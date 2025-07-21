@@ -206,13 +206,13 @@ function App({ mode, toggleColorMode }: AppProps) {
       </Suspense>
 
       <Box sx={{
-        mt: 12,
-        mb: 8,
+        mt: 10,
+        mb: 6,
         textAlign: 'center',
         color: 'text.secondary'
       }}>
-        <p>This calculator provides estimates only. Tax rules and rates may change.</p>
-        <p className="mt-1">Consult with a tax professional for accurate advice.</p>
+        <p>This calculator offers no guarantee of accuracy or completeness. Not all situations are covered.</p>
+        <p className="mt-1">Consult with a tax professional for specific tax advice.</p>
       </Box>
     </Box>
   )
