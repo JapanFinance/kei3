@@ -1,0 +1,13 @@
+name = "kei3"
+compatibility_date = "2025-07-21"
+
+routes = [
+  { pattern = "kei3.japanfinance.org", custom_domain = true }
+]
+
+[assets]
+directory = "./dist/"
+not_found_handling = "404-page"
+
+[build]
+command = "npm run build"
