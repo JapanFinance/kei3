@@ -199,7 +199,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         );
     }
 
-    const pensionPayments = calculatePensionPremium(isEmploymentIncome, annualIncome / 12);
+    // Calculate pension based on health insurance type
+    // People on National Health Insurance are in National Pension system
+    // People on employee health insurance are in Employee Pension system
+    const isInEmployeePensionSystem = inputs.healthInsuranceProvider.id !== 'NationalHealthInsurance';
+    const pensionPayments = calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
 
     const employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
 

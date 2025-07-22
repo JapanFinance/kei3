@@ -96,3 +96,28 @@ describe('calculateHealthInsurancePremium for employees', () => {
       expect(() => calculateHealthInsurancePremium(-1_000_000, true, HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE, 'Tokyo')).toThrowError('Income cannot be negative.')
     })
   })
+
+  describe('calculateHealthInsurancePremium for employees with NHI', () => {
+    // Test cases for employment income workers who are on NHI
+    // (e.g., small employers, part-time workers, low income thresholds)
+    it('calculates NHI premium for employment income', () => {
+      expect(calculateHealthInsurancePremium(5_000_000, false, HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE, 'Tokyo')).toBe(539_380)
+    })
+
+    it('calculates NHI premium for employment income with nursing care', () => {
+      expect(calculateHealthInsurancePremium(5_000_000, true, HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE, 'Tokyo')).toBe(658_805)
+    })
+
+    it('calculates NHI premium for employment income with cap', () => {
+      expect(calculateHealthInsurancePremium(20_000_000, false, HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE, 'Tokyo')).toBe(920_000)
+    })
+
+    it('calculates NHI premium for employment income with nursing care and cap', () => {
+      expect(calculateHealthInsurancePremium(20_000_000, true, HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE, 'Tokyo')).toBe(1_090_000)
+    })
+
+    it('handles zero employment income correctly', () => {
+      expect(calculateHealthInsurancePremium(0, false, HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE, 'Tokyo')).toBe(64_100)
+      expect(calculateHealthInsurancePremium(0, true, HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE, 'Tokyo')).toBe(80_700)
+    })
+  })

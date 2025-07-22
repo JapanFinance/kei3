@@ -47,15 +47,15 @@ export const EMPLOYEES_PENSION_PREMIUM: IncomeBracketToPensionPremium[] = [
 
 /**
  * Calculates the annual insurance premium based on monthly income
+ * @param isEmployeesPension - Whether the person is enrolled in employees pension (厚生年金)
  * @param monthlyIncome - Monthly income in JPY
- * @param isEmployee - Whether the income is from employment (厚生年金)
  * @param isHalfAmount - Whether to return the half amount (折半額) instead of full amount (全額)
  * @returns The calculated annual insurance premium amount
  * @see https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/20200825.html
  * @see https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01
  */
-export function calculatePensionPremium(isEmployee: boolean = true, monthlyIncome: number = 0, isHalfAmount: boolean = true): number {
-  if (!isEmployee) {
+export function calculatePensionPremium(isEmployeesPension: boolean = true, monthlyIncome: number = 0, isHalfAmount: boolean = true): number {
+  if (!isEmployeesPension) {
     return monthlyNationalPensionContribution * 12; // Annual contribution
   }
   if (monthlyIncome < 0) {
