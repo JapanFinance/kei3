@@ -181,8 +181,17 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const isEmploymentIncome = inputs.isEmploymentIncome;
     const netIncome = isEmploymentIncome ? calculateNetEmploymentIncome(annualIncome) : annualIncome;
 
+    // For health insurance calculation, we need to use the appropriate income:
+    // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
+    // - National Health Insurance: uses net income (after employment income deduction if applicable)
+    //   This is because NHI premiums are based on taxable income, while employee health insurance
+    //   is based on standard monthly remuneration before deductions.
+    const incomeForHealthInsurance = inputs.healthInsuranceProvider.id === 'NationalHealthInsurance' 
+        ? netIncome 
+        : inputs.annualIncome;
+
     const healthInsurance = calculateHealthInsurancePremium(
-        inputs.annualIncome,
+        incomeForHealthInsurance,
         inputs.isSubjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
         inputs.prefecture
@@ -191,9 +200,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // Calculate NHI breakdown if National Health Insurance is selected
     let nhiBreakdown = null;
     if (inputs.healthInsuranceProvider.id === 'NationalHealthInsurance') {
-        // Use the new function that accepts boolean directly
+        // For NHI breakdown, also use net income
         nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            inputs.annualIncome,
+            netIncome,
             inputs.isSubjectToLongTermCarePremium,
             inputs.prefecture as string
         );

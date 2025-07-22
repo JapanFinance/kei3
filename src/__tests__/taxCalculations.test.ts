@@ -202,18 +202,20 @@ describe('calculateTaxes', () => {
     expect(result.employmentInsurance).toBe(27_504);
     
     // Should pay NHI premiums (not employee health insurance)
-    expect(result.healthInsurance).toBe(539_380)
+    // NHI should be calculated on net employment income (3,560,000) not gross (5,000,000)
+    expect(result.healthInsurance).toBe(389_620)
     
     // Should pay national pension (not employee pension, since they're on NHI)
     expect(result.pensionPayments).toBe(210_120)
     
     // Tax calculations should use employment income deduction
     expect(result.netEmploymentIncome).toBe(3_560_000)
-    expect(result.nationalIncomeTax).toBe(115_000)
-    expect(result.residenceTax.totalResidenceTax).toBe(237_600)
+    expect(result.nationalIncomeTax).toBe(130_300)
+    expect(result.residenceTax.totalResidenceTax).toBe(252_600)
     
     // Total take-home should reflect employment income with NHI and National Pension
-    expect(result.takeHomeIncome).toBe(3_870_396)
+    // NHI calculated on net employment income results in lower premiums and higher take-home
+    expect(result.takeHomeIncome).toBe(3_989_856)
   })
 
   it('calculates taxes correctly with DC plan contributions', () => {
