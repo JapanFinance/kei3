@@ -18,6 +18,7 @@ import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin }
 import type { HealthInsuranceProviderType } from '../../types/healthInsurance';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { detectCaps } from '../../utils/capDetection';
 
 // Percentile bands configuration
 const QUINTILE_BANDS = [
@@ -243,7 +244,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     () => {
       const baseOptions = getChartOptions(chartRange, currentIncome, useCompactLabelFormat);
       
-      // Enhance tooltips to include percentile information
+      // Enhance tooltips to include percentile and cap information
       return {
         ...baseOptions,
         plugins: {
@@ -257,7 +258,28 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   const income = tooltipItems[0].parsed.x;
                   const estimatedPercentile = calculateEstimatedIncomePercentile(income);
                   const band = getPercentileBand(income);
-                  return `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
+                  let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
+                  
+                  // Add cap information for this income level
+                  const capStatus = detectCaps({
+                    annualIncome: income,
+                    isEmploymentIncome,
+                    isSubjectToLongTermCarePremium,
+                    healthInsuranceProvider,
+                    prefecture,
+                    dcPlanContributions,
+                    numberOfDependents: 0,
+                    showDetailedInput: false,
+                  });
+                  
+                  if (capStatus.healthInsuranceCapped || capStatus.pensionCapped) {
+                    const cappedItems: string[] = [];
+                    if (capStatus.pensionCapped) cappedItems.push('Pension');
+                    if (capStatus.healthInsuranceCapped) cappedItems.push('Health Insurance');
+                    info += `\n🔒 Caps applied: ${cappedItems.join(', ')}`;
+                  }
+                  
+                  return info;
                 }
                 return '';
               },
@@ -266,7 +288,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, prefecture, dcPlanContributions]
   );
 
   // Use media query to determine if we should show minor marks
@@ -285,6 +307,18 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   // Determine if legend items should be visible
   const yourIncomeIsVisibleInChart = currentIncome > 0 && currentIncome >= chartRange.min && currentIncome <= chartRange.max;
   const medianIncomeIsVisibleInChart = MEDIAN_INCOME_VALUE >= chartRange.min && MEDIAN_INCOME_VALUE <= chartRange.max;
+  
+  // Check if current income has caps applied
+  const currentIncomeCapStatus = currentIncome > 0 ? detectCaps({
+    annualIncome: currentIncome,
+    isEmploymentIncome,
+    isSubjectToLongTermCarePremium,
+    healthInsuranceProvider,
+    prefecture,
+    dcPlanContributions,
+    numberOfDependents: 0,
+    showDetailedInput: false,
+  }) : null;
 
   return (
     <Paper 
@@ -367,6 +401,19 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               }}
             >
               Your Income: {formatJPY(currentIncome)}
+              {currentIncomeCapStatus && (currentIncomeCapStatus.healthInsuranceCapped || currentIncomeCapStatus.pensionCapped) && (
+                <Typography 
+                  component="span" 
+                  sx={{ 
+                    display: 'block', 
+                    fontSize: '0.85rem', 
+                    color: 'warning.main', 
+                    fontWeight: 600 
+                  }}
+                >
+                  🔒 Contribution caps applied
+                </Typography>
+              )}
             </Typography>
           </Box>
         )}
@@ -458,6 +505,13 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               </Typography>
               <Typography variant="body2" sx={{ mb: 1.5 }}>
                 The colored background bands represent household income distribution quintiles based on official Japanese government data:
+              </Typography>
+              
+              {/* Note about contribution caps */}
+              <Typography variant="body2" sx={{ mb: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontSize: '0.9rem' }}>
+                💡 <strong>About Contribution Caps:</strong> Health insurance and pension contributions have maximum limits. 
+                Once your income reaches certain thresholds, these contributions stop increasing even if your income continues to rise.
+                Look for 🔒 indicators to see when caps are applied.
               </Typography>
               
               {/* Quintile Data Table */}

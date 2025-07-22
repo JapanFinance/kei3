@@ -82,12 +82,19 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
 
   const getCurrentRowSummary = (row: PremiumTableRow) => {
     const pensionRow = row as unknown as IncomeBracketToPensionPremium;
-    return `Your contribution: ${formatJPY(pensionRow.halfAmount)}/month (employee portion)`;
+    const isCapped = pensionRow.max === null;
+    const baseSummary = `Your contribution: ${formatJPY(pensionRow.halfAmount)}/month (employee portion)`;
+    
+    if (isCapped) {
+      return `${baseSummary} 🔒 MAXIMUM CONTRIBUTION REACHED`;
+    }
+    
+    return baseSummary;
   }; return (
     <PremiumTableTooltip
       title="Employees Pension Premium Table (厚生年金)"
       description="Monthly pension contributions by income bracket. Your income: {monthlyIncome}/month"
-      hint="💡 Employees pay half the contribution, employers pay the other half"
+      hint="💡 Employees pay half the contribution, employers pay the other half. Contributions cap at the highest bracket (¥635,000+ monthly income)."
       tableData={EMPLOYEES_PENSION_PREMIUM as unknown as PremiumTableRow[]}
       columns={columns}
       currentRow={(currentRow || null) as PremiumTableRow | null}

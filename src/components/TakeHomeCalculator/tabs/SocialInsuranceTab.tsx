@@ -14,6 +14,8 @@ import { ResultRow } from '../ResultRow';
 import { employmentInsuranceRate } from '../../../utils/taxCalculations';
 import HealthInsurancePremiumTableTooltip from './HealthInsurancePremiumTableTooltip';
 import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
+import CapIndicator from '../../ui/CapIndicator';
+import { detectCaps } from '../../../utils/capDetection';
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -28,6 +30,10 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider.id === 'NationalHealthInsurance';
+
+  
+  // Detect if any caps are applied
+  const capStatus = detectCaps(inputs);
 
   return (
     <Box>
@@ -62,13 +68,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Health Insurance */}
       <Box sx={{ mt: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-          {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
-          <DetailInfoTooltip
-            title="Health Insurance Premium Details"
-            children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
-          />
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
+            <DetailInfoTooltip
+              title="Health Insurance Premium Details"
+              children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
+            />
+          </Typography>
+          {capStatus.healthInsuranceCapped && <CapIndicator capStatus={capStatus} compact />}
+        </Box>
         {isNationalHealthInsurance ? (
           <>
             <ResultRow
@@ -112,13 +121,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Pension Payments */}
       <Box sx={{ mt: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-          {isNationalHealthInsurance ? "National Pension" : "Employees' Pension Insurance"}
-          <DetailInfoTooltip
-            title="Pension Contribution Details"
-            children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
-          />
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            {isNationalHealthInsurance ? "National Pension" : "Employees' Pension Insurance"}
+            <DetailInfoTooltip
+              title="Pension Contribution Details"
+              children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
+            />
+          </Typography>
+          {capStatus.pensionCapped && <CapIndicator capStatus={capStatus} compact />}
+        </Box>
         <ResultRow 
           label="Monthly Contribution" 
           value={formatJPY(Math.round(results.pensionPayments / 12))} 

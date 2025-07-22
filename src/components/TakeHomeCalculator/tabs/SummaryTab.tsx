@@ -6,7 +6,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import type { TakeHomeResults } from '../../../types/tax';
+import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -14,12 +14,15 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import { ResultRow } from '../ResultRow';
 import InfoTooltip from '../../ui/InfoTooltip';
+import CapIndicator from '../../ui/CapIndicator';
+import { detectCaps } from '../../../utils/capDetection';
 
 interface SummaryTabProps {
   results: TakeHomeResults;
+  inputs?: TakeHomeInputs;
 }
 
-const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
+const SummaryTab: React.FC<SummaryTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -28,6 +31,9 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage = results.annualIncome > 0 ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%` : '100%';
 
+  // Detect caps if inputs are provided
+  const capStatus = inputs ? detectCaps(inputs) : null;
+
   return (
     <Box>
       <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
@@ -35,20 +41,24 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
 
       {/* Social Insurance Section */}
       <Box sx={{ bgcolor: 'rgba(33,150,243,0.03)', borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
-        <Typography
-          variant="subtitle2"
-          sx={{
-            mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 },
-            color: 'primary.main',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: isMobile ? '1rem' : '1.1rem'
-          }}
-        >
-          <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20 }} />
-          Social Insurance
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 } }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              color: 'primary.main',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: isMobile ? '1rem' : '1.1rem'
+            }}
+          >
+            <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20 }} />
+            Social Insurance
+          </Typography>
+          {capStatus && (capStatus.healthInsuranceCapped || capStatus.pensionCapped) && (
+            <CapIndicator capStatus={capStatus} compact />
+          )}
+        </Box>
         <ResultRow 
           label="Health Insurance" 
           value={
