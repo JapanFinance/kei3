@@ -25,6 +25,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const totalSocialInsurance = results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+  
+  // Determine if using National Health Insurance
+  const isNationalHealthInsurance = inputs.healthInsuranceProvider.id === 'NationalHealthInsurance';
 
   return (
     <Box>
@@ -44,38 +47,29 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       </Typography>
 
       <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
-      {results.isEmploymentIncome ? (
-        <ResultRow label="Monthly Income" value={formatJPY(results.annualIncome / 12)} type="default" />
-      ) : (
+      {isNationalHealthInsurance ? (
         <>
+          {/* For NHI, show the income calculation details regardless of employment status */}
+          {results.isEmploymentIncome && (
+            <ResultRow label="Net Employment Income" value={formatJPY(results.netEmploymentIncome!)} type="default" />
+          )}
           <ResultRow label="Basic Deduction" value={formatJPY(-results.residenceTaxBasicDeduction!)} type="default" />
-          <ResultRow label="NHI Calculation Base" value={formatJPY(Math.max(0, results.annualIncome - results.residenceTaxBasicDeduction!))} type="default" />
+          <ResultRow label="NHI Calculation Base" value={formatJPY(Math.max(0, (results.netEmploymentIncome ?? results.annualIncome) - results.residenceTaxBasicDeduction!))} type="default" />
         </>
+      ) : (
+        <ResultRow label="Monthly Income" value={formatJPY(results.annualIncome / 12)} type="default" />
       )}
 
       {/* Health Insurance */}
       <Box sx={{ mt: 1 }}>
         <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-          {results.isEmploymentIncome ? "Employees' Health Insurance" : "National Health Insurance"}
+          {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
           <DetailInfoTooltip
             title="Health Insurance Premium Details"
             children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
           />
         </Typography>
-        {results.isEmploymentIncome ? (
-          <>
-            <ResultRow 
-              label="Monthly Premium" 
-              value={formatJPY(results.healthInsurance / 12)} 
-              type="indented" 
-            />
-            <ResultRow 
-              label="Annual Premium" 
-              value={formatJPY(results.healthInsurance)} 
-              type="subtotal" 
-            />
-          </>
-        ) : (
+        {isNationalHealthInsurance ? (
           <>
             <ResultRow
               label="Medical Portion"
@@ -100,16 +94,29 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               type="subtotal" 
             />
           </>
+        ) : (
+          <>
+            <ResultRow 
+              label="Monthly Premium" 
+              value={formatJPY(results.healthInsurance / 12)} 
+              type="indented" 
+            />
+            <ResultRow 
+              label="Annual Premium" 
+              value={formatJPY(results.healthInsurance)} 
+              type="subtotal" 
+            />
+          </>
         )}
       </Box>
 
       {/* Pension Payments */}
       <Box sx={{ mt: 1 }}>
         <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-          {results.isEmploymentIncome ? "Employees' Pension Insurance" : "National Pension"}
+          {isNationalHealthInsurance ? "National Pension" : "Employees' Pension Insurance"}
           <DetailInfoTooltip
             title="Pension Contribution Details"
-            children={<PensionPremiumTableTooltip results={results} />}
+            children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
           />
         </Typography>
         <ResultRow 

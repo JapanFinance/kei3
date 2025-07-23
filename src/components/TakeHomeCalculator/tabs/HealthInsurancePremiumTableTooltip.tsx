@@ -52,12 +52,17 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     }
 
     // Return National Health Insurance parameters display
-    const annualIncome = results.annualIncome;
+    // Use the same income base that the actual calculation uses:
+    // - For employment income: use net employment income (after employment income deduction)
+    // - For non-employment income: use gross annual income
+    const incomeForNHICalculation = results.isEmploymentIncome && results.netEmploymentIncome 
+      ? results.netEmploymentIncome 
+      : results.annualIncome;
     const includeNursingCareInsurance = inputs.isSubjectToLongTermCarePremium;
     
     // Calculate step-by-step breakdown like the actual calculation
     // Note: NHI premiums are based on previous year's income, but we're using current year as assumption
-    const nhiTaxableIncome = Math.max(0, annualIncome - regionData.nhiStandardDeduction);
+    const nhiTaxableIncome = Math.max(0, incomeForNHICalculation - regionData.nhiStandardDeduction);
     
     // 1. Medical Portion (医療分)
     const incomeBasedMedical = nhiTaxableIncome * regionData.medicalRate;
