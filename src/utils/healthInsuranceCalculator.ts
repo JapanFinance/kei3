@@ -16,14 +16,11 @@ export interface NationalHealthInsuranceBreakdown {
 /**
  * Calculates the annual health insurance premium.
  *
- * @param annualIncome The person's total annual income.
+ * @param annualIncome total annual income (gross for employees health insurance, net for NHI)
  * @param isSubjectToLongTermCarePremium True if the person is required to pay long-term care insurance
  * premiums as a Category 2 insured (介護保険第２号被保険者). This applies to people aged 40-64.
  * @param provider The health insurance provider.
  * @param region The region for the provider.
- *               For KyokaiKenpo, this is KyokaiKenpoRegion.
- *               For National Health Insurance, this is a string (municipality identifier).
- *               For providers with no regions, this is DEFAULT_PROVIDER_REGION.
  * @returns The annual health insurance premium.
  */
 export function calculateHealthInsurancePremium(

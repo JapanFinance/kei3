@@ -185,6 +185,39 @@ describe('calculateTaxes', () => {
     expect(result.takeHomeIncome).toBe(3_563_300)
   })
 
+  it('calculates taxes correctly for employment income with NHI', () => {
+    // Test case for employees who work for small employers or are part-time/low income
+    // and are therefore enrolled in National Health Insurance instead of employee insurance
+    const inputs = {
+      annualIncome: 5_000_000,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE,
+      prefecture: "Tokyo", // For NHI
+      numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
+    };
+    const result = calculateTaxes(inputs);
+    
+    // Should pay employment insurance (since it's employment income)
+    expect(result.employmentInsurance).toBe(27_504);
+    
+    // Should pay NHI premiums (not employee health insurance)
+    // NHI should be calculated on net employment income (3,560,000) not gross (5,000,000)
+    expect(result.healthInsurance).toBe(389_620)
+    
+    // Should pay national pension (not employee pension, since they're on NHI)
+    expect(result.pensionPayments).toBe(210_120)
+    
+    // Tax calculations should use employment income deduction
+    expect(result.netEmploymentIncome).toBe(3_560_000)
+    expect(result.nationalIncomeTax).toBe(130_300)
+    expect(result.residenceTax.totalResidenceTax).toBe(252_600)
+    
+    // Total take-home should reflect employment income with NHI and National Pension
+    // NHI calculated on net employment income results in lower premiums and higher take-home
+    expect(result.takeHomeIncome).toBe(3_989_856)
+  })
+
   it('calculates taxes correctly with DC plan contributions', () => {
     // Test without DC plan contributions
     const inputsWithoutDcPlan = {

@@ -83,7 +83,8 @@ function AdvancedOptionsFields({
           }}
         >
           Health Insurance Provider
-          <InfoTooltip title="Your health insurance provider affects your premium calculations" />
+          <InfoTooltip title="Your health insurance provider affects your premium calculations. 
+          Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
         </Typography>
         <Select
           id="healthInsuranceProvider"
@@ -103,7 +104,7 @@ function AdvancedOptionsFields({
         {isHealthInsuranceProviderDropdownDisabled && (
           <Typography color="text.secondary" sx={{ mt: 0.2, fontSize: '0.95rem' }}>
             {inputs.isEmploymentIncome
-              ? availableProviders.length > 0 ? `Automatically set to ${availableProviders[0].displayName} for employment income.` : 'No employee health insurance providers available.'
+              ? availableProviders.length > 0 ? `Only ${availableProviders[0].displayName} available for this configuration.` : 'No health insurance providers available.'
               : `Automatically set to ${HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.displayName} for non-employment income.`
             }
           </Typography>
@@ -354,10 +355,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   // Determine available health insurance providers based on income type
   const availableProviders = React.useMemo(() => {
     if (inputs.isEmploymentIncome) {
-      // Filter out National Health Insurance for employment income
-      return Object.values(HealthInsuranceProvider).filter(
-        provider => provider.id !== HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id
-      );
+      // Employment income can use either employee health insurance or NHI
+      // (e.g., small employers, part-time workers, low income thresholds)
+      return Object.values(HealthInsuranceProvider);
     } else {
       // Only National Health Insurance for non-employment income
       return [HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE];
