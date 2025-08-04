@@ -313,25 +313,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   // Determine if legend items should be visible
   const yourIncomeIsVisibleInChart = currentIncome > 0 && currentIncome >= chartRange.min && currentIncome <= chartRange.max;
   const medianIncomeIsVisibleInChart = MEDIAN_INCOME_VALUE >= chartRange.min && MEDIAN_INCOME_VALUE <= chartRange.max;
-  
-  // Check if current income has caps applied
-  const currentIncomeCapStatus = useMemo(() => {
-    if (currentIncome <= 0) return null;
-    
-    const taxInputs = {
-      annualIncome: currentIncome,
-      isEmploymentIncome,
-      isSubjectToLongTermCarePremium,
-      healthInsuranceProvider,
-      prefecture,
-      dcPlanContributions,
-      numberOfDependents: 0,
-      showDetailedInput: false,
-    };
-    
-    const taxResults = calculateTaxes(taxInputs);
-    return detectCaps(taxResults);
-  }, [currentIncome, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, prefecture, dcPlanContributions]);
 
   return (
     <Paper 
@@ -414,19 +395,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               }}
             >
               Your Income: {formatJPY(currentIncome)}
-              {currentIncomeCapStatus && (currentIncomeCapStatus.healthInsuranceCapped || currentIncomeCapStatus.pensionCapped) && (
-                <Typography 
-                  component="span" 
-                  sx={{ 
-                    display: 'block', 
-                    fontSize: '0.85rem', 
-                    color: 'warning.main', 
-                    fontWeight: 600 
-                  }}
-                >
-                  🔒 Contribution caps applied
-                </Typography>
-              )}
             </Typography>
           </Box>
         )}
@@ -518,13 +486,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               </Typography>
               <Typography variant="body2" sx={{ mb: 1.5 }}>
                 The colored background bands represent household income distribution quintiles based on official Japanese government data:
-              </Typography>
-              
-              {/* Note about contribution caps */}
-              <Typography variant="body2" sx={{ mb: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1, fontSize: '0.9rem' }}>
-                💡 <strong>About Contribution Caps:</strong> Health insurance and pension contributions have maximum limits. 
-                Once your income reaches certain thresholds, these contributions stop increasing even if your income continues to rise.
-                Look for 🔒 indicators to see when caps are applied.
               </Typography>
               
               {/* Quintile Data Table */}

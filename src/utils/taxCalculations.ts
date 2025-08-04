@@ -1,4 +1,5 @@
 import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
+import { HealthInsuranceProvider } from '../types/healthInsurance';
 import { calculatePensionPremium } from './pensionCalculator';
 import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
@@ -172,8 +173,8 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     furusatoNozei: calculateFurusatoNozeiDetails(0, NON_TAXABLE_RESIDENCE_TAX_DETAIL),
     dcPlanContributions: 0,
     // Add the new required properties with default values
-    healthInsuranceProvider: { id: 'NationalHealthInsurance', displayName: 'National Health Insurance' },
-    prefecture: 'tokyo',
+    healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+    prefecture: 'Tokyo',
     isSubjectToLongTermCarePremium: false,
 };
 
