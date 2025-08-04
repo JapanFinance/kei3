@@ -16,10 +16,21 @@ export const capIndicatorPlugin: Plugin<'bar' | 'line'> = {
     
     if (!chartArea || !xScale || !yScale) return;
     
-    // Get the current inputs from chart options (using generic any type to avoid TS issues)
-    const pluginData = (chart.options as any)?.plugins?.capIndicatorPlugin?.data;
+    // Define a type for plugin options
+    interface CapIndicatorPluginOptions {
+      plugins?: {
+        capIndicatorPlugin?: {
+          data?: {
+            currentInputs?: Omit<TakeHomeInputs, 'annualIncome' | 'showDetailedInput'>;
+          };
+        };
+      };
+    }
+
+    // Use a type assertion for chart.options
+    const pluginData = (chart.options as CapIndicatorPluginOptions)?.plugins?.capIndicatorPlugin?.data;
     if (!pluginData) return;
-    
+
     const { currentInputs } = pluginData;
     if (!currentInputs) return;
     
