@@ -171,6 +171,10 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     takeHomeIncome: 0,
     furusatoNozei: calculateFurusatoNozeiDetails(0, NON_TAXABLE_RESIDENCE_TAX_DETAIL),
     dcPlanContributions: 0,
+    // Add the new required properties with default values
+    healthInsuranceProvider: { id: 'NationalHealthInsurance', displayName: 'National Health Insurance' },
+    prefecture: 'tokyo',
+    isSubjectToLongTermCarePremium: false,
 };
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
@@ -266,5 +270,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         nhiMedicalPortion: nhiBreakdown?.medicalPortion,
         nhiElderlySupportPortion: nhiBreakdown?.elderlySupportPortion,
         nhiLongTermCarePortion: nhiBreakdown?.longTermCarePortion,
+        // Context needed for cap detection
+        healthInsuranceProvider: inputs.healthInsuranceProvider,
+        prefecture: inputs.prefecture,
+        isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
     };
 }

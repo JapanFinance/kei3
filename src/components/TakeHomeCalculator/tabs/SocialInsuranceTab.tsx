@@ -33,7 +33,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   
   // Detect if any caps are applied
-  const capStatus = detectCaps(inputs);
+  const capStatus = detectCaps(results);
 
   return (
     <Box>
@@ -76,23 +76,34 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
             />
           </Typography>
-          {capStatus.healthInsuranceCapped && <CapIndicator capStatus={capStatus} compact />}
+          {!isNationalHealthInsurance && capStatus.healthInsuranceCapped && (
+            <CapIndicator capStatus={capStatus} itemName="health insurance" />
+          )}
         </Box>
         {isNationalHealthInsurance ? (
           <>
             <ResultRow
               label="Medical Portion"
+              labelSuffix={capStatus.healthInsuranceCapDetails?.medicalCapped && (
+                <CapIndicator capStatus={capStatus} iconOnly itemName="medical portion" />
+              )}
               value={formatJPY(results.nhiMedicalPortion ?? 0)}
               type="indented"
             />
             <ResultRow
               label="Elderly Support Portion"
+              labelSuffix={capStatus.healthInsuranceCapDetails?.supportCapped && (
+                <CapIndicator capStatus={capStatus} iconOnly itemName="elderly support portion" />
+              )}
               value={formatJPY(results.nhiElderlySupportPortion ?? 0)}
               type="indented"
             />
             {results.nhiLongTermCarePortion !== undefined && results.nhiLongTermCarePortion > 0 && (
               <ResultRow
                 label="Long-term Care Portion"
+                labelSuffix={capStatus.healthInsuranceCapDetails?.ltcCapped && (
+                  <CapIndicator capStatus={capStatus} iconOnly itemName="long-term care portion" />
+                )}
                 value={formatJPY(results.nhiLongTermCarePortion)}
                 type="indented"
               />
@@ -129,7 +140,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
             />
           </Typography>
-          {capStatus.pensionCapped && <CapIndicator capStatus={capStatus} compact />}
+          {capStatus.pensionCapped && <CapIndicator capStatus={capStatus} />}
         </Box>
         <ResultRow 
           label="Monthly Contribution" 

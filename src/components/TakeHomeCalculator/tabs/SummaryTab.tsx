@@ -6,7 +6,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -19,10 +19,9 @@ import { detectCaps } from '../../../utils/capDetection';
 
 interface SummaryTabProps {
   results: TakeHomeResults;
-  inputs?: TakeHomeInputs;
 }
 
-const SummaryTab: React.FC<SummaryTabProps> = ({ results, inputs }) => {
+const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -31,8 +30,8 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results, inputs }) => {
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage = results.annualIncome > 0 ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%` : '100%';
 
-  // Detect caps if inputs are provided
-  const capStatus = inputs ? detectCaps(inputs) : null;
+  // Detect caps using results (all context is now in results)
+  const capStatus = detectCaps(results);
 
   return (
     <Box>
@@ -41,26 +40,25 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results, inputs }) => {
 
       {/* Social Insurance Section */}
       <Box sx={{ bgcolor: 'rgba(33,150,243,0.03)', borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 } }}>
-          <Typography
-            variant="subtitle2"
-            sx={{
-              color: 'primary.main',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: isMobile ? '1rem' : '1.1rem'
-            }}
-          >
-            <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20 }} />
-            Social Insurance
-          </Typography>
-          {capStatus && (capStatus.healthInsuranceCapped || capStatus.pensionCapped) && (
-            <CapIndicator capStatus={capStatus} compact />
-          )}
-        </Box>
+        <Typography
+          variant="subtitle2"
+          sx={{
+            mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 },
+            color: 'primary.main',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: isMobile ? '1rem' : '1.1rem'
+          }}
+        >
+          <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20 }} />
+          Social Insurance
+        </Typography>
         <ResultRow 
-          label="Health Insurance" 
+          label="Health Insurance"
+          labelSuffix={capStatus && capStatus.healthInsuranceCapped && (
+            <CapIndicator capStatus={capStatus} iconOnly itemName="health insurance" />
+          )}
           value={
             !isMobile ? 
               `${formatJPY(results.healthInsurance)} (${((results.healthInsurance / results.annualIncome) * 100).toFixed(1)}%)` : 
@@ -69,7 +67,10 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results, inputs }) => {
           type="indented" 
         />
         <ResultRow 
-          label="Pension Payments" 
+          label="Pension Payments"
+          labelSuffix={capStatus && capStatus.pensionCapped && (
+            <CapIndicator capStatus={capStatus} iconOnly itemName="pension" />
+          )}
           value={
             !isMobile ? 
               `${formatJPY(results.pensionPayments)} (${((results.pensionPayments / results.annualIncome) * 100).toFixed(1)}%)` : 

@@ -27,6 +27,7 @@ interface ResultRowProps {
   type?: 'default' | 'indented' | 'subtotal' | 'total' | 'final' | 'header' | 'detail' | 'detail-subtotal';
   valuePrefix?: string;
   sx?: SxProps<Theme>;
+  labelSuffix?: React.ReactNode; // Additional content to show after the label and tooltip
 }
 
 export const ResultRow: React.FC<ResultRowProps> = ({
@@ -34,7 +35,8 @@ export const ResultRow: React.FC<ResultRowProps> = ({
   value,
   type = 'default',
   valuePrefix,
-  sx: rowSxOverride
+  sx: rowSxOverride,
+  labelSuffix
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -155,6 +157,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       {typeof label === 'string' && labelTooltips[label] && (
         <InfoTooltip title={labelTooltips[label]} />
       )}
+      {labelSuffix}
     </Box>
   );
 

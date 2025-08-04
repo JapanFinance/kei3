@@ -13,8 +13,6 @@ import SummaryTab from './tabs/SummaryTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';
 import TaxesTab from './tabs/TaxesTab';
 import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
-import CapSummary from '../ui/CapSummary';
-import { detectCaps } from '../../utils/capDetection';
 
 interface DetailedTaxResultsProps {
   results: TakeHomeResults;
@@ -57,9 +55,6 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
     ? ['Summary', 'Social', 'Taxes', 'Furusato']
     : ['Summary', 'Social Insurance', 'Taxes', 'Furusato Nozei'];
 
-  // Detect caps for the current inputs
-  const capStatus = detectCaps(inputs);
-
   return (
     <Paper
       ref={containerRef}
@@ -80,9 +75,6 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
       <Typography variant="h6" component="h2" sx={{ fontSize: { xs: '1.08rem', sm: '1.3rem' }, mb: { xs: 0.7, sm: 1.2 }, fontWeight: 700 }}>
         Take-Home Pay Breakdown
       </Typography>
-
-      {/* Show cap summary if any caps are applied */}
-      <CapSummary capStatus={capStatus} annualIncome={results.annualIncome} />
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
         <Tabs 
@@ -113,7 +105,7 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
       <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
         {currentTab === 0 && (
           <Box role="tabpanel" id="tabpanel-0" aria-labelledby="tab-0">
-            <SummaryTab results={results} inputs={inputs} />
+            <SummaryTab results={results} />
           </Box>
         )}
         {currentTab === 1 && (

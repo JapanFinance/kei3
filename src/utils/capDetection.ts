@@ -1,4 +1,4 @@
-import type { TakeHomeInputs } from '../types/tax';
+import type { TakeHomeResults } from '../types/tax';
 import { HealthInsuranceProvider } from '../types/healthInsurance';
 import { EMPLOYEES_PENSION_PREMIUM } from './pensionCalculator';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance';
@@ -15,16 +15,17 @@ export interface CapStatus {
 }
 
 /**
- * Determines if health insurance and pension contributions are capped for the given inputs
+ * Determines if health insurance and pension contributions are capped for the given results.
+ * All necessary context is now included in the results object.
  */
-export function detectCaps(inputs: TakeHomeInputs): CapStatus {
-  const monthlyIncome = inputs.annualIncome / 12;
+export function detectCaps(results: TakeHomeResults): CapStatus {
+  const monthlyIncome = results.annualIncome / 12;
   
   // Check pension cap
-  const pensionCapped = checkPensionCap(inputs.isEmploymentIncome, monthlyIncome);
+  const pensionCapped = checkPensionCap(results.isEmploymentIncome, monthlyIncome);
   
   // Check health insurance cap
-  const healthInsuranceCapInfo = checkHealthInsuranceCap(inputs);
+  const healthInsuranceCapInfo = checkHealthInsuranceCap(results);
   
   return {
     healthInsuranceCapped: healthInsuranceCapInfo.capped,
@@ -50,7 +51,7 @@ function checkPensionCap(isEmploymentIncome: boolean, monthlyIncome: number): bo
 /**
  * Checks if health insurance contributions are at the maximum
  */
-function checkHealthInsuranceCap(inputs: TakeHomeInputs): {
+function checkHealthInsuranceCap(results: TakeHomeResults): {
   capped: boolean;
   details?: {
     medicalCapped?: boolean;
@@ -58,32 +59,55 @@ function checkHealthInsuranceCap(inputs: TakeHomeInputs): {
     ltcCapped?: boolean;
   };
 } {
-  const monthlyIncome = inputs.annualIncome / 12;
+  const monthlyIncome = results.annualIncome / 12;
   
-  if (inputs.healthInsuranceProvider.id === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id) {
-    // National Health Insurance - check individual component caps
-    const nhiParams = getNationalHealthInsuranceParams(inputs.prefecture as string);
+  if (results.healthInsuranceProvider.id === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id) {
+    // National Health Insurance - use pre-calculated values from results
+    if (results.nhiMedicalPortion === undefined || results.nhiElderlySupportPortion === undefined) {
+      // This shouldn't happen anymore since all context is in results
+      console.warn('NHI component data missing in results:', {
+        nhiMedicalPortion: results.nhiMedicalPortion,
+        nhiElderlySupportPortion: results.nhiElderlySupportPortion,
+        nhiLongTermCarePortion: results.nhiLongTermCarePortion,
+      });
+      return { capped: false };
+    }
+    
+    // Use the pre-calculated results to check against caps
+    const nhiParams = getNationalHealthInsuranceParams(results.prefecture);
     if (!nhiParams) {
       return { capped: false };
     }
     
-    const nhiTaxableIncome = Math.max(0, inputs.annualIncome - nhiParams.nhiStandardDeduction);
+    // Check if each component hit its cap by comparing actual vs theoretical uncapped amount
+    const incomeForNHICalculation = results.isEmploymentIncome && results.netEmploymentIncome 
+      ? results.netEmploymentIncome 
+      : results.annualIncome;
+    const nhiTaxableIncome = Math.max(0, incomeForNHICalculation - nhiParams.nhiStandardDeduction);
     
-    // Check each component for capping
+    // Medical portion cap check
     const medicalIncomeBasedPortion = nhiTaxableIncome * nhiParams.medicalRate;
     const medicalUncapped = medicalIncomeBasedPortion + nhiParams.medicalPerCapita;
-    const medicalCapped = medicalUncapped > nhiParams.medicalCap;
+    const medicalCapped = medicalUncapped > nhiParams.medicalCap &&
+                         Math.abs(results.nhiMedicalPortion - nhiParams.medicalCap) < 1; // Allow for rounding
     
+    // Support portion cap check
     const supportIncomeBasedPortion = nhiTaxableIncome * nhiParams.supportRate;
     const supportUncapped = supportIncomeBasedPortion + nhiParams.supportPerCapita;
-    const supportCapped = supportUncapped > nhiParams.supportCap;
+    const supportCapped = supportUncapped > nhiParams.supportCap &&
+                          Math.abs(results.nhiElderlySupportPortion - nhiParams.supportCap) < 1; // Allow for rounding
     
+    // LTC portion cap check
     let ltcCapped = false;
-    if (inputs.isSubjectToLongTermCarePremium && nhiParams.ltcRateForEligible && 
-        nhiParams.ltcPerCapitaForEligible && nhiParams.ltcCapForEligible) {
+    if (results.nhiLongTermCarePortion !== undefined && 
+        results.isSubjectToLongTermCarePremium && 
+        nhiParams.ltcRateForEligible && 
+        nhiParams.ltcPerCapitaForEligible && 
+        nhiParams.ltcCapForEligible) {
       const ltcIncomeBasedPortion = nhiTaxableIncome * nhiParams.ltcRateForEligible;
       const ltcUncapped = ltcIncomeBasedPortion + nhiParams.ltcPerCapitaForEligible;
-      ltcCapped = ltcUncapped > nhiParams.ltcCapForEligible;
+      ltcCapped = ltcUncapped > nhiParams.ltcCapForEligible &&
+                 Math.abs(results.nhiLongTermCarePortion - nhiParams.ltcCapForEligible) < 1; // Allow for rounding
     }
     
     const anyCapped = medicalCapped || supportCapped || ltcCapped;
@@ -98,7 +122,7 @@ function checkHealthInsuranceCap(inputs: TakeHomeInputs): {
     };
   } else {
     // Employee Health Insurance - check if in highest bracket
-    const premiumTable = getHealthInsurancePremiumTable(inputs.healthInsuranceProvider.id, inputs.prefecture);
+    const premiumTable = getHealthInsurancePremiumTable(results.healthInsuranceProvider.id, results.prefecture);
     if (!premiumTable || premiumTable.length === 0) {
       return { capped: false };
     }

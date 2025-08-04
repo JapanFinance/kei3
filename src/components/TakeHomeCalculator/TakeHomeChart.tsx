@@ -19,6 +19,7 @@ import type { HealthInsuranceProviderType } from '../../types/healthInsurance';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { detectCaps } from '../../utils/capDetection';
+import { calculateTaxes } from '../../utils/taxCalculations';
 
 // Percentile bands configuration
 const QUINTILE_BANDS = [
@@ -260,8 +261,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   const band = getPercentileBand(income);
                   let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
                   
-                  // Add cap information for this income level
-                  const capStatus = detectCaps({
+                  // Calculate full tax results for this income level to get cap status
+                  const taxInputs = {
                     annualIncome: income,
                     isEmploymentIncome,
                     isSubjectToLongTermCarePremium,
@@ -270,7 +271,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     dcPlanContributions,
                     numberOfDependents: 0,
                     showDetailedInput: false,
-                  });
+                  };
+                  
+                  const taxResults = calculateTaxes(taxInputs);
+                  
+                  // Use the calculated results for cap detection
+                  const capStatus = detectCaps(taxResults);
                   
                   if (capStatus.healthInsuranceCapped || capStatus.pensionCapped) {
                     const cappedItems: string[] = [];
@@ -309,16 +315,23 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const medianIncomeIsVisibleInChart = MEDIAN_INCOME_VALUE >= chartRange.min && MEDIAN_INCOME_VALUE <= chartRange.max;
   
   // Check if current income has caps applied
-  const currentIncomeCapStatus = currentIncome > 0 ? detectCaps({
-    annualIncome: currentIncome,
-    isEmploymentIncome,
-    isSubjectToLongTermCarePremium,
-    healthInsuranceProvider,
-    prefecture,
-    dcPlanContributions,
-    numberOfDependents: 0,
-    showDetailedInput: false,
-  }) : null;
+  const currentIncomeCapStatus = useMemo(() => {
+    if (currentIncome <= 0) return null;
+    
+    const taxInputs = {
+      annualIncome: currentIncome,
+      isEmploymentIncome,
+      isSubjectToLongTermCarePremium,
+      healthInsuranceProvider,
+      prefecture,
+      dcPlanContributions,
+      numberOfDependents: 0,
+      showDetailedInput: false,
+    };
+    
+    const taxResults = calculateTaxes(taxInputs);
+    return detectCaps(taxResults);
+  }, [currentIncome, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, prefecture, dcPlanContributions]);
 
   return (
     <Paper 
