@@ -113,39 +113,3 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     return { capped };
   }
 }
-
-/**
- * Gets a human-readable description of the cap status
- */
-export function getCapDescription(capStatus: CapStatus): string {
-  const cappedItems: string[] = [];
-  
-  if (capStatus.pensionCapped) {
-    cappedItems.push('Pension');
-  }
-  
-  if (capStatus.healthInsuranceCapped) {
-    if (capStatus.healthInsuranceCapDetails) {
-      const details = capStatus.healthInsuranceCapDetails;
-      const cappedComponents: string[] = [];
-      
-      if (details.medicalCapped) cappedComponents.push('Medical');
-      if (details.supportCapped) cappedComponents.push('Elderly Support');
-      if (details.ltcCapped) cappedComponents.push('Long-Term Care');
-      
-      if (cappedComponents.length > 0) {
-        cappedItems.push(`Health Insurance (${cappedComponents.join(', ')})`);
-      } else {
-        cappedItems.push('Health Insurance');
-      }
-    } else {
-      cappedItems.push('Health Insurance');
-    }
-  }
-  
-  if (cappedItems.length === 0) {
-    return '';
-  }
-  
-  return `Contribution caps applied: ${cappedItems.join(' and ')}`;
-}
