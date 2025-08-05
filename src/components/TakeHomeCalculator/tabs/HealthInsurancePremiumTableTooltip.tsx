@@ -118,8 +118,28 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Annual Cap: {formatJPY(regionData.medicalCap)}
           </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'success.main' }}>
-            = Final: {formatJPY(totalMedicalPremium)} {uncappedMedical > regionData.medicalCap ? '(capped)' : ''}
+          <Typography variant="body2" sx={{ 
+            fontSize: '0.85rem', 
+            fontWeight: 600, 
+            color: uncappedMedical > regionData.medicalCap ? 'warning.main' : 'success.main',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5
+          }}>
+            = Final: {formatJPY(totalMedicalPremium)} 
+            {uncappedMedical > regionData.medicalCap && (
+              <Box component="span" sx={{ 
+                px: 0.5, 
+                py: 0.2, 
+                borderRadius: 0.5, 
+                bgcolor: 'warning.light', 
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'warning.contrastText'
+              }}>
+                🔒 CAPPED
+              </Box>
+            )}
           </Typography>
         </Box>
 
@@ -140,8 +160,28 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Annual Cap: {formatJPY(regionData.supportCap)}
           </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'success.main' }}>
-            = Final: {formatJPY(totalSupportPremium)} {uncappedSupport > regionData.supportCap ? '(capped)' : ''}
+          <Typography variant="body2" sx={{ 
+            fontSize: '0.85rem', 
+            fontWeight: 600, 
+            color: uncappedSupport > regionData.supportCap ? 'warning.main' : 'success.main',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5
+          }}>
+            = Final: {formatJPY(totalSupportPremium)} 
+            {uncappedSupport > regionData.supportCap && (
+              <Box component="span" sx={{ 
+                px: 0.5, 
+                py: 0.2, 
+                borderRadius: 0.5, 
+                bgcolor: 'warning.light', 
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'warning.contrastText'
+              }}>
+                🔒 CAPPED
+              </Box>
+            )}
           </Typography>
         </Box>
 
@@ -163,8 +203,28 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
               Annual Cap: {formatJPY(regionData.ltcCapForEligible!)}
             </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 600, color: 'success.main' }}>
-              = Final: {formatJPY(totalLtcPremium)} {uncappedLtc > regionData.ltcCapForEligible! ? '(capped)' : ''}
+            <Typography variant="body2" sx={{ 
+              fontSize: '0.85rem', 
+              fontWeight: 600, 
+              color: uncappedLtc > regionData.ltcCapForEligible! ? 'warning.main' : 'success.main',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            }}>
+              = Final: {formatJPY(totalLtcPremium)} 
+              {uncappedLtc > regionData.ltcCapForEligible! && (
+                <Box component="span" sx={{ 
+                  px: 0.5, 
+                  py: 0.2, 
+                  borderRadius: 0.5, 
+                  bgcolor: 'warning.light', 
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'warning.contrastText'
+                }}>
+                  🔒 CAPPED
+                </Box>
+              )}
             </Typography>
           </Box>
         )}

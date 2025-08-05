@@ -1,6 +1,7 @@
 import type { ChartRange, TakeHomeInputs } from '../types/tax'
 import { formatJPY, formatYenCompact } from './formatters'
 import { calculateTaxes } from './taxCalculations'
+import { detectCaps } from './capDetection'
 import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, CoreScaleOptions, Plugin } from 'chart.js'
 import { MEDIAN_INCOME_VALUE } from '../data/income'
 
@@ -73,14 +74,17 @@ export const generateChartData = (
   )
 
   // Create datasets with proper alignment using accessible color palette
+  // Precompute results and cap status for each income point
+  const resultsAndCaps = incomePoints.map(income => {
+    const result = calculateTaxes(createTaxInputsForIncome(income));
+    const caps = detectCaps(result);
+    return { result, caps };
+  });
+
   const datasets = [
     {
       label: 'Take-Home Pay',
-      data: incomePoints.map(income => ({
-        x: income,
-        y: calculateTaxes(createTaxInputsForIncome(income)).takeHomeIncome
-      })),
-      borderColor: 'rgb(34, 139, 34)', // Forest Green - positive outcome
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.takeHomeIncome })),
       backgroundColor: 'rgba(34, 139, 34, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -88,11 +92,7 @@ export const generateChartData = (
     },
     {
       label: 'Income Tax',
-      data: incomePoints.map(income => ({
-        x: income,
-        y: calculateTaxes(createTaxInputsForIncome(income)).nationalIncomeTax
-      })),
-      borderColor: 'rgb(220, 20, 60)', // Crimson - high contrast red
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.nationalIncomeTax })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -100,11 +100,7 @@ export const generateChartData = (
     },
     {
       label: 'Residence Tax',
-      data: incomePoints.map(income => ({
-        x: income,
-        y: calculateTaxes(createTaxInputsForIncome(income)).residenceTax.totalResidenceTax
-      })),
-      borderColor: 'rgb(30, 144, 255)', // Dodger Blue - distinct blue
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.residenceTax.totalResidenceTax })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -112,35 +108,27 @@ export const generateChartData = (
     },
     {
       label: 'Health Insurance',
-      data: incomePoints.map(income => ({
-        x: income,
-        y: calculateTaxes(createTaxInputsForIncome(income)).healthInsurance
-      })),
-      borderColor: 'rgb(255, 140, 0)', // Dark Orange - distinct from other colors
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.healthInsurance })),
+      borderColor: '#222',
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
+      borderWidth: resultsAndCaps.map(({ caps }) => caps.healthInsuranceCapped ? 2 : 0),
       yAxisID: 'y',
       type: 'bar' as const,
       stack: 'stack0',
     },
     {
       label: 'Pension',
-      data: incomePoints.map(income => ({
-        x: income,
-        y: calculateTaxes(createTaxInputsForIncome(income)).pensionPayments
-      })),
-      borderColor: 'rgb(138, 43, 226)', // Blue Violet - distinct purple
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.pensionPayments })),
+      borderColor: '#222',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
+      borderWidth: resultsAndCaps.map(({ caps }) => caps.pensionCapped || caps.pensionFixed ? 2 : 0),
       yAxisID: 'y',
       type: 'bar' as const,
       stack: 'stack0',
     },
     ...(currentInputs.isEmploymentIncome ? [{
       label: 'Employment Insurance',
-      data: incomePoints.map(income => ({
-        x: income,
-        y: calculateTaxes(createTaxInputsForIncome(income)).employmentInsurance ?? 0
-      })),
-      borderColor: 'rgb(255, 20, 147)', // Deep Pink - highly distinct
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.employmentInsurance ?? 0 })),
       backgroundColor: 'rgba(255, 20, 147, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -148,20 +136,14 @@ export const generateChartData = (
     }] : []),
     {
       label: 'Take-Home %',
-      data: incomePoints.map(income => {
-        const result = calculateTaxes(createTaxInputsForIncome(income));
-        return {
-          x: income,
-          y: (result.takeHomeIncome / income) * 100
-        }
-      }),
-      borderColor: 'rgb(105, 105, 105)', // Dim Gray - neutral for percentage line
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: (result.takeHomeIncome / incomePoints[i]) * 100 })),
+      borderColor: 'rgb(105, 105, 105)',
       backgroundColor: 'rgba(105, 105, 105, 0.7)',
       yAxisID: 'y1',
       borderDash: [5, 5],
       type: 'line' as const,
     }
-  ]
+  ];
 
   return {
     labels: incomePoints.map(income => formatJPY(income)),

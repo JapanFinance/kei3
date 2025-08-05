@@ -18,6 +18,8 @@ import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin }
 import type { HealthInsuranceProviderType } from '../../types/healthInsurance';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { detectCaps } from '../../utils/capDetection';
+import { calculateTaxes } from '../../utils/taxCalculations';
 
 // Percentile bands configuration
 const QUINTILE_BANDS = [
@@ -243,7 +245,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     () => {
       const baseOptions = getChartOptions(chartRange, currentIncome, useCompactLabelFormat);
       
-      // Enhance tooltips to include percentile information
+      // Enhance tooltips to include percentile and cap information
       return {
         ...baseOptions,
         plugins: {
@@ -257,7 +259,33 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   const income = tooltipItems[0].parsed.x;
                   const estimatedPercentile = calculateEstimatedIncomePercentile(income);
                   const band = getPercentileBand(income);
-                  return `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
+                  let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
+                  
+                  // Calculate full tax results for this income level to get cap status
+                  const taxInputs = {
+                    annualIncome: income,
+                    isEmploymentIncome,
+                    isSubjectToLongTermCarePremium,
+                    healthInsuranceProvider,
+                    prefecture,
+                    dcPlanContributions,
+                    numberOfDependents: 0,
+                    showDetailedInput: false,
+                  };
+                  
+                  const taxResults = calculateTaxes(taxInputs);
+                  
+                  // Use the calculated results for cap detection
+                  const capStatus = detectCaps(taxResults);
+                  
+                  if (capStatus.healthInsuranceCapped || capStatus.pensionCapped) {
+                    const cappedItems: string[] = [];
+                    if (capStatus.pensionCapped) cappedItems.push('Pension');
+                    if (capStatus.healthInsuranceCapped) cappedItems.push('Health Insurance');
+                    info += `\n🔒 Max reached: ${cappedItems.join(', ')}`;
+                  }
+                  
+                  return info;
                 }
                 return '';
               },
@@ -266,7 +294,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, prefecture, dcPlanContributions]
   );
 
   // Use media query to determine if we should show minor marks

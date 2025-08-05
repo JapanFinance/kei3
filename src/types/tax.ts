@@ -34,6 +34,10 @@ export interface TakeHomeResults {
   nhiMedicalPortion?: number;
   nhiElderlySupportPortion?: number;
   nhiLongTermCarePortion?: number;
+  // Context needed for cap detection
+  healthInsuranceProvider: HealthInsuranceProviderType;
+  prefecture: string;
+  isSubjectToLongTermCarePremium: boolean;
 }
 
 export interface ResidenceTaxDetails {

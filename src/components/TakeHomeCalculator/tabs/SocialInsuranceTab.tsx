@@ -14,6 +14,8 @@ import { ResultRow } from '../ResultRow';
 import { employmentInsuranceRate } from '../../../utils/taxCalculations';
 import HealthInsurancePremiumTableTooltip from './HealthInsurancePremiumTableTooltip';
 import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
+import CapIndicator from '../../ui/CapIndicator';
+import { detectCaps } from '../../../utils/capDetection';
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -28,6 +30,10 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider.id === 'NationalHealthInsurance';
+
+  
+  // Detect if any caps are applied
+  const capStatus = detectCaps(results);
 
   return (
     <Box>
@@ -62,28 +68,42 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Health Insurance */}
       <Box sx={{ mt: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-          {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
-          <DetailInfoTooltip
-            title="Health Insurance Premium Details"
-            children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
-          />
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
+            <DetailInfoTooltip
+              title="Health Insurance Premium Details"
+              children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
+            />
+          </Typography>
+          {!isNationalHealthInsurance && capStatus.healthInsuranceCapped && (
+            <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />
+          )}
+        </Box>
         {isNationalHealthInsurance ? (
           <>
             <ResultRow
               label="Medical Portion"
+              labelSuffix={capStatus.healthInsuranceCapDetails?.medicalCapped && (
+                <CapIndicator capStatus={capStatus} iconOnly contributionType="medical portion" />
+              )}
               value={formatJPY(results.nhiMedicalPortion ?? 0)}
               type="indented"
             />
             <ResultRow
               label="Elderly Support Portion"
+              labelSuffix={capStatus.healthInsuranceCapDetails?.supportCapped && (
+                <CapIndicator capStatus={capStatus} iconOnly contributionType="elderly support portion" />
+              )}
               value={formatJPY(results.nhiElderlySupportPortion ?? 0)}
               type="indented"
             />
             {results.nhiLongTermCarePortion !== undefined && results.nhiLongTermCarePortion > 0 && (
               <ResultRow
                 label="Long-term Care Portion"
+                labelSuffix={capStatus.healthInsuranceCapDetails?.ltcCapped && (
+                  <CapIndicator capStatus={capStatus} iconOnly contributionType="long-term care portion" />
+                )}
                 value={formatJPY(results.nhiLongTermCarePortion)}
                 type="indented"
               />
@@ -112,13 +132,18 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Pension Payments */}
       <Box sx={{ mt: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
-          {isNationalHealthInsurance ? "National Pension" : "Employees' Pension Insurance"}
-          <DetailInfoTooltip
-            title="Pension Contribution Details"
-            children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
-          />
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            {isNationalHealthInsurance ? "National Pension" : "Employees' Pension"}
+            <DetailInfoTooltip
+              title="Pension Contribution Details"
+              children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
+            />
+          </Typography>
+          {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+            <CapIndicator capStatus={capStatus} contributionType="pension" />
+          )}
+        </Box>
         <ResultRow 
           label="Monthly Contribution" 
           value={formatJPY(Math.round(results.pensionPayments / 12))} 
