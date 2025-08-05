@@ -95,7 +95,6 @@ interface TakeHomeChartProps {
   prefecture: string;
   dcPlanContributions: number;
   className?: string;
-  style?: React.CSSProperties;
 }
 
 // Define a type for the mark objects
@@ -159,7 +158,7 @@ const calculateEstimatedIncomePercentile = (income: number): number => {
 
 // Utility function to get percentile band for income
 const getPercentileBand = (income: number): { label: string; color: string } => {
-  const band = QUINTILE_BANDS.find(b => income >= b.min && income < b.max) || QUINTILE_BANDS[QUINTILE_BANDS.length - 1];
+  const band = QUINTILE_BANDS.find(b => income >= b.min && income < b.max) || QUINTILE_BANDS[QUINTILE_BANDS.length - 1]!;
   return { label: band.label, color: band.color };
 };
 
@@ -170,8 +169,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   healthInsuranceProvider,
   prefecture,
   dcPlanContributions,
-  className = '',
-  style
+  className = ''
 }) => {
   const [chartRange, setChartRange] = useState<ChartRange>({
     min: 0,
@@ -215,8 +213,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   }, [currentIncome, hasManuallyAdjustedRange]);
   
   const handleManualRangeChange = (_: Event, newValue: number | number[]) => {
-    if (Array.isArray(newValue)) {
-      setChartRange({ min: newValue[0], max: newValue[1] });
+    if (Array.isArray(newValue) && newValue.length >= 2) {
+      setChartRange({ min: newValue[0]!, max: newValue[1]! });
       // Mark that the user has manually adjusted the range
       setHasManuallyAdjustedRange(true);
     }
@@ -255,7 +253,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             callbacks: {
               ...baseOptions.plugins?.tooltip?.callbacks,
               afterTitle: (tooltipItems: TooltipItem<'bar' | 'line'>[]) => {
-                if (tooltipItems.length > 0) {
+                if (tooltipItems.length > 0 && tooltipItems[0]?.parsed?.x != null) {
                   const income = tooltipItems[0].parsed.x;
                   const estimatedPercentile = calculateEstimatedIncomePercentile(income);
                   const band = getPercentileBand(income);
@@ -326,7 +324,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         border: '1px solid',
         borderColor: 'divider',
         boxShadow: 2,
-        ...style
       }}
     >
       <Box sx={{ mb: { xs: 1, sm: 2 } }}>

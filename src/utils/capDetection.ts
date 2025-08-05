@@ -12,7 +12,7 @@ export interface CapStatus {
     medicalCapped?: boolean;
     supportCapped?: boolean;
     ltcCapped?: boolean;
-  };
+  } | undefined;
 }
 
 /**
@@ -47,6 +47,9 @@ function checkPensionCap(isEmployeesPension: boolean, monthlyIncome: number): bo
   
   // For employee pension, check if we're in the highest bracket
   const lastBracket = EMPLOYEES_PENSION_PREMIUM[EMPLOYEES_PENSION_PREMIUM.length - 1];
+  if (!lastBracket) {
+    return false;
+  }
   return monthlyIncome >= lastBracket.min && lastBracket.max === null;
 }
 
@@ -108,6 +111,9 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     }
     
     const lastBracket = premiumTable[premiumTable.length - 1];
+    if (!lastBracket) {
+      return { capped: false };
+    }
     const capped = monthlyIncome >= lastBracket.minIncomeInclusive && lastBracket.maxIncomeExclusive === Infinity;
     
     return { capped };

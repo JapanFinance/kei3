@@ -17,23 +17,23 @@ export interface TakeHomeResults {
   residenceTax: ResidenceTaxDetails;
   healthInsurance: number;
   pensionPayments: number;
-  employmentInsurance?: number;
+  employmentInsurance?: number | undefined;
   takeHomeIncome: number;
   // Added detailed properties
-  netEmploymentIncome?: number;
-  nationalIncomeTaxBasicDeduction?: number;
-  taxableIncomeForNationalIncomeTax?: number;
-  residenceTaxBasicDeduction?: number;
-  taxableIncomeForResidenceTax?: number;
+  netEmploymentIncome?: number | undefined;
+  nationalIncomeTaxBasicDeduction?: number | undefined;
+  taxableIncomeForNationalIncomeTax?: number | undefined;
+  residenceTaxBasicDeduction?: number | undefined;
+  taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
   dcPlanContributions: number;
   // Income tax breakdown
-  nationalIncomeTaxBase?: number;
-  reconstructionSurtax?: number;
+  nationalIncomeTaxBase?: number | undefined;
+  reconstructionSurtax?: number | undefined;
   // National Health Insurance breakdown (only for non-employment income)
-  nhiMedicalPortion?: number;
-  nhiElderlySupportPortion?: number;
-  nhiLongTermCarePortion?: number;
+  nhiMedicalPortion?: number | undefined;
+  nhiElderlySupportPortion?: number | undefined;
+  nhiLongTermCarePortion?: number | undefined;
   // Context needed for cap detection
   healthInsuranceProvider: HealthInsuranceProviderType;
   prefecture: string;

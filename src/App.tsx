@@ -83,10 +83,10 @@ function App({ mode, toggleColorMode }: AppProps) {
         if (isNowEmploymentIncome) {
           newInputs.healthInsuranceProvider = HealthInsuranceProvider.KYOKAI_KENPO;
           const providerRegions = Object.keys(ALL_EMPLOYEES_HEALTH_INSURANCE_DATA[HealthInsuranceProvider.KYOKAI_KENPO.id] || {});
-          newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0] : DEFAULT_PROVIDER_REGION;
+          newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION;
         } else {
           newInputs.healthInsuranceProvider = HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE;
-          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0] : DEFAULT_PROVIDER_REGION;
+          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION;
         }
       } else if (name === 'healthInsuranceProvider') {
         const newProviderId = processedInputValue as string;
@@ -95,13 +95,13 @@ function App({ mode, toggleColorMode }: AppProps) {
         if (providerObject) {
           newInputs.healthInsuranceProvider = providerObject;
           if (newProviderId === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id) {
-            newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0] : DEFAULT_PROVIDER_REGION;
+            newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION;
           } else {
             // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
             const providerData = ALL_EMPLOYEES_HEALTH_INSURANCE_DATA[newProviderId];
             if (providerData) {
               const providerRegions = Object.keys(providerData);
-              newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0] : DEFAULT_PROVIDER_REGION;
+              newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION;
             } else {
               newInputs.prefecture = DEFAULT_PROVIDER_REGION;
               console.warn(`Data for employee provider ${newProviderId} not found in ALL_EMPLOYEES_HEALTH_INSURANCE_DATA. Defaulting prefecture.`);

@@ -84,7 +84,7 @@ export const generateChartData = (
   const datasets = [
     {
       label: 'Take-Home Pay',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.takeHomeIncome })),
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.takeHomeIncome })),
       backgroundColor: 'rgba(34, 139, 34, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -92,7 +92,7 @@ export const generateChartData = (
     },
     {
       label: 'Income Tax',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.nationalIncomeTax })),
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.nationalIncomeTax })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -100,7 +100,7 @@ export const generateChartData = (
     },
     {
       label: 'Residence Tax',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.residenceTax.totalResidenceTax })),
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.residenceTax.totalResidenceTax })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -108,7 +108,7 @@ export const generateChartData = (
     },
     {
       label: 'Health Insurance',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.healthInsurance })),
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.healthInsurance })),
       borderColor: '#222',
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) => caps.healthInsuranceCapped ? 2 : 0),
@@ -118,7 +118,7 @@ export const generateChartData = (
     },
     {
       label: 'Pension',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.pensionPayments })),
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.pensionPayments })),
       borderColor: '#222',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) => caps.pensionCapped || caps.pensionFixed ? 2 : 0),
@@ -128,7 +128,7 @@ export const generateChartData = (
     },
     ...(currentInputs.isEmploymentIncome ? [{
       label: 'Employment Insurance',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.employmentInsurance ?? 0 })),
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.employmentInsurance ?? 0 })),
       backgroundColor: 'rgba(255, 20, 147, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -136,7 +136,10 @@ export const generateChartData = (
     }] : []),
     {
       label: 'Take-Home %',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: (result.takeHomeIncome / incomePoints[i]) * 100 })),
+      data: resultsAndCaps.map(({ result }, i) => ({ 
+        x: incomePoints[i]!, 
+        y: (result.takeHomeIncome / incomePoints[i]!) * 100 
+      })),
       borderColor: 'rgb(105, 105, 105)',
       backgroundColor: 'rgba(105, 105, 105, 0.7)',
       yAxisID: 'y1',
@@ -181,8 +184,11 @@ export const getChartOptions = (
         },
         callbacks: {
           title: function(context: TooltipItem<'bar' | 'line'>[]) {
-            const income = context[0].parsed.x;
-            return `Income: ${formatJPY(income)}`;
+            if (context.length > 0 && context[0]?.parsed?.x != null) {
+              const income = context[0].parsed.x;
+              return `Income: ${formatJPY(income)}`;
+            }
+            return '';
           },
           label: function(context: TooltipItem<'bar' | 'line'>) {
             let label = context.dataset.label || '';

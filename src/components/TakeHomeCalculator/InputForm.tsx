@@ -104,7 +104,7 @@ function AdvancedOptionsFields({
         {isHealthInsuranceProviderDropdownDisabled && (
           <Typography color="text.secondary" sx={{ mt: 0.2, fontSize: '0.95rem' }}>
             {inputs.isEmploymentIncome
-              ? availableProviders.length > 0 ? `Only ${availableProviders[0].displayName} available for this configuration.` : 'No health insurance providers available.'
+              ? availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'
               : `Automatically set to ${HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.displayName} for non-employment income.`
             }
           </Typography>
