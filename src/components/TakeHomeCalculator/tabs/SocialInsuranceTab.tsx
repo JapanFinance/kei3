@@ -68,7 +68,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Health Insurance */}
       <Box sx={{ mt: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
             <DetailInfoTooltip
@@ -77,7 +77,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             />
           </Typography>
           {!isNationalHealthInsurance && capStatus.healthInsuranceCapped && (
-            <CapIndicator capStatus={capStatus} itemName="health insurance" />
+            <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />
           )}
         </Box>
         {isNationalHealthInsurance ? (
@@ -85,7 +85,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             <ResultRow
               label="Medical Portion"
               labelSuffix={capStatus.healthInsuranceCapDetails?.medicalCapped && (
-                <CapIndicator capStatus={capStatus} iconOnly itemName="medical portion" />
+                <CapIndicator capStatus={capStatus} iconOnly contributionType="medical portion" />
               )}
               value={formatJPY(results.nhiMedicalPortion ?? 0)}
               type="indented"
@@ -93,7 +93,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             <ResultRow
               label="Elderly Support Portion"
               labelSuffix={capStatus.healthInsuranceCapDetails?.supportCapped && (
-                <CapIndicator capStatus={capStatus} iconOnly itemName="elderly support portion" />
+                <CapIndicator capStatus={capStatus} iconOnly contributionType="elderly support portion" />
               )}
               value={formatJPY(results.nhiElderlySupportPortion ?? 0)}
               type="indented"
@@ -102,7 +102,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               <ResultRow
                 label="Long-term Care Portion"
                 labelSuffix={capStatus.healthInsuranceCapDetails?.ltcCapped && (
-                  <CapIndicator capStatus={capStatus} iconOnly itemName="long-term care portion" />
+                  <CapIndicator capStatus={capStatus} iconOnly contributionType="long-term care portion" />
                 )}
                 value={formatJPY(results.nhiLongTermCarePortion)}
                 type="indented"
@@ -132,15 +132,17 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Pension Payments */}
       <Box sx={{ mt: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isNationalHealthInsurance ? "National Pension" : "Employees' Pension Insurance"}
+            {isNationalHealthInsurance ? "National Pension" : "Employees' Pension"}
             <DetailInfoTooltip
               title="Pension Contribution Details"
               children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
             />
           </Typography>
-          {capStatus.pensionCapped && <CapIndicator capStatus={capStatus} />}
+          {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+            <CapIndicator capStatus={capStatus} contributionType="pension" />
+          )}
         </Box>
         <ResultRow 
           label="Monthly Contribution" 

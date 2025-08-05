@@ -121,7 +121,7 @@ export const generateChartData = (
       data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i], y: result.pensionPayments })),
       borderColor: '#222',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
-      borderWidth: resultsAndCaps.map(({ caps }) => caps.pensionCapped ? 2 : 0),
+      borderWidth: resultsAndCaps.map(({ caps }) => caps.pensionCapped || caps.pensionFixed ? 2 : 0),
       yAxisID: 'y',
       type: 'bar' as const,
       stack: 'stack0',

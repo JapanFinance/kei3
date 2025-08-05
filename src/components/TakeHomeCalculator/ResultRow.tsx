@@ -151,7 +151,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
 
   // Add tooltip and icon if available
   const labelContent = (
-    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+    <Box component="span" sx={{ display: 'inline-flex' }}>
       {iconMap[typeof label === 'string' ? label : ''] || null}
       {label}
       {typeof label === 'string' && labelTooltips[label] && (

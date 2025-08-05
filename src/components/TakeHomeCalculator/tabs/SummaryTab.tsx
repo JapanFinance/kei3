@@ -57,7 +57,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         <ResultRow 
           label="Health Insurance"
           labelSuffix={capStatus && capStatus.healthInsuranceCapped && (
-            <CapIndicator capStatus={capStatus} iconOnly itemName="health insurance" />
+            <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="health insurance" />
           )}
           value={
             !isMobile ? 
@@ -68,8 +68,8 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         />
         <ResultRow 
           label="Pension Payments"
-          labelSuffix={capStatus && capStatus.pensionCapped && (
-            <CapIndicator capStatus={capStatus} iconOnly itemName="pension" />
+          labelSuffix={capStatus && (capStatus.pensionCapped || capStatus.pensionFixed) && (
+            <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="pension" />
           )}
           value={
             !isMobile ? 

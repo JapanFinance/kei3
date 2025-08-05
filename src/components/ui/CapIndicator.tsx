@@ -7,30 +7,34 @@ import type { CapStatus } from '../../utils/capDetection';
 interface CapIndicatorProps {
   capStatus: CapStatus;
   iconOnly?: boolean;
-  itemName?: string; // Simple string describing what is capped (e.g., "health insurance", "pension", "medical portion")
+  contributionType: 'pension' | 'health insurance' | 'medical portion' | 'elderly support portion' | 'long-term care portion';
 }
 
 /**
- * Visual indicator that shows when health insurance and pension contributions are capped
+ * Visual indicator that shows when health insurance and pension contributions are capped or fixed
  */
-export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly = false, itemName }) => {
+export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly = false, contributionType }) => {
   const hasAnyCaps = capStatus.healthInsuranceCapped || capStatus.pensionCapped;
-  
   if (!hasAnyCaps) {
     return null;
   }
 
-  // Create simple tooltip content
+  // Determine the appropriate label and tooltip content based on contribution type and status
+  const isNationalPension = contributionType === 'pension' && capStatus.pensionFixed;
+  const labelText = isNationalPension ? 'Fixed' : 'Capped';
+  
   const tooltipContent = (
     <Box>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        {itemName ? 
-          `This ${itemName} contribution has reached its maximum amount.` :
-          'This contribution has reached its maximum amount.'
+        {isNationalPension
+          ? `This ${contributionType} contribution is fixed and does not increase with income.`
+          : `This ${contributionType} contribution has reached its maximum amount.`
         }
       </Typography>
       <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-        💡 Additional income won't increase this contribution further.
+        {isNationalPension
+          ? '💡 Additional income will not change this contribution.'
+          : '💡 Additional income won\'t increase this contribution further.'}
       </Typography>
     </Box>
   );
@@ -38,7 +42,7 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
   if (iconOnly) {
     return (
       <InfoTooltip
-        title="Contribution Cap Applied"
+        title={isNationalPension ? 'Contribution Fixed' : 'Contribution Cap Applied'}
         icon={
           <Box
             sx={{
@@ -65,10 +69,10 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
       />
     );
   }
-  
+
   return (
     <InfoTooltip
-      title="Contribution Cap Applied"
+      title={isNationalPension ? 'Contribution Fixed' : 'Contribution Cap Applied'}
       icon={
         <Box
           sx={{
@@ -87,7 +91,7 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
         >
           <VerticalAlignTopIcon sx={{ fontSize: 14 }} />
           <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500 }}>
-            Capped
+            {labelText}
           </Typography>
         </Box>
       }

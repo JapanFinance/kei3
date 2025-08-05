@@ -282,7 +282,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     const cappedItems: string[] = [];
                     if (capStatus.pensionCapped) cappedItems.push('Pension');
                     if (capStatus.healthInsuranceCapped) cappedItems.push('Health Insurance');
-                    info += `\n🔒 Caps applied: ${cappedItems.join(', ')}`;
+                    info += `\n🔒 Max reached: ${cappedItems.join(', ')}`;
                   }
                   
                   return info;

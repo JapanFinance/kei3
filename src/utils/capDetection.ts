@@ -7,6 +7,7 @@ import { getHealthInsurancePremiumTable } from '../data/employeesHealthInsurance
 export interface CapStatus {
   healthInsuranceCapped: boolean;
   pensionCapped: boolean;
+  pensionFixed?: boolean;
   healthInsuranceCapDetails?: {
     medicalCapped?: boolean;
     supportCapped?: boolean;
@@ -20,16 +21,17 @@ export interface CapStatus {
  */
 export function detectCaps(results: TakeHomeResults): CapStatus {
   const monthlyIncome = results.annualIncome / 12;
-  
+
+  const isNationalPension = results.healthInsuranceProvider.id === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id;
   // Check pension cap
-  const pensionCapped = checkPensionCap(results.healthInsuranceProvider.id !== HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id, monthlyIncome);
-  
+  const pensionCapped = checkPensionCap(!isNationalPension, monthlyIncome);
   // Check health insurance cap
   const healthInsuranceCapInfo = checkHealthInsuranceCap(results);
-  
+
   return {
     healthInsuranceCapped: healthInsuranceCapInfo.capped,
     pensionCapped,
+    pensionFixed: isNationalPension,
     healthInsuranceCapDetails: healthInsuranceCapInfo.details,
   };
 }
