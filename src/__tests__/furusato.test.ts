@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateTaxes } from '../utils/taxCalculations';
-import { HealthInsuranceProvider } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
 
 describe('calculateFurusatoNozeiLimit', () => {
@@ -57,7 +57,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       isSubjectToLongTermCarePremium: false,
       prefecture: 'Tokyo',
       showDetailedInput: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       numberOfDependents: 0,
       dcPlanContributions: 240_000 // 20,000 yen per month
     }).furusatoNozei;
@@ -77,7 +77,7 @@ function calculateFNForIncome(income: number) : FurusatoNozeiDetails {
     isSubjectToLongTermCarePremium: false,
     prefecture: 'Tokyo',
     showDetailedInput: false,
-    healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
     numberOfDependents: 0,
     dcPlanContributions: 0
   }).furusatoNozei;
