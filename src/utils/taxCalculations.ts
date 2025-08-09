@@ -1,5 +1,5 @@
 import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
-import { HealthInsuranceProvider } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import { calculatePensionPremium } from './pensionCalculator';
 import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
@@ -173,7 +173,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     furusatoNozei: calculateFurusatoNozeiDetails(0, NON_TAXABLE_RESIDENCE_TAX_DETAIL),
     dcPlanContributions: 0,
     // Add the new required properties with default values
-    healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
     prefecture: 'Tokyo',
     isSubjectToLongTermCarePremium: false,
 };
@@ -191,8 +191,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // - National Health Insurance: uses net income (after employment income deduction if applicable)
     //   This is because NHI premiums are based on taxable income, while employee health insurance
     //   is based on standard monthly remuneration before deductions.
-    const incomeForHealthInsurance = inputs.healthInsuranceProvider.id === 'NationalHealthInsurance' 
-        ? netIncome 
+    const incomeForHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID
+        ? netIncome
         : inputs.annualIncome;
 
     const healthInsurance = calculateHealthInsurancePremium(
@@ -204,7 +204,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     // Calculate NHI breakdown if National Health Insurance is selected
     let nhiBreakdown = null;
-    if (inputs.healthInsuranceProvider.id === 'NationalHealthInsurance') {
+    if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
         // For NHI breakdown, also use net income
         nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
             netIncome,
@@ -216,7 +216,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // Calculate pension based on health insurance type
     // People on National Health Insurance are in National Pension system
     // People on employee health insurance are in Employee Pension system
-    const isInEmployeePensionSystem = inputs.healthInsuranceProvider.id !== 'NationalHealthInsurance';
+    const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID;
     const pensionPayments = calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
 
     const employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);

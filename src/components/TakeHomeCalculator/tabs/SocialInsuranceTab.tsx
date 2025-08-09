@@ -16,6 +16,7 @@ import HealthInsurancePremiumTableTooltip from './HealthInsurancePremiumTableToo
 import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
 import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
+import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -29,7 +30,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const totalSocialInsurance = results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
   
   // Determine if using National Health Insurance
-  const isNationalHealthInsurance = inputs.healthInsuranceProvider.id === 'NationalHealthInsurance';
+  const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
 
   
   // Detect if any caps are applied

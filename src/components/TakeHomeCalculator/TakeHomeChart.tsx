@@ -15,7 +15,7 @@ import { Box, Paper, Slider, Typography, useTheme, useMediaQuery } from '@mui/ma
 import type { ChartRange } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin } from '../../utils/chartConfig';
-import type { HealthInsuranceProviderType } from '../../types/healthInsurance';
+import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { detectCaps } from '../../utils/capDetection';
@@ -91,7 +91,7 @@ interface TakeHomeChartProps {
   currentIncome: number;
   isEmploymentIncome: boolean;
   isSubjectToLongTermCarePremium: boolean;
-  healthInsuranceProvider: HealthInsuranceProviderType;
+  healthInsuranceProvider: HealthInsuranceProviderId;
   prefecture: string;
   dcPlanContributions: number;
   className?: string;

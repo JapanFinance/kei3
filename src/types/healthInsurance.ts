@@ -1,34 +1,21 @@
-export interface EmployeesHealthInsurancePremiumTableRow {
-    minIncomeInclusive: number;
-    maxIncomeExclusive: number;
-    employeePremiumNoLTC: number; // Employee's share, no LTC
-    employeePremiumWithLTC: number; // Employee's share, with LTC
-    fullPremiumNoLTC: number;     // Full premium, no LTC
-    fullPremiumWithLTC: number;   // Full premium, with LTC
-}
+// Derive provider information directly from underlying data to avoid duplication
+import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 
+export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance';
+export const DEFAULT_PROVIDER = 'KyokaiKenpo';
+
+// Static provider constants mapping to display names
 export const HealthInsuranceProvider = {
-  KYOKAI_KENPO: {
-    id: 'KyokaiKenpo',
-    displayName: 'Kyokai Kenpo'
-  },
-  NATIONAL_HEALTH_INSURANCE: {
-    id: 'NationalHealthInsurance',
-    displayName: 'National Health Insurance'
-  },
-  ITS_KENPO: {
-    id: 'KantoItsKenpo',
-    displayName: 'Kanto ITS Kenpo'
-  }
-  // Example: UNION_HEALTH: { id: 'UnionHealth', displayName: 'Union Health' }, // Add other providers here
+  NationalHealthInsurance: 'National Health Insurance',
+  // Employee health insurance providers
+  // Keys are provider IDs, values are display names
+  // Keys must match PROVIDER_DEFINITIONS keys
+  KyokaiKenpo: PROVIDER_DEFINITIONS.KyokaiKenpo!.providerName,
+  KantoItsKenpo: PROVIDER_DEFINITIONS.KantoItsKenpo!.providerName,
 } as const;
 
-// Type for a health insurance provider object
-export type HealthInsuranceProviderType = typeof HealthInsuranceProvider[keyof typeof HealthInsuranceProvider];
-
-// This type will now represent the ID of the provider
-export type HealthInsuranceProviderId = typeof HealthInsuranceProvider[keyof typeof HealthInsuranceProvider]['id'];
-
+// Valid health insurance provider display names
+export type HealthInsuranceProviderId = typeof HealthInsuranceProvider[keyof typeof HealthInsuranceProvider];
 
 // A generic type for region. Can be a specific enum or a string for flexibility.
 // For providers without distinct regions, you might use a conventional default string.

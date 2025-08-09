@@ -4,6 +4,7 @@ import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { EMPLOYEES_PENSION_PREMIUM, type IncomeBracketToPensionPremium } from '../../../utils/pensionCalculator';
 import PremiumTableTooltip from './PremiumTableTooltip';
+import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 
 interface PensionPremiumTableTooltipProps {
   results: TakeHomeResults;
@@ -16,7 +17,7 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
   const monthlyIncome = results.annualIncome / 12;
   
   // Determine if using National Pension based on health insurance provider
-  const isNationalPension = inputs.healthInsuranceProvider.id === 'NationalHealthInsurance';
+  const isNationalPension = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
 
   // Show National Pension tooltip for NHI users
   if (isNationalPension) {

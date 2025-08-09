@@ -8,6 +8,7 @@ import {
   Box, 
   Slider, 
   InputAdornment, 
+  InputLabel,
   Switch, 
   Accordion,
   AccordionSummary,
@@ -23,10 +24,11 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { TakeHomeInputs } from '../../types/tax';
 import {
   HealthInsuranceProvider,
-  DEFAULT_PROVIDER_REGION, // Import DEFAULT_PROVIDER_REGION
+  DEFAULT_PROVIDER_REGION,
+  NATIONAL_HEALTH_INSURANCE_ID,
 } from '../../types/healthInsurance';
-import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../../data/nationalHealthInsurance';
-import { ALL_EMPLOYEES_HEALTH_INSURANCE_DATA } from '../../data/employeesHealthInsurance'; // Import data source
+import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
+import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
 import { formatJPY } from '../../utils/formatters';
 
 interface TaxInputFormProps {
@@ -34,10 +36,13 @@ interface TaxInputFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
 }
 
-type HealthInsuranceProviderType = (typeof HealthInsuranceProvider)[keyof typeof HealthInsuranceProvider];
+interface ProviderOption {
+  id: string;
+  displayName: string;
+}
 
 interface AdvancedOptionsFieldsProps {
-  availableProviders: HealthInsuranceProviderType[];
+  availableProviders: ProviderOption[];
   isHealthInsuranceProviderDropdownDisabled: boolean;
   inputs: TakeHomeInputs;
   handleSelectChange: (e: { target: { name: string; value: unknown } }) => void;
@@ -86,14 +91,23 @@ function AdvancedOptionsFields({
           <InfoTooltip title="Your health insurance provider affects your premium calculations. 
           Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
         </Typography>
+        {/* Hidden InputLabel for accessibility and testing */}
+        <InputLabel 
+          id="healthInsuranceProvider-label" 
+          sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
+        >
+          Health Insurance Provider
+        </InputLabel>
         <Select
           id="healthInsuranceProvider"
           name="healthInsuranceProvider"
-          value={inputs.healthInsuranceProvider.id}
+          labelId="healthInsuranceProvider-label"
+          value={inputs.healthInsuranceProvider}
           onChange={handleSelectChange}
           disabled={isHealthInsuranceProviderDropdownDisabled}
           fullWidth
           sx={sharedInputSx}
+          data-disabled={isHealthInsuranceProviderDropdownDisabled}
         >
           {availableProviders.map((provider) => (
             <MenuItem key={provider.id} value={provider.id}>
@@ -105,7 +119,7 @@ function AdvancedOptionsFields({
           <Typography color="text.secondary" sx={{ mt: 0.2, fontSize: '0.95rem' }}>
             {inputs.isEmploymentIncome
               ? availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'
-              : `Automatically set to ${HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.displayName} for non-employment income.`
+              : `Automatically set to ${HealthInsuranceProvider.NationalHealthInsurance} for non-employment income.`
             }
           </Typography>
         )}
@@ -204,6 +218,12 @@ function AdvancedOptionsFields({
     </Box>
   );
 }
+
+// National Health Insurance provider (used in both employment and non-employment scenarios)
+const nhiProvider = {
+  id: NATIONAL_HEALTH_INSURANCE_ID,
+  displayName: HealthInsuranceProvider.NationalHealthInsurance
+};
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange }) => {
   const theme = useTheme();
@@ -352,15 +372,21 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     onInputChange(event);
   };
 
+
   // Determine available health insurance providers based on income type
   const availableProviders = React.useMemo(() => {
     if (inputs.isEmploymentIncome) {
       // Employment income can use either employee health insurance or NHI
       // (e.g., small employers, part-time workers, low income thresholds)
-      return Object.values(HealthInsuranceProvider);
+      const employeeProviders = Object.entries(PROVIDER_DEFINITIONS).map(([id, { providerName }]) => ({
+        id,
+        displayName: providerName
+      }));
+
+      return [...employeeProviders, nhiProvider];
     } else {
       // Only National Health Insurance for non-employment income
-      return [HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE];
+      return [nhiProvider];
     }
   }, [inputs.isEmploymentIncome]);
 
@@ -373,13 +399,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
     let regionKeys: string[] = [];
 
-    if (provider.id === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id) {
+    if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
       regionKeys = NATIONAL_HEALTH_INSURANCE_REGIONS;
     } else {
       // Employee health insurance provider
-      const providerData = ALL_EMPLOYEES_HEALTH_INSURANCE_DATA[provider.id];
-      if (providerData) {
-        regionKeys = Object.keys(providerData);
+      const providerDefinition = PROVIDER_DEFINITIONS[provider];
+      if (providerDefinition) {
+        regionKeys = Object.keys(providerDefinition.regions);
       }
     }
     

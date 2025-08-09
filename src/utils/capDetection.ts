@@ -1,8 +1,8 @@
 import type { TakeHomeResults } from '../types/tax';
-import { HealthInsuranceProvider } from '../types/healthInsurance';
 import { EMPLOYEES_PENSION_PREMIUM } from './pensionCalculator';
-import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance';
-import { getHealthInsurancePremiumTable } from '../data/employeesHealthInsurance';
+import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
+import { generateHealthInsurancePremiumTable } from '../data/employeesHealthInsurance/providerRates';
+import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 
 export interface CapStatus {
   healthInsuranceCapped: boolean;
@@ -22,7 +22,7 @@ export interface CapStatus {
 export function detectCaps(results: TakeHomeResults): CapStatus {
   const monthlyIncome = results.annualIncome / 12;
 
-  const isNationalPension = results.healthInsuranceProvider.id === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id;
+  const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
   // Check pension cap
   const pensionCapped = checkPensionCap(!isNationalPension, monthlyIncome);
   // Check health insurance cap
@@ -65,8 +65,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
   };
 } {
   const monthlyIncome = results.annualIncome / 12;
-  
-  if (results.healthInsuranceProvider.id === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id) {
+  if (results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
     if (results.nhiMedicalPortion === undefined || results.nhiElderlySupportPortion === undefined) {
       // This shouldn't happen anymore since all context is in results
       console.warn('NHI component data missing in results:', {
@@ -105,7 +104,10 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     };
   } else {
     // Employee Health Insurance - check if in highest bracket
-    const premiumTable = getHealthInsurancePremiumTable(results.healthInsuranceProvider.id, results.prefecture);
+    if (!results.healthInsuranceProvider) {
+      return { capped: false };
+    }
+    const premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.prefecture);
     if (!premiumTable || premiumTable.length === 0) {
       return { capped: false };
     }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calculateTaxes, calculateNetEmploymentIncome, calculateEmploymentInsurance, calculateNationalIncomeTaxBasicDeduction, calculateNationalIncomeTax } from '../utils/taxCalculations'
-import { HealthInsuranceProvider } from '../types/healthInsurance'
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance'
 
 describe('calculateNetEmploymentIncome', () => {
   it('deduction of 650,000 yen for income up to 1,900,000 yen', () => {
@@ -50,7 +50,7 @@ describe('calculateTaxes', () => {
       annualIncome: 1_500_000,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       prefecture: "Tokyo", // Default for Kyokai Kenpo in tests
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -71,7 +71,7 @@ describe('calculateTaxes', () => {
       annualIncome: 2_500_000,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       prefecture: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -92,7 +92,7 @@ describe('calculateTaxes', () => {
       annualIncome: 5_000_000,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       prefecture: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -114,7 +114,7 @@ describe('calculateTaxes', () => {
       annualIncome: 50_000_000,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       prefecture: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -136,7 +136,7 @@ describe('calculateTaxes', () => {
       annualIncome: 0,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       prefecture: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -154,7 +154,7 @@ describe('calculateTaxes', () => {
       annualIncome: -1_000_000,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       prefecture: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -172,7 +172,7 @@ describe('calculateTaxes', () => {
       annualIncome: 5_000_000,
       isEmploymentIncome: false,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       prefecture: "Tokyo", // For NHI
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -192,7 +192,7 @@ describe('calculateTaxes', () => {
       annualIncome: 5_000_000,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       prefecture: "Tokyo", // For NHI
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
@@ -224,7 +224,7 @@ describe('calculateTaxes', () => {
       annualIncome: 5_000_000,
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
       prefecture: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
