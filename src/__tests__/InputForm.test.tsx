@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import type { TakeHomeInputs } from '../types/tax';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
-import { HealthInsuranceProvider, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import { getProviderDisplayName, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 
 describe('TakeHomeInputForm - Available Providers Logic', () => {
   const mockOnInputChange = vi.fn();
@@ -204,7 +204,7 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       });
     });
 
-    it('should maintain consistency with HealthInsuranceProvider constants', () => {
+    it('should maintain consistency with provider display names', () => {
       const nonEmploymentInputs = { 
         ...baseInputs, 
         isEmploymentIncome: false,
@@ -219,7 +219,7 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       );
 
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
-      expect(providerSelect).toHaveTextContent(HealthInsuranceProvider.NationalHealthInsurance);
+      expect(providerSelect).toHaveTextContent(getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID));
     });
   });
 

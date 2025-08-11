@@ -1,21 +1,26 @@
-// Derive provider information directly from underlying data to avoid duplication
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance';
 export const DEFAULT_PROVIDER = 'KyokaiKenpo';
 
-// Static provider constants mapping to display names
-export const HealthInsuranceProvider = {
-  NationalHealthInsurance: 'National Health Insurance',
-  // Employee health insurance providers
-  // Keys are provider IDs, values are display names
-  // Keys must match PROVIDER_DEFINITIONS keys
-  KyokaiKenpo: PROVIDER_DEFINITIONS.KyokaiKenpo!.providerName,
-  KantoItsKenpo: PROVIDER_DEFINITIONS.KantoItsKenpo!.providerName,
-} as const;
+// Exhaustive union type of all valid health insurance provider IDs
+export type HealthInsuranceProviderId = keyof typeof PROVIDER_DEFINITIONS | typeof NATIONAL_HEALTH_INSURANCE_ID;
 
-// Valid health insurance provider display names
-export type HealthInsuranceProviderId = typeof HealthInsuranceProvider[keyof typeof HealthInsuranceProvider];
+/**
+ * Get the display name for any health insurance provider ID
+ */
+export function getProviderDisplayName(providerId: HealthInsuranceProviderId): string {
+  if (providerId === NATIONAL_HEALTH_INSURANCE_ID) {
+    return 'National Health Insurance';
+  }
+  
+  const providerDef = PROVIDER_DEFINITIONS[providerId as keyof typeof PROVIDER_DEFINITIONS];
+  if (!providerDef) {
+    throw new Error(`Unknown provider ID: ${providerId}`);
+  }
+  
+  return providerDef.providerName;
+}
 
 // A generic type for region. Can be a specific enum or a string for flexibility.
 // For providers without distinct regions, you might use a conventional default string.

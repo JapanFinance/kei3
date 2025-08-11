@@ -23,7 +23,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type { TakeHomeInputs } from '../../types/tax';
 import {
-  HealthInsuranceProvider,
+  getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../../types/healthInsurance';
@@ -48,11 +48,9 @@ interface AdvancedOptionsFieldsProps {
   handleSelectChange: (e: { target: { name: string; value: unknown } }) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
   sharedInputSx: object;
-  HealthInsuranceProvider: typeof HealthInsuranceProvider;
   prefectureSelectValueForUI: string;
   isPrefectureDropdownEffectivelyDisabled: boolean;
   prefectureMenuItemsToDisplay: string[];
-  InfoTooltip: typeof InfoTooltip;
 }
 
 function AdvancedOptionsFields({
@@ -62,11 +60,9 @@ function AdvancedOptionsFields({
   handleSelectChange,
   onInputChange,
   sharedInputSx,
-  HealthInsuranceProvider,
   prefectureSelectValueForUI,
   isPrefectureDropdownEffectivelyDisabled,
   prefectureMenuItemsToDisplay,
-  InfoTooltip,
 }: AdvancedOptionsFieldsProps) {
   return (
     <Box sx={{
@@ -119,7 +115,7 @@ function AdvancedOptionsFields({
           <Typography color="text.secondary" sx={{ mt: 0.2, fontSize: '0.95rem' }}>
             {inputs.isEmploymentIncome
               ? availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'
-              : `Automatically set to ${HealthInsuranceProvider.NationalHealthInsurance} for non-employment income.`
+              : `Automatically set to ${getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID)} for non-employment income.`
             }
           </Typography>
         )}
@@ -222,7 +218,7 @@ function AdvancedOptionsFields({
 // National Health Insurance provider (used in both employment and non-employment scenarios)
 const nhiProvider = {
   id: NATIONAL_HEALTH_INSURANCE_ID,
-  displayName: HealthInsuranceProvider.NationalHealthInsurance
+  displayName: getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID)
 };
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange }) => {
@@ -761,11 +757,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 handleSelectChange={handleSelectChange}
                 onInputChange={onInputChange}
                 sharedInputSx={sharedInputSx}
-                HealthInsuranceProvider={HealthInsuranceProvider}
                 prefectureSelectValueForUI={prefectureSelectValueForUI}
                 isPrefectureDropdownEffectivelyDisabled={isPrefectureDropdownEffectivelyDisabled}
                 prefectureMenuItemsToDisplay={prefectureMenuItemsToDisplay}
-                InfoTooltip={InfoTooltip}
               />
             </AccordionDetails>
           </Accordion>
@@ -788,11 +782,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               handleSelectChange={handleSelectChange}
               onInputChange={onInputChange}
               sharedInputSx={sharedInputSx}
-              HealthInsuranceProvider={HealthInsuranceProvider}
               prefectureSelectValueForUI={prefectureSelectValueForUI}
               isPrefectureDropdownEffectivelyDisabled={isPrefectureDropdownEffectivelyDisabled}
               prefectureMenuItemsToDisplay={prefectureMenuItemsToDisplay}
-              InfoTooltip={InfoTooltip}
             />
           </Box>
         )}
