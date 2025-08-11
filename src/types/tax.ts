@@ -1,11 +1,11 @@
-import type { HealthInsuranceProviderType } from "./healthInsurance";
+import type { HealthInsuranceProviderId } from "./healthInsurance";
 export interface TakeHomeInputs {
   annualIncome: number;
   isEmploymentIncome: boolean;
   isSubjectToLongTermCarePremium: boolean; // Person is 40-64 years old (must pay long-term care insurance premiums)
   prefecture: string;
   showDetailedInput: boolean;
-  healthInsuranceProvider: HealthInsuranceProviderType;
+  healthInsuranceProvider: HealthInsuranceProviderId;
   numberOfDependents: number;
   dcPlanContributions: number;
 }
@@ -35,7 +35,7 @@ export interface TakeHomeResults {
   nhiElderlySupportPortion?: number | undefined;
   nhiLongTermCarePortion?: number | undefined;
   // Context needed for cap detection
-  healthInsuranceProvider: HealthInsuranceProviderType;
+  healthInsuranceProvider: HealthInsuranceProviderId;
   prefecture: string;
   isSubjectToLongTermCarePremium: boolean;
 }

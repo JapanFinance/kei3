@@ -1,13 +1,26 @@
 import type { NationalHealthInsuranceRegionParams } from '../../types/healthInsurance';
-import { NHI_TOKYO_PARAMS } from './nhiTokyoParams';
-// Future: import { NHI_OSAKA_PARAMS } from './nhiOsakaParams';
 
 /**
  * A map storing National Health Insurance parameters by region key (string).
  * The region key would typically be a municipality identifier.
  */
 const allNationalHealthInsuranceParams: { [regionKey: string]: NationalHealthInsuranceRegionParams } = {
-  'Tokyo': NHI_TOKYO_PARAMS, // Using 'Tokyo' as a general key for this example
+  'Tokyo': {
+    regionName: "Tokyo Special Wards",
+    medicalRate: 0.0771,
+    supportRate: 0.0269,
+    ltcRateForEligible: 0.0225,
+    // Per-capita annual amounts
+    medicalPerCapita: 47300,
+    supportPerCapita: 16800,
+    ltcPerCapitaForEligible: 16600,
+    // Annual caps for income-levied portion
+    medicalCap: 660000,
+    supportCap: 260000,
+    ltcCapForEligible: 170000,
+    // Deduction
+    nhiStandardDeduction: 430000, // Often aligns with residence tax basic deduction
+  },
   // 'OsakaCity': NHI_OSAKA_PARAMS, // Example for another region
   // Add more regions/municipalities as needed
 };

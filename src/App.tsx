@@ -4,9 +4,9 @@ import ThemeToggle from './components/ThemeToggle'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
 import type { TakeHomeInputs, TakeHomeResults } from './types/tax'
 import { calculateTaxes } from './utils/taxCalculations'
-import { HealthInsuranceProvider, DEFAULT_PROVIDER_REGION } from './types/healthInsurance'
-import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance'
-import { ALL_EMPLOYEES_HEALTH_INSURANCE_DATA } from './data/employeesHealthInsurance'
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER } from './types/healthInsurance'
+import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData'
+import { PROVIDER_DEFINITIONS } from './data/employeesHealthInsurance/providerRateData'
 
 // Lazy load components that aren't immediately needed
 const TakeHomeResultsDisplay = lazy(() => import('./components/TakeHomeCalculator/TakeHomeResults'))
@@ -20,12 +20,12 @@ interface AppProps {
 function App({ mode, toggleColorMode }: AppProps) {
   // Default values for the form
   const defaultInputs: TakeHomeInputs = {
-    annualIncome: 5000000, // 5 million yen
+    annualIncome: 5_000_000, // 5 million yen
     isEmploymentIncome: true,
     isSubjectToLongTermCarePremium: false,
     prefecture: "Tokyo",
     showDetailedInput: false,
-    healthInsuranceProvider: HealthInsuranceProvider.KYOKAI_KENPO,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
     numberOfDependents: 0,
     dcPlanContributions: 0
   }
@@ -81,34 +81,28 @@ function App({ mode, toggleColorMode }: AppProps) {
       if (name === 'isEmploymentIncome') {
         const isNowEmploymentIncome = processedInputValue as boolean;
         if (isNowEmploymentIncome) {
-          newInputs.healthInsuranceProvider = HealthInsuranceProvider.KYOKAI_KENPO;
-          const providerRegions = Object.keys(ALL_EMPLOYEES_HEALTH_INSURANCE_DATA[HealthInsuranceProvider.KYOKAI_KENPO.id] || {});
+          newInputs.healthInsuranceProvider = 'KyokaiKenpo';
+          const providerDefinition = PROVIDER_DEFINITIONS['KyokaiKenpo'];
+          const providerRegions = providerDefinition ? Object.keys(providerDefinition.regions) : [];
           newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION;
         } else {
-          newInputs.healthInsuranceProvider = HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE;
+          newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
           newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION;
         }
       } else if (name === 'healthInsuranceProvider') {
-        const newProviderId = processedInputValue as string;
-        // Find the provider object by ID
-        const providerObject = Object.values(HealthInsuranceProvider).find(p => p.id === newProviderId);
-        if (providerObject) {
-          newInputs.healthInsuranceProvider = providerObject;
-          if (newProviderId === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id) {
-            newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION;
-          } else {
-            // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
-            const providerData = ALL_EMPLOYEES_HEALTH_INSURANCE_DATA[newProviderId];
-            if (providerData) {
-              const providerRegions = Object.keys(providerData);
-              newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION;
-            } else {
-              newInputs.prefecture = DEFAULT_PROVIDER_REGION;
-              console.warn(`Data for employee provider ${newProviderId} not found in ALL_EMPLOYEES_HEALTH_INSURANCE_DATA. Defaulting prefecture.`);
-            }
-          }
+        newInputs.healthInsuranceProvider = processedInputValue as string;
+        if (processedInputValue === NATIONAL_HEALTH_INSURANCE_ID) {
+          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION;
         } else {
-          console.warn(`Unknown health insurance provider ID: ${newProviderId}`);
+          // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
+          const providerDefinition = PROVIDER_DEFINITIONS[processedInputValue as string];
+          if (providerDefinition) {
+            const providerRegions = Object.keys(providerDefinition.regions);
+            newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION;
+          } else {
+            newInputs.prefecture = DEFAULT_PROVIDER_REGION;
+            console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data. Defaulting prefecture.`);
+          }
         }
       }
       return newInputs;

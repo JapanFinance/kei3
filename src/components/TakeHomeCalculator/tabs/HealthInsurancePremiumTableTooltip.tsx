@@ -2,11 +2,13 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { HealthInsuranceProvider, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
-import { ALL_EMPLOYEES_HEALTH_INSURANCE_DATA } from '../../../data/employeesHealthInsurance';
-import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance';
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
+import { generateHealthInsurancePremiumTable } from '../../../data/employeesHealthInsurance/providerRates';
+import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import PremiumTableTooltip from './PremiumTableTooltip';
+import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 
+// TODO: Refactor this to use a more specific type. Clearly this was made to ignore typescript errors rather than define a proper type.
 type PremiumTableRow = Record<string, unknown>;
 
 interface HealthInsurancePremiumTableTooltipProps {
@@ -19,7 +21,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
   const region = inputs.prefecture;
   const monthlyIncome = results.annualIncome / 12;
 
-  if (provider.id === HealthInsuranceProvider.NATIONAL_HEALTH_INSURANCE.id) {
+  if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
     // National Health Insurance - show region parameters
     const regionData = getNationalHealthInsuranceParams(region);
     if (!regionData) {
@@ -265,15 +267,15 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     );
   } else {
     // Employee Health Insurance - show premium table
-    const providerData = ALL_EMPLOYEES_HEALTH_INSURANCE_DATA[provider.id];
-    if (!providerData || !providerData[region]) {
+    const premiumTableAsRows = generateHealthInsurancePremiumTable(provider, region);
+    if (!premiumTableAsRows) {
       const fallbackContent = (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
             Premium Table
           </Typography>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            Premium table for {provider.displayName} in {region} is not available in the current data.
+            Premium table for {provider} in {region} is not available in the current data.
           </Typography>
         </Box>
       );
@@ -295,13 +297,11 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
       );
     }
 
-    const premiumTable = providerData[region];
-    const premiumTableAsRows = premiumTable as unknown as PremiumTableRow[];
     
     // Find the current row for the user's income
     const currentRow = premiumTableAsRows.find((row) => 
-      monthlyIncome >= (row as unknown as { minIncomeInclusive: number; maxIncomeExclusive: number }).minIncomeInclusive && 
-      monthlyIncome < (row as unknown as { minIncomeInclusive: number; maxIncomeExclusive: number }).maxIncomeExclusive
+      monthlyIncome >= row.minIncomeInclusive && 
+      monthlyIncome < row.maxIncomeExclusive
     );
 
     const columns = [
@@ -322,12 +322,14 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
       return `Your premium: ${formatJPY(inputs.isSubjectToLongTermCarePremium ? healthRow.employeePremiumWithLTC : healthRow.employeePremiumNoLTC)}/month`;
     };
 
+    const premiumTableAsTypedRows = premiumTableAsRows as unknown as PremiumTableRow[];
+
     return (
       <PremiumTableTooltip
-        title={`Health Insurance Premium Table - ${provider.displayName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`}
+        title={`Health Insurance Premium Table - ${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`}
         description="Monthly premiums by income bracket. Your income: {monthlyIncome}/month"
         hint="💡 LTC stands for Long-Term Care, which is an additional premium insured people ages 40-64 need to pay."
-        tableData={premiumTableAsRows}
+        tableData={premiumTableAsTypedRows}
         columns={columns}
         currentRow={currentRow || null}
         monthlyIncome={monthlyIncome}
