@@ -16,6 +16,9 @@ interface FurusatoNozeiTabProps {
   results: TakeHomeResults;
 }
 
+/** Source: 調査結果（概要） https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac02 */
+const FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE = 0.252;
+
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -34,6 +37,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       </Box>
     );
   }
+
+  const estimatedValueOfGifts = Math.round(results.furusatoNozei.limit * FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE);
 
   return (
     <Box>
@@ -236,7 +241,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         
         <ResultRow
           label="Value of Goods* Received"
-          value={`≈ ${formatJPY(Math.round(results.furusatoNozei.limit * 0.271))}`}
+          value={`≈ ${formatJPY(estimatedValueOfGifts)}`}
           type="indented" 
         />
         
@@ -248,12 +253,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         
         <ResultRow
           label="Net Estimated Benefit"
-          value={`≈ ${formatJPY(Math.round(results.furusatoNozei.limit * 0.271) - results.furusatoNozei.outOfPocketCost)}`}
+          value={`≈ ${formatJPY(estimatedValueOfGifts - results.furusatoNozei.outOfPocketCost)}`}
           type="subtotal" 
         />
         
         <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic', mt: 1, display: 'block' }}>
-          * Estimated at 27% of donation amount, based on the{' '}
+          * Estimated at {FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE * 100}% of donation amount, based on the{' '}
           <a 
             href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac02" 
             target="_blank" 
