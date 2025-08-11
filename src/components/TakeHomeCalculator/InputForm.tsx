@@ -15,7 +15,8 @@ import {
   AccordionDetails,
   useTheme,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Autocomplete
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { InfoTooltip } from '../ui/InfoTooltip';
@@ -120,36 +121,37 @@ function AdvancedOptionsFields({
           </Typography>
         )}
       </FormControl>
-      <FormControl fullWidth>
-        <Typography
-          gutterBottom
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '0.97rem',
-            fontWeight: 500,
-            mb: 0.2,
-            color: 'text.primary',
-          }}
-        >
-          Local Region (Prefecture)
-          <InfoTooltip title="Region selection may be used in future features." />
-        </Typography>
-        <Select
+      <FormControl>
+        <Autocomplete
           id="prefecture"
-          name="prefecture"
+          options={prefectureMenuItemsToDisplay}
           value={prefectureSelectValueForUI}
-          onChange={handleSelectChange}
+          onChange={(_, newValue) => {
+            handleSelectChange({
+              target: {
+                name: 'prefecture',
+                value: newValue || ''
+              }
+            });
+          }}
           disabled={isPrefectureDropdownEffectivelyDisabled}
-          fullWidth
+          renderInput={(params) =>
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - MUI Autocomplete params spreading is correct per documentation
+            <TextField
+              {...params}
+              label="Local Region (Prefecture)"
+              placeholder={isPrefectureDropdownEffectivelyDisabled ? 'No options available' : 'Select region...'}
+              helperText="Premium rates depend on the region"
+            />
+          }
+          noOptionsText="No matching regions"
+          clearOnBlur
+          disableClearable
+          selectOnFocus
+          handleHomeEndKeys
           sx={sharedInputSx}
-        >
-          {prefectureMenuItemsToDisplay.map((region: string) => (
-            <MenuItem key={region} value={region}>
-              {region}
-            </MenuItem>
-          ))}
-        </Select>
+        />
       </FormControl>
       <FormControl fullWidth>
         <Typography
