@@ -121,7 +121,7 @@ function AdvancedOptionsFields({
           </Typography>
         )}
       </FormControl>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+      <FormControl>
         <Autocomplete
           id="prefecture"
           options={prefectureMenuItemsToDisplay}
@@ -142,7 +142,7 @@ function AdvancedOptionsFields({
               {...params}
               label="Local Region (Prefecture)"
               placeholder={isPrefectureDropdownEffectivelyDisabled ? 'No options available' : 'Select region...'}
-              size="small"
+              helperText="Premium rates depend on the region"
             />
           }
           noOptionsText="No matching regions"
@@ -150,18 +150,9 @@ function AdvancedOptionsFields({
           disableClearable
           selectOnFocus
           handleHomeEndKeys
-          size="small"
-          sx={{
-            flex: 1,
-            '& .MuiAutocomplete-inputRoot': {
-              fontSize: { xs: '1rem', sm: '1.05rem' },
-              py: { xs: 0.3, sm: 0.5 },
-              minHeight: 36,
-            }
-          }}
+          sx={sharedInputSx}
         />
-        <InfoTooltip title="Health insurance premium rates depend on the selected region." />
-      </Box>
+      </FormControl>
       <FormControl fullWidth>
         <Typography
           gutterBottom
