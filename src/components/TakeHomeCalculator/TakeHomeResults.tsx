@@ -1,13 +1,11 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  useTheme,
-  useMediaQuery,
-  Tabs,
-  Tab,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
 import SummaryTab from './tabs/SummaryTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';

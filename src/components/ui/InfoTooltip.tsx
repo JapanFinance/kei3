@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  IconButton, 
-  Tooltip as MuiTooltip, 
-  Box, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  Button,
-  useTheme,
-  useMediaQuery
-} from '@mui/material';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 interface InfoTooltipProps {
@@ -90,7 +88,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   }
 
   return (
-    <MuiTooltip 
+    <Tooltip 
       title={tooltipContent} 
       arrow
       slotProps={{
@@ -126,7 +124,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
       >
         {icon || <HelpOutlineIcon fontSize="small" />}
       </IconButton>
-    </MuiTooltip>
+    </Tooltip>
   );
 };
 

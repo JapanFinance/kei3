@@ -1,11 +1,9 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  type SxProps, type Theme
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import type { SxProps, Theme } from '@mui/material/styles';
 import InfoTooltip from '../ui/InfoTooltip';
 
 const labelTooltips: Record<string, string> = {

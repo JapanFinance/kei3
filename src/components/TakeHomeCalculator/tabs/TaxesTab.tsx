@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  useTheme,
-  useMediaQuery,
-  Collapse,
-  Switch,
-  FormControlLabel,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import Collapse from '@mui/material/Collapse';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';

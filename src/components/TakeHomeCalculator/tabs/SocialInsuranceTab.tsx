@@ -1,10 +1,8 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  useTheme,
-  useMediaQuery,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';

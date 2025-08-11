@@ -2,7 +2,8 @@ import { StrictMode, Suspense, lazy, useState, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
-import { Box, keyframes } from '@mui/material'
+import Box from '@mui/material/Box';
+import { keyframes } from '@mui/material/styles';
 import { getTheme } from './theme'
 import './index.css'
 

@@ -1,23 +1,21 @@
 import React from 'react';
-import { 
-  TextField, 
-  FormControl, 
-  Select, 
-  MenuItem, 
-  Typography, 
-  Box, 
-  Slider, 
-  InputAdornment, 
-  InputLabel,
-  Switch, 
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  useTheme,
-  FormControlLabel,
-  Checkbox,
-  Autocomplete
-} from '@mui/material';
+import TextField from '@mui/material/TextField';
+import FormControl from '@mui/material/FormControl';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import Slider from '@mui/material/Slider';
+import InputAdornment from '@mui/material/InputAdornment';
+import InputLabel from '@mui/material/InputLabel';
+import Switch from '@mui/material/Switch';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import { useTheme } from '@mui/material/styles';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import Autocomplete from '@mui/material/Autocomplete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import useMediaQuery from '@mui/material/useMediaQuery';

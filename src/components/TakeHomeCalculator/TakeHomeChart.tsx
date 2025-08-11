@@ -11,7 +11,12 @@ import { Chart as ChartJS,
   BarController,
   LineController } from 'chart.js';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
-import { Box, Paper, Slider, Typography, useTheme, useMediaQuery } from '@mui/material';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Slider from '@mui/material/Slider';
+import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import type { ChartRange } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin } from '../../utils/chartConfig';
