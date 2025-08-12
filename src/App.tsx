@@ -1,5 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from 'react'
-import { Box, Typography } from '@mui/material'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
 import ThemeToggle from './components/ThemeToggle'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
 import type { TakeHomeInputs, TakeHomeResults } from './types/tax'
