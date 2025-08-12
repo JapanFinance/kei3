@@ -78,8 +78,10 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       prefix="¥"
       allowNegative={false}
       {...(label && { label })}
-      inputMode="numeric"
       slotProps={{
+        htmlInput: {
+          inputMode: "numeric",
+        },
         input: {
           endAdornment: (
             <InputAdornment position="end">
