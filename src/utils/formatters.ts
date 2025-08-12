@@ -1,5 +1,5 @@
 export const formatJPY = (amount: number) => {
-  return new Intl.NumberFormat('ja-JP', {
+  return new Intl.NumberFormat('en-JP', {
     style: 'currency',
     currency: 'JPY'
   }).format(amount)

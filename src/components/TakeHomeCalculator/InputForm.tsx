@@ -6,7 +6,6 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
-import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
 import Switch from '@mui/material/Switch';
 import Accordion from '@mui/material/Accordion';
@@ -18,6 +17,7 @@ import Checkbox from '@mui/material/Checkbox';
 import Autocomplete from '@mui/material/Autocomplete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type { TakeHomeInputs } from '../../types/tax';
@@ -28,7 +28,6 @@ import {
 } from '../../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
-import { formatJPY } from '../../utils/formatters';
 
 interface TaxInputFormProps {
   inputs: TakeHomeInputs;
@@ -171,44 +170,15 @@ function AdvancedOptionsFields({
           >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
           <InfoTooltip title="Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation." />
         </Typography>
-        <TextField
+        <SpinnerNumberField
           id="dcPlanContributions"
           name="dcPlanContributions"
-          type="number"
           value={inputs.dcPlanContributions}
-          onChange={(e) => onInputChange(e as React.ChangeEvent<HTMLInputElement>)}
+          onInputChange={onInputChange}
           label="Annual Contributions"
-          helperText={inputs.dcPlanContributions > 0 ? `${formatJPY(inputs.dcPlanContributions)}` : 'Enter your annual iDeCo/DC contributions'}
+          step={1_000}
+          shiftStep={10_000}
           sx={sharedInputSx}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Typography color="text.secondary">¥</Typography>
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Typography variant="caption" color="text.secondary">
-                    JPY
-                  </Typography>
-                </InputAdornment>
-              ),
-              inputProps: {
-                min: 0,
-                max: 10000000,
-                step: 1000,
-                inputMode: 'numeric',
-                pattern: '[0-9]*',
-                style: { textAlign: 'right' },
-                'aria-label': 'Annual iDeCo and Corporate DC contributions in Japanese Yen',
-                size: 10
-              }
-            },
-            inputLabel: {
-              shrink: true,
-            }
-          }}
         />
       </FormControl>
     </Box>
@@ -531,44 +501,16 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             >
               {inputs.isEmploymentIncome ? 'Gross Employment Income' : 'Net Income (Business etc.)'}
             </Typography>
-            <TextField
+            <SpinnerNumberField
               id="annualIncome"
               name="annualIncome"
-              type="number"
               value={inputs.annualIncome}
-              onChange={(e) => onInputChange(e as React.ChangeEvent<HTMLInputElement>)}
+              onInputChange={onInputChange}
               label="Annual Income"
-              helperText={inputs.annualIncome > 0 ? `${formatJPY(inputs.annualIncome)}` : 'Enter your annual income'}
+              step={10_000}
+              shiftStep={100_000}
               sx={sharedInputSx}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Typography color="text.secondary">¥</Typography>
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Typography variant="caption" color="text.secondary">
-                        JPY
-                      </Typography>
-                    </InputAdornment>
-                  ),
-                  inputProps: {
-                    min: 0,
-                    max: 1000000000,
-                    step: 10000,
-                    inputMode: 'numeric',
-                    pattern: '[0-9]*',
-                    style: { textAlign: 'right' },
-                    'aria-label': 'Annual income in Japanese Yen',
-                    size: 10
-                  }
-                },
-                inputLabel: {
-                  shrink: true,
-                }
-              }} />
+            />
           </Box>
         </Box>
 
