@@ -172,4 +172,21 @@ describe('SpinnerNumberField', () => {
       })
     );
   });
+
+  it('has inputMode="numeric" for mobile keyboard support', () => {
+    const mockOnChange = vi.fn();
+    
+    render(
+      <SpinnerNumberField
+        value={100000}
+        onChange={mockOnChange}
+        label="Test Amount"
+      />
+    );
+
+    const input = screen.getByLabelText(/Test Amount/i);
+    
+    // Should have inputMode="numeric" attribute for mobile keyboards
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
 });
