@@ -342,7 +342,23 @@ const allNationalHealthInsuranceParams: { [regionKey: string]: NationalHealthIns
     ltcCapForEligible: 170000,
     nhiStandardDeduction: 430000,
   },
-  // 'OsakaCity': NHI_OSAKA_PARAMS, // Example for another region
+  'Osaka': {
+    regionName: "Osaka Prefecture / 大阪府",
+    source: "https://www.pref.osaka.lg.jp/o100080/kokuho/iryouseido/hokenryouritsu/hokenryouritsu.html",
+    medicalRate: 0.0930,
+    supportRate: 0.0302,
+    ltcRateForEligible: 0.0256,
+    medicalPerCapita: 34424,
+    supportPerCapita: 11034,
+    ltcPerCapitaForEligible: 18784,
+    medicalHouseholdFlat: 33574,
+    supportHouseholdFlat: 10761,
+    ltcHouseholdFlatForEligible: 0,
+    medicalCap: 650000,
+    supportCap: 240000,
+    ltcCapForEligible: 170000,
+    nhiStandardDeduction: 430000,
+  },
   // Add more regions/municipalities as needed
 };
 

@@ -45,6 +45,10 @@ export interface NationalHealthInsuranceRegionParams {
   medicalPerCapita: number;   // 医療分均等割額 (e.g., 47,300 JPY)
   supportPerCapita: number;   // 後期高齢者支援金等分均等割額 (e.g., 16,800 JPY)
   ltcPerCapitaForEligible?: number; // 介護納付金分均等割額 (e.g., 16,600 JPY)
+  // Household flat rate portion (平等割) annual amounts - defaults to 0 if not specified
+  medicalHouseholdFlat?: number;   // 医療分平等割額 (e.g., 33,574 JPY) - per household
+  supportHouseholdFlat?: number;   // 後期高齢者支援金等分平等割額 (e.g., 10,761 JPY) - per household
+  ltcHouseholdFlatForEligible?: number; // 介護納付金分平等割額 (e.g., 0 JPY) - per household
   // Annual caps for the income-based portion
   medicalCap: number;         // 医療分賦課限度額 (e.g., 660,000 JPY)
   supportCap: number;         // 後期高齢者支援金等分賦課限度額 (e.g., 260,000 JPY)

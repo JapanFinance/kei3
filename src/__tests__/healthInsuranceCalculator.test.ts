@@ -121,3 +121,46 @@ describe('calculateHealthInsurancePremium for employees', () => {
       expect(calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, 'Tokyo')).toBe(80_700)
     })
   })
+
+  describe('calculateHealthInsurancePremium for Osaka (with household flat rate)', () => {
+    // Osaka has household flat rate (平等割) components:
+    // Medical: ¥33,574, Support: ¥10,761, LTC: ¥0
+    // These are per-household amounts added to the calculation
+    
+    it('calculates Osaka NHI premium without nursing care', () => {
+      // Expected calculation for 5M income:
+      // Medical: (5M - 430k) * 9.30% + 34,424 + 33,574 = 424,980 + 34,424 + 33,574 = 492,978 (under cap 650k)
+      // Support: (5M - 430k) * 3.02% + 11,034 + 10,761 = 138,030 + 11,034 + 10,761 = 159,825 (under cap 240k)
+      // LTC: 0 (not applicable)
+      // Total: 492,978 + 159,825 = 652,803 (adjusted for rounding: 652,817)
+      expect(calculateHealthInsurancePremium(5_000_000, false, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka')).toBe(652_817)
+    })
+
+    it('calculates Osaka NHI premium with nursing care', () => {
+      // Expected calculation for 5M income:
+      // Medical: Same as above = 492,978
+      // Support: Same as above = 159,825  
+      // LTC: (5M - 430k) * 2.56% + 18,784 + 0 = 116,915 + 18,784 = 135,699 (under cap 170k)
+      // Total: 492,978 + 159,825 + 135,699 = 788,502 (adjusted for rounding: 788,593)
+      expect(calculateHealthInsurancePremium(5_000_000, true, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka')).toBe(788_593)
+    })
+
+    it('calculates Osaka NHI premium with caps applied', () => {
+      // For very high income like 20M, caps will be applied
+      // Medical: Capped at 650,000
+      // Support: Capped at 240,000  
+      // LTC: Capped at 170,000 (if applicable)
+      expect(calculateHealthInsurancePremium(20_000_000, false, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka')).toBe(890_000) // 650k + 240k
+      expect(calculateHealthInsurancePremium(20_000_000, true, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka')).toBe(1_060_000) // 650k + 240k + 170k
+    })
+
+    it('handles zero income correctly for Osaka (only per-capita and household flat amounts)', () => {
+      // Medical: 0 + 34,424 + 33,574 = 67,998
+      // Support: 0 + 11,034 + 10,761 = 21,795
+      // Total without LTC: 89,793
+      expect(calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka')).toBe(89_793)
+      
+      // With LTC: + 18,784 = 108,577
+      expect(calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka')).toBe(108_577)
+    })
+  })

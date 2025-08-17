@@ -79,19 +79,22 @@ function calculateNationalHealthInsurancePremiumBreakdown(
     // 1. Medical Portion (医療分)
     const incomeBasedMedical = nhiTaxableIncome * params.medicalRate;
     const perCapitaMedical = params.medicalPerCapita;
-    const totalMedicalPremium = Math.min(incomeBasedMedical + perCapitaMedical, params.medicalCap);
+    const householdFlatMedical = params.medicalHouseholdFlat || 0;
+    const totalMedicalPremium = Math.min(incomeBasedMedical + perCapitaMedical + householdFlatMedical, params.medicalCap);
 
     // 2. Elderly Support Portion (後期高齢者支援金分)
     const incomeBasedSupport = nhiTaxableIncome * params.supportRate;
     const perCapitaSupport = params.supportPerCapita;
-    const totalSupportPremium = Math.min(incomeBasedSupport + perCapitaSupport, params.supportCap);
+    const householdFlatSupport = params.supportHouseholdFlat || 0;
+    const totalSupportPremium = Math.min(incomeBasedSupport + perCapitaSupport + householdFlatSupport, params.supportCap);
 
     // 3. Long-Term Care Portion (介護納付金分) - only for those aged 40-64
     let totalLtcPremium = 0;
     if (isSubjectToLongTermCarePremium && params.ltcRateForEligible && params.ltcPerCapitaForEligible && params.ltcCapForEligible) {
         const incomeBasedLtc = nhiTaxableIncome * params.ltcRateForEligible;
         const perCapitaLtc = params.ltcPerCapitaForEligible;
-        totalLtcPremium = Math.min(incomeBasedLtc + perCapitaLtc, params.ltcCapForEligible);
+        const householdFlatLtc = params.ltcHouseholdFlatForEligible || 0;
+        totalLtcPremium = Math.min(incomeBasedLtc + perCapitaLtc + householdFlatLtc, params.ltcCapForEligible);
     }
 
     const totalPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium;

@@ -73,24 +73,28 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     // 1. Medical Portion (医療分)
     const incomeBasedMedical = nhiTaxableIncome * regionData.medicalRate;
     const perCapitaMedical = regionData.medicalPerCapita;
-    const uncappedMedical = incomeBasedMedical + perCapitaMedical;
+    const householdFlatMedical = regionData.medicalHouseholdFlat || 0;
+    const uncappedMedical = incomeBasedMedical + perCapitaMedical + householdFlatMedical;
     const totalMedicalPremium = Math.min(uncappedMedical, regionData.medicalCap);
     
     // 2. Elderly Support Portion (後期高齢者支援金分)
     const incomeBasedSupport = nhiTaxableIncome * regionData.supportRate;
     const perCapitaSupport = regionData.supportPerCapita;
-    const uncappedSupport = incomeBasedSupport + perCapitaSupport;
+    const householdFlatSupport = regionData.supportHouseholdFlat || 0;
+    const uncappedSupport = incomeBasedSupport + perCapitaSupport + householdFlatSupport;
     const totalSupportPremium = Math.min(uncappedSupport, regionData.supportCap);
     
     // 3. Long-Term Care Portion (介護納付金分) - only for those aged 40-64
     let incomeBasedLtc = 0;
     let perCapitaLtc = 0;
+    let householdFlatLtc = 0;
     let uncappedLtc = 0;
     let totalLtcPremium = 0;
     if (includeNursingCareInsurance && regionData.ltcRateForEligible && regionData.ltcPerCapitaForEligible && regionData.ltcCapForEligible) {
       incomeBasedLtc = nhiTaxableIncome * regionData.ltcRateForEligible;
       perCapitaLtc = regionData.ltcPerCapitaForEligible;
-      uncappedLtc = incomeBasedLtc + perCapitaLtc;
+      householdFlatLtc = regionData.ltcHouseholdFlatForEligible || 0;
+      uncappedLtc = incomeBasedLtc + perCapitaLtc + householdFlatLtc;
       totalLtcPremium = Math.min(uncappedLtc, regionData.ltcCapForEligible);
     }
     
@@ -118,6 +122,11 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Per-capita: {formatJPY(perCapitaMedical)}
           </Typography>
+          {householdFlatMedical > 0 && (
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+              Household flat rate (平等割): {formatJPY(householdFlatMedical)}
+            </Typography>
+          )}
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Subtotal: {formatJPY(uncappedMedical)}
           </Typography>
@@ -160,6 +169,11 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Per-capita: {formatJPY(perCapitaSupport)}
           </Typography>
+          {householdFlatSupport > 0 && (
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+              Household flat rate (平等割): {formatJPY(householdFlatSupport)}
+            </Typography>
+          )}
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Subtotal: {formatJPY(uncappedSupport)}
           </Typography>
@@ -203,6 +217,11 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
               Per-capita: {formatJPY(perCapitaLtc)}
             </Typography>
+            {householdFlatLtc > 0 && (
+              <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+                Household flat rate (平等割): {formatJPY(householdFlatLtc)}
+              </Typography>
+            )}
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
               Subtotal: {formatJPY(uncappedLtc)}
             </Typography>
