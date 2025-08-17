@@ -359,6 +359,23 @@ const allNationalHealthInsuranceParams: { [regionKey: string]: NationalHealthIns
     ltcCapForEligible: 170000,
     nhiStandardDeduction: 430000,
   },
+  'Nara': {
+    regionName: "Nara Prefecture / 奈良県",
+    source: "https://www.city.nara.lg.jp/site/kokuminkenkouhoken/9305.html",
+    medicalRate: 0.0764,
+    supportRate: 0.0327,
+    ltcRateForEligible: 0.0303,
+    medicalPerCapita: 27600,
+    supportPerCapita: 11500,
+    ltcPerCapitaForEligible: 16900,
+    medicalHouseholdFlat: 20000,
+    supportHouseholdFlat: 8400,
+    ltcHouseholdFlatForEligible: 0,
+    medicalCap: 650000,
+    supportCap: 240000,
+    ltcCapForEligible: 170000,
+    nhiStandardDeduction: 430000,
+  },
   // Add more regions/municipalities as needed
 };
 
