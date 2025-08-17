@@ -34,6 +34,9 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ mb: 1 }}>
             Premium calculation parameters for {region} are not available in the current data.
           </Typography>
+          <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 1 }}>
+            💡 National Health Insurance premiums vary by municipality. Please check with your local city/ward office for specific rates.
+          </Typography>
         </Box>
       );
 
@@ -248,6 +251,23 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
             </Typography>
           </Box>
         )}
+
+        {/* Source link */}
+        {regionData.source && (
+          <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+              <strong>Source:</strong>{' '}
+              <a 
+                href={regionData.source} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', textDecoration: 'underline' }}
+              >
+                Official NHI Premium Information
+              </a>
+            </Typography>
+          </Box>
+        )}
       </Box>
     );
 
@@ -269,6 +289,10 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
   } else {
     // Employee Health Insurance - show premium table
     const premiumTableAsRows = generateHealthInsurancePremiumTable(provider, region);
+    const providerDef = PROVIDER_DEFINITIONS[provider];
+    const regionalRates = providerDef?.regions[region] || providerDef?.regions['DEFAULT'];
+    const sourceUrl = regionalRates?.source || providerDef?.defaultSource;
+    
     if (!premiumTableAsRows) {
       const fallbackContent = (
         <Box>
@@ -278,6 +302,19 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ mb: 1 }}>
             Premium table for {provider} in {region} is not available in the current data.
           </Typography>
+          {sourceUrl && (
+            <Typography variant="body2" sx={{ fontSize: '0.8rem', mt: 1 }}>
+              <strong>Source:</strong>{' '}
+              <a 
+                href={sourceUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', textDecoration: 'underline' }}
+              >
+                {sourceUrl}
+              </a>
+            </Typography>
+          )}
         </Box>
       );
 
@@ -325,19 +362,26 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
 
     const premiumTableAsTypedRows = premiumTableAsRows as unknown as PremiumTableRow[];
 
+    const providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
+
+    const baseProps = {
+      title: `Health Insurance Premium Table - ${providerLabel}`,
+      description: "Monthly premiums by income bracket. Your income: {monthlyIncome}/month",
+      hint: "💡 LTC stands for Long-Term Care, which is an additional premium insured people ages 40-64 need to pay.",
+      tableData: premiumTableAsTypedRows,
+      columns,
+      currentRow: currentRow || null,
+      monthlyIncome,
+      tableContainerDataAttr: "data-table-container",
+      currentRowId: "current-income-row",
+      getIncomeRange,
+      getCurrentRowSummary,
+    };
+
     return (
       <PremiumTableTooltip
-        title={`Health Insurance Premium Table - ${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`}
-        description="Monthly premiums by income bracket. Your income: {monthlyIncome}/month"
-        hint="💡 LTC stands for Long-Term Care, which is an additional premium insured people ages 40-64 need to pay."
-        tableData={premiumTableAsTypedRows}
-        columns={columns}
-        currentRow={currentRow || null}
-        monthlyIncome={monthlyIncome}
-        tableContainerDataAttr="data-table-container"
-        currentRowId="current-income-row"
-        getIncomeRange={getIncomeRange}
-        getCurrentRowSummary={getCurrentRowSummary}
+        {...baseProps}
+        {...(sourceUrl ? { officialSourceLink: { url: sourceUrl, text: `${providerLabel} Premium Rates` } } : {})}
       />
     );
   }

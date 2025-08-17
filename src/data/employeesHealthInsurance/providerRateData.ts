@@ -39,9 +39,10 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
   'KantoItsKenpo': {
     providerName: 'Kanto ITS Kenpo',
     effectiveDate: '2025-03-01',
-    defaultSource: 'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/2025.3.1ryougaku.pdf',
+    defaultSource: 'https://www.its-kenpo.or.jp/hoken/jimu/hokenryou/index.html',
     regions: {
       'DEFAULT': {
+        source: 'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/2025.3.1ryougaku.pdf',
         employeeHealthInsuranceRate: 0.0475, // 4.75%
         employeeLongTermCareRate: 0.009, // 0.9%
       }

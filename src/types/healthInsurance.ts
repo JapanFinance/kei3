@@ -35,6 +35,8 @@ export const DEFAULT_PROVIDER_REGION = 'DEFAULT';
  */
 export interface NationalHealthInsuranceRegionParams {
   regionName: string; // For display or reference, e.g., "Tokyo Special Wards Average"
+  // Source information
+  source?: string; // URL or reference to the official source for these parameters
   // Income-based portion (所得割) rates
   medicalRate: number;        // 医療分保険料率 (e.g., 7.71%)
   supportRate: number;        // 後期高齢者支援金等分保険料率 (e.g., 2.69%)

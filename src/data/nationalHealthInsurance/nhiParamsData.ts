@@ -7,6 +7,7 @@ import type { NationalHealthInsuranceRegionParams } from '../../types/healthInsu
 const allNationalHealthInsuranceParams: { [regionKey: string]: NationalHealthInsuranceRegionParams } = {
   'Tokyo': {
     regionName: "Tokyo Special Wards",
+    source: "https://www.hokeniryo.metro.tokyo.lg.jp/kenkou/kokuho/aramashi/hokennryou/h30hokenryougaku",
     medicalRate: 0.0771,
     supportRate: 0.0269,
     ltcRateForEligible: 0.0225,
