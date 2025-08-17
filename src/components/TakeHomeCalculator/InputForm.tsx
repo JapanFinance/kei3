@@ -8,6 +8,7 @@ import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import InputLabel from '@mui/material/InputLabel';
 import Switch from '@mui/material/Switch';
+import FormHelperText from '@mui/material/FormHelperText';
 import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
@@ -110,12 +111,12 @@ function AdvancedOptionsFields({
           ))}
         </Select>
         {isHealthInsuranceProviderDropdownDisabled && (
-          <Typography color="text.secondary" sx={{ mt: 0.2, fontSize: '0.95rem' }}>
+          <FormHelperText>
             {inputs.isEmploymentIncome
               ? availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'
               : `Automatically set to ${getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID)} for non-employment income.`
             }
-          </Typography>
+          </FormHelperText>
         )}
       </FormControl>
       <FormControl>
