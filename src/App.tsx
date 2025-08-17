@@ -24,7 +24,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     annualIncome: 5_000_000, // 5 million yen
     isEmploymentIncome: true,
     isSubjectToLongTermCarePremium: false,
-    prefecture: "Tokyo",
+    region: "Tokyo",
     showDetailedInput: false,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     numberOfDependents: 0,
@@ -78,7 +78,7 @@ function App({ mode, toggleColorMode }: AppProps) {
         [name]: processedInputValue
       };
 
-      // Cascading updates for health insurance provider and prefecture
+      // Cascading updates for health insurance provider and region
       if (name === 'isEmploymentIncome') {
         const isNowEmploymentIncome = processedInputValue as boolean;
         if (isNowEmploymentIncome) {
@@ -86,19 +86,19 @@ function App({ mode, toggleColorMode }: AppProps) {
           const providerDefinition = PROVIDER_DEFINITIONS['KyokaiKenpo'];
           const providerRegions = providerDefinition ? Object.keys(providerDefinition.regions) : [];
           // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-          newInputs.prefecture = providerRegions.includes('Tokyo') ? 'Tokyo' : 
+          newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' : 
                                  (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
         } else {
           newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
           // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
+          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
                                  (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         }
       } else if (name === 'healthInsuranceProvider') {
         newInputs.healthInsuranceProvider = processedInputValue as string;
         if (processedInputValue === NATIONAL_HEALTH_INSURANCE_ID) {
           // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
+          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
                                  (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         } else {
           // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
@@ -106,11 +106,11 @@ function App({ mode, toggleColorMode }: AppProps) {
           if (providerDefinition) {
             const providerRegions = Object.keys(providerDefinition.regions);
             // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-            newInputs.prefecture = providerRegions.includes('Tokyo') ? 'Tokyo' : 
+            newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' : 
                                    (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
           } else {
-            newInputs.prefecture = DEFAULT_PROVIDER_REGION;
-            console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data. Defaulting prefecture.`);
+            newInputs.region = DEFAULT_PROVIDER_REGION;
+            console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data. Defaulting region.`);
           }
         }
       }
@@ -203,7 +203,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           isEmploymentIncome={inputs.isEmploymentIncome}
           isSubjectToLongTermCarePremium={inputs.isSubjectToLongTermCarePremium}
           healthInsuranceProvider={inputs.healthInsuranceProvider}
-          prefecture={inputs.prefecture}
+          region={inputs.region}
           dcPlanContributions={inputs.dcPlanContributions}
         />
       </Suspense>

@@ -13,7 +13,7 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     isEmploymentIncome: true,
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
-    prefecture: 'Tokyo',
+    region: 'Tokyo',
     dcPlanContributions: 0,
     numberOfDependents: 0,
     showDetailedInput: false,

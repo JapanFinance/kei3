@@ -77,7 +77,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     }
     
     // Use the pre-calculated results to check against caps
-    const nhiParams = getNationalHealthInsuranceParams(results.prefecture);
+    const nhiParams = getNationalHealthInsuranceParams(results.region);
     if (!nhiParams) {
       return { capped: false };
     }
@@ -107,7 +107,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     if (!results.healthInsuranceProvider) {
       return { capped: false };
     }
-    const premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.prefecture);
+    const premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.region);
     if (!premiumTable || premiumTable.length === 0) {
       return { capped: false };
     }

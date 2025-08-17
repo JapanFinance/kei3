@@ -174,7 +174,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     dcPlanContributions: 0,
     // Add the new required properties with default values
     healthInsuranceProvider: DEFAULT_PROVIDER,
-    prefecture: 'Tokyo',
+    region: 'Tokyo',
     isSubjectToLongTermCarePremium: false,
 };
 
@@ -199,7 +199,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         incomeForHealthInsurance,
         inputs.isSubjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
-        inputs.prefecture
+        inputs.region
     );
 
     // Calculate NHI breakdown if National Health Insurance is selected
@@ -209,7 +209,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
             netIncome,
             inputs.isSubjectToLongTermCarePremium,
-            inputs.prefecture as string
+            inputs.region as string
         );
     }
 
@@ -273,7 +273,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         nhiLongTermCarePortion: nhiBreakdown?.longTermCarePortion,
         // Context needed for cap detection
         healthInsuranceProvider: inputs.healthInsuranceProvider,
-        prefecture: inputs.prefecture,
+        region: inputs.region,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
     };
 }

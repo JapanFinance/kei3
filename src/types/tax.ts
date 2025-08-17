@@ -3,7 +3,7 @@ export interface TakeHomeInputs {
   annualIncome: number;
   isEmploymentIncome: boolean;
   isSubjectToLongTermCarePremium: boolean; // Person is 40-64 years old (must pay long-term care insurance premiums)
-  prefecture: string;
+  region: string;
   showDetailedInput: boolean;
   healthInsuranceProvider: HealthInsuranceProviderId;
   numberOfDependents: number;
@@ -36,7 +36,7 @@ export interface TakeHomeResults {
   nhiLongTermCarePortion?: number | undefined;
   // Context needed for cap detection
   healthInsuranceProvider: HealthInsuranceProviderId;
-  prefecture: string;
+  region: string;
   isSubjectToLongTermCarePremium: boolean;
 }
 

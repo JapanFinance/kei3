@@ -97,7 +97,7 @@ interface TakeHomeChartProps {
   isEmploymentIncome: boolean;
   isSubjectToLongTermCarePremium: boolean;
   healthInsuranceProvider: HealthInsuranceProviderId;
-  prefecture: string;
+  region: string;
   dcPlanContributions: number;
   className?: string;
 }
@@ -172,7 +172,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   isEmploymentIncome,
   isSubjectToLongTermCarePremium,
   healthInsuranceProvider,
-  prefecture,
+  region,
   dcPlanContributions,
   className = ''
 }) => {
@@ -236,11 +236,11 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       isEmploymentIncome, 
       isSubjectToLongTermCarePremium, 
       healthInsuranceProvider, 
-      prefecture,
+      region,
       dcPlanContributions,
       numberOfDependents: 0 // TODO: Replace 0 with actual value if available
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, prefecture, dcPlanContributions]
+    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions]
   );
 
   // Get chart options using the utility function
@@ -270,7 +270,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     isEmploymentIncome,
                     isSubjectToLongTermCarePremium,
                     healthInsuranceProvider,
-                    prefecture,
+                    region,
                     dcPlanContributions,
                     numberOfDependents: 0,
                     showDetailedInput: false,
@@ -297,7 +297,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, prefecture, dcPlanContributions]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions]
   );
 
   // Use media query to determine if we should show minor marks

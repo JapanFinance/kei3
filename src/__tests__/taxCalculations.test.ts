@@ -51,7 +51,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      prefecture: "Tokyo", // Default for Kyokai Kenpo in tests
+      region: "Tokyo", // Default for Kyokai Kenpo in tests
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -72,7 +72,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      prefecture: "Tokyo",
+      region: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -93,7 +93,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      prefecture: "Tokyo",
+      region: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -115,7 +115,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      prefecture: "Tokyo",
+      region: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -137,7 +137,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      prefecture: "Tokyo",
+      region: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -155,7 +155,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      prefecture: "Tokyo",
+      region: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -173,7 +173,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: false,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-      prefecture: "Tokyo", // For NHI
+      region: "Tokyo", // For NHI
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -193,7 +193,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-      prefecture: "Tokyo", // For NHI
+      region: "Tokyo", // For NHI
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const result = calculateTaxes(inputs);
@@ -225,7 +225,7 @@ describe('calculateTaxes', () => {
       isEmploymentIncome: true,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      prefecture: "Tokyo",
+      region: "Tokyo",
       numberOfDependents: 0, showDetailedInput: false, dcPlanContributions: 0,
     };
     const resultWithoutIdeco = calculateTaxes(inputsWithoutDcPlan);

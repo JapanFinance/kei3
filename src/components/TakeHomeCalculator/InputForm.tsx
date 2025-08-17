@@ -52,8 +52,8 @@ interface AdvancedOptionsFieldsProps {
   handleSelectChange: (e: { target: { name: string; value: unknown } }) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
   sharedInputSx: object;
-  isPrefectureDropdownEffectivelyDisabled: boolean;
-  prefectureMenuItemsToDisplay: RegionOption[];
+  isRegionDropdownEffectivelyDisabled: boolean;
+  regionMenuItemsToDisplay: RegionOption[];
 }
 
 function AdvancedOptionsFields({
@@ -63,8 +63,8 @@ function AdvancedOptionsFields({
   handleSelectChange,
   onInputChange,
   sharedInputSx,
-  isPrefectureDropdownEffectivelyDisabled,
-  prefectureMenuItemsToDisplay,
+  isRegionDropdownEffectivelyDisabled,
+  regionMenuItemsToDisplay,
 }: AdvancedOptionsFieldsProps) {
   return (
     <Box sx={{
@@ -123,32 +123,32 @@ function AdvancedOptionsFields({
         )}
       </FormControl>
       <FormControl>
-        <Autocomplete<RegionOption, false, true, false>
-          id="prefecture"
-          options={prefectureMenuItemsToDisplay}
+        <Autocomplete
+          id="region"
+          options={regionMenuItemsToDisplay}
           value={
-            prefectureMenuItemsToDisplay.find(option => option.id === inputs.prefecture) ||
-            prefectureMenuItemsToDisplay[0] ||
+            regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
+            regionMenuItemsToDisplay[0] ||
             { id: '', displayName: '' }
           }
           onChange={(_, newValue) => {
             handleSelectChange({
               target: {
-                name: 'prefecture',
+                name: 'region',
                 value: newValue?.id || ''
               }
             });
           }}
           getOptionLabel={(option) => option.displayName}
           isOptionEqualToValue={(option, value) => option.id === value.id}
-          disabled={isPrefectureDropdownEffectivelyDisabled}
+          disabled={isRegionDropdownEffectivelyDisabled}
           renderInput={(params) =>
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore - MUI Autocomplete params spreading is correct per documentation
             <TextField
               {...params}
-              label="Local Region (Prefecture)"
-              helperText={isPrefectureDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
+              label="Local Region (Municipality/Prefecture)"
+              helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
             />
           }
           noOptionsText="No matching regions"
@@ -393,17 +393,17 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   const isEffectivelySingleDefaultRegion = 
     derivedProviderRegions.length === 1 && derivedProviderRegions[0]?.id === DEFAULT_PROVIDER_REGION;
 
-  // Prefecture dropdown is disabled if:
+  // Region dropdown is disabled if:
   // 1. No health insurance providers are available at all.
   // 2. The selected provider has no regions listed in its data.
   // 3. The selected provider has only one region (this includes the case where it's DEFAULT_PROVIDER_REGION).
-  const isPrefectureDropdownEffectivelyDisabled = 
+  const isRegionDropdownEffectivelyDisabled = 
     availableProviders.length === 0 ||
     derivedProviderRegions.length === 0 || // Covers case where provider has no regions in data
     derivedProviderRegions.length === 1;   // Covers case where provider has only one region (e.g., only Tokyo, or only DEFAULT)
 
-  // Menu items to display in the prefecture dropdown.
-  const prefectureMenuItemsToDisplay = React.useMemo(() => {
+  // Menu items to display in the region dropdown.
+  const regionMenuItemsToDisplay = React.useMemo(() => {
     if (isEffectivelySingleDefaultRegion) {
       return []; // Don't show "DEFAULT" as a selectable option if it's the only one
     }
@@ -412,7 +412,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
   const handleSelectChange = (e: { target: { name: string; value: unknown } }) => {
     // The parent component's onInputChange handler is responsible for
-    // managing cascading state updates (e.g., setting a default prefecture).
+    // managing cascading state updates (e.g., setting a default region).
     const event = {
       target: {
         ...e.target,
@@ -698,8 +698,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 handleSelectChange={handleSelectChange}
                 onInputChange={onInputChange}
                 sharedInputSx={sharedInputSx}
-                isPrefectureDropdownEffectivelyDisabled={isPrefectureDropdownEffectivelyDisabled}
-                prefectureMenuItemsToDisplay={prefectureMenuItemsToDisplay}
+                isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
+                regionMenuItemsToDisplay={regionMenuItemsToDisplay}
               />
             </AccordionDetails>
           </Accordion>
@@ -722,8 +722,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               handleSelectChange={handleSelectChange}
               onInputChange={onInputChange}
               sharedInputSx={sharedInputSx}
-              isPrefectureDropdownEffectivelyDisabled={isPrefectureDropdownEffectivelyDisabled}
-              prefectureMenuItemsToDisplay={prefectureMenuItemsToDisplay}
+              isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
+              regionMenuItemsToDisplay={regionMenuItemsToDisplay}
             />
           </Box>
         )}

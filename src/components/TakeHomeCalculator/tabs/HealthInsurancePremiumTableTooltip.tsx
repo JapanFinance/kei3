@@ -19,7 +19,7 @@ interface HealthInsurancePremiumTableTooltipProps {
 
 const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTooltipProps> = ({ results, inputs }) => {
   const provider = inputs.healthInsuranceProvider;
-  const region = inputs.prefecture;
+  const region = inputs.region;
   const monthlyIncome = results.annualIncome / 12;
 
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
