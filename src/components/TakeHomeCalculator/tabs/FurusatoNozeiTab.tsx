@@ -59,7 +59,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         <Typography variant="body2">
           For comprehensive information about Furusato Nozei, see{' '}
           <a 
-            href="https://japanfinance.github.io/tax/residence/furusato-nozei/" 
+            href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/" 
             target="_blank" 
             rel="noopener noreferrer" 
             style={{ color: 'inherit', textDecoration: 'underline' }}
@@ -135,7 +135,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                       If you use the One-Stop Exception system (ワンストップ特例制度), this reduction will be applied to your residence tax instead of your income tax.
                     </Typography>
                     <Box sx={{ mt: 1 }}>
-                      <a href="https://japanfinance.github.io/tax/residence/furusato-nozei/" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                      <a href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/" target="_blank" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
                         More about Furusato Nozei
                       </a>
                     </Box>
