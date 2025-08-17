@@ -305,5 +305,43 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
       // Health insurance rates are from Table 17 (effective March 2025)
       // Nursing insurance rate is 1.59% for all regions (effective March 2025)
     }
+  },
+  'TokyoSecuritiesKenpo': {
+    providerName: 'Tokyo Securities Health Insurance Society',
+    effectiveDate: '2025-04-01',
+    defaultSource: 'https://www.shoken-kenpo.or.jp/member/outline/fee.html',
+    regions: {
+      'DEFAULT': {
+        source: 'https://www.shoken-kenpo.or.jp/member/outline/files/hokenryou_getsugaku_2025.pdf',
+        employeeHealthInsuranceRate: 0.033, // 3.3% (total 8.4% split 33/51)
+        employerHealthInsuranceRate: 0.051, // 5.1%
+        employeeLongTermCareRate: 0.0083, // 0.83% (total 1.66% split evenly)
+      }
+    }
+  },
+  'RakutenKenpo': {
+    providerName: 'Rakuten KENPO',
+    effectiveDate: '2025-04-01',
+    defaultSource: 'https://kenpo.rakuten.or.jp/member/outline/fee.html',
+    regions: {
+      'DEFAULT': {
+        source: 'https://kenpo.rakuten.or.jp/member/outline/files/fee.pdf',
+        employeeHealthInsuranceRate: 0.047, // 4.7% (total 9.4% split evenly)
+        employeeLongTermCareRate: 0.01, // 1.0% (total 2.0% split evenly)
+      }
+    }
+  },
+  'RecruitKenpo': {
+    providerName: 'Recruit Health Insurance Society',
+    effectiveDate: '2025-04-01',
+    defaultSource: 'https://kempo.recruit.co.jp/member/outline/fee.html',
+    regions: {
+      'DEFAULT': {
+        source: 'https://kempo.recruit.co.jp/member/info/pdf/r7_fee.pdf',
+        employeeHealthInsuranceRate: 0.0435, // 4.35%
+        employerHealthInsuranceRate: 0.0465, // 4.65%
+        employeeLongTermCareRate: 0.01, // 1.0%
+      }
+    }
   }
 };
