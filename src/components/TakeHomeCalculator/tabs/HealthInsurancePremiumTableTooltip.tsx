@@ -117,10 +117,10 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
             🏥 Medical Portion (医療分)
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Income-based: <strong>{(regionData.medicalRate * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedMedical)}
+            Income-based (所得割): <strong>{(regionData.medicalRate * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedMedical)}
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Per-capita: {formatJPY(perCapitaMedical)}
+            Per-capita (均等割): {formatJPY(perCapitaMedical)}
           </Typography>
           {householdFlatMedical > 0 && (
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
@@ -164,10 +164,10 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
             👥 Elderly Support Portion (後期高齢者支援金分)
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Income-based: <strong>{(regionData.supportRate * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedSupport)}
+            Income-based (所得割): <strong>{(regionData.supportRate * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedSupport)}
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Per-capita: {formatJPY(perCapitaSupport)}
+            Per-capita (均等割): {formatJPY(perCapitaSupport)}
           </Typography>
           {householdFlatSupport > 0 && (
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
@@ -212,10 +212,10 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
               🏠 Long-Term Care Portion (介護納付金分) - Ages 40-64
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Income-based: <strong>{(regionData.ltcRateForEligible * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedLtc)}
+              Income-based (所得割): <strong>{(regionData.ltcRateForEligible * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedLtc)}
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Per-capita: {formatJPY(perCapitaLtc)}
+              Per-capita (均等割): {formatJPY(perCapitaLtc)}
             </Typography>
             {householdFlatLtc > 0 && (
               <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
