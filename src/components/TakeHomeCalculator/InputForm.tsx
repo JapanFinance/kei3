@@ -27,7 +27,7 @@ import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../../types/healthInsurance';
-import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
+import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
 
 interface TaxInputFormProps {
@@ -40,6 +40,11 @@ interface ProviderOption {
   displayName: string;
 }
 
+interface RegionOption {
+  id: string;
+  displayName: string;
+}
+
 interface AdvancedOptionsFieldsProps {
   availableProviders: ProviderOption[];
   isHealthInsuranceProviderDropdownDisabled: boolean;
@@ -47,9 +52,8 @@ interface AdvancedOptionsFieldsProps {
   handleSelectChange: (e: { target: { name: string; value: unknown } }) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
   sharedInputSx: object;
-  prefectureSelectValueForUI: string;
   isPrefectureDropdownEffectivelyDisabled: boolean;
-  prefectureMenuItemsToDisplay: string[];
+  prefectureMenuItemsToDisplay: RegionOption[];
 }
 
 function AdvancedOptionsFields({
@@ -59,7 +63,6 @@ function AdvancedOptionsFields({
   handleSelectChange,
   onInputChange,
   sharedInputSx,
-  prefectureSelectValueForUI,
   isPrefectureDropdownEffectivelyDisabled,
   prefectureMenuItemsToDisplay,
 }: AdvancedOptionsFieldsProps) {
@@ -120,18 +123,24 @@ function AdvancedOptionsFields({
         )}
       </FormControl>
       <FormControl>
-        <Autocomplete
+        <Autocomplete<RegionOption, false, true, false>
           id="prefecture"
           options={prefectureMenuItemsToDisplay}
-          value={prefectureSelectValueForUI}
+          value={
+            prefectureMenuItemsToDisplay.find(option => option.id === inputs.prefecture) ||
+            prefectureMenuItemsToDisplay[0] ||
+            { id: '', displayName: '' }
+          }
           onChange={(_, newValue) => {
             handleSelectChange({
               target: {
                 name: 'prefecture',
-                value: newValue || ''
+                value: newValue?.id || ''
               }
             });
           }}
+          getOptionLabel={(option) => option.displayName}
+          isOptionEqualToValue={(option, value) => option.id === value.id}
           disabled={isPrefectureDropdownEffectivelyDisabled}
           renderInput={(params) =>
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -363,24 +372,26 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     const provider = inputs.healthInsuranceProvider;
     if (!provider) return [];
 
-    let regionKeys: string[] = [];
-
     if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
-      regionKeys = NATIONAL_HEALTH_INSURANCE_REGIONS;
+      return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
     } else {
       // Employee health insurance provider
       const providerDefinition = PROVIDER_DEFINITIONS[provider];
       if (providerDefinition) {
-        regionKeys = Object.keys(providerDefinition.regions);
+        // Convert region keys to region options for consistency
+        return Object.keys(providerDefinition.regions).map(regionKey => ({
+          id: regionKey,
+          displayName: regionKey // For employee health insurance, use the key as display name for now
+        }));
       }
     }
     
-    return regionKeys;
+    return [];
   }, [inputs.healthInsuranceProvider]);
 
   // True if the only derived region is the DEFAULT_PROVIDER_REGION
   const isEffectivelySingleDefaultRegion = 
-    derivedProviderRegions.length === 1 && derivedProviderRegions[0] === DEFAULT_PROVIDER_REGION;
+    derivedProviderRegions.length === 1 && derivedProviderRegions[0]?.id === DEFAULT_PROVIDER_REGION;
 
   // Prefecture dropdown is disabled if:
   // 1. No health insurance providers are available at all.
@@ -391,24 +402,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     derivedProviderRegions.length === 0 || // Covers case where provider has no regions in data
     derivedProviderRegions.length === 1;   // Covers case where provider has only one region (e.g., only Tokyo, or only DEFAULT)
 
-  // Determine the value to pass to the Select component's value prop for UI display.
-  const prefectureSelectValueForUI = React.useMemo(() => {
-    // If the situation is a single default region (like Kanto ITS Kenpo)
-    // AND the actual input value for prefecture IS that default region,
-    // then the UI Select component should receive an empty string to appear blank and satisfy MUI.
-    if (isEffectivelySingleDefaultRegion && inputs.prefecture === DEFAULT_PROVIDER_REGION) {
-      return '';
-    }
-    // Otherwise, use the actual prefecture value from the inputs state.
-    return inputs.prefecture;
-  }, [inputs.prefecture, isEffectivelySingleDefaultRegion]);
-
   // Menu items to display in the prefecture dropdown.
   const prefectureMenuItemsToDisplay = React.useMemo(() => {
     if (isEffectivelySingleDefaultRegion) {
       return []; // Don't show "DEFAULT" as a selectable option if it's the only one
     }
-    return derivedProviderRegions; // This is an array of strings (region IDs)
+    return derivedProviderRegions; // This is an array of region options
   }, [derivedProviderRegions, isEffectivelySingleDefaultRegion]);
 
   const handleSelectChange = (e: { target: { name: string; value: unknown } }) => {
@@ -699,7 +698,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 handleSelectChange={handleSelectChange}
                 onInputChange={onInputChange}
                 sharedInputSx={sharedInputSx}
-                prefectureSelectValueForUI={prefectureSelectValueForUI}
                 isPrefectureDropdownEffectivelyDisabled={isPrefectureDropdownEffectivelyDisabled}
                 prefectureMenuItemsToDisplay={prefectureMenuItemsToDisplay}
               />
@@ -724,7 +722,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               handleSelectChange={handleSelectChange}
               onInputChange={onInputChange}
               sharedInputSx={sharedInputSx}
-              prefectureSelectValueForUI={prefectureSelectValueForUI}
               isPrefectureDropdownEffectivelyDisabled={isPrefectureDropdownEffectivelyDisabled}
               prefectureMenuItemsToDisplay={prefectureMenuItemsToDisplay}
             />
