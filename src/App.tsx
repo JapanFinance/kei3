@@ -85,21 +85,29 @@ function App({ mode, toggleColorMode }: AppProps) {
           newInputs.healthInsuranceProvider = 'KyokaiKenpo';
           const providerDefinition = PROVIDER_DEFINITIONS['KyokaiKenpo'];
           const providerRegions = providerDefinition ? Object.keys(providerDefinition.regions) : [];
-          newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION;
+          // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
+          newInputs.prefecture = providerRegions.includes('Tokyo') ? 'Tokyo' : 
+                                 (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
         } else {
           newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION;
+          // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
+          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
+                                 (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         }
       } else if (name === 'healthInsuranceProvider') {
         newInputs.healthInsuranceProvider = processedInputValue as string;
         if (processedInputValue === NATIONAL_HEALTH_INSURANCE_ID) {
-          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION;
+          // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
+          newInputs.prefecture = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
+                                 (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         } else {
           // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
           const providerDefinition = PROVIDER_DEFINITIONS[processedInputValue as string];
           if (providerDefinition) {
             const providerRegions = Object.keys(providerDefinition.regions);
-            newInputs.prefecture = providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION;
+            // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
+            newInputs.prefecture = providerRegions.includes('Tokyo') ? 'Tokyo' : 
+                                   (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
           } else {
             newInputs.prefecture = DEFAULT_PROVIDER_REGION;
             console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data. Defaulting prefecture.`);
