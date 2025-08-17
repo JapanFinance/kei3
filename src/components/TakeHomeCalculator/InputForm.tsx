@@ -139,8 +139,7 @@ function AdvancedOptionsFields({
             <TextField
               {...params}
               label="Local Region (Prefecture)"
-              placeholder={isPrefectureDropdownEffectivelyDisabled ? 'No options available' : 'Select region...'}
-              helperText="Premium rates depend on the region"
+              helperText={isPrefectureDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
             />
           }
           noOptionsText="No matching regions"
