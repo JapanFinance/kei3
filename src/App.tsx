@@ -2,16 +2,19 @@ import { useState, useEffect, Suspense, lazy } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ThemeToggle from './components/ThemeToggle'
+import ChangelogButton from './components/ChangelogButton'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
 import type { TakeHomeInputs, TakeHomeResults } from './types/tax'
 import { calculateTaxes } from './utils/taxCalculations'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER } from './types/healthInsurance'
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData'
 import { PROVIDER_DEFINITIONS } from './data/employeesHealthInsurance/providerRateData'
+import { useChangelogModal } from './hooks/useChangelogModal'
 
 // Lazy load components that aren't immediately needed
 const TakeHomeResultsDisplay = lazy(() => import('./components/TakeHomeCalculator/TakeHomeResults'))
 const TakeHomeChart = lazy(() => import('./components/TakeHomeCalculator/TakeHomeChart'))
+const ChangelogModal = lazy(() => import('./components/ChangelogModal'))
 
 interface AppProps {
   mode: 'light' | 'dark';
@@ -19,6 +22,9 @@ interface AppProps {
 }
 
 function App({ mode, toggleColorMode }: AppProps) {
+  // Changelog modal management
+  const { isOpen: isChangelogOpen, openModal: openChangelog, closeModal: closeChangelog } = useChangelogModal();
+
   // Default values for the form
   const defaultInputs: TakeHomeInputs = {
     annualIncome: 5_000_000, // 5 million yen
@@ -153,7 +159,14 @@ function App({ mode, toggleColorMode }: AppProps) {
         >
           Japan Take-Home Pay Calculator
         </Typography>
-        <Box sx={{ flexShrink: 0, ml: { xs: 1, sm: 2 } }}>
+        <Box sx={{ 
+          flexShrink: 0, 
+          ml: { xs: 1, sm: 2 },
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1
+        }}>
+          <ChangelogButton onClick={openChangelog} />
           <ThemeToggle mode={mode} toggleColorMode={toggleColorMode} />
         </Box>
       </Box>
@@ -217,6 +230,11 @@ function App({ mode, toggleColorMode }: AppProps) {
         <p>This calculator offers no guarantee of accuracy or completeness. Not all situations are covered.</p>
         <p className="mt-1">Consult with a tax professional for specific tax advice.</p>
       </Box>
+
+      {/* Changelog Modal */}
+      <Suspense fallback={null}>
+        <ChangelogModal open={isChangelogOpen} onClose={closeChangelog} />
+      </Suspense>
     </Box>
   )
 }
