@@ -12,7 +12,6 @@ import {
   parseChangelog, 
   type ParsedChangelog 
 } from '../utils/changelogUtils';
-// Import changelog content directly
 import changelogContent from '../../CHANGELOG.md?raw';
 
 interface ChangelogButtonProps {

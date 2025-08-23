@@ -271,24 +271,6 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
                 No changelog entries found.
               </Typography>
             )}
-            
-            <Box sx={{ 
-              mt: { xs: 3, sm: 4 }, 
-              pt: { xs: 2, sm: 3 }, 
-              borderTop: 1, 
-              borderColor: 'divider' 
-            }}>
-              <Typography 
-                variant="body2" 
-                color="text.secondary" 
-                sx={{ 
-                  textAlign: 'center',
-                  fontSize: { xs: '0.8rem', sm: '0.875rem' }
-                }}
-              >
-                Have feedback or suggestions? We'd love to hear from you!
-              </Typography>
-            </Box>
           </Box>
         )}
       </DialogContent>

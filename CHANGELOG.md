@@ -17,7 +17,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Updated
 
-- Employee health insurance providers are now sorted alphabetically for easier browsing
+- Employee health insurance providers are now sorted alphabetically for easier selecting
 - Adds source links for health insurance premium information to the corresponding tooltip
 
 ## 2025-08-11
