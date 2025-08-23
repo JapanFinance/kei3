@@ -215,7 +215,7 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
       }}>
         <Typography 
           variant="h5" 
-          component="h2"
+          component="div"
           sx={{ fontSize: { xs: '1.3rem', sm: '1.5rem' } }}
         >
           What's New
