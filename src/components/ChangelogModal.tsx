@@ -12,7 +12,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import CloseIcon from '@mui/icons-material/Close';
-import { parseChangelog, setLastViewedVersion, type ChangelogEntry, type ParsedChangelog } from '../utils/changelogUtils';
+import { parseChangelog, setLastViewedDate, formatChangelogDate, type ChangelogEntry, type ParsedChangelog } from '../utils/changelogUtils';
 import changelogContent from '../../CHANGELOG.md?raw';
 
 interface ChangelogModalProps {
@@ -23,7 +23,7 @@ interface ChangelogModalProps {
 const SectionIcon = ({ type }: { type: string }) => {
   const getColor = (sectionType: string): 'success' | 'info' | 'warning' | 'secondary' | 'error' | 'default' => {
     switch (sectionType.toLowerCase()) {
-      case 'added': return 'success';
+      case 'new': return 'success';
       case 'changed': return 'info';
       case 'fixed': return 'warning';
       case 'deprecated': return 'secondary';
@@ -41,8 +41,11 @@ const SectionIcon = ({ type }: { type: string }) => {
       variant="outlined"
       sx={{ 
         textTransform: 'capitalize',
-        fontSize: '0.75rem',
-        height: '24px'
+        fontSize: { xs: '0.7rem', sm: '0.75rem' },
+        height: { xs: '22px', sm: '24px' },
+        '& .MuiChip-label': {
+          px: { xs: 1, sm: 1.5 }
+        }
       }}
     />
   );
@@ -52,18 +55,21 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
   if (!items || items.length === 0) return null;
 
   return (
-    <Box sx={{ mb: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+    <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
         <SectionIcon type={type} />
       </Box>
-      <List dense sx={{ pl: 2 }}>
+      <List dense sx={{ pl: { xs: 1.5, sm: 2 } }}>
         {items.map((item, index) => (
-          <ListItem key={index} sx={{ py: 0.25, px: 0 }}>
+          <ListItem key={index} sx={{ py: { xs: 0.125, sm: 0.25 }, px: 0 }}>
             <ListItemText 
               primary={`• ${item}`}
-              primaryTypographyProps={{
-                variant: 'body2',
-                color: 'text.secondary'
+              slotProps={{
+                primary: {
+                  variant: 'body2',
+                  color: 'text.secondary',
+                  sx: { fontSize: { xs: '0.875rem', sm: '0.875rem' } }
+                }
               }}
             />
           </ListItem>
@@ -75,23 +81,22 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
 
 const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
   return (
-    <Box sx={{ mb: 4 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Typography variant="h6" component="h3">
-          {entry.isUnreleased ? 'Unreleased' : `Version ${entry.version}`}
+    <Box sx={{ mb: { xs: 1, sm: 1.5 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, sm: 2 }, gap: 2 }}>
+        <Typography 
+          variant="h6" 
+          component="h3"
+          sx={{ 
+            fontSize: { xs: '1.1rem', sm: '1.25rem' },
+            fontWeight: { xs: 600, sm: 600 }
+          }}
+        >
+          {formatChangelogDate(entry.date)}
         </Typography>
-        {entry.date && !entry.isUnreleased && (
-          <Typography variant="body2" color="text.secondary">
-            {entry.date}
-          </Typography>
-        )}
-        {entry.isUnreleased && (
-          <Chip label="Coming Soon" size="small" color="primary" variant="outlined" />
-        )}
       </Box>
       
-      {entry.sections.added && (
-        <ChangelogSection type="Added" items={entry.sections.added} />
+      {entry.sections.new && (
+        <ChangelogSection type="New" items={entry.sections.new} />
       )}
       {entry.sections.changed && (
         <ChangelogSection type="Changed" items={entry.sections.changed} />
@@ -114,7 +119,6 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
 
 export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
   const [changelog, setChangelog] = useState<ParsedChangelog | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -124,14 +128,13 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
   }, [open, changelog]);
 
   useEffect(() => {
-    if (open && changelog?.latestVersion) {
-      // Mark the latest version as viewed when the modal is opened
-      setLastViewedVersion(changelog.latestVersion);
+    if (open && changelog?.latestDate) {
+      // Mark the latest date as viewed when the modal is opened
+      setLastViewedDate(changelog.latestDate);
     }
-  }, [open, changelog?.latestVersion]);
+  }, [open, changelog?.latestDate]);
 
   const loadChangelog = () => {
-    setLoading(true);
     setError(null);
     
     try {
@@ -139,8 +142,6 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
       setChangelog(parsed);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to parse changelog');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -155,10 +156,14 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
       maxWidth="md"
       fullWidth
       scroll="paper"
-      PaperProps={{
-        sx: {
-          minHeight: '60vh',
-          maxHeight: '90vh'
+      slotProps={{
+        paper: {
+          sx: {
+            minHeight: { xs: '70vh', sm: '60vh' },
+            maxHeight: { xs: '95vh', sm: '90vh' },
+            m: { xs: 1, sm: 2 },
+            maxWidth: { xs: 'calc(100vw - 16px)', sm: 'md' }
+          }
         }
       }}
     >
@@ -166,32 +171,36 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        pb: 2
+        pb: { xs: 1, sm: 2 },
+        pt: { xs: 2, sm: 3 },
+        px: { xs: 2, sm: 3 }
       }}>
-        <Typography variant="h5" component="h2">
+        <Typography 
+          variant="h5" 
+          component="h2"
+          sx={{ fontSize: { xs: '1.3rem', sm: '1.5rem' } }}
+        >
           What's New
         </Typography>
         <IconButton
           aria-label="close"
           onClick={handleClose}
-          sx={{ color: 'text.secondary' }}
+          sx={{ 
+            color: 'text.secondary',
+            p: { xs: 1, sm: 1 }
+          }}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
       
-      <DialogContent dividers>
-        {loading && (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            minHeight: 200 
-          }}>
-            <Typography color="text.secondary">Loading changelog...</Typography>
-          </Box>
-        )}
-        
+      <DialogContent 
+        dividers
+        sx={{ 
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1.5, sm: 2 }
+        }}
+      >
         {error && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
             <Typography color="error" gutterBottom>
@@ -208,13 +217,13 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
           </Box>
         )}
         
-        {changelog && !loading && !error && (
+        {changelog && !error && (
           <Box>
             {changelog.entries.map((entry, index) => (
-              <Box key={entry.version}>
+              <Box key={entry.date}>
                 <ChangelogEntryComponent entry={entry} />
                 {index < changelog.entries.length - 1 && (
-                  <Divider sx={{ my: 3 }} />
+                  <Divider sx={{ mb: { xs: 2.5, sm: 3 } }} />
                 )}
               </Box>
             ))}
@@ -225,8 +234,20 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
               </Typography>
             )}
             
-            <Box sx={{ mt: 4, pt: 3, borderTop: 1, borderColor: 'divider' }}>
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+            <Box sx={{ 
+              mt: { xs: 3, sm: 4 }, 
+              pt: { xs: 2, sm: 3 }, 
+              borderTop: 1, 
+              borderColor: 'divider' 
+            }}>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ 
+                  textAlign: 'center',
+                  fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                }}
+              >
                 Have feedback or suggestions? We'd love to hear from you!
               </Typography>
             </Box>

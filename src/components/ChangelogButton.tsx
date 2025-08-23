@@ -7,7 +7,7 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
 import { 
-  getLastViewedVersion, 
+  getLastViewedDate, 
   hasNewUpdates, 
   parseChangelog, 
   type ParsedChangelog 
@@ -32,7 +32,7 @@ export default function ChangelogButton({ onClick }: ChangelogButtonProps) {
   const checkForUpdates = () => {
     try {
       const changelog: ParsedChangelog = parseChangelog(changelogContent);
-      const lastViewed = getLastViewedVersion();
+      const lastViewed = getLastViewedDate();
       const hasNew = hasNewUpdates(changelog, lastViewed || undefined);
       setHasNewFeatures(hasNew);
     } catch (error) {

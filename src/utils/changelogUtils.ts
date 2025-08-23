@@ -1,25 +1,23 @@
 export interface ChangelogEntry {
-  version: string;
-  date?: string;
+  date: string; // ISO format (yyyy-mm-dd) for parsing, display format handled in UI
   sections: {
-    added?: string[];
+    new?: string[];
     changed?: string[];
     fixed?: string[];
     deprecated?: string[];
     removed?: string[];
     security?: string[];
   };
-  isUnreleased?: boolean;
 }
 
 export interface ParsedChangelog {
   entries: ChangelogEntry[];
-  latestVersion?: string;
+  latestDate?: string;
 }
 
 /**
  * Simple markdown changelog parser
- * Parses a changelog following the Keep a Changelog format
+ * Parses a changelog with ISO date headers (yyyy-mm-dd)
  */
 export function parseChangelog(markdownContent: string): ParsedChangelog {
   const lines = markdownContent.split('\n').map(line => line.trim());
@@ -28,31 +26,28 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
   let currentSection: keyof ChangelogEntry['sections'] | null = null;
 
   for (const line of lines) {
-    // Check for version header (## [version] - date or ## [Unreleased])
-    const versionMatch = line.match(/^## \[([^\]]+)\](?:\s*-\s*(.+))?/);
-    if (versionMatch) {
+    // Check for date header (## 2025-01-15)
+    const dateMatch = line.match(/^## (\d{4}-\d{2}-\d{2})$/);
+    if (dateMatch) {
       // Save previous entry
       if (currentEntry) {
         entries.push(currentEntry);
       }
       
-      const version = versionMatch[1];
-      const date = versionMatch[2];
+      const date = dateMatch[1];
       
-      if (version) {
+      if (date) {
         currentEntry = {
-          version,
-          ...(date ? { date } : {}),
-          sections: {},
-          isUnreleased: version.toLowerCase() === 'unreleased'
+          date,
+          sections: {}
         };
         currentSection = null;
       }
       continue;
     }
 
-    // Check for section headers (### Added, ### Changed, etc.)
-    const sectionMatch = line.match(/^### (Added|Changed|Fixed|Deprecated|Removed|Security)/i);
+    // Check for section headers (### New, ### Changed, etc.)
+    const sectionMatch = line.match(/^### (New|Changed|Fixed|Deprecated|Removed|Security)/i);
     if (sectionMatch && currentEntry && sectionMatch[1]) {
       currentSection = sectionMatch[1].toLowerCase() as keyof ChangelogEntry['sections'];
       currentEntry.sections[currentSection] = [];
@@ -74,60 +69,74 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
     entries.push(currentEntry);
   }
 
-  // Find latest version (excluding unreleased)
-  const latestVersion = entries.find(entry => !entry.isUnreleased)?.version;
+  // Find latest date (entries are in reverse chronological order, so first is latest)
+  const latestDate = entries[0]?.date;
 
   return {
     entries,
-    ...(latestVersion ? { latestVersion } : {})
+    ...(latestDate ? { latestDate } : {})
   };
 }
 
 /**
- * Get the version that should be considered "new" for notification purposes
+ * Get the date that should be considered "new" for notification purposes
  */
-export function getLatestReleaseVersion(changelog: ParsedChangelog): string | undefined {
-  return changelog.entries.find(entry => !entry.isUnreleased)?.version;
+export function getLatestReleaseDate(changelog: ParsedChangelog): string | undefined {
+  return changelog.latestDate;
 }
 
 /**
- * Check if there are new updates since the last viewed version
+ * Check if there are new updates since the last viewed date
  */
-export function hasNewUpdates(changelog: ParsedChangelog, lastViewedVersion?: string): boolean {
-  if (!lastViewedVersion) return true;
+export function hasNewUpdates(changelog: ParsedChangelog, lastViewedDate?: string): boolean {
+  if (!lastViewedDate) return true;
   
-  const latestVersion = getLatestReleaseVersion(changelog);
-  if (!latestVersion) return false;
+  const latestDate = getLatestReleaseDate(changelog);
+  if (!latestDate) return false;
   
-  return latestVersion !== lastViewedVersion;
+  return latestDate !== lastViewedDate;
+}
+
+/**
+ * Format ISO date (yyyy-mm-dd) to human readable format
+ */
+export function formatChangelogDate(isoDate: string): string {
+  try {
+    const date = new Date(isoDate + 'T00:00:00'); // Add time to avoid timezone issues
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch {
+    return isoDate; // Fallback to ISO format if parsing fails
+  }
 }
 
 /**
  * Local storage keys for changelog functionality
  */
 export const CHANGELOG_STORAGE_KEYS = {
-  LAST_VIEWED_VERSION: 'changelog-last-viewed-version',
   LAST_VIEWED_DATE: 'changelog-last-viewed-date'
 } as const;
 
 /**
- * Get the last viewed version from localStorage
+ * Get the last viewed date from localStorage
  */
-export function getLastViewedVersion(): string | null {
+export function getLastViewedDate(): string | null {
   try {
-    return localStorage.getItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_VERSION);
+    return localStorage.getItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE);
   } catch {
     return null;
   }
 }
 
 /**
- * Set the last viewed version in localStorage
+ * Set the last viewed date in localStorage
  */
-export function setLastViewedVersion(version: string): void {
+export function setLastViewedDate(date: string): void {
   try {
-    localStorage.setItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_VERSION, version);
-    localStorage.setItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE, new Date().toISOString());
+    localStorage.setItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE, date);
   } catch {
     // Silently fail if localStorage is not available
   }
