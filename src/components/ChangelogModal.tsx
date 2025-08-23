@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -54,6 +54,43 @@ const SectionIcon = ({ type }: { type: string }) => {
 const ChangelogSection = ({ type, items }: { type: string; items: string[] }) => {
   if (!items || items.length === 0) return null;
 
+  // Simple markdown link parser for [text](url) format
+  const parseMarkdownLinks = (text: string) => {
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: (string | ReactNode)[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      // Add text before the link
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+      
+      // Add the link
+      parts.push(
+        <Link
+          key={match.index}
+          href={match[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{ color: 'primary.main', textDecoration: 'underline' }}
+        >
+          {match[1]}
+        </Link>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add any remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+    
+    return parts.length > 0 ? parts : [text];
+  };
+
   return (
     <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
@@ -63,14 +100,15 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
         {items.map((item, index) => (
           <ListItem key={index} sx={{ py: { xs: 0.125, sm: 0.25 }, px: 0 }}>
             <ListItemText 
-              primary={`• ${item}`}
-              slotProps={{
-                primary: {
-                  variant: 'body2',
-                  color: 'text.secondary',
-                  sx: { fontSize: { xs: '0.875rem', sm: '0.875rem' } }
-                }
-              }}
+              primary={
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontSize: { xs: '0.875rem', sm: '0.875rem' } }}
+                >
+                  • {parseMarkdownLinks(item)}
+                </Typography>
+              }
             />
           </ListItem>
         ))}

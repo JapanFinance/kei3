@@ -2,60 +2,43 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2025-08-24
+## 2025-08-23
 
 ### New
 
-- Changelog modal with deep linking support
-- User notification system for new features
+- This "What's New" dialog to keep you updated on new features and improvements
 
-## 2025-01-15
+## 2025-08-17
 
 ### New
 
-- Furusato Nozei (hometown tax) calculator with donation limits
-- Health insurance provider selection for employees
-- Support for detailed DC plan contributions
-- Mobile-optimized interface improvements
+- Support for National Health Insurance in Nara prefecture, Osaka prefecture, and Tokyo's special 23 wards
+- Added more employee health insurance providers: Tokyo Securities, Rakuten, and Recruit
 
 ### Changed
 
-- Improved chart performance and visual design
-- Better responsive layout for tablet devices
-- Enhanced tooltip information for premium calculations
+- Employee health insurance providers are now sorted alphabetically for easier browsing
+- Adds source links for health insurance premium information to the corresponding tooltip
 
-### Fixed
-
-- Calculation accuracy for high-income scenarios
-- Theme toggle state persistence
-- Input validation for edge cases
-
-## 2024-12-20
+## 2025-08-11
 
 ### New
 
-- Interactive chart showing income breakdown
-- Dark mode theme support
-- Support for multiple regions across Japan
-- Long-term care premium calculations
+- Complete health insurance rate data for all Kyokai Kenpo regions across Japan
 
 ### Changed
 
-- Redesigned user interface with Material-UI
-- Improved mobile responsiveness
-- Better accessibility support
+- Updated region selection to use searchable dropdown for easier navigation
+- Updated Furusato Nozei estimated gift values based on [latest 2024 statistics (PDF)](https://www.soumu.go.jp/main_content/001022815.crdownload)
 
-### Fixed
-
-- Tax calculation precision for decimal values
-- Browser compatibility issues
-
-## 2024-11-01
+## 2025-08-05
 
 ### New
 
-- Initial release of Japan Take-Home Pay Calculator
-- Basic income tax and residence tax calculations
-- Health insurance and pension premium calculations
-- Simple, clean user interface
-- Responsive design for mobile and desktop
+- Indicators showing when health insurance premiums or pension contributions are capped or fixed
+
+## 2025-07-23
+
+### Changed
+
+- Allow selecting National Health Insurance with employment income
