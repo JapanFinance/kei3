@@ -2,7 +2,7 @@ export interface ChangelogEntry {
   date: string; // ISO format (yyyy-mm-dd) for parsing, display format handled in UI
   sections: {
     new?: string[];
-    changed?: string[];
+    updated?: string[];
     fixed?: string[];
     deprecated?: string[];
     removed?: string[];
@@ -46,8 +46,8 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
       continue;
     }
 
-    // Check for section headers (### New, ### Changed, etc.)
-    const sectionMatch = line.match(/^### (New|Changed|Fixed|Deprecated|Removed|Security)/i);
+    // Check for section headers (### New, ### Updated, etc.)
+    const sectionMatch = line.match(/^### (New|Updated|Fixed|Deprecated|Removed|Security)/i);
     if (sectionMatch && currentEntry && sectionMatch[1]) {
       currentSection = sectionMatch[1].toLowerCase() as keyof ChangelogEntry['sections'];
       currentEntry.sections[currentSection] = [];

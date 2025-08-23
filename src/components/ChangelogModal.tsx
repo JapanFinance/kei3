@@ -24,7 +24,7 @@ const SectionIcon = ({ type }: { type: string }) => {
   const getColor = (sectionType: string): 'success' | 'info' | 'warning' | 'secondary' | 'error' | 'default' => {
     switch (sectionType.toLowerCase()) {
       case 'new': return 'success';
-      case 'changed': return 'info';
+      case 'updated': return 'info';
       case 'fixed': return 'warning';
       case 'deprecated': return 'secondary';
       case 'removed': return 'error';
@@ -136,8 +136,8 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
       {entry.sections.new && (
         <ChangelogSection type="New" items={entry.sections.new} />
       )}
-      {entry.sections.changed && (
-        <ChangelogSection type="Changed" items={entry.sections.changed} />
+      {entry.sections.updated && (
+        <ChangelogSection type="Updated" items={entry.sections.updated} />
       )}
       {entry.sections.fixed && (
         <ChangelogSection type="Fixed" items={entry.sections.fixed} />

@@ -15,7 +15,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 - Support for National Health Insurance in Nara prefecture, Osaka prefecture, and Tokyo's special 23 wards
 - Added more employee health insurance providers: Tokyo Securities, Rakuten, and Recruit
 
-### Changed
+### Updated
 
 - Employee health insurance providers are now sorted alphabetically for easier browsing
 - Adds source links for health insurance premium information to the corresponding tooltip
@@ -26,7 +26,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 - Complete health insurance rate data for all Kyokai Kenpo regions across Japan
 
-### Changed
+### Updated
 
 - Updated region selection to use searchable dropdown for easier navigation
 - Updated Furusato Nozei estimated gift values based on [latest 2024 statistics (PDF)](https://www.soumu.go.jp/main_content/001022815.crdownload)
@@ -39,7 +39,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ## 2025-07-23
 
-### Changed
+### Updated
 
 - Allow selecting National Health Insurance with employment income
 
