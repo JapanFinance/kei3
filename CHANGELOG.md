@@ -42,3 +42,9 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 ### Changed
 
 - Allow selecting National Health Insurance with employment income
+
+## 2025-07-21
+
+### New
+
+- Take-Home Pay Calculator [announced on r/JapanFinance](https://www.reddit.com/r/JapanFinance/comments/1m5jqjn/new_wiki_domain_and_takehome_pay_calculator/)
