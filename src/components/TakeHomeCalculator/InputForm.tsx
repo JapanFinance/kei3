@@ -26,6 +26,9 @@ import {
   getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
+  DEPENDENT_COVERAGE_ID,
+  isDependentCoverageEligible,
+  DEPENDENT_INCOME_THRESHOLD,
 } from '../../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
@@ -54,6 +57,7 @@ interface AdvancedOptionsFieldsProps {
   sharedInputSx: object;
   isRegionDropdownEffectivelyDisabled: boolean;
   regionMenuItemsToDisplay: RegionOption[];
+  isDependentEligible: boolean;
 }
 
 function AdvancedOptionsFields({
@@ -65,6 +69,7 @@ function AdvancedOptionsFields({
   sharedInputSx,
   isRegionDropdownEffectivelyDisabled,
   regionMenuItemsToDisplay,
+  isDependentEligible,
 }: AdvancedOptionsFieldsProps) {
   return (
     <Box sx={{
@@ -115,10 +120,12 @@ function AdvancedOptionsFields({
         </Select>
         {isHealthInsuranceProviderDropdownDisabled && (
           <FormHelperText>
-            {inputs.isEmploymentIncome
-              ? availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'
-              : `Automatically set to ${getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID)} for non-employment income.`
-            }
+            {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
+          </FormHelperText>
+        )}
+        {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
+          <FormHelperText>
+            {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
           </FormHelperText>
         )}
       </FormControl>
@@ -200,9 +207,18 @@ const nhiProvider = {
   displayName: getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID)
 };
 
+// Dependent coverage provider (only for employment income under threshold)
+const dependentProvider = {
+  id: DEPENDENT_COVERAGE_ID,
+  displayName: getProviderDisplayName(DEPENDENT_COVERAGE_ID)
+};
+
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Check if dependent coverage is eligible based on income
+  const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome);
 
   // Component-specific styles that can't be in the global CSS
   const styles = {
@@ -348,7 +364,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   };
 
 
-  // Determine available health insurance providers based on income type
+  // Determine available health insurance providers based on income type and eligibility
   const availableProviders = React.useMemo(() => {
     if (inputs.isEmploymentIncome) {
       // Employment income can use either employee health insurance or NHI
@@ -358,12 +374,21 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         displayName: providerName
       }));
 
-      return [...employeeProviders, nhiProvider];
+      // Include dependent coverage option only if income is below threshold
+      if (isDependentEligible) {
+        return [...employeeProviders, dependentProvider, nhiProvider];
+      } else {
+        return [...employeeProviders, nhiProvider];
+      }
     } else {
-      // Only National Health Insurance for non-employment income
-      return [nhiProvider];
+      // Non-employment income: NHI or dependent coverage (if eligible)
+      if (isDependentEligible) {
+        return [dependentProvider, nhiProvider];
+      } else {
+        return [nhiProvider];
+      }
     }
-  }, [inputs.isEmploymentIncome]);
+  }, [inputs.isEmploymentIncome, isDependentEligible]);
 
   const isHealthInsuranceProviderDropdownDisabled = availableProviders.length <= 1;
 
@@ -371,6 +396,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   const derivedProviderRegions = React.useMemo(() => {
     const provider = inputs.healthInsuranceProvider;
     if (!provider) return [];
+
+    // Dependent coverage doesn't have regions
+    if (provider === DEPENDENT_COVERAGE_ID) {
+      return [];
+    }
 
     if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
       return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
@@ -700,6 +730,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 sharedInputSx={sharedInputSx}
                 isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
                 regionMenuItemsToDisplay={regionMenuItemsToDisplay}
+                isDependentEligible={isDependentEligible}
               />
             </AccordionDetails>
           </Accordion>
@@ -724,6 +755,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               sharedInputSx={sharedInputSx}
               isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
               regionMenuItemsToDisplay={regionMenuItemsToDisplay}
+              isDependentEligible={isDependentEligible}
             />
           </Box>
         )}

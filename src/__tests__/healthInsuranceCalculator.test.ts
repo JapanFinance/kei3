@@ -164,3 +164,25 @@ describe('calculateHealthInsurancePremium for employees', () => {
       expect(calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka')).toBe(108_577)
     })
   })
+
+describe('Dependent Coverage', () => {
+  it('returns zero premium for dependent coverage regardless of age', () => {
+    expect(calculateHealthInsurancePremium(0, false, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+    expect(calculateHealthInsurancePremium(0, true, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+    expect(calculateHealthInsurancePremium(500_000, false, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+    expect(calculateHealthInsurancePremium(500_000, true, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+    expect(calculateHealthInsurancePremium(1_299_999, false, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+    expect(calculateHealthInsurancePremium(1_299_999, true, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+  })
+
+  it('returns zero premium for dependent coverage at threshold income', () => {
+    expect(calculateHealthInsurancePremium(1_300_000, false, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+    expect(calculateHealthInsurancePremium(1_300_000, true, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+  })
+
+  it('returns zero premium for dependent coverage even above threshold (validation should be in UI)', () => {
+    // The calculator itself doesn't enforce the threshold - that's done at the UI level
+    expect(calculateHealthInsurancePremium(2_000_000, false, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+    expect(calculateHealthInsurancePremium(2_000_000, true, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
+  })
+})

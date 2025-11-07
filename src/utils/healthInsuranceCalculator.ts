@@ -1,6 +1,6 @@
 import type { ProviderRegion, NationalHealthInsuranceRegionParams, HealthInsuranceProviderId } from '../types/healthInsurance';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
-import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID } from '../types/healthInsurance';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { calculateMonthlyEmployeePremium, getRegionalRates } from '../data/employeesHealthInsurance/providerRates';
 
@@ -32,6 +32,11 @@ export function calculateHealthInsurancePremium(
 ): number {
     if (annualIncome < 0) {
         throw new Error('Income cannot be negative.');
+    }
+
+    // Dependent coverage has no premium
+    if (provider === DEPENDENT_COVERAGE_ID) {
+        return 0;
     }
 
     if (provider === NATIONAL_HEALTH_INSURANCE_ID) {

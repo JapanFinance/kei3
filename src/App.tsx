@@ -6,7 +6,7 @@ import ChangelogButton from './components/ChangelogButton'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
 import type { TakeHomeInputs, TakeHomeResults } from './types/tax'
 import { calculateTaxes } from './utils/taxCalculations'
-import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER } from './types/healthInsurance'
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, DEPENDENT_COVERAGE_ID, isDependentCoverageEligible } from './types/healthInsurance'
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData'
 import { PROVIDER_DEFINITIONS } from './data/employeesHealthInsurance/providerRateData'
 import { useChangelogModal } from './hooks/useChangelogModal'
@@ -106,6 +106,9 @@ function App({ mode, toggleColorMode }: AppProps) {
           // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
           newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
                                  (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
+        } else if (processedInputValue === DEPENDENT_COVERAGE_ID) {
+          // Dependent coverage doesn't need a region
+          newInputs.region = DEFAULT_PROVIDER_REGION;
         } else {
           // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
           const providerDefinition = PROVIDER_DEFINITIONS[processedInputValue as string];
@@ -118,6 +121,15 @@ function App({ mode, toggleColorMode }: AppProps) {
             newInputs.region = DEFAULT_PROVIDER_REGION;
             console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data. Defaulting region.`);
           }
+        }
+      } else if (name === 'annualIncome') {
+        // If income changes and user has dependent coverage selected, check eligibility
+        const newIncome = processedInputValue as number;
+        if (prev.healthInsuranceProvider === DEPENDENT_COVERAGE_ID && !isDependentCoverageEligible(newIncome)) {
+          // Income exceeded threshold, automatically switch to NHI
+          newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
+          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
+                                 (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         }
       }
       return newInputs;

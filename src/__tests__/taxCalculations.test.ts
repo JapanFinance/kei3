@@ -435,3 +435,77 @@ describe('calculateNationalIncomeTax', () => {
     expect(calculateNationalIncomeTax(-1_000_000)).toBe(0) // Negative income is clamped to 0
   })
 })
+
+describe('calculateTaxes with Dependent Coverage', () => {
+  it('calculates taxes correctly with dependent coverage below threshold', () => {
+    const inputs = {
+      annualIncome: 1_000_000,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: 'DependentCoverage',
+      region: "Tokyo",
+      numberOfDependents: 0, 
+      showDetailedInput: false, 
+      dcPlanContributions: 0,
+    };
+    const result = calculateTaxes(inputs);
+    
+    // With dependent coverage, no health insurance or pension premiums
+    expect(result.healthInsurance).toBe(0)
+    expect(result.pensionPayments).toBe(0)
+    
+    // Employment insurance should still be calculated
+    // 1,000,000 / 12 = 83,333.33 per month
+    // 83,333.33 * 0.55% = 458.33 per month → 458 yen (round down)
+    // 458 * 12 = 5,496 yen annually
+    expect(result.employmentInsurance).toBe(5_496)
+    
+    // Income tax and residence tax should still be calculated normally
+    // Net income: 1,000,000 - 650,000 = 350,000
+    // Social insurance deduction: 0 + 0 + 5,496 = 5,496
+    // Taxable income: 350,000 - 5,496 - 950,000 = negative, so 0
+    expect(result.nationalIncomeTax).toBe(0)
+  })
+
+  it('calculates taxes correctly with dependent coverage at threshold', () => {
+    const inputs = {
+      annualIncome: 1_299_999,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: 'DependentCoverage',
+      region: "Tokyo",
+      numberOfDependents: 0, 
+      showDetailedInput: false, 
+      dcPlanContributions: 0,
+    };
+    const result = calculateTaxes(inputs);
+    
+    // With dependent coverage, no health insurance or pension premiums
+    expect(result.healthInsurance).toBe(0)
+    expect(result.pensionPayments).toBe(0)
+    
+    // Employment insurance should still be calculated
+    // 1,299,999 / 12 = 108,333.25 per month
+    // 108,333.25 * 0.55% = 595.83 per month → 596 yen (round up)
+    // 596 * 12 = 7,152 yen annually
+    expect(result.employmentInsurance).toBe(7_152)
+  })
+
+  it('calculates taxes correctly with dependent coverage and long-term care premium eligibility', () => {
+    const inputs = {
+      annualIncome: 1_200_000,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: true, // Should not matter for dependent coverage
+      healthInsuranceProvider: 'DependentCoverage',
+      region: "Tokyo",
+      numberOfDependents: 0, 
+      showDetailedInput: false, 
+      dcPlanContributions: 0,
+    };
+    const result = calculateTaxes(inputs);
+    
+    // Even with LTC eligibility, dependent coverage has no premiums
+    expect(result.healthInsurance).toBe(0)
+    expect(result.pensionPayments).toBe(0)
+  })
+})

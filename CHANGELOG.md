@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2025-11-07
+
+### New
+
+- Added a new Health Insurance Provider option for people who are covered as a dependent under the employees health insurance of someone in the same household (e.g. their spouse). If your income is below the ¥1,300,000 threshold, you can select this new option "None (dependent of insured employee)" in the Health Insurance Provider dropdown.
+
 ## 2025-08-23
 
 ### New

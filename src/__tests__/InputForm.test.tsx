@@ -97,10 +97,12 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
   });
 
   describe('when employment income is unchecked (non-employment income)', () => {
-    it('should only show National Health Insurance and disable dropdown', () => {
+    it('should show dependent coverage and NHI when income is below threshold', async () => {
+      const user = userEvent.setup();
       const nonEmploymentInputs = { 
         ...baseInputs, 
         isEmploymentIncome: false,
+        annualIncome: 1_000_000, // Below threshold
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
       
@@ -111,18 +113,48 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
         />
       );
 
-      // Dropdown should be disabled
+      // Dropdown should NOT be disabled since there are multiple options
+      const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+      expect(providerSelect).not.toHaveAttribute('aria-disabled', 'true');
+
+      // Click to open dropdown
+      await user.click(providerSelect);
+      const listbox = screen.getByRole('listbox');
+      
+      // Should have both dependent coverage and NHI
+      expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
+      expect(within(listbox).getByRole('option', { name: 'National Health Insurance' })).toBeInTheDocument();
+    });
+
+    it('should only show NHI when non-employment income is above threshold', () => {
+      const nonEmploymentInputs = { 
+        ...baseInputs, 
+        isEmploymentIncome: false,
+        annualIncome: 1_500_000, // Above threshold
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      };
+      
+      render(
+        <TakeHomeInputForm 
+          inputs={nonEmploymentInputs} 
+          onInputChange={mockOnInputChange} 
+        />
+      );
+
+      // Dropdown should be disabled since there's only one option
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
       expect(providerSelect).toHaveAttribute('aria-disabled', 'true');
 
-      // Should show explanatory text
-      expect(screen.getByText(/automatically set to.*national health insurance.*for non-employment income/i)).toBeInTheDocument();
+      // Should show helper text about only option available
+      expect(screen.getByText(/Only National Health Insurance available for this configuration/i)).toBeInTheDocument();
     });
 
     it('should not show employee health insurance providers for non-employment income', async () => {
+      const user = userEvent.setup();
       const nonEmploymentInputs = { 
         ...baseInputs, 
         isEmploymentIncome: false,
+        annualIncome: 1_000_000, // Below threshold to have options
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
       
@@ -134,11 +166,16 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       );
 
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+      await user.click(providerSelect);
       
-      // Since it's disabled, we can't click to see options, but we can verify
-      // that the current value is National Health Insurance
-      expect(providerSelect).toHaveTextContent('National Health Insurance');
-      expect(providerSelect).toHaveAttribute('aria-disabled', 'true');
+      const listbox = screen.getByRole('listbox');
+      const options = within(listbox).getAllByRole('option');
+      
+      // Should only have dependent coverage and NHI, no employee providers
+      expect(options).toHaveLength(2);
+      expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
+      expect(within(listbox).getByRole('option', { name: 'National Health Insurance' })).toBeInTheDocument();
+      expect(within(listbox).queryByRole('option', { name: 'Kyokai Kenpo' })).not.toBeInTheDocument();
     });
   });
 
@@ -259,4 +296,93 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       expect(employmentIncomeLabel).toBeInTheDocument();
     });
   });
+});
+
+describe('Dependent Coverage UI Behavior', () => {
+  const mockOnInputChange = vi.fn();
+  const baseInputs: TakeHomeInputs = {
+    annualIncome: 5000000,
+    isEmploymentIncome: true,
+    isSubjectToLongTermCarePremium: false,
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    numberOfDependents: 0,
+    showDetailedInput: false,
+  };
+
+  beforeEach(() => {
+    mockOnInputChange.mockClear();
+  });
+
+  it('should include dependent coverage option when income is below threshold for employment income', async () => {
+    const user = userEvent.setup();
+    const inputs = { ...baseInputs, annualIncome: 1_200_000, isEmploymentIncome: true };
+    
+    render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    const listbox = screen.getByRole('listbox');
+    
+    // Should include dependent coverage option
+    expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
+  });
+
+  it('should NOT include dependent coverage option when income is at or above threshold', async () => {
+    const user = userEvent.setup();
+    const inputs = { ...baseInputs, annualIncome: 1_300_000, isEmploymentIncome: true };
+    
+    render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    const listbox = screen.getByRole('listbox');
+    const options = within(listbox).getAllByRole('option');
+    const optionTexts = options.map(opt => opt.textContent);
+    
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it('should include dependent coverage option for non-employment income when below threshold', async () => {
+    const user = userEvent.setup();
+    const inputs = { ...baseInputs, annualIncome: 1_000_000, isEmploymentIncome: false };
+    
+    render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    const listbox = screen.getByRole('listbox');
+    
+    // Should include both dependent coverage and NHI for non-employment income below threshold
+    expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: 'National Health Insurance' })).toBeInTheDocument();
+  });
+
+  it('should NOT include dependent coverage option for non-employment income above threshold', () => {
+    const inputs = { ...baseInputs, annualIncome: 1_500_000, isEmploymentIncome: false };
+    
+    render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    
+    // Should be disabled since only one option (NHI)
+    expect(providerSelect).toHaveAttribute('aria-disabled', 'true');
+    
+    // Should show helper text explaining only NHI is available for this configuration
+    expect(screen.getByText(/Only National Health Insurance available for this configuration/i)).toBeInTheDocument();
+  });
+
+  it('should show helper text about dependent coverage when income is below threshold', () => {
+    const inputs = { ...baseInputs, annualIncome: 1_200_000, isEmploymentIncome: true };
+    
+    render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
+
+    // Should show helper text mentioning the threshold
+    expect(screen.getByText(/If you are covered as a dependent under employee health insurance, select "None"./i)).toBeInTheDocument();
+  });
+
 });
