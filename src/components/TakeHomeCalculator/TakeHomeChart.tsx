@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Chart } from 'react-chartjs-2';
 import { Chart as ChartJS,
   LinearScale,
@@ -176,13 +176,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   dcPlanContributions,
   className = ''
 }) => {
-  const [chartRange, setChartRange] = useState<ChartRange>({
-    min: 0,
-    max: 10000000, // 10 million yen
-  });
-  
   // Track whether the user has manually adjusted the range
   const [hasManuallyAdjustedRange, setHasManuallyAdjustedRange] = useState(false);
+  const [manualChartRange, setManualChartRange] = useState<ChartRange | null>(null);
   
   // Function to calculate auto-centered range based on income
   const calculateAutoCenteredRange = (income: number): ChartRange => {
@@ -209,17 +205,20 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     return { min, max };
   };
   
-  // Auto-adjust range when income changes, but only if user hasn't manually adjusted it
-  useEffect(() => {
-    if (!hasManuallyAdjustedRange && currentIncome > 0) {
-      const newRange = calculateAutoCenteredRange(currentIncome);
-      setChartRange(newRange);
+  // Calculate chart range - use manual range if set, otherwise auto-calculate
+  const chartRange = useMemo(() => {
+    if (hasManuallyAdjustedRange && manualChartRange) {
+      return manualChartRange;
     }
-  }, [currentIncome, hasManuallyAdjustedRange]);
+    if (currentIncome > 0) {
+      return calculateAutoCenteredRange(currentIncome);
+    }
+    return { min: 0, max: 10000000 }; // Default range
+  }, [currentIncome, hasManuallyAdjustedRange, manualChartRange]);
   
   const handleManualRangeChange = (_: Event, newValue: number | number[]) => {
     if (Array.isArray(newValue) && newValue.length >= 2) {
-      setChartRange({ min: newValue[0]!, max: newValue[1]! });
+      setManualChartRange({ min: newValue[0]!, max: newValue[1]! });
       // Mark that the user has manually adjusted the range
       setHasManuallyAdjustedRange(true);
     }
