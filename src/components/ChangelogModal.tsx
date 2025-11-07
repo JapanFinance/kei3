@@ -157,20 +157,14 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
 
 export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
   // Parse changelog once using lazy initialization - it's static content
-  const [changelog] = useState<ParsedChangelog | null>(() => {
+  const [{ changelog, error }] = useState<{ changelog: ParsedChangelog | null; error: string | null }>(() => {
     try {
-      return parseChangelog(changelogContent);
-    } catch {
-      return null;
-    }
-  });
-  
-  const [error] = useState<string | null>(() => {
-    try {
-      parseChangelog(changelogContent);
-      return null;
+      return { changelog: parseChangelog(changelogContent), error: null };
     } catch (err) {
-      return err instanceof Error ? err.message : 'Failed to parse changelog';
+      return { 
+        changelog: null, 
+        error: err instanceof Error ? err.message : 'Failed to parse changelog' 
+      };
     }
   });
 
@@ -239,17 +233,9 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
       >
         {error && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography color="error" gutterBottom>
+            <Typography color="error">
               {error}
             </Typography>
-            <Link
-              component="button"
-              variant="body2"
-              onClick={loadChangelog}
-              sx={{ mt: 1 }}
-            >
-              Try again
-            </Link>
           </Box>
         )}
         
