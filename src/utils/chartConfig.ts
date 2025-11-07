@@ -184,7 +184,7 @@ export const getChartOptions = (
         },
         callbacks: {
           title: function(context: TooltipItem<'bar' | 'line'>[]) {
-            if (context.length > 0 && context[0]?.parsed?.x != null) {
+            if (context.length > 0 && context[0]?.parsed?.x !== null && context[0]?.parsed?.x !== undefined) {
               const income = context[0].parsed.x;
               return `Income: ${formatJPY(income)}`;
             }
