@@ -184,7 +184,7 @@ export const getChartOptions = (
         },
         callbacks: {
           title: function(context: TooltipItem<'bar' | 'line'>[]) {
-            if (context.length > 0 && context[0]?.parsed?.x !== null && context[0]?.parsed?.x !== undefined) {
+            if (context.length > 0 && context[0]?.parsed?.x != null) {
               const income = context[0].parsed.x;
               return `Income: ${formatJPY(income)}`;
             }
@@ -195,10 +195,10 @@ export const getChartOptions = (
             if (label) {
               label += ': ';
             }
-            if (context.parsed.y !== null) {
+            if (context.parsed.y != null) {
               const income = context.parsed.x;
               const fractionDigits = context.dataset.label === 'Employment Insurance' ? 2 : 1;
-              const percentage = income !== null && income > 0 ? ((context.parsed.y / income) * 100).toFixed(fractionDigits) : '0.0';
+              const percentage = income != null && income > 0 ? ((context.parsed.y / income) * 100).toFixed(fractionDigits) : '0.0';
               label += `${formatJPY(context.parsed.y)} (${percentage}%)`;
             }
             return label;
