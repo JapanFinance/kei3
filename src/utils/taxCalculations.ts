@@ -1,5 +1,5 @@
 import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID } from '../types/healthInsurance';
 import { calculatePensionPremium } from './pensionCalculator';
 import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
@@ -216,8 +216,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // Calculate pension based on health insurance type
     // People on National Health Insurance are in National Pension system
     // People on employee health insurance are in Employee Pension system
-    const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID;
-    const pensionPayments = calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
+    // People covered as dependents do not pay pension premiums
+    const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
+    const pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
+        ? 0 
+        : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
 
     const employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
 
