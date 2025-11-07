@@ -156,14 +156,23 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
 };
 
 export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
-  const [changelog, setChangelog] = useState<ParsedChangelog | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (open && !changelog) {
-      loadChangelog();
+  // Parse changelog once using lazy initialization - it's static content
+  const [changelog] = useState<ParsedChangelog | null>(() => {
+    try {
+      return parseChangelog(changelogContent);
+    } catch {
+      return null;
     }
-  }, [open, changelog]);
+  });
+  
+  const [error] = useState<string | null>(() => {
+    try {
+      parseChangelog(changelogContent);
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : 'Failed to parse changelog';
+    }
+  });
 
   useEffect(() => {
     if (open && changelog?.latestDate) {
@@ -171,17 +180,6 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
       setLastViewedDate(changelog.latestDate);
     }
   }, [open, changelog?.latestDate]);
-
-  const loadChangelog = () => {
-    setError(null);
-    
-    try {
-      const parsed = parseChangelog(changelogContent);
-      setChangelog(parsed);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to parse changelog');
-    }
-  };
 
   const handleClose = () => {
     onClose();
