@@ -5,6 +5,8 @@ routes = [
   { pattern = "kei3.japanfinance.org", custom_domain = true }
 ]
 
+preview_urls = true
+
 [assets]
 directory = "./dist/"
 not_found_handling = "404-page"
