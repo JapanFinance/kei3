@@ -3,6 +3,7 @@ import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID }
 import { calculatePensionPremium } from './pensionCalculator';
 import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
+import { calculateDependentDeductions } from './dependentDeductions';
 
 /** https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html */
 export const employmentInsuranceRate = 0.0055; // 0.55%
@@ -229,9 +230,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
+    // Calculate dependent deductions
+    const dependentDeductions = calculateDependentDeductions(inputs.dependents);
+
     const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome);
 
-    const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction) / 1000) * 1000);
+    const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
 
     const nationalIncomeTax = calculateNationalIncomeTax(taxableIncomeForNationalIncomeTax);
     
@@ -241,15 +245,15 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const reconstructionSurtax = calculateReconstructionSurtax(nationalIncomeTaxBase);
 
     const residenceTaxBasicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
-    const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction) / 1000) * 1000);
+    const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction - dependentDeductions.residenceTax.total) / 1000) * 1000);
 
-    const residenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction);
+    const residenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions.residenceTax.total);
 
     // Calculate totals
     const totalSocialsAndTax = nationalIncomeTax + residenceTax.totalResidenceTax + healthInsurance + pensionPayments + employmentInsurance;
     const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
-    const furusatoNozeiLimit = calculateFurusatoNozeiDetails(netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction, residenceTax);
+    const furusatoNozeiLimit = calculateFurusatoNozeiDetails(netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total, residenceTax);
 
     return {
         annualIncome,
@@ -278,5 +282,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         healthInsuranceProvider: inputs.healthInsuranceProvider,
         region: inputs.region,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
+        // Dependent deductions (always include, even if zero)
+        ...(inputs.dependents.length > 0 && {
+            dependentDeductions: {
+                nationalTaxTotal: dependentDeductions.nationalTax.total,
+                residenceTaxTotal: dependentDeductions.residenceTax.total,
+            }
+        }),
     };
 }
