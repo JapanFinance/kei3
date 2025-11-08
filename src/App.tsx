@@ -33,7 +33,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     region: "Tokyo",
     showDetailedInput: false,
     healthInsuranceProvider: DEFAULT_PROVIDER,
-    numberOfDependents: 0,
+    dependents: [],
     dcPlanContributions: 0
   }
 

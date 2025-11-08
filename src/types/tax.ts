@@ -1,4 +1,6 @@
 import type { HealthInsuranceProviderId } from "./healthInsurance";
+import type { Dependent } from "./dependents";
+
 export interface TakeHomeInputs {
   annualIncome: number;
   isEmploymentIncome: boolean;
@@ -6,7 +8,7 @@ export interface TakeHomeInputs {
   region: string;
   showDetailedInput: boolean;
   healthInsuranceProvider: HealthInsuranceProviderId;
-  numberOfDependents: number;
+  dependents: Dependent[];
   dcPlanContributions: number;
 }
 
@@ -27,6 +29,11 @@ export interface TakeHomeResults {
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
   dcPlanContributions: number;
+  // Dependent deductions
+  dependentDeductions?: {
+    nationalTaxTotal: number;
+    residenceTaxTotal: number;
+  };
   // Income tax breakdown
   nationalIncomeTaxBase?: number | undefined;
   reconstructionSurtax?: number | undefined;
