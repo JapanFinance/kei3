@@ -14,8 +14,9 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type { 
-  Dependent, 
+  OtherDependent, 
   DependentRelationship, 
+  DependentAgeCategory,
   IncomeLevel,
   DisabilityLevel,
 } from '../../types/dependents';
@@ -23,14 +24,15 @@ import {
   INCOME_LEVELS,
   RELATIONSHIPS,
   DISABILITY_LEVELS,
+  DEPENDENT_AGE_CATEGORIES,
   getIncomeLevelFromSlider,
   getSliderValueFromIncomeLevel,
 } from '../../types/dependents';
 import { InfoTooltip } from '../ui/InfoTooltip';
 
 interface DependentFormProps {
-  dependent: Dependent | null;
-  onSave: (dependent: Dependent) => void;
+  dependent: OtherDependent | null;
+  onSave: (dependent: OtherDependent) => void;
   onCancel: () => void;
 }
 
@@ -48,12 +50,14 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   // Form state
   const [name, setName] = useState(dependent?.name || '');
-  const [relationship, setRelationship] = useState<DependentRelationship>(
+  const [relationship, setRelationship] = useState<Exclude<DependentRelationship, 'spouse'>>(
     dependent?.relationship || 'child'
   );
-  const [age, setAge] = useState(dependent?.age.toString() || '');
+  const [ageCategory, setAgeCategory] = useState<DependentAgeCategory>(
+    dependent?.ageCategory || '16to18'
+  );
   const [incomeLevel, setIncomeLevel] = useState<IncomeLevel>(
-    dependent?.incomeLevel || 'none'
+    dependent?.incomeLevel || 'under48'
   );
   const [disability, setDisability] = useState<DisabilityLevel>(
     dependent?.disability || 'none'
@@ -67,24 +71,12 @@ export const DependentForm: React.FC<DependentFormProps> = ({
     setIncomeLevel(newLevel);
   };
 
-  // Validate age (derived value, no useEffect needed)
-  const ageNum = parseInt(age);
-  const ageError = age !== '' && (isNaN(ageNum) || ageNum < 0 || ageNum > 150)
-    ? 'Please enter a valid age (0-150)'
-    : '';
-
   const handleSubmit = () => {
-    // ageNum and ageError are already computed as derived values
-    if (!age || ageError) {
-      // Don't submit if there's an age error
-      return;
-    }
-
     const trimmedName = name.trim();
-    const newDependent: Dependent = {
+    const newDependent: OtherDependent = {
       id: dependent?.id || `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       relationship,
-      age: ageNum,
+      ageCategory,
       incomeLevel,
       disability,
       isCohabiting,
@@ -94,7 +86,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
     onSave(newDependent);
   };
 
-  const canSubmit = age !== '' && !ageError;
+  const canSubmit = true; // All fields have defaults, always submittable
 
   const incomeLevelInfo = INCOME_LEVELS.find(l => l.value === incomeLevel);
   const sliderValue = getSliderValueFromIncomeLevel(incomeLevel);
@@ -139,9 +131,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           labelId="relationship-label"
           label="Relationship"
           value={relationship}
-          onChange={(e) => setRelationship(e.target.value as DependentRelationship)}
+          onChange={(e) => setRelationship(e.target.value as Exclude<DependentRelationship, 'spouse'>)}
         >
-          {RELATIONSHIPS.map((rel) => (
+          {RELATIONSHIPS.filter(rel => rel.value !== 'spouse').map((rel) => (
             <MenuItem key={rel.value} value={rel.value}>
               {rel.label}
             </MenuItem>
@@ -149,24 +141,30 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         </Select>
       </FormControl>
 
-      {/* Age */}
-      <TextField
-        required
-        label="Age"
-        type="number"
-        value={age}
-        onChange={(e) => setAge(e.target.value)}
-        error={!!ageError}
-        helperText={ageError || 'Age as of December 31st of the tax year'}
-        fullWidth
-        slotProps={{
-          htmlInput: {
-            min: 0,
-            max: 150,
-            step: 1,
-          }
-        }}
-      />
+      {/* Age Category */}
+      <FormControl fullWidth>
+        <InputLabel id="age-label">Age Category</InputLabel>
+        <Select
+          labelId="age-label"
+          label="Age Category"
+          value={ageCategory}
+          onChange={(e) => setAgeCategory(e.target.value as DependentAgeCategory)}
+        >
+          {DEPENDENT_AGE_CATEGORIES.map((cat) => (
+            <MenuItem key={cat.value} value={cat.value}>
+              <Box>
+                <Typography variant="body2">{cat.label}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {cat.description}
+                </Typography>
+              </Box>
+            </MenuItem>
+          ))}
+        </Select>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
+          Age as of December 31st of the tax year
+        </Typography>
+      </FormControl>
 
       {/* Income Level Slider */}
       <Box>
@@ -189,7 +187,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             step={1}
             marks={sliderMarks}
             min={0}
-            max={4}
+            max={3}
             valueLabelDisplay="off"
             sx={{
               '& .MuiSlider-markLabel': {
