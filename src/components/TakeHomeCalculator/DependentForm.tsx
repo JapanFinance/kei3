@@ -284,7 +284,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       {/* Age and Living Together on same row */}
       <Box>
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-          <FormControl sx={{ flex: 1 }}>
+          <FormControl sx={{ flex: 1 }} size="small">
             <InputLabel id="age-label">Age</InputLabel>
             <Select
               labelId="age-label"
@@ -322,7 +322,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       </Box>
 
       {/* Disability */}
-      <FormControl fullWidth>
+      <FormControl fullWidth size="small">
         <Typography 
           gutterBottom 
           sx={{ 
