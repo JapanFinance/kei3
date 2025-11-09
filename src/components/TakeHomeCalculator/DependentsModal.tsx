@@ -21,9 +21,10 @@ import PersonIcon from '@mui/icons-material/Person';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { Dependent } from '../../types/dependents';
-import { INCOME_LEVELS, RELATIONSHIPS } from '../../types/dependents';
+import type { Dependent, OtherDependent, Spouse } from '../../types/dependents';
+import { INCOME_LEVELS, RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES } from '../../types/dependents';
 import { DependentForm } from './DependentForm';
+import SpouseSection from './SpouseSection';
 
 interface DependentsModalProps {
   open: boolean;
@@ -44,15 +45,28 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [editingDependent, setEditingDependent] = useState<Dependent | null>(null);
+  const [editingDependent, setEditingDependent] = useState<OtherDependent | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
 
-  const handleAddDependent = (dependent: Dependent) => {
+  // Separate spouse from other dependents
+  const spouse = dependents.find(d => d.relationship === 'spouse') as Spouse | undefined;
+  const otherDependents = dependents.filter(d => d.relationship !== 'spouse') as OtherDependent[];
+
+  const handleSpouseChange = (newSpouse: Spouse | null) => {
+    const nonSpouseDependents = dependents.filter(d => d.relationship !== 'spouse');
+    if (newSpouse) {
+      onDependentsChange([newSpouse, ...nonSpouseDependents]);
+    } else {
+      onDependentsChange(nonSpouseDependents);
+    }
+  };
+
+  const handleAddDependent = (dependent: OtherDependent) => {
     onDependentsChange([...dependents, dependent]);
     setIsAddingNew(false);
   };
 
-  const handleUpdateDependent = (updatedDependent: Dependent) => {
+  const handleUpdateDependent = (updatedDependent: OtherDependent) => {
     onDependentsChange(
       dependents.map(d => d.id === updatedDependent.id ? updatedDependent : d)
     );
@@ -63,7 +77,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
     onDependentsChange(dependents.filter(d => d.id !== id));
   };
 
-  const handleStartEdit = (dependent: Dependent) => {
+  const handleStartEdit = (dependent: OtherDependent) => {
     setEditingDependent(dependent);
     setIsAddingNew(false);
   };
@@ -78,22 +92,27 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
     setEditingDependent(null);
   };
 
-  const getDependentSummary = (dependent: Dependent): string => {
+  const getDependentSummary = (dependent: OtherDependent): string => {
     const relationship = RELATIONSHIPS.find(r => r.value === dependent.relationship)?.label || 'Unknown';
+    const ageLabel = DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label || 'Unknown';
     const incomeLabel = INCOME_LEVELS.find(l => l.value === dependent.incomeLevel)?.label || 'Unknown';
-    return `${relationship}, Age ${dependent.age}, Income: ${incomeLabel}`;
+    return `${relationship}, Age: ${ageLabel}, Income: ${incomeLabel}`;
   };
 
-  const getDependentChips = (dependent: Dependent): React.ReactNode[] => {
+  const getDependentChips = (dependent: OtherDependent): React.ReactNode[] => {
     const chips: React.ReactNode[] = [];
     
     if (dependent.disability !== 'none') {
+      let disabilityLabel = dependent.disability === 'regular' ? 'Disabled' : 'Special Disability';
+      // Add cohabiting info to special disability chip
+      if (dependent.disability === 'special' && dependent.isCohabiting) {
+        disabilityLabel += ' (Cohabiting)';
+      }
+      
       chips.push(
         <Chip 
           key="disability" 
-          label={dependent.disability === 'regular' ? 'Disabled' : 
-                 dependent.disability === 'special' ? 'Special Disability' : 
-                 'Special (Cohabiting)'}
+          label={disabilityLabel}
           size="small" 
           color="secondary"
           sx={{ mr: 0.5, mt: 0.5 }}
@@ -101,7 +120,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       );
     }
     
-    if (dependent.isCohabiting) {
+    // Only show separate cohabiting chip if not special disability
+    // (to avoid redundancy since special disability chip already shows it)
+    if (dependent.isCohabiting && dependent.disability !== 'special') {
       chips.push(
         <Chip 
           key="cohabiting" 
@@ -187,26 +208,36 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               </Typography>
             </Box>
 
-            {/* List of dependents */}
-            {dependents.length === 0 ? (
+            {/* Spouse Section */}
+            <SpouseSection 
+              spouse={spouse || null}
+              onChange={handleSpouseChange}
+            />
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* Other Dependents Section */}
+            <Typography variant="h6" gutterBottom>
+              Other Dependents
+            </Typography>
+
+            {/* List of other dependents */}
+            {otherDependents.length === 0 ? (
               <Box 
                 sx={{ 
                   textAlign: 'center', 
-                  py: 6,
+                  py: 4,
                   color: 'text.secondary',
                 }}
               >
-                <PersonIcon sx={{ fontSize: 64, opacity: 0.3, mb: 2 }} />
-                <Typography variant="body1" gutterBottom>
-                  No dependents added yet
-                </Typography>
+                <PersonIcon sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
                 <Typography variant="body2">
-                  Click &quot;Add Dependent&quot; to get started
+                  No other dependents added yet
                 </Typography>
               </Box>
             ) : (
               <List sx={{ width: '100%' }}>
-                {dependents.map((dependent, index) => (
+                {otherDependents.map((dependent, index) => (
                   <React.Fragment key={dependent.id}>
                     {index > 0 && <Divider component="li" />}
                     <ListItem
@@ -273,7 +304,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 size="large"
                 fullWidth={isMobile}
               >
-                Add Dependent
+                Add Other Dependent
               </Button>
             </Box>
           </Box>
@@ -286,7 +317,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
         {!showingForm && (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto', ml: 1 }}>
-              {dependents.length} dependent{dependents.length !== 1 ? 's' : ''}
+              {spouse ? '1 spouse, ' : ''}{otherDependents.length} other dependent{otherDependents.length !== 1 ? 's' : ''}
             </Typography>
             <Button onClick={onClose} variant="contained">
               Done

@@ -147,8 +147,15 @@ export interface DependentDeductionBreakdown {
 
 /**
  * Get disability deduction amount for a given disability level
+ * @param disability - The disability level
+ * @param isCohabiting - Whether the dependent lives with the taxpayer
+ * @param forResidenceTax - Whether this is for residence tax (vs national tax)
  */
-function getDisabilityDeduction(disability: DisabilityLevel, forResidenceTax: boolean): number {
+function getDisabilityDeduction(
+  disability: DisabilityLevel, 
+  isCohabiting: boolean,
+  forResidenceTax: boolean
+): number {
   if (disability === 'none') {
     return 0;
   }
@@ -159,9 +166,10 @@ function getDisabilityDeduction(disability: DisabilityLevel, forResidenceTax: bo
     case 'regular':
       return deductions.DISABILITY_REGULAR;
     case 'special':
-      return deductions.DISABILITY_SPECIAL;
-    case 'specialCohabiting':
-      return deductions.DISABILITY_SPECIAL_COHABITING;
+      // Special disability with cohabitation gets higher deduction
+      return isCohabiting 
+        ? deductions.DISABILITY_SPECIAL_COHABITING 
+        : deductions.DISABILITY_SPECIAL;
     default:
       return 0;
   }
@@ -235,10 +243,14 @@ function calculateSpouseDeduction(dependent: Dependent, forResidenceTax: boolean
     return 0;
   }
   
+  if (dependent.relationship !== 'spouse') {
+    return 0;
+  }
+  
   const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
   
   // Check if elderly spouse (age 70+)
-  if (dependent.age >= 70) {
+  if (dependent.ageCategory === '70plus') {
     return deductions.ELDERLY_SPOUSE;
   }
   
@@ -289,15 +301,21 @@ export function calculateDependentDeductions(
     
     // Calculate disability deduction (applies to all dependents regardless of other status)
     if (dependent.disability !== 'none') {
-      const natDisability = getDisabilityDeduction(dependent.disability, false);
-      const resDisability = getDisabilityDeduction(dependent.disability, true);
+      const natDisability = getDisabilityDeduction(dependent.disability, dependent.isCohabiting, false);
+      const resDisability = getDisabilityDeduction(dependent.disability, dependent.isCohabiting, true);
       
       results.nationalTax.disabilityDeduction += natDisability;
       results.residenceTax.disabilityDeduction += resDisability;
       
       breakdown.nationalTaxAmount += natDisability;
       breakdown.residenceTaxAmount += resDisability;
-      breakdown.notes.push(`Disability deduction (${dependent.disability})`);
+      
+      // Build disability note with cohabiting info if special disability
+      let disabilityNote = `Disability deduction (${dependent.disability})`;
+      if (dependent.disability === 'special' && dependent.isCohabiting) {
+        disabilityNote += ' - cohabiting';
+      }
+      breakdown.notes.push(disabilityNote);
     }
     
     // Spouse deductions
@@ -312,7 +330,7 @@ export function calculateDependentDeductions(
         breakdown.nationalTaxAmount += natSpouse;
         breakdown.residenceTaxAmount += resSpouse;
         breakdown.deductionType = 'Spouse Deduction';
-        breakdown.notes.push(dependent.age >= 70 ? 'Elderly spouse' : 'Spouse deduction');
+        breakdown.notes.push(dependent.ageCategory === '70plus' ? 'Elderly spouse' : 'Spouse deduction');
       } else if (isEligibleForSpouseSpecialDeduction(dependent)) {
         const natSpouseSpecial = getSpouseSpecialDeduction(dependent.incomeLevel, false);
         const resSpouseSpecial = getSpouseSpecialDeduction(dependent.incomeLevel, true);
