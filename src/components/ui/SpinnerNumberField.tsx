@@ -6,6 +6,8 @@ import InputAdornment from '@mui/material/InputAdornment';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { NumericFormat } from 'react-number-format';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 interface SpinnerNumberFieldProps {
   id?: string;
@@ -17,6 +19,7 @@ interface SpinnerNumberFieldProps {
   step?: number;
   shiftStep?: number;
   sx?: object;
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
 }
 
 export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
@@ -29,7 +32,11 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   step = 1000,
   shiftStep = 10000,
   sx,
+  inputProps,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const handleChange = (newValue: number) => {
     if (onChange) {
       onChange(newValue);
@@ -78,12 +85,14 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       prefix="¥"
       allowNegative={false}
       {...(label && { label })}
+      size="small"
       slotProps={{
         htmlInput: {
           inputMode: "numeric",
+          ...inputProps,
         },
         input: {
-          endAdornment: (
+          endAdornment: !isMobile ? (
             <InputAdornment position="end">
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 <IconButton
@@ -102,7 +111,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
                 </IconButton>
               </Box>
             </InputAdornment>
-          ),
+          ) : undefined,
         },
       }}
       {...(sx && { sx })}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TextField from '@mui/material/TextField';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
@@ -16,10 +16,14 @@ import { useTheme } from '@mui/material/styles';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Autocomplete from '@mui/material/Autocomplete';
+import Button from '@mui/material/Button';
+import Badge from '@mui/material/Badge';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PeopleIcon from '@mui/icons-material/People';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { DependentsModal } from './DependentsModal';
 
 import type { TakeHomeInputs } from '../../types/tax';
 import {
@@ -219,6 +223,26 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
   // Check if dependent coverage is eligible based on income
   const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome);
+
+  // Dependents modal state
+  const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
+
+  const handleOpenDependentsModal = () => {
+    setDependentsModalOpen(true);
+  };
+
+  const handleCloseDependentsModal = () => {
+    setDependentsModalOpen(false);
+  };
+
+  const handleDependentsChange = (newDependents: typeof inputs.dependents) => {
+    onInputChange({
+      target: {
+        name: 'dependents',
+        value: newDependents,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
 
   // Component-specific styles that can't be in the global CSS
   const styles = {
@@ -640,7 +664,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               </Typography>
             </Box>
           </Box>
-          {/* Dependents Input */}
+          {/* Dependents Button */}
           <Box
             sx={{
               flex: 1,
@@ -649,12 +673,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               alignItems: 'center',
               justifyContent: 'center',
               minWidth: 0,
-              maxWidth: 180, // optional: prevents them from getting too wide
+              maxWidth: 200,
             }}
           >
             <Typography
               sx={{
-                mb: 0.2,
+                mb: 0.5,
                 fontSize: '0.97rem',
                 fontWeight: 500,
                 color: 'text.primary',
@@ -664,37 +688,31 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               }}
             >
               Dependents
-              <InfoTooltip title="This input is disabled because dependents are not yet supported in the calculator. Future updates will allow you to enter dependents." />
+              <InfoTooltip title="Add spouse and dependents to calculate applicable tax deductions. Click to manage dependents." />
             </Typography>
-            <TextField
-              disabled
-              title="Dependents input is disabled because it is not yet implemented."
-              id="numberOfDependents"
-              name="numberOfDependents"
-              label=""
-              value={inputs.numberOfDependents}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                const value = parseInt(e.target.value) || 0;
-                onInputChange({
-                  target: {
-                    name: 'numberOfDependents',
-                    value: value,
-                    type: 'number'
-                  }
-                } as unknown as React.ChangeEvent<HTMLInputElement>);
-              }}
-              type="number"
+            <Badge 
+              badgeContent={inputs.dependents.length} 
+              color="primary"
               sx={{
-                ...styles.dependentsInput,
-                ...sharedInputSx
-              }}
-              slotProps={{
-                htmlInput: {
-                  min: 0,
-                  'aria-label': 'Number of dependents'
+                '& .MuiBadge-badge': {
+                  right: -3,
+                  top: 3,
                 }
               }}
-            />
+            >
+              <Button
+                variant="outlined"
+                startIcon={<PeopleIcon />}
+                onClick={handleOpenDependentsModal}
+                size="medium"
+                sx={{
+                  minWidth: 140,
+                  textTransform: 'none',
+                }}
+              >
+                Manage
+              </Button>
+            </Badge>
           </Box>
         </Box>
 
@@ -760,6 +778,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           </Box>
         )}
       </Box>
+
+      {/* Dependents Modal */}
+      <DependentsModal
+        open={dependentsModalOpen}
+        onClose={handleCloseDependentsModal}
+        dependents={inputs.dependents}
+        onDependentsChange={handleDependentsChange}
+      />
     </Box>
   );
 }

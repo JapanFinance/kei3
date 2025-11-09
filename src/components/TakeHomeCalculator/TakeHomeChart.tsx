@@ -237,7 +237,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       healthInsuranceProvider, 
       region,
       dcPlanContributions,
-      numberOfDependents: 0 // TODO: Replace 0 with actual value if available
+      dependents: [] // TODO: Pass actual dependents if chart should reflect them
     }),
     [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions]
   );
@@ -271,7 +271,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     healthInsuranceProvider,
                     region,
                     dcPlanContributions,
-                    numberOfDependents: 0,
+                    dependents: [],
                     showDetailedInput: false,
                   };
                   
