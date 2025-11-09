@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
@@ -49,7 +48,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   const isEditing = dependent !== null;
 
   // Form state
-  const [name, setName] = useState(dependent?.name || '');
   const [relationship, setRelationship] = useState<Exclude<DependentRelationship, 'spouse'>>(
     dependent?.relationship || 'child'
   );
@@ -72,7 +70,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   };
 
   const handleSubmit = () => {
-    const trimmedName = name.trim();
     const newDependent: OtherDependent = {
       id: dependent?.id || `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       relationship,
@@ -80,7 +77,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       incomeLevel,
       disability,
       isCohabiting,
-      ...(trimmedName && { name: trimmedName }),
     };
 
     onSave(newDependent);
@@ -115,15 +111,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         {isEditing ? 'Edit Dependent' : 'Add New Dependent'}
       </Typography>
 
-      {/* Optional Name */}
-      <TextField
-        label="Name (Optional)"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        fullWidth
-        helperText="Optional: For your reference only"
-      />
-
       {/* Relationship */}
       <FormControl fullWidth>
         <InputLabel id="relationship-label">Relationship</InputLabel>
@@ -152,12 +139,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         >
           {DEPENDENT_AGE_CATEGORIES.map((cat) => (
             <MenuItem key={cat.value} value={cat.value}>
-              <Box>
-                <Typography variant="body2">{cat.label}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {cat.description}
-                </Typography>
-              </Box>
+              {cat.label}
             </MenuItem>
           ))}
         </Select>

@@ -256,7 +256,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           <ListItemText
                             primary={
                               <Typography variant="subtitle1" fontWeight={500}>
-                                {dependent.name || `Dependent ${index + 1}`}
+                                Dependent {index + 1}
                               </Typography>
                             }
                             secondary={getDependentSummary(dependent)}
