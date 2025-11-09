@@ -187,27 +187,6 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           />
         ) : (
           <Box>
-            {/* Info box explaining dependents */}
-            <Box 
-              sx={{ 
-                mb: 3, 
-                p: 2, 
-                bgcolor: 'action.hover', 
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                <strong>About Dependent Deductions:</strong>
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Add your spouse and dependents to calculate applicable tax deductions. 
-                Japanese tax law provides various deductions based on relationship, age, 
-                income level, and disability status. The calculator will automatically 
-                determine which deductions apply.
-              </Typography>
-            </Box>
 
             {/* Spouse Section */}
             <SpouseSection 
