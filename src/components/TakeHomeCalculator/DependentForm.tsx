@@ -122,26 +122,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         </Select>
       </FormControl>
 
-      {/* Age Category */}
-      <FormControl fullWidth>
-        <InputLabel id="age-label">Age Category</InputLabel>
-        <Select
-          labelId="age-label"
-          label="Age Category"
-          value={ageCategory}
-          onChange={(e) => setAgeCategory(e.target.value as DependentAgeCategory)}
-        >
-          {DEPENDENT_AGE_CATEGORIES.map((cat) => (
-            <MenuItem key={cat.value} value={cat.value}>
-              {cat.label}
-            </MenuItem>
-          ))}
-        </Select>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75 }}>
-          Age as of December 31st of the tax year
-        </Typography>
-      </FormControl>
-
       {/* Income Information */}
       <Box>
         <Typography 
@@ -301,6 +281,46 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         )}
       </Box>
 
+      {/* Age and Living Together on same row */}
+      <Box>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <FormControl sx={{ flex: 1 }}>
+            <InputLabel id="age-label">Age</InputLabel>
+            <Select
+              labelId="age-label"
+              label="Age"
+              value={ageCategory}
+              onChange={(e) => setAgeCategory(e.target.value as DependentAgeCategory)}
+            >
+              {DEPENDENT_AGE_CATEGORIES.map((cat) => (
+                <MenuItem key={cat.value} value={cat.value}>
+                  {cat.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isCohabiting}
+                onChange={(e) => setIsCohabiting(e.target.checked)}
+              />
+            }
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                Living Together
+                <InfoTooltip title="Check this if the dependent lives with you. This may affect deduction amounts for elderly parents or special disability cases." />
+              </Box>
+            }
+            sx={{ flex: 1, mt: 1 }}
+          />
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75, display: 'block' }}>
+          Age as of December 31st of the tax year
+        </Typography>
+      </Box>
+
       {/* Disability */}
       <FormControl fullWidth>
         <Typography 
@@ -327,22 +347,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           ))}
         </Select>
       </FormControl>
-
-      {/* Cohabiting Switch */}
-      <FormControlLabel
-        control={
-          <Switch
-            checked={isCohabiting}
-            onChange={(e) => setIsCohabiting(e.target.checked)}
-          />
-        }
-        label={
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            Living Together (Cohabiting)
-            <InfoTooltip title="Check this if the dependent lives with you. This may affect deduction amounts for elderly parents or special disability cases." />
-          </Box>
-        }
-      />
 
       {/* Eligible Deductions Table */}
       <Box sx={{ mt: 3 }}>
