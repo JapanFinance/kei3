@@ -94,26 +94,6 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
 
       {hasSpouse && spouse && (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Age Category */}
-          <FormControl fullWidth>
-            <InputLabel>Age</InputLabel>
-            <Select
-              value={spouse.ageCategory}
-              label="Age"
-              onChange={(e) =>
-                handleSpouseChange({
-                  ageCategory: e.target.value as SpouseAgeCategory,
-                })
-              }
-            >
-              {SPOUSE_AGE_CATEGORIES.map((cat) => (
-                <MenuItem key={cat.value} value={cat.value}>
-                  {cat.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
           {/* Income Information */}
           <Box>
             <Typography variant="subtitle2" gutterBottom>
@@ -274,6 +254,41 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
             )}
           </Box>
 
+          {/* Age Category and Living Together on same row */}
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <FormControl sx={{ flex: 1 }}>
+              <InputLabel>Age</InputLabel>
+              <Select
+                value={spouse.ageCategory}
+                label="Age"
+                onChange={(e) =>
+                  handleSpouseChange({
+                    ageCategory: e.target.value as SpouseAgeCategory,
+                  })
+                }
+              >
+                {SPOUSE_AGE_CATEGORIES.map((cat) => (
+                  <MenuItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={spouse.isCohabiting}
+                  onChange={(e) =>
+                    handleSpouseChange({ isCohabiting: e.target.checked })
+                  }
+                />
+              }
+              label="Living together"
+              sx={{ flex: 1 }}
+            />
+          </Box>
+
           {/* Disability Level */}
           <FormControl fullWidth>
             <InputLabel>Disability Status</InputLabel>
@@ -293,19 +308,6 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
               ))}
             </Select>
           </FormControl>
-
-          {/* Cohabiting Status */}
-          <FormControlLabel
-            control={
-              <Switch
-                checked={spouse.isCohabiting}
-                onChange={(e) =>
-                  handleSpouseChange({ isCohabiting: e.target.checked })
-                }
-              />
-            }
-            label="Living together"
-          />
 
           {/* Eligible Deductions Table */}
           <Box sx={{ mt: 3 }}>
