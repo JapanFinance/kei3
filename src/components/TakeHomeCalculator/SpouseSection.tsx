@@ -78,19 +78,20 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
-        Spouse
-      </Typography>
-      
-      <FormControlLabel
-        control={
-          <Switch
-            checked={hasSpouse}
-            onChange={(e) => handleToggleSpouse(e.target.checked)}
-          />
-        }
-        label="Do you have a spouse?"
-      />
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h6">
+          Spouse
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={hasSpouse}
+              onChange={(e) => handleToggleSpouse(e.target.checked)}
+            />
+          }
+          label="Do you have a spouse?"
+        />
+      </Box>
 
       {hasSpouse && spouse && (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -256,7 +257,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
 
           {/* Age Category and Living Together on same row */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl sx={{ flex: 1 }}>
+            <FormControl sx={{ flex: 1 }} size="small">
               <InputLabel>Age</InputLabel>
               <Select
                 value={spouse.ageCategory}
@@ -290,7 +291,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
           </Box>
 
           {/* Disability Level */}
-          <FormControl fullWidth>
+          <FormControl fullWidth size="small">
             <InputLabel>Disability Status</InputLabel>
             <Select
               value={spouse.disability}
