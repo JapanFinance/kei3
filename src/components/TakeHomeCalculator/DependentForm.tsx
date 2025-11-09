@@ -3,10 +3,12 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
+import Link from '@mui/material/Link';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import Switch from '@mui/material/Switch';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -27,6 +29,7 @@ import {
   isEligibleForDependentDeduction,
   isEligibleForSpecificRelativeDeduction,
 } from '../../types/dependents';
+import { CURRENT_TAX_YEAR } from '../../types/tax';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { formatJPY } from '../../utils/formatters';
@@ -106,7 +109,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       </Typography>
 
       {/* Relationship */}
-      <FormControl fullWidth>
+      <FormControl fullWidth size="small">
         <InputLabel id="relationship-label">Relationship</InputLabel>
         <Select
           labelId="relationship-label"
@@ -282,63 +285,48 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       </Box>
 
       {/* Age and Living Together on same row */}
-      <Box>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-          <FormControl sx={{ flex: 1 }} size="small">
-            <InputLabel id="age-label">Age</InputLabel>
-            <Select
-              labelId="age-label"
-              label="Age"
-              value={ageCategory}
-              onChange={(e) => setAgeCategory(e.target.value as DependentAgeCategory)}
-            >
-              {DEPENDENT_AGE_CATEGORIES.map((cat) => (
-                <MenuItem key={cat.value} value={cat.value}>
-                  {cat.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          
-          <FormControlLabel
-            control={
-              <Switch
-                checked={isCohabiting}
-                onChange={(e) => setIsCohabiting(e.target.checked)}
-              />
-            }
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                Living Together
-                <InfoTooltip title="Check this if the dependent lives with you. This may affect deduction amounts for elderly parents or special disability cases." />
-              </Box>
-            }
-            sx={{ flex: 1, mt: 1 }}
-          />
-        </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.75, display: 'block' }}>
-          Age as of December 31st of the tax year
-        </Typography>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+        <FormControl sx={{ flex: 1 }} size="small">
+          <InputLabel id="age-label">Age</InputLabel>
+          <Select
+            labelId="age-label"
+            label="Age"
+            value={ageCategory}
+            onChange={(e) => setAgeCategory(e.target.value as DependentAgeCategory)}
+          >
+            {DEPENDENT_AGE_CATEGORIES.map((cat) => (
+              <MenuItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>On December 31, {CURRENT_TAX_YEAR}</FormHelperText>
+        </FormControl>
+        
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isCohabiting}
+              onChange={(e) => setIsCohabiting(e.target.checked)}
+            />
+          }
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              Living Together
+              <InfoTooltip title="Check this if the dependent lives with you. This may affect deduction amounts for elderly parents or special disability cases." />
+            </Box>
+          }
+          sx={{ flex: 1, mt: 1 }}
+        />
       </Box>
 
-      {/* Disability */}
+      {/* Disability Status */}
       <FormControl fullWidth size="small">
-        <Typography 
-          gutterBottom 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            mb: 1,
-            fontSize: '0.97rem',
-          }}
-        >
-          Disability Status
-          <InfoTooltip title="Select the disability level if applicable. Different disability levels provide different deduction amounts under Japanese tax law." />
-        </Typography>
+        <InputLabel>Disability Status</InputLabel>
         <Select
           value={disability}
+          label="Disability Status"
           onChange={(e) => setDisability(e.target.value as DisabilityLevel)}
-          displayEmpty
         >
           {DISABILITY_LEVELS.map((level) => (
             <MenuItem key={level.value} value={level.value}>
@@ -346,6 +334,16 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             </MenuItem>
           ))}
         </Select>
+        <FormHelperText>
+          See{' '}
+          <Link
+            href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            NTA disability deduction guide
+          </Link>
+        </FormHelperText>
       </FormControl>
 
       {/* Eligible Deductions Table */}

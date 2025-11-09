@@ -2,7 +2,9 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
+import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
@@ -290,7 +292,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
             />
           </Box>
 
-          {/* Disability Level */}
+          {/* Disability Status */}
           <FormControl fullWidth size="small">
             <InputLabel>Disability Status</InputLabel>
             <Select
@@ -308,6 +310,16 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                 </MenuItem>
               ))}
             </Select>
+            <FormHelperText>
+              See{' '}
+              <Link
+                href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                NTA disability deduction guide
+              </Link>
+            </FormHelperText>
           </FormControl>
 
           {/* Eligible Deductions Table */}

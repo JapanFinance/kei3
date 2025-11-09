@@ -64,3 +64,27 @@ npm run lint
 - `public/` - Static assets
 - `dist/` - Production build output
 - `tests/` - Test files
+
+## Updating Tax Rules for a New Year
+
+When updating the calculator to support a new tax year (e.g., 2026):
+
+1. **Update the tax year constant** in `src/types/tax.ts`:
+   ```typescript
+   export const CURRENT_TAX_YEAR = 2026; // Change from 2025
+   ```
+
+2. **Search for all uses** of `CURRENT_TAX_YEAR` in the codebase to find date-sensitive text
+
+3. **Review and update tax rules** throughout the codebase:
+   - Tax brackets and rates (`src/utils/taxCalculations.ts`)
+   - Health insurance rates (`src/data/employeesHealthInsurance/`, `src/data/nationalHealthInsurance/`)
+   - Deduction amounts and thresholds (`src/utils/dependentDeductions.ts`)
+   - Employment income deduction formula (if changed)
+   - Basic deduction amounts (if changed)
+
+4. **Search for hardcoded year references** (e.g., "2025") to catch any missed updates
+
+5. **Update documentation and source links** to point to the new year's official guidance
+
+6. **Run all tests** to ensure calculations remain accurate with the new rules
