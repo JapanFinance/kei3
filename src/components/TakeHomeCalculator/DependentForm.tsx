@@ -6,7 +6,6 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
-import Slider from '@mui/material/Slider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import { useTheme } from '@mui/material/styles';
@@ -16,18 +15,29 @@ import type {
   OtherDependent, 
   DependentRelationship, 
   DependentAgeCategory,
-  IncomeLevel,
   DisabilityLevel,
+  DependentIncome,
 } from '../../types/dependents';
 import {
-  INCOME_LEVELS,
   RELATIONSHIPS,
   DISABILITY_LEVELS,
   DEPENDENT_AGE_CATEGORIES,
-  getIncomeLevelFromSlider,
-  getSliderValueFromIncomeLevel,
+  calculateDependentTotalNetIncome,
+  calculateNetEmploymentIncome,
+  isEligibleForDependentDeduction,
+  isEligibleForSpecificRelativeDeduction,
 } from '../../types/dependents';
 import { InfoTooltip } from '../ui/InfoTooltip';
+import { SpinnerNumberField } from '../ui/SpinnerNumberField';
+import { formatJPY } from '../../utils/formatters';
+import { getSpecificRelativeDeduction, getDependentDeduction, getDisabilityDeduction } from '../../utils/dependentDeductions';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import Divider from '@mui/material/Divider';
 
 interface DependentFormProps {
   dependent: OtherDependent | null;
@@ -54,27 +64,20 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   const [ageCategory, setAgeCategory] = useState<DependentAgeCategory>(
     dependent?.ageCategory || '16to18'
   );
-  const [incomeLevel, setIncomeLevel] = useState<IncomeLevel>(
-    dependent?.incomeLevel || 'under48'
+  const [income, setIncome] = useState<DependentIncome>(
+    dependent?.income || { grossEmploymentIncome: 0, otherNetIncome: 0 }
   );
   const [disability, setDisability] = useState<DisabilityLevel>(
     dependent?.disability || 'none'
   );
   const [isCohabiting, setIsCohabiting] = useState(dependent?.isCohabiting || false);
 
-  // Update income level from slider
-  const handleIncomeLevelSliderChange = (_event: Event, value: number | number[]) => {
-    const sliderValue = Array.isArray(value) ? value[0]! : value;
-    const newLevel = getIncomeLevelFromSlider(sliderValue);
-    setIncomeLevel(newLevel);
-  };
-
   const handleSubmit = () => {
     const newDependent: OtherDependent = {
       id: dependent?.id || `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       relationship,
       ageCategory,
-      incomeLevel,
+      income,
       disability,
       isCohabiting,
     };
@@ -83,15 +86,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   };
 
   const canSubmit = true; // All fields have defaults, always submittable
-
-  const incomeLevelInfo = INCOME_LEVELS.find(l => l.value === incomeLevel);
-  const sliderValue = getSliderValueFromIncomeLevel(incomeLevel);
-
-  // Slider marks
-  const sliderMarks = INCOME_LEVELS.map((level, index) => ({
-    value: index,
-    label: isMobile ? '' : level.label,
-  }));
 
   return (
     <Box
@@ -148,7 +142,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         </Typography>
       </FormControl>
 
-      {/* Income Level Slider */}
+      {/* Income Information */}
       <Box>
         <Typography 
           gutterBottom 
@@ -158,48 +152,153 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             mb: 1,
           }}
         >
-          Estimated Annual Income
-          <InfoTooltip title="We don't need the exact income amount. Just select which income bracket applies. This determines eligibility for various deductions." />
+          Income Information
+          <InfoTooltip title="Enter income amounts to calculate total net income (合計所得金額) and determine deduction eligibility." />
         </Typography>
         
-        <Box sx={{ px: isMobile ? 1 : 2, pt: 1 }}>
-          <Slider
-            value={sliderValue}
-            onChange={handleIncomeLevelSliderChange}
-            step={1}
-            marks={sliderMarks}
-            min={0}
-            max={3}
-            valueLabelDisplay="off"
-            sx={{
-              '& .MuiSlider-markLabel': {
-                fontSize: '0.7rem',
-                transform: isMobile ? 'translateX(-50%) rotate(-45deg)' : 'translateX(-50%)',
-                transformOrigin: 'top center',
-                top: isMobile ? 32 : 26,
-                whiteSpace: 'nowrap',
-              },
-            }}
-          />
-        </Box>
-
-        <Box 
-          sx={{ 
-            mt: isMobile ? 4 : 2,
-            p: 2, 
-            bgcolor: 'action.hover', 
-            borderRadius: 1,
-            border: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
-          <Typography variant="body2" fontWeight={500} gutterBottom>
-            Selected: {incomeLevelInfo?.label}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {incomeLevelInfo?.description}
-          </Typography>
-        </Box>
+        {isMobile ? (
+          /* Mobile: Stacked Layout */
+          <Paper variant="outlined" sx={{ p: 2 }}>
+            {/* Employment Income */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight="medium" gutterBottom>
+                Employment Income (給与)
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="caption" color="text.secondary">Gross (収入)</Typography>
+                <SpinnerNumberField
+                  value={income.grossEmploymentIncome}
+                  onChange={(value: number) =>
+                    setIncome({
+                      ...income,
+                      grossEmploymentIncome: value,
+                    })
+                  }
+                  step={10_000}
+                  shiftStep={100_000}
+                  sx={{ maxWidth: 180 }}
+                  inputProps={{ style: { textAlign: 'right' } }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary">Net (所得)</Typography>
+                <Typography variant="body2">
+                  {formatJPY(calculateNetEmploymentIncome(income.grossEmploymentIncome))}
+                </Typography>
+              </Box>
+            </Box>
+            
+            <Divider sx={{ my: 2 }} />
+            
+            {/* Other Income */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight="medium" gutterBottom>
+                Other Income (その他)
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary">Net (所得)</Typography>
+                <SpinnerNumberField
+                  value={income.otherNetIncome}
+                  onChange={(value: number) =>
+                    setIncome({
+                      ...income,
+                      otherNetIncome: value,
+                    })
+                  }
+                  step={10_000}
+                  shiftStep={100_000}
+                  sx={{ maxWidth: 180 }}
+                  inputProps={{ style: { textAlign: 'right' } }}
+                />
+              </Box>
+            </Box>
+            
+            <Divider sx={{ my: 2 }} />
+            
+            {/* Total */}
+            <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2" fontWeight="bold">
+                  Total (合計所得金額)
+                </Typography>
+                <Typography variant="body2" fontWeight="bold">
+                  {formatJPY(calculateDependentTotalNetIncome(income))}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        ) : (
+          /* Desktop: Table Layout */
+          <Paper variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Income Category</TableCell>
+                  <TableCell align="right">Gross (収入)</TableCell>
+                  <TableCell align="right">Net (所得)</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {/* Employment Income Row */}
+                <TableRow>
+                  <TableCell>Employment<br/><Typography variant="caption" color="text.secondary">給与</Typography></TableCell>
+                  <TableCell align="right">
+                    <SpinnerNumberField
+                      value={income.grossEmploymentIncome}
+                      onChange={(value: number) =>
+                        setIncome({
+                          ...income,
+                          grossEmploymentIncome: value,
+                        })
+                      }
+                      step={10_000}
+                      shiftStep={100_000}
+                      sx={{ maxWidth: 150 }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2">
+                      {formatJPY(calculateNetEmploymentIncome(income.grossEmploymentIncome))}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+                
+                {/* Other Income Row */}
+                <TableRow>
+                  <TableCell>Other<br/><Typography variant="caption" color="text.secondary">その他</Typography></TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2" color="text.secondary">—</Typography>
+                  </TableCell>
+                  <TableCell align="right">
+                    <SpinnerNumberField
+                      value={income.otherNetIncome}
+                      onChange={(value: number) =>
+                        setIncome({
+                          ...income,
+                          otherNetIncome: value,
+                        })
+                      }
+                      step={10_000}
+                      shiftStep={100_000}
+                      sx={{ maxWidth: 150 }}
+                    />
+                  </TableCell>
+                </TableRow>
+                
+                {/* Total Row */}
+                <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                  <TableCell><strong>Total (合計所得金額)</strong></TableCell>
+                  <TableCell align="right"></TableCell>
+                  <TableCell align="right">
+                    <Typography variant="body2" fontWeight="bold">
+                      {formatJPY(calculateDependentTotalNetIncome(income))}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Paper>
+        )}
       </Box>
 
       {/* Disability */}
@@ -227,11 +326,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             </MenuItem>
           ))}
         </Select>
-        {disability !== 'none' && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-            {DISABILITY_LEVELS.find(l => l.value === disability)?.description}
-          </Typography>
-        )}
       </FormControl>
 
       {/* Cohabiting Switch */}
@@ -249,6 +343,95 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           </Box>
         }
       />
+
+      {/* Eligible Deductions Table */}
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Eligible Deductions:
+        </Typography>
+        <Paper variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Deduction Type</TableCell>
+                <TableCell align="right">Income Tax</TableCell>
+                <TableCell align="right">Residence Tax</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(() => {
+                const totalNetIncome = calculateDependentTotalNetIncome(income);
+                const tempDependent: OtherDependent = {
+                  id: 'temp',
+                  relationship,
+                  ageCategory,
+                  income,
+                  disability,
+                  isCohabiting,
+                };
+                
+                const eligibleForDependent = isEligibleForDependentDeduction(tempDependent);
+                const eligibleForSpecificRelative = isEligibleForSpecificRelativeDeduction(tempDependent);
+                const rows: React.ReactNode[] = [];
+                
+                // Dependent Deduction
+                if (eligibleForDependent) {
+                  const natDependent = getDependentDeduction(ageCategory, relationship, isCohabiting, false);
+                  const resDependent = getDependentDeduction(ageCategory, relationship, isCohabiting, true);
+                  rows.push(
+                    <TableRow key="dependent">
+                      <TableCell>Dependent Deduction (扶養控除)</TableCell>
+                      <TableCell align="right">{formatJPY(natDependent)}</TableCell>
+                      <TableCell align="right">{formatJPY(resDependent)}</TableCell>
+                    </TableRow>
+                  );
+                }
+                
+                // Specific Relative Special Deduction
+                if (eligibleForSpecificRelative) {
+                  const natSpecific = getSpecificRelativeDeduction(totalNetIncome, false);
+                  const resSpecific = getSpecificRelativeDeduction(totalNetIncome, true);
+                  rows.push(
+                    <TableRow key="specific-relative">
+                      <TableCell>Specific Relative Special Deduction (特定親族特別控除)</TableCell>
+                      <TableCell align="right">{formatJPY(natSpecific)}</TableCell>
+                      <TableCell align="right">{formatJPY(resSpecific)}</TableCell>
+                    </TableRow>
+                  );
+                }
+                
+                // Disability Deduction
+                if (disability !== 'none') {
+                  const natDisability = getDisabilityDeduction(disability, isCohabiting, false);
+                  const resDisability = getDisabilityDeduction(disability, isCohabiting, true);
+                  rows.push(
+                    <TableRow key="disability">
+                      <TableCell>Disability Deduction (障害者控除)</TableCell>
+                      <TableCell align="right">{formatJPY(natDisability)}</TableCell>
+                      <TableCell align="right">{formatJPY(resDisability)}</TableCell>
+                    </TableRow>
+                  );
+                }
+                
+                // No deductions message
+                if (rows.length === 0) {
+                  return (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center">
+                        <Typography variant="body2" color="text.secondary">
+                          No deductions available
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }
+                
+                return rows;
+              })()}
+            </TableBody>
+          </Table>
+        </Paper>
+      </Box>
 
       {/* Action Buttons */}
       <Box 

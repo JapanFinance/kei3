@@ -22,7 +22,7 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type { Dependent, OtherDependent, Spouse } from '../../types/dependents';
-import { INCOME_LEVELS, RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES } from '../../types/dependents';
+import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, calculateDependentTotalNetIncome } from '../../types/dependents';
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
 
@@ -95,8 +95,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   const getDependentSummary = (dependent: OtherDependent): string => {
     const relationship = RELATIONSHIPS.find(r => r.value === dependent.relationship)?.label || 'Unknown';
     const ageLabel = DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label || 'Unknown';
-    const incomeLabel = INCOME_LEVELS.find(l => l.value === dependent.incomeLevel)?.label || 'Unknown';
-    return `${relationship}, Age: ${ageLabel}, Income: ${incomeLabel}`;
+    const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+    const incomeLabel = totalNetIncome === 0 ? 'No income' : `Net income: ¥${totalNetIncome.toLocaleString()}`;
+    return `${relationship}, Age: ${ageLabel}, ${incomeLabel}`;
   };
 
   const getDependentChips = (dependent: OtherDependent): React.ReactNode[] => {

@@ -20,6 +20,7 @@ import {
   isEligibleForSpouseDeduction,
   isEligibleForSpouseSpecialDeduction,
   isEligibleForSpecificRelativeDeduction,
+  calculateDependentTotalNetIncome,
 } from '../types/dependents';
 
 /**
@@ -151,7 +152,7 @@ export interface DependentDeductionBreakdown {
  * @param isCohabiting - Whether the dependent lives with the taxpayer
  * @param forResidenceTax - Whether this is for residence tax (vs national tax)
  */
-function getDisabilityDeduction(
+export function getDisabilityDeduction(
   disability: DisabilityLevel, 
   isCohabiting: boolean,
   forResidenceTax: boolean
@@ -176,35 +177,102 @@ function getDisabilityDeduction(
 }
 
 /**
- * Get spouse special deduction amount based on income level
- * For simplicity, we use midpoint of each range
+ * Get spouse deduction amount based on age
+ * Spouse deduction applies when spouse income is ≤ 95万円
  */
-function getSpouseSpecialDeduction(incomeLevel: string, forResidenceTax: boolean): number {
+export function getSpouseDeduction(isElderly: boolean, forResidenceTax: boolean): number {
   const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
-  
-  // For income 95to133, we use the 95-100 bracket as representative
-  // In a real application, you'd want exact income to calculate this precisely
-  if (incomeLevel === '95to133') {
-    return deductions.SPOUSE_SPECIAL_95TO100;
-  }
-  
-  return 0;
+  return isElderly ? deductions.ELDERLY_SPOUSE : deductions.SPOUSE;
 }
 
 /**
- * Get specific relative special deduction amount based on income level
+ * Get spouse special deduction amount based on actual total net income
+ * Spouse special deduction applies when spouse income is between 95万円 and 133万円
  */
-function getSpecificRelativeDeduction(incomeLevel: string, forResidenceTax: boolean): number {
+export function getSpouseSpecialDeduction(totalNetIncome: number, forResidenceTax: boolean): number {
   const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
   
-  // For income ranges, we use the most favorable bracket
-  if (incomeLevel === '48to95') {
+  // Spouse special deduction brackets (all values in yen)
+  if (totalNetIncome <= 950_000 || totalNetIncome > 1_330_000) {
+    return 0;
+  } else if (totalNetIncome <= 1_000_000) {
+    return deductions.SPOUSE_SPECIAL_95TO100;
+  } else if (totalNetIncome <= 1_050_000) {
+    return deductions.SPOUSE_SPECIAL_100TO105;
+  } else if (totalNetIncome <= 1_100_000) {
+    return deductions.SPOUSE_SPECIAL_105TO110;
+  } else if (totalNetIncome <= 1_150_000) {
+    return deductions.SPOUSE_SPECIAL_110TO115;
+  } else if (totalNetIncome <= 1_200_000) {
+    return deductions.SPOUSE_SPECIAL_115TO120;
+  } else if (totalNetIncome <= 1_250_000) {
+    return deductions.SPOUSE_SPECIAL_120TO125;
+  } else if (totalNetIncome <= 1_300_000) {
+    return deductions.SPOUSE_SPECIAL_125TO130;
+  } else {
+    return deductions.SPOUSE_SPECIAL_130TO133;
+  }
+}
+
+/**
+ * Get specific relative special deduction amount based on actual total net income
+ * Applies to age 19-23 dependents with income between 48万円 and 133万円
+ */
+export function getSpecificRelativeDeduction(totalNetIncome: number, forResidenceTax: boolean): number {
+  const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
+  
+  // Specific relative special deduction brackets (all values in yen)
+  if (totalNetIncome <= 480_000 || totalNetIncome > 1_330_000) {
+    return 0;
+  } else if (totalNetIncome <= 950_000) {
     return deductions.SPECIFIC_RELATIVE_48TO95;
-  } else if (incomeLevel === '95to133') {
+  } else if (totalNetIncome <= 1_000_000) {
     return deductions.SPECIFIC_RELATIVE_95TO100;
+  } else if (totalNetIncome <= 1_050_000) {
+    return deductions.SPECIFIC_RELATIVE_100TO105;
+  } else if (totalNetIncome <= 1_100_000) {
+    return deductions.SPECIFIC_RELATIVE_105TO110;
+  } else if (totalNetIncome <= 1_150_000) {
+    return deductions.SPECIFIC_RELATIVE_110TO115;
+  } else if (totalNetIncome <= 1_200_000) {
+    return deductions.SPECIFIC_RELATIVE_115TO120;
+  } else if (totalNetIncome <= 1_250_000) {
+    return deductions.SPECIFIC_RELATIVE_120TO125;
+  } else if (totalNetIncome <= 1_300_000) {
+    return deductions.SPECIFIC_RELATIVE_125TO130;
+  } else {
+    return deductions.SPECIFIC_RELATIVE_130TO133;
+  }
+}
+
+/**
+ * Get dependent deduction amount based on age category and relationship
+ * Used for preview before dependent is fully created
+ */
+export function getDependentDeduction(
+  ageCategory: string,
+  relationship: string,
+  isCohabiting: boolean,
+  forResidenceTax: boolean
+): number {
+  const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
+  
+  // Check for special dependent (age 19-22)
+  if (ageCategory === '19to22') {
+    return deductions.SPECIAL_DEPENDENT;
   }
   
-  return 0;
+  // Check for elderly dependent (age 70+)
+  if (ageCategory === '70plus') {
+    // Additional deduction if cohabiting parent or grandparent
+    if (isCohabiting && relationship === 'parent') {
+      return deductions.ELDERLY_COHABITING;
+    }
+    return deductions.ELDERLY_DEPENDENT;
+  }
+  
+  // General dependent deduction
+  return deductions.GENERAL_DEPENDENT;
 }
 
 /**
@@ -332,8 +400,9 @@ export function calculateDependentDeductions(
         breakdown.deductionType = 'Spouse Deduction';
         breakdown.notes.push(dependent.ageCategory === '70plus' ? 'Elderly spouse' : 'Spouse deduction');
       } else if (isEligibleForSpouseSpecialDeduction(dependent)) {
-        const natSpouseSpecial = getSpouseSpecialDeduction(dependent.incomeLevel, false);
-        const resSpouseSpecial = getSpouseSpecialDeduction(dependent.incomeLevel, true);
+        const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+        const natSpouseSpecial = getSpouseSpecialDeduction(totalNetIncome, false);
+        const resSpouseSpecial = getSpouseSpecialDeduction(totalNetIncome, true);
         
         results.nationalTax.spouseSpecialDeduction += natSpouseSpecial;
         results.residenceTax.spouseSpecialDeduction += resSpouseSpecial;
@@ -346,8 +415,9 @@ export function calculateDependentDeductions(
     }
     // Specific relative special deduction (age 19-23, income 48-133万円)
     else if (isEligibleForSpecificRelativeDeduction(dependent)) {
-      const natSpecific = getSpecificRelativeDeduction(dependent.incomeLevel, false);
-      const resSpecific = getSpecificRelativeDeduction(dependent.incomeLevel, true);
+      const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+      const natSpecific = getSpecificRelativeDeduction(totalNetIncome, false);
+      const resSpecific = getSpecificRelativeDeduction(totalNetIncome, true);
       
       results.nationalTax.specificRelativeDeduction += natSpecific;
       results.residenceTax.specificRelativeDeduction += resSpecific;

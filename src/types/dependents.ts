@@ -3,21 +3,59 @@
  */
 
 /**
- * Income level thresholds for non-spouse dependents
- * - under48: Income up to ¥480,000 (eligible for dependent deduction)
- * - 48to95: Income ¥480,000 to ¥950,000 (not eligible for dependent deduction, but age 19-23 may get specific relative special deduction)
- * - 95to133: Income ¥950,000 to ¥1,330,000 (age 19-23 may get specific relative special deduction)
- * - over133: Income over ¥1,330,000 (not eligible for any dependent deductions)
+ * Income input for dependents
+ * We ask for gross employment income and other net income separately to calculate
+ * total net income (合計所得金額) accurately, rather than asking users to calculate it themselves
  */
-export type IncomeLevel = 'under48' | '48to95' | '95to133' | 'over133';
+export interface DependentIncome {
+  /** Gross employment income (給与収入) - we'll calculate the net using employment income deduction */
+  grossEmploymentIncome: number;
+  
+  /** Other net income (その他の所得) - business income, pension, capital gains, etc. */
+  otherNetIncome: number;
+}
 
 /**
- * Income level thresholds for spouse
- * - under95: Income up to ¥950,000 (eligible for spouse deduction 配偶者控除)
- * - 95to133: Income ¥950,000 to ¥1,330,000 (eligible for spouse special deduction 配偶者特別控除)
- * - over133: Income over ¥1,330,000 (not eligible for any deductions)
+ * Calculate net employment income (給与所得) from gross employment income (給与収入)
+ * Uses the employment income deduction formula (給与所得控除)
  */
-export type SpouseIncomeLevel = 'under95' | '95to133' | 'over133';
+export function calculateNetEmploymentIncome(grossEmploymentIncome: number): number {
+  let netEmploymentIncome = 0;
+  if (grossEmploymentIncome < 651_000) {
+    netEmploymentIncome = 0;
+  } else if (grossEmploymentIncome < 1_900_000) {
+    netEmploymentIncome = grossEmploymentIncome - 650_000;
+  } else {
+    // From 1.9M yen through 6.6M yen, gross income is rounded down to the nearest 4,000 yen
+    const roundedGrossIncome = Math.floor(grossEmploymentIncome / 4000) * 4000;
+    
+    if (grossEmploymentIncome <= 3_600_000) {
+      netEmploymentIncome = Math.floor(roundedGrossIncome * 0.7) - 80_000;
+    } else if (grossEmploymentIncome <= 6_600_000) {
+      netEmploymentIncome = Math.floor(roundedGrossIncome * 0.8) - 440_000;
+    } else if (grossEmploymentIncome <= 8_500_000) {
+      netEmploymentIncome = Math.floor(grossEmploymentIncome * 0.9) - 1_100_000;
+    } else {
+      netEmploymentIncome = grossEmploymentIncome - 1_950_000;
+    }
+  }
+  
+  return netEmploymentIncome;
+}
+
+/**
+ * Calculate total net income (合計所得金額) for a dependent
+ * This is used to determine eligibility for various dependent deductions
+ */
+export function calculateDependentTotalNetIncome(income: DependentIncome): number {
+  const { grossEmploymentIncome, otherNetIncome } = income;
+  
+  // Calculate net employment income using employment income deduction formula
+  const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+  
+  // Total net income = net employment income + other net income
+  return netEmploymentIncome + otherNetIncome;
+}
 
 /**
  * Disability levels for dependent deductions
@@ -65,8 +103,8 @@ export interface Spouse {
   /** Age category of the spouse */
   ageCategory: SpouseAgeCategory;
   
-  /** Income level bracket of the spouse */
-  incomeLevel: SpouseIncomeLevel;
+  /** Income details for calculating total net income */
+  income: DependentIncome;
   
   /** Disability status and level */
   disability: DisabilityLevel;
@@ -88,8 +126,8 @@ export interface OtherDependent {
   /** Age category of the dependent */
   ageCategory: DependentAgeCategory;
   
-  /** Income level bracket of the dependent */
-  incomeLevel: IncomeLevel;
+  /** Income details for calculating total net income */
+  income: DependentIncome;
   
   /** Disability status and level */
   disability: DisabilityLevel;
@@ -104,87 +142,11 @@ export interface OtherDependent {
 export type Dependent = Spouse | OtherDependent;
 
 /**
- * Income level display information
- */
-export interface IncomeLevelInfo {
-  value: IncomeLevel;
-  label: string;
-  description: string;
-  maxAmount: number | null; // null means no upper limit
-}
-
-/**
- * Spouse income level display information
- */
-export interface SpouseIncomeLevelInfo {
-  value: SpouseIncomeLevel;
-  label: string;
-  description: string;
-  maxAmount: number | null; // null means no upper limit
-}
-
-/**
- * Income level definitions with labels and thresholds
- */
-export const INCOME_LEVELS: IncomeLevelInfo[] = [
-  {
-    value: 'under48',
-    label: 'Up to ¥480,000',
-    description: '¥0 - ¥480,000',
-    maxAmount: 480_000,
-  },
-  {
-    value: '48to95',
-    label: '¥480,000 - ¥950,000',
-    description: '¥480,001 - ¥950,000',
-    maxAmount: 950_000,
-  },
-  {
-    value: '95to133',
-    label: '¥950,000 - ¥1,330,000',
-    description: '¥950,001 - ¥1,330,000',
-    maxAmount: 1_330_000,
-  },
-  {
-    value: 'over133',
-    label: 'Over ¥1,330,000',
-    description: 'Over ¥1,330,000',
-    maxAmount: null,
-  },
-];
-
-/**
- * Spouse income level definitions with labels and thresholds
- * Simplified thresholds specific to spouse deductions
- */
-export const SPOUSE_INCOME_LEVELS: SpouseIncomeLevelInfo[] = [
-  {
-    value: 'under95',
-    label: 'Up to ¥950,000',
-    description: '¥0 - ¥950,000 (eligible for spouse deduction)',
-    maxAmount: 950_000,
-  },
-  {
-    value: '95to133',
-    label: '¥950,000 - ¥1,330,000',
-    description: '¥950,001 - ¥1,330,000 (eligible for spouse special deduction)',
-    maxAmount: 1_330_000,
-  },
-  {
-    value: 'over133',
-    label: 'Over ¥1,330,000',
-    description: 'Over ¥1,330,000 (not eligible for deduction)',
-    maxAmount: null,
-  },
-];
-
-/**
  * Disability level display information
  */
 export interface DisabilityLevelInfo {
   value: DisabilityLevel;
   label: string;
-  description: string;
 }
 
 /**
@@ -194,17 +156,14 @@ export const DISABILITY_LEVELS: DisabilityLevelInfo[] = [
   {
     value: 'none',
     label: 'Not Disabled',
-    description: 'No disability status',
   },
   {
     value: 'regular',
-    label: 'Regular Disability',
-    description: '一般の障害者 - Regular disability status',
+    label: 'Regular Disability (一般の障害者)',
   },
   {
     value: 'special',
-    label: 'Special Disability',
-    description: '特別障害者 - Special disability status (additional deduction if living together)',
+    label: 'Special Disability (特別障害者)',
   },
 ];
 
@@ -225,22 +184,6 @@ export const RELATIONSHIPS: RelationshipInfo[] = [
   { value: 'parent', label: 'Parent' },
   { value: 'other', label: 'Other Relative' },
 ];
-
-/**
- * Get income level from slider value (0-3)
- */
-export function getIncomeLevelFromSlider(value: number): IncomeLevel {
-  const levels: IncomeLevel[] = ['under48', '48to95', '95to133', 'over133'];
-  return levels[value] || 'under48';
-}
-
-/**
- * Get slider value (0-3) from income level
- */
-export function getSliderValueFromIncomeLevel(level: IncomeLevel): number {
-  const levels: IncomeLevel[] = ['under48', '48to95', '95to133', 'over133'];
-  return levels.indexOf(level);
-}
 
 /**
  * Spouse age category display information
@@ -302,21 +245,23 @@ export const DEPENDENT_AGE_CATEGORIES: DependentAgeCategoryInfo[] = [
  * Check if a dependent qualifies for any deduction based on their income level
  */
 export function hasEligibleIncome(dependent: Dependent): boolean {
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  
   // Spouse is eligible for deductions up to 133万円
   if (dependent.relationship === 'spouse') {
-    return dependent.incomeLevel !== 'over133';
+    return totalNetIncome <= 1_330_000;
   }
   
   // Others (age 19-23) are eligible for specific relative special deduction if income is 48-133万円
   const ageCategory = (dependent as OtherDependent).ageCategory;
   if (ageCategory === '19to22' || ageCategory === '23to69') {
-    // Age 19-23 can get specific relative special deduction with higher income
+    // Age 19-23 can get specific relative special deduction with income up to 133万円
     // For 23to69 category, we conservatively allow since age 23 qualifies
-    return dependent.incomeLevel === '48to95' || dependent.incomeLevel === '95to133' || dependent.incomeLevel === 'under48';
+    return totalNetIncome <= 1_330_000;
   }
   
   // Others are only eligible if income is under 48万円
-  return dependent.incomeLevel === 'under48';
+  return totalNetIncome <= 480_000;
 }
 
 /**
@@ -327,7 +272,8 @@ export function isEligibleForDependentDeduction(dependent: Dependent): boolean {
   if (dependent.relationship === 'spouse') {
     return false;
   }
-  return dependent.incomeLevel === 'under48';
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome <= 480_000;
 }
 
 /**
@@ -366,7 +312,8 @@ export function isEligibleForSpouseDeduction(dependent: Dependent): boolean {
   if (dependent.relationship !== 'spouse') {
     return false;
   }
-  return (dependent as Spouse).incomeLevel === 'under95';
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome <= 950_000;
 }
 
 /**
@@ -377,7 +324,8 @@ export function isEligibleForSpouseSpecialDeduction(dependent: Dependent): boole
   if (dependent.relationship !== 'spouse') {
     return false;
   }
-  return (dependent as Spouse).incomeLevel === '95to133';
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome > 950_000 && totalNetIncome <= 1_330_000;
 }
 
 /**
@@ -395,5 +343,7 @@ export function isEligibleForSpecificRelativeDeduction(dependent: Dependent): bo
   if (ageCategory !== '19to22' && ageCategory !== '23to69') {
     return false;
   }
-  return dependent.incomeLevel === '48to95' || dependent.incomeLevel === '95to133';
+  
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome > 480_000 && totalNetIncome <= 1_330_000;
 }
