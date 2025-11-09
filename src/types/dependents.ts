@@ -73,9 +73,6 @@ export interface Spouse {
   
   /** Whether the spouse lives with the taxpayer */
   isCohabiting: boolean;
-  
-  /** Optional name for display purposes (not used in calculations) */
-  name?: string;
 }
 
 /**
@@ -99,9 +96,6 @@ export interface OtherDependent {
   
   /** Whether the dependent lives with the taxpayer */
   isCohabiting: boolean;
-  
-  /** Optional name for display purposes (not used in calculations) */
-  name?: string;
 }
 
 /**
@@ -254,7 +248,6 @@ export function getSliderValueFromIncomeLevel(level: IncomeLevel): number {
 export interface SpouseAgeCategoryInfo {
   value: SpouseAgeCategory;
   label: string;
-  description: string;
 }
 
 /**
@@ -264,12 +257,10 @@ export const SPOUSE_AGE_CATEGORIES: SpouseAgeCategoryInfo[] = [
   {
     value: 'under70',
     label: 'Under 70',
-    description: 'Under 70 years old',
   },
   {
     value: '70plus',
     label: '70 or Older',
-    description: '70 years or older (elderly spouse)',
   },
 ];
 
@@ -279,7 +270,6 @@ export const SPOUSE_AGE_CATEGORIES: SpouseAgeCategoryInfo[] = [
 export interface DependentAgeCategoryInfo {
   value: DependentAgeCategory;
   label: string;
-  description: string;
 }
 
 /**
@@ -289,27 +279,22 @@ export const DEPENDENT_AGE_CATEGORIES: DependentAgeCategoryInfo[] = [
   {
     value: 'under16',
     label: 'Under 16',
-    description: 'Under 16 years old (not eligible for dependent deduction)',
   },
   {
     value: '16to18',
     label: '16 - 18',
-    description: 'Age 16-18',
   },
   {
     value: '19to22',
     label: '19 - 22',
-    description: 'Age 19-22 (eligible for special dependent deduction)',
   },
   {
     value: '23to69',
     label: '23 - 69',
-    description: 'Age 23-69',
   },
   {
     value: '70plus',
     label: '70 or Older',
-    description: '70 years or older (elderly dependent)',
   },
 ];
 
