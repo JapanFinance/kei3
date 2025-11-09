@@ -289,6 +289,51 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
           type="detail" 
         />
         
+        {results.dependentDeductions && results.dependentDeductions.nationalTaxTotal > 0 && (
+          <ResultRow 
+            label={
+              <span>
+                Dependent Deductions
+                <DetailInfoTooltip
+                  title="Dependent-Related Deductions"
+                  children={
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Dependent-Related Deductions for Income Tax
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        These deductions include spouse deductions, dependent deductions, and disability deductions based on your household composition.
+                      </Typography>
+                      <Box sx={{ mt: 1 }}>
+                        Official Sources:
+                        <ul>
+                          <li>
+                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                              配偶者控除 - NTA
+                            </a>
+                          </li>
+                          <li>
+                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                              扶養控除 - NTA
+                            </a>
+                          </li>
+                          <li>
+                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                              障害者控除 - NTA
+                            </a>
+                          </li>
+                        </ul>
+                      </Box>
+                    </Box>
+                  }
+                />
+              </span>
+            }
+            value={formatJPY(-results.dependentDeductions.nationalTaxTotal)} 
+            type="detail" 
+          />
+        )}
+        
         {results.taxableIncomeForNationalIncomeTax !== undefined && (
           <ResultRow 
             label={
@@ -607,6 +652,51 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
           value={formatJPY(-(results.residenceTaxBasicDeduction ?? 0))} 
           type="detail" 
         />
+        
+        {results.dependentDeductions && results.dependentDeductions.residenceTaxTotal > 0 && (
+          <ResultRow 
+            label={
+              <span>
+                Dependent Deductions
+                <DetailInfoTooltip
+                  title="Dependent-Related Deductions"
+                  children={
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Dependent-Related Deductions for Residence Tax
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        These deductions include spouse deductions, dependent deductions, and disability deductions based on your household composition.
+                      </Typography>
+                      <Box sx={{ mt: 1 }}>
+                        Official Sources:
+                        <ul>
+                          <li>
+                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                              配偶者控除 - NTA
+                            </a>
+                          </li>
+                          <li>
+                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                              扶養控除 - NTA
+                            </a>
+                          </li>
+                          <li>
+                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                              障害者控除 - NTA
+                            </a>
+                          </li>
+                        </ul>
+                      </Box>
+                    </Box>
+                  }
+                />
+              </span>
+            }
+            value={formatJPY(-results.dependentDeductions.residenceTaxTotal)} 
+            type="detail" 
+          />
+        )}
         
         {results.taxableIncomeForResidenceTax !== undefined && (
           <ResultRow 
