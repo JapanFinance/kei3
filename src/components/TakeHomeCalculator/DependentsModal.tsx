@@ -149,8 +149,20 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       fullScreen={isMobile}
       PaperProps={{
         sx: {
-          minHeight: isMobile ? '100vh' : '500px',
-          maxHeight: isMobile ? '100vh' : '90vh',
+          minHeight: isMobile ? '100dvh' : '500px',
+          maxHeight: isMobile ? '100dvh' : '90vh',
+          // Fallback for browsers that don't support dvh
+          '@supports not (height: 100dvh)': {
+            minHeight: isMobile ? '100vh' : '500px',
+            maxHeight: isMobile ? '100vh' : '90vh',
+          },
+        }
+      }}
+      sx={{
+        // Ensure modal respects safe areas on iOS
+        '& .MuiDialog-container': {
+          paddingTop: isMobile ? 'env(safe-area-inset-top)' : 0,
+          paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : 0,
         }
       }}
     >
@@ -159,6 +171,13 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
         alignItems: 'center', 
         justifyContent: 'space-between',
         pb: 1,
+        // Add safe area padding for iOS notch
+        pt: isMobile ? 'max(16px, env(safe-area-inset-top))' : 2,
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        position: isMobile ? 'sticky' : 'relative',
+        top: 0,
+        zIndex: 1,
+        backgroundColor: 'background.paper',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonIcon />
@@ -178,7 +197,10 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
       <Divider />
 
-      <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+      <DialogContent sx={{ 
+        p: { xs: 2, sm: 3 },
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+      }}>
         {showingForm ? (
           <DependentForm
             dependent={editingDependent}
@@ -293,7 +315,15 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
       <Divider />
 
-      <DialogActions sx={{ px: { xs: 2, sm: 3 }, py: 2 }}>
+      <DialogActions sx={{ 
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        py: 2,
+        pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+        position: isMobile ? 'sticky' : 'relative',
+        bottom: 0,
+        zIndex: 1,
+        backgroundColor: 'background.paper',
+      }}>
         {!showingForm && (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto', ml: 1 }}>
