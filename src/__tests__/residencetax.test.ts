@@ -31,17 +31,29 @@ describe('calculateResidenceTaxBasicDeduction', () => {
 describe('calculateResidenceTax', () => {
   it('calculates tax correctly for income with full deductions', () => {
     // Example: 5M income, 1M social insurance
-    expect(calculateResidenceTax(5_000_000, 1_000_000).totalResidenceTax).toBe(359_500) // (5M - 1M - 430K) * 0.1 + 5000
+    // Taxable: (5M - 1M - 430K) = 3,570,000
+    // Per Article 314-6: Basic deduction difference = 50,000 (fixed for income ≤ 25M)
+    // Adjustment credit: max((50K - (3.57M - 2M)) * 0.05, 50K * 0.05) = 2,500
+    // Tax: 3,570,000 * 0.1 - 2,500 + 5,000 = 359,500
+    expect(calculateResidenceTax(5_000_000, 1_000_000).totalResidenceTax).toBe(359_500)
   })
 
   it('calculates tax correctly for income with partial basic deduction', () => {
     // Example: 24.2M income, 1M social insurance
-    expect(calculateResidenceTax(24_200_000, 1_000_000).totalResidenceTax).toBe(2_293_500) // (24.2M - 1M - 290K) * 0.1 + 5000
+    // Taxable: (24.2M - 1M - 290K) = 22,910,000
+    // Per Article 314-6: Basic deduction difference = 50,000 (fixed for income ≤ 25M)
+    // Adjustment credit: max((50K - (22.91M - 2M)) * 0.05, 50K * 0.05) = 2,500
+    // Tax: 22,910,000 * 0.1 - 2,500 + 5,000 = 2,293,500
+    expect(calculateResidenceTax(24_200_000, 1_000_000).totalResidenceTax).toBe(2_293_500)
   })
 
   it('calculates tax correctly for income with minimum basic deduction', () => {
     // Example: 24.7M income, 1M social insurance
-    expect(calculateResidenceTax(24_700_000, 1_000_000).totalResidenceTax).toBe(2_357_500) // (24.7M - 1M - 150K) * 0.1 + 5000
+    // Taxable: (24.7M - 1M - 150K) = 23,550,000
+    // Per Article 314-6: Basic deduction difference = 50,000 (fixed for income ≤ 25M)
+    // Adjustment credit: max((50K - (23.55M - 2M)) * 0.05, 50K * 0.05) = 2,500
+    // Tax: 23,550,000 * 0.1 - 2,500 + 5,000 = 2,357,500
+    expect(calculateResidenceTax(24_700_000, 1_000_000).totalResidenceTax).toBe(2_357_500)
   })
 
   it('calculates tax correctly for income with no basic deduction', () => {
@@ -75,53 +87,52 @@ describe('calculateResidenceTax', () => {
 
 describe('calculateResidenceTax - 調整控除額 (Adjustment Credit)', () => {
   it('calculates adjustment credit correctly for taxable income <= 2M yen', () => {
-    // 3M gross employment income case
-    // Net income: 2,020,000, Social insurance: 450,000, Basic deduction: 430,000
-    // Taxable income: 1,140,000 (rounded down from 1,140,000)
-    // Should use: Math.min(50,000 * 0.05, 1,140,000 * 0.05) = Math.min(2,500, 57,000) = 2,500
+    // Net income: 2,020,000, Social insurance: 450,000
+    // Per Article 314-6: Basic deduction difference = 50,000 (fixed for income ≤ 25M)
+    // Taxable income: 2,020,000 - 450,000 - 430,000 = 1,140,000
+    // Adjustment credit: Math.min(50,000 * 0.05, 1,140,000 * 0.05) = Math.min(2,500, 57,000) = 2,500
     const result = calculateResidenceTax(2_020_000, 450_000);
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
   })
 
   it('calculates adjustment credit correctly for taxable income > 2M yen', () => {
-    // 5M gross employment income case
-    // Net income: 3,640,000, Social insurance: ~700,000, Basic deduction: 430,000  
-    // Taxable income: 2,510,000 (rounded down)
-    // Should use: Math.max((50,000 - (2,510,000 - 2,000,000)) * 0.05, 50,000 * 0.05)
-    //           = Math.max((50,000 - 510,000) * 0.05, 2,500)
-    //           = Math.max(-23,000, 2,500) = 2,500
+    // Net income: 3,640,000, Social insurance: ~700,000
+    // Per Article 314-6: Basic deduction difference = 50,000 (fixed for income ≤ 25M)
+    // Taxable income: 3,640,000 - 700,000 - 430,000 = 2,510,000
+    // Adjustment credit: Math.max((50,000 - (2,510,000 - 2,000,000)) * 0.05, 50,000 * 0.05)
+    //                  = Math.max((50,000 - 510,000) * 0.05, 2,500)
+    //                  = Math.max(-23,000, 2,500) = 2,500
     const result = calculateResidenceTax(3_640_000, 700_000);
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
   })
 
   it('calculates adjustment credit as zero for netIncome > 25M yen', () => {
-    // 30M gross employment income case
-    // Net income: 28,050,000 (30M - 1.95M max deduction)
-    // Should have zero adjustment credit because netIncome > 25M
+    // Net income: 28,050,000, Social insurance: 2,000,000
+    // Should have zero adjustment credit because netIncome > 25M (no basic deduction)
     const result = calculateResidenceTax(28_050_000, 2_000_000);
     expect(result.city.cityAdjustmentCredit).toBe(0);
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(0);
   })
 
   it('calculates adjustment credit correctly at the 2M taxable income boundary', () => {
-    // Test case where taxable income is exactly 2M
-    // Net income: 2,860,000, Social insurance: 430,000, Basic deduction: 430,000
-    // Taxable income: 2,000,000 (exactly at boundary)
-    // Should use: Math.min(50,000 * 0.05, 2,000,000 * 0.05) = Math.min(2,500, 100,000) = 2,500
+    // Net income: 2,860,000, Social insurance: 430,000
+    // Per Article 314-6: Basic deduction difference = 50,000 (fixed for income ≤ 25M)
+    // Taxable income: 2,860,000 - 430,000 - 430,000 = 2,000,000 (exactly at boundary)
+    // Adjustment credit: Math.min(50,000 * 0.05, 2,000,000 * 0.05) = Math.min(2,500, 100,000) = 2,500
     const result = calculateResidenceTax(2_860_000, 430_000);
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
   })
 
   it('calculates adjustment credit correctly just over 2M taxable income', () => {
-    // Test case where taxable income is just over 2M
-    // Net income: 2,861,000, Social insurance: 430,000, Basic deduction: 430,000
-    // Taxable income: 2,001,000 (just over boundary, rounded down to 2,001,000)
-    // Should use: Math.max((50,000 - (2,001,000 - 2,000,000)) * 0.05, 50,000 * 0.05)
-    //           = Math.max((50,000 - 1,000) * 0.05, 2,500)
-    //           = Math.max(2,450, 2,500) = 2,500
+    // Net income: 2,861,000, Social insurance: 430,000
+    // Per Article 314-6: Basic deduction difference = 50,000 (fixed for income ≤ 25M)
+    // Taxable income: 2,861,000 - 430,000 - 430,000 = 2,001,000 (just over boundary, rounded to 2,001,000)
+    // Adjustment credit: Math.max((50,000 - (2,001,000 - 2,000,000)) * 0.05, 50,000 * 0.05)
+    //                  = Math.max((50,000 - 1,000) * 0.05, 2,500)
+    //                  = Math.max(2,450, 2,500) = 2,500
     const result = calculateResidenceTax(2_861_000, 430_000);
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000

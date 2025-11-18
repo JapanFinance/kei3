@@ -789,9 +789,27 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         </tr>
                       </tbody>
                     </Box>
-                    <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85em' }}>
-                      Note: Small adjustment credits (調整控除) may apply to reduce the final amount.
-                    </Typography>
+                    
+                    {/* Adjustment Credit Section */}
+                    {results.residenceTax.personalDeductionDifference > 0 && (
+                      <Box sx={{ mt: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                          Adjustment Credit (調整控除)
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                          Personal deduction difference: ¥{results.residenceTax.personalDeductionDifference.toLocaleString()}
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.85em', color: 'text.secondary' }}>
+                          This statutory amount (defined in Local Tax Act Article 314-6) accounts for differences between national and residence tax personal deductions, including basic deduction, spouse/dependent deductions, and disability deductions.
+                        </Typography>
+                        {(results.residenceTax.city.cityAdjustmentCredit + results.residenceTax.prefecture.prefecturalAdjustmentCredit) > 0 && (
+                          <Typography variant="body2" sx={{ fontSize: '0.85em', mt: 0.5 }}>
+                            Credit applied: ¥{(results.residenceTax.city.cityAdjustmentCredit + results.residenceTax.prefecture.prefecturalAdjustmentCredit).toLocaleString()}
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                    
                     <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85em' }}>
                       <strong>Rounding:</strong> The municipal and prefectural portions are each rounded down to the nearest 100 yen after applying any tax credits.
                     </Typography>

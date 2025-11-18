@@ -62,6 +62,7 @@ export interface ResidenceTaxDetails {
   prefecturalProportion: number;
   residenceTaxRate: number;
   basicDeduction: number;
+  personalDeductionDifference: number; // 人的控除額の差 - difference between national and residence tax personal deductions
   city: {
     cityTaxableIncome: number;
     cityAdjustmentCredit: number;

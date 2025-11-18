@@ -1,5 +1,6 @@
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from "../types/tax";
 import { calculateNationalIncomeTax } from "./taxCalculations";
+import type { DependentDeductionResults } from "./dependentDeductions";
 
 /**
  * Calculates the basic deduction (基礎控除) for residence tax based on income
@@ -28,6 +29,7 @@ export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
     prefecturalProportion: 0.4,
     residenceTaxRate: 0.1,
     basicDeduction: 0,
+    personalDeductionDifference: 0,
     city: {
         cityTaxableIncome: 0,
         cityAdjustmentCredit: 0,
@@ -45,8 +47,118 @@ export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
     totalResidenceTax: 0,
 }
 
-// 人的控除額調整控除 - 50,000 yen for the basic deduction; should be updated if other deductions are added to the calculator
-const personalDeductionDifference = 50_000;
+/**
+ * Statutory personal deduction difference amounts per Local Tax Act Article 314-6
+ * These are used for the adjustment credit calculation (調整控除)
+ * 
+ * IMPORTANT: These are specific statutory amounts defined in law, NOT arithmetic differences.
+ * 
+ * Reference: https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
+ */
+const STATUTORY_DEDUCTION_DIFFERENCES = {
+    // 扶養控除 (Dependent Deduction)
+    DEPENDENT_GENERAL: 50_000, // General dependent (16-18, 23-69)
+    DEPENDENT_SPECIAL: 180_000, // Special dependent (19-22)
+    DEPENDENT_ELDERLY: 100_000, // Elderly dependent (70+)
+    DEPENDENT_ELDERLY_COHABITING: 130_000, // Elderly cohabiting parent/grandparent (70+)
+    
+    // 障害者控除 (Disability Deduction)
+    DISABILITY_REGULAR: 10_000, // Regular disability
+    DISABILITY_SPECIAL: 100_000, // Special disability
+    DISABILITY_SPECIAL_COHABITING: 220_000, // Special disability with cohabitation
+} as const;
+
+/**
+ * Get statutory difference for spouse deduction based on taxpayer's income
+ * Per Local Tax Act Article 314-6(6), varies by taxpayer income.
+ * 
+ * Note: Spouse special deduction has NO statutory difference because the income ranges
+ * for qualifying for spouse special deduction (>58万円) are mutually exclusive with
+ * the ranges where statutory differences are defined (<55万円) in Article 314-6(7).
+ * 
+ * Reference: 地方税法第314条の6第6号
+ * 
+ * @param isElderly - Whether spouse is 70+ years old
+ * @param taxpayerNetIncome - Taxpayer's net income (納税義務者の前年の合計所得金額)
+ * @returns Statutory deduction difference amount
+ */
+function getSpouseDeductionDifference(isElderly: boolean, taxpayerNetIncome: number): number {
+    if (taxpayerNetIncome <= 9_000_000) {
+        return isElderly ? 100_000 : 50_000;
+    } else if (taxpayerNetIncome <= 9_500_000) {
+        return isElderly ? 60_000 : 40_000;
+    } else if (taxpayerNetIncome <= 10_000_000) {
+        return isElderly ? 30_000 : 20_000;
+    }
+    return 0;
+}
+
+
+
+/**
+ * Calculates the statutory personal deduction difference (人的控除額の差) per Local Tax Act Article 314-6
+ * 
+ * IMPORTANT: These are NOT the actual arithmetic differences between national and residence tax deductions.
+ * They are specific statutory amounts defined in law for the adjustment credit calculation.
+ * 
+ * Reference: https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
+ * Reference: https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/pdf/R03chouseikoujo01.pdf
+ * 
+ * @param deductions - The dependent deduction results containing breakdown by dependent
+ * @returns The statutory personal deduction difference amount for adjustment credit calculation
+ */
+function calculateStatutoryPersonalDeductionDifference(deductions: DependentDeductionResults, taxpayerNetIncome: number): number {
+    let totalDifference = 0;
+    
+    // Calculate the statutory difference for each dependent based on their specific characteristics
+    for (const breakdown of deductions.breakdown) {
+        const dep = breakdown.dependent;
+        
+        // Spouse deductions
+        if (dep.relationship === 'spouse') {
+            // Only spouse deduction (配偶者控除) has statutory difference
+            // Spouse special deduction (配偶者特別控除) has NO statutory difference because:
+            // - Spouse special deduction requires spouse income > 58万円
+            // - Statutory differences only defined for spouse income < 55万円
+            // These ranges are mutually exclusive per Article 314-6(7)
+            if (breakdown.deductionType === 'Spouse Deduction') {
+                const isElderly = dep.ageCategory === '70plus';
+                totalDifference += getSpouseDeductionDifference(isElderly, taxpayerNetIncome);
+            }
+            // Spouse special deduction: statutory difference is 0 (not defined in law)
+        } 
+        // Other dependent deductions
+        else {
+            // For specific relative special deduction, no statutory difference is defined in the law
+            // So we use the standard dependent deduction differences
+            if (dep.ageCategory === '19to22') {
+                // Special dependent (19-22)
+                totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_SPECIAL;
+            } else if (dep.ageCategory === '70plus') {
+                // Elderly dependent
+                if (dep.isCohabiting && (dep.relationship === 'parent' || dep.relationship === 'other')) {
+                    totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY_COHABITING;
+                } else {
+                    totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY;
+                }
+            } else if (dep.ageCategory === '16to18' || dep.ageCategory === '23to69') {
+                // General dependent (16-18, 23-69)
+                totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_GENERAL;
+            }
+        }
+        
+        // Disability deductions (apply in addition to other deductions)
+        if (dep.disability === 'special' && dep.isCohabiting) {
+            totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_SPECIAL_COHABITING;
+        } else if (dep.disability === 'special') {
+            totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_SPECIAL;
+        } else if (dep.disability === 'regular') {
+            totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_REGULAR;
+        }
+    }
+    
+    return totalDifference;
+}
 
 /**
  * Calculates residence tax (住民税) based on net income and deductions
@@ -54,11 +166,16 @@ const personalDeductionDifference = 50_000;
  * Taxable income = net income - social insurance deductions - residence tax basic deduction
  * The details vary by municipality, but most deviate little from this calculation.
  * https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju
+ * 
+ * @param netIncome - Net income after employment income deduction (used for both taxable income calculation and taxpayer income for statutory differences)
+ * @param nonBasicDeductions - Social insurance + iDeCo deductions
+ * @param dependentDeductions - Full dependent deduction results (used for adjustment credit calculation per Local Tax Act Article 314-6)
+ * @param taxCredit - Tax credit amount
  */
 export const calculateResidenceTax = (
     netIncome: number,
     nonBasicDeductions: number,
-    dependentDeductionsTotal: number = 0,
+    dependentDeductions: DependentDeductionResults | null = null,
     taxCredit: number = 0
 ): ResidenceTaxDetails => {
     if (netIncome <= 450_000) {
@@ -68,9 +185,38 @@ export const calculateResidenceTax = (
     const cityProportion = 0.6;
     const prefecturalProportion = 0.4;
     const basicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
-    const taxableIncome = Math.floor(Math.max(0, netIncome - nonBasicDeductions - basicDeduction - dependentDeductionsTotal) / 1000) * 1000;
+    
+    // Calculate taxable income using residence tax deductions
+    const dependentDeductionsResidenceTaxTotal = dependentDeductions?.residenceTax.total || 0;
+    const taxableIncome = Math.floor(Math.max(0, netIncome - nonBasicDeductions - basicDeduction - dependentDeductionsResidenceTaxTotal) / 1000) * 1000;
 
-    // 調整控除額
+    // 人的控除額調整控除 (personal deduction adjustment credit)
+    // Per Local Tax Act Article 314-6, the "personal deduction difference" (人的控除額の差) 
+    // uses specific statutory amounts defined by law, NOT actual arithmetic differences
+    // Source: https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
+    
+    // Basic deduction difference per Article 314-6:
+    // Fixed at 50,000 yen for taxpayers with combined net income ≤ 25M yen
+    // (i.e., anyone who qualifies for any amount of basic deduction)
+    // 「五万円に、当該納税義務者が次の表の上欄に掲げる者に該当する場合には...」
+    let basicDeductionDifference = 0;
+    if (netIncome <= 25_000_000) {
+        basicDeductionDifference = 50_000;
+    }
+    
+    // Dependent-related deduction differences use statutory amounts from Article 314-6 table
+    // These are NOT the actual arithmetic differences but legally defined amounts for adjustment credit
+    const dependentDeductionsDifference = dependentDeductions 
+        ? calculateStatutoryPersonalDeductionDifference(dependentDeductions, netIncome)
+        : 0;
+    
+    // Total personal deduction difference per law
+    const personalDeductionDifference = basicDeductionDifference + dependentDeductionsDifference;
+
+    // 調整控除額 (adjustment credit)
+    // For taxable income of 2M or less: min(personal deduction difference x 5%, taxable income x 5%)
+    // For taxable income over 2M: max({personal deduction difference - (taxable income - 2M)} x 5%, personal deduction difference x 5%)
+    // No adjustment credit if net income exceeds 25M yen
     let adjustmentCredit = 0;
     if (netIncome > 25_000_000) {
         adjustmentCredit = 0;
@@ -97,6 +243,7 @@ export const calculateResidenceTax = (
         prefecturalProportion,
         residenceTaxRate,
         basicDeduction,
+        personalDeductionDifference,
         city: {
             cityTaxableIncome: taxableIncome * cityProportion,
             cityAdjustmentCredit,
@@ -147,7 +294,7 @@ export function calculateFurusatoNozeiDetails(
     const residentTaxAmountForIncomePortion = residenceTaxDetails.totalResidenceTax - residenceTaxDetails.perCapitaTax;
 
     // Special deduction rate for resident tax (特例控除割合)
-    const specialDeductionRate = getSpecialDeductionMultiplier(residenceTaxDetails.taxableIncome - personalDeductionDifference);
+    const specialDeductionRate = getSpecialDeductionMultiplier(residenceTaxDetails.taxableIncome - residenceTaxDetails.personalDeductionDifference);
 
     // The deduction breakdown:
     // Income tax deduction: (X - 2000) * incomeTaxRate (not used if one-stop)
