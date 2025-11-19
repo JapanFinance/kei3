@@ -20,17 +20,10 @@ import {
   SPOUSE_AGE_CATEGORIES,
   calculateDependentTotalNetIncome,
   calculateNetEmploymentIncome,
-  isEligibleForSpouseDeduction,
-  isEligibleForSpouseSpecialDeduction,
 } from '../../types/dependents';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { formatJPY } from '../../utils/formatters';
-import { 
-  getSpouseDeduction, 
-  getSpouseSpecialDeduction,
-  getDisabilityDeduction
-} from '../../utils/dependentDeductions';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -321,82 +314,6 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
               </Link>
             </FormHelperText>
           </FormControl>
-
-          {/* Eligible Deductions Table */}
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Eligible Deductions:
-            </Typography>
-            <Paper variant="outlined">
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Deduction Type</TableCell>
-                    <TableCell align="right">Income Tax</TableCell>
-                    <TableCell align="right">Residence Tax</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {(() => {
-                    const totalNetIncome = calculateDependentTotalNetIncome(spouse.income);
-                    const isElderly = spouse.ageCategory === '70plus';
-                    const rows: React.ReactNode[] = [];
-                    
-                    // Spouse or Spouse Special Deduction
-                    if (isEligibleForSpouseDeduction({ ...spouse, relationship: 'spouse' as const })) {
-                      const natDeduction = getSpouseDeduction(isElderly, false);
-                      const resDeduction = getSpouseDeduction(isElderly, true);
-                      rows.push(
-                        <TableRow key="spouse">
-                          <TableCell>Spouse Deduction (配偶者控除)</TableCell>
-                          <TableCell align="right">{formatJPY(natDeduction)}</TableCell>
-                          <TableCell align="right">{formatJPY(resDeduction)}</TableCell>
-                        </TableRow>
-                      );
-                    } else if (isEligibleForSpouseSpecialDeduction({ ...spouse, relationship: 'spouse' as const })) {
-                      const natDeduction = getSpouseSpecialDeduction(totalNetIncome, false);
-                      const resDeduction = getSpouseSpecialDeduction(totalNetIncome, true);
-                      rows.push(
-                        <TableRow key="spouse-special">
-                          <TableCell>Spouse Special Deduction (配偶者特別控除)</TableCell>
-                          <TableCell align="right">{formatJPY(natDeduction)}</TableCell>
-                          <TableCell align="right">{formatJPY(resDeduction)}</TableCell>
-                        </TableRow>
-                      );
-                    }
-                    
-                    // Disability Deduction
-                    if (spouse.disability !== 'none') {
-                      const natDeduction = getDisabilityDeduction(spouse.disability, spouse.isCohabiting, false);
-                      const resDeduction = getDisabilityDeduction(spouse.disability, spouse.isCohabiting, true);
-                      rows.push(
-                        <TableRow key="disability">
-                          <TableCell>Disability Deduction (障害者控除)</TableCell>
-                          <TableCell align="right">{formatJPY(natDeduction)}</TableCell>
-                          <TableCell align="right">{formatJPY(resDeduction)}</TableCell>
-                        </TableRow>
-                      );
-                    }
-                    
-                    // No deductions message
-                    if (rows.length === 0) {
-                      return (
-                        <TableRow>
-                          <TableCell colSpan={3} align="center">
-                            <Typography variant="body2" color="text.secondary">
-                              No deductions available
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
-                    
-                    return rows;
-                  })()}
-                </TableBody>
-              </Table>
-            </Paper>
-          </Box>
         </Box>
       )}
     </Box>

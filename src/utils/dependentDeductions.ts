@@ -397,7 +397,7 @@ export function calculateDependentDeductions(
         
         breakdown.nationalTaxAmount += natSpouse;
         breakdown.residenceTaxAmount += resSpouse;
-        breakdown.deductionType = 'Spouse Deduction';
+        breakdown.deductionType = 'Spouse';
         breakdown.notes.push(dependent.ageCategory === '70plus' ? 'Elderly spouse' : 'Spouse deduction');
       } else if (isEligibleForSpouseSpecialDeduction(dependent)) {
         const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
@@ -409,7 +409,7 @@ export function calculateDependentDeductions(
         
         breakdown.nationalTaxAmount += natSpouseSpecial;
         breakdown.residenceTaxAmount += resSpouseSpecial;
-        breakdown.deductionType = 'Spouse Special Deduction';
+        breakdown.deductionType = 'Spouse Special';
         breakdown.notes.push('Spouse special deduction (income 95-133万円)');
       }
     }
@@ -424,7 +424,7 @@ export function calculateDependentDeductions(
       
       breakdown.nationalTaxAmount += natSpecific;
       breakdown.residenceTaxAmount += resSpecific;
-      breakdown.deductionType = 'Specific Relative Special Deduction';
+      breakdown.deductionType = 'Specific Relative Special';
       breakdown.notes.push('Age 19-23 with income 48-133万円');
     }
     // Standard dependent deduction
@@ -439,17 +439,17 @@ export function calculateDependentDeductions(
       breakdown.residenceTaxAmount += resDependent;
       
       if (isSpecialDependent(dependent)) {
-        breakdown.deductionType = 'Special Dependent Deduction';
+        breakdown.deductionType = 'Special Dependent';
         breakdown.notes.push('Age 19-22 (Special dependent)');
       } else if (isElderlyDependent(dependent)) {
-        breakdown.deductionType = 'Elderly Dependent Deduction';
+        breakdown.deductionType = 'Elderly Dependent';
         if (dependent.isCohabiting && dependent.relationship === 'parent') {
           breakdown.notes.push('Age 70+ cohabiting parent');
         } else {
           breakdown.notes.push('Age 70+ elderly dependent');
         }
       } else {
-        breakdown.deductionType = 'General Dependent Deduction';
+        breakdown.deductionType = 'General Dependent';
         breakdown.notes.push('General dependent');
       }
     } else {
