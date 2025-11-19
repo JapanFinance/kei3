@@ -1,6 +1,7 @@
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from "../types/tax";
 import { calculateNationalIncomeTax } from "./taxCalculations";
 import type { DependentDeductionResults } from "./dependentDeductions";
+import { DEDUCTION_TYPES } from "./dependentDeductions";
 
 /**
  * Calculates the basic deduction (基礎控除) for residence tax based on income
@@ -121,7 +122,7 @@ function calculateStatutoryPersonalDeductionDifference(deductions: DependentDedu
             // - Spouse special deduction requires spouse income > 58万円
             // - Statutory differences only defined for spouse income < 55万円
             // These ranges are mutually exclusive per Article 314-6(7)
-            if (breakdown.deductionType === 'Spouse Deduction') {
+            if (breakdown.deductionType === DEDUCTION_TYPES.SPOUSE) {
                 const isElderly = dep.ageCategory === '70plus';
                 totalDifference += getSpouseDeductionDifference(isElderly, taxpayerNetIncome);
             }

@@ -31,7 +31,7 @@ import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, calculateDependentTotalNetInco
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
 import { formatJPY } from '../../../utils/formatters';
-import { calculateDependentDeductions, getDisabilityDeduction, type DependentDeductionBreakdown } from '../../../utils/dependentDeductions';
+import { calculateDependentDeductions, getDisabilityDeduction, DEDUCTION_TYPES, type DependentDeductionBreakdown } from '../../../utils/dependentDeductions';
 
 interface DependentsModalProps {
   open: boolean;
@@ -365,7 +365,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           const dep = breakdown.dependent;
                           
                           // Handle main deduction type (spouse, dependent, etc.)
-                          if (breakdown.deductionType && breakdown.deductionType !== 'Not Eligible') {
+                          if (breakdown.deductionType && breakdown.deductionType !== DEDUCTION_TYPES.NOT_ELIGIBLE) {
                             // Calculate amounts for main deduction and disability separately
                             let mainNatAmount = 0;
                             let mainResAmount = 0;

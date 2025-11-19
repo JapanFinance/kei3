@@ -136,13 +136,29 @@ export interface DependentDeductionResults {
 }
 
 /**
- * Deduction breakdown for a single dependent
+ * Deduction type constants to ensure consistency across the codebase
+ */
+export const DEDUCTION_TYPES = {
+  SPOUSE: 'Spouse',
+  SPOUSE_SPECIAL: 'Spouse Special',
+  DEPENDENT: 'Dependent',
+  SPECIAL_DEPENDENT: 'Special Dependent',
+  ELDERLY_DEPENDENT: 'Elderly Dependent',
+  GENERAL_DEPENDENT: 'General Dependent',
+  SPECIFIC_RELATIVE_SPECIAL: 'Specific Relative Special',
+  NOT_ELIGIBLE: 'Not Eligible',
+} as const;
+
+export type DeductionType = typeof DEDUCTION_TYPES[keyof typeof DEDUCTION_TYPES];
+
+/**
+ * Represents the breakdown of deductions for a single dependent
  */
 export interface DependentDeductionBreakdown {
   dependent: Dependent;
   nationalTaxAmount: number;
   residenceTaxAmount: number;
-  deductionType: string;
+  deductionType: DeductionType | '';
   notes: string[];
 }
 
@@ -397,7 +413,7 @@ export function calculateDependentDeductions(
         
         breakdown.nationalTaxAmount += natSpouse;
         breakdown.residenceTaxAmount += resSpouse;
-        breakdown.deductionType = 'Spouse';
+        breakdown.deductionType = DEDUCTION_TYPES.SPOUSE;
         breakdown.notes.push(dependent.ageCategory === '70plus' ? 'Elderly spouse' : 'Spouse deduction');
       } else if (isEligibleForSpouseSpecialDeduction(dependent)) {
         const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
@@ -409,7 +425,7 @@ export function calculateDependentDeductions(
         
         breakdown.nationalTaxAmount += natSpouseSpecial;
         breakdown.residenceTaxAmount += resSpouseSpecial;
-        breakdown.deductionType = 'Spouse Special';
+        breakdown.deductionType = DEDUCTION_TYPES.SPOUSE_SPECIAL;
         breakdown.notes.push('Spouse special deduction (income 95-133万円)');
       }
     }
@@ -424,7 +440,7 @@ export function calculateDependentDeductions(
       
       breakdown.nationalTaxAmount += natSpecific;
       breakdown.residenceTaxAmount += resSpecific;
-      breakdown.deductionType = 'Specific Relative Special';
+      breakdown.deductionType = DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL;
       breakdown.notes.push('Age 19-23 with income 48-133万円');
     }
     // Standard dependent deduction
@@ -439,23 +455,23 @@ export function calculateDependentDeductions(
       breakdown.residenceTaxAmount += resDependent;
       
       if (isSpecialDependent(dependent)) {
-        breakdown.deductionType = 'Special Dependent';
+        breakdown.deductionType = DEDUCTION_TYPES.SPECIAL_DEPENDENT;
         breakdown.notes.push('Age 19-22 (Special dependent)');
       } else if (isElderlyDependent(dependent)) {
-        breakdown.deductionType = 'Elderly Dependent';
+        breakdown.deductionType = DEDUCTION_TYPES.ELDERLY_DEPENDENT;
         if (dependent.isCohabiting && dependent.relationship === 'parent') {
           breakdown.notes.push('Age 70+ cohabiting parent');
         } else {
           breakdown.notes.push('Age 70+ elderly dependent');
         }
       } else {
-        breakdown.deductionType = 'General Dependent';
+        breakdown.deductionType = DEDUCTION_TYPES.GENERAL_DEPENDENT;
         breakdown.notes.push('General dependent');
       }
     } else {
       // Not eligible for any deduction (except disability which was already handled)
       if (dependent.disability === 'none') {
-        breakdown.deductionType = 'Not Eligible';
+        breakdown.deductionType = DEDUCTION_TYPES.NOT_ELIGIBLE;
         breakdown.notes.push('Income exceeds threshold for deductions');
       }
     }
@@ -495,14 +511,15 @@ export function getDependentDeductionSummary(results: DependentDeductionResults)
   }
   if (results.nationalTax.dependentDeduction > 0) {
     const count = results.breakdown.filter(b => 
-      b.deductionType.includes('Dependent') && 
-      !b.deductionType.includes('Specific')
+      b.deductionType === DEDUCTION_TYPES.SPECIAL_DEPENDENT ||
+      b.deductionType === DEDUCTION_TYPES.ELDERLY_DEPENDENT ||
+      b.deductionType === DEDUCTION_TYPES.GENERAL_DEPENDENT
     ).length;
     parts.push(`${count} dependent${count > 1 ? 's' : ''}`);
   }
   if (results.nationalTax.specificRelativeDeduction > 0) {
     const count = results.breakdown.filter(b => 
-      b.deductionType.includes('Specific')
+      b.deductionType === DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL
     ).length;
     parts.push(`${count} specific relative${count > 1 ? 's' : ''}`);
   }
