@@ -10,7 +10,6 @@ import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
-import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
 import Paper from '@mui/material/Paper';
@@ -27,12 +26,12 @@ import PersonIcon from '@mui/icons-material/Person';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { Dependent, OtherDependent, Spouse } from '../../types/dependents';
-import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, calculateDependentTotalNetIncome } from '../../types/dependents';
+import type { Dependent, OtherDependent, Spouse } from '../../../types/dependents';
+import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, calculateDependentTotalNetIncome } from '../../../types/dependents';
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
-import { formatJPY } from '../../utils/formatters';
-import { calculateDependentDeductions, getDisabilityDeduction, type DependentDeductionBreakdown } from '../../utils/dependentDeductions';
+import { formatJPY } from '../../../utils/formatters';
+import { calculateDependentDeductions, getDisabilityDeduction, type DependentDeductionBreakdown } from '../../../utils/dependentDeductions';
 
 interface DependentsModalProps {
   open: boolean;
@@ -153,15 +152,17 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       maxWidth="md"
       fullWidth
       fullScreen={isMobile}
-      PaperProps={{
-        sx: {
-          minHeight: isMobile ? '100dvh' : '500px',
-          maxHeight: isMobile ? '100dvh' : '90vh',
-          // Fallback for browsers that don't support dvh
-          '@supports not (height: 100dvh)': {
-            minHeight: isMobile ? '100vh' : '500px',
-            maxHeight: isMobile ? '100vh' : '90vh',
-          },
+      slotProps={{
+        paper: {
+          sx: {
+            minHeight: isMobile ? '100dvh' : '500px',
+            maxHeight: isMobile ? '100dvh' : '90vh',
+            // Fallback for browsers that don't support dvh
+            '@supports not (height: 100dvh)': {
+              minHeight: isMobile ? '100vh' : '500px',
+              maxHeight: isMobile ? '100vh' : '90vh',
+            },
+          }
         }
       }}
       sx={{
@@ -249,34 +250,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                   <React.Fragment key={dependent.id}>
                     {index > 0 && <Divider component="li" />}
                     <ListItem
-                      sx={{
-                        py: 2,
-                        px: { xs: 1, sm: 2 },
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        },
-                      }}
-                    >
-                      <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Box sx={{ flex: 1, minWidth: 0, mr: 2 }}>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-                                <Typography variant="subtitle1" fontWeight={500}>
-                                  Dependent {index + 1}
-                                </Typography>
-                                {getDependentChips(dependent)}
-                              </Box>
-                            }
-                            secondary={getDependentSummary(dependent)}
-                            secondaryTypographyProps={{
-                              sx: { mt: 0.5 }
-                            }}
-                          />
-                        </Box>
-                        <ListItemSecondaryAction sx={{ position: 'relative', transform: 'none', top: 'auto', right: 'auto' }}>
+                      secondaryAction={
+                        <>
                           <IconButton
                             edge="end"
                             aria-label="edit"
@@ -295,8 +270,32 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
-                        </ListItemSecondaryAction>
-                      </Box>
+                        </>
+                      }
+                      sx={{
+                        py: 2,
+                        px: { xs: 1, sm: 2 },
+                        '&:hover': {
+                          bgcolor: 'action.hover',
+                        },
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                            <Typography variant="subtitle1" fontWeight={500}>
+                              Dependent {index + 1}
+                            </Typography>
+                            {getDependentChips(dependent)}
+                          </Box>
+                        }
+                        secondary={getDependentSummary(dependent)}
+                        slotProps={{
+                          secondary: {
+                            sx: { mt: 0.5 }
+                          }
+                        }}
+                      />
                     </ListItem>
                   </React.Fragment>
                 ))}
