@@ -14,16 +14,16 @@ import type {
   DisabilityLevel,
   Spouse,
   SpouseAgeCategory,
-} from '../../types/dependents';
+} from '../../../types/dependents';
 import {
   DISABILITY_LEVELS,
   SPOUSE_AGE_CATEGORIES,
   calculateDependentTotalNetIncome,
   calculateNetEmploymentIncome,
-} from '../../types/dependents';
-import { SpinnerNumberField } from '../ui/SpinnerNumberField';
-import { InfoTooltip } from '../ui/InfoTooltip';
-import { formatJPY } from '../../utils/formatters';
+} from '../../../types/dependents';
+import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
+import { InfoTooltip } from '../../ui/InfoTooltip';
+import { formatJPY } from '../../../utils/formatters';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';

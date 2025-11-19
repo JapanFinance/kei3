@@ -19,7 +19,7 @@ import type {
   DependentAgeCategory,
   DisabilityLevel,
   DependentIncome,
-} from '../../types/dependents';
+} from '../../../types/dependents';
 import {
   RELATIONSHIPS,
   DISABILITY_LEVELS,
@@ -28,16 +28,16 @@ import {
   calculateNetEmploymentIncome,
   isEligibleForDependentDeduction,
   isEligibleForSpecificRelativeDeduction,
-} from '../../types/dependents';
-import { CURRENT_TAX_YEAR } from '../../types/tax';
-import { InfoTooltip } from '../ui/InfoTooltip';
-import { SpinnerNumberField } from '../ui/SpinnerNumberField';
-import { formatJPY } from '../../utils/formatters';
+} from '../../../types/dependents';
+import { CURRENT_TAX_YEAR } from '../../../types/tax';
+import { InfoTooltip } from '../../ui/InfoTooltip';
+import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
+import { formatJPY } from '../../../utils/formatters';
 import { 
   getDependentDeduction,
   getSpecificRelativeDeduction,
   getDisabilityDeduction
-} from '../../utils/dependentDeductions';
+} from '../../../utils/dependentDeductions';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';

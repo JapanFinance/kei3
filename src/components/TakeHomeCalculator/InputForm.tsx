@@ -23,7 +23,7 @@ import PeopleIcon from '@mui/icons-material/People';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { DependentsModal } from './DependentsModal';
+import { DependentsModal } from './Dependents/DependentsModal';
 
 import type { TakeHomeInputs } from '../../types/tax';
 import {
