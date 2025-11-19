@@ -789,28 +789,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         </tr>
                       </tbody>
                     </Box>
-                    
-                    {/* Adjustment Credit Section */}
-                    {results.residenceTax.personalDeductionDifference > 0 && (
-                      <Box sx={{ mt: 1.5, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          Adjustment Credit (調整控除)
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
-                          Personal deduction difference: ¥{results.residenceTax.personalDeductionDifference.toLocaleString()}
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.85em', color: 'text.secondary' }}>
-                          This statutory amount (defined in Local Tax Act Article 314-6) accounts for differences between national and residence tax personal deductions, including basic deduction, spouse/dependent deductions, and disability deductions.
-                        </Typography>
-                        {(results.residenceTax.city.cityAdjustmentCredit + results.residenceTax.prefecture.prefecturalAdjustmentCredit) > 0 && (
-                          <Typography variant="body2" sx={{ fontSize: '0.85em', mt: 0.5 }}>
-                            Credit applied: ¥{(results.residenceTax.city.cityAdjustmentCredit + results.residenceTax.prefecture.prefecturalAdjustmentCredit).toLocaleString()}
-                          </Typography>
-                        )}
-                      </Box>
-                    )}
-                    
-                    <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85em' }}>
+                    <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85em' }}>
                       <strong>Rounding:</strong> The municipal and prefectural portions are each rounded down to the nearest 100 yen after applying any tax credits.
                     </Typography>
                     <Box sx={{ mt: 1 }}>
@@ -843,7 +822,47 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
             />
             {results.residenceTax.city.cityAdjustmentCredit > 0 && (
               <ResultRow 
-                label="Adjustment credit"
+                label={
+                  <span>
+                    Tax credit (municipal)
+                    <DetailInfoTooltip
+                      title="Municipal Tax Credits"
+                      children={
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Tax Credits Applied to Municipal Portion
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1, fontSize: '0.9em' }}>
+                            The following credits reduce your municipal residence tax:
+                          </Typography>
+                          
+                          {/* Adjustment Credit */}
+                          <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              Adjustment Credit (調整控除)
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Municipal portion (60%): ¥{results.residenceTax.city.cityAdjustmentCredit.toLocaleString()}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Personal deduction difference: ¥{results.residenceTax.personalDeductionDifference.toLocaleString()}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 0.5 }}>
+                              This statutory amount (defined in Local Tax Act Article 314-6) accounts for differences between national and residence tax personal deductions, including basic deduction, spouse/dependent deductions, and disability deductions.
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
+                              The adjustment credit is calculated based on the personal deduction difference and taxable income, with 60% allocated to municipal tax.
+                            </Typography>
+                          </Box>
+                          
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                            Total Municipal Tax Credit: ¥{results.residenceTax.city.cityAdjustmentCredit.toLocaleString()}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </span>
+                }
                 value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)} 
                 type="detail" 
                 sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
@@ -858,7 +877,47 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
             />
             {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
               <ResultRow 
-                label="Adjustment credit"
+                label={
+                  <span>
+                    Tax credit (prefectural)
+                    <DetailInfoTooltip
+                      title="Prefectural Tax Credits"
+                      children={
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Tax Credits Applied to Prefectural Portion
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1, fontSize: '0.9em' }}>
+                            The following credits reduce your prefectural residence tax:
+                          </Typography>
+                          
+                          {/* Adjustment Credit */}
+                          <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              Adjustment Credit (調整控除)
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Prefectural portion (40%): ¥{results.residenceTax.prefecture.prefecturalAdjustmentCredit.toLocaleString()}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Personal deduction difference: ¥{results.residenceTax.personalDeductionDifference.toLocaleString()}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 0.5 }}>
+                              This statutory amount (defined in Local Tax Act Article 314-6) accounts for differences between national and residence tax personal deductions, including basic deduction, spouse/dependent deductions, and disability deductions.
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary' }}>
+                              The adjustment credit is calculated based on the personal deduction difference and taxable income, with 40% allocated to prefectural tax.
+                            </Typography>
+                          </Box>
+                          
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                            Total Prefectural Tax Credit: ¥{results.residenceTax.prefecture.prefecturalAdjustmentCredit.toLocaleString()}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </span>
+                }
                 value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)} 
                 type="detail" 
                 sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
