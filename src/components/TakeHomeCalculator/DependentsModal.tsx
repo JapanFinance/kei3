@@ -13,6 +13,12 @@ import ListItemText from '@mui/material/ListItemText';
 import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
+import Paper from '@mui/material/Paper';
+import Table from '@mui/material/Table';
+import TableHead from '@mui/material/TableHead';
+import TableBody from '@mui/material/TableBody';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
 import CloseIcon from '@mui/icons-material/Close';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -25,6 +31,8 @@ import type { Dependent, OtherDependent, Spouse } from '../../types/dependents';
 import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, calculateDependentTotalNetIncome } from '../../types/dependents';
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
+import { formatJPY } from '../../utils/formatters';
+import { calculateDependentDeductions, getDisabilityDeduction, type DependentDeductionBreakdown } from '../../utils/dependentDeductions';
 
 interface DependentsModalProps {
   open: boolean;
@@ -116,7 +124,6 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           label={disabilityLabel}
           size="small" 
           color="secondary"
-          sx={{ mr: 0.5, mt: 0.5 }}
         />
       );
     }
@@ -130,7 +137,6 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           label="Cohabiting" 
           size="small" 
           variant="outlined"
-          sx={{ mr: 0.5, mt: 0.5 }}
         />
       );
     }
@@ -257,18 +263,18 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         <Box sx={{ flex: 1, minWidth: 0, mr: 2 }}>
                           <ListItemText
                             primary={
-                              <Typography variant="subtitle1" fontWeight={500}>
-                                Dependent {index + 1}
-                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                                <Typography variant="subtitle1" fontWeight={500}>
+                                  Dependent {index + 1}
+                                </Typography>
+                                {getDependentChips(dependent)}
+                              </Box>
                             }
                             secondary={getDependentSummary(dependent)}
                             secondaryTypographyProps={{
                               sx: { mt: 0.5 }
                             }}
                           />
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', mt: 0.5 }}>
-                            {getDependentChips(dependent)}
-                          </Box>
                         </Box>
                         <ListItemSecondaryAction sx={{ position: 'relative', transform: 'none', top: 'auto', right: 'auto' }}>
                           <IconButton
@@ -309,6 +315,201 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 Add Other Dependent
               </Button>
             </Box>
+
+            {/* Deduction Summary */}
+            {(spouse || otherDependents.length > 0) && (
+              <Box sx={{ mt: 4 }}>
+                <Divider sx={{ mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Total Deductions Summary
+                </Typography>
+                <Paper variant="outlined" sx={{ border: { xs: 'none', sm: '1px solid' }, borderColor: { sm: 'divider' } }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Deduction Type</TableCell>
+                        <TableCell align="center">Count</TableCell>
+                        <TableCell align="right">Income Tax</TableCell>
+                        <TableCell align="right">Residence Tax</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(() => {
+                        const allDependents: Dependent[] = [...(spouse ? [spouse] : []), ...otherDependents];
+                        
+                        if (allDependents.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={4} align="center">
+                                <Typography variant="body2" color="text.secondary">
+                                  No dependents added
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+                        
+                        const deductionResults = calculateDependentDeductions(allDependents);
+                        
+                        // Group deductions by type and amount
+                        interface DeductionGroup {
+                          type: string;
+                          natAmount: number;
+                          resAmount: number;
+                          count: number;
+                        }
+                        
+                        const deductionMap = new Map<string, DeductionGroup>();
+                        
+                        // Process each breakdown - split combined deductions into separate entries
+                        deductionResults.breakdown.forEach((breakdown: DependentDeductionBreakdown) => {
+                          const dep = breakdown.dependent;
+                          
+                          // Handle main deduction type (spouse, dependent, etc.)
+                          if (breakdown.deductionType && breakdown.deductionType !== 'Not Eligible') {
+                            // Calculate amounts for main deduction and disability separately
+                            let mainNatAmount = 0;
+                            let mainResAmount = 0;
+                            let disabilityNatAmount = 0;
+                            let disabilityResAmount = 0;
+                            
+                            // Calculate disability deduction if applicable
+                            if (dep.disability !== 'none') {
+                              disabilityNatAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, false);
+                              disabilityResAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, true);
+                            }
+                            
+                            // Main deduction is the total minus disability
+                            mainNatAmount = breakdown.nationalTaxAmount - disabilityNatAmount;
+                            mainResAmount = breakdown.residenceTaxAmount - disabilityResAmount;
+                            
+                            // Add main deduction if non-zero
+                            if (mainNatAmount > 0 || mainResAmount > 0) {
+                              const key = `${breakdown.deductionType}-${mainNatAmount}-${mainResAmount}`;
+                              const existing = deductionMap.get(key);
+                              
+                              if (existing) {
+                                existing.count++;
+                              } else {
+                                deductionMap.set(key, {
+                                  type: breakdown.deductionType,
+                                  natAmount: mainNatAmount,
+                                  resAmount: mainResAmount,
+                                  count: 1,
+                                });
+                              }
+                            }
+                            
+                            // Add disability deduction separately if applicable
+                            if (dep.disability !== 'none') {
+                              let disabilityType = 'Disability';
+                              if (dep.disability === 'special' && dep.isCohabiting) {
+                                disabilityType = 'Special Disability (Cohabiting)';
+                              } else if (dep.disability === 'special') {
+                                disabilityType = 'Special Disability';
+                              } else if (dep.disability === 'regular') {
+                                disabilityType = 'Regular Disability';
+                              }
+                              
+                              const disKey = `${disabilityType}-${disabilityNatAmount}-${disabilityResAmount}`;
+                              const existingDis = deductionMap.get(disKey);
+                              
+                              if (existingDis) {
+                                existingDis.count++;
+                              } else {
+                                deductionMap.set(disKey, {
+                                  type: disabilityType,
+                                  natAmount: disabilityNatAmount,
+                                  resAmount: disabilityResAmount,
+                                  count: 1,
+                                });
+                              }
+                            }
+                          } else if (dep.disability !== 'none') {
+                            // Only disability deduction, no other deduction
+                            const disabilityNatAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, false);
+                            const disabilityResAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, true);
+                            
+                            let disabilityType = 'Disability';
+                            if (dep.disability === 'special' && dep.isCohabiting) {
+                              disabilityType = 'Special Disability (Cohabiting)';
+                            } else if (dep.disability === 'special') {
+                              disabilityType = 'Special Disability';
+                            } else if (dep.disability === 'regular') {
+                              disabilityType = 'Regular Disability';
+                            }
+                            
+                            const disKey = `${disabilityType}-${disabilityNatAmount}-${disabilityResAmount}`;
+                            const existingDis = deductionMap.get(disKey);
+                            
+                            if (existingDis) {
+                              existingDis.count++;
+                            } else {
+                              deductionMap.set(disKey, {
+                                type: disabilityType,
+                                natAmount: disabilityNatAmount,
+                                resAmount: disabilityResAmount,
+                                count: 1,
+                              });
+                            }
+                          }
+                        });
+                        
+                        // Convert to array and sort
+                        const deductionGroups = Array.from(deductionMap.values()).sort((a, b) => {
+                          // Sort by total amount descending
+                          return (b.natAmount + b.resAmount) - (a.natAmount + a.resAmount);
+                        });
+                        
+                        const rows: React.ReactNode[] = [];
+                        let totalNat = 0;
+                        let totalRes = 0;
+                        
+                        // Add row for each deduction group
+                        deductionGroups.forEach((group, index) => {
+                          totalNat += group.natAmount * group.count;
+                          totalRes += group.resAmount * group.count;
+                          
+                          rows.push(
+                            <TableRow key={`deduction-${index}`}>
+                              <TableCell>{group.type}</TableCell>
+                              <TableCell align="center">{group.count}</TableCell>
+                              <TableCell align="right">
+                                {formatJPY(group.natAmount)}
+                                {group.count > 1 && (
+                                  <Typography variant="caption" display="block" color="text.secondary">
+                                    = {formatJPY(group.natAmount * group.count)}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell align="right">
+                                {formatJPY(group.resAmount)}
+                                {group.count > 1 && (
+                                  <Typography variant="caption" display="block" color="text.secondary">
+                                    = {formatJPY(group.resAmount * group.count)}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        });
+                        
+                        // Add total row
+                        rows.push(
+                          <TableRow key="total" sx={{ backgroundColor: 'action.hover', fontWeight: 'bold' }}>
+                            <TableCell colSpan={2}><strong>Total</strong></TableCell>
+                            <TableCell align="right"><strong>{formatJPY(totalNat)}</strong></TableCell>
+                            <TableCell align="right"><strong>{formatJPY(totalRes)}</strong></TableCell>
+                          </TableRow>
+                        );
+                        
+                        return rows;
+                      })()}
+                    </TableBody>
+                  </Table>
+                </Paper>
+              </Box>
+            )}
           </Box>
         )}
       </DialogContent>

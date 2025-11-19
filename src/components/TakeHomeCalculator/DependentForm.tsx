@@ -33,7 +33,11 @@ import { CURRENT_TAX_YEAR } from '../../types/tax';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { formatJPY } from '../../utils/formatters';
-import { getSpecificRelativeDeduction, getDependentDeduction, getDisabilityDeduction } from '../../utils/dependentDeductions';
+import { 
+  getDependentDeduction,
+  getSpecificRelativeDeduction,
+  getDisabilityDeduction
+} from '../../utils/dependentDeductions';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';

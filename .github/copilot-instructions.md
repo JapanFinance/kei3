@@ -35,12 +35,15 @@ This is a single-page application built around a **reactive tax calculation engi
 ### Commands
 ```bash
 npm run dev          # Vite dev server (port 5173)
-npm test            # Vitest test runner with jsdom
 npm run build       # TypeScript compilation + Vite build
 npm run deploy      # Cloudflare Pages deployment via Wrangler
 ```
 
 ### Testing Strategy
+When running tests, do not use the command line directly.
+Instead, use the IDE's test runner for better integration.
+You get stuck when the command line is waiting for input if you run tests using the command line.
+
 - **Unit Tests**: Focus on calculation accuracy (see `__tests__/taxCalculations.test.ts`)
 - **Component Tests**: React Testing Library for UI components
 - **Test Environment**: Vitest with jsdom, setup in `test-setup.ts`
