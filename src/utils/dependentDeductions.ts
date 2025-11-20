@@ -5,7 +5,7 @@
  * - 扶養控除 (Dependent Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
  * - 配偶者控除 (Spouse Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
  * - 配偶者特別控除 (Spouse Special Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
- * - 特定親族特別控除 (Specific Relative Special Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191_1.htm
+ * - 特定親族特別控除 (Specific Relative Special Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
  * - 障害者控除 (Disability Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm
  */
 
@@ -24,6 +24,85 @@ import {
 } from '../types/dependents';
 
 /**
+ * Income thresholds for dependent deductions (2025 tax year - 令和7年)
+ * 
+ * These thresholds determine eligibility for various dependent deductions.
+ * Updated December 1, 2025 per 令和7年度税制改正.
+ * 
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm - 扶養控除
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm - 配偶者控除  
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm - 配偶者特別控除
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm - 特定親族特別控除
+ */
+export const DEPENDENT_INCOME_THRESHOLDS = {
+  /**
+   * Maximum total net income for dependent deduction eligibility (扶養控除)
+   * Changed from 480,000 yen to 580,000 yen in 2025 tax reform
+   */
+  DEPENDENT_DEDUCTION_MAX: 580_000,
+  
+  /**
+   * Maximum total net income for spouse deduction eligibility (配偶者控除)
+   * Changed from 480,000 yen to 580,000 yen in 2025 tax reform
+   */
+  SPOUSE_DEDUCTION_MAX: 580_000,
+  
+  /**
+   * Maximum total net income for spouse special deduction eligibility (配偶者特別控除)
+   * Upper limit remains at 1,330,000 yen (no change in 2025)
+   */
+  SPOUSE_SPECIAL_DEDUCTION_MAX: 1_330_000,
+  
+  /**
+   * Maximum total net income for specific relative special deduction (特定親族特別控除)
+   * Upper limit is 1,230,000 yen (123万円)
+   * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
+   */
+  SPECIFIC_RELATIVE_DEDUCTION_MAX: 1_230_000,
+} as const;
+
+/**
+ * Bracket thresholds for spouse special deduction (配偶者特別控除)
+ * These define the income ranges for different deduction amounts.
+ * 
+ * For 2025 tax year, the lower bound starts at 58万円超 (above SPOUSE_DEDUCTION_MAX).
+ * Brackets remain at traditional values: 95万円, 100万円, 105万円, etc.
+ * 
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
+ */
+export const SPOUSE_SPECIAL_DEDUCTION_BRACKETS = {
+  BRACKET_95: 950_000,
+  BRACKET_100: 1_000_000,
+  BRACKET_105: 1_050_000,
+  BRACKET_110: 1_100_000,
+  BRACKET_115: 1_150_000,
+  BRACKET_120: 1_200_000,
+  BRACKET_125: 1_250_000,
+  BRACKET_130: 1_300_000,
+} as const;
+
+/**
+ * Bracket thresholds for specific relative special deduction (特定親族特別控除)
+ * These define the income ranges for different deduction amounts for age 19-23 dependents.
+ * 
+ * For 2025 tax year, the lower bound starts at 58万円超 (above DEPENDENT_DEDUCTION_MAX).
+ * Upper limit is 123万円 (different from spouse special deduction's 133万円).
+ * 
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
+ */
+export const SPECIFIC_RELATIVE_DEDUCTION_BRACKETS = {
+  BRACKET_85: 850_000,
+  BRACKET_90: 900_000,
+  BRACKET_95: 950_000,
+  BRACKET_100: 1_000_000,
+  BRACKET_105: 1_050_000,
+  BRACKET_110: 1_100_000,
+  BRACKET_115: 1_150_000,
+  BRACKET_120: 1_200_000,
+  BRACKET_123: 1_230_000,
+} as const;
+
+/**
  * Deduction amounts for national income tax (国税)
  */
 export const NATIONAL_TAX_DEDUCTIONS = {
@@ -38,26 +117,27 @@ export const NATIONAL_TAX_DEDUCTIONS = {
   ELDERLY_SPOUSE: 480_000, // 老人配偶者控除 (age 70+)
   
   // 配偶者特別控除 (Spouse Special Deduction) - varies by spouse income
-  // For spouse income 95-133万円, taxpayer income ≤ 9,000,000
-  SPOUSE_SPECIAL_95TO100: 380_000,
-  SPOUSE_SPECIAL_100TO105: 360_000,
-  SPOUSE_SPECIAL_105TO110: 310_000,
-  SPOUSE_SPECIAL_110TO115: 260_000,
-  SPOUSE_SPECIAL_115TO120: 210_000,
-  SPOUSE_SPECIAL_120TO125: 160_000,
-  SPOUSE_SPECIAL_125TO130: 110_000,
-  SPOUSE_SPECIAL_130TO133: 60_000,
+  // For 2025: spouse income 58-133万円 (lower bound changed from 48万円), taxpayer income ≤ 9,000,000
+  SPOUSE_SPECIAL_58TO95: 380_000,  // Changed from 48TO95 in 2025 reform
+  SPOUSE_SPECIAL_95TO100: 360_000,
+  SPOUSE_SPECIAL_100TO105: 310_000,
+  SPOUSE_SPECIAL_105TO110: 260_000,
+  SPOUSE_SPECIAL_110TO115: 210_000,
+  SPOUSE_SPECIAL_115TO120: 160_000,
+  SPOUSE_SPECIAL_120TO125: 110_000,
+  SPOUSE_SPECIAL_125TO130: 60_000,
+  SPOUSE_SPECIAL_130TO133: 30_000,
   
-  // 特定親族特別控除 (Specific Relative Special Deduction) - age 19-23, income 48-133万円
-  SPECIFIC_RELATIVE_48TO95: 630_000,
-  SPECIFIC_RELATIVE_95TO100: 580_000,
-  SPECIFIC_RELATIVE_100TO105: 530_000,
-  SPECIFIC_RELATIVE_105TO110: 480_000,
-  SPECIFIC_RELATIVE_110TO115: 430_000,
-  SPECIFIC_RELATIVE_115TO120: 380_000,
-  SPECIFIC_RELATIVE_120TO125: 330_000,
-  SPECIFIC_RELATIVE_125TO130: 280_000,
-  SPECIFIC_RELATIVE_130TO133: 230_000,
+  // 特定親族特別控除 (Specific Relative Special Deduction) - age 19-23, income 58-123万円 (2025 reform)
+  SPECIFIC_RELATIVE_58TO85: 630_000,
+  SPECIFIC_RELATIVE_85TO90: 610_000,
+  SPECIFIC_RELATIVE_90TO95: 510_000,
+  SPECIFIC_RELATIVE_95TO100: 410_000,
+  SPECIFIC_RELATIVE_100TO105: 310_000,
+  SPECIFIC_RELATIVE_105TO110: 210_000,
+  SPECIFIC_RELATIVE_110TO115: 110_000,
+  SPECIFIC_RELATIVE_115TO120: 60_000,
+  SPECIFIC_RELATIVE_120TO123: 30_000,
   
   // 障害者控除 (Disability Deduction)
   DISABILITY_REGULAR: 270_000, // 一般の障害者
@@ -80,26 +160,28 @@ export const RESIDENCE_TAX_DEDUCTIONS = {
   SPOUSE: 330_000,
   ELDERLY_SPOUSE: 380_000, // age 70+
   
-  // 配偶者特別控除
-  SPOUSE_SPECIAL_95TO100: 330_000,
-  SPOUSE_SPECIAL_100TO105: 310_000,
-  SPOUSE_SPECIAL_105TO110: 260_000,
-  SPOUSE_SPECIAL_110TO115: 210_000,
-  SPOUSE_SPECIAL_115TO120: 160_000,
-  SPOUSE_SPECIAL_120TO125: 110_000,
-  SPOUSE_SPECIAL_125TO130: 60_000,
-  SPOUSE_SPECIAL_130TO133: 30_000,
+  // 配偶者特別控除 (2025: spouse income 58-133万円)
+  SPOUSE_SPECIAL_58TO95: 330_000,   // Changed from 48TO95 in 2025 reform
+  SPOUSE_SPECIAL_95TO100: 310_000,
+  SPOUSE_SPECIAL_100TO105: 260_000,
+  SPOUSE_SPECIAL_105TO110: 210_000,
+  SPOUSE_SPECIAL_110TO115: 160_000,
+  SPOUSE_SPECIAL_115TO120: 110_000,
+  SPOUSE_SPECIAL_120TO125: 60_000,
+  SPOUSE_SPECIAL_125TO130: 30_000,
+  SPOUSE_SPECIAL_130TO133: 10_000,
   
   // 特定親族特別控除
-  SPECIFIC_RELATIVE_48TO95: 450_000,
-  SPECIFIC_RELATIVE_95TO100: 420_000,
-  SPECIFIC_RELATIVE_100TO105: 390_000,
-  SPECIFIC_RELATIVE_105TO110: 360_000,
-  SPECIFIC_RELATIVE_110TO115: 330_000,
-  SPECIFIC_RELATIVE_115TO120: 300_000,
-  SPECIFIC_RELATIVE_120TO125: 270_000,
-  SPECIFIC_RELATIVE_125TO130: 240_000,
-  SPECIFIC_RELATIVE_130TO133: 210_000,
+  // https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html
+  SPECIFIC_RELATIVE_58TO85: 450_000,
+  SPECIFIC_RELATIVE_85TO90: 450_000,
+  SPECIFIC_RELATIVE_90TO95: 450_000,
+  SPECIFIC_RELATIVE_95TO100: 410_000,
+  SPECIFIC_RELATIVE_100TO105: 310_000,
+  SPECIFIC_RELATIVE_105TO110: 210_000,
+  SPECIFIC_RELATIVE_110TO115: 110_000,
+  SPECIFIC_RELATIVE_115TO120: 60_000,
+  SPECIFIC_RELATIVE_120TO123: 30_000,
   
   // 障害者控除
   DISABILITY_REGULAR: 260_000,
@@ -194,7 +276,7 @@ export function getDisabilityDeduction(
 
 /**
  * Get spouse deduction amount based on age
- * Spouse deduction applies when spouse income is ≤ 95万円
+ * Spouse deduction applies when spouse income is ≤ 58万円 (changed from 48万円 in 2025 tax reform)
  */
 export function getSpouseDeduction(isElderly: boolean, forResidenceTax: boolean): number {
   const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
@@ -203,61 +285,67 @@ export function getSpouseDeduction(isElderly: boolean, forResidenceTax: boolean)
 
 /**
  * Get spouse special deduction amount based on actual total net income
- * Spouse special deduction applies when spouse income is between 95万円 and 133万円
+ * Spouse special deduction applies when spouse income is between 58万円 and 133万円 (2025 tax reform)
  */
 export function getSpouseSpecialDeduction(totalNetIncome: number, forResidenceTax: boolean): number {
   const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
   
   // Spouse special deduction brackets (all values in yen)
-  if (totalNetIncome <= 950_000 || totalNetIncome > 1_330_000) {
+  // For 2025: spouse income 58万円超～133万円以下 (lower bound changed from 48万円 to 58万円)
+  if (totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX || 
+      totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.SPOUSE_SPECIAL_DEDUCTION_MAX) {
     return 0;
-  } else if (totalNetIncome <= 1_000_000) {
-    return deductions.SPOUSE_SPECIAL_95TO100;
-  } else if (totalNetIncome <= 1_050_000) {
-    return deductions.SPOUSE_SPECIAL_100TO105;
-  } else if (totalNetIncome <= 1_100_000) {
-    return deductions.SPOUSE_SPECIAL_105TO110;
-  } else if (totalNetIncome <= 1_150_000) {
-    return deductions.SPOUSE_SPECIAL_110TO115;
-  } else if (totalNetIncome <= 1_200_000) {
-    return deductions.SPOUSE_SPECIAL_115TO120;
-  } else if (totalNetIncome <= 1_250_000) {
-    return deductions.SPOUSE_SPECIAL_120TO125;
-  } else if (totalNetIncome <= 1_300_000) {
-    return deductions.SPOUSE_SPECIAL_125TO130;
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_95) {
+    return deductions.SPOUSE_SPECIAL_58TO95; // 58万円超～95万円以下
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_100) {
+    return deductions.SPOUSE_SPECIAL_95TO100; // 95万円超～100万円以下
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_105) {
+    return deductions.SPOUSE_SPECIAL_100TO105; // 100万円超～105万円以下
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_110) {
+    return deductions.SPOUSE_SPECIAL_105TO110; // 105万円超～110万円以下
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_115) {
+    return deductions.SPOUSE_SPECIAL_110TO115; // 110万円超～115万円以下
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_120) {
+    return deductions.SPOUSE_SPECIAL_115TO120; // 115万円超～120万円以下
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_125) {
+    return deductions.SPOUSE_SPECIAL_120TO125; // 120万円超～125万円以下
+  } else if (totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_BRACKETS.BRACKET_130) {
+    return deductions.SPOUSE_SPECIAL_125TO130; // 125万円超～130万円以下
   } else {
-    return deductions.SPOUSE_SPECIAL_130TO133;
+    return deductions.SPOUSE_SPECIAL_130TO133; // 130万円超～133万円以下
   }
 }
 
 /**
  * Get specific relative special deduction amount based on actual total net income
- * Applies to age 19-23 dependents with income between 48万円 and 133万円
+ * Applies to age 19-22 dependents with income between 58万円 and 123万円 (2025 tax reform)
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
  */
 export function getSpecificRelativeDeduction(totalNetIncome: number, forResidenceTax: boolean): number {
   const deductions = forResidenceTax ? RESIDENCE_TAX_DEDUCTIONS : NATIONAL_TAX_DEDUCTIONS;
   
   // Specific relative special deduction brackets (all values in yen)
-  if (totalNetIncome <= 480_000 || totalNetIncome > 1_330_000) {
+  if (totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX || 
+      totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.SPECIFIC_RELATIVE_DEDUCTION_MAX) {
     return 0;
-  } else if (totalNetIncome <= 950_000) {
-    return deductions.SPECIFIC_RELATIVE_48TO95;
-  } else if (totalNetIncome <= 1_000_000) {
-    return deductions.SPECIFIC_RELATIVE_95TO100;
-  } else if (totalNetIncome <= 1_050_000) {
-    return deductions.SPECIFIC_RELATIVE_100TO105;
-  } else if (totalNetIncome <= 1_100_000) {
-    return deductions.SPECIFIC_RELATIVE_105TO110;
-  } else if (totalNetIncome <= 1_150_000) {
-    return deductions.SPECIFIC_RELATIVE_110TO115;
-  } else if (totalNetIncome <= 1_200_000) {
-    return deductions.SPECIFIC_RELATIVE_115TO120;
-  } else if (totalNetIncome <= 1_250_000) {
-    return deductions.SPECIFIC_RELATIVE_120TO125;
-  } else if (totalNetIncome <= 1_300_000) {
-    return deductions.SPECIFIC_RELATIVE_125TO130;
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_85) {
+    return deductions.SPECIFIC_RELATIVE_58TO85; // 58万円超～85万円以下
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_90) {
+    return deductions.SPECIFIC_RELATIVE_85TO90; // 85万円超～90万円以下
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_95) {
+    return deductions.SPECIFIC_RELATIVE_90TO95; // 90万円超～95万円以下
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_100) {
+    return deductions.SPECIFIC_RELATIVE_95TO100; // 95万円超～100万円以下
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_105) {
+    return deductions.SPECIFIC_RELATIVE_100TO105; // 100万円超～105万円以下
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_110) {
+    return deductions.SPECIFIC_RELATIVE_105TO110; // 105万円超～110万円以下
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_115) {
+    return deductions.SPECIFIC_RELATIVE_110TO115; // 110万円超～115万円以下
+  } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_120) {
+    return deductions.SPECIFIC_RELATIVE_115TO120; // 115万円超～120万円以下
   } else {
-    return deductions.SPECIFIC_RELATIVE_130TO133;
+    return deductions.SPECIFIC_RELATIVE_120TO123; // 120万円超～123万円以下
   }
 }
 
@@ -293,6 +381,7 @@ export function getDependentDeduction(
 
 /**
  * Calculate dependent deduction for a single dependent (excluding spouse)
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
  */
 function calculateDependentDeduction(dependent: Dependent, forResidenceTax: boolean): number {
   if (!isEligibleForDependentDeduction(dependent)) {
@@ -426,10 +515,10 @@ export function calculateDependentDeductions(
         breakdown.nationalTaxAmount += natSpouseSpecial;
         breakdown.residenceTaxAmount += resSpouseSpecial;
         breakdown.deductionType = DEDUCTION_TYPES.SPOUSE_SPECIAL;
-        breakdown.notes.push('Spouse special deduction (income 95-133万円)');
+        breakdown.notes.push('Spouse special deduction (income 58-133万円)');
       }
     }
-    // Specific relative special deduction (age 19-23, income 48-133万円)
+    // Specific relative special deduction (age 19-22, income 58-123万円)
     else if (isEligibleForSpecificRelativeDeduction(dependent)) {
       const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
       const natSpecific = getSpecificRelativeDeduction(totalNetIncome, false);
@@ -441,7 +530,7 @@ export function calculateDependentDeductions(
       breakdown.nationalTaxAmount += natSpecific;
       breakdown.residenceTaxAmount += resSpecific;
       breakdown.deductionType = DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL;
-      breakdown.notes.push('Age 19-23 with income 48-133万円');
+      breakdown.notes.push('Age 19-22 with income 58-123万円');
     }
     // Standard dependent deduction
     else if (isEligibleForDependentDeduction(dependent)) {
