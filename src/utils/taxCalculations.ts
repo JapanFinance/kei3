@@ -230,8 +230,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
-    // Calculate dependent deductions
-    const dependentDeductions = calculateDependentDeductions(inputs.dependents);
+    // Calculate dependent deductions (pass netIncome for spouse deduction phase-out)
+    const dependentDeductions = calculateDependentDeductions(inputs.dependents, netIncome);
 
     const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome);
 
