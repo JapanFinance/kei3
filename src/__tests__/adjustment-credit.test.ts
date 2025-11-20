@@ -15,7 +15,7 @@ import type { Dependent } from "../types/dependents"
  */
 
 describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
-  describe('General spouse (under 70) - income ≤ 95万円', () => {
+  describe('General spouse (under 70) - income ≤ 58万円', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
@@ -23,7 +23,7 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
       isCohabiting: false,
       disability: 'none',
       income: {
-        grossEmploymentIncome: 900_000, // Gross 90万円 → net 35万円 (under 95万円 limit)
+        grossEmploymentIncome: 900_000, // Gross 90万円 → net 35万円 (under 58万円 limit)
         otherNetIncome: 0,
       },
     }
@@ -81,7 +81,7 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     })
   })
 
-  describe('Elderly spouse (70+) - income ≤ 95万円', () => {
+  describe('Elderly spouse (70+) - income ≤ 58万円', () => {
     const elderlySpouse: Dependent = {
       id: '1',
       relationship: 'spouse',
@@ -130,7 +130,7 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
 })
 
 describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)', () => {
-  describe('Spouse income 95-100万円 (qualifies for spouse special deduction)', () => {
+  describe('Spouse income 58-100万円 (qualifies for spouse special deduction)', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
@@ -138,7 +138,7 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
       isCohabiting: false,
       disability: 'none',
       income: {
-        grossEmploymentIncome: 1_600_001, // Gross 1,600,001円 → net 950,001円 (just over 95万円, qualifies for spouse special deduction)
+        grossEmploymentIncome: 1_600_001, // Gross 1,600,001円 → net 950,001円 (over 58万円, qualifies for spouse special deduction)
         otherNetIncome: 0,
       },
     }
