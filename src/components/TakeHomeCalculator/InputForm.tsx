@@ -24,6 +24,7 @@ import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
+import { calculateNetEmploymentIncome } from '../../utils/taxCalculations';
 
 import type { TakeHomeInputs } from '../../types/tax';
 import {
@@ -785,6 +786,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onClose={handleCloseDependentsModal}
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
+        taxpayerNetIncome={calculateNetEmploymentIncome(inputs.annualIncome)}
       />
     </Box>
   );

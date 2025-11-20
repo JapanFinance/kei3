@@ -38,6 +38,7 @@ interface DependentsModalProps {
   onClose: () => void;
   dependents: Dependent[];
   onDependentsChange: (dependents: Dependent[]) => void;
+  taxpayerNetIncome: number;
 }
 
 /**
@@ -49,6 +50,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   onClose,
   dependents,
   onDependentsChange,
+  taxpayerNetIncome,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -348,7 +350,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           );
                         }
                         
-                        const deductionResults = calculateDependentDeductions(allDependents);
+                        const deductionResults = calculateDependentDeductions(allDependents, taxpayerNetIncome);
                         
                         // Group deductions by type and amount
                         interface DeductionGroup {
