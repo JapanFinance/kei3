@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  getSpouseDeduction,
   getSpouseSpecialDeduction,
   getSpecificRelativeDeduction,
+  calculateDependentDeductions,
   NATIONAL_TAX_DEDUCTIONS,
   RESIDENCE_TAX_DEDUCTIONS,
 } from '../utils/dependentDeductions'
@@ -344,79 +346,80 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
   })
 })
 
-describe('Spouse Special Deduction Amounts', () => {
+describe('Spouse Special Deduction Amounts (with low taxpayer income)', () => {
+  const taxpayerIncome = 5_000_000 // Below phase-out threshold
+
   describe('First bracket (58万円超～95万円以下)', () => {
     it('returns correct national tax amount at 580,001 yen', () => {
-      expect(getSpouseSpecialDeduction(580_001, false)).toBe(NATIONAL_TAX_DEDUCTIONS.SPOUSE_SPECIAL_58TO95)
-      expect(getSpouseSpecialDeduction(580_001, false)).toBe(380_000)
+      expect(getSpouseSpecialDeduction(580_001, false, taxpayerIncome)).toBe(380_000)
     })
 
     it('returns correct residence tax amount at 580,001 yen', () => {
-      expect(getSpouseSpecialDeduction(580_001, true)).toBe(RESIDENCE_TAX_DEDUCTIONS.SPOUSE_SPECIAL_58TO95)
-      expect(getSpouseSpecialDeduction(580_001, true)).toBe(330_000)
+      expect(getSpouseSpecialDeduction(580_001, true, taxpayerIncome)).toBe(330_000)
+      expect(getSpouseSpecialDeduction(580_001, true, taxpayerIncome)).toBe(330_000)
     })
 
     it('returns correct amount at 950,000 yen (upper bound)', () => {
-      expect(getSpouseSpecialDeduction(950_000, false)).toBe(380_000)
+      expect(getSpouseSpecialDeduction(950_000, false, taxpayerIncome)).toBe(380_000)
     })
   })
 
   describe('Bracket boundaries', () => {
     it('transitions correctly at 95万円', () => {
-      expect(getSpouseSpecialDeduction(950_000, false)).toBe(380_000)
-      expect(getSpouseSpecialDeduction(950_001, false)).toBe(360_000)
+      expect(getSpouseSpecialDeduction(950_000, false, taxpayerIncome)).toBe(380_000)
+      expect(getSpouseSpecialDeduction(950_001, false, taxpayerIncome)).toBe(360_000)
     })
 
     it('transitions correctly at 100万円', () => {
-      expect(getSpouseSpecialDeduction(1_000_000, false)).toBe(360_000)
-      expect(getSpouseSpecialDeduction(1_000_001, false)).toBe(310_000)
+      expect(getSpouseSpecialDeduction(1_000_000, false, taxpayerIncome)).toBe(360_000)
+      expect(getSpouseSpecialDeduction(1_000_001, false, taxpayerIncome)).toBe(310_000)
     })
 
     it('transitions correctly at 105万円', () => {
-      expect(getSpouseSpecialDeduction(1_050_000, false)).toBe(310_000)
-      expect(getSpouseSpecialDeduction(1_050_001, false)).toBe(260_000)
+      expect(getSpouseSpecialDeduction(1_050_000, false, taxpayerIncome)).toBe(310_000)
+      expect(getSpouseSpecialDeduction(1_050_001, false, taxpayerIncome)).toBe(260_000)
     })
 
     it('transitions correctly at 110万円', () => {
-      expect(getSpouseSpecialDeduction(1_100_000, false)).toBe(260_000)
-      expect(getSpouseSpecialDeduction(1_100_001, false)).toBe(210_000)
+      expect(getSpouseSpecialDeduction(1_100_000, false, taxpayerIncome)).toBe(260_000)
+      expect(getSpouseSpecialDeduction(1_100_001, false, taxpayerIncome)).toBe(210_000)
     })
 
     it('transitions correctly at 115万円', () => {
-      expect(getSpouseSpecialDeduction(1_150_000, false)).toBe(210_000)
-      expect(getSpouseSpecialDeduction(1_150_001, false)).toBe(160_000)
+      expect(getSpouseSpecialDeduction(1_150_000, false, taxpayerIncome)).toBe(210_000)
+      expect(getSpouseSpecialDeduction(1_150_001, false, taxpayerIncome)).toBe(160_000)
     })
 
     it('transitions correctly at 120万円', () => {
-      expect(getSpouseSpecialDeduction(1_200_000, false)).toBe(160_000)
-      expect(getSpouseSpecialDeduction(1_200_001, false)).toBe(110_000)
+      expect(getSpouseSpecialDeduction(1_200_000, false, taxpayerIncome)).toBe(160_000)
+      expect(getSpouseSpecialDeduction(1_200_001, false, taxpayerIncome)).toBe(110_000)
     })
 
     it('transitions correctly at 125万円', () => {
-      expect(getSpouseSpecialDeduction(1_250_000, false)).toBe(110_000)
-      expect(getSpouseSpecialDeduction(1_250_001, false)).toBe(60_000)
+      expect(getSpouseSpecialDeduction(1_250_000, false, taxpayerIncome)).toBe(110_000)
+      expect(getSpouseSpecialDeduction(1_250_001, false, taxpayerIncome)).toBe(60_000)
     })
 
     it('transitions correctly at 130万円', () => {
-      expect(getSpouseSpecialDeduction(1_300_000, false)).toBe(60_000)
-      expect(getSpouseSpecialDeduction(1_300_001, false)).toBe(30_000)
+      expect(getSpouseSpecialDeduction(1_300_000, false, taxpayerIncome)).toBe(60_000)
+      expect(getSpouseSpecialDeduction(1_300_001, false, taxpayerIncome)).toBe(30_000)
     })
 
     it('upper limit at 133万円', () => {
-      expect(getSpouseSpecialDeduction(1_330_000, false)).toBe(30_000)
-      expect(getSpouseSpecialDeduction(1_330_001, false)).toBe(0)
+      expect(getSpouseSpecialDeduction(1_330_000, false, taxpayerIncome)).toBe(30_000)
+      expect(getSpouseSpecialDeduction(1_330_001, false, taxpayerIncome)).toBe(0)
     })
   })
 
   describe('Returns 0 outside valid range', () => {
     it('returns 0 for income at or below spouse deduction threshold', () => {
-      expect(getSpouseSpecialDeduction(580_000, false)).toBe(0)
-      expect(getSpouseSpecialDeduction(500_000, false)).toBe(0)
+      expect(getSpouseSpecialDeduction(580_000, false, taxpayerIncome)).toBe(0)
+      expect(getSpouseSpecialDeduction(500_000, false, taxpayerIncome)).toBe(0)
     })
 
     it('returns 0 for income above upper limit', () => {
-      expect(getSpouseSpecialDeduction(1_330_001, false)).toBe(0)
-      expect(getSpouseSpecialDeduction(2_000_000, false)).toBe(0)
+      expect(getSpouseSpecialDeduction(1_330_001, false, taxpayerIncome)).toBe(0)
+      expect(getSpouseSpecialDeduction(2_000_000, false, taxpayerIncome)).toBe(0)
     })
   })
 })
@@ -781,5 +784,522 @@ describe('Total Net Income Calculation with Other Income', () => {
       },
     }
     expect(isEligibleForDependentDeduction(dependent)).toBe(false)
+  })
+})
+
+describe('Taxpayer Income Effects on Spouse Deduction (配偶者控除)', () => {
+  describe('Taxpayer income ≤ 9,000,000 yen', () => {
+    it('returns full spouse deduction for national tax (380,000)', () => {
+      expect(getSpouseDeduction(false, false, 9_000_000)).toBe(380_000)
+      expect(getSpouseDeduction(false, false, 5_000_000)).toBe(380_000)
+    })
+
+    it('returns full spouse deduction for residence tax (330,000)', () => {
+      expect(getSpouseDeduction(false, true, 9_000_000)).toBe(330_000)
+      expect(getSpouseDeduction(false, true, 5_000_000)).toBe(330_000)
+    })
+
+    it('returns full elderly spouse deduction for national tax (480,000)', () => {
+      expect(getSpouseDeduction(true, false, 9_000_000)).toBe(480_000)
+    })
+
+    it('returns full elderly spouse deduction for residence tax (380,000)', () => {
+      expect(getSpouseDeduction(true, true, 9_000_000)).toBe(380_000)
+    })
+  })
+
+  describe('Taxpayer income 9,000,001 - 9,500,000 yen', () => {
+    it('returns reduced spouse deduction for national tax (260,000)', () => {
+      expect(getSpouseDeduction(false, false, 9_000_001)).toBe(260_000)
+      expect(getSpouseDeduction(false, false, 9_500_000)).toBe(260_000)
+    })
+
+    it('returns reduced spouse deduction for residence tax (220,000)', () => {
+      expect(getSpouseDeduction(false, true, 9_000_001)).toBe(220_000)
+      expect(getSpouseDeduction(false, true, 9_500_000)).toBe(220_000)
+    })
+
+    it('returns reduced elderly spouse deduction for national tax (320,000)', () => {
+      expect(getSpouseDeduction(true, false, 9_000_001)).toBe(320_000)
+      expect(getSpouseDeduction(true, false, 9_500_000)).toBe(320_000)
+    })
+
+    it('returns reduced elderly spouse deduction for residence tax (260,000)', () => {
+      expect(getSpouseDeduction(true, true, 9_000_001)).toBe(260_000)
+      expect(getSpouseDeduction(true, true, 9_500_000)).toBe(260_000)
+    })
+  })
+
+  describe('Taxpayer income 9,500,001 - 10,000,000 yen', () => {
+    it('returns further reduced spouse deduction for national tax (130,000)', () => {
+      expect(getSpouseDeduction(false, false, 9_500_001)).toBe(130_000)
+      expect(getSpouseDeduction(false, false, 10_000_000)).toBe(130_000)
+    })
+
+    it('returns further reduced spouse deduction for residence tax (110,000)', () => {
+      expect(getSpouseDeduction(false, true, 9_500_001)).toBe(110_000)
+      expect(getSpouseDeduction(false, true, 10_000_000)).toBe(110_000)
+    })
+
+    it('returns further reduced elderly spouse deduction for national tax (160,000)', () => {
+      expect(getSpouseDeduction(true, false, 9_500_001)).toBe(160_000)
+      expect(getSpouseDeduction(true, false, 10_000_000)).toBe(160_000)
+    })
+
+    it('returns further reduced elderly spouse deduction for residence tax (130,000)', () => {
+      expect(getSpouseDeduction(true, true, 9_500_001)).toBe(130_000)
+      expect(getSpouseDeduction(true, true, 10_000_000)).toBe(130_000)
+    })
+  })
+
+  describe('Taxpayer income > 10,000,000 yen', () => {
+    it('returns zero - no spouse deduction allowed', () => {
+      expect(getSpouseDeduction(false, false, 10_000_001)).toBe(0)
+      expect(getSpouseDeduction(false, true, 10_000_001)).toBe(0)
+      expect(getSpouseDeduction(true, false, 10_000_001)).toBe(0)
+      expect(getSpouseDeduction(true, true, 10_000_001)).toBe(0)
+      expect(getSpouseDeduction(false, false, 15_000_000)).toBe(0)
+    })
+  })
+})
+
+describe('Taxpayer Income Effects on Spouse Special Deduction (配偶者特別控除)', () => {
+  const spouseIncome = 950_001 // In the 95万円超～100万円以下 bracket
+
+  describe('Taxpayer income ≤ 9,000,000 yen', () => {
+    const taxpayerIncome = 8_000_000
+
+    describe('National tax - all brackets', () => {
+      it('58万円超～95万円以下: 380,000', () => {
+        expect(getSpouseSpecialDeduction(580_001, false, taxpayerIncome)).toBe(380_000)
+        expect(getSpouseSpecialDeduction(950_000, false, taxpayerIncome)).toBe(380_000)
+      })
+
+      it('95万円超～100万円以下: 360,000', () => {
+        expect(getSpouseSpecialDeduction(950_001, false, taxpayerIncome)).toBe(360_000)
+        expect(getSpouseSpecialDeduction(1_000_000, false, taxpayerIncome)).toBe(360_000)
+      })
+
+      it('100万円超～105万円以下: 310,000', () => {
+        expect(getSpouseSpecialDeduction(1_000_001, false, taxpayerIncome)).toBe(310_000)
+        expect(getSpouseSpecialDeduction(1_050_000, false, taxpayerIncome)).toBe(310_000)
+      })
+
+      it('105万円超～110万円以下: 260,000', () => {
+        expect(getSpouseSpecialDeduction(1_050_001, false, taxpayerIncome)).toBe(260_000)
+        expect(getSpouseSpecialDeduction(1_100_000, false, taxpayerIncome)).toBe(260_000)
+      })
+
+      it('110万円超～115万円以下: 210,000', () => {
+        expect(getSpouseSpecialDeduction(1_100_001, false, taxpayerIncome)).toBe(210_000)
+        expect(getSpouseSpecialDeduction(1_150_000, false, taxpayerIncome)).toBe(210_000)
+      })
+
+      it('115万円超～120万円以下: 160,000', () => {
+        expect(getSpouseSpecialDeduction(1_150_001, false, taxpayerIncome)).toBe(160_000)
+        expect(getSpouseSpecialDeduction(1_200_000, false, taxpayerIncome)).toBe(160_000)
+      })
+
+      it('120万円超～125万円以下: 110,000', () => {
+        expect(getSpouseSpecialDeduction(1_200_001, false, taxpayerIncome)).toBe(110_000)
+        expect(getSpouseSpecialDeduction(1_250_000, false, taxpayerIncome)).toBe(110_000)
+      })
+
+      it('125万円超～130万円以下: 60,000', () => {
+        expect(getSpouseSpecialDeduction(1_250_001, false, taxpayerIncome)).toBe(60_000)
+        expect(getSpouseSpecialDeduction(1_300_000, false, taxpayerIncome)).toBe(60_000)
+      })
+
+      it('130万円超～133万円以下: 30,000', () => {
+        expect(getSpouseSpecialDeduction(1_300_001, false, taxpayerIncome)).toBe(30_000)
+        expect(getSpouseSpecialDeduction(1_330_000, false, taxpayerIncome)).toBe(30_000)
+      })
+    })
+
+    describe('Residence tax - all brackets', () => {
+      it('58万円超～100万円以下: 330,000', () => {
+        expect(getSpouseSpecialDeduction(580_001, true, taxpayerIncome)).toBe(330_000)
+        expect(getSpouseSpecialDeduction(1_000_000, true, taxpayerIncome)).toBe(330_000)
+      })
+
+      it('100万円超～105万円以下: 310,000', () => {
+        expect(getSpouseSpecialDeduction(1_000_001, true, taxpayerIncome)).toBe(310_000)
+        expect(getSpouseSpecialDeduction(1_050_000, true, taxpayerIncome)).toBe(310_000)
+      })
+
+      it('105万円超～110万円以下: 260,000', () => {
+        expect(getSpouseSpecialDeduction(1_050_001, true, taxpayerIncome)).toBe(260_000)
+        expect(getSpouseSpecialDeduction(1_100_000, true, taxpayerIncome)).toBe(260_000)
+      })
+
+      it('110万円超～115万円以下: 210,000', () => {
+        expect(getSpouseSpecialDeduction(1_100_001, true, taxpayerIncome)).toBe(210_000)
+        expect(getSpouseSpecialDeduction(1_150_000, true, taxpayerIncome)).toBe(210_000)
+      })
+
+      it('115万円超～120万円以下: 160,000', () => {
+        expect(getSpouseSpecialDeduction(1_150_001, true, taxpayerIncome)).toBe(160_000)
+        expect(getSpouseSpecialDeduction(1_200_000, true, taxpayerIncome)).toBe(160_000)
+      })
+
+      it('120万円超～125万円以下: 110,000', () => {
+        expect(getSpouseSpecialDeduction(1_200_001, true, taxpayerIncome)).toBe(110_000)
+        expect(getSpouseSpecialDeduction(1_250_000, true, taxpayerIncome)).toBe(110_000)
+      })
+
+      it('125万円超～130万円以下: 60,000', () => {
+        expect(getSpouseSpecialDeduction(1_250_001, true, taxpayerIncome)).toBe(60_000)
+        expect(getSpouseSpecialDeduction(1_300_000, true, taxpayerIncome)).toBe(60_000)
+      })
+
+      it('130万円超～133万円以下: 30,000', () => {
+        expect(getSpouseSpecialDeduction(1_300_001, true, taxpayerIncome)).toBe(30_000)
+        expect(getSpouseSpecialDeduction(1_330_000, true, taxpayerIncome)).toBe(30_000)
+      })
+    })
+  })
+
+  describe('Taxpayer income 9,000,001 - 9,500,000 yen', () => {
+    const taxpayerIncome = 9_200_000
+
+    describe('National tax - all brackets', () => {
+      it('58万円超～95万円以下: 260,000', () => {
+        expect(getSpouseSpecialDeduction(580_001, false, taxpayerIncome)).toBe(260_000)
+        expect(getSpouseSpecialDeduction(950_000, false, taxpayerIncome)).toBe(260_000)
+      })
+
+      it('95万円超～100万円以下: 240,000', () => {
+        expect(getSpouseSpecialDeduction(950_001, false, taxpayerIncome)).toBe(240_000)
+        expect(getSpouseSpecialDeduction(1_000_000, false, taxpayerIncome)).toBe(240_000)
+      })
+
+      it('100万円超～105万円以下: 210,000', () => {
+        expect(getSpouseSpecialDeduction(1_000_001, false, taxpayerIncome)).toBe(210_000)
+        expect(getSpouseSpecialDeduction(1_050_000, false, taxpayerIncome)).toBe(210_000)
+      })
+
+      it('105万円超～110万円以下: 180,000', () => {
+        expect(getSpouseSpecialDeduction(1_050_001, false, taxpayerIncome)).toBe(180_000)
+        expect(getSpouseSpecialDeduction(1_100_000, false, taxpayerIncome)).toBe(180_000)
+      })
+
+      it('110万円超～115万円以下: 140,000', () => {
+        expect(getSpouseSpecialDeduction(1_100_001, false, taxpayerIncome)).toBe(140_000)
+        expect(getSpouseSpecialDeduction(1_150_000, false, taxpayerIncome)).toBe(140_000)
+      })
+
+      it('115万円超～120万円以下: 110,000', () => {
+        expect(getSpouseSpecialDeduction(1_150_001, false, taxpayerIncome)).toBe(110_000)
+        expect(getSpouseSpecialDeduction(1_200_000, false, taxpayerIncome)).toBe(110_000)
+      })
+
+      it('120万円超～125万円以下: 80,000', () => {
+        expect(getSpouseSpecialDeduction(1_200_001, false, taxpayerIncome)).toBe(80_000)
+        expect(getSpouseSpecialDeduction(1_250_000, false, taxpayerIncome)).toBe(80_000)
+      })
+
+      it('125万円超～130万円以下: 40,000', () => {
+        expect(getSpouseSpecialDeduction(1_250_001, false, taxpayerIncome)).toBe(40_000)
+        expect(getSpouseSpecialDeduction(1_300_000, false, taxpayerIncome)).toBe(40_000)
+      })
+
+      it('130万円超～133万円以下: 20,000', () => {
+        expect(getSpouseSpecialDeduction(1_300_001, false, taxpayerIncome)).toBe(20_000)
+        expect(getSpouseSpecialDeduction(1_330_000, false, taxpayerIncome)).toBe(20_000)
+      })
+    })
+
+    describe('Residence tax - all brackets', () => {
+      it('58万円超～100万円以下: 220,000', () => {
+        expect(getSpouseSpecialDeduction(580_001, true, taxpayerIncome)).toBe(220_000)
+        expect(getSpouseSpecialDeduction(1_000_000, true, taxpayerIncome)).toBe(220_000)
+      })
+
+      it('100万円超～105万円以下: 210,000', () => {
+        expect(getSpouseSpecialDeduction(1_000_001, true, taxpayerIncome)).toBe(210_000)
+        expect(getSpouseSpecialDeduction(1_050_000, true, taxpayerIncome)).toBe(210_000)
+      })
+
+      it('105万円超～110万円以下: 180,000', () => {
+        expect(getSpouseSpecialDeduction(1_050_001, true, taxpayerIncome)).toBe(180_000)
+        expect(getSpouseSpecialDeduction(1_100_000, true, taxpayerIncome)).toBe(180_000)
+      })
+
+      it('110万円超～115万円以下: 140,000', () => {
+        expect(getSpouseSpecialDeduction(1_100_001, true, taxpayerIncome)).toBe(140_000)
+        expect(getSpouseSpecialDeduction(1_150_000, true, taxpayerIncome)).toBe(140_000)
+      })
+
+      it('115万円超～120万円以下: 110,000', () => {
+        expect(getSpouseSpecialDeduction(1_150_001, true, taxpayerIncome)).toBe(110_000)
+        expect(getSpouseSpecialDeduction(1_200_000, true, taxpayerIncome)).toBe(110_000)
+      })
+
+      it('120万円超～125万円以下: 80,000', () => {
+        expect(getSpouseSpecialDeduction(1_200_001, true, taxpayerIncome)).toBe(80_000)
+        expect(getSpouseSpecialDeduction(1_250_000, true, taxpayerIncome)).toBe(80_000)
+      })
+
+      it('125万円超～130万円以下: 40,000', () => {
+        expect(getSpouseSpecialDeduction(1_250_001, true, taxpayerIncome)).toBe(40_000)
+        expect(getSpouseSpecialDeduction(1_300_000, true, taxpayerIncome)).toBe(40_000)
+      })
+
+      it('130万円超～133万円以下: 20,000', () => {
+        expect(getSpouseSpecialDeduction(1_300_001, true, taxpayerIncome)).toBe(20_000)
+        expect(getSpouseSpecialDeduction(1_330_000, true, taxpayerIncome)).toBe(20_000)
+      })
+    })
+  })
+
+  describe('Taxpayer income 9,500,001 - 10,000,000 yen', () => {
+    const taxpayerIncome = 9_700_000
+
+    describe('National tax - all brackets', () => {
+      it('58万円超～95万円以下: 130,000', () => {
+        expect(getSpouseSpecialDeduction(580_001, false, taxpayerIncome)).toBe(130_000)
+        expect(getSpouseSpecialDeduction(950_000, false, taxpayerIncome)).toBe(130_000)
+      })
+
+      it('95万円超～100万円以下: 120,000', () => {
+        expect(getSpouseSpecialDeduction(950_001, false, taxpayerIncome)).toBe(120_000)
+        expect(getSpouseSpecialDeduction(1_000_000, false, taxpayerIncome)).toBe(120_000)
+      })
+
+      it('100万円超～105万円以下: 110,000', () => {
+        expect(getSpouseSpecialDeduction(1_000_001, false, taxpayerIncome)).toBe(110_000)
+        expect(getSpouseSpecialDeduction(1_050_000, false, taxpayerIncome)).toBe(110_000)
+      })
+
+      it('105万円超～110万円以下: 90,000', () => {
+        expect(getSpouseSpecialDeduction(1_050_001, false, taxpayerIncome)).toBe(90_000)
+        expect(getSpouseSpecialDeduction(1_100_000, false, taxpayerIncome)).toBe(90_000)
+      })
+
+      it('110万円超～115万円以下: 70,000', () => {
+        expect(getSpouseSpecialDeduction(1_100_001, false, taxpayerIncome)).toBe(70_000)
+        expect(getSpouseSpecialDeduction(1_150_000, false, taxpayerIncome)).toBe(70_000)
+      })
+
+      it('115万円超～120万円以下: 60,000', () => {
+        expect(getSpouseSpecialDeduction(1_150_001, false, taxpayerIncome)).toBe(60_000)
+        expect(getSpouseSpecialDeduction(1_200_000, false, taxpayerIncome)).toBe(60_000)
+      })
+
+      it('120万円超～125万円以下: 40,000', () => {
+        expect(getSpouseSpecialDeduction(1_200_001, false, taxpayerIncome)).toBe(40_000)
+        expect(getSpouseSpecialDeduction(1_250_000, false, taxpayerIncome)).toBe(40_000)
+      })
+
+      it('125万円超～130万円以下: 20,000', () => {
+        expect(getSpouseSpecialDeduction(1_250_001, false, taxpayerIncome)).toBe(20_000)
+        expect(getSpouseSpecialDeduction(1_300_000, false, taxpayerIncome)).toBe(20_000)
+      })
+
+      it('130万円超～133万円以下: 10,000', () => {
+        expect(getSpouseSpecialDeduction(1_300_001, false, taxpayerIncome)).toBe(10_000)
+        expect(getSpouseSpecialDeduction(1_330_000, false, taxpayerIncome)).toBe(10_000)
+      })
+    })
+
+    describe('Residence tax - all brackets', () => {
+      it('58万円超～100万円以下: 110,000', () => {
+        expect(getSpouseSpecialDeduction(580_001, true, taxpayerIncome)).toBe(110_000)
+        expect(getSpouseSpecialDeduction(1_000_000, true, taxpayerIncome)).toBe(110_000)
+      })
+
+      it('100万円超～105万円以下: 110,000', () => {
+        expect(getSpouseSpecialDeduction(1_000_001, true, taxpayerIncome)).toBe(110_000)
+        expect(getSpouseSpecialDeduction(1_050_000, true, taxpayerIncome)).toBe(110_000)
+      })
+
+      it('105万円超～110万円以下: 90,000', () => {
+        expect(getSpouseSpecialDeduction(1_050_001, true, taxpayerIncome)).toBe(90_000)
+        expect(getSpouseSpecialDeduction(1_100_000, true, taxpayerIncome)).toBe(90_000)
+      })
+
+      it('110万円超～115万円以下: 70,000', () => {
+        expect(getSpouseSpecialDeduction(1_100_001, true, taxpayerIncome)).toBe(70_000)
+        expect(getSpouseSpecialDeduction(1_150_000, true, taxpayerIncome)).toBe(70_000)
+      })
+
+      it('115万円超～120万円以下: 60,000', () => {
+        expect(getSpouseSpecialDeduction(1_150_001, true, taxpayerIncome)).toBe(60_000)
+        expect(getSpouseSpecialDeduction(1_200_000, true, taxpayerIncome)).toBe(60_000)
+      })
+
+      it('120万円超～125万円以下: 40,000', () => {
+        expect(getSpouseSpecialDeduction(1_200_001, true, taxpayerIncome)).toBe(40_000)
+        expect(getSpouseSpecialDeduction(1_250_000, true, taxpayerIncome)).toBe(40_000)
+      })
+
+      it('125万円超～130万円以下: 20,000', () => {
+        expect(getSpouseSpecialDeduction(1_250_001, true, taxpayerIncome)).toBe(20_000)
+        expect(getSpouseSpecialDeduction(1_300_000, true, taxpayerIncome)).toBe(20_000)
+      })
+
+      it('130万円超～133万円以下: 10,000', () => {
+        expect(getSpouseSpecialDeduction(1_300_001, true, taxpayerIncome)).toBe(10_000)
+        expect(getSpouseSpecialDeduction(1_330_000, true, taxpayerIncome)).toBe(10_000)
+      })
+    })
+  })
+
+  describe('Taxpayer income > 10,000,000 yen', () => {
+    it('returns zero - no spouse special deduction allowed', () => {
+      expect(getSpouseSpecialDeduction(spouseIncome, false, 10_000_001)).toBe(0)
+      expect(getSpouseSpecialDeduction(spouseIncome, true, 10_000_001)).toBe(0)
+      expect(getSpouseSpecialDeduction(580_001, false, 15_000_000)).toBe(0)
+    })
+  })
+
+  describe('Returns zero outside spouse income range', () => {
+    it('returns zero when spouse income ≤ 58万円', () => {
+      expect(getSpouseSpecialDeduction(580_000, false, 5_000_000)).toBe(0)
+    })
+
+    it('returns zero when spouse income > 133万円', () => {
+      expect(getSpouseSpecialDeduction(1_330_001, false, 5_000_000)).toBe(0)
+    })
+  })
+})
+
+describe('Integration: calculateDependentDeductions with Taxpayer Income', () => {
+  describe('Spouse deduction with varying taxpayer income', () => {
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: false,
+      disability: 'none',
+      income: {
+        grossEmploymentIncome: 1_230_000, // Net = 580,000
+        otherNetIncome: 0,
+      },
+    }
+
+    it('full deduction when taxpayer income ≤ 9,000,000', () => {
+      const result = calculateDependentDeductions([spouse], 8_000_000)
+      expect(result.nationalTax.spouseDeduction).toBe(380_000)
+      expect(result.residenceTax.spouseDeduction).toBe(330_000)
+    })
+
+    it('reduced deduction when taxpayer income 9,000,001 - 9,500,000', () => {
+      const result = calculateDependentDeductions([spouse], 9_200_000)
+      expect(result.nationalTax.spouseDeduction).toBe(260_000)
+      expect(result.residenceTax.spouseDeduction).toBe(220_000)
+    })
+
+    it('further reduced when taxpayer income 9,500,001 - 10,000,000', () => {
+      const result = calculateDependentDeductions([spouse], 9_700_000)
+      expect(result.nationalTax.spouseDeduction).toBe(130_000)
+      expect(result.residenceTax.spouseDeduction).toBe(110_000)
+    })
+
+    it('no deduction when taxpayer income > 10,000,000', () => {
+      const result = calculateDependentDeductions([spouse], 11_000_000)
+      expect(result.nationalTax.spouseDeduction).toBe(0)
+      expect(result.residenceTax.spouseDeduction).toBe(0)
+    })
+  })
+
+  describe('Spouse special deduction with varying taxpayer income', () => {
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: false,
+      disability: 'none',
+      income: {
+        grossEmploymentIncome: 1_600_001, // Net = 950,001 (95万円超～100万円 bracket)
+        otherNetIncome: 0,
+      },
+    }
+
+    it('full deduction when taxpayer income ≤ 9,000,000', () => {
+      const result = calculateDependentDeductions([spouse], 8_000_000)
+      expect(result.nationalTax.spouseSpecialDeduction).toBe(360_000)
+      expect(result.residenceTax.spouseSpecialDeduction).toBe(330_000)
+    })
+
+    it('reduced deduction when taxpayer income 9,000,001 - 9,500,000', () => {
+      const result = calculateDependentDeductions([spouse], 9_200_000)
+      expect(result.nationalTax.spouseSpecialDeduction).toBe(240_000)
+      expect(result.residenceTax.spouseSpecialDeduction).toBe(220_000)
+    })
+
+    it('further reduced when taxpayer income 9,500,001 - 10,000,000', () => {
+      const result = calculateDependentDeductions([spouse], 9_700_000)
+      expect(result.nationalTax.spouseSpecialDeduction).toBe(120_000)
+      expect(result.residenceTax.spouseSpecialDeduction).toBe(110_000)
+    })
+
+    it('no deduction when taxpayer income > 10,000,000', () => {
+      const result = calculateDependentDeductions([spouse], 11_000_000)
+      expect(result.nationalTax.spouseSpecialDeduction).toBe(0)
+      expect(result.residenceTax.spouseSpecialDeduction).toBe(0)
+    })
+  })
+
+  describe('Elderly spouse deduction with varying taxpayer income', () => {
+    const elderlySpouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: '70plus',
+      isCohabiting: false,
+      disability: 'none',
+      income: {
+        grossEmploymentIncome: 900_000, // Net = 350,000
+        otherNetIncome: 0,
+      },
+    }
+
+    it('full elderly spouse deduction when taxpayer income ≤ 9,000,000', () => {
+      const result = calculateDependentDeductions([elderlySpouse], 8_000_000)
+      expect(result.nationalTax.spouseDeduction).toBe(480_000)
+      expect(result.residenceTax.spouseDeduction).toBe(380_000)
+    })
+
+    it('reduced elderly spouse deduction when taxpayer income 9,000,001 - 9,500,000', () => {
+      const result = calculateDependentDeductions([elderlySpouse], 9_200_000)
+      expect(result.nationalTax.spouseDeduction).toBe(320_000)
+      expect(result.residenceTax.spouseDeduction).toBe(260_000)
+    })
+
+    it('further reduced when taxpayer income 9,500,001 - 10,000,000', () => {
+      const result = calculateDependentDeductions([elderlySpouse], 9_700_000)
+      expect(result.nationalTax.spouseDeduction).toBe(160_000)
+      expect(result.residenceTax.spouseDeduction).toBe(130_000)
+    })
+
+    it('no deduction when taxpayer income > 10,000,000', () => {
+      const result = calculateDependentDeductions([elderlySpouse], 11_000_000)
+      expect(result.nationalTax.spouseDeduction).toBe(0)
+      expect(result.residenceTax.spouseDeduction).toBe(0)
+    })
+  })
+
+  describe('Non-spouse dependents unaffected by taxpayer income', () => {
+    const child: Dependent = {
+      id: '1',
+      relationship: 'child',
+      ageCategory: '19to22',
+      isCohabiting: false,
+      disability: 'none',
+      income: {
+        grossEmploymentIncome: 1_230_000, // Net = 580,000
+        otherNetIncome: 0,
+      },
+    }
+
+    it('dependent deduction remains constant regardless of taxpayer income', () => {
+      const result1 = calculateDependentDeductions([child], 5_000_000)
+      const result2 = calculateDependentDeductions([child], 9_500_000)
+      const result3 = calculateDependentDeductions([child], 11_000_000)
+      
+      expect(result1.nationalTax.dependentDeduction).toBe(630_000)
+      expect(result2.nationalTax.dependentDeduction).toBe(630_000)
+      expect(result3.nationalTax.dependentDeduction).toBe(630_000)
+    })
   })
 })
