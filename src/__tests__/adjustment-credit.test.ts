@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { calculateResidenceTax } from "../utils/residenceTax"
 import { calculateDependentDeductions } from "../utils/dependentDeductions"
-import type { Dependent } from "../types/dependents"
+import { DEDUCTION_TYPES, type Dependent } from "../types/dependents"
 
 /**
  * Tests for adjustment credit (調整控除) calculation per Local Tax Act Article 314-6
@@ -589,5 +589,36 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     // - Child3 (23-69, general): 50,000
     // Total: 330,000
     expect(result.personalDeductionDifference).toBe(330_000)
+  })
+})
+
+describe('Specific Relative Special Deduction (特定親族特別控除)', () => {
+  it('has NO statutory difference (0 yen)', () => {
+    const dependent: Dependent = {
+      id: '1',
+      relationship: 'child',
+      ageCategory: '19to22',
+      isCohabiting: false,
+      disability: 'none',
+      income: {
+        grossEmploymentIncome: 1_300_000, // Net = 750,000 (qualifies for specific relative special)
+        otherNetIncome: 0,
+      },
+    }
+
+    const taxpayerIncome = 8_000_000
+    const socialInsurance = 1_000_000
+    const dependents = calculateDependentDeductions([dependent])
+
+    expect(dependents.breakdown).toHaveLength(1)
+    expect(dependents.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL)
+    
+    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents)
+    
+    // Personal deduction difference breakdown:
+    // - Basic: 50,000
+    // - Specific Relative Special: 0 (no statutory difference defined)
+    // Total: 50,000
+    expect(result.personalDeductionDifference).toBe(50_000)
   })
 })

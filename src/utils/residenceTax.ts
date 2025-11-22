@@ -52,18 +52,18 @@ export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
  * Statutory personal deduction difference amounts per Local Tax Act Article 314-6
  * These are used for the adjustment credit calculation (調整控除)
  * 
- * IMPORTANT: These are specific statutory amounts defined in law, NOT arithmetic differences.
+ * IMPORTANT: These are specific statutory amounts defined in law, NOT actual differences between national and residence tax deductions.
  * 
  * Reference: https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
  */
 const STATUTORY_DEDUCTION_DIFFERENCES = {
-    // 扶養控除 (Dependent Deduction)
+    // 扶養控除 (Dependent Deduction) (8) and (9) in the statutory table.
     DEPENDENT_GENERAL: 50_000, // General dependent (16-18, 23-69)
     DEPENDENT_SPECIAL: 180_000, // Special dependent (19-22)
     DEPENDENT_ELDERLY: 100_000, // Elderly dependent (70+)
     DEPENDENT_ELDERLY_COHABITING: 130_000, // Elderly cohabiting parent/grandparent (70+)
     
-    // 障害者控除 (Disability Deduction)
+    // 障害者控除 (Disability Deduction) (1) and (2) in the statutory table.
     DISABILITY_REGULAR: 10_000, // Regular disability
     DISABILITY_SPECIAL: 100_000, // Special disability
     DISABILITY_SPECIAL_COHABITING: 220_000, // Special disability with cohabitation
@@ -77,7 +77,7 @@ const STATUTORY_DEDUCTION_DIFFERENCES = {
  * for qualifying for spouse special deduction (>58万円) are mutually exclusive with
  * the ranges where statutory differences are defined (<55万円) in Article 314-6(7).
  * 
- * Reference: 地方税法第314条の6第6号
+ * Reference: 地方税法第314条の6第6号 (6) in the statutory table.
  * 
  * @param isElderly - Whether spouse is 70+ years old
  * @param taxpayerNetIncome - Taxpayer's net income (納税義務者の前年の合計所得金額)
@@ -103,58 +103,72 @@ function getSpouseDeductionDifference(isElderly: boolean, taxpayerNetIncome: num
  * They are specific statutory amounts defined in law for the adjustment credit calculation.
  * 
  * Reference: https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
- * Reference: https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/pdf/R03chouseikoujo01.pdf
  * 
- * @param deductions - The dependent deduction results containing breakdown by dependent
+ * @param deductions - The dependent deduction results containing breakdown by deduction
+ * @param taxpayerNetIncome - Taxpayer's total net income (納税義務者の前年の合計所得金額)
  * @returns The statutory personal deduction difference amount for adjustment credit calculation
  */
 function calculateStatutoryPersonalDeductionDifference(deductions: DependentDeductionResults, taxpayerNetIncome: number): number {
     let totalDifference = 0;
     
-    // Calculate the statutory difference for each dependent based on their specific characteristics
+    // Calculate the statutory difference for each deduction in the breakdown
     for (const breakdown of deductions.breakdown) {
         const dep = breakdown.dependent;
         
-        // Spouse deductions
-        if (dep.relationship === 'spouse') {
-            // Only spouse deduction (配偶者控除) has statutory difference
-            // Spouse special deduction (配偶者特別控除) has NO statutory difference because:
-            // - Spouse special deduction requires spouse income > 58万円
-            // - Statutory differences only defined for spouse income < 55万円
-            // These ranges are mutually exclusive per Article 314-6(7)
-            if (breakdown.deductionType === DEDUCTION_TYPES.SPOUSE) {
+        switch (breakdown.deductionType) {
+            case DEDUCTION_TYPES.SPOUSE: {
                 const isElderly = dep.ageCategory === '70plus';
                 totalDifference += getSpouseDeductionDifference(isElderly, taxpayerNetIncome);
+                break;
             }
-            // Spouse special deduction: statutory difference is 0 (not defined in law)
-        } 
-        // Other dependent deductions
-        else {
-            // For specific relative special deduction, no statutory difference is defined in the law
-            // So we use the standard dependent deduction differences
-            if (dep.ageCategory === '19to22') {
+                
+            case DEDUCTION_TYPES.SPECIAL_DEPENDENT:
                 // Special dependent (19-22)
                 totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_SPECIAL;
-            } else if (dep.ageCategory === '70plus') {
-                // Elderly dependent
+                break;
+                
+            case DEDUCTION_TYPES.ELDERLY_DEPENDENT:
+                // Elderly dependent (70+)
                 if (dep.isCohabiting && (dep.relationship === 'parent' || dep.relationship === 'other')) {
                     totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY_COHABITING;
                 } else {
                     totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY;
                 }
-            } else if (dep.ageCategory === '16to18' || dep.ageCategory === '23to69') {
+                break;
+                
+            case DEDUCTION_TYPES.GENERAL_DEPENDENT:
                 // General dependent (16-18, 23-69)
                 totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_GENERAL;
-            }
-        }
-        
-        // Disability deductions (apply in addition to other deductions)
-        if (dep.disability === 'special' && dep.isCohabiting) {
-            totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_SPECIAL_COHABITING;
-        } else if (dep.disability === 'special') {
-            totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_SPECIAL;
-        } else if (dep.disability === 'regular') {
-            totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_REGULAR;
+                break;
+                
+            case DEDUCTION_TYPES.DISABILITY:
+                totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_REGULAR;
+                break;
+                
+            case DEDUCTION_TYPES.SPECIAL_DISABILITY:
+                totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_SPECIAL;
+                break;
+                
+            case DEDUCTION_TYPES.SPECIAL_DISABILITY_COHABITING:
+                totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DISABILITY_SPECIAL_COHABITING;
+                break;
+                
+            /*
+              Spouse Special Deduction contributes no statutory difference because of a quirk in the statute.
+              The income ranges for qualifying for Spouse Special Deduction (>580,000 yen) are mutually exclusive
+              with the ranges where statutory differences are defined (<550,000 yen) in Article 314-6(7) of the Local Tax Act.
+              
+              The Specific Relative Special Deduction has no statutory difference defined in the law.
+              The relevant statute was not updated when the Specific Relative Special Deduction was introduced.
+
+              Therefore, no statutory personal difference is added for the Spouse Special Deduction or Specific Relative Special Deduction.
+            */
+            case DEDUCTION_TYPES.SPOUSE_SPECIAL:
+            case DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL:
+            case DEDUCTION_TYPES.NOT_ELIGIBLE:
+            default:
+                // No statutory difference
+                break;
         }
     }
     
