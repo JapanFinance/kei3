@@ -211,15 +211,23 @@ export const DEPENDENT_AGE_CATEGORIES: DependentAgeCategoryInfo[] = [
  * Deduction type constants to ensure consistency across the codebase
  */
 export const DEDUCTION_TYPES = {
+  /** 配偶者控除 */
   SPOUSE: 'Spouse',
+  /** 配偶者特別控除 */
   SPOUSE_SPECIAL: 'Spouse Special',
-  DEPENDENT: 'Dependent',
-  SPECIAL_DEPENDENT: 'Special Dependent',
-  ELDERLY_DEPENDENT: 'Elderly Dependent',
+  /** 一般の控除対象扶養親族 (16-18歳, 23-69歳) */
   GENERAL_DEPENDENT: 'General Dependent',
+  /** 特定扶養親族 (19-22歳) */
+  SPECIAL_DEPENDENT: 'Special Dependent',
+  /** 老人扶養控除 */
+  ELDERLY_DEPENDENT: 'Elderly Dependent',
+  /** 特定親族特別控除 */
   SPECIFIC_RELATIVE_SPECIAL: 'Specific Relative Special',
+  /** 障害者控除（一般の障害者） */
   DISABILITY: 'Disability',
+  /** 障害者控除（特別障害者） */
   SPECIAL_DISABILITY: 'Special Disability',
+  /** 障害者控除（同居特別障害者） */
   SPECIAL_DISABILITY_COHABITING: 'Special Disability (Cohabiting)',
   NOT_ELIGIBLE: 'Not Eligible',
 } as const;
