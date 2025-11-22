@@ -230,6 +230,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           healthInsuranceProvider={inputs.healthInsuranceProvider}
           region={inputs.region}
           dcPlanContributions={inputs.dcPlanContributions}
+          dependents={inputs.dependents}
         />
       </Suspense>
 

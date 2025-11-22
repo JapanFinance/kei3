@@ -21,6 +21,7 @@ import type { ChartRange } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin } from '../../utils/chartConfig';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
+import type { Dependent } from '../../types/dependents';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { detectCaps } from '../../utils/capDetection';
@@ -99,6 +100,7 @@ interface TakeHomeChartProps {
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
   dcPlanContributions: number;
+  dependents: Dependent[];
   className?: string;
 }
 
@@ -174,6 +176,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   healthInsuranceProvider,
   region,
   dcPlanContributions,
+  dependents,
   className = ''
 }) => {
   // Track whether the user has manually adjusted the range
@@ -237,9 +240,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       healthInsuranceProvider, 
       region,
       dcPlanContributions,
-      dependents: [] // TODO: Pass actual dependents if chart should reflect them
+      dependents
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions]
+    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents]
   );
 
   // Get chart options using the utility function
@@ -271,7 +274,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     healthInsuranceProvider,
                     region,
                     dcPlanContributions,
-                    dependents: [],
+                    dependents,
                     showDetailedInput: false,
                   };
                   
@@ -296,7 +299,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents]
   );
 
   // Use media query to determine if we should show minor marks
