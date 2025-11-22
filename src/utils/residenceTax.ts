@@ -357,7 +357,7 @@ function calculateIncomeTaxReduction(taxableIncome: number, furusatoNozeiDeducti
 
 /**
  * 
- * @param taxableIncome taxable income for residence tax (住民税の課税総所得金額)
+ * @param taxableIncome taxable income for residence tax minus the personal deduction difference (住民税の課税総所得金額 - 人的控除差調整額)
  * @returns 特例控除割合
  * @see 地方税法第37条の二
  */
