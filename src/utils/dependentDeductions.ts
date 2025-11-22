@@ -12,16 +12,13 @@
 import type { 
   Dependent, 
   DisabilityLevel,
+  DependentIncome,
+  OtherDependent,
+  DependentDeductionResults,
+  DependentDeductionBreakdown,
 } from '../types/dependents';
-import {
-  isEligibleForDependentDeduction,
-  isSpecialDependent,
-  isElderlyDependent,
-  isEligibleForSpouseDeduction,
-  isEligibleForSpouseSpecialDeduction,
-  isEligibleForSpecificRelativeDeduction,
-  calculateDependentTotalNetIncome,
-} from '../types/dependents';
+import { DEDUCTION_TYPES } from '../types/dependents';
+import { calculateNetEmploymentIncome } from './taxCalculations';
 
 /**
  * Income thresholds for dependent deductions (2025 tax year - 令和7年)
@@ -60,6 +57,107 @@ export const DEPENDENT_INCOME_THRESHOLDS = {
    */
   SPECIFIC_RELATIVE_DEDUCTION_MAX: 1_230_000,
 } as const;
+
+/**
+ * Calculate total net income (合計所得金額) for a dependent
+ * This is used to determine eligibility for various dependent deductions
+ */
+export function calculateDependentTotalNetIncome(income: DependentIncome): number {
+  const { grossEmploymentIncome, otherNetIncome } = income;
+  
+  // Calculate net employment income using employment income deduction formula
+  const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+  
+  // Total net income = net employment income + other net income
+  return netEmploymentIncome + otherNetIncome;
+}
+
+/**
+ * Check if dependent is eligible for standard dependent deduction (扶養控除)
+ * Must have income ≤ 58万円 and not be a spouse (2025 tax reform)
+ */
+export function isEligibleForDependentDeduction(dependent: Dependent): boolean {
+  if (dependent.relationship === 'spouse') {
+    return false;
+  }
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX;
+}
+
+/**
+ * Check if dependent is a special dependent (特定扶養親族)
+ * Age 19-22 on December 31st, with income ≤ 58万円 (2025 tax reform)
+ */
+export function isSpecialDependent(dependent: Dependent): boolean {
+  if (!isEligibleForDependentDeduction(dependent)) {
+    return false;
+  }
+  if (dependent.relationship === 'spouse') {
+    return false;
+  }
+  return (dependent as OtherDependent).ageCategory === '19to22';
+}
+
+/**
+ * Check if dependent is an elderly dependent (老人扶養親族)
+ * Age 70+ on December 31st, with income ≤ 58万円 (2025 tax reform)
+ */
+export function isElderlyDependent(dependent: Dependent): boolean {
+  if (!isEligibleForDependentDeduction(dependent)) {
+    return false;
+  }
+  if (dependent.relationship === 'spouse') {
+    return false;
+  }
+  return (dependent as OtherDependent).ageCategory === '70plus';
+}
+
+/**
+ * Check if dependent is eligible for spouse deduction (配偶者控除)
+ * Spouse with income ≤ 58万円 (changed from 48万円 in 2025 tax reform)
+ */
+export function isEligibleForSpouseDeduction(dependent: Dependent): boolean {
+  if (dependent.relationship !== 'spouse') {
+    return false;
+  }
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX;
+}
+
+/**
+ * Check if dependent is eligible for spouse special deduction (配偶者特別控除)
+ * Spouse with income 58万円 < income ≤ 133万円 (lower threshold changed from 48万円 in 2025)
+ */
+export function isEligibleForSpouseSpecialDeduction(dependent: Dependent): boolean {
+  if (dependent.relationship !== 'spouse') {
+    return false;
+  }
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX && 
+         totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_SPECIAL_DEDUCTION_MAX;
+}
+
+/**
+ * Check if dependent is eligible for specific relative special deduction (特定親族特別控除)
+ * Age 19-22 (19歳以上23歳未満) on December 31st, not spouse, with income 58万円 < income ≤ 123万円
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
+ */
+export function isEligibleForSpecificRelativeDeduction(dependent: Dependent): boolean {
+  if (dependent.relationship === 'spouse') {
+    return false;
+  }
+  const otherDependent = dependent as OtherDependent;
+  const ageCategory = otherDependent.ageCategory;
+  
+  // Only age 19-22 are eligible (19歳以上23歳未満)
+  if (ageCategory !== '19to22') {
+    return false;
+  }
+  
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+  return totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX && 
+         totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPECIFIC_RELATIVE_DEDUCTION_MAX;
+}
 
 /**
  * Bracket thresholds for spouse special deduction (配偶者特別控除)
@@ -166,60 +264,7 @@ export const RESIDENCE_TAX_DEDUCTIONS = {
   DISABILITY_SPECIAL_COHABITING: 530_000,
 } as const;
 
-/**
- * Results of dependent deduction calculations
- */
-export interface DependentDeductionResults {
-  // National income tax deductions
-  nationalTax: {
-    dependentDeduction: number; // 扶養控除
-    spouseDeduction: number; // 配偶者控除
-    spouseSpecialDeduction: number; // 配偶者特別控除
-    specificRelativeDeduction: number; // 特定親族特別控除
-    disabilityDeduction: number; // 障害者控除
-    total: number;
-  };
-  
-  // Residence tax deductions
-  residenceTax: {
-    dependentDeduction: number;
-    spouseDeduction: number;
-    spouseSpecialDeduction: number;
-    specificRelativeDeduction: number;
-    disabilityDeduction: number;
-    total: number;
-  };
-  
-  // Breakdown by dependent
-  breakdown: DependentDeductionBreakdown[];
-}
 
-/**
- * Deduction type constants to ensure consistency across the codebase
- */
-export const DEDUCTION_TYPES = {
-  SPOUSE: 'Spouse',
-  SPOUSE_SPECIAL: 'Spouse Special',
-  DEPENDENT: 'Dependent',
-  SPECIAL_DEPENDENT: 'Special Dependent',
-  ELDERLY_DEPENDENT: 'Elderly Dependent',
-  GENERAL_DEPENDENT: 'General Dependent',
-  SPECIFIC_RELATIVE_SPECIAL: 'Specific Relative Special',
-  NOT_ELIGIBLE: 'Not Eligible',
-} as const;
-
-export type DeductionType = typeof DEDUCTION_TYPES[keyof typeof DEDUCTION_TYPES];
-
-/**
- * Represents the breakdown of deductions for a single dependent
- */
-export interface DependentDeductionBreakdown {
-  dependent: Dependent;
-  nationalTaxAmount: number;
-  residenceTaxAmount: number;
-  deductionType: DeductionType | '';
-  notes: string[];
-}
 
 /**
  * Get disability deduction amount for a given disability level

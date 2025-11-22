@@ -26,12 +26,12 @@ import PersonIcon from '@mui/icons-material/Person';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { Dependent, OtherDependent, Spouse } from '../../../types/dependents';
-import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, calculateDependentTotalNetIncome } from '../../../types/dependents';
+import type { Dependent, DependentDeductionBreakdown, OtherDependent, Spouse } from '../../../types/dependents';
+import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, DEDUCTION_TYPES } from '../../../types/dependents';
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
 import { formatJPY } from '../../../utils/formatters';
-import { calculateDependentDeductions, getDisabilityDeduction, DEDUCTION_TYPES, type DependentDeductionBreakdown } from '../../../utils/dependentDeductions';
+import { calculateDependentDeductions, getDisabilityDeduction, calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
 
 interface DependentsModalProps {
   open: boolean;

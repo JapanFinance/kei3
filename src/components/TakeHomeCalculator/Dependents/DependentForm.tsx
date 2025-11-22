@@ -24,10 +24,6 @@ import {
   RELATIONSHIPS,
   DISABILITY_LEVELS,
   DEPENDENT_AGE_CATEGORIES,
-  calculateDependentTotalNetIncome,
-  calculateNetEmploymentIncome,
-  isEligibleForDependentDeduction,
-  isEligibleForSpecificRelativeDeduction,
 } from '../../../types/dependents';
 import { CURRENT_TAX_YEAR } from '../../../types/tax';
 import { InfoTooltip } from '../../ui/InfoTooltip';
@@ -36,8 +32,12 @@ import { formatJPY } from '../../../utils/formatters';
 import { 
   getDependentDeduction,
   getSpecificRelativeDeduction,
-  getDisabilityDeduction
+  getDisabilityDeduction,
+  calculateDependentTotalNetIncome,
+  isEligibleForDependentDeduction,
+  isEligibleForSpecificRelativeDeduction,
 } from '../../../utils/dependentDeductions';
+import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
