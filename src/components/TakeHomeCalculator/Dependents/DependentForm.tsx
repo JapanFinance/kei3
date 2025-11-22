@@ -30,12 +30,8 @@ import { InfoTooltip } from '../../ui/InfoTooltip';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { formatJPY } from '../../../utils/formatters';
 import { 
-  getDependentDeduction,
-  getSpecificRelativeDeduction,
-  getDisabilityDeduction,
+  calculateDependentDeductions,
   calculateDependentTotalNetIncome,
-  isEligibleForDependentDeduction,
-  isEligibleForSpecificRelativeDeduction,
 } from '../../../utils/dependentDeductions';
 import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import Table from '@mui/material/Table';
@@ -366,7 +362,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             </TableHead>
             <TableBody>
               {(() => {
-                const totalNetIncome = calculateDependentTotalNetIncome(income);
                 const tempDependent: OtherDependent = {
                   id: 'temp',
                   relationship,
@@ -376,45 +371,39 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   isCohabiting,
                 };
                 
-                const eligibleForDependent = isEligibleForDependentDeduction(tempDependent);
-                const eligibleForSpecificRelative = isEligibleForSpecificRelativeDeduction(tempDependent);
+                // Calculate all deductions for this dependent
+                const results = calculateDependentDeductions([tempDependent]);
                 const rows: React.ReactNode[] = [];
                 
                 // Dependent Deduction
-                if (eligibleForDependent) {
-                  const natDependent = getDependentDeduction(ageCategory, relationship, isCohabiting, false);
-                  const resDependent = getDependentDeduction(ageCategory, relationship, isCohabiting, true);
+                if (results.nationalTax.dependentDeduction > 0 || results.residenceTax.dependentDeduction > 0) {
                   rows.push(
                     <TableRow key="dependent">
                       <TableCell>Dependent Deduction (扶養控除)</TableCell>
-                      <TableCell align="right">{formatJPY(natDependent)}</TableCell>
-                      <TableCell align="right">{formatJPY(resDependent)}</TableCell>
+                      <TableCell align="right">{formatJPY(results.nationalTax.dependentDeduction)}</TableCell>
+                      <TableCell align="right">{formatJPY(results.residenceTax.dependentDeduction)}</TableCell>
                     </TableRow>
                   );
                 }
                 
                 // Specific Relative Special Deduction
-                if (eligibleForSpecificRelative) {
-                  const natSpecific = getSpecificRelativeDeduction(totalNetIncome, false);
-                  const resSpecific = getSpecificRelativeDeduction(totalNetIncome, true);
+                if (results.nationalTax.specificRelativeDeduction > 0 || results.residenceTax.specificRelativeDeduction > 0) {
                   rows.push(
                     <TableRow key="specific-relative">
                       <TableCell>Specific Relative Special Deduction (特定親族特別控除)</TableCell>
-                      <TableCell align="right">{formatJPY(natSpecific)}</TableCell>
-                      <TableCell align="right">{formatJPY(resSpecific)}</TableCell>
+                      <TableCell align="right">{formatJPY(results.nationalTax.specificRelativeDeduction)}</TableCell>
+                      <TableCell align="right">{formatJPY(results.residenceTax.specificRelativeDeduction)}</TableCell>
                     </TableRow>
                   );
                 }
                 
                 // Disability Deduction
-                if (disability !== 'none') {
-                  const natDisability = getDisabilityDeduction(disability, isCohabiting, false);
-                  const resDisability = getDisabilityDeduction(disability, isCohabiting, true);
+                if (results.nationalTax.disabilityDeduction > 0 || results.residenceTax.disabilityDeduction > 0) {
                   rows.push(
                     <TableRow key="disability">
                       <TableCell>Disability Deduction (障害者控除)</TableCell>
-                      <TableCell align="right">{formatJPY(natDisability)}</TableCell>
-                      <TableCell align="right">{formatJPY(resDisability)}</TableCell>
+                      <TableCell align="right">{formatJPY(results.nationalTax.disabilityDeduction)}</TableCell>
+                      <TableCell align="right">{formatJPY(results.residenceTax.disabilityDeduction)}</TableCell>
                     </TableRow>
                   );
                 }

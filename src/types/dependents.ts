@@ -17,7 +17,7 @@ export interface DependentIncome {
 
 /**
  * Disability levels for dependent deductions
- * - none: Not disabled
+ * - none: No disability
  * - regular: Regular disability (一般の障害者)
  * - special: Special disability (特別障害者)
  * 
@@ -47,6 +47,14 @@ export type SpouseAgeCategory = 'under70' | '70plus';
  * - 70plus: 70 years or older (eligible for elderly dependent deduction)
  */
 export type DependentAgeCategory = 'under16' | '16to18' | '19to22' | '23to69' | '70plus';
+
+/**
+ * Deduction amount for national and residence tax
+ */
+export interface DeductionAmount {
+  national: number;
+  residence: number;
+}
 
 /**
  * Represents a spouse for tax deduction purposes
@@ -210,6 +218,9 @@ export const DEDUCTION_TYPES = {
   ELDERLY_DEPENDENT: 'Elderly Dependent',
   GENERAL_DEPENDENT: 'General Dependent',
   SPECIFIC_RELATIVE_SPECIAL: 'Specific Relative Special',
+  DISABILITY: 'Disability',
+  SPECIAL_DISABILITY: 'Special Disability',
+  SPECIAL_DISABILITY_COHABITING: 'Special Disability (Cohabiting)',
   NOT_ELIGIBLE: 'Not Eligible',
 } as const;
 
@@ -222,8 +233,7 @@ export interface DependentDeductionBreakdown {
   dependent: Dependent;
   nationalTaxAmount: number;
   residenceTaxAmount: number;
-  deductionType: DeductionType | '';
-  notes: string[];
+  deductionType: DeductionType;
 }
 
 /**
