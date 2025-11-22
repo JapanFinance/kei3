@@ -284,10 +284,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
         // Dependent deductions (always include, even if zero)
         ...(inputs.dependents.length > 0 && {
-            dependentDeductions: {
-                nationalTaxTotal: dependentDeductions.nationalTax.total,
-                residenceTaxTotal: dependentDeductions.residenceTax.total,
-            }
+            dependentDeductions: dependentDeductions
         }),
     };
 }
