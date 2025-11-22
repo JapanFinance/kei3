@@ -6,8 +6,6 @@ import {
   calculateDependentDeductions,
   NATIONAL_TAX_DEDUCTIONS,
   RESIDENCE_TAX_DEDUCTIONS,
-} from '../utils/dependentDeductions'
-import {
   isEligibleForDependentDeduction,
   isEligibleForSpouseDeduction,
   isEligibleForSpouseSpecialDeduction,
@@ -15,7 +13,7 @@ import {
   isSpecialDependent,
   isElderlyDependent,
   calculateDependentTotalNetIncome,
-} from '../types/dependents'
+} from '../utils/dependentDeductions'
 import type { Dependent } from '../types/dependents'
 
 /**

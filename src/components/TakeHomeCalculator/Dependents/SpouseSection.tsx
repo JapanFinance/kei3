@@ -18,9 +18,9 @@ import type {
 import {
   DISABILITY_LEVELS,
   SPOUSE_AGE_CATEGORIES,
-  calculateDependentTotalNetIncome,
-  calculateNetEmploymentIncome,
 } from '../../../types/dependents';
+import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
+import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { InfoTooltip } from '../../ui/InfoTooltip';
 import { formatJPY } from '../../../utils/formatters';

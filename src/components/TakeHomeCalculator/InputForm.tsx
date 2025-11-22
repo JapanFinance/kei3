@@ -780,7 +780,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         )}
       </Box>
 
-      {/* Dependents Modal */}
       <DependentsModal
         open={dependentsModalOpen}
         onClose={handleCloseDependentsModal}

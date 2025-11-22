@@ -2,8 +2,6 @@
  * Types for dependent-related deductions in Japanese tax system
  */
 
-import { DEPENDENT_INCOME_THRESHOLDS } from '../utils/dependentDeductions';
-
 /**
  * Income input for dependents
  * We ask for gross employment income and other net income separately to calculate
@@ -15,48 +13,6 @@ export interface DependentIncome {
   
   /** Other net income (その他の所得) - business income, pension, capital gains, etc. */
   otherNetIncome: number;
-}
-
-/**
- * Calculate net employment income (給与所得) from gross employment income (給与収入)
- * Uses the employment income deduction formula (給与所得控除)
- */
-export function calculateNetEmploymentIncome(grossEmploymentIncome: number): number {
-  let netEmploymentIncome = 0;
-  if (grossEmploymentIncome < 651_000) {
-    netEmploymentIncome = 0;
-  } else if (grossEmploymentIncome < 1_900_000) {
-    netEmploymentIncome = grossEmploymentIncome - 650_000;
-  } else {
-    // From 1.9M yen through 6.6M yen, gross income is rounded down to the nearest 4,000 yen
-    const roundedGrossIncome = Math.floor(grossEmploymentIncome / 4000) * 4000;
-    
-    if (grossEmploymentIncome <= 3_600_000) {
-      netEmploymentIncome = Math.floor(roundedGrossIncome * 0.7) - 80_000;
-    } else if (grossEmploymentIncome <= 6_600_000) {
-      netEmploymentIncome = Math.floor(roundedGrossIncome * 0.8) - 440_000;
-    } else if (grossEmploymentIncome <= 8_500_000) {
-      netEmploymentIncome = Math.floor(grossEmploymentIncome * 0.9) - 1_100_000;
-    } else {
-      netEmploymentIncome = grossEmploymentIncome - 1_950_000;
-    }
-  }
-  
-  return netEmploymentIncome;
-}
-
-/**
- * Calculate total net income (合計所得金額) for a dependent
- * This is used to determine eligibility for various dependent deductions
- */
-export function calculateDependentTotalNetIncome(income: DependentIncome): number {
-  const { grossEmploymentIncome, otherNetIncome } = income;
-  
-  // Calculate net employment income using employment income deduction formula
-  const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
-  
-  // Total net income = net employment income + other net income
-  return netEmploymentIncome + otherNetIncome;
 }
 
 /**
@@ -244,88 +200,58 @@ export const DEPENDENT_AGE_CATEGORIES: DependentAgeCategoryInfo[] = [
 ];
 
 /**
- * Check if dependent is eligible for standard dependent deduction (扶養控除)
- * Must have income ≤ 58万円 and not be a spouse (2025 tax reform)
+ * Deduction type constants to ensure consistency across the codebase
  */
-export function isEligibleForDependentDeduction(dependent: Dependent): boolean {
-  if (dependent.relationship === 'spouse') {
-    return false;
-  }
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX;
+export const DEDUCTION_TYPES = {
+  SPOUSE: 'Spouse',
+  SPOUSE_SPECIAL: 'Spouse Special',
+  DEPENDENT: 'Dependent',
+  SPECIAL_DEPENDENT: 'Special Dependent',
+  ELDERLY_DEPENDENT: 'Elderly Dependent',
+  GENERAL_DEPENDENT: 'General Dependent',
+  SPECIFIC_RELATIVE_SPECIAL: 'Specific Relative Special',
+  NOT_ELIGIBLE: 'Not Eligible',
+} as const;
+
+export type DeductionType = typeof DEDUCTION_TYPES[keyof typeof DEDUCTION_TYPES];
+
+/**
+ * Represents the breakdown of deductions for a single dependent
+ */
+export interface DependentDeductionBreakdown {
+  dependent: Dependent;
+  nationalTaxAmount: number;
+  residenceTaxAmount: number;
+  deductionType: DeductionType | '';
+  notes: string[];
 }
 
 /**
- * Check if dependent is a special dependent (特定扶養親族)
- * Age 19-22 on December 31st, with income ≤ 58万円 (2025 tax reform)
+ * Results of dependent deduction calculations
  */
-export function isSpecialDependent(dependent: Dependent): boolean {
-  if (!isEligibleForDependentDeduction(dependent)) {
-    return false;
-  }
-  if (dependent.relationship === 'spouse') {
-    return false;
-  }
-  return (dependent as OtherDependent).ageCategory === '19to22';
-}
-
-/**
- * Check if dependent is an elderly dependent (老人扶養親族)
- * Age 70+ on December 31st, with income ≤ 58万円 (2025 tax reform)
- */
-export function isElderlyDependent(dependent: Dependent): boolean {
-  if (!isEligibleForDependentDeduction(dependent)) {
-    return false;
-  }
-  if (dependent.relationship === 'spouse') {
-    return false;
-  }
-  return (dependent as OtherDependent).ageCategory === '70plus';
-}
-
-/**
- * Check if dependent is eligible for spouse deduction (配偶者控除)
- * Spouse with income ≤ 58万円 (changed from 48万円 in 2025 tax reform)
- */
-export function isEligibleForSpouseDeduction(dependent: Dependent): boolean {
-  if (dependent.relationship !== 'spouse') {
-    return false;
-  }
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX;
-}
-
-/**
- * Check if dependent is eligible for spouse special deduction (配偶者特別控除)
- * Spouse with income 58万円 < income ≤ 133万円 (lower threshold changed from 48万円 in 2025)
- */
-export function isEligibleForSpouseSpecialDeduction(dependent: Dependent): boolean {
-  if (dependent.relationship !== 'spouse') {
-    return false;
-  }
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX && 
-         totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_SPECIAL_DEDUCTION_MAX;
-}
-
-/**
- * Check if dependent is eligible for specific relative special deduction (特定親族特別控除)
- * Age 19-22 (19歳以上23歳未満) on December 31st, not spouse, with income 58万円 < income ≤ 123万円
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
- */
-export function isEligibleForSpecificRelativeDeduction(dependent: Dependent): boolean {
-  if (dependent.relationship === 'spouse') {
-    return false;
-  }
-  const otherDependent = dependent as OtherDependent;
-  const ageCategory = otherDependent.ageCategory;
+export interface DependentDeductionResults {
+  // National income tax deductions
+  nationalTax: {
+    dependentDeduction: number; // 扶養控除
+    spouseDeduction: number; // 配偶者控除
+    spouseSpecialDeduction: number; // 配偶者特別控除
+    specificRelativeDeduction: number; // 特定親族特別控除
+    disabilityDeduction: number; // 障害者控除
+    total: number;
+  };
   
-  // Only age 19-22 are eligible (19歳以上23歳未満)
-  if (ageCategory !== '19to22') {
-    return false;
-  }
+  // Residence tax deductions
+  residenceTax: {
+    dependentDeduction: number;
+    spouseDeduction: number;
+    spouseSpecialDeduction: number;
+    specificRelativeDeduction: number;
+    disabilityDeduction: number;
+    total: number;
+  };
   
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX && 
-         totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPECIFIC_RELATIVE_DEDUCTION_MAX;
+  // Breakdown by dependent
+  breakdown: DependentDeductionBreakdown[];
 }
+
+
