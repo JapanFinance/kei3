@@ -1,5 +1,5 @@
 import type { HealthInsuranceProviderId } from "./healthInsurance";
-import type { Dependent } from "./dependents";
+import type { Dependent, DependentDeductionResults } from "./dependents";
 
 /**
  * The tax year that this calculator supports.
@@ -39,10 +39,7 @@ export interface TakeHomeResults {
   furusatoNozei: FurusatoNozeiDetails;
   dcPlanContributions: number;
   // Dependent deductions
-  dependentDeductions?: {
-    nationalTaxTotal: number;
-    residenceTaxTotal: number;
-  };
+  dependentDeductions?: DependentDeductionResults;
   // Income tax breakdown
   nationalIncomeTaxBase?: number | undefined;
   reconstructionSurtax?: number | undefined;

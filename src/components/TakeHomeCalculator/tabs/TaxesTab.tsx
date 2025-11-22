@@ -6,7 +6,14 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import Collapse from '@mui/material/Collapse';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import type { TakeHomeResults } from '../../../types/tax';
+import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import DetailInfoTooltip from '../../ui/DetailInfoTooltip';
@@ -72,12 +79,12 @@ const EmploymentIncomeDeductionTooltip: React.FC = () => (
       <ul>
         <li>
           <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            No.1410 給与所得控除 - NTA
+            給与所得控除 - NTA
           </a>
         </li>
         <li>
           <a href="https://www.nta.go.jp/english/taxes/individual/12012.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            No.12012 Overview of deduction for employment income - NTA (English)
+            Overview of deduction for employment income - NTA (English)
           </a>
         </li>
         <li>
@@ -90,6 +97,111 @@ const EmploymentIncomeDeductionTooltip: React.FC = () => (
             令和７年度税制改正（いわゆる年収の壁への対応）の概要 - Yokohama City
           </a>
         </li>
+      </ul>
+    </Box>
+  </Box>
+);
+
+interface DependentDeductionTooltipProps {
+  deductions: DependentDeductionResults;
+}
+
+const NationalTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({ deductions }) => (
+  <Box sx={{ minWidth: { xs: 0, sm: 350 }, maxWidth: { xs: '100vw', sm: 500 } }}>
+    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+      Applied Deductions Breakdown
+    </Typography>
+    {deductions.breakdown.filter(b => b.nationalTaxAmount > 0).length > 0 ? (
+      <TableContainer component={Box} sx={{ mb: 2 }}>
+        <Table size="small" sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Dependent / Type</TableCell>
+              <TableCell align="right">Amount</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {deductions.breakdown.filter(b => b.nationalTaxAmount > 0).map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
+                  <div style={{ fontSize: '0.85em', color: '#666' }}>{item.notes.join(', ')}</div>
+                </TableCell>
+                <TableCell align="right">{formatJPY(item.nationalTaxAmount)}</TableCell>
+              </TableRow>
+            ))}
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.nationalTax.total)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    ) : (
+      <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
+        No dependent deductions applied.
+      </Typography>
+    )}
+
+
+    
+    <Box sx={{ mt: 1 }}>
+      Official NTA Sources:
+      <ul>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>扶養控除 (Dependent Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>特定親族特別控除 (Specific Relative Special Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者控除 (Spouse Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者特別控除 (Spouse Special Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>障害者控除 (Disability Deduction)</a></li>
+      </ul>
+    </Box>
+  </Box>
+);
+
+const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({ deductions }) => (
+  <Box sx={{ minWidth: { xs: 0, sm: 350 }, maxWidth: { xs: '100vw', sm: 500 } }}>
+    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+      Applied Deductions Breakdown
+    </Typography>
+    {deductions.breakdown.filter(b => b.residenceTaxAmount > 0).length > 0 ? (
+      <TableContainer component={Box} sx={{ mb: 2 }}>
+        <Table size="small" sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Dependent / Type</TableCell>
+              <TableCell align="right">Amount</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {deductions.breakdown.filter(b => b.residenceTaxAmount > 0).map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
+                  <div style={{ fontSize: '0.85em', color: '#666' }}>{item.notes.join(', ')}</div>
+                </TableCell>
+                <TableCell align="right">{formatJPY(item.residenceTaxAmount)}</TableCell>
+              </TableRow>
+            ))}
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.residenceTax.total)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    ) : (
+      <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
+        No dependent deductions applied.
+      </Typography>
+    )}
+
+
+    
+    <Box sx={{ mt: 1 }}>
+      Official Sources:
+      <ul>
+        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>人的控除 (Residence tax deduction amounts - Nerima City)</a></li>
+        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>令和7年度税制改正 (2025 Tax Reform - Nerima City)</a></li>
       </ul>
     </Box>
   </Box>
@@ -275,7 +387,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         </li>
                         <li>
                           <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                            No.1199 基礎控除
+                            基礎控除
                           </a>
                         </li>
                       </ul>
@@ -289,47 +401,18 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
           type="detail" 
         />
         
-        {results.dependentDeductions && results.dependentDeductions.nationalTaxTotal > 0 && (
+        {results.dependentDeductions && results.dependentDeductions.nationalTax.total > 0 && (
           <ResultRow 
             label={
               <span>
                 Dependent Deductions
                 <DetailInfoTooltip
-                  title="Dependent-Related Deductions"
-                  children={
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        Dependent-Related Deductions for Income Tax
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        These deductions include spouse deductions, dependent deductions, and disability deductions based on your household composition.
-                      </Typography>
-                      <Box sx={{ mt: 1 }}>
-                        Official Sources:
-                        <ul>
-                          <li>
-                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              配偶者控除 - NTA
-                            </a>
-                          </li>
-                          <li>
-                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              扶養控除 - NTA
-                            </a>
-                          </li>
-                          <li>
-                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              障害者控除 - NTA
-                            </a>
-                          </li>
-                        </ul>
-                      </Box>
-                    </Box>
-                  }
+                  title="Dependent-Related Deductions (National Tax)"
+                  children={<NationalTaxDependentDeductionTooltip deductions={results.dependentDeductions} />}
                 />
               </span>
             }
-            value={formatJPY(-results.dependentDeductions.nationalTaxTotal)} 
+            value={formatJPY(-results.dependentDeductions.nationalTax.total)} 
             type="detail" 
           />
         )}
@@ -360,7 +443,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         <ul>
                           <li>
                             <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              No.2260 所得税の税率 - NTA
+                              所得税の税率 - NTA
                             </a>
                           </li>
                         </ul>
@@ -458,7 +541,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                           <ul>
                             <li>
                               <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                                No.2260 所得税の税率 - NTA
+                                所得税の税率 - NTA
                               </a>
                             </li>
                           </ul>
@@ -500,7 +583,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         <ul>
                           <li>
                             <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              No.2260 所得税の税率 - NTA
+                              所得税の税率 - NTA
                             </a>
                           </li>
                           <li>
@@ -542,7 +625,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                       <ul>
                         <li>
                           <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                            No.2260 所得税の税率 - NTA
+                            所得税の税率 - NTA
                           </a>
                         </li>
                       </ul>
@@ -653,47 +736,18 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
           type="detail" 
         />
         
-        {results.dependentDeductions && results.dependentDeductions.residenceTaxTotal > 0 && (
+        {results.dependentDeductions && results.dependentDeductions.residenceTax.total > 0 && (
           <ResultRow 
             label={
               <span>
                 Dependent Deductions
                 <DetailInfoTooltip
-                  title="Dependent-Related Deductions"
-                  children={
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        Dependent-Related Deductions for Residence Tax
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        These deductions include spouse deductions, dependent deductions, and disability deductions based on your household composition.
-                      </Typography>
-                      <Box sx={{ mt: 1 }}>
-                        Official Sources:
-                        <ul>
-                          <li>
-                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              配偶者控除 - NTA
-                            </a>
-                          </li>
-                          <li>
-                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              扶養控除 - NTA
-                            </a>
-                          </li>
-                          <li>
-                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              障害者控除 - NTA
-                            </a>
-                          </li>
-                        </ul>
-                      </Box>
-                    </Box>
-                  }
+                  title="Dependent-Related Deductions (Residence Tax)"
+                  children={<ResidenceTaxDependentDeductionTooltip deductions={results.dependentDeductions} />}
                 />
               </span>
             }
-            value={formatJPY(-results.dependentDeductions.residenceTaxTotal)} 
+            value={formatJPY(-results.dependentDeductions.residenceTax.total)} 
             type="detail" 
           />
         )}
