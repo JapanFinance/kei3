@@ -31,7 +31,7 @@ import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, DEDUCTION_TYPES } from '../../
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
 import { formatJPY } from '../../../utils/formatters';
-import { calculateDependentDeductions, getDisabilityDeduction, calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
+import { calculateDependentDeductions, calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
 
 interface DependentsModalProps {
   open: boolean;
@@ -362,97 +362,25 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         
                         const deductionMap = new Map<string, DeductionGroup>();
                         
-                        // Process each breakdown - split combined deductions into separate entries
+                        // Process each breakdown
                         deductionResults.breakdown.forEach((breakdown: DependentDeductionBreakdown) => {
-                          const dep = breakdown.dependent;
+                          // Skip if not eligible
+                          if (!breakdown.deductionType || breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE) {
+                            return;
+                          }
+
+                          const key = `${breakdown.deductionType}-${breakdown.nationalTaxAmount}-${breakdown.residenceTaxAmount}`;
+                          const existing = deductionMap.get(key);
                           
-                          // Handle main deduction type (spouse, dependent, etc.)
-                          if (breakdown.deductionType && breakdown.deductionType !== DEDUCTION_TYPES.NOT_ELIGIBLE) {
-                            // Calculate amounts for main deduction and disability separately
-                            let mainNatAmount = 0;
-                            let mainResAmount = 0;
-                            let disabilityNatAmount = 0;
-                            let disabilityResAmount = 0;
-                            
-                            // Calculate disability deduction if applicable
-                            if (dep.disability !== 'none') {
-                              disabilityNatAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, false);
-                              disabilityResAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, true);
-                            }
-                            
-                            // Main deduction is the total minus disability
-                            mainNatAmount = breakdown.nationalTaxAmount - disabilityNatAmount;
-                            mainResAmount = breakdown.residenceTaxAmount - disabilityResAmount;
-                            
-                            // Add main deduction if non-zero
-                            if (mainNatAmount > 0 || mainResAmount > 0) {
-                              const key = `${breakdown.deductionType}-${mainNatAmount}-${mainResAmount}`;
-                              const existing = deductionMap.get(key);
-                              
-                              if (existing) {
-                                existing.count++;
-                              } else {
-                                deductionMap.set(key, {
-                                  type: breakdown.deductionType,
-                                  natAmount: mainNatAmount,
-                                  resAmount: mainResAmount,
-                                  count: 1,
-                                });
-                              }
-                            }
-                            
-                            // Add disability deduction separately if applicable
-                            if (dep.disability !== 'none') {
-                              let disabilityType = 'Disability';
-                              if (dep.disability === 'special' && dep.isCohabiting) {
-                                disabilityType = 'Special Disability (Cohabiting)';
-                              } else if (dep.disability === 'special') {
-                                disabilityType = 'Special Disability';
-                              } else if (dep.disability === 'regular') {
-                                disabilityType = 'Regular Disability';
-                              }
-                              
-                              const disKey = `${disabilityType}-${disabilityNatAmount}-${disabilityResAmount}`;
-                              const existingDis = deductionMap.get(disKey);
-                              
-                              if (existingDis) {
-                                existingDis.count++;
-                              } else {
-                                deductionMap.set(disKey, {
-                                  type: disabilityType,
-                                  natAmount: disabilityNatAmount,
-                                  resAmount: disabilityResAmount,
-                                  count: 1,
-                                });
-                              }
-                            }
-                          } else if (dep.disability !== 'none') {
-                            // Only disability deduction, no other deduction
-                            const disabilityNatAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, false);
-                            const disabilityResAmount = getDisabilityDeduction(dep.disability, dep.isCohabiting, true);
-                            
-                            let disabilityType = 'Disability';
-                            if (dep.disability === 'special' && dep.isCohabiting) {
-                              disabilityType = 'Special Disability (Cohabiting)';
-                            } else if (dep.disability === 'special') {
-                              disabilityType = 'Special Disability';
-                            } else if (dep.disability === 'regular') {
-                              disabilityType = 'Regular Disability';
-                            }
-                            
-                            const disKey = `${disabilityType}-${disabilityNatAmount}-${disabilityResAmount}`;
-                            const existingDis = deductionMap.get(disKey);
-                            
-                            if (existingDis) {
-                              existingDis.count++;
-                            } else {
-                              deductionMap.set(disKey, {
-                                type: disabilityType,
-                                natAmount: disabilityNatAmount,
-                                resAmount: disabilityResAmount,
-                                count: 1,
-                              });
-                            }
+                          if (existing) {
+                            existing.count++;
+                          } else {
+                            deductionMap.set(key, {
+                              type: breakdown.deductionType,
+                              natAmount: breakdown.nationalTaxAmount,
+                              resAmount: breakdown.residenceTaxAmount,
+                              count: 1,
+                            });
                           }
                         });
                         

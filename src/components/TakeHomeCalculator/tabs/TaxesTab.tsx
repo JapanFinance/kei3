@@ -125,7 +125,6 @@ const NationalTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipPr
               <TableRow key={index}>
                 <TableCell>
                   <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
-                  <div style={{ fontSize: '0.85em', color: '#666' }}>{item.notes.join(', ')}</div>
                 </TableCell>
                 <TableCell align="right">{formatJPY(item.nationalTaxAmount)}</TableCell>
               </TableRow>
@@ -177,7 +176,6 @@ const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipP
               <TableRow key={index}>
                 <TableCell>
                   <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
-                  <div style={{ fontSize: '0.85em', color: '#666' }}>{item.notes.join(', ')}</div>
                 </TableCell>
                 <TableCell align="right">{formatJPY(item.residenceTaxAmount)}</TableCell>
               </TableRow>
