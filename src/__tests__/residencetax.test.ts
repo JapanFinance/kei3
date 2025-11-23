@@ -342,3 +342,15 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
   })
 })
+
+describe('calculateResidenceTax - Personal Deduction Difference', () => {
+  it('returns correct personal deduction difference for income <= 25M', () => {
+    const result = calculateResidenceTax(25_000_000, 1_000_000, EMPTY_DEPENDENT_DEDUCTIONS);
+    expect(result.personalDeductionDifference).toBe(50_000);
+  })
+
+  it('returns correct personal deduction difference for income > 25M', () => {
+    const result = calculateResidenceTax(26_000_000, 1_000_000, EMPTY_DEPENDENT_DEDUCTIONS);
+    expect(result.personalDeductionDifference).toBe(50_000);
+  })
+})
