@@ -217,11 +217,11 @@ export const DEDUCTION_TYPES = {
   SPOUSE_SPECIAL: 'Spouse Special',
   /** 一般の控除対象扶養親族 (16-18歳, 23-69歳) */
   GENERAL_DEPENDENT: 'General Dependent',
-  /** 特定扶養親族 (19-22歳) */
+  /** 特定扶養親族 (19-22歳) - Standard deduction for eligible dependents */
   SPECIAL_DEPENDENT: 'Special Dependent',
   /** 老人扶養控除 */
   ELDERLY_DEPENDENT: 'Elderly Dependent',
-  /** 特定親族特別控除 */
+  /** 特定親族特別控除 - Phased deduction for 19-22 year olds with income above general dependent threshold */
   SPECIFIC_RELATIVE_SPECIAL: 'Specific Relative Special',
   /** 障害者控除（一般の障害者） */
   DISABILITY: 'Disability',

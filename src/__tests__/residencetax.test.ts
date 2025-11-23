@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { calculateResidenceTax, calculateResidenceTaxBasicDeduction } from "../utils/residenceTax"
-import type { DependentDeductionResults } from "../types/dependents"
+import { calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from "../utils/residenceTax"
+import { calculateDependentDeductions } from "../utils/dependentDeductions"
+import type { DependentDeductionResults, Dependent } from "../types/dependents"
 
 /**
  * An empty dependent deduction result object with all values set to zero.
@@ -161,5 +162,183 @@ describe('calculateResidenceTax - 調整控除額 (Adjustment Credit)', () => {
     const result = calculateResidenceTax(2_861_000, 430_000, EMPTY_DEPENDENT_DEDUCTIONS);
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
+  })
+})
+
+describe('Residence Tax - Non-Taxable Limit', () => {
+  it('should be non-taxable for single person with income <= 450,000', () => {
+    const result = calculateResidenceTax(450_000, 0, calculateDependentDeductions([]))
+    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should be taxable for single person with income > 450,000', () => {
+    const result = calculateResidenceTax(450_001, 0, calculateDependentDeductions([]))
+    expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should be non-taxable for person with 1 dependent (spouse) with income <= 1,010,000', () => {
+    // Limit = 350k * (1+1) + 100k + 210k = 700k + 310k = 1,010,000
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const dependents = calculateDependentDeductions([spouse])
+    
+    const result = calculateResidenceTax(1_010_000, 0, dependents)
+    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should be taxable for person with 1 dependent (spouse) with income > 1,010,000', () => {
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const dependents = calculateDependentDeductions([spouse])
+    
+    const result = calculateResidenceTax(1_010_001, 0, dependents)
+    expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+  
+  it('should count under 16 dependent for non-taxable limit', () => {
+    // Limit = 350k * (1+1) + 100k + 210k = 1,010,000
+    const child: Dependent = {
+      id: '1',
+      relationship: 'child',
+      ageCategory: 'under16',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const dependents = calculateDependentDeductions([child])
+    
+    const result = calculateResidenceTax(1_010_000, 0, dependents)
+    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should be non-taxable for person with spouse and under 16 dependent (2 dependents) with income <= 1,360,000', () => {
+    // Limit = 350k * (2+1) + 100k + 210k = 1,050k + 310k = 1,360,000
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const child: Dependent = {
+      id: '2',
+      relationship: 'child',
+      ageCategory: 'under16',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const dependents = calculateDependentDeductions([spouse, child])
+    
+    const result = calculateResidenceTax(1_360_000, 0, dependents)
+    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should be taxable for person with spouse and under 16 dependent (2 dependents) with income > 1,360,000', () => {
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const child: Dependent = {
+      id: '2',
+      relationship: 'child',
+      ageCategory: 'under16',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const dependents = calculateDependentDeductions([spouse, child])
+    
+    const result = calculateResidenceTax(1_360_001, 0, dependents)
+    expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should NOT count spouse with income > 580,000 (Spouse Special Deduction) for non-taxable limit', () => {
+    // Spouse with 1,000,000 income qualifies for Spouse Special Deduction but is NOT a "Same Livelihood Spouse"
+    // So qualifiedDependentsCount should be 0.
+    // Limit for single person = 450,000
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 1_000_000 },
+    }
+    const dependents = calculateDependentDeductions([spouse])
+    
+    // If spouse counted: Limit would be 350k*(1+1)+310k = 1,010,000 -> 500,000 would be non-taxable
+    // If spouse NOT counted: Limit is 450,000 -> 500,000 is taxable
+    
+    const result = calculateResidenceTax(500_000, 0, dependents)
+    expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should count under 16 dependent even though deduction amount is 0', () => {
+    // Under 16 dependent has 0 deduction, but counts for non-taxable limit
+    // Limit = 350k*(1+1)+310k = 1,010,000
+    const child: Dependent = {
+      id: '1',
+      relationship: 'child',
+      ageCategory: 'under16',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const dependents = calculateDependentDeductions([child])
+    
+    // Verify deduction is actually 0 first
+    expect(dependents.residenceTax.dependentDeduction).toBe(0)
+    
+    // Should be non-taxable at 1,000,000
+    const result = calculateResidenceTax(1_000_000, 0, dependents)
+    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
+  })
+
+  it('should apply only per capita tax when income is between Per Capita Limit and Income Portion Limit', () => {
+    // 1 dependent (spouse)
+    // Per Capita Limit: 350k*(2)+100k+210k = 1,010,000
+    // Income Levy Limit: 350k*(2)+100k+320k = 1,120,000
+    
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+    const dependents = calculateDependentDeductions([spouse])
+    
+    // Test income: 1,050,000 (Between 1,010,000 and 1,120,000)
+    const result = calculateResidenceTax(1_050_000, 0, dependents)
+    
+    // Should have 0 income tax
+    expect(result.city.cityIncomeTax).toBe(0)
+    expect(result.prefecture.prefecturalIncomeTax).toBe(0)
+    
+    // But should have per capita tax (5,000 yen)
+    expect(result.perCapitaTax).toBe(5_000)
+    expect(result.totalResidenceTax).toBe(5_000)
+    
+    // And should NOT be the non-taxable object
+    expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL)
   })
 })
