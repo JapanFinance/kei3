@@ -15,7 +15,7 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
-    numberOfDependents: 0,
+    dependents: [],
     showDetailedInput: false,
   };
 
@@ -307,7 +307,7 @@ describe('Dependent Coverage UI Behavior', () => {
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
-    numberOfDependents: 0,
+    dependents: [],
     showDetailedInput: false,
   };
 
