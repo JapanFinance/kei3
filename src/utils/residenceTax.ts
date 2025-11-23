@@ -238,11 +238,9 @@ const STATUTORY_DEDUCTION_DIFFERENCES = {
  * @see https://www.town.hinode.tokyo.jp/0000000519.html
  */
 function calculateStatutoryPersonalDeductionDifference(deductions: DependentDeductionResults, taxpayerNetIncome: number): number {
-    let totalDifference = 0;
-
-    if (taxpayerNetIncome <= 25_000_000) {
-        totalDifference += 50_000;
-    }
+    // Basic deduction difference is 50,000 yen regardless of income
+    // Although adjustment credit is 0 for income > 25M, the statutory difference itself is defined.
+    let totalDifference = 50_000;
     
     // Calculate the statutory difference for each deduction in the breakdown
     for (const breakdown of deductions.breakdown) {
