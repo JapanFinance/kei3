@@ -785,7 +785,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onClose={handleCloseDependentsModal}
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
-        taxpayerNetIncome={calculateNetEmploymentIncome(inputs.annualIncome)}
+        taxpayerNetIncome={inputs.isEmploymentIncome ? calculateNetEmploymentIncome(inputs.annualIncome) : inputs.annualIncome}
       />
     </Box>
   );
