@@ -3,7 +3,7 @@ import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
 } from '../utils/dependentDeductions'
-import type { Dependent } from '../types/dependents'
+import { DEDUCTION_TYPES, type Dependent } from '../types/dependents'
 
 // --- Helper functions to test internal logic via public API ---
 
@@ -1381,5 +1381,59 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
       expect(result2.nationalTax.dependentDeduction).toBe(630_000)
       expect(result3.nationalTax.dependentDeduction).toBe(630_000)
     })
+  })
+})
+
+describe('Dependent Deductions - Under 16', () => {
+  it('should not provide dependent deduction for child under 16', () => {
+    const dependent: Dependent = {
+      id: '1',
+      relationship: 'child',
+      ageCategory: 'under16',
+      isCohabiting: true,
+      disability: 'none',
+      income: {
+        grossEmploymentIncome: 0,
+        otherNetIncome: 0,
+      },
+    }
+
+    const result = calculateDependentDeductions([dependent], 5000000)
+    
+    // Should have 0 deduction
+    expect(result.nationalTax.dependentDeduction).toBe(0)
+    expect(result.residenceTax.dependentDeduction).toBe(0)
+    
+    // Should be marked as NOT_ELIGIBLE in breakdown
+    expect(result.breakdown).toHaveLength(1)
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE)
+  })
+
+  it('should provide disability deduction for disabled child under 16', () => {
+    const dependent: Dependent = {
+      id: '1',
+      relationship: 'child',
+      ageCategory: 'under16',
+      isCohabiting: true,
+      disability: 'regular',
+      income: {
+        grossEmploymentIncome: 0,
+        otherNetIncome: 0,
+      },
+    }
+
+    const result = calculateDependentDeductions([dependent], 5000000)
+    
+    // Should have disability deduction
+    expect(result.nationalTax.disabilityDeduction).toBeGreaterThan(0)
+    expect(result.residenceTax.disabilityDeduction).toBeGreaterThan(0)
+    
+    // Should NOT have dependent deduction
+    expect(result.nationalTax.dependentDeduction).toBe(0)
+    expect(result.residenceTax.dependentDeduction).toBe(0)
+    
+    // Breakdown should show Disability
+    expect(result.breakdown).toHaveLength(1)
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.DISABILITY)
   })
 })

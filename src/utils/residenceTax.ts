@@ -2,6 +2,7 @@ import type { FurusatoNozeiDetails, ResidenceTaxDetails } from "../types/tax";
 import { calculateNationalIncomeTax } from "./taxCalculations";
 import type { DependentDeductionResults } from "../types/dependents";
 import { DEDUCTION_TYPES } from "../types/dependents";
+import { calculateDependentTotalNetIncome, DEPENDENT_INCOME_THRESHOLDS } from './dependentDeductions';
 
 /**
  * Calculates the basic deduction (基礎控除) for residence tax based on income
@@ -23,12 +24,16 @@ export const calculateResidenceTaxBasicDeduction = (netIncome: number): number =
     }
 }
 
-// 非課税制度
+const RESIDENCE_TAX_RATE = 0.1;
+const CITY_TAX_PROPORTION = 0.6;
+const PREFECTURAL_TAX_PROPORTION = 0.4;
+
+// 非課税制度 - 所得割・均等割とも非課税
 export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
     taxableIncome: 0, // 市町村民税の課税標準額
-    cityProportion: 0.6,
-    prefecturalProportion: 0.4,
-    residenceTaxRate: 0.1,
+    cityProportion: CITY_TAX_PROPORTION,
+    prefecturalProportion: PREFECTURAL_TAX_PROPORTION,
+    residenceTaxRate: RESIDENCE_TAX_RATE,
     basicDeduction: 0,
     personalDeductionDifference: 0,
     city: {
@@ -48,6 +53,12 @@ export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
     totalResidenceTax: 0,
 }
 
+// Per capita tax breakdown
+const cityPerCapitaTax = 3000; // Municipal per capita tax
+const prefecturalPerCapitaTax = 1000;
+const forestEnvironmentTax = 1000; // 森林環境税
+const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironmentTax;
+
 /**
  * Calculates residence tax (住民税) based on net income and deductions
  * Rate: 10% (6% municipal tax + 4% prefectural tax) of taxable income
@@ -55,9 +66,9 @@ export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
  * The details vary by municipality, but most deviate little from this calculation.
  * https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju
  * 
- * @param netIncome - Net income after employment income deduction (used for both taxable income calculation and taxpayer income for statutory differences)
+ * @param netIncome - Net income
  * @param nonBasicDeductions - Social insurance + iDeCo deductions
- * @param dependentDeductions - Full dependent deduction results (used for adjustment credit calculation per Local Tax Act Article 314-6)
+ * @param dependentDeductions - Full dependent deduction results
  * @param taxCredit - Tax credit amount
  */
 export const calculateResidenceTax = (
@@ -66,12 +77,40 @@ export const calculateResidenceTax = (
     dependentDeductions: DependentDeductionResults,
     taxCredit: number = 0
 ): ResidenceTaxDetails => {
-    if (netIncome <= 450_000) {
+    const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions);
+    const { perCapitaLimit, incomeBasedLimit } = getResidenceTaxExemptionLimits(qualifiedDependentsCount);
+
+    if (netIncome <= perCapitaLimit) {
         return NON_TAXABLE_RESIDENCE_TAX_DETAIL;
     }
-    const residenceTaxRate = 0.1;
-    const cityProportion = 0.6;
-    const prefecturalProportion = 0.4;
+
+    // If income is below Income Based Limit, Income portion is 0.
+    if (netIncome <= incomeBasedLimit) {
+         return {
+            taxableIncome: 0,
+            cityProportion: CITY_TAX_PROPORTION,
+            prefecturalProportion: PREFECTURAL_TAX_PROPORTION,
+            residenceTaxRate: RESIDENCE_TAX_RATE,
+            basicDeduction: calculateResidenceTaxBasicDeduction(netIncome),
+            personalDeductionDifference: 0,
+            city: {
+                cityTaxableIncome: 0,
+                cityAdjustmentCredit: 0,
+                cityIncomeTax: 0,
+                cityPerCapitaTax,
+            },
+            prefecture: {
+                prefecturalTaxableIncome: 0,
+                prefecturalAdjustmentCredit: 0,
+                prefecturalIncomeTax: 0,
+                prefecturalPerCapitaTax,
+            },
+            perCapitaTax,
+            forestEnvironmentTax,
+            totalResidenceTax: perCapitaTax,
+        };
+    }
+
     const basicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
     
     // Calculate taxable income using residence tax deductions
@@ -82,33 +121,27 @@ export const calculateResidenceTax = (
 
     // 調整控除額 (adjustment credit)
     const adjustmentCredit = calculateAdjustmentCredit(netIncome, taxableIncome, personalDeductionDifference);
-    const cityAdjustmentCredit = adjustmentCredit * cityProportion;
-    const prefecturalAdjustmentCredit = adjustmentCredit * prefecturalProportion;
+    const cityAdjustmentCredit = adjustmentCredit * CITY_TAX_PROPORTION;
+    const prefecturalAdjustmentCredit = adjustmentCredit * PREFECTURAL_TAX_PROPORTION;
 
-    const cityIncomeTax = Math.floor(((taxableIncome * 0.06) - cityAdjustmentCredit - (taxCredit * cityProportion)) / 100) * 100;
-    const prefecturalIncomeTax = Math.floor(((taxableIncome * 0.04) - prefecturalAdjustmentCredit - (taxCredit * prefecturalProportion)) / 100) * 100;
+    const cityIncomeTax = Math.floor(Math.max(0, (taxableIncome * 0.06) - cityAdjustmentCredit - (taxCredit * CITY_TAX_PROPORTION)) / 100) * 100;
+    const prefecturalIncomeTax = Math.floor(Math.max(0, (taxableIncome * 0.04) - prefecturalAdjustmentCredit - (taxCredit * PREFECTURAL_TAX_PROPORTION)) / 100) * 100;
     
-    // Per capita tax breakdown
-    const cityPerCapitaTax = 3000; // Municipal per capita tax
-    const prefecturalPerCapitaTax = 1000; // Prefectural per capita tax  
-    const forestEnvironmentTax = 1000; // Forest environment tax (森林環境税)
-    const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironmentTax; // Total per capita tax
-
     return {
         taxableIncome,
-        cityProportion,
-        prefecturalProportion,
-        residenceTaxRate,
+        cityProportion: CITY_TAX_PROPORTION,
+        prefecturalProportion: PREFECTURAL_TAX_PROPORTION,
+        residenceTaxRate: RESIDENCE_TAX_RATE,
         basicDeduction,
         personalDeductionDifference,
         city: {
-            cityTaxableIncome: taxableIncome * cityProportion,
+            cityTaxableIncome: taxableIncome * CITY_TAX_PROPORTION,
             cityAdjustmentCredit,
             cityIncomeTax,
             cityPerCapitaTax,
         },
         prefecture: {
-            prefecturalTaxableIncome: taxableIncome * prefecturalProportion,
+            prefecturalTaxableIncome: taxableIncome * PREFECTURAL_TAX_PROPORTION,
             prefecturalAdjustmentCredit,
             prefecturalIncomeTax,
             prefecturalPerCapitaTax,
@@ -116,6 +149,58 @@ export const calculateResidenceTax = (
         perCapitaTax,
         forestEnvironmentTax,
         totalResidenceTax: cityIncomeTax + prefecturalIncomeTax + perCapitaTax,
+    };
+}
+
+/**
+ * Counts the number of qualified dependents for residence tax non-taxable limit calculations.
+ * Includes spouse and other dependents with total net income <= threshold.
+ * Note: Includes dependents under 16.
+ * 扶養親族は、年齢16歳未満の者及び地方税法第314条の2第1項第11号に規定する控除対象扶養親族に限ります。
+ * @see https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
+ */
+function countQualifiedDependents(dependentDeductions: DependentDeductionResults): number {
+    const uniqueDependents = new Map();
+    dependentDeductions.breakdown.forEach(b => {
+        uniqueDependents.set(b.dependent.id, b.dependent);
+    });
+    
+    let qualifiedDependentsCount = 0;
+    uniqueDependents.forEach((dependent) => {
+        const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+        if (totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX) {
+            qualifiedDependentsCount++;
+        }
+    });
+    return qualifiedDependentsCount;
+}
+
+/**
+ * Calculates the non-taxable limits for residence tax (Tokyo 23 wards standard).
+ * 
+ * There are two limits:
+ * 1. Per Capita Exempt Limit (所得割・均等割とも非課税): Below this, no residence tax at all.
+ * 2. Income Exempt Limit (所得割が非課税): Below this, no income-based residence tax but per capita residence tax applies.
+ * 
+ * @param qualifiedDependentsCount Number of {@link countQualifiedDependents qualified dependents}
+ * @returns Object containing both net income limits
+ * @see https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/hikazeikijun/juuminzei-hikazei.html
+ */
+function getResidenceTaxExemptionLimits(qualifiedDependentsCount: number): { perCapitaLimit: number, incomeBasedLimit: number } {
+    if (qualifiedDependentsCount === 0) {
+        return {
+            perCapitaLimit: 450_000,
+            incomeBasedLimit: 450_000
+        };
+    }
+
+    // With dependents: 350,000 * (dependents + 1) + 100,000 + add-on
+    // Note: (dependents + 1) accounts for the taxpayer themselves
+    const baseAmount = 350_000 * (qualifiedDependentsCount + 1) + 100_000;
+    
+    return {
+        perCapitaLimit: baseAmount + 210_000,
+        incomeBasedLimit: baseAmount + 320_000
     };
 }
 

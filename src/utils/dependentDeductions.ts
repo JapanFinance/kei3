@@ -37,7 +37,7 @@ import { calculateNetEmploymentIncome } from './taxCalculations';
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm - 配偶者特別控除
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm - 特定親族特別控除
  */
-const DEPENDENT_INCOME_THRESHOLDS = {
+export const DEPENDENT_INCOME_THRESHOLDS = {
   /**
    * Maximum total net income for dependent deduction eligibility (扶養控除)
    * Changed from 480,000 yen to 580,000 yen in 2025 tax reform
@@ -87,6 +87,14 @@ function isEligibleForDependentDeduction(dependent: Dependent): boolean {
     // Spouse is a special case because of the spouse deduction and spouse special deduction.
     return false;
   }
+
+  // Dependents under 16 are not eligible for the dependent deduction (扶養控除)
+  // They are eligible for disability deduction if applicable, but that is handled separately.
+  // Note: Child Allowance (児童手当) replaces the tax deduction for this age group.
+  if ((dependent as OtherDependent).ageCategory === 'under16') {
+    return false;
+  }
+
   const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
   return totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX;
 }
