@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2025-12-06
+
+### New
+
+- Added support for dependent-related deductions. You can now add information about a spouse and other dependents. Depending on applicable deductions, this will affect your income tax and residence tax calculations.
+
 ## 2025-11-07
 
 ### New
