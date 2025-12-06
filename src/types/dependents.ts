@@ -147,7 +147,7 @@ export interface RelationshipInfo {
 export const RELATIONSHIPS: RelationshipInfo[] = [
   { value: 'spouse', label: 'Spouse' },
   { value: 'child', label: 'Child' },
-  { value: 'parent', label: 'Parent' },
+  { value: 'parent', label: 'Parent or Grandparent' },
   { value: 'other', label: 'Other Relative' },
 ];
 

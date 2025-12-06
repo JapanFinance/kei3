@@ -25,7 +25,6 @@ import {
   DISABILITY_LEVELS,
   DEPENDENT_AGE_CATEGORIES,
 } from '../../../types/dependents';
-import { CURRENT_TAX_YEAR } from '../../../types/tax';
 import { InfoTooltip } from '../../ui/InfoTooltip';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { formatJPY } from '../../../utils/formatters';
@@ -300,7 +299,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               </MenuItem>
             ))}
           </Select>
-          <FormHelperText>On December 31, {CURRENT_TAX_YEAR}</FormHelperText>
+          <FormHelperText>On December 31</FormHelperText>
         </FormControl>
         
         <FormControlLabel

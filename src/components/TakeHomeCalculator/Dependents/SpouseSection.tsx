@@ -269,6 +269,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                   </MenuItem>
                 ))}
               </Select>
+              <FormHelperText>On December 31</FormHelperText>
             </FormControl>
             
             <FormControlLabel
