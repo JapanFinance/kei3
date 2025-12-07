@@ -689,7 +689,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               }}
             >
               Dependents
-              <InfoTooltip title="Add spouse and dependents to calculate applicable tax deductions. Click to manage dependents." />
+              <InfoTooltip title="Add spouse and dependents to calculate applicable tax deductions." />
             </Typography>
             <Badge 
               badgeContent={inputs.dependents.length} 
