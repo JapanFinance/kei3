@@ -1,8 +1,8 @@
 import type { TakeHomeResults } from '../types/tax';
 import { EMPLOYEES_PENSION_PREMIUM } from './pensionCalculator';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
-import { generateHealthInsurancePremiumTable } from '../data/employeesHealthInsurance/providerRates';
-import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import { generateHealthInsurancePremiumTable, generatePremiumTableFromRates } from '../data/employeesHealthInsurance/providerRates';
+import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 
 export interface CapStatus {
   healthInsuranceCapped: boolean;
@@ -107,7 +107,23 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     if (!results.healthInsuranceProvider) {
       return { capped: false };
     }
-    const premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.region);
+
+    let premiumTable;
+    if (results.healthInsuranceProvider === CUSTOM_PROVIDER_ID) {
+      if (results.customHealthInsuranceRate === undefined || results.customLongTermCareRate === undefined) {
+        return { capped: false };
+      }
+      const customRates = {
+        employeeHealthInsuranceRate: results.customHealthInsuranceRate / 100,
+        employeeLongTermCareRate: results.customLongTermCareRate / 100,
+        employerHealthInsuranceRate: 0,
+        employerLongTermCareRate: 0
+      };
+      premiumTable = generatePremiumTableFromRates(customRates);
+    } else {
+      premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.region);
+    }
+
     if (!premiumTable || premiumTable.length === 0) {
       return { capped: false };
     }

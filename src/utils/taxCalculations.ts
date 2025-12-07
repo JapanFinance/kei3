@@ -290,6 +290,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         healthInsuranceProvider: inputs.healthInsuranceProvider,
         region: inputs.region,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
+        customHealthInsuranceRate: inputs.customHealthInsuranceRate,
+        customLongTermCareRate: inputs.customLongTermCareRate,
         // Dependent deductions (always include, even if zero)
         ...(inputs.dependents.length > 0 && {
             dependentDeductions: dependentDeductions
