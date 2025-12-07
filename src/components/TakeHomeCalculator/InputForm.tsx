@@ -722,6 +722,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                       shiftStep={1.0}
                       prefix=""
                       suffix="%"
+                      max={100}
                       sx={sharedInputSx}
                     />
                   </FormControl>
@@ -739,6 +740,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                       shiftStep={1.0}
                       prefix=""
                       suffix="%"
+                      max={100}
                       sx={sharedInputSx}
                     />
                   </FormControl>

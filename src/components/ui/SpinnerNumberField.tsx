@@ -22,6 +22,8 @@ interface SpinnerNumberFieldProps {
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   prefix?: string;
   suffix?: string;
+  min?: number;
+  max?: number;
 }
 
 export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
@@ -37,18 +39,24 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   inputProps,
   prefix = "¥",
   suffix = "",
+  min = 0,
+  max,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const handleChange = (newValue: number) => {
+    let clampedValue = newValue;
+    if (typeof min === 'number') clampedValue = Math.max(min, clampedValue);
+    if (typeof max === 'number') clampedValue = Math.min(max, clampedValue);
+
     if (onChange) {
-      onChange(newValue);
+      onChange(clampedValue);
     } else if (onInputChange && name) {
       const event = {
         target: {
           name,
-          value: newValue,
+          value: clampedValue,
           type: 'number'
         }
       } as unknown as React.ChangeEvent<HTMLInputElement>;
@@ -61,7 +69,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   };
 
   const handleDecrement = () => {
-    handleChange(Math.max(0, value - step));
+    handleChange(value - step);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -70,7 +78,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       const currentStep = e.shiftKey ? shiftStep : step;
       const newValue = e.key === 'ArrowUp' 
         ? value + currentStep 
-        : Math.max(0, value - currentStep);
+        : value - currentStep;
       handleChange(newValue);
     }
   };
@@ -84,11 +92,18 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       onValueChange={(values) => {
         handleChange(values.floatValue || 0);
       }}
+      isAllowed={(values) => {
+        const { floatValue } = values;
+        if (floatValue === undefined) return true;
+        if (typeof min === 'number' && floatValue < min) return false;
+        if (typeof max === 'number' && floatValue > max) return false;
+        return true;
+      }}
       onKeyDown={handleKeyDown}
       thousandSeparator=","
       prefix={prefix}
       suffix={suffix}
-      allowNegative={false}
+      allowNegative={min < 0}
       {...(label && { label })}
       size="small"
       slotProps={{
