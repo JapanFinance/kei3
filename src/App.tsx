@@ -35,6 +35,8 @@ function App({ mode, toggleColorMode }: AppProps) {
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
     dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
   }
 
   // State for form inputs
@@ -232,6 +234,8 @@ function App({ mode, toggleColorMode }: AppProps) {
           dcPlanContributions={inputs.dcPlanContributions}
           dependents={inputs.dependents}
           customEHIRates={inputs.customEHIRates}
+          manualSocialInsuranceEntry={inputs.manualSocialInsuranceEntry}
+          manualSocialInsuranceAmount={inputs.manualSocialInsuranceAmount}
         />
       </Suspense>
 

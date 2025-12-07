@@ -52,7 +52,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo", // Default for Kyokai Kenpo in tests
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -73,7 +73,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(22_300)
@@ -116,7 +116,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(16_345_400) // 50M - 1.95M (employment deduction) - 1.815194M (social insurance) - 0 (basic deduction) = 46.234806M, rounded to 46.234M, then 45% - 4.796M = 16.0093M, + 2.1% = 16.345495M, rounded down to 16.3454M
@@ -138,7 +138,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -156,7 +156,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -174,7 +174,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo", // For NHI
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(302_700)
@@ -194,7 +194,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo", // For NHI
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
     };
     const result = calculateTaxes(inputs);
     
@@ -447,6 +447,8 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dependents: [], 
       showDetailedInput: false, 
       dcPlanContributions: 0, 
+      manualSocialInsuranceEntry: false, 
+      manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     
@@ -477,6 +479,8 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dependents: [], 
       showDetailedInput: false, 
       dcPlanContributions: 0, 
+      manualSocialInsuranceEntry: false, 
+      manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     
@@ -501,6 +505,8 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dependents: [], 
       showDetailedInput: false, 
       dcPlanContributions: 0, 
+      manualSocialInsuranceEntry: false, 
+      manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     
@@ -519,6 +525,8 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dependents: [],
       showDetailedInput: false,
       dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false, 
+      manualSocialInsuranceAmount: 0,
       customEHIRates: {
         healthInsuranceRate: 5, // 5%
         longTermCareRate: 1, // 1%

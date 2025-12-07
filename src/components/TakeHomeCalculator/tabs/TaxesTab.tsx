@@ -210,7 +210,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
 
-  const totalSocialInsurance = results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+  const totalSocialInsurance = results.socialInsuranceOverride ?? (results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0));
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome = (results.netEmploymentIncome ?? results.annualIncome) - totalSocialInsurance - (results.dcPlanContributions ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
