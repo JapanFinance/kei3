@@ -314,8 +314,8 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     if (provider === CUSTOM_PROVIDER_ID) {
       // Generate table for custom provider using input rates
       const customRates = {
-        employeeHealthInsuranceRate: inputs.customHealthInsuranceRate / 100,
-        employeeLongTermCareRate: inputs.customLongTermCareRate / 100,
+        employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
+        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100,
         // Employer rates not needed for this table as we only show employee portion
       };
       

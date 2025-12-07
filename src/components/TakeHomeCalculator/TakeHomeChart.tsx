@@ -17,7 +17,7 @@ import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import type { ChartRange } from '../../types/tax';
+import type { ChartRange, CustomEmployeesHealthInsuranceRates } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin } from '../../utils/chartConfig';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
@@ -101,8 +101,7 @@ interface TakeHomeChartProps {
   region: string;
   dcPlanContributions: number;
   dependents: Dependent[];
-  customHealthInsuranceRate: number;
-  customLongTermCareRate: number;
+  customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   className?: string;
 }
 
@@ -179,8 +178,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   region,
   dcPlanContributions,
   dependents,
-  customHealthInsuranceRate,
-  customLongTermCareRate,
+  customEHIRates,
   className = ''
 }) => {
   // Track whether the user has manually adjusted the range
@@ -245,10 +243,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       region,
       dcPlanContributions,
       dependents,
-      customHealthInsuranceRate,
-      customLongTermCareRate
+      customEHIRates
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customHealthInsuranceRate, customLongTermCareRate]
+    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates]
   );
 
   // Get chart options using the utility function
@@ -282,8 +279,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     dcPlanContributions,
                     dependents,
                     showDetailedInput: false,
-                    customHealthInsuranceRate,
-                    customLongTermCareRate,
+                    customEHIRates,
                   };
                   
                   const taxResults = calculateTaxes(taxInputs);
@@ -307,7 +303,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customHealthInsuranceRate, customLongTermCareRate]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates]
   );
 
   // Use media query to determine if we should show minor marks

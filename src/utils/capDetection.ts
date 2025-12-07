@@ -110,12 +110,12 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
 
     let premiumTable;
     if (results.healthInsuranceProvider === CUSTOM_PROVIDER_ID) {
-      if (results.customHealthInsuranceRate === undefined || results.customLongTermCareRate === undefined) {
+      if (!results.customEHIRates) {
         return { capped: false };
       }
       const customRates = {
-        employeeHealthInsuranceRate: results.customHealthInsuranceRate / 100,
-        employeeLongTermCareRate: results.customLongTermCareRate / 100,
+        employeeHealthInsuranceRate: results.customEHIRates.healthInsuranceRate / 100,
+        employeeLongTermCareRate: results.customEHIRates.longTermCareRate / 100,
         employerHealthInsuranceRate: 0,
         employerLongTermCareRate: 0
       };

@@ -87,6 +87,25 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
+  const handleCustomRateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
+    const { name, value } = e.target as { name: string; value: unknown };
+    const numValue = typeof value === 'number' ? value : parseFloat(value as string) || 0;
+    
+    const currentRates = inputs.customEHIRates || { healthInsuranceRate: 0, longTermCareRate: 0 };
+    
+    const newRates = {
+      ...currentRates,
+      [name === 'customHealthInsuranceRate' ? 'healthInsuranceRate' : 'longTermCareRate']: numValue
+    };
+
+    onInputChange({
+      target: {
+        name: 'customEHIRates',
+        value: newRates
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
   // Component-specific styles that can't be in the global CSS
   const styles = {
     slider: {
@@ -595,8 +614,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     <SpinnerNumberField
                       id="customHealthInsuranceRate"
                       name="customHealthInsuranceRate"
-                      value={inputs.customHealthInsuranceRate}
-                      onInputChange={onInputChange}
+                      value={inputs.customEHIRates?.healthInsuranceRate ?? 0}
+                      onInputChange={handleCustomRateChange}
                       label="Rate (%)"
                       step={0.1}
                       shiftStep={1.0}
@@ -614,8 +633,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     <SpinnerNumberField
                       id="customLongTermCareRate"
                       name="customLongTermCareRate"
-                      value={inputs.customLongTermCareRate}
-                      onInputChange={onInputChange}
+                      value={inputs.customEHIRates?.longTermCareRate ?? 0}
+                      onInputChange={handleCustomRateChange}
                       label="Rate (%)"
                       step={0.1}
                       shiftStep={1.0}

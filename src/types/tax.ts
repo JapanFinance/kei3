@@ -11,8 +11,12 @@ export interface TakeHomeInputs {
   dependents: Dependent[];
   dcPlanContributions: number;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
-  customHealthInsuranceRate: number;
-  customLongTermCareRate: number;
+  customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+}
+
+export interface CustomEmployeesHealthInsuranceRates {
+  healthInsuranceRate: number;
+  longTermCareRate: number;
 }
 
 export interface TakeHomeResults {
@@ -46,8 +50,7 @@ export interface TakeHomeResults {
   region: string;
   isSubjectToLongTermCarePremium: boolean;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
-  customHealthInsuranceRate?: number;
-  customLongTermCareRate?: number;
+  customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
 }
 
 export interface ResidenceTaxDetails {

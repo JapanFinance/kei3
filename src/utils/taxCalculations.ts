@@ -207,9 +207,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         inputs.isSubjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
         inputs.region,
-        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? {
-            healthRate: inputs.customHealthInsuranceRate,
-            ltcRate: inputs.customLongTermCareRate
+        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates ? {
+            healthRate: inputs.customEHIRates.healthInsuranceRate,
+            ltcRate: inputs.customEHIRates.longTermCareRate
         } : undefined
     );
 
@@ -290,8 +290,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         healthInsuranceProvider: inputs.healthInsuranceProvider,
         region: inputs.region,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
-        customHealthInsuranceRate: inputs.customHealthInsuranceRate,
-        customLongTermCareRate: inputs.customLongTermCareRate,
+        customEHIRates: inputs.customEHIRates,
         // Dependent deductions (always include, even if zero)
         ...(inputs.dependents.length > 0 && {
             dependentDeductions: dependentDeductions

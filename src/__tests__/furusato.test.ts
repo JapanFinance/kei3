@@ -60,8 +60,6 @@ describe('calculateFurusatoNozeiLimit', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
       dcPlanContributions: 240_000, // 20,000 yen per month
-      customHealthInsuranceRate: 0,
-      customLongTermCareRate: 0
     }).furusatoNozei;
 
     const fnWithoutDC = calculateFNForIncome(5_000_000);
@@ -82,7 +80,5 @@ function calculateFNForIncome(income: number) : FurusatoNozeiDetails {
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
     dcPlanContributions: 0,
-    customHealthInsuranceRate: 0,
-    customLongTermCareRate: 0
   }).furusatoNozei;
 }

@@ -17,8 +17,6 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
-    customHealthInsuranceRate: 0,
-    customLongTermCareRate: 0,
   };
 
   beforeEach(() => {
@@ -311,8 +309,6 @@ describe('Dependent Coverage UI Behavior', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
-    customHealthInsuranceRate: 0,
-    customLongTermCareRate: 0,
   };
 
   beforeEach(() => {
@@ -434,8 +430,10 @@ describe('Dependent Coverage UI Behavior', () => {
       expect(mockOnInputChange).toHaveBeenCalledWith(
         expect.objectContaining({
           target: expect.objectContaining({
-            name: 'customHealthInsuranceRate',
-            value: 5,
+            name: 'customEHIRates',
+            value: expect.objectContaining({
+              healthInsuranceRate: 5,
+            }),
           })
         })
       );
