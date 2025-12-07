@@ -35,8 +35,6 @@ function App({ mode, toggleColorMode }: AppProps) {
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
     dcPlanContributions: 0,
-    manualSocialInsuranceEntry: false,
-    manualSocialInsuranceAmount: 0,
     customHealthInsuranceRate: 0,
     customLongTermCareRate: 0
   }
@@ -235,8 +233,6 @@ function App({ mode, toggleColorMode }: AppProps) {
           region={inputs.region}
           dcPlanContributions={inputs.dcPlanContributions}
           dependents={inputs.dependents}
-          manualSocialInsuranceEntry={inputs.manualSocialInsuranceEntry}
-          manualSocialInsuranceAmount={inputs.manualSocialInsuranceAmount}
           customHealthInsuranceRate={inputs.customHealthInsuranceRate}
           customLongTermCareRate={inputs.customLongTermCareRate}
         />

@@ -10,9 +10,6 @@ export interface TakeHomeInputs {
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
   dcPlanContributions: number;
-  // Manual override for social insurance
-  manualSocialInsuranceEntry: boolean;
-  manualSocialInsuranceAmount: number;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
   customHealthInsuranceRate: number;
   customLongTermCareRate: number;
@@ -26,8 +23,6 @@ export interface TakeHomeResults {
   healthInsurance: number;
   pensionPayments: number;
   employmentInsurance?: number | undefined;
-  // Manual override result
-  socialInsuranceOverride?: number;
   takeHomeIncome: number;
   // Added detailed properties
   netEmploymentIncome?: number | undefined;

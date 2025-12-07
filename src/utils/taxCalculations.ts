@@ -193,56 +193,48 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     let socialInsuranceDeduction = 0;
     let nhiBreakdown = null;
 
-    if (inputs.manualSocialInsuranceEntry) {
-        socialInsuranceDeduction = inputs.manualSocialInsuranceAmount;
-        // Individual components are unknown/zeroed out for display
-        healthInsurance = 0;
-        pensionPayments = 0;
-        employmentInsurance = 0;
-    } else {
-        // For health insurance calculation, we need to use the appropriate income:
-        // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
-        // - National Health Insurance: uses net income (after employment income deduction if applicable)
-        //   This is because NHI premiums are based on taxable income, while employee health insurance
-        //   is based on standard monthly remuneration before deductions.
-        const incomeForHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID
-            ? netIncome
-            : inputs.annualIncome;
+    // For health insurance calculation, we need to use the appropriate income:
+    // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
+    // - National Health Insurance: uses net income (after employment income deduction if applicable)
+    //   This is because NHI premiums are based on taxable income, while employee health insurance
+    //   is based on standard monthly remuneration before deductions.
+    const incomeForHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID
+        ? netIncome
+        : inputs.annualIncome;
 
-        healthInsurance = calculateHealthInsurancePremium(
-            incomeForHealthInsurance,
+    healthInsurance = calculateHealthInsurancePremium(
+        incomeForHealthInsurance,
+        inputs.isSubjectToLongTermCarePremium,
+        inputs.healthInsuranceProvider,
+        inputs.region,
+        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? {
+            healthRate: inputs.customHealthInsuranceRate,
+            ltcRate: inputs.customLongTermCareRate
+        } : undefined
+    );
+
+    // Calculate NHI breakdown if National Health Insurance is selected
+    if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
+        // For NHI breakdown, also use net income
+        nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+            netIncome,
             inputs.isSubjectToLongTermCarePremium,
-            inputs.healthInsuranceProvider,
-            inputs.region,
-            inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? {
-                healthRate: inputs.customHealthInsuranceRate,
-                ltcRate: inputs.customLongTermCareRate
-            } : undefined
+            inputs.region as string
         );
-
-        // Calculate NHI breakdown if National Health Insurance is selected
-        if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
-            // For NHI breakdown, also use net income
-            nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-                netIncome,
-                inputs.isSubjectToLongTermCarePremium,
-                inputs.region as string
-            );
-        }
-
-        // Calculate pension based on health insurance type
-        // People on National Health Insurance are in National Pension system
-        // People on employee health insurance are in Employee Pension system
-        // People covered as dependents do not pay pension premiums
-        const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
-        pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
-            ? 0 
-            : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
-
-        employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
-
-        socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
     }
+
+    // Calculate pension based on health insurance type
+    // People on National Health Insurance are in National Pension system
+    // People on employee health insurance are in Employee Pension system
+    // People covered as dependents do not pay pension premiums
+    const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
+    pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
+        ? 0 
+        : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
+
+    employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
+
+    socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
 
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
@@ -279,7 +271,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         healthInsurance,
         pensionPayments,
         employmentInsurance,
-        ...(inputs.manualSocialInsuranceEntry ? { socialInsuranceOverride: inputs.manualSocialInsuranceAmount } : {}),
         takeHomeIncome,
         netEmploymentIncome: isEmploymentIncome ? netIncome : undefined,
         nationalIncomeTaxBasicDeduction,

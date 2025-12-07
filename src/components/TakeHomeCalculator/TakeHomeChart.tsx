@@ -101,8 +101,6 @@ interface TakeHomeChartProps {
   region: string;
   dcPlanContributions: number;
   dependents: Dependent[];
-  manualSocialInsuranceEntry: boolean;
-  manualSocialInsuranceAmount: number;
   customHealthInsuranceRate: number;
   customLongTermCareRate: number;
   className?: string;
@@ -181,8 +179,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   region,
   dcPlanContributions,
   dependents,
-  manualSocialInsuranceEntry,
-  manualSocialInsuranceAmount,
   customHealthInsuranceRate,
   customLongTermCareRate,
   className = ''
@@ -249,12 +245,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       region,
       dcPlanContributions,
       dependents,
-      manualSocialInsuranceEntry,
-      manualSocialInsuranceAmount,
       customHealthInsuranceRate,
       customLongTermCareRate
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, manualSocialInsuranceEntry, manualSocialInsuranceAmount, customHealthInsuranceRate, customLongTermCareRate]
+    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customHealthInsuranceRate, customLongTermCareRate]
   );
 
   // Get chart options using the utility function
@@ -288,8 +282,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     dcPlanContributions,
                     dependents,
                     showDetailedInput: false,
-                    manualSocialInsuranceEntry,
-                    manualSocialInsuranceAmount,
                     customHealthInsuranceRate,
                     customLongTermCareRate,
                   };
@@ -315,7 +307,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, manualSocialInsuranceEntry, manualSocialInsuranceAmount, customHealthInsuranceRate, customLongTermCareRate]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customHealthInsuranceRate, customLongTermCareRate]
   );
 
   // Use media query to determine if we should show minor marks

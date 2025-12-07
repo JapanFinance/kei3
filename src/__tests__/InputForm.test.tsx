@@ -17,8 +17,6 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
-    manualSocialInsuranceEntry: false,
-    manualSocialInsuranceAmount: 0,
     customHealthInsuranceRate: 0,
     customLongTermCareRate: 0,
   };
@@ -313,8 +311,6 @@ describe('Dependent Coverage UI Behavior', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
-    manualSocialInsuranceEntry: false,
-    manualSocialInsuranceAmount: 0,
     customHealthInsuranceRate: 0,
     customLongTermCareRate: 0,
   };

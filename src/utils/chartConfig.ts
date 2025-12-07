@@ -81,31 +81,7 @@ export const generateChartData = (
     return { result, caps };
   });
 
-  const datasets = [
-    {
-      label: 'Take-Home Pay',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.takeHomeIncome })),
-      backgroundColor: 'rgba(34, 139, 34, 0.7)',
-      yAxisID: 'y',
-      type: 'bar' as const,
-      stack: 'stack0',
-    },
-    {
-      label: 'Income Tax',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.nationalIncomeTax })),
-      backgroundColor: 'rgba(220, 20, 60, 0.7)',
-      yAxisID: 'y',
-      type: 'bar' as const,
-      stack: 'stack0',
-    },
-    {
-      label: 'Residence Tax',
-      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.residenceTax.totalResidenceTax })),
-      backgroundColor: 'rgba(30, 144, 255, 0.7)',
-      yAxisID: 'y',
-      type: 'bar' as const,
-      stack: 'stack0',
-    },
+  const socialInsuranceDatasets = [
     {
       label: 'Health Insurance',
       data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.healthInsurance })),
@@ -133,7 +109,35 @@ export const generateChartData = (
       yAxisID: 'y',
       type: 'bar' as const,
       stack: 'stack0',
-    }] : []),
+    }] : [])
+  ];
+
+  const datasets = [
+    {
+      label: 'Take-Home Pay',
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.takeHomeIncome })),
+      backgroundColor: 'rgba(34, 139, 34, 0.7)',
+      yAxisID: 'y',
+      type: 'bar' as const,
+      stack: 'stack0',
+    },
+    {
+      label: 'Income Tax',
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.nationalIncomeTax })),
+      backgroundColor: 'rgba(220, 20, 60, 0.7)',
+      yAxisID: 'y',
+      type: 'bar' as const,
+      stack: 'stack0',
+    },
+    {
+      label: 'Residence Tax',
+      data: resultsAndCaps.map(({ result }, i) => ({ x: incomePoints[i]!, y: result.residenceTax.totalResidenceTax })),
+      backgroundColor: 'rgba(30, 144, 255, 0.7)',
+      yAxisID: 'y',
+      type: 'bar' as const,
+      stack: 'stack0',
+    },
+    ...socialInsuranceDatasets,
     {
       label: 'Take-Home %',
       data: resultsAndCaps.map(({ result }, i) => ({ 

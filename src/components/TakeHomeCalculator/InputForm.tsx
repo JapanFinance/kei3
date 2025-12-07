@@ -531,46 +531,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
         {/* Social Insurance Configuration */}
         <Box sx={{ mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.2, sm: 0.5 } }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={inputs.manualSocialInsuranceEntry}
-                onChange={(e) => onInputChange({
-                  target: {
-                    name: 'manualSocialInsuranceEntry',
-                    checked: e.target.checked,
-                    type: 'checkbox'
-                  }
-                } as React.ChangeEvent<HTMLInputElement>)}
-                color="primary"
-                size="small"
-              />
-            }
-            label={
-              <Typography sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
-                Enter Social Insurance Manually
-              </Typography>
-            }
-          />
-          
-          {inputs.manualSocialInsuranceEntry ? (
-            <Box sx={{ mt: 1 }}>
-              <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
-                Total Social Insurance
-                <InfoTooltip title="Enter the total amount of social insurance premiums (Health Insurance, Pension, Employment Insurance) paid annually. This corresponds to the amount on your withholding slip (源泉徴収票) or tax return." />
-              </Typography>
-              <SpinnerNumberField
-                id="manualSocialInsuranceAmount"
-                name="manualSocialInsuranceAmount"
-                value={inputs.manualSocialInsuranceAmount}
-                onInputChange={onInputChange}
-                label="Total Amount"
-                step={1000}
-                shiftStep={10000}
-                sx={sharedInputSx}
-              />
-            </Box>
-          ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1 }}>
               <FormControl fullWidth>
                 <Typography
@@ -705,7 +665,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 </FormControl>
               )}
             </Box>
-          )}
         </Box>
 
         {/* iDeCo/Corporate DC Contributions */}
