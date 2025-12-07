@@ -64,12 +64,18 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
     }
   };
 
+  // Helper to avoid floating point errors (e.g. 0.1 + 0.2 = 0.30000000000000004)
+  const roundFloatingPoint = (result: number) => {
+    // Round to 10 decimal places to strip floating point artifacts
+    return Math.round(result * 1e10) / 1e10;
+  };
+
   const handleIncrement = () => {
-    handleChange(value + step);
+    handleChange(roundFloatingPoint(value + step));
   };
 
   const handleDecrement = () => {
-    handleChange(value - step);
+    handleChange(roundFloatingPoint(value - step));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -77,8 +83,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       e.preventDefault();
       const currentStep = e.shiftKey ? shiftStep : step;
       const newValue = e.key === 'ArrowUp' 
-        ? value + currentStep 
-        : value - currentStep;
+        ? roundFloatingPoint(value + currentStep) 
+        : roundFloatingPoint(value - currentStep);
       handleChange(newValue);
     }
   };
