@@ -9,16 +9,12 @@ import Slider from '@mui/material/Slider';
 import InputLabel from '@mui/material/InputLabel';
 import Switch from '@mui/material/Switch';
 import FormHelperText from '@mui/material/FormHelperText';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
 import { useTheme } from '@mui/material/styles';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PeopleIcon from '@mui/icons-material/People';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
@@ -44,58 +40,7 @@ interface TaxInputFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
 }
 
-interface AdvancedOptionsFieldsProps {
-  inputs: TakeHomeInputs;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
-  sharedInputSx: object;
-}
 
-function AdvancedOptionsFields({
-  inputs,
-  onInputChange,
-  sharedInputSx,
-}: AdvancedOptionsFieldsProps) {
-  return (
-    <Box sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: { xs: 1, sm: 1.5 },
-      width: '100%',
-    }}>
-      <FormControl fullWidth>
-        <Typography
-          gutterBottom
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '0.97rem',
-            fontWeight: 500,
-            mb: 0.2,
-            color: 'text.primary',
-          }}
-        >
-          <a
-            href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit', fontWeight: 500 }}
-          >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
-          <InfoTooltip title="Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation." />
-        </Typography>
-        <SpinnerNumberField
-          id="dcPlanContributions"
-          name="dcPlanContributions"
-          value={inputs.dcPlanContributions}
-          onInputChange={onInputChange}
-          label="Annual Contributions"
-          step={1_000}
-          shiftStep={10_000}
-          sx={sharedInputSx}
-        />
-      </FormControl>
-    </Box>
-  );
-}
 
 // National Health Insurance provider (used in both employment and non-employment scenarios)
 const nhiProvider = {
@@ -208,7 +153,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       justifyContent: 'center',
       gap: { xs: 2, sm: 3 },
       mt: { xs: 0.5, sm: 1 },
-      mb: { xs: 0.5, sm: 1 },
+      mb: { xs: 0.2, sm: 0.5 },
       width: '100%',
       flexWrap: 'wrap', // allow wrapping if truly needed
     },
@@ -223,36 +168,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         py: { xs: 0.2, sm: 0.4 },
         textAlign: 'right',
       }
-    },
-    accordion: {
-      mt: { xs: 1, sm: 2 },
-      bgcolor: 'background.paper',
-      boxShadow: 'none',
-      '&:before': { display: 'none' },
-      border: '1px solid',
-      borderColor: 'divider',
-      borderRadius: 1,
-      overflow: 'hidden',
-      display: isMobile ? 'block' : 'none', // Hide on desktop
-    },
-    accordionDetails: {
-      p: { xs: 1, sm: 1.5 },
-      pt: { xs: 1, sm: 2 },
-      display: 'flex',
-      flexDirection: 'column',
-      gap: { xs: 1, sm: 1.5 },
-    },
-    advancedOptionsDesktop: {
-      display: isMobile ? 'none' : 'block', // Show only on desktop
-      mt: { xs: 1, sm: 2 },
-    },
-    advancedOptionsSection: {
-      display: 'flex',
-      flexDirection: 'column', // stack inputs vertically
-      gap: { xs: 1, sm: 1.5 },
-      mt: { xs: 1, sm: 2 },
-      mb: { xs: 0, sm: 0 },
-      width: '100%',
     },
   };
   const handleSliderChange = (_: Event, value: number | number[]) => {
@@ -615,7 +530,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         </Box>
 
         {/* Social Insurance Configuration */}
-        <Box sx={{ mt: 2, mb: 1 }}>
+        <Box sx={{ mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.2, sm: 0.5 } }}>
           <FormControlLabel
             control={
               <Switch
@@ -639,7 +554,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           />
           
           {inputs.manualSocialInsuranceEntry ? (
-            <Box sx={{ mt: 1.5 }}>
+            <Box sx={{ mt: 1 }}>
               <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
                 Total Social Insurance
                 <InfoTooltip title="Enter the total amount of social insurance premiums (Health Insurance, Pension, Employment Insurance) paid annually. This corresponds to the amount on your withholding slip (源泉徴収票) or tax return." />
@@ -656,7 +571,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               />
             </Box>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1.5 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1 }}>
               <FormControl fullWidth>
                 <Typography
                   gutterBottom
@@ -692,7 +607,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     <MenuItem 
                       key={provider.id} 
                       value={provider.id}
-                      sx={provider.id === CUSTOM_PROVIDER_ID ? { fontStyle: 'italic' } : undefined}
+                      sx={provider.id === CUSTOM_PROVIDER_ID ? { fontStyle: 'italic' } : {}}
                     >
                       {provider.displayName}
                     </MenuItem>
@@ -793,55 +708,40 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           )}
         </Box>
 
-        {/* Advanced Options */}
-        {isMobile ? (
-          <Accordion
-            elevation={0}
-            sx={styles.accordion}
-            defaultExpanded={false}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="advanced-options-content"
-              id="advanced-options-header"
-            >
-              <Typography
-                sx={{
-                  fontSize: '1.08rem',
-                  fontWeight: 700,
-                  color: 'text.primary',
-                }}
-              >
-                Advanced Options
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={styles.accordionDetails}>
-              <AdvancedOptionsFields
-                inputs={inputs}
-                onInputChange={onInputChange}
-                sharedInputSx={sharedInputSx}
-              />
-            </AccordionDetails>
-          </Accordion>
-        ) : (
-          <Box sx={styles.advancedOptionsDesktop}>
+        {/* iDeCo/Corporate DC Contributions */}
+        <Box sx={{ mt: { xs: 0.5, sm: 1 } }}>
+          <FormControl fullWidth>
             <Typography
+              gutterBottom
               sx={{
-                fontSize: { xs: '1.08rem', sm: '1.15rem' },
-                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '0.97rem',
+                fontWeight: 500,
+                mb: 0.2,
                 color: 'text.primary',
-                mb: 1,
               }}
             >
-              Advanced Options
+              <a
+                href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', fontWeight: 500 }}
+              >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
+              <InfoTooltip title="Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation." />
             </Typography>
-            <AdvancedOptionsFields
-              inputs={inputs}
+            <SpinnerNumberField
+              id="dcPlanContributions"
+              name="dcPlanContributions"
+              value={inputs.dcPlanContributions}
               onInputChange={onInputChange}
-              sharedInputSx={sharedInputSx}
+              label="Annual Contributions"
+              step={1_000}
+              shiftStep={10_000}
+              sx={sharedInputSx}
             />
-          </Box>
-        )}
+          </FormControl>
+        </Box>
       </Box>
 
       <DependentsModal
