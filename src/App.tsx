@@ -33,7 +33,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     region: "Tokyo",
     showDetailedInput: false,
     healthInsuranceProvider: DEFAULT_PROVIDER,
-    numberOfDependents: 0,
+    dependents: [],
     dcPlanContributions: 0
   }
 
@@ -230,6 +230,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           healthInsuranceProvider={inputs.healthInsuranceProvider}
           region={inputs.region}
           dcPlanContributions={inputs.dcPlanContributions}
+          dependents={inputs.dependents}
         />
       </Suspense>
 

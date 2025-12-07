@@ -58,7 +58,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       region: 'Tokyo',
       showDetailedInput: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
-      numberOfDependents: 0,
+      dependents: [],
       dcPlanContributions: 240_000 // 20,000 yen per month
     }).furusatoNozei;
 
@@ -78,7 +78,7 @@ function calculateFNForIncome(income: number) : FurusatoNozeiDetails {
     region: 'Tokyo',
     showDetailedInput: false,
     healthInsuranceProvider: DEFAULT_PROVIDER,
-    numberOfDependents: 0,
+    dependents: [],
     dcPlanContributions: 0
   }).furusatoNozei;
 }

@@ -35,12 +35,15 @@ This is a single-page application built around a **reactive tax calculation engi
 ### Commands
 ```bash
 npm run dev          # Vite dev server (port 5173)
-npm test            # Vitest test runner with jsdom
 npm run build       # TypeScript compilation + Vite build
 npm run deploy      # Cloudflare Pages deployment via Wrangler
 ```
 
 ### Testing Strategy
+When running tests, do not use the command line directly.
+Instead, use the IDE's test runner for better integration.
+You get stuck when the command line is waiting for input if you run tests using the command line.
+
 - **Unit Tests**: Focus on calculation accuracy (see `__tests__/taxCalculations.test.ts`)
 - **Component Tests**: React Testing Library for UI components
 - **Test Environment**: Vitest with jsdom, setup in `test-setup.ts`
@@ -88,3 +91,18 @@ The codebase prioritizes calculation accuracy and transparency - all formulas in
 
 If the change is noteworthy, add an entry to the `CHANGELOG.md` summarizing the update for users.
 Entries have a specific format and are processed for displaying to users in the "What's New" dialog.
+
+## Critical Rule: Official Sources Only
+
+**NEVER infer, guess, or calculate tax amounts based on patterns or ratios.** Japanese tax law specifies exact amounts in legislation, not mathematical formulas.
+
+When implementing tax calculations:
+1. **Always reference official government sources** for exact amounts:
+   - National Tax (income tax): [NTA (National Tax Agency)](https://www.nta.go.jp/)
+   - Residence Tax: Local government websites (e.g., [Nerima City](https://www.city.nerima.tokyo.jp/))
+2. **Use lookup tables with exact legislated values**, not calculated ratios
+3. **Document the source URL** in code comments for each value
+4. **Verify against multiple official sources** when implementing new features
+5. **If official values cannot be found**, request clarification rather than guessing
+
+Example: Spouse deductions use specific amounts (38万, 26万, 13万) defined by law, not ratios like "2/3" or "1/3" of base amounts.

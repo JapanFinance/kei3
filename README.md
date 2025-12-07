@@ -64,3 +64,4 @@ npm run lint
 - `public/` - Static assets
 - `dist/` - Production build output
 - `tests/` - Test files
+

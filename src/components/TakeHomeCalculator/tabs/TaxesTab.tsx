@@ -6,7 +6,14 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import Collapse from '@mui/material/Collapse';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import type { TakeHomeResults } from '../../../types/tax';
+import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import DetailInfoTooltip from '../../ui/DetailInfoTooltip';
@@ -72,12 +79,12 @@ const EmploymentIncomeDeductionTooltip: React.FC = () => (
       <ul>
         <li>
           <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            No.1410 給与所得控除 - NTA
+            給与所得控除 - NTA
           </a>
         </li>
         <li>
           <a href="https://www.nta.go.jp/english/taxes/individual/12012.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            No.12012 Overview of deduction for employment income - NTA (English)
+            Overview of deduction for employment income - NTA (English)
           </a>
         </li>
         <li>
@@ -90,6 +97,109 @@ const EmploymentIncomeDeductionTooltip: React.FC = () => (
             令和７年度税制改正（いわゆる年収の壁への対応）の概要 - Yokohama City
           </a>
         </li>
+      </ul>
+    </Box>
+  </Box>
+);
+
+interface DependentDeductionTooltipProps {
+  deductions: DependentDeductionResults;
+}
+
+const NationalTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({ deductions }) => (
+  <Box sx={{ minWidth: { xs: 0, sm: 350 }, maxWidth: { xs: '100vw', sm: 500 } }}>
+    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+      Applied Deductions Breakdown
+    </Typography>
+    {deductions.breakdown.filter(b => b.nationalTaxAmount > 0).length > 0 ? (
+      <TableContainer component={Box} sx={{ mb: 2 }}>
+        <Table size="small" sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Dependent / Type</TableCell>
+              <TableCell align="right">Amount</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {deductions.breakdown.filter(b => b.nationalTaxAmount > 0).map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
+                </TableCell>
+                <TableCell align="right">{formatJPY(item.nationalTaxAmount)}</TableCell>
+              </TableRow>
+            ))}
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.nationalTax.total)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    ) : (
+      <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
+        No dependent deductions applied.
+      </Typography>
+    )}
+
+
+    
+    <Box sx={{ mt: 1 }}>
+      Official NTA Sources:
+      <ul>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>扶養控除 (Dependent Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>特定親族特別控除 (Specific Relative Special Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者控除 (Spouse Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者特別控除 (Spouse Special Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>障害者控除 (Disability Deduction)</a></li>
+      </ul>
+    </Box>
+  </Box>
+);
+
+const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({ deductions }) => (
+  <Box sx={{ minWidth: { xs: 0, sm: 350 }, maxWidth: { xs: '100vw', sm: 500 } }}>
+    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+      Applied Deductions Breakdown
+    </Typography>
+    {deductions.breakdown.filter(b => b.residenceTaxAmount > 0).length > 0 ? (
+      <TableContainer component={Box} sx={{ mb: 2 }}>
+        <Table size="small" sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Dependent / Type</TableCell>
+              <TableCell align="right">Amount</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {deductions.breakdown.filter(b => b.residenceTaxAmount > 0).map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
+                </TableCell>
+                <TableCell align="right">{formatJPY(item.residenceTaxAmount)}</TableCell>
+              </TableRow>
+            ))}
+            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.residenceTax.total)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    ) : (
+      <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
+        No dependent deductions applied.
+      </Typography>
+    )}
+
+
+    
+    <Box sx={{ mt: 1 }}>
+      Official Sources:
+      <ul>
+        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>人的控除 (Residence tax deduction amounts - Nerima City)</a></li>
+        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>令和7年度税制改正 (2025 Tax Reform - Nerima City)</a></li>
       </ul>
     </Box>
   </Box>
@@ -275,7 +385,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         </li>
                         <li>
                           <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                            No.1199 基礎控除
+                            基礎控除
                           </a>
                         </li>
                       </ul>
@@ -288,6 +398,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
           value={formatJPY(-(results.nationalIncomeTaxBasicDeduction ?? 0))} 
           type="detail" 
         />
+        
+        {results.dependentDeductions && results.dependentDeductions.nationalTax.total > 0 && (
+          <ResultRow 
+            label={
+              <span>
+                Dependent Deductions
+                <DetailInfoTooltip
+                  title="Dependent-Related Deductions (National Tax)"
+                  children={<NationalTaxDependentDeductionTooltip deductions={results.dependentDeductions} />}
+                />
+              </span>
+            }
+            value={formatJPY(-results.dependentDeductions.nationalTax.total)} 
+            type="detail" 
+          />
+        )}
         
         {results.taxableIncomeForNationalIncomeTax !== undefined && (
           <ResultRow 
@@ -315,7 +441,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         <ul>
                           <li>
                             <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              No.2260 所得税の税率 - NTA
+                              所得税の税率 - NTA
                             </a>
                           </li>
                         </ul>
@@ -413,7 +539,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                           <ul>
                             <li>
                               <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                                No.2260 所得税の税率 - NTA
+                                所得税の税率 - NTA
                               </a>
                             </li>
                           </ul>
@@ -455,7 +581,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         <ul>
                           <li>
                             <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                              No.2260 所得税の税率 - NTA
+                              所得税の税率 - NTA
                             </a>
                           </li>
                           <li>
@@ -497,7 +623,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                       <ul>
                         <li>
                           <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                            No.2260 所得税の税率 - NTA
+                            所得税の税率 - NTA
                           </a>
                         </li>
                       </ul>
@@ -608,6 +734,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
           type="detail" 
         />
         
+        {results.dependentDeductions && results.dependentDeductions.residenceTax.total > 0 && (
+          <ResultRow 
+            label={
+              <span>
+                Dependent Deductions
+                <DetailInfoTooltip
+                  title="Dependent-Related Deductions (Residence Tax)"
+                  children={<ResidenceTaxDependentDeductionTooltip deductions={results.dependentDeductions} />}
+                />
+              </span>
+            }
+            value={formatJPY(-results.dependentDeductions.residenceTax.total)} 
+            type="detail" 
+          />
+        )}
+        
         {results.taxableIncomeForResidenceTax !== undefined && (
           <ResultRow 
             label={
@@ -699,10 +841,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                         </tr>
                       </tbody>
                     </Box>
-                    <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85em' }}>
-                      Note: Small adjustment credits (調整控除) may apply to reduce the final amount.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85em' }}>
+                    <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85em' }}>
                       <strong>Rounding:</strong> The municipal and prefectural portions are each rounded down to the nearest 100 yen after applying any tax credits.
                     </Typography>
                     <Box sx={{ mt: 1 }}>
@@ -735,7 +874,71 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
             />
             {results.residenceTax.city.cityAdjustmentCredit > 0 && (
               <ResultRow 
-                label="Adjustment credit"
+                label={
+                  <span>
+                    Tax credit (municipal)
+                    <DetailInfoTooltip
+                      title="Municipal Tax Credits"
+                      children={
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Tax Credits Applied to Municipal Portion
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1, fontSize: '0.9em' }}>
+                            The following tax credits (税額控除) reduce the municipal portion of residence tax:
+                          </Typography>
+                          
+                          {/* Adjustment Credit */}
+                          <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              Adjustment Credit (調整控除)
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Personal deduction difference: ¥{results.residenceTax.personalDeductionDifference.toLocaleString()}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 0.5 }}>
+                              The statutory personal deduction difference (defined in <a href="https://laws.e-gov.go.jp/law/325AC0000000226#Mp-At_314_6" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Local Tax Act Article 314-6</a>) accounts for differences between national and residence tax deduction amounts.
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 1 }}>
+                              The adjustment credit is calculated:
+                            </Typography>
+                            
+                            <Box sx={{ pl: 1, borderLeft: '2px solid #eee', mb: 1 }}>
+                              <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                                If Taxable Income ≤ 2,000,000 JPY:
+                              </Typography>
+                              <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                                Min(Difference, Taxable Income) × 5%
+                              </Typography>
+                              
+                              <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                                If Taxable Income &gt; 2,000,000 JPY:
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                (Difference - (Taxable Income - 2,000,000)) × 5%
+                              </Typography>
+                              <Typography variant="caption" display="block" sx={{ color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
+                                (Minimum credit: 2,500 JPY)
+                              </Typography>
+                              
+                              <Typography variant="caption" display="block" sx={{ fontWeight: 600, color: 'error.main' }}>
+                                If Net Income &gt; 25,000,000 JPY, no credit.
+                              </Typography>
+                            </Box>
+
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Municipal portion (60%): ¥{results.residenceTax.city.cityAdjustmentCredit.toLocaleString()}
+                            </Typography>
+                          </Box>
+                          
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                            Total Municipal Tax Credit: ¥{results.residenceTax.city.cityAdjustmentCredit.toLocaleString()}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </span>
+                }
                 value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)} 
                 type="detail" 
                 sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
@@ -750,7 +953,71 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
             />
             {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
               <ResultRow 
-                label="Adjustment credit"
+                label={
+                  <span>
+                    Tax credit (prefectural)
+                    <DetailInfoTooltip
+                      title="Prefectural Tax Credits"
+                      children={
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Tax Credits Applied to Prefectural Portion
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1, fontSize: '0.9em' }}>
+                            The following tax credits (税額控除) reduce the prefectural portion of residence tax:
+                          </Typography>
+                          
+                          {/* Adjustment Credit */}
+                          <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                              Adjustment Credit (調整控除)
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Personal deduction difference: ¥{results.residenceTax.personalDeductionDifference.toLocaleString()}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 0.5 }}>
+                              The statutory personal deduction difference (defined in <a href="https://laws.e-gov.go.jp/law/325AC0000000226#Mp-At_314_6" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Local Tax Act Article 314-6</a>) accounts for differences between national and residence tax deduction amounts.
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 1 }}>
+                              The adjustment credit is calculated:
+                            </Typography>
+
+                            <Box sx={{ pl: 1, borderLeft: '2px solid #eee', mb: 1 }}>
+                              <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                                If Taxable Income ≤ 2,000,000 JPY:
+                              </Typography>
+                              <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                                Min(Difference, Taxable Income) × 5%
+                              </Typography>
+                              
+                              <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                                If Taxable Income &gt; 2,000,000 JPY:
+                              </Typography>
+                              <Typography variant="caption" display="block">
+                                (Difference - (Taxable Income - 2,000,000)) × 5%
+                              </Typography>
+                              <Typography variant="caption" display="block" sx={{ color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
+                                (Minimum credit: 2,500 JPY)
+                              </Typography>
+                              
+                              <Typography variant="caption" display="block" sx={{ fontWeight: 600, color: 'error.main' }}>
+                                If Net Income &gt; 25,000,000 JPY, no credit.
+                              </Typography>
+                            </Box>
+
+                            <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
+                              Prefectural portion (40%): ¥{results.residenceTax.prefecture.prefecturalAdjustmentCredit.toLocaleString()}
+                            </Typography>
+                          </Box>
+                          
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                            Total Prefectural Tax Credit: ¥{results.residenceTax.prefecture.prefecturalAdjustmentCredit.toLocaleString()}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </span>
+                }
                 value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)} 
                 type="detail" 
                 sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
@@ -769,10 +1036,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                 children={
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Per Capita Portion (均等割): Fixed Annual Amount
+                      Per Capita Portion (均等割): Fixed Amount
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A fixed amount paid by all residents regardless of income level, split between municipal, prefectural, and forest environment taxes.
+                      A fixed amount paid by all non-exempt residents, split among the following.
                     </Typography>
                     <Box
                       component="table"
@@ -837,29 +1104,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
           type="detail" 
         />
         
-        {/* Municipal/Prefectural breakdown for per capita portion */}
-        <Collapse in={showDetailedBreakdown}>
-          <Box sx={{ ml: 2, mb: 1 }}>
-            <ResultRow 
-              label="Municipal portion"
-              value={formatJPY(results.residenceTax.city.cityPerCapitaTax)} 
-              type="detail" 
-              sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
-            />
-            <ResultRow 
-              label="Prefectural portion"
-              value={formatJPY(results.residenceTax.prefecture.prefecturalPerCapitaTax)} 
-              type="detail" 
-              sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
-            />
-            <ResultRow 
-              label="Forest Environment Tax"
-              value={formatJPY(results.residenceTax.forestEnvironmentTax)} 
-              type="detail" 
-              sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
-            />
-          </Box>
-        </Collapse>
+
         
         <ResultRow 
           label="Total Residence Tax" 
