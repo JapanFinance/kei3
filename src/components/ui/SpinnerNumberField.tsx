@@ -20,6 +20,8 @@ interface SpinnerNumberFieldProps {
   shiftStep?: number;
   sx?: object;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+  prefix?: string;
+  suffix?: string;
 }
 
 export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
@@ -33,6 +35,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   shiftStep = 10000,
   sx,
   inputProps,
+  prefix = "¥",
+  suffix = "",
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -82,7 +86,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       }}
       onKeyDown={handleKeyDown}
       thousandSeparator=","
-      prefix="¥"
+      prefix={prefix}
+      suffix={suffix}
       allowNegative={false}
       {...(label && { label })}
       size="small"
