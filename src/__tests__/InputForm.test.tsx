@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import type { TakeHomeInputs } from '../types/tax';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
-import { getProviderDisplayName, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import { getProviderDisplayName, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 
 describe('TakeHomeInputForm - Available Providers Logic', () => {
   const mockOnInputChange = vi.fn();
@@ -387,6 +387,72 @@ describe('Dependent Coverage UI Behavior', () => {
 
     // Should show helper text mentioning the threshold
     expect(screen.getByText(/If you are covered as a dependent under employee health insurance, select "None"./i)).toBeInTheDocument();
+  });
+
+  describe('Custom Provider UI', () => {
+    it('should show custom rate fields when Custom Provider is selected', async () => {
+      const customInputs = { ...baseInputs, healthInsuranceProvider: CUSTOM_PROVIDER_ID };
+      
+      render(
+        <TakeHomeInputForm 
+          inputs={customInputs} 
+          onInputChange={mockOnInputChange} 
+        />
+      );
+
+      // Check if custom rate fields are visible
+      // There are two "Rate (%)" fields
+      const rateInputs = screen.getAllByLabelText('Rate (%)');
+      expect(rateInputs).toHaveLength(2);
+      
+      // Verify context labels exist
+      expect(screen.getByText('Health Insurance', { selector: 'p' })).toBeInTheDocument(); // Typography renders as p by default or I can check text content
+      expect(screen.getByText('Long-term Care', { selector: 'p' })).toBeInTheDocument();
+    });
+
+    it('should call onInputChange when custom rates are updated', async () => {
+      const user = userEvent.setup();
+      const customInputs = { ...baseInputs, healthInsuranceProvider: CUSTOM_PROVIDER_ID };
+      
+      render(
+        <TakeHomeInputForm 
+          inputs={customInputs} 
+          onInputChange={mockOnInputChange} 
+        />
+      );
+
+      const rateInputs = screen.getAllByLabelText('Rate (%)');
+      const healthRateInput = rateInputs[0]; // First one is Health Insurance
+
+      if (!healthRateInput) {
+        throw new Error('Health rate input not found');
+      }
+
+      await user.clear(healthRateInput);
+      await user.type(healthRateInput, '5');
+
+      expect(mockOnInputChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          target: expect.objectContaining({
+            name: 'customHealthInsuranceRate',
+            value: 5,
+          })
+        })
+      );
+    });
+    
+    it('should hide custom rate fields when another provider is selected', () => {
+      const standardInputs = { ...baseInputs, healthInsuranceProvider: 'KyokaiKenpo' };
+      
+      render(
+        <TakeHomeInputForm 
+          inputs={standardInputs} 
+          onInputChange={mockOnInputChange} 
+        />
+      );
+
+      expect(screen.queryByLabelText('Rate (%)')).not.toBeInTheDocument();
+    });
   });
 
 });

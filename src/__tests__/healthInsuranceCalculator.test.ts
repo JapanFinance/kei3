@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calculateHealthInsurancePremium } from '../utils/healthInsuranceCalculator'
-import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER } from '../types/healthInsurance'
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
 const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
@@ -185,4 +185,29 @@ describe('Dependent Coverage', () => {
     expect(calculateHealthInsurancePremium(2_000_000, false, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
     expect(calculateHealthInsurancePremium(2_000_000, true, 'DependentCoverage', DEFAULT_PROVIDER_REGION)).toBe(0)
   })
+
+  describe('Custom Provider', () => {
+    const customRates = { healthRate: 5, ltcRate: 1 }; // 5% and 1%
+
+    // Annual income 5,000,000 / 12 = 416,666.67. SMR: 410,000円
+    // Employee No LTC: 410,000 * 0.05 = 20,500
+    it('calculates premium with custom rates for people under 40', () => {
+      expect(calculateHealthInsurancePremium(5_000_000, false, CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION, customRates)).toBe(20500 * 12); // 246,000
+    });
+
+    // Employee With LTC: 410,000 * 0.05 + 410,000 * 0.01 = 20,500 + 4,100 = 24,600
+    it('calculates premium with custom rates for people over 40', () => {
+      expect(calculateHealthInsurancePremium(5_000_000, true, CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION, customRates)).toBe(24600 * 12); // 295,200
+    });
+
+    it('returns 0 if custom rates are missing', () => {
+      expect(calculateHealthInsurancePremium(5_000_000, false, CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION)).toBe(0);
+    });
+    
+    it('handles zero income correctly with custom rates', () => {
+       // SMR for 0 income is 58,000 (min bracket)
+       // 58,000 * 0.05 = 2,900
+       expect(calculateHealthInsurancePremium(0, false, CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION, customRates)).toBe(2900 * 12);
+    });
+  });
 })

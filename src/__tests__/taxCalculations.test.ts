@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calculateTaxes, calculateNetEmploymentIncome, calculateEmploymentInsurance, calculateNationalIncomeTaxBasicDeduction, calculateNationalIncomeTax } from '../utils/taxCalculations'
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance'
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
 
 describe('calculateNetEmploymentIncome', () => {
   it('deduction of 650,000 yen for income up to 1,900,000 yen', () => {
@@ -508,4 +508,25 @@ describe('calculateTaxes with Dependent Coverage', () => {
     expect(result.healthInsurance).toBe(0)
     expect(result.pensionPayments).toBe(0)
   })
+
+  it('calculates taxes correctly with Custom Provider', () => {
+    const inputs = {
+      annualIncome: 5_000_000,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: true,
+      healthInsuranceProvider: CUSTOM_PROVIDER_ID,
+      region: "Tokyo",
+      dependents: [],
+      showDetailedInput: false,
+      dcPlanContributions: 0,
+      customHealthInsuranceRate: 5, // 5%
+      customLongTermCareRate: 1, // 1%
+    };
+    const result = calculateTaxes(inputs);
+
+    // SMR for 5M is 410,000.
+    // Health Insurance: 410,000 * 0.05 * 12 = 246,000
+    // Long Term Care: 410,000 * 0.01 * 12 = 49,200
+    expect(result.healthInsurance).toBe(246_000 + 49_200);
+  });
 })
