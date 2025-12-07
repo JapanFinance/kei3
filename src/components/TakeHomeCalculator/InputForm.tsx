@@ -32,6 +32,7 @@ import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
+  CUSTOM_PROVIDER_ID,
   isDependentCoverageEligible,
   DEPENDENT_INCOME_THRESHOLD,
 } from '../../types/healthInsurance';
@@ -43,38 +44,16 @@ interface TaxInputFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
 }
 
-interface ProviderOption {
-  id: string;
-  displayName: string;
-}
-
-interface RegionOption {
-  id: string;
-  displayName: string;
-}
-
 interface AdvancedOptionsFieldsProps {
-  availableProviders: ProviderOption[];
-  isHealthInsuranceProviderDropdownDisabled: boolean;
   inputs: TakeHomeInputs;
-  handleSelectChange: (e: { target: { name: string; value: unknown } }) => void;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
   sharedInputSx: object;
-  isRegionDropdownEffectivelyDisabled: boolean;
-  regionMenuItemsToDisplay: RegionOption[];
-  isDependentEligible: boolean;
 }
 
 function AdvancedOptionsFields({
-  availableProviders,
-  isHealthInsuranceProviderDropdownDisabled,
   inputs,
-  handleSelectChange,
   onInputChange,
   sharedInputSx,
-  isRegionDropdownEffectivelyDisabled,
-  regionMenuItemsToDisplay,
-  isDependentEligible,
 }: AdvancedOptionsFieldsProps) {
   return (
     <Box sx={{
@@ -83,94 +62,6 @@ function AdvancedOptionsFields({
       gap: { xs: 1, sm: 1.5 },
       width: '100%',
     }}>
-      <FormControl fullWidth>
-        <Typography
-          gutterBottom
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '0.97rem',
-            fontWeight: 500,
-            mb: 0.2,
-            color: 'text.primary',
-          }}
-        >
-          Health Insurance Provider
-          <InfoTooltip title="Your health insurance provider affects your premium calculations. 
-          Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
-        </Typography>
-        {/* Hidden InputLabel for accessibility and testing */}
-        <InputLabel 
-          id="healthInsuranceProvider-label" 
-          sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
-        >
-          Health Insurance Provider
-        </InputLabel>
-        <Select
-          id="healthInsuranceProvider"
-          name="healthInsuranceProvider"
-          labelId="healthInsuranceProvider-label"
-          value={inputs.healthInsuranceProvider}
-          onChange={handleSelectChange}
-          disabled={isHealthInsuranceProviderDropdownDisabled}
-          fullWidth
-          sx={sharedInputSx}
-          data-disabled={isHealthInsuranceProviderDropdownDisabled}
-        >
-          {availableProviders.map((provider) => (
-            <MenuItem key={provider.id} value={provider.id}>
-              {provider.displayName}
-            </MenuItem>
-          ))}
-        </Select>
-        {isHealthInsuranceProviderDropdownDisabled && (
-          <FormHelperText>
-            {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
-          </FormHelperText>
-        )}
-        {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
-          <FormHelperText>
-            {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
-          </FormHelperText>
-        )}
-      </FormControl>
-      <FormControl>
-        <Autocomplete
-          id="region"
-          options={regionMenuItemsToDisplay}
-          value={
-            regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
-            regionMenuItemsToDisplay[0] ||
-            { id: '', displayName: '' }
-          }
-          onChange={(_, newValue) => {
-            handleSelectChange({
-              target: {
-                name: 'region',
-                value: newValue?.id || ''
-              }
-            });
-          }}
-          getOptionLabel={(option) => option.displayName}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          disabled={isRegionDropdownEffectivelyDisabled}
-          renderInput={(params) =>
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore - MUI Autocomplete params spreading is correct per documentation
-            <TextField
-              {...params}
-              label="Local Region (Municipality/Prefecture)"
-              helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
-            />
-          }
-          noOptionsText="No matching regions"
-          clearOnBlur
-          disableClearable
-          selectOnFocus
-          handleHomeEndKeys
-          sx={sharedInputSx}
-        />
-      </FormControl>
       <FormControl fullWidth>
         <Typography
           gutterBottom
@@ -216,6 +107,12 @@ const nhiProvider = {
 const dependentProvider = {
   id: DEPENDENT_COVERAGE_ID,
   displayName: getProviderDisplayName(DEPENDENT_COVERAGE_ID)
+};
+
+// Custom provider
+const customProvider = {
+  id: CUSTOM_PROVIDER_ID,
+  displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID)
 };
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange }) => {
@@ -401,9 +298,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
       // Include dependent coverage option only if income is below threshold
       if (isDependentEligible) {
-        return [...employeeProviders, dependentProvider, nhiProvider];
+        return [...employeeProviders, dependentProvider, nhiProvider, customProvider];
       } else {
-        return [...employeeProviders, nhiProvider];
+        return [...employeeProviders, nhiProvider, customProvider];
       }
     } else {
       // Non-employment income: NHI or dependent coverage (if eligible)
@@ -423,7 +320,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     if (!provider) return [];
 
     // Dependent coverage doesn't have regions
-    if (provider === DEPENDENT_COVERAGE_ID) {
+    if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
       return [];
     }
 
@@ -717,6 +614,173 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           </Box>
         </Box>
 
+        {/* Social Insurance Configuration */}
+        <Box sx={{ mt: 2, mb: 1 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={inputs.manualSocialInsuranceEntry}
+                onChange={(e) => onInputChange({
+                  target: {
+                    name: 'manualSocialInsuranceEntry',
+                    checked: e.target.checked,
+                    type: 'checkbox'
+                  }
+                } as React.ChangeEvent<HTMLInputElement>)}
+                color="primary"
+                size="small"
+              />
+            }
+            label={
+              <Typography sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
+                Enter Social Insurance Manually
+              </Typography>
+            }
+          />
+          
+          {inputs.manualSocialInsuranceEntry ? (
+            <Box sx={{ mt: 1.5 }}>
+              <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
+                Total Social Insurance
+                <InfoTooltip title="Enter the total amount of social insurance premiums (Health Insurance, Pension, Employment Insurance) paid annually. This corresponds to the amount on your withholding slip (源泉徴収票) or tax return." />
+              </Typography>
+              <SpinnerNumberField
+                id="manualSocialInsuranceAmount"
+                name="manualSocialInsuranceAmount"
+                value={inputs.manualSocialInsuranceAmount}
+                onInputChange={onInputChange}
+                label="Total Amount"
+                step={1000}
+                shiftStep={10000}
+                sx={sharedInputSx}
+              />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1.5 }}>
+              <FormControl fullWidth>
+                <Typography
+                  gutterBottom
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: '0.97rem',
+                    fontWeight: 500,
+                    mb: 0.2,
+                    color: 'text.primary',
+                  }}
+                >
+                  Health Insurance Provider
+                  <InfoTooltip title="Your health insurance provider affects your premium calculations. Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
+                </Typography>
+                <InputLabel 
+                  id="healthInsuranceProvider-label" 
+                  sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
+                >
+                  Health Insurance Provider
+                </InputLabel>
+                <Select
+                  id="healthInsuranceProvider"
+                  name="healthInsuranceProvider"
+                  labelId="healthInsuranceProvider-label"
+                  value={inputs.healthInsuranceProvider}
+                  onChange={handleSelectChange}
+                  disabled={isHealthInsuranceProviderDropdownDisabled}
+                  fullWidth
+                  sx={sharedInputSx}
+                >
+                  {availableProviders.map((provider) => (
+                    <MenuItem key={provider.id} value={provider.id}>
+                      {provider.displayName}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {isHealthInsuranceProviderDropdownDisabled && (
+                  <FormHelperText>
+                    {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
+                  </FormHelperText>
+                )}
+                {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
+                  <FormHelperText>
+                    {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
+                  </FormHelperText>
+                )}
+              </FormControl>
+
+              {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl fullWidth>
+                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
+                      Health Insurance Rate (%)
+                    </Typography>
+                    <SpinnerNumberField
+                      id="customHealthInsuranceRate"
+                      name="customHealthInsuranceRate"
+                      value={inputs.customHealthInsuranceRate}
+                      onInputChange={onInputChange}
+                      label="Rate (%)"
+                      step={0.1}
+                      shiftStep={1.0}
+                      sx={sharedInputSx}
+                    />
+                  </FormControl>
+                  <FormControl fullWidth>
+                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
+                      Long-term Care Rate (%)
+                    </Typography>
+                    <SpinnerNumberField
+                      id="customLongTermCareRate"
+                      name="customLongTermCareRate"
+                      value={inputs.customLongTermCareRate}
+                      onInputChange={onInputChange}
+                      label="Rate (%)"
+                      step={0.1}
+                      shiftStep={1.0}
+                      sx={sharedInputSx}
+                    />
+                  </FormControl>
+                </Box>
+              ) : (
+                <FormControl>
+                  <Autocomplete
+                    id="region"
+                    options={regionMenuItemsToDisplay}
+                    value={
+                      regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
+                      regionMenuItemsToDisplay[0] ||
+                      { id: '', displayName: '' }
+                    }
+                    onChange={(_, newValue) => {
+                      handleSelectChange({
+                        target: {
+                          name: 'region',
+                          value: newValue?.id || ''
+                        }
+                      });
+                    }}
+                    getOptionLabel={(option) => option.displayName}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    disabled={isRegionDropdownEffectivelyDisabled}
+                    renderInput={(params) => (
+                      <TextField
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        {...(params as any)}
+                        label="Local Region (Municipality/Prefecture)"
+                        helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
+                      />
+                    )}
+                    noOptionsText="No matching regions"
+                    clearOnBlur
+                    disableClearable
+                    selectOnFocus
+                    handleHomeEndKeys
+                    sx={sharedInputSx}
+                  />
+                </FormControl>
+              )}
+            </Box>
+          )}
+        </Box>
+
         {/* Advanced Options */}
         {isMobile ? (
           <Accordion
@@ -741,15 +805,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             </AccordionSummary>
             <AccordionDetails sx={styles.accordionDetails}>
               <AdvancedOptionsFields
-                availableProviders={availableProviders}
-                isHealthInsuranceProviderDropdownDisabled={isHealthInsuranceProviderDropdownDisabled}
                 inputs={inputs}
-                handleSelectChange={handleSelectChange}
                 onInputChange={onInputChange}
                 sharedInputSx={sharedInputSx}
-                isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
-                regionMenuItemsToDisplay={regionMenuItemsToDisplay}
-                isDependentEligible={isDependentEligible}
               />
             </AccordionDetails>
           </Accordion>
@@ -766,15 +824,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               Advanced Options
             </Typography>
             <AdvancedOptionsFields
-              availableProviders={availableProviders}
-              isHealthInsuranceProviderDropdownDisabled={isHealthInsuranceProviderDropdownDisabled}
               inputs={inputs}
-              handleSelectChange={handleSelectChange}
               onInputChange={onInputChange}
               sharedInputSx={sharedInputSx}
-              isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
-              regionMenuItemsToDisplay={regionMenuItemsToDisplay}
-              isDependentEligible={isDependentEligible}
             />
           </Box>
         )}

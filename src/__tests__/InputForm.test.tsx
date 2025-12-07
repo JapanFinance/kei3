@@ -17,6 +17,10 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    customHealthInsuranceRate: 0,
+    customLongTermCareRate: 0,
   };
 
   beforeEach(() => {
@@ -46,9 +50,9 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       expect(within(listbox).getByRole('option', { name: 'Kyokai Kenpo' })).toBeInTheDocument();
       expect(within(listbox).getByRole('option', { name: 'Kanto ITS Kenpo' })).toBeInTheDocument();
       
-      // Should have employee providers + NHI
+      // Should have employee providers + NHI + Custom
       const optionsInSelect = within(listbox).getAllByRole('option');
-      expect(optionsInSelect).toHaveLength(Object.keys(PROVIDER_DEFINITIONS).length + 1);
+      expect(optionsInSelect).toHaveLength(Object.keys(PROVIDER_DEFINITIONS).length + 2);
     });
 
     it('should allow selecting different employee health insurance providers', async () => {
@@ -233,7 +237,7 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       // After clicking, there's exactly one listbox - the one for our select
       const listbox = screen.getByRole('listbox');
       const optionsInSelect = within(listbox).getAllByRole('option');
-      expect(optionsInSelect).toHaveLength(Object.keys(PROVIDER_DEFINITIONS).length + 1);
+      expect(optionsInSelect).toHaveLength(Object.keys(PROVIDER_DEFINITIONS).length + 2);
 
       // Each provider from PROVIDER_DEFINITIONS should be present within the listbox
       Object.entries(PROVIDER_DEFINITIONS).forEach(([, { providerName }]) => {
@@ -309,6 +313,10 @@ describe('Dependent Coverage UI Behavior', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    customHealthInsuranceRate: 0,
+    customLongTermCareRate: 0,
   };
 
   beforeEach(() => {

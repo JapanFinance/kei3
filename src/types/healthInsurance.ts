@@ -2,6 +2,7 @@ import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerR
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance';
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage';
+export const CUSTOM_PROVIDER_ID = 'CustomProvider';
 export const DEFAULT_PROVIDER = 'KyokaiKenpo';
 
 // Income threshold for dependent coverage eligibility (1.3 million yen)
@@ -9,7 +10,7 @@ export const DEFAULT_PROVIDER = 'KyokaiKenpo';
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
 
 // Exhaustive union type of all valid health insurance provider IDs
-export type HealthInsuranceProviderId = keyof typeof PROVIDER_DEFINITIONS | typeof NATIONAL_HEALTH_INSURANCE_ID | typeof DEPENDENT_COVERAGE_ID;
+export type HealthInsuranceProviderId = keyof typeof PROVIDER_DEFINITIONS | typeof NATIONAL_HEALTH_INSURANCE_ID | typeof DEPENDENT_COVERAGE_ID | typeof CUSTOM_PROVIDER_ID;
 
 /**
  * Checks if dependent coverage is eligible based on annual income.
@@ -30,6 +31,10 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
   
   if (providerId === DEPENDENT_COVERAGE_ID) {
     return 'None (dependent of insured employee)';
+  }
+
+  if (providerId === CUSTOM_PROVIDER_ID) {
+    return 'Custom Rates';
   }
   
   const providerDef = PROVIDER_DEFINITIONS[providerId as keyof typeof PROVIDER_DEFINITIONS];

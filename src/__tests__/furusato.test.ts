@@ -59,7 +59,11 @@ describe('calculateFurusatoNozeiLimit', () => {
       showDetailedInput: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
-      dcPlanContributions: 240_000 // 20,000 yen per month
+      dcPlanContributions: 240_000, // 20,000 yen per month
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      customHealthInsuranceRate: 0,
+      customLongTermCareRate: 0
     }).furusatoNozei;
 
     const fnWithoutDC = calculateFNForIncome(5_000_000);
@@ -79,6 +83,10 @@ function calculateFNForIncome(income: number) : FurusatoNozeiDetails {
     showDetailedInput: false,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
-    dcPlanContributions: 0
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    customHealthInsuranceRate: 0,
+    customLongTermCareRate: 0
   }).furusatoNozei;
 }

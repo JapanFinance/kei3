@@ -1,5 +1,5 @@
 import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { calculatePensionPremium } from './pensionCalculator';
 import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
@@ -187,45 +187,62 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const isEmploymentIncome = inputs.isEmploymentIncome;
     const netIncome = isEmploymentIncome ? calculateNetEmploymentIncome(annualIncome) : annualIncome;
 
-    // For health insurance calculation, we need to use the appropriate income:
-    // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
-    // - National Health Insurance: uses net income (after employment income deduction if applicable)
-    //   This is because NHI premiums are based on taxable income, while employee health insurance
-    //   is based on standard monthly remuneration before deductions.
-    const incomeForHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID
-        ? netIncome
-        : inputs.annualIncome;
-
-    const healthInsurance = calculateHealthInsurancePremium(
-        incomeForHealthInsurance,
-        inputs.isSubjectToLongTermCarePremium,
-        inputs.healthInsuranceProvider,
-        inputs.region
-    );
-
-    // Calculate NHI breakdown if National Health Insurance is selected
+    let healthInsurance = 0;
+    let pensionPayments = 0;
+    let employmentInsurance = 0;
+    let socialInsuranceDeduction = 0;
     let nhiBreakdown = null;
-    if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
-        // For NHI breakdown, also use net income
-        nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            netIncome,
+
+    if (inputs.manualSocialInsuranceEntry) {
+        socialInsuranceDeduction = inputs.manualSocialInsuranceAmount;
+        // Individual components are unknown/zeroed out for display
+        healthInsurance = 0;
+        pensionPayments = 0;
+        employmentInsurance = 0;
+    } else {
+        // For health insurance calculation, we need to use the appropriate income:
+        // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
+        // - National Health Insurance: uses net income (after employment income deduction if applicable)
+        //   This is because NHI premiums are based on taxable income, while employee health insurance
+        //   is based on standard monthly remuneration before deductions.
+        const incomeForHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID
+            ? netIncome
+            : inputs.annualIncome;
+
+        healthInsurance = calculateHealthInsurancePremium(
+            incomeForHealthInsurance,
             inputs.isSubjectToLongTermCarePremium,
-            inputs.region as string
+            inputs.healthInsuranceProvider,
+            inputs.region,
+            inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? {
+                healthRate: inputs.customHealthInsuranceRate,
+                ltcRate: inputs.customLongTermCareRate
+            } : undefined
         );
+
+        // Calculate NHI breakdown if National Health Insurance is selected
+        if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
+            // For NHI breakdown, also use net income
+            nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+                netIncome,
+                inputs.isSubjectToLongTermCarePremium,
+                inputs.region as string
+            );
+        }
+
+        // Calculate pension based on health insurance type
+        // People on National Health Insurance are in National Pension system
+        // People on employee health insurance are in Employee Pension system
+        // People covered as dependents do not pay pension premiums
+        const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
+        pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
+            ? 0 
+            : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
+
+        employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
+
+        socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
     }
-
-    // Calculate pension based on health insurance type
-    // People on National Health Insurance are in National Pension system
-    // People on employee health insurance are in Employee Pension system
-    // People covered as dependents do not pay pension premiums
-    const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
-    const pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
-        ? 0 
-        : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
-
-    const employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
-
-    const socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
 
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
@@ -262,6 +279,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         healthInsurance,
         pensionPayments,
         employmentInsurance,
+        ...(inputs.manualSocialInsuranceEntry ? { socialInsuranceOverride: inputs.manualSocialInsuranceAmount } : {}),
         takeHomeIncome,
         netEmploymentIncome: isEmploymentIncome ? netIncome : undefined,
         nationalIncomeTaxBasicDeduction,
