@@ -34,7 +34,7 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
   }
 
   if (providerId === CUSTOM_PROVIDER_ID) {
-    return 'Custom Rates';
+    return 'Custom Employee Health Insurance Provider';
   }
   
   const providerDef = PROVIDER_DEFINITIONS[providerId as keyof typeof PROVIDER_DEFINITIONS];

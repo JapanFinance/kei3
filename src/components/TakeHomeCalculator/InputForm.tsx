@@ -689,7 +689,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   sx={sharedInputSx}
                 >
                   {availableProviders.map((provider) => (
-                    <MenuItem key={provider.id} value={provider.id}>
+                    <MenuItem 
+                      key={provider.id} 
+                      value={provider.id}
+                      sx={provider.id === CUSTOM_PROVIDER_ID ? { fontStyle: 'italic' } : undefined}
+                    >
                       {provider.displayName}
                     </MenuItem>
                   ))}
@@ -709,8 +713,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <FormControl fullWidth>
-                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
-                      Health Insurance Rate (%)
+                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                      Health Insurance
+                      <InfoTooltip title="Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率." />
                     </Typography>
                     <SpinnerNumberField
                       id="customHealthInsuranceRate"
@@ -727,8 +732,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     />
                   </FormControl>
                   <FormControl fullWidth>
-                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
-                      Long-term Care Rate (%)
+                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                      Long-term Care
+                      <InfoTooltip title="Enter the employee's share of the Long-term Care premium rate (usually half of the total rate). This only applies if you are aged 40-64. Look for 介護保険料率 on the provider's website." />
                     </Typography>
                     <SpinnerNumberField
                       id="customLongTermCareRate"
