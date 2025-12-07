@@ -1,5 +1,5 @@
 import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { calculatePensionPremium } from './pensionCalculator';
 import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
@@ -187,6 +187,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const isEmploymentIncome = inputs.isEmploymentIncome;
     const netIncome = isEmploymentIncome ? calculateNetEmploymentIncome(annualIncome) : annualIncome;
 
+    let healthInsurance = 0;
+    let pensionPayments = 0;
+    let employmentInsurance = 0;
+    let socialInsuranceDeduction = 0;
+    let nhiBreakdown = null;
+
     // For health insurance calculation, we need to use the appropriate income:
     // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
     // - National Health Insurance: uses net income (after employment income deduction if applicable)
@@ -196,15 +202,18 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         ? netIncome
         : inputs.annualIncome;
 
-    const healthInsurance = calculateHealthInsurancePremium(
+    healthInsurance = calculateHealthInsurancePremium(
         incomeForHealthInsurance,
         inputs.isSubjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
-        inputs.region
+        inputs.region,
+        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? {
+            healthRate: inputs.customHealthInsuranceRate,
+            ltcRate: inputs.customLongTermCareRate
+        } : undefined
     );
 
     // Calculate NHI breakdown if National Health Insurance is selected
-    let nhiBreakdown = null;
     if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
         // For NHI breakdown, also use net income
         nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
@@ -219,13 +228,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // People on employee health insurance are in Employee Pension system
     // People covered as dependents do not pay pension premiums
     const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
-    const pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
+    pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
         ? 0 
         : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
 
-    const employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
+    employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
 
-    const socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
+    socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
 
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
@@ -281,6 +290,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         healthInsuranceProvider: inputs.healthInsuranceProvider,
         region: inputs.region,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
+        customHealthInsuranceRate: inputs.customHealthInsuranceRate,
+        customLongTermCareRate: inputs.customLongTermCareRate,
         // Dependent deductions (always include, even if zero)
         ...(inputs.dependents.length > 0 && {
             dependentDeductions: dependentDeductions

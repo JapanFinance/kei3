@@ -101,6 +101,8 @@ interface TakeHomeChartProps {
   region: string;
   dcPlanContributions: number;
   dependents: Dependent[];
+  customHealthInsuranceRate: number;
+  customLongTermCareRate: number;
   className?: string;
 }
 
@@ -177,6 +179,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   region,
   dcPlanContributions,
   dependents,
+  customHealthInsuranceRate,
+  customLongTermCareRate,
   className = ''
 }) => {
   // Track whether the user has manually adjusted the range
@@ -240,9 +244,11 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       healthInsuranceProvider, 
       region,
       dcPlanContributions,
-      dependents
+      dependents,
+      customHealthInsuranceRate,
+      customLongTermCareRate
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents]
+    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customHealthInsuranceRate, customLongTermCareRate]
   );
 
   // Get chart options using the utility function
@@ -276,6 +282,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     dcPlanContributions,
                     dependents,
                     showDetailedInput: false,
+                    customHealthInsuranceRate,
+                    customLongTermCareRate,
                   };
                   
                   const taxResults = calculateTaxes(taxInputs);
@@ -299,7 +307,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customHealthInsuranceRate, customLongTermCareRate]
   );
 
   // Use media query to determine if we should show minor marks

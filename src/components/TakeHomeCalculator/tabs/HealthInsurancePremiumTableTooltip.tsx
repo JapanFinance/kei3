@@ -3,8 +3,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
-import { generateHealthInsurancePremiumTable } from '../../../data/employeesHealthInsurance/providerRates';
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
+import { generateHealthInsurancePremiumTable, generatePremiumTableFromRates } from '../../../data/employeesHealthInsurance/providerRates';
 import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import PremiumTableTooltip from './PremiumTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
@@ -307,10 +307,28 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     );
   } else {
     // Employee Health Insurance - show premium table
-    const premiumTableAsRows = generateHealthInsurancePremiumTable(provider, region);
-    const providerDef = PROVIDER_DEFINITIONS[provider];
-    const regionalRates = providerDef?.regions[region] || providerDef?.regions['DEFAULT'];
-    const sourceUrl = regionalRates?.source || providerDef?.defaultSource;
+    let premiumTableAsRows;
+    let sourceUrl;
+    let providerLabel;
+
+    if (provider === CUSTOM_PROVIDER_ID) {
+      // Generate table for custom provider using input rates
+      const customRates = {
+        employeeHealthInsuranceRate: inputs.customHealthInsuranceRate / 100,
+        employeeLongTermCareRate: inputs.customLongTermCareRate / 100,
+        // Employer rates not needed for this table as we only show employee portion
+      };
+      
+      premiumTableAsRows = generatePremiumTableFromRates(customRates);
+      
+      providerLabel = "Custom Provider";
+    } else {
+      premiumTableAsRows = generateHealthInsurancePremiumTable(provider, region);
+      const providerDef = PROVIDER_DEFINITIONS[provider];
+      const regionalRates = providerDef?.regions[region] || providerDef?.regions['DEFAULT'];
+      sourceUrl = regionalRates?.source || providerDef?.defaultSource;
+      providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
+    }
     
     if (!premiumTableAsRows) {
       const fallbackContent = (
@@ -380,8 +398,6 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     };
 
     const premiumTableAsTypedRows = premiumTableAsRows as unknown as PremiumTableRow[];
-
-    const providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
 
     const baseProps = {
       title: `Health Insurance Premium Table - ${providerLabel}`,

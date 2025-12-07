@@ -9,16 +9,12 @@ import Slider from '@mui/material/Slider';
 import InputLabel from '@mui/material/InputLabel';
 import Switch from '@mui/material/Switch';
 import FormHelperText from '@mui/material/FormHelperText';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
 import { useTheme } from '@mui/material/styles';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PeopleIcon from '@mui/icons-material/People';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
@@ -32,6 +28,7 @@ import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
+  CUSTOM_PROVIDER_ID,
   isDependentCoverageEligible,
   DEPENDENT_INCOME_THRESHOLD,
 } from '../../types/healthInsurance';
@@ -43,168 +40,7 @@ interface TaxInputFormProps {
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
 }
 
-interface ProviderOption {
-  id: string;
-  displayName: string;
-}
 
-interface RegionOption {
-  id: string;
-  displayName: string;
-}
-
-interface AdvancedOptionsFieldsProps {
-  availableProviders: ProviderOption[];
-  isHealthInsuranceProviderDropdownDisabled: boolean;
-  inputs: TakeHomeInputs;
-  handleSelectChange: (e: { target: { name: string; value: unknown } }) => void;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
-  sharedInputSx: object;
-  isRegionDropdownEffectivelyDisabled: boolean;
-  regionMenuItemsToDisplay: RegionOption[];
-  isDependentEligible: boolean;
-}
-
-function AdvancedOptionsFields({
-  availableProviders,
-  isHealthInsuranceProviderDropdownDisabled,
-  inputs,
-  handleSelectChange,
-  onInputChange,
-  sharedInputSx,
-  isRegionDropdownEffectivelyDisabled,
-  regionMenuItemsToDisplay,
-  isDependentEligible,
-}: AdvancedOptionsFieldsProps) {
-  return (
-    <Box sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: { xs: 1, sm: 1.5 },
-      width: '100%',
-    }}>
-      <FormControl fullWidth>
-        <Typography
-          gutterBottom
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '0.97rem',
-            fontWeight: 500,
-            mb: 0.2,
-            color: 'text.primary',
-          }}
-        >
-          Health Insurance Provider
-          <InfoTooltip title="Your health insurance provider affects your premium calculations. 
-          Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
-        </Typography>
-        {/* Hidden InputLabel for accessibility and testing */}
-        <InputLabel 
-          id="healthInsuranceProvider-label" 
-          sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
-        >
-          Health Insurance Provider
-        </InputLabel>
-        <Select
-          id="healthInsuranceProvider"
-          name="healthInsuranceProvider"
-          labelId="healthInsuranceProvider-label"
-          value={inputs.healthInsuranceProvider}
-          onChange={handleSelectChange}
-          disabled={isHealthInsuranceProviderDropdownDisabled}
-          fullWidth
-          sx={sharedInputSx}
-          data-disabled={isHealthInsuranceProviderDropdownDisabled}
-        >
-          {availableProviders.map((provider) => (
-            <MenuItem key={provider.id} value={provider.id}>
-              {provider.displayName}
-            </MenuItem>
-          ))}
-        </Select>
-        {isHealthInsuranceProviderDropdownDisabled && (
-          <FormHelperText>
-            {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
-          </FormHelperText>
-        )}
-        {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
-          <FormHelperText>
-            {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
-          </FormHelperText>
-        )}
-      </FormControl>
-      <FormControl>
-        <Autocomplete
-          id="region"
-          options={regionMenuItemsToDisplay}
-          value={
-            regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
-            regionMenuItemsToDisplay[0] ||
-            { id: '', displayName: '' }
-          }
-          onChange={(_, newValue) => {
-            handleSelectChange({
-              target: {
-                name: 'region',
-                value: newValue?.id || ''
-              }
-            });
-          }}
-          getOptionLabel={(option) => option.displayName}
-          isOptionEqualToValue={(option, value) => option.id === value.id}
-          disabled={isRegionDropdownEffectivelyDisabled}
-          renderInput={(params) =>
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore - MUI Autocomplete params spreading is correct per documentation
-            <TextField
-              {...params}
-              label="Local Region (Municipality/Prefecture)"
-              helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
-            />
-          }
-          noOptionsText="No matching regions"
-          clearOnBlur
-          disableClearable
-          selectOnFocus
-          handleHomeEndKeys
-          sx={sharedInputSx}
-        />
-      </FormControl>
-      <FormControl fullWidth>
-        <Typography
-          gutterBottom
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            fontSize: '0.97rem',
-            fontWeight: 500,
-            mb: 0.2,
-            color: 'text.primary',
-          }}
-        >
-          <a
-            href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit', fontWeight: 500 }}
-          >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
-          <InfoTooltip title="Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation." />
-        </Typography>
-        <SpinnerNumberField
-          id="dcPlanContributions"
-          name="dcPlanContributions"
-          value={inputs.dcPlanContributions}
-          onInputChange={onInputChange}
-          label="Annual Contributions"
-          step={1_000}
-          shiftStep={10_000}
-          sx={sharedInputSx}
-        />
-      </FormControl>
-    </Box>
-  );
-}
 
 // National Health Insurance provider (used in both employment and non-employment scenarios)
 const nhiProvider = {
@@ -216,6 +52,12 @@ const nhiProvider = {
 const dependentProvider = {
   id: DEPENDENT_COVERAGE_ID,
   displayName: getProviderDisplayName(DEPENDENT_COVERAGE_ID)
+};
+
+// Custom provider
+const customProvider = {
+  id: CUSTOM_PROVIDER_ID,
+  displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID)
 };
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange }) => {
@@ -311,7 +153,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       justifyContent: 'center',
       gap: { xs: 2, sm: 3 },
       mt: { xs: 0.5, sm: 1 },
-      mb: { xs: 0.5, sm: 1 },
+      mb: { xs: 0.2, sm: 0.5 },
       width: '100%',
       flexWrap: 'wrap', // allow wrapping if truly needed
     },
@@ -326,36 +168,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         py: { xs: 0.2, sm: 0.4 },
         textAlign: 'right',
       }
-    },
-    accordion: {
-      mt: { xs: 1, sm: 2 },
-      bgcolor: 'background.paper',
-      boxShadow: 'none',
-      '&:before': { display: 'none' },
-      border: '1px solid',
-      borderColor: 'divider',
-      borderRadius: 1,
-      overflow: 'hidden',
-      display: isMobile ? 'block' : 'none', // Hide on desktop
-    },
-    accordionDetails: {
-      p: { xs: 1, sm: 1.5 },
-      pt: { xs: 1, sm: 2 },
-      display: 'flex',
-      flexDirection: 'column',
-      gap: { xs: 1, sm: 1.5 },
-    },
-    advancedOptionsDesktop: {
-      display: isMobile ? 'none' : 'block', // Show only on desktop
-      mt: { xs: 1, sm: 2 },
-    },
-    advancedOptionsSection: {
-      display: 'flex',
-      flexDirection: 'column', // stack inputs vertically
-      gap: { xs: 1, sm: 1.5 },
-      mt: { xs: 1, sm: 2 },
-      mb: { xs: 0, sm: 0 },
-      width: '100%',
     },
   };
   const handleSliderChange = (_: Event, value: number | number[]) => {
@@ -401,9 +213,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
       // Include dependent coverage option only if income is below threshold
       if (isDependentEligible) {
-        return [...employeeProviders, dependentProvider, nhiProvider];
+        return [...employeeProviders, dependentProvider, nhiProvider, customProvider];
       } else {
-        return [...employeeProviders, nhiProvider];
+        return [...employeeProviders, nhiProvider, customProvider];
       }
     } else {
       // Non-employment income: NHI or dependent coverage (if eligible)
@@ -423,7 +235,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     if (!provider) return [];
 
     // Dependent coverage doesn't have regions
-    if (provider === DEPENDENT_COVERAGE_ID) {
+    if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
       return [];
     }
 
@@ -717,67 +529,178 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           </Box>
         </Box>
 
-        {/* Advanced Options */}
-        {isMobile ? (
-          <Accordion
-            elevation={0}
-            sx={styles.accordion}
-            defaultExpanded={false}
-          >
-            <AccordionSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="advanced-options-content"
-              id="advanced-options-header"
-            >
-              <Typography
-                sx={{
-                  fontSize: '1.08rem',
-                  fontWeight: 700,
-                  color: 'text.primary',
-                }}
-              >
-                Advanced Options
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails sx={styles.accordionDetails}>
-              <AdvancedOptionsFields
-                availableProviders={availableProviders}
-                isHealthInsuranceProviderDropdownDisabled={isHealthInsuranceProviderDropdownDisabled}
-                inputs={inputs}
-                handleSelectChange={handleSelectChange}
-                onInputChange={onInputChange}
-                sharedInputSx={sharedInputSx}
-                isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
-                regionMenuItemsToDisplay={regionMenuItemsToDisplay}
-                isDependentEligible={isDependentEligible}
-              />
-            </AccordionDetails>
-          </Accordion>
-        ) : (
-          <Box sx={styles.advancedOptionsDesktop}>
+        {/* Social Insurance Configuration */}
+        <Box sx={{ mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.2, sm: 0.5 } }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1 }}>
+              <FormControl fullWidth>
+                <Typography
+                  gutterBottom
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: '0.97rem',
+                    fontWeight: 500,
+                    mb: 0.2,
+                    color: 'text.primary',
+                  }}
+                >
+                  Health Insurance Provider
+                  <InfoTooltip title="Your health insurance provider affects your premium calculations. Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
+                </Typography>
+                <InputLabel 
+                  id="healthInsuranceProvider-label" 
+                  sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
+                >
+                  Health Insurance Provider
+                </InputLabel>
+                <Select
+                  id="healthInsuranceProvider"
+                  name="healthInsuranceProvider"
+                  labelId="healthInsuranceProvider-label"
+                  value={inputs.healthInsuranceProvider}
+                  onChange={handleSelectChange}
+                  disabled={isHealthInsuranceProviderDropdownDisabled}
+                  fullWidth
+                  sx={sharedInputSx}
+                >
+                  {availableProviders.map((provider) => (
+                    <MenuItem 
+                      key={provider.id} 
+                      value={provider.id}
+                      sx={provider.id === CUSTOM_PROVIDER_ID ? { fontStyle: 'italic' } : {}}
+                    >
+                      {provider.displayName}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {isHealthInsuranceProviderDropdownDisabled && (
+                  <FormHelperText>
+                    {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
+                  </FormHelperText>
+                )}
+                {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
+                  <FormHelperText>
+                    {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
+                  </FormHelperText>
+                )}
+              </FormControl>
+
+              {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl fullWidth>
+                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                      Health Insurance
+                      <InfoTooltip title="Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率." />
+                    </Typography>
+                    <SpinnerNumberField
+                      id="customHealthInsuranceRate"
+                      name="customHealthInsuranceRate"
+                      value={inputs.customHealthInsuranceRate}
+                      onInputChange={onInputChange}
+                      label="Rate (%)"
+                      step={0.1}
+                      shiftStep={1.0}
+                      prefix=""
+                      suffix="%"
+                      max={100}
+                      sx={sharedInputSx}
+                    />
+                  </FormControl>
+                  <FormControl fullWidth>
+                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                      Long-term Care
+                      <InfoTooltip title="Enter the employee's share of the Long-term Care premium rate (usually half of the total rate). This only applies if you are aged 40-64. Look for 介護保険料率 on the provider's website." />
+                    </Typography>
+                    <SpinnerNumberField
+                      id="customLongTermCareRate"
+                      name="customLongTermCareRate"
+                      value={inputs.customLongTermCareRate}
+                      onInputChange={onInputChange}
+                      label="Rate (%)"
+                      step={0.1}
+                      shiftStep={1.0}
+                      prefix=""
+                      suffix="%"
+                      max={100}
+                      sx={sharedInputSx}
+                    />
+                  </FormControl>
+                </Box>
+              ) : (
+                <FormControl>
+                  <Autocomplete
+                    id="region"
+                    options={regionMenuItemsToDisplay}
+                    value={
+                      regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
+                      regionMenuItemsToDisplay[0] ||
+                      { id: '', displayName: '' }
+                    }
+                    onChange={(_, newValue) => {
+                      handleSelectChange({
+                        target: {
+                          name: 'region',
+                          value: newValue?.id || ''
+                        }
+                      });
+                    }}
+                    getOptionLabel={(option) => option.displayName}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    disabled={isRegionDropdownEffectivelyDisabled}
+                    renderInput={(params) => (
+                      <TextField
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        {...(params as any)}
+                        label="Local Region (Municipality/Prefecture)"
+                        helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
+                      />
+                    )}
+                    noOptionsText="No matching regions"
+                    clearOnBlur
+                    disableClearable
+                    selectOnFocus
+                    handleHomeEndKeys
+                    sx={sharedInputSx}
+                  />
+                </FormControl>
+              )}
+            </Box>
+        </Box>
+
+        {/* iDeCo/Corporate DC Contributions */}
+        <Box sx={{ mt: { xs: 0.5, sm: 1 } }}>
+          <FormControl fullWidth>
             <Typography
+              gutterBottom
               sx={{
-                fontSize: { xs: '1.08rem', sm: '1.15rem' },
-                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '0.97rem',
+                fontWeight: 500,
+                mb: 0.2,
                 color: 'text.primary',
-                mb: 1,
               }}
             >
-              Advanced Options
+              <a
+                href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', fontWeight: 500 }}
+              >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
+              <InfoTooltip title="Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation." />
             </Typography>
-            <AdvancedOptionsFields
-              availableProviders={availableProviders}
-              isHealthInsuranceProviderDropdownDisabled={isHealthInsuranceProviderDropdownDisabled}
-              inputs={inputs}
-              handleSelectChange={handleSelectChange}
+            <SpinnerNumberField
+              id="dcPlanContributions"
+              name="dcPlanContributions"
+              value={inputs.dcPlanContributions}
               onInputChange={onInputChange}
-              sharedInputSx={sharedInputSx}
-              isRegionDropdownEffectivelyDisabled={isRegionDropdownEffectivelyDisabled}
-              regionMenuItemsToDisplay={regionMenuItemsToDisplay}
-              isDependentEligible={isDependentEligible}
+              label="Annual Contributions"
+              step={1_000}
+              shiftStep={10_000}
+              sx={sharedInputSx}
             />
-          </Box>
-        )}
+          </FormControl>
+        </Box>
       </Box>
 
       <DependentsModal

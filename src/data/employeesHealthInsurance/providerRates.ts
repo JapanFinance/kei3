@@ -53,12 +53,10 @@ export function getAvailableProviders(): Array<{providerId: string, providerName
 }
 
 /**
- * Generate a premium table for display purposes (backward compatibility)
- * This creates the same format as the old ALL_EMPLOYEES_HEALTH_INSURANCE_DATA
+ * Generate a premium table from a specific set of rates
  */
-export function generateHealthInsurancePremiumTable(
-  providerId: string,
-  region: string = 'DEFAULT'
+export function generatePremiumTableFromRates(
+  regionalRates: RegionalRates
 ): Array<{
   minIncomeInclusive: number;
   maxIncomeExclusive: number;
@@ -66,10 +64,7 @@ export function generateHealthInsurancePremiumTable(
   employeePremiumWithLTC: number;
   fullPremiumNoLTC: number;
   fullPremiumWithLTC: number;
-}> | undefined {
-  const regionalRates = getRegionalRates(providerId, region);
-  if (!regionalRates) return undefined;
-
+}> {
   return STANDARD_SMR_BRACKETS.map((bracket) => {
     const employeePremiumNoLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, false);
     const employeePremiumWithLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, true);
@@ -90,4 +85,24 @@ export function generateHealthInsurancePremiumTable(
       fullPremiumWithLTC: fullHealthPremium + fullLTCPremium
     };
   });
+}
+
+/**
+ * Generate a premium table for display purposes
+ */
+export function generateHealthInsurancePremiumTable(
+  providerId: string,
+  region: string = 'DEFAULT'
+): Array<{
+  minIncomeInclusive: number;
+  maxIncomeExclusive: number;
+  employeePremiumNoLTC: number;
+  employeePremiumWithLTC: number;
+  fullPremiumNoLTC: number;
+  fullPremiumWithLTC: number;
+}> | undefined {
+  const regionalRates = getRegionalRates(providerId, region);
+  if (!regionalRates) return undefined;
+
+  return generatePremiumTableFromRates(regionalRates);
 }

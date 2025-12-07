@@ -7,6 +7,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 ### New
 
 - Added support for dependent-related deductions. You can now add information about a spouse and other dependents. Depending on applicable deductions, this will affect your income tax and residence tax calculations.
+- Added "Custom Employee Health Insurance Provider" option to the Health Insurance Provider input. This allows you to manually input your specific health insurance and long-term care insurance rates if your provider is not listed.
 
 ## 2025-11-07
 

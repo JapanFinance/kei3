@@ -1,6 +1,6 @@
 import type { ProviderRegion, NationalHealthInsuranceRegionParams, HealthInsuranceProviderId } from '../types/healthInsurance';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
-import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { calculateMonthlyEmployeePremium, getRegionalRates } from '../data/employeesHealthInsurance/providerRates';
 
@@ -28,7 +28,8 @@ export function calculateHealthInsurancePremium(
     annualIncome: number,
     isSubjectToLongTermCarePremium: boolean,
     provider: HealthInsuranceProviderId,
-    region: ProviderRegion = DEFAULT_PROVIDER_REGION
+    region: ProviderRegion = DEFAULT_PROVIDER_REGION,
+    customRates?: { healthRate: number, ltcRate: number }
 ): number {
     if (annualIncome < 0) {
         throw new Error('Income cannot be negative.');
@@ -50,8 +51,25 @@ export function calculateHealthInsurancePremium(
             throw new Error(`Monthly income ${monthlyIncome.toLocaleString()} is outside the defined SMR ranges.`);
         }
         
-        // Get the regional rates directly
-        const regionalRates = getRegionalRates(provider, region);
+        let regionalRates;
+
+        if (provider === CUSTOM_PROVIDER_ID) {
+            if (!customRates) {
+                // Fallback if custom rates are missing but provider is custom
+                return 0;
+            }
+            regionalRates = {
+                employeeHealthInsuranceRate: customRates.healthRate / 100,
+                employeeLongTermCareRate: customRates.ltcRate / 100,
+                // Employer rates not needed for employee premium calculation
+                employerHealthInsuranceRate: 0,
+                employerLongTermCareRate: 0
+            };
+        } else {
+            // Get the regional rates directly
+            regionalRates = getRegionalRates(provider, region);
+        }
+        
         if (!regionalRates) {
             console.error(`Regional rates not found for provider ${provider} and region ${region}. Returning 0 premium.`);
             return 0;
