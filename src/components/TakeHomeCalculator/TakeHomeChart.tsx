@@ -391,7 +391,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               Comparative Data Unavailable
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}>
-              Projected values for other income levels cannot be calculated<br/>when using manual social insurance entry.
+              Data for other income levels cannot be calculated<br/>when using manual social insurance entry.
             </Typography>
           </Paper>
         )}

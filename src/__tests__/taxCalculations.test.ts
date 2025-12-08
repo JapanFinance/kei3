@@ -539,4 +539,30 @@ describe('calculateTaxes with Dependent Coverage', () => {
     // Long Term Care: 410,000 * 0.01 * 12 = 49,200
     expect(result.healthInsurance).toBe(246_000 + 49_200);
   });
+
+  it('uses manual social insurance amount when enabled', () => {
+    const inputs = {
+      annualIncome: 5_000_000,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: "Tokyo",
+      dependents: [],
+      showDetailedInput: false,
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 500_000,
+    };
+    const result = calculateTaxes(inputs);
+
+    expect(result.healthInsurance).toBe(0);
+    expect(result.pensionPayments).toBe(0);
+    expect(result.employmentInsurance).toBe(0);
+    expect(result.socialInsuranceOverride).toBe(500_000);
+    
+    // Verify take home calculation uses the manual amount
+    expect(result.takeHomeIncome).toBe(
+      inputs.annualIncome - (result.nationalIncomeTax + result.residenceTax.totalResidenceTax + 500_000)
+    );
+  });
 })

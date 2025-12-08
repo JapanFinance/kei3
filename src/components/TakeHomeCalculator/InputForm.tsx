@@ -559,14 +559,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     onChange={onInputChange}
                     name="manualSocialInsuranceEntry"
                     color="primary"
+                    size="small"
                   />
                 }
                 label={
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Typography sx={{ fontSize: '0.97rem', fontWeight: 500 }}>
+                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
                       Enter Social Insurance Manually
                     </Typography>
-                    <InfoTooltip title="Manually enter the total social insurance amount (Health Insurance + Pension + Employment Insurance). This overrides the automatic calculation." />
+                    <InfoTooltip title="Manually enter the total social insurance amount paid in the year (e.g. Health Insurance + Pension + Employment Insurance). This option should be used only if you have a situation where the automatic calculation does not reflect your actual payments. Employees generally can find this amount on their annual withholding statement (源泉徴収票) as the item labelled 社会保険料等の金額." />
                   </Box>
                 }
               />
