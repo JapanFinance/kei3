@@ -73,6 +73,21 @@ export const generateChartData = (
     (_, i) => chartRange.min + (i * step)
   )
 
+  // If manual social insurance is entered, we cannot accurately calculate the breakdown for other income levels.
+  // We return a dummy dataset to ensure the chart renders (axes, background bands, vertical lines) but without misleading bars.
+  if (currentInputs.manualSocialInsuranceEntry) {
+    return {
+      datasets: [{
+        label: 'Data Unavailable',
+        data: incomePoints.map(x => ({ x, y: 0 })),
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        yAxisID: 'y',
+        type: 'bar' as const,
+      }]
+    };
+  }
+
   // Create datasets with proper alignment using accessible color palette
   // Precompute results and cap status for each income point
   const resultsAndCaps = incomePoints.map(income => {

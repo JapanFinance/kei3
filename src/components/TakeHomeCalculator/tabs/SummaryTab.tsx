@@ -23,7 +23,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const totalSocialInsurance = results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+  const totalSocialInsurance = results.socialInsuranceOverride ?? (results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0));
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage = results.annualIncome > 0 ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%` : '100%';
@@ -52,50 +52,64 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
           <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20 }} />
           Social Insurance
         </Typography>
-        <ResultRow 
-          label="Health Insurance"
-          labelSuffix={capStatus && capStatus.healthInsuranceCapped && (
-            <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="health insurance" />
-          )}
-          value={
-            !isMobile ? 
-              `${formatJPY(results.healthInsurance)} (${((results.healthInsurance / results.annualIncome) * 100).toFixed(1)}%)` : 
-              formatJPY(results.healthInsurance)
-          } 
-          type="indented" 
-        />
-        <ResultRow 
-          label="Pension Payments"
-          labelSuffix={capStatus && (capStatus.pensionCapped || capStatus.pensionFixed) && (
-            <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="pension" />
-          )}
-          value={
-            !isMobile ? 
-              `${formatJPY(results.pensionPayments)} (${((results.pensionPayments / results.annualIncome) * 100).toFixed(1)}%)` : 
-              formatJPY(results.pensionPayments)
-          } 
-          type="indented" 
-        />
-        {results.isEmploymentIncome && (
+        {results.socialInsuranceOverride !== undefined ? (
           <ResultRow 
-            label="Employment Insurance"
+            label="Total Social Insurance (Manual)" 
             value={
               !isMobile ? 
-                `${formatJPY(results.employmentInsurance ?? 0)} (${(((results.employmentInsurance ?? 0) / results.annualIncome) * 100).toFixed(2)}%)` : 
-                formatJPY(results.employmentInsurance ?? 0)
+                `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)` : 
+                formatJPY(totalSocialInsurance)
             } 
-            type="indented" 
+            type="subtotal" 
           />
+        ) : (
+          <>
+            <ResultRow 
+              label="Health Insurance"
+              labelSuffix={capStatus && capStatus.healthInsuranceCapped && (
+                <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="health insurance" />
+              )}
+              value={
+                !isMobile ? 
+                  `${formatJPY(results.healthInsurance)} (${((results.healthInsurance / results.annualIncome) * 100).toFixed(1)}%)` : 
+                  formatJPY(results.healthInsurance)
+              } 
+              type="indented" 
+            />
+            <ResultRow 
+              label="Pension Payments"
+              labelSuffix={capStatus && (capStatus.pensionCapped || capStatus.pensionFixed) && (
+                <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="pension" />
+              )}
+              value={
+                !isMobile ? 
+                  `${formatJPY(results.pensionPayments)} (${((results.pensionPayments / results.annualIncome) * 100).toFixed(1)}%)` : 
+                  formatJPY(results.pensionPayments)
+              } 
+              type="indented" 
+            />
+            {results.isEmploymentIncome && (
+              <ResultRow 
+                label="Employment Insurance"
+                value={
+                  !isMobile ? 
+                    `${formatJPY(results.employmentInsurance ?? 0)} (${(((results.employmentInsurance ?? 0) / results.annualIncome) * 100).toFixed(2)}%)` : 
+                    formatJPY(results.employmentInsurance ?? 0)
+                } 
+                type="indented" 
+              />
+            )}
+            <ResultRow 
+              label="Total Social Insurance" 
+              value={
+                !isMobile ? 
+                  `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)` : 
+                  formatJPY(totalSocialInsurance)
+              } 
+              type="subtotal" 
+            />
+          </>
         )}
-        <ResultRow 
-          label="Total Social Insurance" 
-          value={
-            !isMobile ? 
-              `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)` : 
-              formatJPY(totalSocialInsurance)
-          } 
-          type="subtotal" 
-        />
       </Box>
       
       {/* Taxes Section */}

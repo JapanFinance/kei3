@@ -60,6 +60,8 @@ describe('calculateFurusatoNozeiLimit', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
       dcPlanContributions: 240_000, // 20,000 yen per month
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
     }).furusatoNozei;
 
     const fnWithoutDC = calculateFNForIncome(5_000_000);
@@ -67,6 +69,41 @@ describe('calculateFurusatoNozeiLimit', () => {
     expect(fn.limit).toBeLessThan(fnWithoutDC.limit);
     expect(fn.limit).toBe(55_000);
     expect(fn.outOfPocketCost).toBe(4700);
+  });
+
+  it('furusato nozei limit is affected by manual social insurance override', () => {
+    // Standard calculation for 5M income has limit of 61,000
+    // If we increase social insurance deduction manually, taxable income decreases, so limit should decrease
+    const fnWithHighSocialInsurance = calculateTaxes({
+      annualIncome: 5_000_000,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: false,
+      region: 'Tokyo',
+      showDetailedInput: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 1_000_000, // Higher than standard ~726k
+    }).furusatoNozei;
+
+    expect(fnWithHighSocialInsurance.limit).toBeLessThan(61_000);
+    
+    // If we decrease social insurance deduction manually, taxable income increases, so limit should increase
+    const fnWithLowSocialInsurance = calculateTaxes({
+      annualIncome: 5_000_000,
+      isEmploymentIncome: true,
+      isSubjectToLongTermCarePremium: false,
+      region: 'Tokyo',
+      showDetailedInput: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 500_000, // Lower than standard ~726k
+    }).furusatoNozei;
+
+    expect(fnWithLowSocialInsurance.limit).toBeGreaterThan(61_000);
   });
 });
 
@@ -80,5 +117,7 @@ function calculateFNForIncome(income: number) : FurusatoNozeiDetails {
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
     dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
   }).furusatoNozei;
 }

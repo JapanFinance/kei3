@@ -103,6 +103,8 @@ interface TakeHomeChartProps {
   dependents: Dependent[];
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   className?: string;
+  manualSocialInsuranceEntry?: boolean;
+  manualSocialInsuranceAmount?: number;
 }
 
 // Define a type for the mark objects
@@ -179,8 +181,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   dcPlanContributions,
   dependents,
   customEHIRates,
-  className = ''
+  className = '',
+  manualSocialInsuranceEntry,
+  manualSocialInsuranceAmount = 0
 }) => {
+  const theme = useTheme();
+
   // Track whether the user has manually adjusted the range
   const [hasManuallyAdjustedRange, setHasManuallyAdjustedRange] = useState(false);
   const [manualChartRange, setManualChartRange] = useState<ChartRange | null>(null);
@@ -229,7 +235,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     }
   };
   
-  const theme = useTheme();
   const useCompactLabelFormat = useMediaQuery(theme.breakpoints.down('md'));
 
   const chartRef = useRef<ChartJS<'bar' | 'line'>>(null);
@@ -243,9 +248,11 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       region,
       dcPlanContributions,
       dependents,
-      customEHIRates
+      customEHIRates,
+      manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
+      manualSocialInsuranceAmount
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates]
+    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount]
   );
 
   // Get chart options using the utility function
@@ -280,6 +287,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     dependents,
                     showDetailedInput: false,
                     customEHIRates,
+                    manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
+                    manualSocialInsuranceAmount
                   };
                   
                   const taxResults = calculateTaxes(taxInputs);
@@ -303,7 +312,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates]
+    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount]
   );
 
   // Use media query to determine if we should show minor marks
@@ -351,7 +360,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         </Typography>
       </Box>
       
-      <Box className="chart-container" sx={{ mb: { xs: 1.2, sm: 2 } }}>
+      <Box className="chart-container" sx={{ mb: { xs: 1.2, sm: 2 }, position: 'relative' }}>
         <Chart 
           ref={chartRef}
           type="bar" 
@@ -359,6 +368,33 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           options={chartOptions}
           style={{ height: '100%', width: '100%' }}
         />
+        {manualSocialInsuranceEntry && (
+          <Paper
+            elevation={2}
+            sx={{
+              position: 'absolute',
+              top: '15%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              bgcolor: 'background.paper',
+              opacity: 0.95,
+              p: 1.5,
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'warning.main',
+              textAlign: 'center',
+              maxWidth: '90%',
+              zIndex: 10,
+            }}
+          >
+            <Typography variant="subtitle2" color="warning.main" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+              Comparative Data Unavailable
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}>
+              Data for other income levels cannot be calculated<br/>when using manual social insurance entry.
+            </Typography>
+          </Paper>
+        )}
       </Box>
 
       {/* Custom Legend for Income Lines */}

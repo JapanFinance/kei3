@@ -550,140 +550,179 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
         {/* Social Insurance Configuration */}
         <Box sx={{ mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.2, sm: 0.5 } }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1 }}>
-              <FormControl fullWidth>
-                <Typography
-                  gutterBottom
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.97rem',
-                    fontWeight: 500,
-                    mb: 0.2,
-                    color: 'text.primary',
-                  }}
-                >
-                  Health Insurance Provider
-                  <InfoTooltip title="Your health insurance provider affects your premium calculations. Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
-                </Typography>
-                <InputLabel 
-                  id="healthInsuranceProvider-label" 
-                  sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
-                >
-                  Health Insurance Provider
-                </InputLabel>
-                <Select
-                  id="healthInsuranceProvider"
-                  name="healthInsuranceProvider"
-                  labelId="healthInsuranceProvider-label"
-                  value={inputs.healthInsuranceProvider}
-                  onChange={handleSelectChange}
-                  disabled={isHealthInsuranceProviderDropdownDisabled}
-                  fullWidth
-                  sx={sharedInputSx}
-                >
-                  {availableProviders.map((provider) => (
-                    <MenuItem 
-                      key={provider.id} 
-                      value={provider.id}
-                      sx={provider.id === CUSTOM_PROVIDER_ID ? { fontStyle: 'italic' } : {}}
-                    >
-                      {provider.displayName}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {isHealthInsuranceProviderDropdownDisabled && (
-                  <FormHelperText>
-                    {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
-                  </FormHelperText>
-                )}
-                {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
-                  <FormHelperText>
-                    {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
-                  </FormHelperText>
-                )}
-              </FormControl>
-
-              {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <FormControl fullWidth>
-                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
-                      Health Insurance
-                      <InfoTooltip title="Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率." />
-                    </Typography>
-                    <SpinnerNumberField
-                      id="customHealthInsuranceRate"
-                      name="customHealthInsuranceRate"
-                      value={inputs.customEHIRates?.healthInsuranceRate ?? 0}
-                      onInputChange={handleCustomRateChange}
-                      label="Rate (%)"
-                      step={0.1}
-                      shiftStep={1.0}
-                      prefix=""
-                      suffix="%"
-                      max={100}
-                      sx={sharedInputSx}
-                    />
-                  </FormControl>
-                  <FormControl fullWidth>
-                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
-                      Long-term Care
-                      <InfoTooltip title="Enter the employee's share of the Long-term Care premium rate (usually half of the total rate). This only applies if you are aged 40-64. Look for 介護保険料率 on the provider's website." />
-                    </Typography>
-                    <SpinnerNumberField
-                      id="customLongTermCareRate"
-                      name="customLongTermCareRate"
-                      value={inputs.customEHIRates?.longTermCareRate ?? 0}
-                      onInputChange={handleCustomRateChange}
-                      label="Rate (%)"
-                      step={0.1}
-                      shiftStep={1.0}
-                      prefix=""
-                      suffix="%"
-                      max={100}
-                      sx={sharedInputSx}
-                    />
-                  </FormControl>
-                </Box>
-              ) : (
-                <FormControl>
-                  <Autocomplete
-                    id="region"
-                    options={regionMenuItemsToDisplay}
-                    value={
-                      regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
-                      regionMenuItemsToDisplay[0] ||
-                      { id: '', displayName: '' }
-                    }
-                    onChange={(_, newValue) => {
-                      handleSelectChange({
-                        target: {
-                          name: 'region',
-                          value: newValue?.id || ''
-                        }
-                      });
-                    }}
-                    getOptionLabel={(option) => option.displayName}
-                    isOptionEqualToValue={(option, value) => option.id === value.id}
-                    disabled={isRegionDropdownEffectivelyDisabled}
-                    renderInput={(params) => (
-                      <TextField
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        {...(params as any)}
-                        label="Local Region (Municipality/Prefecture)"
-                        helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
-                      />
-                    )}
-                    noOptionsText="No matching regions"
-                    clearOnBlur
-                    disableClearable
-                    selectOnFocus
-                    handleHomeEndKeys
-                    sx={sharedInputSx}
+            {/* Manual Social Insurance Entry Switch */}
+            <Box sx={{ mb: 1 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={inputs.manualSocialInsuranceEntry}
+                    onChange={onInputChange}
+                    name="manualSocialInsuranceEntry"
+                    color="primary"
+                    size="small"
                   />
-                </FormControl>
-              )}
+                }
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                      Enter Social Insurance Manually
+                    </Typography>
+                    <InfoTooltip title="Manually enter the total social insurance amount paid in the year (e.g. Health Insurance + Pension + Employment Insurance). This option should be used only if you have a situation where the automatic calculation does not reflect your actual payments. Employees generally can find this amount on their annual withholding statement (源泉徴収票) as the item labelled 社会保険料等の金額." />
+                  </Box>
+                }
+              />
             </Box>
+
+            {inputs.manualSocialInsuranceEntry ? (
+              <Box sx={{ mt: 1 }}>
+                <SpinnerNumberField
+                  id="manualSocialInsuranceAmount"
+                  name="manualSocialInsuranceAmount"
+                  value={inputs.manualSocialInsuranceAmount}
+                  onInputChange={onInputChange}
+                  label="Total Social Insurance Amount"
+                  step={1000}
+                  shiftStep={10000}
+                  min={0}
+                  sx={{ ...sharedInputSx, width: '100%' }}
+                />
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1 }}>
+                <FormControl fullWidth>
+                  <Typography
+                    gutterBottom
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      fontSize: '0.97rem',
+                      fontWeight: 500,
+                      mb: 0.2,
+                      color: 'text.primary',
+                    }}
+                  >
+                    Health Insurance Provider
+                    <InfoTooltip title="Your health insurance provider affects your premium calculations. Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
+                  </Typography>
+                  <InputLabel 
+                    id="healthInsuranceProvider-label" 
+                    sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
+                  >
+                    Health Insurance Provider
+                  </InputLabel>
+                  <Select
+                    id="healthInsuranceProvider"
+                    name="healthInsuranceProvider"
+                    labelId="healthInsuranceProvider-label"
+                    value={inputs.healthInsuranceProvider}
+                    onChange={handleSelectChange}
+                    disabled={isHealthInsuranceProviderDropdownDisabled}
+                    fullWidth
+                    sx={sharedInputSx}
+                  >
+                    {availableProviders.map((provider) => (
+                      <MenuItem 
+                        key={provider.id} 
+                        value={provider.id}
+                        sx={provider.id === CUSTOM_PROVIDER_ID ? { fontStyle: 'italic' } : {}}
+                      >
+                        {provider.displayName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {isHealthInsuranceProviderDropdownDisabled && (
+                    <FormHelperText>
+                      {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
+                    </FormHelperText>
+                  )}
+                  {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
+                    <FormHelperText>
+                      {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
+                    </FormHelperText>
+                  )}
+                </FormControl>
+
+                {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <FormControl fullWidth>
+                      <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                        Health Insurance
+                        <InfoTooltip title="Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率." />
+                      </Typography>
+                      <SpinnerNumberField
+                        id="customHealthInsuranceRate"
+                        name="customHealthInsuranceRate"
+                        value={inputs.customEHIRates?.healthInsuranceRate ?? 0}
+                        onInputChange={handleCustomRateChange}
+                        label="Rate (%)"
+                        step={0.1}
+                        shiftStep={1.0}
+                        prefix=""
+                        suffix="%"
+                        max={100}
+                        sx={sharedInputSx}
+                      />
+                    </FormControl>
+                    <FormControl fullWidth>
+                      <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                        Long-term Care
+                        <InfoTooltip title="Enter the employee's share of the Long-term Care premium rate (usually half of the total rate). This only applies if you are aged 40-64. Look for 介護保険料率 on the provider's website." />
+                      </Typography>
+                      <SpinnerNumberField
+                        id="customLongTermCareRate"
+                        name="customLongTermCareRate"
+                        value={inputs.customEHIRates?.longTermCareRate ?? 0}
+                        onInputChange={handleCustomRateChange}
+                        label="Rate (%)"
+                        step={0.1}
+                        shiftStep={1.0}
+                        prefix=""
+                        suffix="%"
+                        max={100}
+                        sx={sharedInputSx}
+                      />
+                    </FormControl>
+                  </Box>
+                ) : (
+                  <FormControl>
+                    <Autocomplete
+                      id="region"
+                      options={regionMenuItemsToDisplay}
+                      value={
+                        regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
+                        regionMenuItemsToDisplay[0] ||
+                        { id: '', displayName: '' }
+                      }
+                      onChange={(_, newValue) => {
+                        handleSelectChange({
+                          target: {
+                            name: 'region',
+                            value: newValue?.id || ''
+                          }
+                        });
+                      }}
+                      getOptionLabel={(option) => option.displayName}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      disabled={isRegionDropdownEffectivelyDisabled}
+                      renderInput={(params) => (
+                        <TextField
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          {...(params as any)}
+                          label="Local Region (Municipality/Prefecture)"
+                          helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
+                        />
+                      )}
+                      noOptionsText="No matching regions"
+                      clearOnBlur
+                      disableClearable
+                      selectOnFocus
+                      handleHomeEndKeys
+                      sx={sharedInputSx}
+                    />
+                  </FormControl>
+                )}
+              </Box>
+            )}
         </Box>
 
         {/* iDeCo/Corporate DC Contributions */}

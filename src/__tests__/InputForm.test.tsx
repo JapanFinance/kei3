@@ -17,6 +17,8 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
   };
 
   beforeEach(() => {
@@ -309,6 +311,8 @@ describe('Dependent Coverage UI Behavior', () => {
     dcPlanContributions: 0,
     dependents: [],
     showDetailedInput: false,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
   };
 
   beforeEach(() => {
@@ -450,6 +454,56 @@ describe('Dependent Coverage UI Behavior', () => {
       );
 
       expect(screen.queryByLabelText('Rate (%)')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Manual Social Insurance Entry', () => {
+    it('should show manual entry input when toggle is on', () => {
+      const manualInputs = { ...baseInputs, manualSocialInsuranceEntry: true };
+      
+      render(
+        <TakeHomeInputForm 
+          inputs={manualInputs} 
+          onInputChange={mockOnInputChange} 
+        />
+      );
+
+      // Check if the input field is visible
+      expect(screen.getByLabelText(/Total Social Insurance Amount/i)).toBeInTheDocument();
+      
+      // Check if the provider dropdown is NOT visible
+      expect(screen.queryByRole('combobox', { name: /health insurance provider/i })).not.toBeInTheDocument();
+    });
+
+    it('should hide manual entry input when toggle is off', () => {
+      const manualInputs = { ...baseInputs, manualSocialInsuranceEntry: false };
+      
+      render(
+        <TakeHomeInputForm 
+          inputs={manualInputs} 
+          onInputChange={mockOnInputChange} 
+        />
+      );
+
+      expect(screen.queryByLabelText(/Total Social Insurance Amount/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toBeInTheDocument();
+    });
+
+    it('should call onInputChange when manual amount changes', async () => {
+      const user = userEvent.setup();
+      const manualInputs = { ...baseInputs, manualSocialInsuranceEntry: true, manualSocialInsuranceAmount: 0 };
+      
+      render(
+        <TakeHomeInputForm 
+          inputs={manualInputs} 
+          onInputChange={mockOnInputChange} 
+        />
+      );
+
+      const amountInput = screen.getByLabelText(/Total Social Insurance Amount/i);
+      await user.type(amountInput, '5');
+
+      expect(mockOnInputChange).toHaveBeenCalled();
     });
   });
 

@@ -25,7 +25,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const totalSocialInsurance = results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+  const totalSocialInsurance = results.socialInsuranceOverride !== undefined 
+    ? results.socialInsuranceOverride 
+    : results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
   
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
@@ -33,6 +35,39 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   
   // Detect if any caps are applied
   const capStatus = detectCaps(results);
+
+  if (results.socialInsuranceOverride !== undefined) {
+    return (
+      <Box>
+        <Typography
+          variant="h6"
+          sx={{
+            mb: 1,
+            color: 'primary.main',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: isMobile ? '1.1rem' : '1.25rem'
+          }}
+        >
+          <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 20 : 24 }} />
+          Social Insurance Details
+        </Typography>
+
+        <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
+        
+        <Box sx={{ my: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px dashed', borderColor: 'text.secondary' }}>
+           <Typography variant="body2" color="text.secondary" align="center">
+              Using manually entered social insurance amount.
+              <br />
+              Detailed breakdown is not available.
+           </Typography>
+        </Box>
+
+        <ResultRow label="Total Social Insurance" value={formatJPY(totalSocialInsurance)} type="total" />
+      </Box>
+    );
+  }
 
   return (
     <Box>
