@@ -6,7 +6,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### New
 
-- Added "Manual Social Insurance Entry" option. This allows you to manually input the total social insurance amount if you already know the exact deduction amount, overriding the automatic calculation. This is useful for situations not covered by the options available, such as employees who don't have a fixed annual income and people on NHI in a municipality not available in the dropdown options.
+- Added "Manual Social Insurance Entry" option. This allows you to manually input the total social insurance amount if you already know the exact deduction amount, overriding the automatic calculation. This is useful for situations not covered by the options available, such as employees who don't have a fixed annual salary and people on NHI in a municipality not available in the dropdown options.
 
 ## 2025-12-07
 
