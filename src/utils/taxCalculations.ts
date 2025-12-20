@@ -1,10 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
+import type { TakeHomeInputs, TakeHomeResults, BonusIncomeStream } from '../types/tax'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
-import { calculatePensionPremium } from './pensionCalculator';
-import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
+import { calculatePensionBreakdown } from './pensionCalculator';
+import { calculateHealthInsuranceBreakdown, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
 import { calculateDependentDeductions } from './dependentDeductions';
 
@@ -39,6 +39,69 @@ export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): num
 }
 
 /**
+ * Breakdown of Employment Insurance premium components
+ */
+export interface EmploymentInsuranceBreakdown {
+    total: number;
+    bonusPortion: number;
+}
+
+/**
+ * Calculates employment insurance premiums breakdown based on income
+ */
+export const calculateEmploymentInsuranceBreakdown = (
+    regularIncome: number, 
+    bonuses: BonusIncomeStream[], 
+    isEmploymentIncome: boolean
+): EmploymentInsuranceBreakdown => {
+    // If not employment income, no employment insurance is required
+    if (!isEmploymentIncome || (regularIncome <= 0 && bonuses.length === 0)) {
+        return { total: 0, bonusPortion: 0 };
+    }
+
+    let annualPremium = 0;
+    let bonusPortion = 0;
+
+    // Calculate on regular monthly salary
+    if (regularIncome > 0) {
+        const monthlySalary = regularIncome / 12;
+        for (let i = 0; i < 12; i++) {
+            const monthlyPremium = monthlySalary * employmentInsuranceRate;
+            // Apply special rounding rules
+            const decimal = monthlyPremium - Math.floor(monthlyPremium);
+            let roundedPremium: number;
+            
+            if (decimal <= 0.5) {
+                roundedPremium = Math.floor(monthlyPremium);
+            } else {
+                roundedPremium = Math.ceil(monthlyPremium);
+            }
+            
+            annualPremium += roundedPremium;
+        }
+    }
+
+    // Calculate on bonuses
+    for (const bonus of bonuses) {
+        const bonusPremium = bonus.amount * employmentInsuranceRate;
+        // Apply special rounding rules
+        const decimal = bonusPremium - Math.floor(bonusPremium);
+        let roundedPremium: number;
+        
+        if (decimal <= 0.5) {
+            roundedPremium = Math.floor(bonusPremium);
+        } else {
+            roundedPremium = Math.ceil(bonusPremium);
+        }
+        
+        bonusPortion += roundedPremium;
+        annualPremium += roundedPremium;
+    }
+
+    return { total: Math.max(annualPremium, 0), bonusPortion };
+}
+
+/**
  * Calculates employment insurance premiums based on income
  * Source: Ministry of Health, Labour and Welfare (MHLW) rates for 2025
  * https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html
@@ -51,32 +114,12 @@ export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): num
  *   - If decimal is 0.51 yen or more → round up
  * - Annual total is the sum of 12 monthly premiums
  */
-export const calculateEmploymentInsurance = (annualIncome: number, isEmploymentIncome: boolean): number => {
-    // If not employment income, no employment insurance is required
-    if (!isEmploymentIncome || annualIncome <= 0) {
-        return 0;
-    }
-
-    const monthlySalary = annualIncome / 12;
-    let annualPremium = 0;
-
-
-    for (let i = 0; i < 12; i++) {
-        const monthlyPremium = monthlySalary * employmentInsuranceRate;
-        // Apply special rounding rules
-        const decimal = monthlyPremium - Math.floor(monthlyPremium);
-        let roundedPremium: number;
-        
-        if (decimal <= 0.5) {
-            roundedPremium = Math.floor(monthlyPremium);
-        } else {
-            roundedPremium = Math.ceil(monthlyPremium);
-        }
-        
-        annualPremium += roundedPremium;
-    }
-
-    return Math.max(annualPremium, 0);
+export const calculateEmploymentInsurance = (
+    regularIncome: number, 
+    bonuses: BonusIncomeStream[], 
+    isEmploymentIncome: boolean
+): number => {
+    return calculateEmploymentInsuranceBreakdown(regularIncome, bonuses, isEmploymentIncome).total;
 }
 
 /**
@@ -183,18 +226,64 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
 };
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
-    if (inputs.annualIncome <= 0) {
+    // Determine income components based on mode
+    let regularEmploymentIncome = 0;
+    const bonusIncome: BonusIncomeStream[] = [];
+    let businessIncome = 0;
+    let totalAnnualIncome = 0;
+
+    if (inputs.incomeMode === 'advanced') {
+        for (const stream of inputs.incomeStreams) {
+            if (stream.type === 'salary') {
+                if (stream.frequency === 'monthly') {
+                    regularEmploymentIncome += stream.amount * 12;
+                } else {
+                    regularEmploymentIncome += stream.amount;
+                }
+            } else if (stream.type === 'bonus') {
+                bonusIncome.push(stream);
+            } else if (stream.type === 'business') {
+                businessIncome += stream.amount;
+            }
+        }
+        totalAnnualIncome = regularEmploymentIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + businessIncome;
+    } else if (inputs.incomeMode === 'business') {
+        businessIncome = inputs.annualIncome;
+        totalAnnualIncome = inputs.annualIncome;
+    } else {
+        // Default to salary mode
+        regularEmploymentIncome = inputs.annualIncome;
+        totalAnnualIncome = inputs.annualIncome;
+    }
+
+    if (totalAnnualIncome <= 0) {
         return DEFAULT_TAKE_HOME_RESULTS;
     }
-    const annualIncome = inputs.annualIncome;
-    const isEmploymentIncome = inputs.isEmploymentIncome;
-    const netIncome = isEmploymentIncome ? calculateNetEmploymentIncome(annualIncome) : annualIncome;
+    
+    // Use the calculated total annual income instead of inputs.annualIncome for consistency
+    const annualIncome = totalAnnualIncome;
+    
+    // Determine if there is any employment income (salary or bonus)
+    const isEmploymentIncome = regularEmploymentIncome > 0 || bonusIncome.length > 0;
+    
+    // Calculate net income for tax purposes
+    // Employment income deduction applies to the sum of salary and bonuses
+    const grossEmploymentIncome = regularEmploymentIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+    
+    // Total net income = Net Employment Income + Business Income
+    const netIncome = netEmploymentIncome + businessIncome;
 
     let healthInsurance = 0;
     let pensionPayments = 0;
     let employmentInsurance = 0;
     let socialInsuranceDeduction = 0;
     let nhiBreakdown = null;
+    
+    // Bonus breakdown variables
+    let healthInsuranceOnBonus = 0;
+    let pensionOnBonus = 0;
+    let employmentInsuranceOnBonus = 0;
 
     if (inputs.manualSocialInsuranceEntry) {
         socialInsuranceDeduction = inputs.manualSocialInsuranceAmount;
@@ -204,29 +293,44 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         // - National Health Insurance: uses net income (after employment income deduction if applicable)
         //   This is because NHI premiums are based on taxable income, while employee health insurance
         //   is based on standard monthly remuneration before deductions.
-        const incomeForHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID
-            ? netIncome
-            : inputs.annualIncome;
-
-        healthInsurance = calculateHealthInsurancePremium(
-            incomeForHealthInsurance,
-            inputs.isSubjectToLongTermCarePremium,
-            inputs.healthInsuranceProvider,
-            inputs.region,
-            inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates ? {
-                healthRate: inputs.customEHIRates.healthInsuranceRate,
-                ltcRate: inputs.customEHIRates.longTermCareRate
-            } : undefined
-        );
-
-        // Calculate NHI breakdown if National Health Insurance is selected
+        
+        // If using NHI, we use the total net income
+        // If using Employee Health Insurance, we calculate based on regular salary + bonuses
+        
         if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
+             const hiResult = calculateHealthInsuranceBreakdown(
+                netIncome,
+                inputs.isSubjectToLongTermCarePremium,
+                inputs.healthInsuranceProvider,
+                inputs.region,
+                undefined,
+                [] // No separate bonus calculation for NHI
+            );
+            healthInsurance = hiResult.total;
+            healthInsuranceOnBonus = hiResult.bonusPortion;
+            
             // For NHI breakdown, also use net income
             nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
                 netIncome,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.region as string
             );
+        } else {
+            // Employee Health Insurance
+            // We pass the regular employment income (annualized) and the list of bonuses
+            const hiResult = calculateHealthInsuranceBreakdown(
+                regularEmploymentIncome,
+                inputs.isSubjectToLongTermCarePremium,
+                inputs.healthInsuranceProvider,
+                inputs.region,
+                inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates ? {
+                    healthRate: inputs.customEHIRates.healthInsuranceRate,
+                    ltcRate: inputs.customEHIRates.longTermCareRate
+                } : undefined,
+                bonusIncome
+            );
+            healthInsurance = hiResult.total;
+            healthInsuranceOnBonus = hiResult.bonusPortion;
         }
 
         // Calculate pension based on health insurance type
@@ -234,11 +338,23 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         // People on employee health insurance are in Employee Pension system
         // People covered as dependents do not pay pension premiums
         const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
-        pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
-            ? 0 
-            : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
+        
+        if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
+            pensionPayments = 0;
+        } else if (isInEmployeePensionSystem) {
+            const pensionResult = calculatePensionBreakdown(true, regularEmploymentIncome / 12, true, bonusIncome);
+            pensionPayments = pensionResult.total;
+            pensionOnBonus = pensionResult.bonusPortion;
+        } else {
+            // National Pension
+            const pensionResult = calculatePensionBreakdown(false, 0, false, []);
+            pensionPayments = pensionResult.total;
+            pensionOnBonus = pensionResult.bonusPortion;
+        }
 
-        employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
+        const eiResult = calculateEmploymentInsuranceBreakdown(regularEmploymentIncome, bonusIncome, isEmploymentIncome);
+        employmentInsurance = eiResult.total;
+        employmentInsuranceOnBonus = eiResult.bonusPortion;
 
         socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
     }
@@ -280,6 +396,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         employmentInsurance,
         takeHomeIncome,
         socialInsuranceOverride: inputs.manualSocialInsuranceEntry ? inputs.manualSocialInsuranceAmount : undefined,
+        // Bonus breakdown
+        healthInsuranceOnBonus,
+        pensionOnBonus,
+        employmentInsuranceOnBonus,
         netEmploymentIncome: isEmploymentIncome ? netIncome : undefined,
         nationalIncomeTaxBasicDeduction,
         taxableIncomeForNationalIncomeTax,

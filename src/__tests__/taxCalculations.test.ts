@@ -55,7 +55,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo", // Default for Kyokai Kenpo in tests
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -76,7 +76,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(22_300)
@@ -97,7 +97,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(120_700)
@@ -119,7 +119,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(16_345_400) // 50M - 1.95M (employment deduction) - 1.815194M (social insurance) - 0 (basic deduction) = 46.234806M, rounded to 46.234M, then 45% - 4.796M = 16.0093M, + 2.1% = 16.345495M, rounded down to 16.3454M
@@ -141,7 +141,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -159,7 +159,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -174,6 +174,8 @@ describe('calculateTaxes', () => {
     const inputs = {
       annualIncome: 5_000_000,
       isEmploymentIncome: false,
+      incomeMode: 'business' as const,
+      incomeStreams: [],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo", // For NHI
@@ -197,7 +199,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo", // For NHI
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const result = calculateTaxes(inputs);
     
@@ -229,7 +231,7 @@ describe('calculateTaxes', () => {
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
     };
     const resultWithoutIdeco = calculateTaxes(inputsWithoutDcPlan);
 
@@ -265,12 +267,12 @@ describe('calculateEmploymentInsurance', () => {
     // 1,200,000 / 12 = 100,000 per month
     // 100,000 * 0.55% = 550 yen per month
     // 550 * 12 = 6,600 yen annually
-    expect(calculateEmploymentInsurance(1_200_000, true)).toBe(6_600)
+    expect(calculateEmploymentInsurance(1_200_000, [], true)).toBe(6_600)
     
     // 2,400,000 / 12 = 200,000 per month
     // 200,000 * 0.55% = 1,100 yen per month
     // 1,100 * 12 = 13,200 yen annually
-    expect(calculateEmploymentInsurance(2_400_000, true)).toBe(13_200)
+    expect(calculateEmploymentInsurance(2_400_000, [], true)).toBe(13_200)
   })
 
   // Test cases with non-even monthly amounts to verify rounding
@@ -279,47 +281,47 @@ describe('calculateEmploymentInsurance', () => {
     // 83,333.33 * 0.55% ≈ 458.33 per month
     // Rounded to 458 yen per month (decimal .33 < .50 → round down)
     // 458 * 12 = 5,496 yen annually
-    expect(calculateEmploymentInsurance(1_000_000, true)).toBe(5_496)
+    expect(calculateEmploymentInsurance(1_000_000, [], true)).toBe(5_496)
     
     // 1,100,000 / 12 ≈ 91,666.67 per month
     // 91,666.67 * 0.55% ≈ 504.17 per month
     // Rounded to 504 yen per month (decimal .17 < .50 → round down)
     // 504 * 12 = 6,048 yen annually
-    expect(calculateEmploymentInsurance(1_100_000, true)).toBe(6_048)
+    expect(calculateEmploymentInsurance(1_100_000, [], true)).toBe(6_048)
     
     // 1,111,111 / 12 ≈ 92,592.58 per month
     // 92,592.58 * 0.55% ≈ 509.26 per month
     // Rounded to 509 yen per month (decimal .26 < .50 → round down)
     // 509 * 12 = 6,108 yen annually
-    expect(calculateEmploymentInsurance(1_111_111, true)).toBe(6_108)
+    expect(calculateEmploymentInsurance(1_111_111, [], true)).toBe(6_108)
     
     // 1,200,001 / 12 = 100,000.083 per month
     // 100,000.083 * 0.55% ≈ 550.00046 per month
     // Rounded to 550 yen per month (decimal .00046 < .50 → round down)
     // 550 * 12 = 6,600 yen annually
-    expect(calculateEmploymentInsurance(1_200_001, true)).toBe(6_600)
+    expect(calculateEmploymentInsurance(1_200_001, [], true)).toBe(6_600)
     
     // 1,999,999 / 12 ≈ 166,666.58 per month
     // 166,666.58 * 0.55% ≈ 916.67 per month
     // Rounded to 917 yen per month (decimal .67 > .50 → round up)
     // 917 * 12 = 11,004 yen annually
-    expect(calculateEmploymentInsurance(1_999_999, true)).toBe(11_004)
+    expect(calculateEmploymentInsurance(1_999_999, [], true)).toBe(11_004)
   })
 
   // Test edge cases
   it('returns 0 for non-employment income', () => {
-    expect(calculateEmploymentInsurance(5_000_000, false)).toBe(0)
-    expect(calculateEmploymentInsurance(10_000_000, false)).toBe(0)
+    expect(calculateEmploymentInsurance(5_000_000, [], false)).toBe(0)
+    expect(calculateEmploymentInsurance(10_000_000, [], false)).toBe(0)
   })
 
   it('returns 0 for zero income', () => {
-    expect(calculateEmploymentInsurance(0, true)).toBe(0)
-    expect(calculateEmploymentInsurance(0, false)).toBe(0)
+    expect(calculateEmploymentInsurance(0, [], true)).toBe(0)
+    expect(calculateEmploymentInsurance(0, [], false)).toBe(0)
   })
 
   it('returns 0 for negative income', () => {
-    expect(calculateEmploymentInsurance(-1_000_000, true)).toBe(0)
-    expect(calculateEmploymentInsurance(-1_000_000, false)).toBe(0)
+    expect(calculateEmploymentInsurance(-1_000_000, [], true)).toBe(0)
+    expect(calculateEmploymentInsurance(-1_000_000, [], false)).toBe(0)
   })
   
   // Test with very small amounts to ensure rounding works correctly
@@ -328,13 +330,13 @@ describe('calculateEmploymentInsurance', () => {
     // 833.33 * 0.55% ≈ 4.58 per month
     // Rounded to 5 yen per month (decimal .58 > .50 → round up)
     // 5 * 12 = 60 yen annually
-    expect(calculateEmploymentInsurance(10_000, true)).toBe(60)
+    expect(calculateEmploymentInsurance(10_000, [], true)).toBe(60)
     
     // 9,090 / 12 = 757.5 per month
     // 757.5 * 0.55% ≈ 4.17 per month
     // Rounded to 4 yen per month (decimal .17 < .50 → round down)
     // 4 * 12 = 48 yen annually
-    expect(calculateEmploymentInsurance(9_090, true)).toBe(48)
+    expect(calculateEmploymentInsurance(9_090, [], true)).toBe(48)
   })
 })
 
@@ -451,7 +453,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       showDetailedInput: false, 
       dcPlanContributions: 0, 
       manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0,
+      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
     };
     const result = calculateTaxes(inputs);
     
@@ -483,7 +485,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       showDetailedInput: false, 
       dcPlanContributions: 0, 
       manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0,
+      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
     };
     const result = calculateTaxes(inputs);
     
@@ -509,7 +511,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       showDetailedInput: false, 
       dcPlanContributions: 0, 
       manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0,
+      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
     };
     const result = calculateTaxes(inputs);
     
@@ -529,7 +531,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       showDetailedInput: false,
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0,
+      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
       customEHIRates: {
         healthInsuranceRate: 5, // 5%
         longTermCareRate: 1, // 1%
@@ -555,6 +557,8 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 500_000,
+      incomeMode: 'salary' as const,
+      incomeStreams: [],
     };
     const result = calculateTaxes(inputs);
 

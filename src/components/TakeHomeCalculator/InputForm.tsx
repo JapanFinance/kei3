@@ -14,20 +14,24 @@ import Switch from '@mui/material/Switch';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import FormHelperText from '@mui/material/FormHelperText';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
 import { useTheme } from '@mui/material/styles';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
 import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
 import PeopleIcon from '@mui/icons-material/People';
+import EditIcon from '@mui/icons-material/Edit';
 import { InfoTooltip } from '../ui/InfoTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
+import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
 import { calculateNetEmploymentIncome } from '../../utils/taxCalculations';
+import { formatJPY } from '../../utils/formatters';
 
-import type { TakeHomeInputs } from '../../types/tax';
+import type { TakeHomeInputs, IncomeMode, IncomeStream } from '../../types/tax';
 import {
   getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
@@ -42,7 +46,7 @@ import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/provid
 
 interface TaxInputFormProps {
   inputs: TakeHomeInputs;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => void;
+  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => void;
 }
 
 
@@ -74,6 +78,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
 
   const handleOpenDependentsModal = () => {
     setDependentsModalOpen(true);
@@ -90,6 +95,135 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         value: newDependents,
       }
     } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
+    // Calculate total annual income from streams
+    const totalIncome = newStreams.reduce((sum, s) => {
+      if (s.type === 'salary' && s.frequency === 'monthly') {
+        return sum + s.amount * 12;
+      }
+      return sum + s.amount;
+    }, 0);
+
+    // Determine if there is any employment income
+    const hasEmploymentIncome = newStreams.some(s => s.type === 'salary' || s.type === 'bonus');
+
+    // Update inputs
+    // We need to update multiple fields: incomeStreams, annualIncome, isEmploymentIncome
+    // Since onInputChange expects a single event, we might need to chain updates or assume the parent handles object merging if we pass a partial object?
+    // Looking at App.tsx: setInputs(prev => ({ ...prev, [name]: value })) usually.
+    // But here we need to update multiple.
+    // Let's assume we can pass a special event or we need to call onInputChange multiple times?
+    // Actually, standard React pattern for complex forms often allows passing the whole object.
+    // But the prop is `onInputChange: (e: React.ChangeEvent<...>) => void`.
+    // Let's look at how `handleDependentsChange` does it. It fakes an event with name 'dependents'.
+    
+    // We can fake an event for 'incomeStreams'
+    onInputChange({
+      target: {
+        name: 'incomeStreams',
+        value: newStreams,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+
+    // And we also need to update annualIncome and isEmploymentIncome.
+    // This is tricky with the current interface.
+    // Ideally, we should update the parent to accept a bulk update or handle side effects.
+    // For now, let's just update 'incomeStreams' and let the parent (App.tsx) or a useEffect here handle the derived values?
+    // No, App.tsx is simple.
+    // We should probably change the interface of onInputChange or cheat by calling it multiple times.
+    // Calling multiple times might cause race conditions if state updates are async/batched.
+    
+    // Let's try to update 'incomeStreams' and let's add a special case in App.tsx? 
+    // Or better, let's just update the fields one by one and hope for the best?
+    // No, let's look at App.tsx again.
+    // It uses `const { name, value, type, checked } = e.target`.
+    // `setInputs(prev => ({ ...prev, [name]: value }))`.
+    
+    // So we can't update multiple fields at once with the current App.tsx implementation.
+    // However, we can modify App.tsx to handle a special "bulkUpdate" event or just expose `setInputs`.
+    // But I am editing InputForm.tsx now.
+    
+    // Let's stick to updating `incomeStreams` here.
+    // And we can update `annualIncome` separately.
+    
+    onInputChange({
+      target: {
+        name: 'annualIncome',
+        value: totalIncome,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    
+    onInputChange({
+      target: {
+        name: 'isEmploymentIncome',
+        value: hasEmploymentIncome,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleIncomeModeChange = (
+    _: React.MouseEvent<HTMLElement>,
+    newMode: IncomeMode | null,
+  ) => {
+    if (newMode !== null) {
+      onInputChange({
+        target: {
+          name: 'incomeMode',
+          value: newMode,
+        }
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+
+      // Side effects for mode switching
+      if (newMode === 'salary') {
+        onInputChange({
+          target: {
+            name: 'isEmploymentIncome',
+            value: true, // checked
+            type: 'checkbox',
+            checked: true
+          }
+        } as unknown as React.ChangeEvent<HTMLInputElement>);
+      } else if (newMode === 'business') {
+        onInputChange({
+          target: {
+            name: 'isEmploymentIncome',
+            value: false, // unchecked
+            type: 'checkbox',
+            checked: false
+          }
+        } as unknown as React.ChangeEvent<HTMLInputElement>);
+      } else if (newMode === 'advanced') {
+        // When switching to advanced, we should probably initialize incomeStreams from current annualIncome
+        // if it's empty.
+        if (inputs.incomeStreams.length === 0 && inputs.annualIncome > 0) {
+           const initialStream: IncomeStream = inputs.isEmploymentIncome 
+             ? { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'salary', frequency: 'annual', amount: inputs.annualIncome }
+             : { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'business', amount: inputs.annualIncome };
+           
+           onInputChange({
+            target: {
+              name: 'incomeStreams',
+              value: [initialStream],
+            }
+          } as unknown as React.ChangeEvent<HTMLInputElement>);
+        } else if (inputs.incomeStreams.length > 0) {
+          // Check if existing streams contain employment income
+          const hasEmploymentIncome = inputs.incomeStreams.some(s => s.type === 'salary' || s.type === 'bonus');
+          if (hasEmploymentIncome && !inputs.isEmploymentIncome) {
+             onInputChange({
+              target: {
+                name: 'isEmploymentIncome',
+                value: true,
+                type: 'checkbox',
+                checked: true
+              }
+            } as unknown as React.ChangeEvent<HTMLInputElement>);
+          }
+        }
+      }
+    }
   };
 
   const handleCustomRateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
@@ -330,108 +464,130 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         Your Information
       </Typography>
       <Box className="form-group">
-        {/* Income Type + Annual Income Row */}
-        <Box sx={styles.formSection}>
-          {/* Income Type Checkbox */}
-          <Box sx={styles.incomeTypeToggle}>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  id="isEmploymentIncome"
-                  name="isEmploymentIncome"
-                  checked={inputs.isEmploymentIncome}
-                  onChange={(e) => onInputChange(e as React.ChangeEvent<HTMLInputElement>)}
-                  color="primary"
-                  size="small"
-                />
-              }
-              label={
-                <Box sx={{
-                  display: 'flex',
-                  flexDirection: 'row',      // Row for inline, allows wrapping
-                  alignItems: 'center',
-                  justifyContent: 'center',  // Center contents when wrapped
-                  flexWrap: 'wrap',          // Allow wrapping
-                  fontSize: '0.95rem',
-                  fontWeight: 500,
-                  color: 'text.primary',
-                  gap: 0.1,                  // Space between label and tooltip
-                  lineHeight: 1.2,
-                  textAlign: 'center',
-                  width: '100%',             // Ensures centering when wrapped
-                }}>
-                  Employment Income
-                  <InfoTooltip title="Check this box if your income is from employment (salary, wages). Uncheck for business income, miscellaneous income, etc." />
-                </Box>
-              }
-            />
-          </Box>
-          {/* Income Input */}
-          <Box sx={styles.incomeInput}>
-            <Typography
-              sx={{
-                mb: 1,
-                fontSize: '0.97rem',
-                fontWeight: 500,
-                color: 'text.primary',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {inputs.isEmploymentIncome ? 'Gross Employment Income' : 'Net Income (Business etc.)'}
+        <Card variant="outlined" sx={{ mb: 2 }}>
+          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+              Income Source
             </Typography>
-            <SpinnerNumberField
-              id="annualIncome"
-              name="annualIncome"
-              value={inputs.annualIncome}
-              onInputChange={onInputChange}
-              label="Annual Income"
-              step={10_000}
-              shiftStep={100_000}
-              sx={sharedInputSx}
-            />
-          </Box>
-        </Box>
+            
+            {/* Income Mode Toggle */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <ToggleButtonGroup
+                value={inputs.incomeMode || 'salary'}
+                exclusive
+                onChange={handleIncomeModeChange}
+                aria-label="income mode"
+                size="small"
+                fullWidth
+              >
+                <ToggleButton value="salary">Salary</ToggleButton>
+                <ToggleButton value="business">Business</ToggleButton>
+                <ToggleButton value="advanced">Advanced</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
 
-        {/* Annual Income Slider */}
-        <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 0 }}>
-          {/* Explanatory text above the slider */}
-          <Typography
-            sx={{
-              mb: 0.5,
-              fontSize: '0.93rem',
-              color: 'text.secondary',
-              textAlign: 'center',
-              fontStyle: 'italic',
-            }}
-          >
-            {isMobile
-              ? 'For 20M+ yen incomes, use the field above.'
-              : 'For incomes over 20 million yen, enter the amount in the field above.'
-            }
-          </Typography>
-          <Slider
-            className="income-slider"
-            value={inputs.annualIncome}
-            onChange={handleSliderChange}
-            min={0}
-            max={20000000}
-            step={10000}
-            valueLabelDisplay="off"
-            marks={[
-              { value: 0, label: '¥0' },
-              { value: 5000000, label: '¥5M' },
-              { value: 10000000, label: '¥10M' },
-              { value: 15000000, label: '¥15M' },
-              { value: 20000000, label: '¥20M' },
-            ]}
-            sx={{
-              mt: 0,
-              mb: { xs: 0.3, sm: 0.7 },
-            }}
-          />
-        </Box>
+            {/* Income Input or Advanced Details */}
+            {inputs.incomeMode === 'advanced' ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
+                  <Typography variant="body1">Total Annual Income</Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {formatJPY(inputs.annualIncome)}
+                  </Typography>
+                </Box>
+                
+                <Badge 
+                  badgeContent={inputs.incomeStreams.length} 
+                  color="primary"
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiBadge-badge': {
+                      right: -3,
+                      top: 3,
+                    }
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    startIcon={<EditIcon />}
+                    onClick={() => setIncomeModalOpen(true)}
+                    fullWidth
+                    sx={{ height: 48 }}
+                  >
+                    Edit Income Streams
+                  </Button>
+                </Badge>
+              </Box>
+            ) : (
+              <Box sx={styles.incomeInput}>
+                <Typography
+                  sx={{
+                    mb: 1,
+                    fontSize: '0.97rem',
+                    fontWeight: 500,
+                    color: 'text.primary',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Business Income'}
+                </Typography>
+                <SpinnerNumberField
+                  id="annualIncome"
+                  name="annualIncome"
+                  value={inputs.annualIncome}
+                  onInputChange={onInputChange}
+                  label="Annual Income"
+                  step={10_000}
+                  shiftStep={100_000}
+                  sx={sharedInputSx}
+                />
+              </Box>
+            )}
+
+            {/* Annual Income Slider - Only show for simple modes */}
+            {inputs.incomeMode !== 'advanced' && (
+              <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 2 }}>
+                {/* Explanatory text above the slider */}
+                <Typography
+                  sx={{
+                    mb: 0.5,
+                    fontSize: '0.93rem',
+                    color: 'text.secondary',
+                    textAlign: 'center',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  {isMobile
+                    ? 'For 20M+ yen incomes, use the field above.'
+                    : 'For incomes over 20 million yen, enter the amount in the field above.'
+                  }
+                </Typography>
+                <Slider
+                  className="income-slider"
+                  value={inputs.annualIncome}
+                  onChange={handleSliderChange}
+                  min={0}
+                  max={20000000}
+                  step={10000}
+                  valueLabelDisplay="off"
+                  marks={[
+                    { value: 0, label: '¥0' },
+                    { value: 5000000, label: '¥5M' },
+                    { value: 10000000, label: '¥10M' },
+                    { value: 15000000, label: '¥15M' },
+                    { value: 20000000, label: '¥20M' },
+                  ]}
+                  sx={{
+                    mt: 0,
+                    mb: { xs: 0.3, sm: 0.7 },
+                  }}
+                />
+              </Box>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Age + Dependents Row */}
         <Box sx={styles.ageDependentsRow}>
@@ -773,6 +929,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
         taxpayerNetIncome={inputs.isEmploymentIncome ? calculateNetEmploymentIncome(inputs.annualIncome) : inputs.annualIncome}
+      />
+
+      <IncomeDetailsModal
+        open={incomeModalOpen}
+        onClose={() => setIncomeModalOpen(false)}
+        streams={inputs.incomeStreams}
+        onStreamsChange={handleIncomeStreamsChange}
       />
     </Box>
   );

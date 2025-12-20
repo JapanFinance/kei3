@@ -253,7 +253,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       dependents,
       customEHIRates,
       manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
-      manualSocialInsuranceAmount
+      manualSocialInsuranceAmount,
+      incomeMode: 'salary' as const,
+      incomeStreams: []
     }),
     [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount]
   );
@@ -291,7 +293,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                     showDetailedInput: false,
                     customEHIRates,
                     manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
-                    manualSocialInsuranceAmount
+                    manualSocialInsuranceAmount,
+                    incomeMode: 'salary' as const,
+                    incomeStreams: []
                   };
                   
                   const taxResults = calculateTaxes(taxInputs);

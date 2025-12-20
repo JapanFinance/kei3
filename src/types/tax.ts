@@ -4,9 +4,37 @@
 import type { HealthInsuranceProviderId } from "./healthInsurance";
 import type { Dependent, DependentDeductionResults } from "./dependents";
 
+export type IncomeMode = 'salary' | 'business' | 'advanced';
+
+export type IncomeStreamType = 'salary' | 'bonus' | 'business';
+
+export interface BaseIncomeStream {
+  id: string;
+  type: IncomeStreamType;
+  amount: number;
+}
+
+export interface SalaryIncomeStream extends BaseIncomeStream {
+  type: 'salary';
+  frequency: 'monthly' | 'annual';
+}
+
+export interface BonusIncomeStream extends BaseIncomeStream {
+  type: 'bonus';
+  month: number; // 0-11 for Jan-Dec
+}
+
+export interface BusinessIncomeStream extends BaseIncomeStream {
+  type: 'business';
+}
+
+export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream;
+
 export interface TakeHomeInputs {
   annualIncome: number;
   isEmploymentIncome: boolean;
+  incomeMode: IncomeMode;
+  incomeStreams: IncomeStream[];
   isSubjectToLongTermCarePremium: boolean; // Person is 40-64 years old (must pay long-term care insurance premiums)
   region: string;
   showDetailedInput: boolean;
@@ -34,6 +62,10 @@ export interface TakeHomeResults {
   employmentInsurance?: number | undefined;
   takeHomeIncome: number;
   socialInsuranceOverride?: number | undefined;
+  // Bonus breakdown
+  healthInsuranceOnBonus?: number;
+  pensionOnBonus?: number;
+  employmentInsuranceOnBonus?: number;
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
   nationalIncomeTaxBasicDeduction?: number | undefined;

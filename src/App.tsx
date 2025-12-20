@@ -32,6 +32,8 @@ function App({ mode, toggleColorMode }: AppProps) {
   const defaultInputs: TakeHomeInputs = {
     annualIncome: 5_000_000, // 5 million yen
     isEmploymentIncome: true,
+    incomeMode: 'salary',
+    incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     region: "Tokyo",
     showDetailedInput: false,
@@ -66,21 +68,28 @@ function App({ mode, toggleColorMode }: AppProps) {
   }, [inputs]); // Depend on the entire inputs object
 
   // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
-    const target = e.target as HTMLInputElement;
-    const { name, value, type } = target;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => {
+    const target = e.target;
+    const name = target.name || '';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const value = (target as any).value;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const type = (target as any).type;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const checked = (target as any).checked;
+
     const isCheckbox = type === 'checkbox';
     const isNumber = type === 'number' || type === 'range';
 
     setInputs(prev => {
-      let processedInputValue: string | number | boolean;
+      let processedInputValue: unknown;
       
       if (isCheckbox) {
-        processedInputValue = target.checked;
+        processedInputValue = checked;
       } else if (isNumber) {
         processedInputValue = parseFloat(value as string) || 0;
       } else {
-        // For select and other text-based inputs
+        // For select and other text-based inputs, as well as complex objects
         processedInputValue = value;
       }
 

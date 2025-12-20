@@ -14,6 +14,8 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
   const baseInputs: TakeHomeInputs = {
     annualIncome: 5000000,
     isEmploymentIncome: true,
+    incomeMode: 'salary',
+    incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
@@ -185,9 +187,9 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
   });
 
   describe('when switching between employment and non-employment income', () => {
-    it('should change available providers when toggling employment income checkbox', async () => {
+    it('should change available providers when toggling income mode', async () => {
       const user = userEvent.setup();
-      const employmentInputs = { ...baseInputs, isEmploymentIncome: true };
+      const employmentInputs = { ...baseInputs, isEmploymentIncome: true, incomeMode: 'salary' as const };
       
       render(
         <TakeHomeInputForm 
@@ -200,21 +202,17 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
       expect(providerSelect).not.toBeDisabled();
 
-      // Find and uncheck the employment income checkbox
-      const employmentCheckbox = screen.getByRole('checkbox', { name: /employment income/i });
-      expect(employmentCheckbox).toBeChecked();
-      
-      await user.click(employmentCheckbox);
+      // Find and click the Business toggle
+      const businessToggle = screen.getByRole('button', { name: /business/i });
+      await user.click(businessToggle);
 
-      // Verify that the checkbox change was registered
-      // Note: React Testing Library shows the target element at the moment of interaction
+      // Verify that the mode change was registered
       expect(mockOnInputChange).toHaveBeenCalledWith(
         expect.objectContaining({
           target: expect.objectContaining({
-            name: 'isEmploymentIncome',
-            type: 'checkbox'
-          }),
-          type: 'change'
+            name: 'incomeMode',
+            value: 'business'
+          })
         })
       );
     });
@@ -279,8 +277,10 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       // Health insurance provider field should be properly labeled
       expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toBeInTheDocument();
       
-      // Employment income checkbox should be properly labeled
-      expect(screen.getByRole('checkbox', { name: /employment income/i })).toBeInTheDocument();
+      // Income mode selection should be present
+      expect(screen.getByRole('group', { name: /income mode/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /salary/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /business/i })).toBeInTheDocument();
     });
 
     it('should show helpful tooltips and explanatory text', () => {
@@ -296,9 +296,9 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       // Should have health insurance provider section (test accessibility)
       expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toBeInTheDocument();
       
-      // Should have tooltip for employment income
-      const employmentIncomeLabel = screen.getByText('Employment Income');
-      expect(employmentIncomeLabel).toBeInTheDocument();
+      // Should have tooltip for Age Range
+      const ageRangeLabel = screen.getByText('Age Range');
+      expect(ageRangeLabel).toBeInTheDocument();
     });
   });
 });
@@ -307,6 +307,8 @@ describe('Dependent Coverage UI Behavior', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeInputs = {
     annualIncome: 5000000,
+    incomeMode: 'salary',
+    incomeStreams: [],
     isEmploymentIncome: true,
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
@@ -516,6 +518,8 @@ describe('Age Range Selection', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeInputs = {
     annualIncome: 5000000,
+    incomeMode: 'salary',
+    incomeStreams: [],
     isEmploymentIncome: true,
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',

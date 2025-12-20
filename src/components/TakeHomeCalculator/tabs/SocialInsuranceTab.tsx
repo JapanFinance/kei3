@@ -15,6 +15,8 @@ import { ResultRow } from '../ResultRow';
 import { employmentInsuranceRate } from '../../../utils/taxCalculations';
 import HealthInsurancePremiumTableTooltip from './HealthInsurancePremiumTableTooltip';
 import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
+import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
+import PensionBonusTooltip from './PensionBonusTooltip';
 import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
@@ -108,10 +110,12 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
-            <DetailInfoTooltip
-              title="Health Insurance Premium Details"
-              children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
-            />
+            {isNationalHealthInsurance && (
+              <DetailInfoTooltip
+                title="Health Insurance Premium Details"
+                children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
+              />
+            )}
           </Typography>
           {!isNationalHealthInsurance && capStatus.healthInsuranceCapped && (
             <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />
@@ -155,9 +159,28 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <>
             <ResultRow 
               label="Monthly Premium" 
-              value={formatJPY(results.healthInsurance / 12)} 
+              labelSuffix={
+                <DetailInfoTooltip
+                  title="Health Insurance Premium Details"
+                  children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
+                />
+              }
+              value={formatJPY((results.healthInsurance - (results.healthInsuranceOnBonus ?? 0)) / 12)} 
               type="indented" 
             />
+            {results.healthInsuranceOnBonus !== undefined && results.healthInsuranceOnBonus > 0 && (
+              <ResultRow 
+                label="Bonus Premium" 
+                labelSuffix={
+                  <DetailInfoTooltip
+                    title="Bonus Health Insurance Details"
+                    children={<HealthInsuranceBonusTooltip results={results} inputs={inputs} />}
+                  />
+                }
+                value={formatJPY(results.healthInsuranceOnBonus)} 
+                type="indented" 
+              />
+            )}
             <ResultRow 
               label="Annual Premium" 
               value={formatJPY(results.healthInsurance)} 
@@ -172,10 +195,12 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isNationalHealthInsurance ? "National Pension" : "Employees' Pension"}
-            <DetailInfoTooltip
-              title="Pension Contribution Details"
-              children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
-            />
+            {isNationalHealthInsurance && (
+              <DetailInfoTooltip
+                title="Pension Contribution Details"
+                children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
+              />
+            )}
           </Typography>
           {(capStatus.pensionCapped || capStatus.pensionFixed) && (
             <CapIndicator capStatus={capStatus} contributionType="pension" />
@@ -183,9 +208,30 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         </Box>
         <ResultRow 
           label="Monthly Contribution" 
-          value={formatJPY(Math.round(results.pensionPayments / 12))} 
+          labelSuffix={
+            !isNationalHealthInsurance && (
+              <DetailInfoTooltip
+                title="Pension Contribution Details"
+                children={<PensionPremiumTableTooltip results={results} inputs={inputs} />}
+              />
+            )
+          }
+          value={formatJPY(Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12))} 
           type="indented" 
         />
+        {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
+          <ResultRow 
+            label="Bonus Contribution" 
+            labelSuffix={
+              <DetailInfoTooltip
+                title="Bonus Pension Contribution Details"
+                children={<PensionBonusTooltip />}
+              />
+            }
+            value={formatJPY(results.pensionOnBonus)} 
+            type="indented" 
+          />
+        )}
         <ResultRow 
           label="Annual Contribution" 
           value={formatJPY(results.pensionPayments)} 
@@ -225,9 +271,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           </Typography>
           <ResultRow 
             label={`Monthly Premium (${(employmentInsuranceRate * 100).toFixed(2)}%)`}
-            value={formatJPY(Math.round((results.employmentInsurance ?? 0) / 12))} 
+            value={formatJPY(Math.round(((results.employmentInsurance ?? 0) - (results.employmentInsuranceOnBonus ?? 0)) / 12))} 
             type="indented" 
           />
+          {results.employmentInsuranceOnBonus !== undefined && results.employmentInsuranceOnBonus > 0 && (
+            <ResultRow 
+              label="Bonus Premium" 
+              value={formatJPY(results.employmentInsuranceOnBonus)} 
+              type="indented" 
+            />
+          )}
           <ResultRow 
             label="Annual Premium"
             value={formatJPY(results.employmentInsurance ?? 0)} 

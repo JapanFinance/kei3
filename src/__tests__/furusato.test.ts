@@ -65,6 +65,8 @@ describe('calculateFurusatoNozeiLimit', () => {
       dcPlanContributions: 240_000, // 20,000 yen per month
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeMode: 'salary',
+      incomeStreams: [],
     }).furusatoNozei;
 
     const fnWithoutDC = calculateFNForIncome(5_000_000);
@@ -88,6 +90,8 @@ describe('calculateFurusatoNozeiLimit', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 1_000_000, // Higher than standard ~726k
+      incomeMode: 'salary',
+      incomeStreams: [],
     }).furusatoNozei;
 
     expect(fnWithHighSocialInsurance.limit).toBeLessThan(61_000);
@@ -104,6 +108,8 @@ describe('calculateFurusatoNozeiLimit', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 500_000, // Lower than standard ~726k
+      incomeMode: 'salary',
+      incomeStreams: [],
     }).furusatoNozei;
 
     expect(fnWithLowSocialInsurance.limit).toBeGreaterThan(61_000);
@@ -122,5 +128,7 @@ function calculateFNForIncome(income: number) : FurusatoNozeiDetails {
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
     manualSocialInsuranceAmount: 0,
+    incomeMode: 'salary',
+    incomeStreams: [],
   }).furusatoNozei;
 }

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ProviderRegion, NationalHealthInsuranceRegionParams, HealthInsuranceProviderId } from '../types/healthInsurance';
+import type { BonusIncomeStream } from '../types/tax';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
@@ -18,33 +19,37 @@ export interface NationalHealthInsuranceBreakdown {
 }
 
 /**
- * Calculates the annual health insurance premium.
- *
- * @param annualIncome total annual income (gross for employees health insurance, net for NHI)
- * @param isSubjectToLongTermCarePremium True if the person is required to pay long-term care insurance
- * premiums as a Category 2 insured (介護保険第２号被保険者). This applies to people aged 40-64.
- * @param provider The health insurance provider.
- * @param region The region for the provider.
- * @returns The annual health insurance premium.
+ * Breakdown of Health Insurance premium components
  */
-export function calculateHealthInsurancePremium(
+export interface HealthInsuranceBreakdown {
+    total: number;
+    bonusPortion: number;
+}
+
+/**
+ * Calculates the annual health insurance premium breakdown.
+ */
+export function calculateHealthInsuranceBreakdown(
     annualIncome: number,
     isSubjectToLongTermCarePremium: boolean,
     provider: HealthInsuranceProviderId,
     region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-    customRates?: { healthRate: number, ltcRate: number }
-): number {
+    customRates?: { healthRate: number, ltcRate: number },
+    bonuses: BonusIncomeStream[] = []
+): HealthInsuranceBreakdown {
     if (annualIncome < 0) {
         throw new Error('Income cannot be negative.');
     }
 
     // Dependent coverage has no premium
     if (provider === DEPENDENT_COVERAGE_ID) {
-        return 0;
+        return { total: 0, bonusPortion: 0 };
     }
 
     if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
-        return calculateNationalHealthInsurancePremiumWithBreakdown(annualIncome, isSubjectToLongTermCarePremium, region).total;
+        // For NHI, bonuses are just part of the total income.
+        const total = calculateNationalHealthInsurancePremiumWithBreakdown(annualIncome, isSubjectToLongTermCarePremium, region).total;
+        return { total, bonusPortion: 0 };
     } else {
         const monthlyIncome = annualIncome / 12;
         
@@ -59,7 +64,7 @@ export function calculateHealthInsurancePremium(
         if (provider === CUSTOM_PROVIDER_ID) {
             if (!customRates) {
                 // Fallback if custom rates are missing but provider is custom
-                return 0;
+                return { total: 0, bonusPortion: 0 };
             }
             regionalRates = {
                 employeeHealthInsuranceRate: customRates.healthRate / 100,
@@ -75,7 +80,7 @@ export function calculateHealthInsurancePremium(
         
         if (!regionalRates) {
             console.error(`Regional rates not found for provider ${provider} and region ${region}. Returning 0 premium.`);
-            return 0;
+            return { total: 0, bonusPortion: 0 };
         }
         
         // Calculate monthly premium and multiply by 12
@@ -85,8 +90,66 @@ export function calculateHealthInsurancePremium(
             isSubjectToLongTermCarePremium
         );
         
-        return monthlyPremium * 12;
+        let totalPremium = monthlyPremium * 12;
+        let bonusPortion = 0;
+
+        // Calculate bonus premiums
+        if (bonuses.length > 0) {
+            // 1. Calculate Standard Bonus Amount for each bonus (round down to nearest 1,000 yen)
+            // 2. Sum them up
+            // 3. Cap the cumulative total at 5.73 million yen (fiscal year cap)
+            // Note: This assumes all bonuses fall within the same fiscal year.
+            
+            let totalStandardBonusAmount = 0;
+            for (const bonus of bonuses) {
+                totalStandardBonusAmount += Math.floor(bonus.amount / 1000) * 1000;
+            }
+
+            const cappedBonusAmount = Math.min(totalStandardBonusAmount, 5_730_000);
+
+            // Calculate premium on the capped amount
+            // Rate is the same as monthly
+            const bonusHealthInsurance = cappedBonusAmount * regionalRates.employeeHealthInsuranceRate;
+            const bonusLongTermCare = isSubjectToLongTermCarePremium 
+                ? cappedBonusAmount * regionalRates.employeeLongTermCareRate
+                : 0;
+            
+            bonusPortion = Math.round(bonusHealthInsurance + bonusLongTermCare);
+            totalPremium += bonusPortion;
+        }
+
+        return { total: totalPremium, bonusPortion };
     }
+}
+
+/**
+ * Calculates the annual health insurance premium.
+ *
+ * @param annualIncome total annual income (gross for employees health insurance, net for NHI)
+ * @param isSubjectToLongTermCarePremium True if the person is required to pay long-term care insurance
+ * premiums as a Category 2 insured (介護保険第２号被保険者). This applies to people aged 40-64.
+ * @param provider The health insurance provider.
+ * @param region The region for the provider.
+ * @param customRates Custom rates if provider is custom.
+ * @param bonuses List of bonus payments.
+ * @returns The annual health insurance premium.
+ */
+export function calculateHealthInsurancePremium(
+    annualIncome: number,
+    isSubjectToLongTermCarePremium: boolean,
+    provider: HealthInsuranceProviderId,
+    region: ProviderRegion = DEFAULT_PROVIDER_REGION,
+    customRates?: { healthRate: number, ltcRate: number },
+    bonuses: BonusIncomeStream[] = []
+): number {
+    return calculateHealthInsuranceBreakdown(
+        annualIncome,
+        isSubjectToLongTermCarePremium,
+        provider,
+        region,
+        customRates,
+        bonuses
+    ).total;
 }
 
 /**
