@@ -8,6 +8,8 @@ import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
 import InputLabel from '@mui/material/InputLabel';
 import Switch from '@mui/material/Switch';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import FormHelperText from '@mui/material/FormHelperText';
 import { useTheme } from '@mui/material/styles';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -154,16 +156,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         fontSize: { xs: '0.95rem', sm: '1rem' },
         py: { xs: 0.2, sm: 0.4 },
       }
-    },
-    // Common style for the Box containing a Switch and its labels
-    sharedSwitchControlBox: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 0.5,
-      bgcolor: 'action.hover',
-      borderRadius: 2,
-      p: 0.5,
-      width: 'fit-content'
     },
     ageDependentsRow: {
       display: 'flex',
@@ -466,35 +458,46 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               Age Range
               <InfoTooltip title="People aged 40-64 are required to pay long-term care insurance premiums as part of their health insurance." />
             </Typography>
-            <Box sx={styles.sharedSwitchControlBox}>
-              <Typography
-                color={!inputs.isSubjectToLongTermCarePremium ? 'primary' : 'text.secondary'}
-                fontWeight={!inputs.isSubjectToLongTermCarePremium ? 600 : 400}
-                sx={{ minWidth: 45, textAlign: 'center', fontSize: '0.9rem' }}
-              >
-                &lt;40 or 65+
-              </Typography>
-              <Switch
-                checked={inputs.isSubjectToLongTermCarePremium}
-                onChange={(e) => onInputChange({
-                  target: {
-                    name: 'isSubjectToLongTermCarePremium',
-                    checked: e.target.checked,
-                    type: 'checkbox'
+            <ToggleButtonGroup
+              value={inputs.isSubjectToLongTermCarePremium}
+              exclusive
+              onChange={(_, newValue) => {
+                if (newValue !== null) {
+                  onInputChange({
+                    target: {
+                      name: 'isSubjectToLongTermCarePremium',
+                      checked: newValue,
+                      type: 'checkbox'
+                    }
+                  } as React.ChangeEvent<HTMLInputElement>);
+                }
+              }}
+              aria-label="age range"
+              size="small"
+              sx={{ 
+                '& .MuiToggleButton-root': {
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.85rem',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                    }
                   }
-                } as React.ChangeEvent<HTMLInputElement>)}
-                color="primary"
-                size="small"
-                sx={{ mx: 0.5 }}
-              />
-              <Typography
-                color={inputs.isSubjectToLongTermCarePremium ? 'primary' : 'text.secondary'}
-                fontWeight={inputs.isSubjectToLongTermCarePremium ? 600 : 400}
-                sx={{ minWidth: 45, textAlign: 'center', fontSize: '0.9rem' }}
-              >
+                }
+              }}
+            >
+              <ToggleButton value={false}>
+                &lt;40 or 65+
+              </ToggleButton>
+              <ToggleButton value={true}>
                 40-64
-              </Typography>
-            </Box>
+              </ToggleButton>
+            </ToggleButtonGroup>
           </Box>
           {/* Dependents Button */}
           <Box

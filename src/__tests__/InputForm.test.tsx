@@ -508,3 +508,44 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 
 });
+
+describe('Age Range Selection', () => {
+  const mockOnInputChange = vi.fn();
+  const baseInputs: TakeHomeInputs = {
+    annualIncome: 5000000,
+    isEmploymentIncome: true,
+    isSubjectToLongTermCarePremium: false,
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    showDetailedInput: false,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  it('should toggle age range using segmented buttons', async () => {
+    const user = userEvent.setup();
+    render(<TakeHomeInputForm inputs={baseInputs} onInputChange={mockOnInputChange} />);
+
+    // Find the buttons
+    const under40Button = screen.getByRole('button', { name: /<40 or 65\+/i });
+    const over40Button = screen.getByRole('button', { name: /40-64/i });
+
+    // Initial state: <40 or 65+ is selected (false)
+    expect(under40Button).toHaveAttribute('aria-pressed', 'true');
+    expect(over40Button).toHaveAttribute('aria-pressed', 'false');
+
+    // Click 40-64
+    await user.click(over40Button);
+
+    expect(mockOnInputChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: expect.objectContaining({
+          name: 'isSubjectToLongTermCarePremium',
+          checked: true,
+        })
+      })
+    );
+  });
+});
