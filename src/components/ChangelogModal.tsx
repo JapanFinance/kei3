@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useState, useEffect, type ReactNode } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';

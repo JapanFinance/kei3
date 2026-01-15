@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'

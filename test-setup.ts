@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import '@testing-library/jest-dom'
 
 // Note: useMediaQuery mock might not be needed since jsdom 

@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import IconButton from '@mui/material/IconButton';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';

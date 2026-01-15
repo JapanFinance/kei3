@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /// <reference types="vite/client" />
 
 // Extend Chart.js types to include our custom plugin

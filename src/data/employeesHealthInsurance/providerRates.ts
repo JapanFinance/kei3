@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Core health insurance premium calculation functions
  * Works directly with provider rate data without intermediate transformations

@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useState } from 'react';
 import Box from '@mui/material/Box';
 import FormControl from '@mui/material/FormControl';

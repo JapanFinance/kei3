@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Types for dependent-related deductions in Japanese tax system
  */

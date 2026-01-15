@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 /**
  * Regional rate variations for a provider
  * Contains only the data that varies by region: rates and region-specific metadata

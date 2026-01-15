@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { describe, it, expect } from 'vitest'
 import { isDependentCoverageEligible, DEPENDENT_INCOME_THRESHOLD } from '../types/healthInsurance'
 

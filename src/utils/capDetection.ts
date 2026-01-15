@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import type { TakeHomeResults } from '../types/tax';
 import { EMPLOYEES_PENSION_PREMIUM } from './pensionCalculator';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';

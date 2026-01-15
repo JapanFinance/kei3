@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import { useState, useEffect } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';

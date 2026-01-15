@@ -1,4 +1,6 @@
 // Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 import React from 'react';
 import InfoTooltip from './InfoTooltip';
 import CalculateIcon from '@mui/icons-material/Calculate';
