@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';

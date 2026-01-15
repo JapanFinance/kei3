@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import '@testing-library/jest-dom'
 
 // Note: useMediaQuery mock might not be needed since jsdom 

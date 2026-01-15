@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { createTheme } from '@mui/material/styles';
 
 export const getTheme = (mode: 'light' | 'dark') => {

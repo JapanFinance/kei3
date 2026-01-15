@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from "../types/tax";
 import { calculateNationalIncomeTax } from "./taxCalculations";
 import type { DependentDeductionResults } from "../types/dependents";

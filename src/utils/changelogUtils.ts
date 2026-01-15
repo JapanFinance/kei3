@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 export interface ChangelogEntry {
   date: string; // ISO format (yyyy-mm-dd) for parsing, display format handled in UI
   sections: {

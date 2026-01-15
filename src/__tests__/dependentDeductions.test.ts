@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { describe, expect, it } from 'vitest'
 import {
   calculateDependentDeductions,

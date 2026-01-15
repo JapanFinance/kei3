@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import type { TakeHomeResults } from '../types/tax';
 import { EMPLOYEES_PENSION_PREMIUM } from './pensionCalculator';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';

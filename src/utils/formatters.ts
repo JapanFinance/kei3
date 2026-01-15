@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 export const formatJPY = (amount: number) => {
   return new Intl.NumberFormat('en-JP', {
     style: 'currency',

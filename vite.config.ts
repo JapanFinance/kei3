@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { defineConfig } from 'vite'
 import { cloudflare } from "@cloudflare/vite-plugin";
 import react from '@vitejs/plugin-react'

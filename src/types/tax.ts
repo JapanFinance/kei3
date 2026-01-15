@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import type { HealthInsuranceProviderId } from "./healthInsurance";
 import type { Dependent, DependentDeductionResults } from "./dependents";
 

@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 /**
  * Core health insurance premium calculation functions
  * Works directly with provider rate data without intermediate transformations

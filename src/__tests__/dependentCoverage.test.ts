@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { describe, it, expect } from 'vitest'
 import { isDependentCoverageEligible, DEPENDENT_INCOME_THRESHOLD } from '../types/healthInsurance'
 

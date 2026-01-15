@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { useState, useEffect } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';

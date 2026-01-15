@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 /**
  * Regional rate variations for a provider
  * Contains only the data that varies by region: rates and region-specific metadata

@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { calculatePensionPremium } from './pensionCalculator';

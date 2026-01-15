@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import React from 'react';
 import InfoTooltip from './InfoTooltip';
 import CalculateIcon from '@mui/icons-material/Calculate';

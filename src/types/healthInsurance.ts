@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance';
