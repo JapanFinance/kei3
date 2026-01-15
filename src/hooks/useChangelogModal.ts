@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { useState, useEffect, useCallback } from 'react';
 
 export const CHANGELOG_HASH = '#changelog';

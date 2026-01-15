@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { describe, it, expect } from 'vitest'
 import { calculateTaxes, calculateNetEmploymentIncome, calculateEmploymentInsurance, calculateNationalIncomeTaxBasicDeduction, calculateNationalIncomeTax } from '../utils/taxCalculations'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'

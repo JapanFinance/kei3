@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { describe, expect, it } from "vitest"
 import { calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from "../utils/residenceTax"
 import { calculateDependentDeductions } from "../utils/dependentDeductions"

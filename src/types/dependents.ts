@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 /**
  * Types for dependent-related deductions in Japanese tax system
  */

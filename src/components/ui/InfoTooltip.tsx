@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import React, { useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';

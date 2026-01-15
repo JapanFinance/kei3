@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SpinnerNumberField } from '../components/ui/SpinnerNumberField';
 

@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { describe, it, expect } from 'vitest'
 import { calculateHealthInsurancePremium } from '../utils/healthInsuranceCalculator'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'

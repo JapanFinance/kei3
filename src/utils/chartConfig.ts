@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import type { ChartRange, TakeHomeInputs } from '../types/tax'
 import { formatJPY, formatYenCompact } from './formatters'
 import { calculateTaxes } from './taxCalculations'

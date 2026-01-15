@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import React, { useMemo, useRef, useState } from 'react';
 import { Chart } from 'react-chartjs-2';
 import { Chart as ChartJS,

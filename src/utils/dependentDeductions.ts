@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 /**
  * Calculation utilities for dependent-related tax deductions in Japan
  * 

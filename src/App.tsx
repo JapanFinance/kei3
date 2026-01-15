@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { useState, useEffect, Suspense, lazy } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'

@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import { StrictMode, Suspense, lazy, useState, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ThemeProvider } from '@mui/material/styles'

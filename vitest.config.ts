@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'

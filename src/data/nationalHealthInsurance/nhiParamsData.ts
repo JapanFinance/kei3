@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 import type { NationalHealthInsuranceRegionParams } from '../../types/healthInsurance';
 
 /**

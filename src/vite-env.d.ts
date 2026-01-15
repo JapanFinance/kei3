@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 /// <reference types="vite/client" />
 
 // Extend Chart.js types to include our custom plugin

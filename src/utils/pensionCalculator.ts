@@ -1,3 +1,4 @@
+// Copyright the original author or authors
 export interface IncomeBracketToPensionPremium {
   min: number;
   max: number | null;
