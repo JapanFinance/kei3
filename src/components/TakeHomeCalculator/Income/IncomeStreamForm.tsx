@@ -36,11 +36,38 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       stream = { id, type: 'salary', amount, frequency };
     } else if (type === 'bonus') {
       stream = { id, type: 'bonus', amount, month };
-    } else {
+    } else if (type === 'business') {
       stream = { id, type: 'business', amount };
+    } else {
+      stream = { id, type: 'miscellaneous', amount };
     }
 
     onSave(stream);
+  };
+
+  const getAmountLabel = () => {
+    switch (type) {
+      case 'business':
+      case 'miscellaneous':
+        return 'Annual Net Income';
+      default:
+        return 'Gross Income';
+    }
+  };
+
+  const getAmountHelperText = () => {
+    switch (type) {
+      case 'business':
+        return 'Profit after deducting expenses';
+      case 'miscellaneous':
+        return 'Total income minus necessary expenses';      
+      case 'salary':
+        return 'Total income before taxes and deductions';
+      case 'bonus':
+        return 'Total bonus amount before taxes and deductions';
+      default:
+        return undefined;
+    }
   };
 
   return (
@@ -55,7 +82,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           >
             <MenuItem value="salary">Salary</MenuItem>
             <MenuItem value="bonus">Bonus</MenuItem>
-            <MenuItem value="business">Business / Other</MenuItem>
+            <MenuItem value="business">Business</MenuItem>
+            <MenuItem value="miscellaneous">Miscellaneous</MenuItem>
           </Select>
         </FormControl>
 
@@ -91,10 +119,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         )}
 
         <SpinnerNumberField
-          label="Amount"
+          label={getAmountLabel()}
           value={amount}
           onChange={(val) => setAmount(val)}
           sx={{ width: '100%' }}
+          helperText={getAmountHelperText()}
         />
 
         <Stack direction="row" spacing={2} justifyContent="flex-end">

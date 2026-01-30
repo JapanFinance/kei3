@@ -20,7 +20,7 @@ import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import type { ChartRange, CustomEmployeesHealthInsuranceRates } from '../../types/tax';
+import type { ChartRange, CustomEmployeesHealthInsuranceRates, IncomeMode, IncomeStream } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin } from '../../utils/chartConfig';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
@@ -108,6 +108,8 @@ interface TakeHomeChartProps {
   className?: string;
   manualSocialInsuranceEntry?: boolean;
   manualSocialInsuranceAmount?: number;
+  incomeMode?: IncomeMode;
+  incomeStreams?: IncomeStream[];
 }
 
 // Define a type for the mark objects
@@ -186,7 +188,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   customEHIRates,
   className = '',
   manualSocialInsuranceEntry,
-  manualSocialInsuranceAmount = 0
+  manualSocialInsuranceAmount = 0,
+  incomeMode,
+  incomeStreams = []
 }) => {
   const theme = useTheme();
 
@@ -254,10 +258,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       customEHIRates,
       manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
       manualSocialInsuranceAmount,
-      incomeMode: 'salary' as const,
-      incomeStreams: []
+      incomeMode: incomeMode ?? 'salary',
+      incomeStreams
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount]
+    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount, incomeMode, incomeStreams]
   );
 
   // Get chart options using the utility function

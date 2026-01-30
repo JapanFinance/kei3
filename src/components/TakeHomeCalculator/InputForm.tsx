@@ -514,7 +514,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     fullWidth
                     sx={{ height: 48 }}
                   >
-                    Edit Income Streams
+                    Edit Income
                   </Button>
                 </Badge>
               </Box>

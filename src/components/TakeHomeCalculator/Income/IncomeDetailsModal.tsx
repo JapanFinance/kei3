@@ -68,18 +68,120 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       return `Salary (${stream.frequency})`;
     } else if (stream.type === 'bonus') {
       return `Bonus (${new Date(0, stream.month).toLocaleString('default', { month: 'long' })})`;
-    } else {
+    } else if (stream.type === 'business') {
       return 'Business Income';
+    } else {
+      return 'Miscellaneous Income';
     }
   };
 
-  const getStreamColor = (type: string): 'primary' | 'secondary' | 'success' | 'default' => {
+  const getStreamColor = (type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'default' => {
     switch (type) {
       case 'salary': return 'primary';
-      case 'bonus': return 'secondary';
+      case 'bonus': return 'primary'; // Bonus is employment income, same as salary
       case 'business': return 'success';
+      case 'miscellaneous': return 'warning';
       default: return 'default';
     }
+  };
+
+  const calculateSubtotals = () => {
+    let employmentIncome = 0;
+    let businessIncome = 0;
+    let miscellaneousIncome = 0;
+
+    streams.forEach(s => {
+      let annualAmount = 0;
+      if (s.type === 'salary' && s.frequency === 'monthly') {
+        annualAmount = s.amount * 12;
+      } else {
+        annualAmount = s.amount;
+      }
+
+      if (s.type === 'salary' || s.type === 'bonus') {
+        employmentIncome += annualAmount;
+      } else if (s.type === 'business') {
+        businessIncome += annualAmount;
+      } else if (s.type === 'miscellaneous') {
+        miscellaneousIncome += annualAmount;
+      }
+    });
+
+    return { employmentIncome, businessIncome, miscellaneousIncome };
+  };
+
+  const groupStreams = () => {
+    const employment = streams.filter(s => s.type === 'salary' || s.type === 'bonus');
+    const business = streams.filter(s => s.type === 'business');
+    const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
+
+    return { employment, business, miscellaneous };
+  };
+
+  const subtotals = calculateSubtotals();
+  const groupedStreams = groupStreams();
+
+  const renderStreamGroup = (
+      title: string, 
+      groupStreams: IncomeStream[], 
+      subtotal: number, 
+      chipColor: 'primary' | 'success' | 'warning'
+    ) => {
+    if (groupStreams.length === 0) return null;
+
+    return (
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, ml: 0.5 }}>
+          {title}
+        </Typography>
+        <Stack spacing={1}>
+          {groupStreams.map((stream) => (
+            <Card key={stream.id} variant="outlined">
+              <CardContent sx={{ 
+                p: 2, 
+                '&:last-child': { pb: 2 },
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Chip 
+                      label={stream.type.toUpperCase()} 
+                      size="small" 
+                      color={getStreamColor(stream.type)}
+                      sx={{ fontSize: '0.7rem', height: 20 }}
+                    />
+                    <Typography variant="subtitle1" fontWeight="medium">
+                      {getStreamLabel(stream)}
+                    </Typography>
+                  </Box>
+                  <Typography variant="h6" color="text.primary">
+                    {formatJPY(stream.amount)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <IconButton onClick={() => setEditingStream(stream)} color="primary" size="small">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteStream(stream.id)} color="error" size="small">
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, mr: 1 }}>
+            <Chip 
+              label={`Subtotal: ${formatJPY(subtotal)}`} 
+              size="small"
+              color={chipColor}
+              variant="outlined"
+            />
+          </Box>
+        </Stack>
+      </Box>
+    );
   };
 
   return (
@@ -109,49 +211,33 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             onCancel={() => setEditingStream(null)}
           />
         ) : (
-          <Stack spacing={2}>
+          <Stack spacing={0}>
             {streams.length === 0 && (
               <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                No income streams added yet.
+                No income added yet.
               </Typography>
             )}
+
+            {renderStreamGroup(
+              "Employment Income (給与所得)", 
+              groupedStreams.employment, 
+              subtotals.employmentIncome, 
+              "primary"
+            )}
             
-            {streams.map((stream) => (
-              <Card key={stream.id} variant="outlined">
-                <CardContent sx={{ 
-                  p: 2, 
-                  '&:last-child': { pb: 2 },
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                      <Chip 
-                        label={stream.type.toUpperCase()} 
-                        size="small" 
-                        color={getStreamColor(stream.type)}
-                        sx={{ fontSize: '0.7rem', height: 20 }}
-                      />
-                      <Typography variant="subtitle1" fontWeight="medium">
-                        {getStreamLabel(stream)}
-                      </Typography>
-                    </Box>
-                    <Typography variant="h6" color="text.primary">
-                      {formatJPY(stream.amount)}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <IconButton onClick={() => setEditingStream(stream)} color="primary" size="small">
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteStream(stream.id)} color="error" size="small">
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
+            {renderStreamGroup(
+              "Business Income (事業所得)", 
+              groupedStreams.business, 
+              subtotals.businessIncome, 
+              "success"
+            )}
+
+            {renderStreamGroup(
+              "Miscellaneous Income (雑所得)", 
+              groupedStreams.miscellaneous, 
+              subtotals.miscellaneousIncome, 
+              "warning"
+            )}
             
             <Button 
               variant="outlined" 
@@ -162,10 +248,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 borderStyle: 'dashed', 
                 borderColor: 'divider',
                 py: 1.5,
-                color: 'text.secondary'
+                color: 'text.secondary',
+                mt: 2
               }}
             >
-              Add Income Stream
+              Add Income
             </Button>
           </Stack>
         )}

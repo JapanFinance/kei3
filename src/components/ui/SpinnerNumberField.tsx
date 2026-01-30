@@ -27,6 +27,7 @@ interface SpinnerNumberFieldProps {
   suffix?: string;
   min?: number;
   max?: number;
+  helperText?: React.ReactNode;
 }
 
 export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
@@ -44,6 +45,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   suffix = "",
   min = 0,
   max,
+  helperText,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -114,6 +116,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       suffix={suffix}
       allowNegative={min < 0}
       {...(label && { label })}
+      {...(helperText && { helperText })}
       size="small"
       slotProps={{
         htmlInput: {

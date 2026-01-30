@@ -6,7 +6,7 @@ import type { Dependent, DependentDeductionResults } from "./dependents";
 
 export type IncomeMode = 'salary' | 'business' | 'advanced';
 
-export type IncomeStreamType = 'salary' | 'bonus' | 'business';
+export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous';
 
 export interface BaseIncomeStream {
   id: string;
@@ -28,7 +28,11 @@ export interface BusinessIncomeStream extends BaseIncomeStream {
   type: 'business';
 }
 
-export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream;
+export interface MiscellaneousIncomeStream extends BaseIncomeStream {
+  type: 'miscellaneous';
+}
+
+export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream;
 
 export interface TakeHomeInputs {
   annualIncome: number;
