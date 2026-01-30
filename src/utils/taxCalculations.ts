@@ -242,7 +242,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
                 }
             } else if (stream.type === 'bonus') {
                 bonusIncome.push(stream);
-            } else if (stream.type === 'business') {
+            } else if (stream.type === 'business' || stream.type === 'miscellaneous') {
                 businessIncome += stream.amount;
             }
         }

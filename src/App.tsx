@@ -248,6 +248,8 @@ function App({ mode, toggleColorMode }: AppProps) {
           customEHIRates={inputs.customEHIRates}
           manualSocialInsuranceEntry={inputs.manualSocialInsuranceEntry}
           manualSocialInsuranceAmount={inputs.manualSocialInsuranceAmount}
+          incomeMode={inputs.incomeMode}
+          incomeStreams={inputs.incomeStreams}
         />
       </Suspense>
 
