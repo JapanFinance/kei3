@@ -122,11 +122,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const groupedStreams = groupStreams();
 
   const renderStreamGroup = (
-      title: string, 
-      groupStreams: IncomeStream[], 
-      subtotal: number, 
-      chipColor: 'primary' | 'success' | 'warning'
-    ) => {
+    title: string,
+    groupStreams: IncomeStream[],
+    subtotal: number,
+    chipColor: 'primary' | 'success' | 'warning'
+  ) => {
     if (groupStreams.length === 0) return null;
 
     return (
@@ -137,8 +137,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         <Stack spacing={1}>
           {groupStreams.map((stream) => (
             <Card key={stream.id} variant="outlined">
-              <CardContent sx={{ 
-                p: 2, 
+              <CardContent sx={{
+                p: 2,
                 '&:last-child': { pb: 2 },
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -146,9 +146,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               }}>
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                    <Chip 
-                      label={stream.type.toUpperCase()} 
-                      size="small" 
+                    <Chip
+                      label={stream.type.toUpperCase()}
+                      size="small"
                       color={getStreamColor(stream.type)}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
@@ -159,6 +159,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   <Typography variant="h6" color="text.primary">
                     {formatJPY(stream.amount)}
                   </Typography>
+                  {stream.type === 'salary' && stream.frequency === 'monthly' && (
+                    <Typography variant="caption" color="text.secondary" display="block" align="right">
+                      (Annual: {formatJPY(stream.amount * 12)})
+                    </Typography>
+                  )}
                 </Box>
                 <Box>
                   <IconButton onClick={() => setEditingStream(stream)} color="primary" size="small">
@@ -172,8 +177,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             </Card>
           ))}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, mr: 1 }}>
-            <Chip 
-              label={`Subtotal: ${formatJPY(subtotal)}`} 
+            <Chip
+              label={`Subtotal: ${formatJPY(subtotal)}`}
               size="small"
               color={chipColor}
               variant="outlined"
@@ -189,10 +194,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       <DialogTitle sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Income Details</Typography>
-          <Chip 
-            label={`Total: ${formatJPY(totalIncome)}`} 
-            color="primary" 
-            variant="outlined" 
+          <Chip
+            label={`Total: ${formatJPY(totalIncome)}`}
+            color="primary"
+            variant="outlined"
             sx={{ fontWeight: 'bold' }}
           />
         </Box>
@@ -219,33 +224,33 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             )}
 
             {renderStreamGroup(
-              "Employment Income (給与所得)", 
-              groupedStreams.employment, 
-              subtotals.employmentIncome, 
+              "Employment Income (給与所得)",
+              groupedStreams.employment,
+              subtotals.employmentIncome,
               "primary"
             )}
-            
+
             {renderStreamGroup(
-              "Business Income (事業所得)", 
-              groupedStreams.business, 
-              subtotals.businessIncome, 
+              "Business Income (事業所得)",
+              groupedStreams.business,
+              subtotals.businessIncome,
               "success"
             )}
 
             {renderStreamGroup(
-              "Miscellaneous Income (雑所得)", 
-              groupedStreams.miscellaneous, 
-              subtotals.miscellaneousIncome, 
+              "Miscellaneous Income (雑所得)",
+              groupedStreams.miscellaneous,
+              subtotals.miscellaneousIncome,
               "warning"
             )}
-            
-            <Button 
-              variant="outlined" 
-              startIcon={<AddIcon />} 
+
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
               onClick={() => setIsAddingNew(true)}
               fullWidth
-              sx={{ 
-                borderStyle: 'dashed', 
+              sx={{
+                borderStyle: 'dashed',
                 borderColor: 'divider',
                 py: 1.5,
                 color: 'text.secondary',

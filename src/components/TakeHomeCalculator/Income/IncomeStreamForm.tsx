@@ -12,6 +12,9 @@ import Select from '@mui/material/Select';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 
+import Typography from '@mui/material/Typography';
+import { formatJPY } from '../../../utils/formatters';
+
 interface IncomeStreamFormProps {
   initialData?: IncomeStream;
   onSave: (stream: IncomeStream) => void;
@@ -60,7 +63,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       case 'business':
         return 'Profit after deducting expenses';
       case 'miscellaneous':
-        return 'Total income minus necessary expenses';      
+        return 'Total income minus necessary expenses';
       case 'salary':
         return 'Total income before taxes and deductions';
       case 'bonus':
@@ -118,13 +121,20 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           </FormControl>
         )}
 
-        <SpinnerNumberField
-          label={getAmountLabel()}
-          value={amount}
-          onChange={(val) => setAmount(val)}
-          sx={{ width: '100%' }}
-          helperText={getAmountHelperText()}
-        />
+        <Box>
+          <SpinnerNumberField
+            label={getAmountLabel()}
+            value={amount}
+            onChange={(val) => setAmount(val)}
+            sx={{ width: '100%' }}
+            helperText={getAmountHelperText()}
+          />
+          {type === 'salary' && frequency === 'monthly' && amount > 0 && (
+            <Typography variant="body2" color="text.secondary" align="right" sx={{ mt: 0.5 }}>
+              Annual: {formatJPY(amount * 12)}
+            </Typography>
+          )}
+        </Box>
 
         <Stack direction="row" spacing={2} justifyContent="flex-end">
           <Button onClick={onCancel}>Cancel</Button>
