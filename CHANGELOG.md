@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2025-12-20
+
+### New
+
+- Introduced "Advanced" income mode for managing multiple incomes (e.g. Salary, Bonus, Business).
+
 ## 2025-12-08
 
 ### New

@@ -48,6 +48,12 @@ You get stuck when the command line is waiting for input if you run tests using 
 - **Component Tests**: React Testing Library for UI components
 - **Test Environment**: Vitest with jsdom, setup in `test-setup.ts`
 
+### Verification Protocol
+Before declaring a task complete, you MUST:
+1. Run `npm run lint` and fix ALL errors and new warnings.
+2. Run `npm run build` to ensure the project compiles successfully.
+3. Run relevant tests to ensure no regressions.
+
 ### Code Organization
 - **Barrel Exports**: Not used - direct imports preferred
 - **Utility Functions**: Pure functions with comprehensive JSDoc comments
