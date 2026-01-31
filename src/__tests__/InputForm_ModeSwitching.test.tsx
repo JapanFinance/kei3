@@ -76,7 +76,7 @@ describe('InputForm Mode Switching Bug', () => {
 
     // 3. Add a bonus (using our mocked modal)
     // First open the modal
-    await user.click(screen.getByRole('button', { name: /edit income streams/i }));
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
     // Click the "Add Bonus" button in our mock
     await user.click(screen.getByRole('button', { name: /add bonus/i }));
     
