@@ -4,22 +4,19 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { EMPLOYEES_PENSION_PREMIUM, type IncomeBracketToPensionPremium } from '../../../utils/pensionCalculator';
 import PremiumTableTooltip from './PremiumTableTooltip';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 
 interface PensionPremiumTableTooltipProps {
-  results: TakeHomeResults;
   inputs: TakeHomeInputs;
 }
 
 type PremiumTableRow = Record<string, unknown>;
 
-const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({ results, inputs }) => {
-  const monthlyIncome = results.annualIncome / 12;
-  
+const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({ inputs }) => {
   // Determine if using National Pension based on health insurance provider
   const isNationalPension = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
 
@@ -53,7 +50,7 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
         tableData={[]}
         columns={[]}
         currentRow={null}
-        monthlyIncome={monthlyIncome}
+        monthlyIncome={0} // irrelevant for national pension
         tableContainerDataAttr="data-pension-table-container"
         currentRowId="current-pension-row"
         getIncomeRange={() => ''}
@@ -62,6 +59,12 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
       />
     );
   }
+
+  // Calculate salary income specifically for Employee Pension display
+  const salaryIncome = inputs.incomeStreams
+    .filter(s => s.type === 'salary')
+    .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0);
+  const monthlyIncome = salaryIncome / 12;
 
   // Find the current row for the user's income
   const currentRow = EMPLOYEES_PENSION_PREMIUM.find(row =>
@@ -89,11 +92,11 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
     const pensionRow = row as unknown as IncomeBracketToPensionPremium;
     const isCapped = pensionRow.max === null;
     const baseSummary = `Your contribution: ${formatJPY(pensionRow.halfAmount)}/month`;
-    
+
     if (isCapped) {
       return `${baseSummary} (capped at maximum amount)`;
     }
-    
+
     return baseSummary;
   }; return (
     <PremiumTableTooltip

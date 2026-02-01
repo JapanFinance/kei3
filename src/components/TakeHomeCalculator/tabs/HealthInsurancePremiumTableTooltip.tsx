@@ -23,7 +23,6 @@ interface HealthInsurancePremiumTableTooltipProps {
 const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTooltipProps> = ({ results, inputs }) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
-  const monthlyIncome = results.annualIncome / 12;
 
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
     // National Health Insurance - show region parameters
@@ -50,7 +49,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           tableData={[]}
           columns={[]}
           currentRow={null}
-          monthlyIncome={monthlyIncome}
+          monthlyIncome={0}
           tableContainerDataAttr="data-table-container"
           currentRowId="current-income-row"
           getIncomeRange={() => ''}
@@ -61,32 +60,26 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     }
 
     // Return National Health Insurance parameters display
-    // Use the same income base that the actual calculation uses:
-    // - For employment income: use net employment income (after employment income deduction)
-    // - For non-employment income: use gross annual income
-    const incomeForNHICalculation = results.isEmploymentIncome && results.netEmploymentIncome 
-      ? results.netEmploymentIncome 
-      : results.annualIncome;
     const includeNursingCareInsurance = inputs.isSubjectToLongTermCarePremium;
-    
+
     // Calculate step-by-step breakdown like the actual calculation
     // Note: NHI premiums are based on previous year's income, but we're using current year as assumption
-    const nhiTaxableIncome = Math.max(0, incomeForNHICalculation - regionData.nhiStandardDeduction);
-    
+    const nhiTaxableIncome = Math.max(0, results.totalNetIncome - regionData.nhiStandardDeduction);
+
     // 1. Medical Portion (医療分)
     const incomeBasedMedical = nhiTaxableIncome * regionData.medicalRate;
     const perCapitaMedical = regionData.medicalPerCapita;
     const householdFlatMedical = regionData.medicalHouseholdFlat || 0;
     const uncappedMedical = incomeBasedMedical + perCapitaMedical + householdFlatMedical;
     const totalMedicalPremium = Math.min(uncappedMedical, regionData.medicalCap);
-    
+
     // 2. Elderly Support Portion (後期高齢者支援金分)
     const incomeBasedSupport = nhiTaxableIncome * regionData.supportRate;
     const perCapitaSupport = regionData.supportPerCapita;
     const householdFlatSupport = regionData.supportHouseholdFlat || 0;
     const uncappedSupport = incomeBasedSupport + perCapitaSupport + householdFlatSupport;
     const totalSupportPremium = Math.min(uncappedSupport, regionData.supportCap);
-    
+
     // 3. Long-Term Care Portion (介護納付金分) - only for those aged 40-64
     let incomeBasedLtc = 0;
     let perCapitaLtc = 0;
@@ -100,7 +93,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
       uncappedLtc = incomeBasedLtc + perCapitaLtc + householdFlatLtc;
       totalLtcPremium = Math.min(uncappedLtc, regionData.ltcCapForEligible);
     }
-    
+
     const totalCalculatedPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium;
 
     const fallbackContent = (
@@ -136,21 +129,21 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Annual Cap: {formatJPY(regionData.medicalCap)}
           </Typography>
-          <Typography variant="body2" sx={{ 
-            fontSize: '0.85rem', 
-            fontWeight: 600, 
+          <Typography variant="body2" sx={{
+            fontSize: '0.85rem',
+            fontWeight: 600,
             color: uncappedMedical > regionData.medicalCap ? 'warning.main' : 'success.main',
             display: 'flex',
             alignItems: 'center',
             gap: 0.5
           }}>
-            = Final: {formatJPY(totalMedicalPremium)} 
+            = Final: {formatJPY(totalMedicalPremium)}
             {uncappedMedical > regionData.medicalCap && (
-              <Box component="span" sx={{ 
-                px: 0.5, 
-                py: 0.2, 
-                borderRadius: 0.5, 
-                bgcolor: 'warning.light', 
+              <Box component="span" sx={{
+                px: 0.5,
+                py: 0.2,
+                borderRadius: 0.5,
+                bgcolor: 'warning.light',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 color: 'warning.contrastText'
@@ -183,21 +176,21 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
             Annual Cap: {formatJPY(regionData.supportCap)}
           </Typography>
-          <Typography variant="body2" sx={{ 
-            fontSize: '0.85rem', 
-            fontWeight: 600, 
+          <Typography variant="body2" sx={{
+            fontSize: '0.85rem',
+            fontWeight: 600,
             color: uncappedSupport > regionData.supportCap ? 'warning.main' : 'success.main',
             display: 'flex',
             alignItems: 'center',
             gap: 0.5
           }}>
-            = Final: {formatJPY(totalSupportPremium)} 
+            = Final: {formatJPY(totalSupportPremium)}
             {uncappedSupport > regionData.supportCap && (
-              <Box component="span" sx={{ 
-                px: 0.5, 
-                py: 0.2, 
-                borderRadius: 0.5, 
-                bgcolor: 'warning.light', 
+              <Box component="span" sx={{
+                px: 0.5,
+                py: 0.2,
+                borderRadius: 0.5,
+                bgcolor: 'warning.light',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 color: 'warning.contrastText'
@@ -231,21 +224,21 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
               Annual Cap: {formatJPY(regionData.ltcCapForEligible!)}
             </Typography>
-            <Typography variant="body2" sx={{ 
-              fontSize: '0.85rem', 
-              fontWeight: 600, 
+            <Typography variant="body2" sx={{
+              fontSize: '0.85rem',
+              fontWeight: 600,
               color: uncappedLtc > regionData.ltcCapForEligible! ? 'warning.main' : 'success.main',
               display: 'flex',
               alignItems: 'center',
               gap: 0.5
             }}>
-              = Final: {formatJPY(totalLtcPremium)} 
+              = Final: {formatJPY(totalLtcPremium)}
               {uncappedLtc > regionData.ltcCapForEligible! && (
-                <Box component="span" sx={{ 
-                  px: 0.5, 
-                  py: 0.2, 
-                  borderRadius: 0.5, 
-                  bgcolor: 'warning.light', 
+                <Box component="span" sx={{
+                  px: 0.5,
+                  py: 0.2,
+                  borderRadius: 0.5,
+                  bgcolor: 'warning.light',
                   fontSize: '0.75rem',
                   fontWeight: 600,
                   color: 'warning.contrastText'
@@ -279,9 +272,9 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
               <strong>Source:</strong>{' '}
-              <a 
-                href={regionData.source} 
-                target="_blank" 
+              <a
+                href={regionData.source}
+                target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: 'inherit', textDecoration: 'underline' }}
               >
@@ -300,7 +293,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
         tableData={[]}
         columns={[]}
         currentRow={null}
-        monthlyIncome={monthlyIncome}
+        monthlyIncome={0}
         tableContainerDataAttr="data-table-container"
         currentRowId="current-income-row"
         getIncomeRange={() => ''}
@@ -313,6 +306,9 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     let premiumTableAsRows;
     let sourceUrl;
     let providerLabel;
+    const monthlyIncome = inputs.incomeStreams.length > 0 ? inputs.incomeStreams
+      .filter(s => s.type === 'salary')
+      .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0) / 12 : results.annualIncome / 12;
 
     if (provider === CUSTOM_PROVIDER_ID) {
       // Generate table for custom provider using input rates
@@ -321,9 +317,9 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
         employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100,
         // Employer rates not needed for this table as we only show employee portion
       };
-      
+
       premiumTableAsRows = generatePremiumTableFromRates(customRates);
-      
+
       providerLabel = "Custom Provider";
     } else {
       premiumTableAsRows = generateHealthInsurancePremiumTable(provider, region);
@@ -332,7 +328,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
       sourceUrl = regionalRates?.source || providerDef?.defaultSource;
       providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
     }
-    
+
     if (!premiumTableAsRows) {
       const fallbackContent = (
         <Box>
@@ -345,9 +341,9 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           {sourceUrl && (
             <Typography variant="body2" sx={{ fontSize: '0.8rem', mt: 1 }}>
               <strong>Source:</strong>{' '}
-              <a 
-                href={sourceUrl} 
-                target="_blank" 
+              <a
+                href={sourceUrl}
+                target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: 'inherit', textDecoration: 'underline' }}
               >
@@ -375,10 +371,10 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
       );
     }
 
-    
+
     // Find the current row for the user's income
-    const currentRow = premiumTableAsRows.find((row) => 
-      monthlyIncome >= row.minIncomeInclusive && 
+    const currentRow = premiumTableAsRows.find((row) =>
+      monthlyIncome >= row.minIncomeInclusive &&
       monthlyIncome < row.maxIncomeExclusive
     );
 
@@ -390,9 +386,8 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
 
     const getIncomeRange = (row: PremiumTableRow) => {
       const healthRow = row as unknown as { minIncomeInclusive: number; maxIncomeExclusive: number };
-      return `${formatJPY(healthRow.minIncomeInclusive)} - ${
-        healthRow.maxIncomeExclusive === Infinity ? '∞' : formatJPY(healthRow.maxIncomeExclusive)
-      }`;
+      return `${formatJPY(healthRow.minIncomeInclusive)} - ${healthRow.maxIncomeExclusive === Infinity ? '∞' : formatJPY(healthRow.maxIncomeExclusive)
+        }`;
     };
 
     const getCurrentRowSummary = (row: PremiumTableRow) => {

@@ -4,16 +4,15 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
-import type { TakeHomeInputs } from '../types/tax';
+import type { TakeHomeFormState } from '../types/tax';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 import { getProviderDisplayName, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 
 describe('TakeHomeInputForm - Available Providers Logic', () => {
   const mockOnInputChange = vi.fn();
-  
-  const baseInputs: TakeHomeInputs = {
+
+  const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
-    isEmploymentIncome: true,
     incomeMode: 'salary',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -21,7 +20,6 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
-    showDetailedInput: false,
     manualSocialInsuranceEntry: false,
     manualSocialInsuranceAmount: 0,
   };
@@ -30,15 +28,15 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     mockOnInputChange.mockClear();
   });
 
-  describe('when employment income is checked', () => {
+  describe('when salary mode income input is used', () => {
     it('should include National Health Insurance as an option alongside employee providers for employment income', async () => {
       const user = userEvent.setup();
-      const employmentInputs = { ...baseInputs, isEmploymentIncome: true };
-      
+      const employmentInputs = { ...baseInputs };
+
       render(
-        <TakeHomeInputForm 
-          inputs={employmentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={employmentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -47,12 +45,12 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
 
       // After clicking, there's exactly one listbox - the one for our select
       const listbox = screen.getByRole('listbox');
-      
+
       // Now scope our option searches to this listbox (which we know is ours)
       expect(within(listbox).getByRole('option', { name: 'National Health Insurance' })).toBeInTheDocument();
       expect(within(listbox).getByRole('option', { name: 'Kyokai Kenpo' })).toBeInTheDocument();
       expect(within(listbox).getByRole('option', { name: 'Kanto ITS Kenpo' })).toBeInTheDocument();
-      
+
       // Should have employee providers + NHI + Custom
       const optionsInSelect = within(listbox).getAllByRole('option');
       expect(optionsInSelect).toHaveLength(Object.keys(PROVIDER_DEFINITIONS).length + 2);
@@ -60,12 +58,12 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
 
     it('should allow selecting different employee health insurance providers', async () => {
       const user = userEvent.setup();
-      const employmentInputs = { ...baseInputs, isEmploymentIncome: true };
-      
+      const employmentInputs = { ...baseInputs };
+
       render(
-        <TakeHomeInputForm 
-          inputs={employmentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={employmentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -87,36 +85,22 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
         })
       );
     });
-
-    it('should display helper text when dropdown has choices', () => {
-      const employmentInputs = { ...baseInputs, isEmploymentIncome: true };
-      
-      render(
-        <TakeHomeInputForm 
-          inputs={employmentInputs} 
-          onInputChange={mockOnInputChange} 
-        />
-      );
-
-      // Should not show "automatically set" message when there are choices
-      expect(screen.queryByText(/automatically set to.*national health insurance/i)).not.toBeInTheDocument();
-    });
   });
 
-  describe('when employment income is unchecked (non-employment income)', () => {
+  describe('when in business income mode (non-employment income)', () => {
     it('should show dependent coverage and NHI when income is below threshold', async () => {
       const user = userEvent.setup();
-      const nonEmploymentInputs = { 
-        ...baseInputs, 
-        isEmploymentIncome: false,
+      const nonEmploymentInputs = {
+        ...baseInputs,
+        incomeMode: 'business' as const,
         annualIncome: 1_000_000, // Below threshold
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={nonEmploymentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={nonEmploymentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -127,24 +111,24 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       // Click to open dropdown
       await user.click(providerSelect);
       const listbox = screen.getByRole('listbox');
-      
+
       // Should have both dependent coverage and NHI
       expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
       expect(within(listbox).getByRole('option', { name: 'National Health Insurance' })).toBeInTheDocument();
     });
 
     it('should only show NHI when non-employment income is above threshold', () => {
-      const nonEmploymentInputs = { 
-        ...baseInputs, 
-        isEmploymentIncome: false,
+      const nonEmploymentInputs = {
+        ...baseInputs,
+        incomeMode: 'business' as const,
         annualIncome: 1_500_000, // Above threshold
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={nonEmploymentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={nonEmploymentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -158,26 +142,26 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
 
     it('should not show employee health insurance providers for non-employment income', async () => {
       const user = userEvent.setup();
-      const nonEmploymentInputs = { 
-        ...baseInputs, 
-        isEmploymentIncome: false,
+      const nonEmploymentInputs = {
+        ...baseInputs,
+        incomeMode: 'business' as const,
         annualIncome: 1_000_000, // Below threshold to have options
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={nonEmploymentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={nonEmploymentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
       await user.click(providerSelect);
-      
+
       const listbox = screen.getByRole('listbox');
       const options = within(listbox).getAllByRole('option');
-      
+
       // Should only have dependent coverage and NHI, no employee providers
       expect(options).toHaveLength(2);
       expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
@@ -189,12 +173,12 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
   describe('when switching between employment and non-employment income', () => {
     it('should change available providers when toggling income mode', async () => {
       const user = userEvent.setup();
-      const employmentInputs = { ...baseInputs, isEmploymentIncome: true, incomeMode: 'salary' as const };
-      
+      const employmentInputs = { ...baseInputs, incomeMode: 'salary' as const };
+
       render(
-        <TakeHomeInputForm 
-          inputs={employmentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={employmentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -221,12 +205,12 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
   describe('integration with real provider data', () => {
     it('should dynamically include all providers from PROVIDER_DEFINITIONS', async () => {
       const user = userEvent.setup();
-      const employmentInputs = { ...baseInputs, isEmploymentIncome: true };
-      
+      const employmentInputs = { ...baseInputs };
+
       render(
-        <TakeHomeInputForm 
-          inputs={employmentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={employmentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -245,16 +229,16 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
     });
 
     it('should maintain consistency with provider display names', () => {
-      const nonEmploymentInputs = { 
-        ...baseInputs, 
-        isEmploymentIncome: false,
+      const nonEmploymentInputs = {
+        ...baseInputs,
+        incomeMode: 'business' as const,
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={nonEmploymentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={nonEmploymentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -266,17 +250,17 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
   describe('accessibility and user experience', () => {
     it('should have proper ARIA labels and roles', () => {
       const employmentInputs = { ...baseInputs, isEmploymentIncome: true };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={employmentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={employmentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
       // Health insurance provider field should be properly labeled
       expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toBeInTheDocument();
-      
+
       // Income mode selection should be present
       expect(screen.getByRole('group', { name: /income mode/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /salary/i })).toBeInTheDocument();
@@ -285,17 +269,17 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
 
     it('should show helpful tooltips and explanatory text', () => {
       const employmentInputs = { ...baseInputs, isEmploymentIncome: true };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={employmentInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={employmentInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
       // Should have health insurance provider section (test accessibility)
       expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toBeInTheDocument();
-      
+
       // Should have tooltip for Age Range
       const ageRangeLabel = screen.getByText('Age Range');
       expect(ageRangeLabel).toBeInTheDocument();
@@ -305,17 +289,15 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
 
 describe('Dependent Coverage UI Behavior', () => {
   const mockOnInputChange = vi.fn();
-  const baseInputs: TakeHomeInputs = {
+  const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
     incomeMode: 'salary',
     incomeStreams: [],
-    isEmploymentIncome: true,
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
-    showDetailedInput: false,
     manualSocialInsuranceEntry: false,
     manualSocialInsuranceAmount: 0,
   };
@@ -326,23 +308,23 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should include dependent coverage option when income is below threshold for employment income', async () => {
     const user = userEvent.setup();
-    const inputs = { ...baseInputs, annualIncome: 1_200_000, isEmploymentIncome: true };
-    
+    const inputs = { ...baseInputs, annualIncome: 1_200_000 };
+
     render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
 
     const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
     await user.click(providerSelect);
 
     const listbox = screen.getByRole('listbox');
-    
+
     // Should include dependent coverage option
     expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
   });
 
   it('should NOT include dependent coverage option when income is at or above threshold', async () => {
     const user = userEvent.setup();
-    const inputs = { ...baseInputs, annualIncome: 1_300_000, isEmploymentIncome: true };
-    
+    const inputs = { ...baseInputs, annualIncome: 1_300_000 };
+
     render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
 
     const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
@@ -351,43 +333,43 @@ describe('Dependent Coverage UI Behavior', () => {
     const listbox = screen.getByRole('listbox');
     const options = within(listbox).getAllByRole('option');
     const optionTexts = options.map(opt => opt.textContent);
-    
+
     expect(optionTexts).not.toContain('None (dependent of insured employee)');
   });
 
   it('should include dependent coverage option for non-employment income when below threshold', async () => {
     const user = userEvent.setup();
-    const inputs = { ...baseInputs, annualIncome: 1_000_000, isEmploymentIncome: false };
-    
+    const inputs = { ...baseInputs, annualIncome: 1_000_000, incomeMode: 'business' as const };
+
     render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
 
     const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
     await user.click(providerSelect);
 
     const listbox = screen.getByRole('listbox');
-    
+
     // Should include both dependent coverage and NHI for non-employment income below threshold
     expect(within(listbox).getByRole('option', { name: 'None (dependent of insured employee)' })).toBeInTheDocument();
     expect(within(listbox).getByRole('option', { name: 'National Health Insurance' })).toBeInTheDocument();
   });
 
   it('should NOT include dependent coverage option for non-employment income above threshold', () => {
-    const inputs = { ...baseInputs, annualIncome: 1_500_000, isEmploymentIncome: false };
-    
+    const inputs = { ...baseInputs, annualIncome: 1_500_000, incomeMode: 'business' as const };
+
     render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
 
     const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
-    
+
     // Should be disabled since only one option (NHI)
     expect(providerSelect).toHaveAttribute('aria-disabled', 'true');
-    
+
     // Should show helper text explaining only NHI is available for this configuration
     expect(screen.getByText(/Only National Health Insurance available for this configuration/i)).toBeInTheDocument();
   });
 
   it('should show helper text about dependent coverage when income is below threshold', () => {
-    const inputs = { ...baseInputs, annualIncome: 1_200_000, isEmploymentIncome: true };
-    
+    const inputs = { ...baseInputs, annualIncome: 1_200_000 };
+
     render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
 
     // Should show helper text mentioning the threshold
@@ -397,11 +379,11 @@ describe('Dependent Coverage UI Behavior', () => {
   describe('Custom Provider UI', () => {
     it('should show custom rate fields when Custom Provider is selected', async () => {
       const customInputs = { ...baseInputs, healthInsuranceProvider: CUSTOM_PROVIDER_ID };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={customInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={customInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -409,7 +391,7 @@ describe('Dependent Coverage UI Behavior', () => {
       // There are two "Rate (%)" fields
       const rateInputs = screen.getAllByLabelText('Rate (%)');
       expect(rateInputs).toHaveLength(2);
-      
+
       // Verify context labels exist
       expect(screen.getByText('Health Insurance', { selector: 'p' })).toBeInTheDocument(); // Typography renders as p by default or I can check text content
       expect(screen.getByText('Long-term Care', { selector: 'p' })).toBeInTheDocument();
@@ -418,11 +400,11 @@ describe('Dependent Coverage UI Behavior', () => {
     it('should call onInputChange when custom rates are updated', async () => {
       const user = userEvent.setup();
       const customInputs = { ...baseInputs, healthInsuranceProvider: CUSTOM_PROVIDER_ID };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={customInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={customInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -447,14 +429,14 @@ describe('Dependent Coverage UI Behavior', () => {
         })
       );
     });
-    
+
     it('should hide custom rate fields when another provider is selected', () => {
       const standardInputs = { ...baseInputs, healthInsuranceProvider: 'KyokaiKenpo' };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={standardInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={standardInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -465,28 +447,28 @@ describe('Dependent Coverage UI Behavior', () => {
   describe('Manual Social Insurance Entry', () => {
     it('should show manual entry input when toggle is on', () => {
       const manualInputs = { ...baseInputs, manualSocialInsuranceEntry: true };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={manualInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={manualInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
       // Check if the input field is visible
       expect(screen.getByLabelText(/Total Social Insurance Amount/i)).toBeInTheDocument();
-      
+
       // Check if the provider dropdown is NOT visible
       expect(screen.queryByRole('combobox', { name: /health insurance provider/i })).not.toBeInTheDocument();
     });
 
     it('should hide manual entry input when toggle is off', () => {
       const manualInputs = { ...baseInputs, manualSocialInsuranceEntry: false };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={manualInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={manualInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -497,11 +479,11 @@ describe('Dependent Coverage UI Behavior', () => {
     it('should call onInputChange when manual amount changes', async () => {
       const user = userEvent.setup();
       const manualInputs = { ...baseInputs, manualSocialInsuranceEntry: true, manualSocialInsuranceAmount: 0 };
-      
+
       render(
-        <TakeHomeInputForm 
-          inputs={manualInputs} 
-          onInputChange={mockOnInputChange} 
+        <TakeHomeInputForm
+          inputs={manualInputs}
+          onInputChange={mockOnInputChange}
         />
       );
 
@@ -516,17 +498,15 @@ describe('Dependent Coverage UI Behavior', () => {
 
 describe('Age Range Selection', () => {
   const mockOnInputChange = vi.fn();
-  const baseInputs: TakeHomeInputs = {
+  const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
     incomeMode: 'salary',
     incomeStreams: [],
-    isEmploymentIncome: true,
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
-    showDetailedInput: false,
     manualSocialInsuranceEntry: false,
     manualSocialInsuranceAmount: 0,
   };

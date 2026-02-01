@@ -164,6 +164,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       (Annual: {formatJPY(stream.amount * 12)})
                     </Typography>
                   )}
+                  {stream.type === 'business' && stream.blueFilerDeduction && (
+                    <Typography variant="caption" color="text.secondary" display="block" align="right">
+                      (Blue-filer Deduction: -{formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
+                    </Typography>
+                  )}
                 </Box>
                 <Box>
                   <IconButton onClick={() => setEditingStream(stream)} color="primary" size="small">
@@ -207,6 +212,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           <IncomeStreamForm
             onSave={handleSaveStream}
             onCancel={() => setIsAddingNew(false)}
+            disabledTypes={streams.some(s => s.type === 'business') ? ['business'] : []}
           />
         ) : editingStream ? (
           <IncomeStreamForm

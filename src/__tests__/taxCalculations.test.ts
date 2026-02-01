@@ -50,12 +50,11 @@ describe('calculateTaxes', () => {
   // Test cases for different income brackets
   it('calculates taxes correctly for income below 1,950,000 yen', () => {
     const inputs = {
-      annualIncome: 1_500_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 1_500_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo", // Default for Kyokai Kenpo in tests
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -71,12 +70,11 @@ describe('calculateTaxes', () => {
 
   it('calculates taxes correctly for income between 1,950,000 and 3,300,000 yen', () => {
     const inputs = {
-      annualIncome: 2_500_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 2_500_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(22_300)
@@ -92,12 +90,11 @@ describe('calculateTaxes', () => {
 
   it('calculates taxes correctly for income between 3,300,000 and 6,950,000 yen', () => {
     const inputs = {
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(120_700)
@@ -114,12 +111,11 @@ describe('calculateTaxes', () => {
   // Test cases for high income brackets
   it('calculates taxes correctly for income above 40,000,000 yen', () => {
     const inputs = {
-      annualIncome: 50_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 50_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(16_345_400) // 50M - 1.95M (employment deduction) - 1.815194M (social insurance) - 0 (basic deduction) = 46.234806M, rounded to 46.234M, then 45% - 4.796M = 16.0093M, + 2.1% = 16.345495M, rounded down to 16.3454M
@@ -136,12 +132,11 @@ describe('calculateTaxes', () => {
   // Test edge cases
   it('handles zero income correctly', () => {
     const inputs = {
-      annualIncome: 0,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 0, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -154,12 +149,11 @@ describe('calculateTaxes', () => {
 
   it('handles negative income correctly', () => {
     const inputs = {
-      annualIncome: -1_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: -1_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -172,14 +166,11 @@ describe('calculateTaxes', () => {
 
   it('calculates taxes correctly for non-employment income', () => {
     const inputs = {
-      annualIncome: 5_000_000,
-      isEmploymentIncome: false,
-      incomeMode: 'business' as const,
-      incomeStreams: [],
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 5_000_000, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-      region: "Tokyo", // For NHI
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, 
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(302_700)
@@ -194,30 +185,29 @@ describe('calculateTaxes', () => {
     // Test case for employees who work for small employers or are part-time/low income
     // and are therefore enrolled in National Health Insurance instead of employee insurance
     const inputs = {
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo", // For NHI
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
-    
+
     // Should pay employment insurance (since it's employment income)
     expect(result.employmentInsurance).toBe(27_504);
-    
+
     // Should pay NHI premiums (not employee health insurance)
     // NHI should be calculated on net employment income (3,560,000) not gross (5,000,000)
     expect(result.healthInsurance).toBe(389_620)
-    
+
     // Should pay national pension (not employee pension, since they're on NHI)
     expect(result.pensionPayments).toBe(210_120)
-    
+
     // Tax calculations should use employment income deduction
     expect(result.netEmploymentIncome).toBe(3_560_000)
     expect(result.nationalIncomeTax).toBe(130_300)
     expect(result.residenceTax.totalResidenceTax).toBe(252_600)
-    
+
     // Total take-home should reflect employment income with NHI and National Pension
     // NHI calculated on net employment income results in lower premiums and higher take-home
     expect(result.takeHomeIncome).toBe(3_989_856)
@@ -226,12 +216,11 @@ describe('calculateTaxes', () => {
   it('calculates taxes correctly with DC plan contributions', () => {
     // Test without DC plan contributions
     const inputsWithoutDcPlan = {
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
-      dependents: [], showDetailedInput: false, dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [], 
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
     };
     const resultWithoutIdeco = calculateTaxes(inputsWithoutDcPlan);
 
@@ -245,19 +234,79 @@ describe('calculateTaxes', () => {
     // iDeCo contributions should reduce taxes
     expect(resultWithIdeco.nationalIncomeTax).toBeLessThan(resultWithoutIdeco.nationalIncomeTax);
     expect(resultWithIdeco.residenceTax.totalResidenceTax).toBeLessThan(resultWithoutIdeco.residenceTax.totalResidenceTax);
-    
+
     // Take-home pay should be higher with iDeCo contributions
     // This is because the tax savings offset part of the contribution
     expect(resultWithIdeco.takeHomeIncome).toBeGreaterThan(resultWithoutIdeco.takeHomeIncome);
-    
+
     // Verify that the tax savings are calculated correctly
     const incomeTaxSavings = resultWithoutIdeco.nationalIncomeTax - resultWithIdeco.nationalIncomeTax;
     const residenceTaxSavings = resultWithoutIdeco.residenceTax.totalResidenceTax - resultWithIdeco.residenceTax.totalResidenceTax;
-    
+
     // With 240,000 yen contribution at ~10% marginal tax rate, we expect around 24,000 yen in income tax savings
     // and around 24,000 yen in residence tax savings (10% rate)
     expect(incomeTaxSavings).equals(22_800); // less because it crosses into the 5% bracket
     expect(residenceTaxSavings).equals(24_000);
+  });
+
+  it('calculates taxes correctly with Blue-Filer deduction for business income', () => {
+    const inputs = {
+      incomeStreams: [
+        {
+          id: '1',
+          type: 'business' as const,
+          amount: 5_000_000,
+          blueFilerDeduction: 650_000,
+        }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+    const result = calculateTaxes(inputs);
+
+    // Net Business Income = 5,000,000 - 650,000 = 4,350,000
+    // NHI and Tax should be calculated based on 4,350,000
+
+    // For comparison, let's look at business income of 4,350,000 without deduction
+    const inputsReference = {
+      ...inputs,
+      incomeStreams: [
+        {
+          id: '1',
+          type: 'business' as const,
+          amount: 4_350_000,
+          blueFilerDeduction: 0,
+        }
+      ]
+    };
+    const resultReference = calculateTaxes(inputsReference);
+
+    expect(result.nationalIncomeTax).toBe(resultReference.nationalIncomeTax);
+    expect(result.healthInsurance).toBe(resultReference.healthInsurance);
+    expect(result.residenceTax.totalResidenceTax).toBe(resultReference.residenceTax.totalResidenceTax);
+
+    // VERIFICATION:
+    // Annual Income should be the GROSS income (5M), not the reduced income (4.35M)
+    expect(result.annualIncome).toBe(5_000_000);
+    expect(resultReference.annualIncome).toBe(4_350_000);
+
+    // Take Home Income should be higher by the deduction amount (since it's not a cash expense)
+    // 5M - Tax == 4.35M - Tax + 650k
+    expect(result.takeHomeIncome).toBe(resultReference.takeHomeIncome + 650_000);
+
+    // Verify Blue-Filer deduction is returned
+    expect(result.blueFilerDeduction).toBe(650_000);
+
+    // Verify specific values to be sure
+    // Net Income 4.35M
+    // NHI (Tokyo, 40-): Limit check? 
+    // Medical: (4.35M - 0.43M basic deduction) * 7.25% + 44054 (flat) = 3.92M * 0.0725 + 44054 = 284200 + 44054 = 328254
+    // Support: (4.35M - 0.43M) * 2.45% + 14174 = 96040 + 14174 = 110214
+    // Total NHI ~ 438,400 (rounded)
+    // resultReference.healthInsurance should be around there.
+    expect(result.healthInsurance).toBeGreaterThan(0);
   });
 })
 
@@ -268,7 +317,7 @@ describe('calculateEmploymentInsurance', () => {
     // 100,000 * 0.55% = 550 yen per month
     // 550 * 12 = 6,600 yen annually
     expect(calculateEmploymentInsurance(1_200_000, [], true)).toBe(6_600)
-    
+
     // 2,400,000 / 12 = 200,000 per month
     // 200,000 * 0.55% = 1,100 yen per month
     // 1,100 * 12 = 13,200 yen annually
@@ -282,25 +331,25 @@ describe('calculateEmploymentInsurance', () => {
     // Rounded to 458 yen per month (decimal .33 < .50 → round down)
     // 458 * 12 = 5,496 yen annually
     expect(calculateEmploymentInsurance(1_000_000, [], true)).toBe(5_496)
-    
+
     // 1,100,000 / 12 ≈ 91,666.67 per month
     // 91,666.67 * 0.55% ≈ 504.17 per month
     // Rounded to 504 yen per month (decimal .17 < .50 → round down)
     // 504 * 12 = 6,048 yen annually
     expect(calculateEmploymentInsurance(1_100_000, [], true)).toBe(6_048)
-    
+
     // 1,111,111 / 12 ≈ 92,592.58 per month
     // 92,592.58 * 0.55% ≈ 509.26 per month
     // Rounded to 509 yen per month (decimal .26 < .50 → round down)
     // 509 * 12 = 6,108 yen annually
     expect(calculateEmploymentInsurance(1_111_111, [], true)).toBe(6_108)
-    
+
     // 1,200,001 / 12 = 100,000.083 per month
     // 100,000.083 * 0.55% ≈ 550.00046 per month
     // Rounded to 550 yen per month (decimal .00046 < .50 → round down)
     // 550 * 12 = 6,600 yen annually
     expect(calculateEmploymentInsurance(1_200_001, [], true)).toBe(6_600)
-    
+
     // 1,999,999 / 12 ≈ 166,666.58 per month
     // 166,666.58 * 0.55% ≈ 916.67 per month
     // Rounded to 917 yen per month (decimal .67 > .50 → round up)
@@ -323,7 +372,7 @@ describe('calculateEmploymentInsurance', () => {
     expect(calculateEmploymentInsurance(-1_000_000, [], true)).toBe(0)
     expect(calculateEmploymentInsurance(-1_000_000, [], false)).toBe(0)
   })
-  
+
   // Test with very small amounts to ensure rounding works correctly
   it('handles very small amounts correctly', () => {
     // 10,000 / 12 ≈ 833.33 per month
@@ -331,7 +380,7 @@ describe('calculateEmploymentInsurance', () => {
     // Rounded to 5 yen per month (decimal .58 > .50 → round up)
     // 5 * 12 = 60 yen annually
     expect(calculateEmploymentInsurance(10_000, [], true)).toBe(60)
-    
+
     // 9,090 / 12 = 757.5 per month
     // 757.5 * 0.55% ≈ 4.17 per month
     // Rounded to 4 yen per month (decimal .17 < .50 → round down)
@@ -444,29 +493,27 @@ describe('calculateNationalIncomeTax', () => {
 describe('calculateTaxes with Dependent Coverage', () => {
   it('calculates taxes correctly with dependent coverage below threshold', () => {
     const inputs = {
-      annualIncome: 1_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 1_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: 'DependentCoverage',
       region: "Tokyo",
-      dependents: [], 
-      showDetailedInput: false, 
-      dcPlanContributions: 0, 
-      manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
-    
+
     // With dependent coverage, no health insurance or pension premiums
     expect(result.healthInsurance).toBe(0)
     expect(result.pensionPayments).toBe(0)
-    
+
     // Employment insurance should still be calculated
     // 1,000,000 / 12 = 83,333.33 per month
     // 83,333.33 * 0.55% = 458.33 per month → 458 yen (round down)
     // 458 * 12 = 5,496 yen annually
     expect(result.employmentInsurance).toBe(5_496)
-    
+
     // Income tax and residence tax should still be calculated normally
     // Net income: 1,000,000 - 650,000 = 350,000
     // Social insurance deduction: 0 + 0 + 5,496 = 5,496
@@ -476,23 +523,21 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('calculates taxes correctly with dependent coverage at threshold', () => {
     const inputs = {
-      annualIncome: 1_299_999,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 1_299_999, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: 'DependentCoverage',
       region: "Tokyo",
-      dependents: [], 
-      showDetailedInput: false, 
-      dcPlanContributions: 0, 
-      manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
-    
+
     // With dependent coverage, no health insurance or pension premiums
     expect(result.healthInsurance).toBe(0)
     expect(result.pensionPayments).toBe(0)
-    
+
     // Employment insurance should still be calculated
     // 1,299,999 / 12 = 108,333.25 per month
     // 108,333.25 * 0.55% = 595.83 per month → 596 yen (round up)
@@ -502,19 +547,17 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('calculates taxes correctly with dependent coverage and long-term care premium eligibility', () => {
     const inputs = {
-      annualIncome: 1_200_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 1_200_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: true, // Should not matter for dependent coverage
       healthInsuranceProvider: 'DependentCoverage',
       region: "Tokyo",
-      dependents: [], 
-      showDetailedInput: false, 
-      dcPlanContributions: 0, 
-      manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
     };
     const result = calculateTaxes(inputs);
-    
+
     // Even with LTC eligibility, dependent coverage has no premiums
     expect(result.healthInsurance).toBe(0)
     expect(result.pensionPayments).toBe(0)
@@ -522,16 +565,14 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('calculates taxes correctly with Custom Provider', () => {
     const inputs = {
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: true,
       healthInsuranceProvider: CUSTOM_PROVIDER_ID,
       region: "Tokyo",
       dependents: [],
-      showDetailedInput: false,
       dcPlanContributions: 0,
-      manualSocialInsuranceEntry: false, 
-      manualSocialInsuranceAmount: 0, incomeMode: "salary" as const, incomeStreams: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
       customEHIRates: {
         healthInsuranceRate: 5, // 5%
         longTermCareRate: 1, // 1%
@@ -547,18 +588,14 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('uses manual social insurance amount when enabled', () => {
     const inputs = {
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [],
-      showDetailedInput: false,
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 500_000,
-      incomeMode: 'salary' as const,
-      incomeStreams: [],
     };
     const result = calculateTaxes(inputs);
 
@@ -566,10 +603,71 @@ describe('calculateTaxes with Dependent Coverage', () => {
     expect(result.pensionPayments).toBe(0);
     expect(result.employmentInsurance).toBe(0);
     expect(result.socialInsuranceOverride).toBe(500_000);
-    
+
     // Verify take home calculation uses the manual amount
     expect(result.takeHomeIncome).toBe(
-      inputs.annualIncome - (result.nationalIncomeTax + result.residenceTax.totalResidenceTax + 500_000)
+      5_000_000 - (result.nationalIncomeTax + result.residenceTax.totalResidenceTax + 500_000)
     );
+  });
+  it('caps Blue-Filer deduction at the amount of business income', () => {
+    const inputs = {
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: "Tokyo",
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeStreams: [
+        {
+          id: '1',
+          type: 'business' as const,
+          amount: 300_000,
+          blueFilerDeduction: 650_000,
+        }
+      ],
+    };
+    const result = calculateTaxes(inputs);
+
+    // Deduction (650k) > Income (300k) => Effective deduction should be 300k
+    expect(result.blueFilerDeduction).toBe(300_000);
+
+    // Taxable business income should be 0
+    // Gross income should be 300k
+    expect(result.annualIncome).toBe(300_000);
+    expect(result.nationalIncomeTax).toBe(0);
+  });
+  it('calculates NHI base correctly with Employment AND Miscellaneous income', () => {
+    const inputs = {
+      incomeStreams: [
+        { id: '1', type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const },
+        { id: '2', type: 'miscellaneous' as const, amount: 1_000_000 }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: "Tokyo",
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. Validate Gross Annual Income: 3M + 1M = 4M
+    expect(result.annualIncome).toBe(4_000_000);
+
+    // 2. Validate Net Employment Income
+    // Deduction for 3M: 3M * 30% + 80k = 980k; Net = 2.02M
+    expect(result.netEmploymentIncome).toBe(2_020_000);
+
+    // 3. Validate Total Net Income (The base for NHI)
+    // Total Net = Net Employment (2.02M) + Misc (1M) = 3.02M
+    expect(result.totalNetIncome).toBe(3_020_000);
+
+    // 4. Validate NHI Premium is calculated broadly correctly (non-zero)
+    // Base = 3.02M - 430k = 2.59M
+    // Rough calc: 2.59M * ~10% = ~260k. 
+    expect(result.healthInsurance).toBeGreaterThan(200_000);
   });
 })

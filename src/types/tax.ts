@@ -26,6 +26,7 @@ export interface BonusIncomeStream extends BaseIncomeStream {
 
 export interface BusinessIncomeStream extends BaseIncomeStream {
   type: 'business';
+  blueFilerDeduction?: number; // 0, 100000, 550000, or 650000
 }
 
 export interface MiscellaneousIncomeStream extends BaseIncomeStream {
@@ -34,20 +35,31 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
 
 export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream;
 
-export interface TakeHomeInputs {
+/** Interface for the UI Form State (includes legacy/UI-specific fields) */
+export interface TakeHomeFormState {
   annualIncome: number;
-  isEmploymentIncome: boolean;
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
-  isSubjectToLongTermCarePremium: boolean; // Person is 40-64 years old (must pay long-term care insurance premiums)
+  isSubjectToLongTermCarePremium: boolean;
   region: string;
-  showDetailedInput: boolean;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
   dcPlanContributions: number;
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
-  // Custom provider rates (percentages, e.g. 5.0 for 5%)
+  customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+}
+
+/** Interface for Calculation Logic (clean, normalized inputs) */
+export interface TakeHomeInputs {
+  incomeStreams: IncomeStream[];
+  isSubjectToLongTermCarePremium: boolean;
+  region: string;
+  healthInsuranceProvider: HealthInsuranceProviderId;
+  dependents: Dependent[];
+  dcPlanContributions: number;
+  manualSocialInsuranceEntry: boolean;
+  manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
 }
 
@@ -59,6 +71,7 @@ export interface CustomEmployeesHealthInsuranceRates {
 export interface TakeHomeResults {
   annualIncome: number;
   isEmploymentIncome: boolean;
+  blueFilerDeduction?: number;
   nationalIncomeTax: number;
   residenceTax: ResidenceTaxDetails;
   healthInsurance: number;
@@ -72,6 +85,7 @@ export interface TakeHomeResults {
   employmentInsuranceOnBonus?: number;
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
+  totalNetIncome: number; // Total net income (Employment Net + Business Taxable)
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;
