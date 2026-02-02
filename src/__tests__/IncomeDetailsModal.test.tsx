@@ -155,4 +155,29 @@ describe('IncomeDetailsModal - Business Income', () => {
         // Should display capped amount (-300,000)
         expect(screen.getByText(/Blue-filer Deduction: -¥300,000/i)).toBeInTheDocument();
     });
+
+    it('does not display Blue-filer Deduction or stray 0 when it is 0/None', () => {
+        const streams: IncomeStream[] = [{
+            id: '1',
+            type: 'business',
+            amount: 1111111, // Use an amount with no zeros
+            blueFilerDeduction: 0
+        }];
+
+        render(
+            <IncomeDetailsModal
+                open={true}
+                onClose={() => { }}
+                streams={streams}
+                onStreamsChange={() => { }}
+            />
+        );
+
+        // Should NOT display "Blue-filer Deduction"
+        expect(screen.queryByText(/Blue-filer Deduction/i)).not.toBeInTheDocument();
+
+        // Should NOT display a stray "0"
+        expect(screen.queryByText('0')).not.toBeInTheDocument();
+    });
 });
+

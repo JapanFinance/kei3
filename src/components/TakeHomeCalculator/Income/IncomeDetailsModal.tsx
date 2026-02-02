@@ -165,7 +165,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       (Annual: {formatJPY(stream.amount * 12)})
                     </Typography>
                   )}
-                  {stream.type === 'business' && stream.blueFilerDeduction && (
+                  {stream.type === 'business' && !!stream.blueFilerDeduction && (
                     <Typography variant="caption" color="text.secondary" display="block" align="right">
                       (Blue-filer Deduction: -{formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
                     </Typography>
