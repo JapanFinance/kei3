@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TakeHomeInputs, TakeHomeResults, BonusIncomeStream } from '../types/tax'
+import type { TakeHomeInputs, TakeHomeResults, BonusIncomeStream, IncomeStream } from '../types/tax'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { calculatePensionBreakdown } from './pensionCalculator';
 import { calculateHealthInsuranceBreakdown, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
@@ -431,3 +431,31 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         }),
     };
 }
+
+/**
+ * Normalizes income streams from the form state into a standard array of streams.
+ * Handles the conversion of simple "Salary" and "Business" modes into explicit income streams.
+ */
+export const normalizeIncomeStreams = (
+    incomeMode: string,
+    annualIncome: number,
+    currentStreams: IncomeStream[]
+): IncomeStream[] => {
+    if (incomeMode === 'advanced') {
+        return currentStreams;
+    } else if (incomeMode === 'business') {
+        return [{
+            id: 'simple-business',
+            type: 'business',
+            amount: annualIncome,
+            blueFilerDeduction: 0,
+        }];
+    } else {
+        return [{
+            id: 'simple-salary',
+            type: 'salary',
+            amount: annualIncome,
+            frequency: 'annual'
+        }];
+    }
+};

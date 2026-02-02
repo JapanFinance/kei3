@@ -8,7 +8,7 @@ import ThemeToggle from './components/ThemeToggle'
 import ChangelogButton from './components/ChangelogButton'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
 import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults, IncomeStream } from './types/tax'
-import { calculateTaxes } from './utils/taxCalculations'
+import { calculateTaxes, normalizeIncomeStreams } from './utils/taxCalculations'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, DEPENDENT_COVERAGE_ID, isDependentCoverageEligible } from './types/healthInsurance'
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData'
 import { PROVIDER_DEFINITIONS } from './data/employeesHealthInsurance/providerRateData'
@@ -50,23 +50,7 @@ function App({ mode, toggleColorMode }: AppProps) {
 
   // Normalize inputs for calculation (memoized for use in both calculation and validation/charts)
   const normalizedIncomeStreams = useMemo<IncomeStream[]>(() => {
-    if (inputs.incomeMode === 'advanced') {
-      return inputs.incomeStreams;
-    } else if (inputs.incomeMode === 'business') {
-      return [{
-        id: 'simple-business',
-        type: 'business',
-        amount: inputs.annualIncome,
-        blueFilerDeduction: 0,
-      }];
-    } else {
-      return [{
-        id: 'simple-salary',
-        type: 'salary',
-        amount: inputs.annualIncome,
-        frequency: 'annual'
-      }];
-    }
+    return normalizeIncomeStreams(inputs.incomeMode, inputs.annualIncome, inputs.incomeStreams);
   }, [inputs.incomeMode, inputs.incomeStreams, inputs.annualIncome]);
 
   // Debounce the tax calculation to prevent excessive updates from rapid slider changes
