@@ -22,7 +22,11 @@ const mockResults: TakeHomeResults = {
     isEmploymentIncome: false,
     blueFilerDeduction: 650_000,
     nationalIncomeTax: 100_000,
-    residenceTax: { totalResidenceTax: 200_000 } as unknown as ResidenceTaxDetails,
+    residenceTax: {
+        totalResidenceTax: 200_000,
+        city: { cityIncomeTax: 100_000, cityPerCapitaTax: 0 },
+        prefecture: { prefectureIncomeTax: 100_000, prefecturePerCapitaTax: 0 }
+    } as unknown as ResidenceTaxDetails,
     healthInsurance: 300_000,
     pensionPayments: 180_000,
     employmentInsurance: 0,
@@ -55,14 +59,46 @@ const mockInputs: TakeHomeInputs = {
 describe('Blue-Filer Deduction Display', () => {
     // Skipped due to test environment rendering issues with dynamic content injection
     // Manual verification required for TaxesTab layout
-    it.skip('displays Blue-Filer Deduction in TaxesTab', () => {
-        render(<TaxesTab results={mockResults} />);
+    it('displays Net Business Income and Blue-Filer info in TaxesTab (Single Income)', () => {
+        render(<TaxesTab results={mockResults} inputs={mockInputs} />);
 
-        // Verify the component renders at all
-        expect(screen.getByText('Income Tax Calculation')).toBeInTheDocument();
+        // Verify the component renders header
+        expect(screen.getByText(/Tax Calculation Details/)).toBeInTheDocument();
 
-        expect(screen.getByText(/Blue-Filer Deduction/)).toBeInTheDocument();
-        expect(screen.getByText('-¥650,000')).toBeInTheDocument();
+        // Should NOT display "Total Net Income" for single income source
+        expect(screen.queryByText('Total Net Income')).not.toBeInTheDocument();
+
+        // Should display "Net Business / Misc Income"
+        expect(screen.getByText(/Net Business.*Misc Income/)).toBeInTheDocument();
+        // Value should appear once (for Net Business Income)
+        expect(screen.getAllByText('¥4,350,000')).toHaveLength(1);
+
+        // Should NOT display a standalone "Blue-Filer Deduction" row anymore
+        expect(screen.queryByText(/Blue-Filer Deduction/, { selector: '.MuiTypography-root' })).not.toBeInTheDocument();
+    });
+
+    it('displays Total Net Income row when there are mixed income sources', () => {
+        const mixedInputs: TakeHomeInputs = {
+            ...mockInputs,
+            incomeStreams: [
+                { id: '1', type: 'salary', amount: 3_000_000, frequency: 'annual' },
+                { id: '2', type: 'business', amount: 2_000_000, blueFilerDeduction: 100_000 }
+            ]
+        };
+
+        const mixedResults: TakeHomeResults = {
+            ...mockResults,
+            isEmploymentIncome: true, // Has employment income
+            // Mocking other necessary values
+            netEmploymentIncome: 2_000_000, // Dummy
+            totalNetIncome: 3_900_000 // Dummy total
+        };
+
+        render(<TaxesTab results={mixedResults} inputs={mixedInputs} />);
+
+        // Should display "Total Net Income" for mixed income
+        expect(screen.getByText('Total Net Income')).toBeInTheDocument();
+        expect(screen.getByText('¥3,900,000')).toBeInTheDocument();
     });
 
     it('displays Blue-Filer Deduction in SocialInsuranceTab for NHI', () => {

@@ -15,7 +15,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import type { TakeHomeResults } from '../../../types/tax';
+import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -24,6 +24,7 @@ import { ResultRow } from '../ResultRow';
 
 interface TaxesTabProps {
   results: TakeHomeResults;
+  inputs: TakeHomeInputs;
 }
 
 // Reusable tooltip content for employment income deduction
@@ -208,7 +209,7 @@ const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipP
   </Box>
 );
 
-const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
+const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
@@ -216,6 +217,18 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome = (results.totalNetIncome ?? results.annualIncome) - totalSocialInsurance - (results.dcPlanContributions ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
+
+  // Calculate separated gross income
+  const grossEmploymentIncome = inputs.incomeStreams
+    .filter(s => s.type === 'salary' || s.type === 'bonus')
+    .reduce((sum, s) => sum + (s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0);
+
+  const businessAndMiscIncome = inputs.incomeStreams
+    .filter(s => s.type === 'business' || s.type === 'miscellaneous')
+    .reduce((sum, s) => sum + s.amount, 0);
+
+  const hasEmploymentIncome = grossEmploymentIncome > 0;
+  const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 
   return (
     <Box>
@@ -236,56 +249,112 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
 
       {/* Income Overview */}
       <Box sx={{ mb: 1 }}>
-        <ResultRow label={results.isEmploymentIncome ? "Gross Employment Income" : "Net Annual Income"} value={formatJPY(results.annualIncome)} type="header" />
-
-        {results.isEmploymentIncome && results.netEmploymentIncome !== undefined && (
+        {hasEmploymentIncome && results.netEmploymentIncome !== undefined && (
           <ResultRow
             label={
               <span>
                 Net Employment Income
                 <DetailInfoTooltip
-                  title="Employment Income Deduction Table"
-                  children={<EmploymentIncomeDeductionTooltip />}
+                  title="Employment Income Details"
+                  children={
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Calculation Breakdown
+                      </Typography>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Gross Employment Income:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(grossEmploymentIncome)}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Employment Deduction:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</td>
+                          </tr>
+                          <tr style={{ borderTop: '1px solid #ddd' }}>
+                            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
+                            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(results.netEmploymentIncome)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <EmploymentIncomeDeductionTooltip />
+                    </Box>
+                  }
                 />
               </span>
             }
             value={formatJPY(results.netEmploymentIncome)}
-            type="default"
+            type="header"
           />
         )}
 
-        {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+        {hasBusinessOrMiscIncome && (
           <ResultRow
-            label="Blue-Filer Deduction"
-            labelSuffix={
-              <DetailInfoTooltip
-                title="Blue-Filer Deduction (青色申告特別控除)"
-                children={
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Blue-Filer Special Deduction
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      A special deduction for business income earners who file a Blue Return. This amount is deducted from your gross business income before calculating taxable income.
-                    </Typography>
-                    <Box sx={{ mt: 1 }}>
-                      Official Sources:
-                      <ul>
-                        <li>
-                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                            青色申告特別控除 - NTA
-                          </a>
-                        </li>
-                      </ul>
+            label={
+              <span>
+                Net Business / Misc Income
+                <DetailInfoTooltip
+                  title="Business & Miscellaneous Income Details"
+                  children={
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Calculation Breakdown
+                      </Typography>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Gross Revenue:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
+                          </tr>
+                          {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+                            <tr>
+                              <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(results.blueFilerDeduction)}</td>
+                            </tr>
+                          )}
+                          <tr style={{ borderTop: '1px solid #ddd' }}>
+                            <td style={{ padding: '4px 0', fontWeight: 600 }}>Taxable Business Income:</td>
+                            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                              {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Blue-Filer Special Deduction
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            A special deduction for business income earners who file a Blue Return. This amount is deducted from your gross business income before calculating taxable income.
+                          </Typography>
+                          <Box sx={{ mt: 1 }}>
+                            Official Sources:
+                            <ul>
+                              <li>
+                                <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                                  青色申告特別控除 - NTA
+                                </a>
+                              </li>
+                            </ul>
+                          </Box>
+                        </Box>
+                      )}
                     </Box>
-                  </Box>
-                }
-              />
+                  }
+                />
+              </span>
             }
-            value={formatJPY(-results.blueFilerDeduction)}
-            type="default"
+            // Value is Total Net - Net Employment (effectively Taxable Business/Misc)
+            value={formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+            type="header"
           />
         )}
+
+        {/* Total Net Income Row */}
+        {hasEmploymentIncome && hasBusinessOrMiscIncome &&
+          <ResultRow label="Total Net Income" value={formatJPY(results.totalNetIncome)} type="subtotal" sx={{ mt: 0.5, mb: 0.5 }} />
+        }
 
         {results.dcPlanContributions > 0 && (
           <ResultRow
