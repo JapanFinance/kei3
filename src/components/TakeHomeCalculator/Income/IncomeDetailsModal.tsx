@@ -63,15 +63,14 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     return sum + s.amount;
   }, 0);
 
-  const getStreamLabel = (stream: IncomeStream) => {
-    if (stream.type === 'salary') {
-      return `Salary (${stream.frequency})`;
-    } else if (stream.type === 'bonus') {
-      return `Bonus (${new Date(0, stream.month).toLocaleString('default', { month: 'long' })})`;
-    } else if (stream.type === 'business') {
-      return 'Business Income';
-    } else {
-      return 'Miscellaneous Income';
+  const getStreamDescription = (stream: IncomeStream) => {
+    switch (stream.type) {
+      case 'salary':
+        return stream.frequency === 'monthly' ? 'Monthly' : 'Annual';
+      case 'bonus':
+        return new Date(0, stream.month).toLocaleString('default', { month: 'long' });
+      default:
+        return null;
     }
   };
 
@@ -145,20 +144,22 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 alignItems: 'center'
               }}>
                 <Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
                       label={stream.type.toUpperCase()}
                       size="small"
                       color={getStreamColor(stream.type)}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
-                    <Typography variant="subtitle1" fontWeight="medium">
-                      {getStreamLabel(stream)}
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {formatJPY(stream.amount)}
                     </Typography>
+                    {getStreamDescription(stream) && (
+                      <Typography variant="body2" color="text.secondary">
+                        {getStreamDescription(stream)}
+                      </Typography>
+                    )}
                   </Box>
-                  <Typography variant="h6" color="text.primary">
-                    {formatJPY(stream.amount)}
-                  </Typography>
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
                     <Typography variant="caption" color="text.secondary" display="block" align="right">
                       (Annual: {formatJPY(stream.amount * 12)})
