@@ -35,7 +35,7 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
 
 export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream;
 
-/** Interface for the UI Form State (includes legacy/UI-specific fields) */
+/** Interface for the UI Form State */
 export interface TakeHomeFormState {
   annualIncome: number;
   incomeMode: IncomeMode;
@@ -48,6 +48,7 @@ export interface TakeHomeFormState {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+  savedIncomeStreams?: IncomeStream[];
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */

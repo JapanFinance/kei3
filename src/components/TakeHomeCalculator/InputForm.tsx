@@ -177,14 +177,70 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       } as unknown as React.ChangeEvent<HTMLInputElement>);
 
       // Side effects for mode switching
+
+      // If we are LEAVING advanced mode, save the current streams
+      if (inputs.incomeMode === 'advanced') {
+        onInputChange({
+          target: {
+            name: 'savedIncomeStreams',
+            value: inputs.incomeStreams,
+          }
+        } as unknown as React.ChangeEvent<HTMLInputElement>);
+      }
+
       if (newMode === 'salary') {
-        // No additional state update needed for isEmploymentIncome, it's derived
+        // Sync streams to strictly match the simple mode
+        onInputChange({
+          target: {
+            name: 'incomeStreams',
+            value: [{
+              id: 'simple-salary',
+              type: 'salary',
+              amount: inputs.annualIncome,
+              frequency: 'annual'
+            }],
+          }
+        } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else if (newMode === 'business') {
-        // No additional state update needed
+        // Sync streams to strictly match the simple mode
+        onInputChange({
+          target: {
+            name: 'incomeStreams',
+            value: [{
+              id: 'simple-business',
+              type: 'business',
+              amount: inputs.annualIncome,
+              blueFilerDeduction: 0 // Always 0 for simple business mode
+            }],
+          }
+        } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else if (newMode === 'advanced') {
-        // When switching to advanced, we should probably initialize incomeStreams from current annualIncome
-        // if it's empty.
-        if (inputs.incomeStreams.length === 0 && inputs.annualIncome > 0) {
+        // Try to restore saved streams if they match the current total
+
+        let streamsToUse = inputs.incomeStreams;
+        // If we have saved streams, try to use them
+        if (inputs.savedIncomeStreams && inputs.savedIncomeStreams.length > 0) {
+          streamsToUse = inputs.savedIncomeStreams;
+        }
+
+        // Calculate total of candidate streams
+        const streamTotal = streamsToUse.reduce((sum, s) => {
+          if (s.type === 'salary' && s.frequency === 'monthly') {
+            return sum + s.amount * 12;
+          }
+          return sum + s.amount;
+        }, 0);
+
+        // If the saved streams match the current annual income, use them!
+        if (streamTotal === inputs.annualIncome) {
+          onInputChange({
+            target: {
+              name: 'incomeStreams',
+              value: streamsToUse,
+            }
+          } as unknown as React.ChangeEvent<HTMLInputElement>);
+        } else {
+          // Mismatch or empty: Reset to single stream matching Total
           const initialStream: IncomeStream = hasEmploymentIncome
             ? { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'salary', frequency: 'annual', amount: inputs.annualIncome }
             : { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'business', amount: inputs.annualIncome };
@@ -292,6 +348,37 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       }
     },
   };
+  const handleAnnualIncomeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => {
+    onInputChange(e);
+
+    // If in simple mode, also update the income streams to match new income
+    if (inputs.incomeMode === 'salary') {
+      onInputChange({
+        target: {
+          name: 'incomeStreams',
+          value: [{
+            id: 'simple-salary',
+            type: 'salary',
+            amount: Number(e.target.value),
+            frequency: 'annual'
+          }],
+        }
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+    } else if (inputs.incomeMode === 'business') {
+      onInputChange({
+        target: {
+          name: 'incomeStreams',
+          value: [{
+            id: 'simple-business',
+            type: 'business',
+            amount: Number(e.target.value),
+            blueFilerDeduction: 0
+          }],
+        }
+      } as unknown as React.ChangeEvent<HTMLInputElement>);
+    }
+  };
+
   const handleSliderChange = (_: Event, value: number | number[]) => {
     const newValue = Array.isArray(value) ? value[0] : value;
     const event = {
@@ -319,9 +406,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       isPropagationStopped: () => false,
       persist: () => { }
     } as unknown as React.ChangeEvent<HTMLInputElement>;
-    onInputChange(event);
-  };
 
+    handleAnnualIncomeChange(event);
+  };
 
   // Determine available health insurance providers based on income type and eligibility
   const availableProviders = React.useMemo(() => {
@@ -523,7 +610,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   id="annualIncome"
                   name="annualIncome"
                   value={inputs.annualIncome}
-                  onInputChange={onInputChange}
+                  onInputChange={handleAnnualIncomeChange}
                   label="Annual Income"
                   step={10_000}
                   shiftStep={100_000}
