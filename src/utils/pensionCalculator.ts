@@ -64,8 +64,8 @@ export interface PensionBreakdown {
  * Calculates the annual insurance premium breakdown based on monthly income
  */
 export function calculatePensionBreakdown(
-  isEmployeesPension: boolean = true, 
-  monthlyIncome: number = 0, 
+  isEmployeesPension: boolean = true,
+  monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
   bonuses: BonusIncomeStream[] = []
 ): PensionBreakdown {
@@ -76,8 +76,8 @@ export function calculatePensionBreakdown(
     throw new Error('Monthly income must be a positive number');
   }
 
-  const monthlyPremium = EMPLOYEES_PENSION_PREMIUM.find(bracket => 
-    monthlyIncome >= bracket.min && 
+  const monthlyPremium = EMPLOYEES_PENSION_PREMIUM.find(bracket =>
+    monthlyIncome >= bracket.min &&
     (bracket.max === null || monthlyIncome < bracket.max)
   );
 
@@ -93,15 +93,25 @@ export function calculatePensionBreakdown(
     const bonusRate = PENSION_RATE;
     const effectiveRate = isHalfAmount ? bonusRate / 2 : bonusRate;
 
+    // Group bonuses by month (0-11)
+    const monthlyBonusTotals = new Map<number, number>();
+
     for (const bonus of bonuses) {
-      // Standard Bonus Amount: Round down to nearest 1,000 yen
-      const standardBonusAmount = Math.floor(bonus.amount / 1000) * 1000;
-      
-      // Cap at 1.5 million yen per payment
+      const currentMonthTotal = monthlyBonusTotals.get(bonus.month) || 0;
+      monthlyBonusTotals.set(bonus.month, currentMonthTotal + bonus.amount);
+    }
+
+    // Calculate premium for each month with bonuses
+    for (const [, totalAmount] of monthlyBonusTotals) {
+      // 1. Round down to nearest 1,000 yen to get Standard Bonus Amount
+      const standardBonusAmount = Math.floor(totalAmount / 1000) * 1000;
+
+      // 2. Cap at 1.5 million yen per month
       const cappedBonusAmount = Math.min(standardBonusAmount, 1_500_000);
-      
-      // Calculate premium
+
+      // 3. Calculate premium
       const premium = Math.round(cappedBonusAmount * effectiveRate);
+
       bonusPortion += premium;
       totalPremium += premium;
     }
@@ -121,8 +131,8 @@ export function calculatePensionBreakdown(
  * @see https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01
  */
 export function calculatePensionPremium(
-  isEmployeesPension: boolean = true, 
-  monthlyIncome: number = 0, 
+  isEmployeesPension: boolean = true,
+  monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
   bonuses: BonusIncomeStream[] = []
 ): number {
