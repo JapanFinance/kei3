@@ -492,9 +492,17 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         Your Information
       </Typography>
       <Box className="form-group">
-        <Card variant="outlined" sx={{ mb: 2 }}>
-          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+        <Card variant="outlined">
+          <CardContent sx={{ p: 2, pt: 1, '&:last-child': { pb: 2 } }}>
+            <Typography
+              sx={{
+                fontSize: '0.97rem',
+                fontWeight: 500,
+                color: 'text.primary',
+                textAlign: 'center',
+                mb: 1
+              }}
+            >
               Income Source
             </Typography>
 
@@ -550,25 +558,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               </Box>
             ) : (
               <Box sx={styles.incomeInput}>
-                <Typography
-                  sx={{
-                    mb: 1,
-                    fontSize: '0.97rem',
-                    fontWeight: 500,
-                    color: 'text.primary',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Business Income'}
-                </Typography>
                 <SpinnerNumberField
                   id="annualIncome"
                   name="annualIncome"
                   value={inputs.annualIncome}
                   onInputChange={handleAnnualIncomeChange}
-                  label="Annual Income"
+                  label={inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Annual Income'}
                   step={10_000}
                   shiftStep={100_000}
                   sx={sharedInputSx}
@@ -590,7 +585,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   }}
                 >
                   {isMobile
-                    ? 'For 20M+ yen incomes, use the field above.'
+                    ? 'Use the input above for ¥20M+ incomes'
                     : 'For incomes over 20 million yen, enter the amount in the field above.'
                   }
                 </Typography>
