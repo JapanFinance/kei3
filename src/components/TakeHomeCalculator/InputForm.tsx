@@ -503,7 +503,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 mb: 1
               }}
             >
-              Income Source
+              Income
             </Typography>
 
             {/* Income Mode Toggle */}
@@ -566,6 +566,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   label={inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Annual Income'}
                   step={10_000}
                   shiftStep={100_000}
+                  helperText={
+                    isMobile
+                      ? 'Input amount directly for ¥20M+ incomes.'
+                      : 'For incomes over 20 million yen, input the amount directly.'
+                  }
                   sx={sharedInputSx}
                 />
               </Box>
@@ -573,22 +578,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
             {/* Annual Income Slider - Only show for simple modes */}
             {inputs.incomeMode !== 'advanced' && (
-              <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 2 }}>
-                {/* Explanatory text above the slider */}
-                <Typography
-                  sx={{
-                    mb: 0.5,
-                    fontSize: '0.93rem',
-                    color: 'text.secondary',
-                    textAlign: 'center',
-                    fontStyle: 'italic',
-                  }}
-                >
-                  {isMobile
-                    ? 'Use the input above for ¥20M+ incomes'
-                    : 'For incomes over 20 million yen, enter the amount in the field above.'
-                  }
-                </Typography>
+              <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 1 }}>
                 <Slider
                   className="income-slider"
                   value={inputs.annualIncome}
