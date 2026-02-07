@@ -18,10 +18,16 @@ import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import { calculatePensionBonusBreakdown } from '../../../utils/pensionCalculator';
+import { calculateHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
 import type { BonusIncomeStream } from '../../../types/tax';
 import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
-import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
+import {
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  DEFAULT_PROVIDER_REGION
+} from '../../../types/healthInsurance';
+import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -39,9 +45,45 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
 
-
   // Detect if any caps are applied
   const capStatus = detectCaps(results);
+
+  // Calculate Health Insurance Bonus Breakdown for Tooltip
+  // We need to determine the rates here to pass to the breakdown calculator
+  const bonuses = inputs.incomeStreams.filter((s): s is BonusIncomeStream => s.type === 'bonus');
+  let healthInsuranceBreakdown = undefined;
+
+  if (bonuses.length > 0 && !isNationalHealthInsurance) {
+    const provider = inputs.healthInsuranceProvider;
+    const region = inputs.region;
+    let rates = undefined;
+
+    if (provider === CUSTOM_PROVIDER_ID) {
+      rates = {
+        employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
+        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100
+      };
+    } else {
+      const providerDef = PROVIDER_DEFINITIONS[provider];
+      if (providerDef) {
+        const regionalRates = providerDef.regions[region] || providerDef.regions[DEFAULT_PROVIDER_REGION];
+        if (regionalRates) {
+          rates = {
+            employeeHealthInsuranceRate: regionalRates.employeeHealthInsuranceRate,
+            employeeLongTermCareRate: regionalRates.employeeLongTermCareRate
+          };
+        }
+      }
+    }
+
+    if (rates) {
+      healthInsuranceBreakdown = calculateHealthInsuranceBonusBreakdown(
+        bonuses,
+        rates,
+        inputs.isSubjectToLongTermCarePremium
+      );
+    }
+  }
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -208,7 +250,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 labelSuffix={
                   <DetailInfoTooltip
                     title="Bonus Health Insurance Details"
-                    children={<HealthInsuranceBonusTooltip results={results} inputs={inputs} />}
+                    children={<HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />}
                   />
                 }
                 value={formatJPY(results.healthInsuranceOnBonus)}
@@ -262,7 +304,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 children={
                   <PensionBonusTooltip
                     breakdown={calculatePensionBonusBreakdown(
-                      inputs.incomeStreams.filter((s): s is BonusIncomeStream => s.type === 'bonus')
+                      bonuses
                     )}
                   />
                 }

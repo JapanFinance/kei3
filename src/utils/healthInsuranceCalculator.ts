@@ -52,13 +52,13 @@ export function calculateHealthInsuranceBreakdown(
         return { total, bonusPortion: 0 };
     } else {
         const monthlyIncome = annualIncome / 12;
-        
+
         // Find the SMR bracket for this income
         const smrBracket = findSMRBracket(monthlyIncome);
         if (!smrBracket) {
             throw new Error(`Monthly income ${monthlyIncome.toLocaleString()} is outside the defined SMR ranges.`);
         }
-        
+
         let regionalRates;
 
         if (provider === CUSTOM_PROVIDER_ID) {
@@ -77,49 +77,94 @@ export function calculateHealthInsuranceBreakdown(
             // Get the regional rates directly
             regionalRates = getRegionalRates(provider, region);
         }
-        
+
         if (!regionalRates) {
             console.error(`Regional rates not found for provider ${provider} and region ${region}. Returning 0 premium.`);
             return { total: 0, bonusPortion: 0 };
         }
-        
+
         // Calculate monthly premium and multiply by 12
         const monthlyPremium = calculateMonthlyEmployeePremium(
             smrBracket.smrAmount,
             regionalRates,
             isSubjectToLongTermCarePremium
         );
-        
+
         let totalPremium = monthlyPremium * 12;
         let bonusPortion = 0;
 
-        // Calculate bonus premiums
         if (bonuses.length > 0) {
-            // 1. Calculate Standard Bonus Amount for each bonus (round down to nearest 1,000 yen)
-            // 2. Sum them up
-            // 3. Cap the cumulative total at 5.73 million yen (fiscal year cap)
-            // Note: This assumes all bonuses fall within the same fiscal year.
-            
-            let totalStandardBonusAmount = 0;
-            for (const bonus of bonuses) {
-                totalStandardBonusAmount += Math.floor(bonus.amount / 1000) * 1000;
-            }
+            const bonusDetails = calculateHealthInsuranceBonusBreakdown(
+                bonuses,
+                regionalRates,
+                isSubjectToLongTermCarePremium
+            );
 
-            const cappedBonusAmount = Math.min(totalStandardBonusAmount, 5_730_000);
-
-            // Calculate premium on the capped amount
-            // Rate is the same as monthly
-            const bonusHealthInsurance = cappedBonusAmount * regionalRates.employeeHealthInsuranceRate;
-            const bonusLongTermCare = isSubjectToLongTermCarePremium 
-                ? cappedBonusAmount * regionalRates.employeeLongTermCareRate
-                : 0;
-            
-            bonusPortion = Math.round(bonusHealthInsurance + bonusLongTermCare);
+            bonusPortion = bonusDetails.reduce((sum, item) => sum + item.healthInsurancePremium + item.longTermCarePremium, 0);
             totalPremium += bonusPortion;
         }
 
         return { total: totalPremium, bonusPortion };
     }
+}
+
+/**
+ * Breakdown of a single bonus payment's health insurance premium
+ */
+export interface HealthInsuranceBonusBreakdownItem {
+    month: number;
+    bonusAmount: number;
+    standardBonusAmount: number; // The rounded down, potentially capped amount
+    /** Annual cumulative standard bonus amount */
+    cumulativeStandardBonus: number;
+    healthInsurancePremium: number;
+    longTermCarePremium: number;
+}
+
+const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
+
+/**
+ * Calculates detailed breakdown for health insurance bonuses
+ */
+export function calculateHealthInsuranceBonusBreakdown(
+    bonuses: BonusIncomeStream[],
+    regionalRates: { employeeHealthInsuranceRate: number, employeeLongTermCareRate: number },
+    isSubjectToLongTermCarePremium: boolean
+): HealthInsuranceBonusBreakdownItem[] {
+    // Sort bonuses by month to apply cumulative cap correctly
+    const sortedBonuses = [...bonuses].sort((a, b) => a.month - b.month);
+
+    const breakdown: HealthInsuranceBonusBreakdownItem[] = [];
+    let cumulativeStandardBonus = 0;
+
+    for (const bonus of sortedBonuses) {
+        const roundedBonus = Math.floor(bonus.amount / 1000) * 1000;
+
+        // Calculate how much room is left in the cap
+        const remainingCap = Math.max(0, ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP - cumulativeStandardBonus);
+
+        // The standard bonus amount for this payment is the rounded amount,
+        // limited by the remaining cap space.
+        const standardBonusAmount = Math.min(roundedBonus, remainingCap);
+
+        cumulativeStandardBonus += standardBonusAmount;
+
+        const healthInsurancePremium = standardBonusAmount * regionalRates.employeeHealthInsuranceRate;
+        const longTermCarePremium = isSubjectToLongTermCarePremium
+            ? standardBonusAmount * regionalRates.employeeLongTermCareRate
+            : 0;
+
+        breakdown.push({
+            month: bonus.month,
+            bonusAmount: bonus.amount,
+            standardBonusAmount,
+            cumulativeStandardBonus,
+            healthInsurancePremium: Math.round(healthInsurancePremium),
+            longTermCarePremium: Math.round(longTermCarePremium)
+        });
+    }
+
+    return breakdown;
 }
 
 /**
@@ -187,7 +232,7 @@ function calculateNationalHealthInsurancePremiumBreakdown(
     }
 
     const totalPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium;
-    
+
     return {
         medicalPortion: Math.round(totalMedicalPremium),
         elderlySupportPortion: Math.round(totalSupportPremium),

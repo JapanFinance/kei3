@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { calculateHealthInsurancePremium, calculateHealthInsuranceBreakdown } from '../utils/healthInsuranceCalculator'
+import { calculateHealthInsurancePremium, calculateHealthInsuranceBreakdown, calculateHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
@@ -289,5 +289,52 @@ describe('calculateHealthInsuranceBreakdown with bonuses', () => {
     const bonuses = [{ amount: 1_000_000, id: '1', type: 'bonus' as const, month: 6 }];
     const result = calculateHealthInsuranceBreakdown(5_000_000, true, KYOKAI_KENPO_PROVIDER, "Tokyo", undefined, bonuses);
     expect(result.bonusPortion).toBe(57_500);
+  });
+});
+
+describe('calculateHealthInsuranceBonusBreakdown details', () => {
+  // Using Kyokai Kenpo (Tokyo) rates for testing
+  // Health Rate: 9.91% -> Employee: 4.955% (0.04955)
+  // LTC Rate: 1.59% -> Employee: 0.795% (0.00795)
+
+  const rates = {
+    employeeHealthInsuranceRate: 0.04955,
+    employeeLongTermCareRate: 0.00795
+  };
+
+  it('returns correct breakdown for single bonus below cap', () => {
+    const bonuses = [{ amount: 1_000_500, id: '1', type: 'bonus' as const, month: 6 }];
+    const breakdown = calculateHealthInsuranceBonusBreakdown(bonuses, rates, true);
+
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0]!.bonusAmount).toBe(1_000_500);
+    expect(breakdown[0]!.standardBonusAmount).toBe(1_000_000);
+    expect(breakdown[0]!.cumulativeStandardBonus).toBe(1_000_000);
+    // Premium: 1,000,000 * (0.04955 + 0.00795) = 1,000,000 * 0.0575 = 57,500
+    expect(breakdown[0]!.healthInsurancePremium + breakdown[0]!.longTermCarePremium).toBe(57_500);
+  });
+
+  it('returns correct breakdown for multiple bonuses reaching cap', () => {
+    // Annual Cap: 5,730,000
+    const bonuses = [
+      { amount: 4_000_000, id: '1', type: 'bonus' as const, month: 6 },
+      { amount: 3_000_000, id: '2', type: 'bonus' as const, month: 12 }
+    ];
+    const breakdown = calculateHealthInsuranceBonusBreakdown(bonuses, rates, false);
+
+    expect(breakdown).toHaveLength(2);
+
+    // First bonus
+    expect(breakdown[0]!.month).toBe(6);
+    expect(breakdown[0]!.standardBonusAmount).toBe(4_000_000);
+    expect(breakdown[0]!.cumulativeStandardBonus).toBe(4_000_000);
+    expect(breakdown[0]!.healthInsurancePremium).toBe(Math.round(4_000_000 * 0.04955)); // 198,200
+
+    // Second bonus
+    // Remaining Cap: 5,730,000 - 4,000,000 = 1,730,000
+    expect(breakdown[1]!.month).toBe(12);
+    expect(breakdown[1]!.standardBonusAmount).toBe(1_730_000); // Capped
+    expect(breakdown[1]!.cumulativeStandardBonus).toBe(5_730_000);
+    expect(breakdown[1]!.healthInsurancePremium).toBe(Math.round(1_730_000 * 0.04955)); // 85,721.5 -> 85,722
   });
 });
