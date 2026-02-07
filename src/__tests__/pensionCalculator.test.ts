@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { calculatePensionPremium, calculatePensionBreakdown } from '../utils/pensionCalculator'
+import { calculatePensionPremium, calculatePensionBreakdown, calculatePensionBonusBreakdown } from '../utils/pensionCalculator'
 
 describe('calculatePensionPremium', () => {
   it('calculates employees pension correctly for employment income below cap', () => {
@@ -91,5 +91,84 @@ describe('calculatePensionBreakdown with bonuses', () => {
     const bonuses = [{ amount: 100_999, id: '1', type: 'bonus' as const, month: 6 }];
     const result = calculatePensionBreakdown(true, 300_000, true, bonuses);
     expect(result.bonusPortion).toBe(9_150);
+  });
+})
+
+describe('calculatePensionBonusBreakdown', () => {
+  it('returns empty array for no bonuses', () => {
+    expect(calculatePensionBonusBreakdown([])).toEqual([]);
+  });
+
+  it('correctly calculates breakdown for single bonus', () => {
+    const bonuses = [{ amount: 1_000_000, id: '1', type: 'bonus' as const, month: 6 }];
+    const breakdown = calculatePensionBonusBreakdown(bonuses, true);
+
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0]).toEqual({
+      month: 6,
+      totalBonusAmount: 1_000_000,
+      standardBonusAmount: 1_000_000,
+      premium: 91_500
+    });
+  });
+
+  it('correctly calculates breakdown for capped bonus', () => {
+    const bonuses = [{ amount: 2_000_000, id: '1', type: 'bonus' as const, month: 6 }];
+    const breakdown = calculatePensionBonusBreakdown(bonuses, true);
+
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0]).toEqual({
+      month: 6,
+      totalBonusAmount: 2_000_000,
+      standardBonusAmount: 1_500_000,
+      premium: 137_250
+    });
+  });
+
+  it('aggregates multiple bonuses in same month', () => {
+    const bonuses = [
+      { amount: 800_000, id: '1', type: 'bonus' as const, month: 6 },
+      { amount: 300_000, id: '2', type: 'bonus' as const, month: 6 }
+    ];
+    const breakdown = calculatePensionBonusBreakdown(bonuses, true);
+
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0]).toEqual({
+      month: 6,
+      totalBonusAmount: 1_100_000,
+      standardBonusAmount: 1_100_000,
+      premium: 100_650 // 1,100,000 * 0.0915
+    });
+  });
+
+  it('sorts breakdown by month', () => {
+    const bonuses = [
+      { amount: 500_000, id: '1', type: 'bonus' as const, month: 12 },
+      { amount: 500_000, id: '2', type: 'bonus' as const, month: 6 }
+    ];
+    const breakdown = calculatePensionBonusBreakdown(bonuses, true);
+
+    expect(breakdown).toHaveLength(2);
+    expect(breakdown[0]!.month).toBe(6);
+    expect(breakdown[1]!.month).toBe(12);
+  });
+
+  it('rounds standard bonus amount after summing bonuses for the same month', () => {
+    // Reference: https://support.yayoi-kk.co.jp/faq_Subcontents.html?page_id=19494
+    // Bonus 1: 200,500
+    // Bonus 2: 100,600
+    // Total raw: 301,100
+    // Rounded Standard Bonus Amount: 301,000 (NOT 200,000 + 100,000 = 300,000)
+    // Premium: 301,000 * 0.0915 = 27,541.5 -> 27,542
+    const bonuses = [
+      { amount: 200_500, id: '1', type: 'bonus' as const, month: 6 },
+      { amount: 100_600, id: '2', type: 'bonus' as const, month: 6 }
+    ];
+    const breakdown = calculatePensionBonusBreakdown(bonuses, true);
+
+    expect(breakdown).toHaveLength(1);
+    expect(breakdown[0]!.totalBonusAmount).toBe(301_100);
+    expect(breakdown[0]!.standardBonusAmount).toBe(301_000);
+    expect(breakdown[0]!.premium).toBe(27_542);
   });
 })

@@ -88,36 +88,71 @@ export function calculatePensionBreakdown(
   let totalPremium = (isHalfAmount ? monthlyPremium.halfAmount : monthlyPremium.fullAmount) * 12;
   let bonusPortion = 0;
 
-  // Calculate bonus premiums
   if (bonuses.length > 0) {
-    const bonusRate = PENSION_RATE;
-    const effectiveRate = isHalfAmount ? bonusRate / 2 : bonusRate;
-
-    // Group bonuses by month (0-11)
-    const monthlyBonusTotals = new Map<number, number>();
-
-    for (const bonus of bonuses) {
-      const currentMonthTotal = monthlyBonusTotals.get(bonus.month) || 0;
-      monthlyBonusTotals.set(bonus.month, currentMonthTotal + bonus.amount);
-    }
-
-    // Calculate premium for each month with bonuses
-    for (const [, totalAmount] of monthlyBonusTotals) {
-      // 1. Round down to nearest 1,000 yen to get Standard Bonus Amount
-      const standardBonusAmount = Math.floor(totalAmount / 1000) * 1000;
-
-      // 2. Cap at 1.5 million yen per month
-      const cappedBonusAmount = Math.min(standardBonusAmount, 1_500_000);
-
-      // 3. Calculate premium
-      const premium = Math.round(cappedBonusAmount * effectiveRate);
-
-      bonusPortion += premium;
-      totalPremium += premium;
-    }
+    const bonusBreakdown = calculatePensionBonusBreakdown(bonuses, isHalfAmount);
+    bonusPortion = bonusBreakdown.reduce((sum, item) => sum + item.premium, 0);
+    totalPremium += bonusPortion;
   }
 
   return { total: totalPremium, bonusPortion };
+}
+
+/**
+ * Breakdown of a single month's bonus pension calculation
+ */
+export interface PensionBonusBreakdownItem {
+  month: number;
+  totalBonusAmount: number;
+  standardBonusAmount: number;
+  premium: number;
+}
+
+/**
+ * Calculates the detailed breakdown of pension premiums for bonuses
+ * @param bonuses - List of bonus payments
+ * @param isHalfAmount - Whether to return the half amount (折半額)
+ */
+export function calculatePensionBonusBreakdown(
+  bonuses: BonusIncomeStream[],
+  isHalfAmount: boolean = true
+): PensionBonusBreakdownItem[] {
+  if (bonuses.length === 0) {
+    return [];
+  }
+
+  const bonusRate = PENSION_RATE;
+  const effectiveRate = isHalfAmount ? bonusRate / 2 : bonusRate;
+  const breakdown: PensionBonusBreakdownItem[] = [];
+
+  // Group bonuses by month (0-11)
+  const monthlyBonusTotals = new Map<number, number>();
+
+  for (const bonus of bonuses) {
+    const currentMonthTotal = monthlyBonusTotals.get(bonus.month) || 0;
+    monthlyBonusTotals.set(bonus.month, currentMonthTotal + bonus.amount);
+  }
+
+  // Calculate premium for each month with bonuses
+  for (const [month, totalAmount] of monthlyBonusTotals) {
+    // 1. Round down to nearest 1,000 yen
+    const roundedBonusAmount = Math.floor(totalAmount / 1000) * 1000;
+
+    // 2. Cap at 1.5 million yen per month to get Standard Bonus Amount
+    const standardBonusAmount = Math.min(roundedBonusAmount, 1_500_000);
+
+    // 3. Calculate premium
+    const premium = Math.round(standardBonusAmount * effectiveRate);
+
+    breakdown.push({
+      month,
+      totalBonusAmount: totalAmount,
+      standardBonusAmount,
+      premium,
+    });
+  }
+
+  // Sort by month
+  return breakdown.sort((a, b) => a.month - b.month);
 }
 
 /**

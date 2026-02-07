@@ -17,6 +17,8 @@ import HealthInsurancePremiumTableTooltip from './HealthInsurancePremiumTableToo
 import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
+import { calculatePensionBonusBreakdown } from '../../../utils/pensionCalculator';
+import type { BonusIncomeStream } from '../../../types/tax';
 import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
@@ -257,7 +259,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             labelSuffix={
               <DetailInfoTooltip
                 title="Bonus Pension Contribution Details"
-                children={<PensionBonusTooltip />}
+                children={
+                  <PensionBonusTooltip
+                    breakdown={calculatePensionBonusBreakdown(
+                      inputs.incomeStreams.filter((s): s is BonusIncomeStream => s.type === 'bonus')
+                    )}
+                  />
+                }
               />
             }
             value={formatJPY(results.pensionOnBonus)}

@@ -4,19 +4,31 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { PENSION_RATE } from '../../../utils/pensionCalculator';
+import { PENSION_RATE, type PensionBonusBreakdownItem } from '../../../utils/pensionCalculator';
+import { formatJPY } from '../../../utils/formatters';
 
-const PensionBonusTooltip: React.FC = () => {
+interface PensionBonusTooltipProps {
+  breakdown?: PensionBonusBreakdownItem[];
+}
+
+const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) => {
   // Employee share is half
   const employeeRate = PENSION_RATE / 2;
 
+  // Helper to format month index to name
+  const getMonthName = (monthIndex: number) => {
+    const date = new Date();
+    date.setMonth(monthIndex);
+    return date.toLocaleString('default', { month: 'short' });
+  };
+
   return (
-    <Box sx={{ p: 1 }}>
+    <Box sx={{ p: 1, maxWidth: 500 }}>
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
         Bonus Pension Contribution
       </Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        For bonuses, the contribution is calculated by multiplying the Standard Bonus Amount (gross bonus amount rounded down to nearest 1,000 yen) by the contribution rate.
+        The contribution is calculated by multiplying the Standard Bonus Amount (gross bonus amount rounded down to nearest 1,000 yen) by the contribution rate.
       </Typography>
 
       <Box sx={{ bgcolor: 'background.default', p: 1.5, borderRadius: 1, mb: 1 }}>
@@ -26,8 +38,63 @@ const PensionBonusTooltip: React.FC = () => {
       </Box>
 
       <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-        * The rate shown is the employee's share (50% of the total rate).
+        The rate shown is the employee's share (50% of the total rate).
       </Typography>
+
+      {breakdown && breakdown.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.9em' }}>
+            Calculation Detail
+          </Typography>
+          <Box
+            component="table"
+            sx={{
+              width: '100%',
+              fontSize: '0.85em',
+              borderCollapse: 'collapse',
+              '& th': { textAlign: 'left', borderBottom: '1px solid #ccc', p: 0.5 },
+              '& td': { p: 0.5, borderBottom: '1px solid #eee' },
+              '& td:not(:first-of-type), & th:not(:first-of-type)': { textAlign: 'right' }
+            }}
+          >
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Bonus Total</th>
+                <th>Std. Bonus Amt.</th>
+                <th>Premium</th>
+              </tr>
+            </thead>
+            <tbody>
+              {breakdown.map((item, index) => (
+                <tr key={index}>
+                  <td>{getMonthName(item.month)}</td>
+                  <td>{formatJPY(item.totalBonusAmount)}</td>
+                  <td>
+                    {formatJPY(item.standardBonusAmount)}
+                    {item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000 && (
+                      <span style={{ color: 'orange', marginLeft: 4 }} title="Capped at 1,500,000 JPY">*</span>
+                    )}
+                  </td>
+                  <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop: '2px solid #aaa', fontWeight: 700 }}>
+                <td style={{ paddingTop: 4 }}>Total</td>
+                <td style={{ paddingTop: 4 }}>
+                  {formatJPY(breakdown.reduce((sum, item) => sum + item.totalBonusAmount, 0))}
+                </td>
+                <td style={{ paddingTop: 4 }}></td>
+                <td style={{ paddingTop: 4 }}>
+                  {formatJPY(breakdown.reduce((sum, item) => sum + item.premium, 0))}
+                </td>
+              </tr>
+            </tfoot>
+          </Box>
+        </Box>
+      )}
 
       <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.contrastText' }}>
         <Typography variant="caption" fontWeight="bold">
@@ -38,7 +105,7 @@ const PensionBonusTooltip: React.FC = () => {
         </Typography>
       </Box>
       <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-        Official Source:<a href="https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20150515-01.html" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+        Reference: <a href="https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20150515-01.html" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
           厚生年金保険の保険料 (Japan Pension Service)
         </a>
       </Typography>

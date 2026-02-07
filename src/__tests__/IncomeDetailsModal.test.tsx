@@ -44,11 +44,11 @@ describe('IncomeDetailsModal - Business Income', () => {
         await user.click(within(listbox).getByRole('option', { name: /business/i }));
 
         // 3. Verify Blue-Filer Deduction input and text appears
-        const deductionSelect = screen.getByRole('combobox', { name: /blue-filer deduction/i });
+        const deductionSelect = screen.getByRole('combobox', { name: /blue-filer special deduction/i });
         expect(deductionSelect).toBeInTheDocument();
 
         // Check for explanation text (NTA No.2072 is visible outside tooltip)
-        expect(screen.getByText(/For requirements, see/i)).toBeInTheDocument();
+        expect(screen.getByText(/No.2072/i)).toBeInTheDocument();
 
         // 3b. Verify Tooltip Trigger (Info Icon)
         const infoButton = screen.getByRole('button', { name: /requirements/i });
