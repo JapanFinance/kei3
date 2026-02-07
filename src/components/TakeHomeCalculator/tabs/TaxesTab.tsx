@@ -31,7 +31,7 @@ interface TaxesTabProps {
 const EmploymentIncomeDeductionTooltip: React.FC = () => (
   <Box>
     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-      2025 Employment Income Deduction Table
+      Employment Income Deduction Table
     </Typography>
     <Box
       component="table"
@@ -268,7 +268,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                             <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(grossEmploymentIncome)}</td>
                           </tr>
                           <tr>
-                            <td style={{ padding: '2px 0' }}>Employment Deduction:</td>
+                            <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
                             <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</td>
                           </tr>
                           <tr style={{ borderTop: '1px solid #ddd' }}>
@@ -303,7 +303,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
                         <tbody>
                           <tr>
-                            <td style={{ padding: '2px 0' }}>Gross Revenue:</td>
+                            <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
                             <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
                           </tr>
                           {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
@@ -313,7 +313,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                             </tr>
                           )}
                           <tr style={{ borderTop: '1px solid #ddd' }}>
-                            <td style={{ padding: '4px 0', fontWeight: 600 }}>Taxable Business Income:</td>
+                            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
                             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
                               {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
                             </td>
@@ -326,7 +326,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                             Blue-Filer Special Deduction
                           </Typography>
                           <Typography variant="body2" sx={{ mb: 1 }}>
-                            A special deduction for business income earners who file a Blue Return. This amount is deducted from your gross business income before calculating taxable income.
+                            A special deduction for business operators with permission to file a Blue Return. This amount is deducted from business income after expenses before calculating taxable income.
                           </Typography>
                           <Box sx={{ mt: 1 }}>
                             Official Sources:

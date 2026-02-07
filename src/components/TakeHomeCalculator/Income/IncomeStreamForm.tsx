@@ -68,13 +68,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const getAmountHelperText = () => {
     switch (type) {
       case 'business':
-        return 'Profit after deducting expenses (combine all businesses if multiple)';
+        return 'Business income minus business expenses (combine from all businesses)';
       case 'miscellaneous':
-        return 'Total income minus necessary expenses';
+        return 'Income minus necessary expenses';
       case 'salary':
-        return 'Total income before taxes and deductions';
+        return 'Gross income before taxes and deductions';
       case 'bonus':
-        return 'Total bonus amount before taxes and deductions';
+        return 'Gross bonus amount before taxes and deductions';
       default:
         return undefined;
     }
@@ -132,11 +132,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         <Box>
           {type === 'business' && (
             <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel id="blue-filer-label">Blue-Filer Deduction</InputLabel>
+              <InputLabel id="blue-filer-label">Blue-Filer Special Deduction</InputLabel>
               <Select
                 labelId="blue-filer-label"
                 value={blueFilerDeduction}
-                label="Blue-Filer Deduction"
+                label="Blue-Filer Special Deduction"
                 onChange={(e) => setBlueFilerDeduction(Number(e.target.value))}
               >
                 <MenuItem value={0}>None</MenuItem>
@@ -146,14 +146,14 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               </Select>
               <FormHelperText component="div" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <span>
-                  For requirements, see{' '}
+                  See{' '}
                   <a
                     href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: 'inherit', textDecoration: 'underline' }}
                   >
-                    NTA No.2072
+                    No.2072 青色申告特別控除 (NTA)
                   </a>.
                 </span>
                 <InfoTooltip
@@ -218,7 +218,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                         <td style={{ color: '#757575' }}>Simple</td>
                       </tr>
                       <tr>
-                        <td>Balance Sheet & Profit and Loss</td>
+                        <td>Balance Sheet, Profit & Loss Statement</td>
                         <td style={{ color: '#2e7d32', fontSize: '1rem' }}>○</td>
                         <td style={{ color: '#2e7d32', fontSize: '1rem' }}>○</td>
                         <td style={{ color: '#bdbdbd' }}>—</td>
