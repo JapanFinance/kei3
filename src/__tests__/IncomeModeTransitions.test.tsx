@@ -167,7 +167,7 @@ describe('Income Mode Transitions (State Assertion)', () => {
         fireEvent.click(screen.getByRole('button', { name: /salary/i }));
 
         // 3. Modify Amount to 6M
-        const input = await screen.findByLabelText('Annual Income');
+        const input = await screen.findByLabelText('Gross Annual Salary');
         fireEvent.change(input, { target: { value: '6000000' } });
         expect(getState().annualIncome).toBe(6000000);
 
