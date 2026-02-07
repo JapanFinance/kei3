@@ -104,47 +104,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       return sum + s.amount;
     }, 0);
 
-    // Determine if there is any employment income
-    const hasEmploymentIncome = newStreams.some(s => s.type === 'salary' || s.type === 'bonus');
-
-    // Update inputs
-    // We need to update multiple fields: incomeStreams, annualIncome, isEmploymentIncome
-    // Since onInputChange expects a single event, we might need to chain updates or assume the parent handles object merging if we pass a partial object?
-    // Looking at App.tsx: setInputs(prev => ({ ...prev, [name]: value })) usually.
-    // But here we need to update multiple.
-    // Let's assume we can pass a special event or we need to call onInputChange multiple times?
-    // Actually, standard React pattern for complex forms often allows passing the whole object.
-    // But the prop is `onInputChange: (e: React.ChangeEvent<...>) => void`.
-    // Let's look at how `handleDependentsChange` does it. It fakes an event with name 'dependents'.
-
-    // We can fake an event for 'incomeStreams'
     onInputChange({
       target: {
         name: 'incomeStreams',
         value: newStreams,
       }
     } as unknown as React.ChangeEvent<HTMLInputElement>);
-
-    // And we also need to update annualIncome and isEmploymentIncome.
-    // This is tricky with the current interface.
-    // Ideally, we should update the parent to accept a bulk update or handle side effects.
-    // For now, let's just update 'incomeStreams' and let the parent (App.tsx) or a useEffect here handle the derived values?
-    // No, App.tsx is simple.
-    // We should probably change the interface of onInputChange or cheat by calling it multiple times.
-    // Calling multiple times might cause race conditions if state updates are async/batched.
-
-    // Let's try to update 'incomeStreams' and let's add a special case in App.tsx? 
-    // Or better, let's just update the fields one by one and hope for the best?
-    // No, let's look at App.tsx again.
-    // It uses `const { name, value, type, checked } = e.target`.
-    // `setInputs(prev => ({ ...prev, [name]: value }))`.
-
-    // So we can't update multiple fields at once with the current App.tsx implementation.
-    // However, we can modify App.tsx to handle a special "bulkUpdate" event or just expose `setInputs`.
-    // But I am editing InputForm.tsx now.
-
-    // Let's stick to updating `incomeStreams` here.
-    // And we can update `annualIncome` separately.
 
     onInputChange({
       target: {
@@ -153,12 +118,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       }
     } as unknown as React.ChangeEvent<HTMLInputElement>);
 
-    onInputChange({
-      target: {
-        name: 'isEmploymentIncome',
-        value: hasEmploymentIncome,
-      }
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
   const hasEmploymentIncome = inputs.incomeMode === 'salary' ||
@@ -175,8 +134,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           value: newMode,
         }
       } as unknown as React.ChangeEvent<HTMLInputElement>);
-
-      // Side effects for mode switching
 
       // If we are LEAVING advanced mode, save the current streams
       if (inputs.incomeMode === 'advanced') {
