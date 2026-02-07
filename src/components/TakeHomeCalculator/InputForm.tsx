@@ -232,79 +232,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
-  // Component-specific styles that can't be in the global CSS
-  const styles = {
-    slider: {
-      color: 'primary.main',
-      '& .MuiSlider-thumb': {
-        '&:hover, &.Mui-focusVisible': {
-          boxShadow: `0 0 0 8px ${theme.palette.mode === 'dark'
-            ? 'rgba(66, 165, 245, 0.16)'
-            : 'rgba(25, 118, 210, 0.16)'}`,
-        },
-        '&.Mui-active': {
-          boxShadow: `0 0 0 14px ${theme.palette.mode === 'dark'
-            ? 'rgba(66, 165, 245, 0.16)'
-            : 'rgba(25, 118, 210, 0.16)'}`,
-        },
-      },
-    },
-    formSection: {
-      display: 'flex',
-      flexDirection: 'row', // Force row always
-      gap: { xs: 1, sm: 1.5 },
-      alignItems: 'center', // Center vertically
-      mb: 0,
-      width: '100%',
-      '& > *': {
-        flex: '1 1 0',
-        minWidth: 0,
-      }
-    },
-    incomeTypeToggle: {
-      flex: '1 1 0',
-      minWidth: 0,
-    },
-    incomeInput: {
-      flex: '1 1 0',
-      width: '100%',
-      minWidth: 180, // Prevents shrinking too much
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      '& .MuiInputBase-root': {
-        fontSize: { xs: '0.97rem', sm: '1.05rem' },
-        py: { xs: 0.2, sm: 0.4 },
-      },
-      '& .MuiInputBase-input': {
-        fontSize: { xs: '0.95rem', sm: '1rem' },
-        py: { xs: 0.2, sm: 0.4 },
-      }
-    },
-    ageDependentsRow: {
-      display: 'flex',
-      flexDirection: 'row', // always row
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: { xs: 2, sm: 3 },
-      mt: { xs: 0.5, sm: 1 },
-      mb: { xs: 0.2, sm: 0.5 },
-      width: '100%',
-      flexWrap: 'wrap', // allow wrapping if truly needed
-    },
-    dependentsInput: {
-      width: 80,
-      '& .MuiInputBase-root': {
-        fontSize: { xs: '0.97rem', sm: '1.05rem' },
-        py: { xs: 0.2, sm: 0.4 },
-      },
-      '& .MuiInputBase-input': {
-        fontSize: { xs: '0.95rem', sm: '1rem' },
-        py: { xs: 0.2, sm: 0.4 },
-        textAlign: 'right',
-      }
-    },
-  };
   const handleAnnualIncomeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => {
     onInputChange(e);
 
@@ -557,7 +484,22 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 </Badge>
               </Box>
             ) : (
-              <Box sx={styles.incomeInput}>
+              <Box sx={{
+                flex: '1 1 0',
+                width: '100%',
+                minWidth: 180, // Prevents shrinking too much
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.97rem', sm: '1.05rem' },
+                  py: { xs: 0.2, sm: 0.4 },
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: { xs: '0.95rem', sm: '1rem' },
+                  py: { xs: 0.2, sm: 0.4 },
+                }
+              }}>
                 <SpinnerNumberField
                   id="annualIncome"
                   name="annualIncome"
@@ -605,7 +547,16 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         </Card>
 
         {/* Age + Dependents Row */}
-        <Box sx={styles.ageDependentsRow}>
+        <Box sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: { xs: 2, sm: 3 },
+          mb: { xs: 0.2, sm: 0.5 },
+          width: '100%',
+          flexWrap: 'wrap',
+        }}>
           {/* Age Switch */}
           <Box
             sx={{
