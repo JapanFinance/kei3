@@ -51,8 +51,8 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
   // Use container width instead of screen breakpoint for tab labels
   // Threshold around 500px works well for tab label switching
   const useShortLabels = containerWidth > 0 && containerWidth < 500;
-  
-  const tabLabels = useShortLabels 
+
+  const tabLabels = useShortLabels
     ? ['Summary', 'Social', 'Taxes', 'Furusato']
     : ['Summary', 'Social Insurance', 'Taxes', 'Furusato Nozei'];
 
@@ -78,9 +78,9 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
       </Typography>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs 
-          value={currentTab} 
-          onChange={handleTabChange} 
+        <Tabs
+          value={currentTab}
+          onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
           sx={{
@@ -93,9 +93,9 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
           }}
         >
           {tabLabels.map((label, index) => (
-            <Tab 
-              key={label} 
-              label={label} 
+            <Tab
+              key={label}
+              label={label}
               id={`tab-${index}`}
               aria-controls={`tabpanel-${index}`}
             />
@@ -116,7 +116,7 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
         )}
         {currentTab === 2 && (
           <Box role="tabpanel" id="tabpanel-2" aria-labelledby="tab-2">
-            <TaxesTab results={results} />
+            <TaxesTab results={results} inputs={inputs} />
           </Box>
         )}
         {currentTab === 3 && (

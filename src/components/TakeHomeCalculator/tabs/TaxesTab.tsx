@@ -15,95 +15,18 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import type { TakeHomeResults } from '../../../types/tax';
+import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import DetailInfoTooltip from '../../ui/DetailInfoTooltip';
 import { ResultRow } from '../ResultRow';
+import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
 
 interface TaxesTabProps {
   results: TakeHomeResults;
+  inputs: TakeHomeInputs;
 }
-
-// Reusable tooltip content for employment income deduction
-const EmploymentIncomeDeductionTooltip: React.FC = () => (
-  <Box>
-    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-      2025 Employment Income Deduction Table
-    </Typography>
-    <Box
-      component="table"
-      sx={{
-        borderCollapse: 'collapse',
-        width: '100%',
-        fontSize: '0.95em',
-        '& td': {
-          padding: '2px 6px'
-        },
-        '& th': {
-          borderBottom: '1px solid #ccc',
-          padding: '2px 6px',
-          textAlign: 'left'
-        }
-      }}
-    >
-      <thead>
-        <tr>
-          <th>Gross Employment Income (¥)</th>
-          <th>Deduction Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Up to 1,900,000</td>
-          <td>650,000</td>
-        </tr>
-        <tr>
-          <td>1,900,001 – 3,600,000</td>
-          <td>30% of income + 80,000</td>
-        </tr>
-        <tr>
-          <td>3,600,001 – 6,600,000</td>
-          <td>20% of income + 440,000</td>
-        </tr>
-        <tr>
-          <td>6,600,001 – 8,500,000</td>
-          <td>10% of income + 1,100,000</td>
-        </tr>
-        <tr>
-          <td>8,500,001 and above</td>
-          <td>1,950,000 (max)</td>
-        </tr>
-      </tbody>
-    </Box>
-    <Box sx={{ mt: 1 }}>
-      Official Sources:
-      <ul>
-        <li>
-          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            給与所得控除 - NTA
-          </a>
-        </li>
-        <li>
-          <a href="https://www.nta.go.jp/english/taxes/individual/12012.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            Overview of deduction for employment income - NTA (English)
-          </a>
-        </li>
-        <li>
-          <a href="https://www.nta.go.jp/users/gensen/2025kiso/index.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            令和７年度税制改正による所得税の基礎控除の見直し等について - NTA
-          </a>
-        </li>
-        <li>
-          <a href="https://www.city.yokohama.lg.jp/kurashi/koseki-zei-hoken/zeikin/y-shizei/kojin-shiminzei-kenminzei/R7kaisei.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-            令和７年度税制改正（いわゆる年収の壁への対応）の概要 - Yokohama City
-          </a>
-        </li>
-      </ul>
-    </Box>
-  </Box>
-);
 
 interface DependentDeductionTooltipProps {
   deductions: DependentDeductionResults;
@@ -146,7 +69,7 @@ const NationalTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipPr
     )}
 
 
-    
+
     <Box sx={{ mt: 1 }}>
       Official NTA Sources:
       <ul>
@@ -197,7 +120,7 @@ const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipP
     )}
 
 
-    
+
     <Box sx={{ mt: 1 }}>
       Official Sources:
       <ul>
@@ -208,15 +131,26 @@ const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipP
   </Box>
 );
 
-const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
+const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
-
   const totalSocialInsurance = results.socialInsuranceOverride ?? (results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0));
   // Almost taxable income but before applying the basic deduction
-  const subtotalIncome = (results.netEmploymentIncome ?? results.annualIncome) - totalSocialInsurance - (results.dcPlanContributions ?? 0);
+  const subtotalIncome = (results.totalNetIncome ?? results.annualIncome) - totalSocialInsurance - (results.dcPlanContributions ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
+
+  // Calculate separated gross income
+  const grossEmploymentIncome = inputs.incomeStreams
+    .filter(s => s.type === 'salary' || s.type === 'bonus')
+    .reduce((sum, s) => sum + (s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0);
+
+  const businessAndMiscIncome = inputs.incomeStreams
+    .filter(s => s.type === 'business' || s.type === 'miscellaneous')
+    .reduce((sum, s) => sum + s.amount, 0);
+
+  const hasEmploymentIncome = grossEmploymentIncome > 0;
+  const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 
   return (
     <Box>
@@ -237,26 +171,113 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
 
       {/* Income Overview */}
       <Box sx={{ mb: 1 }}>
-        <ResultRow label={results.isEmploymentIncome ? "Gross Employment Income" : "Net Annual Income"} value={formatJPY(results.annualIncome)} type="header" />
-
-        {results.isEmploymentIncome && results.netEmploymentIncome !== undefined && (
-          <ResultRow 
+        {hasEmploymentIncome && results.netEmploymentIncome !== undefined && (
+          <ResultRow
             label={
               <span>
                 Net Employment Income
-                <DetailInfoTooltip 
-                  title="Employment Income Deduction Table"
-                  children={<EmploymentIncomeDeductionTooltip />} 
+                <DetailInfoTooltip
+                  title="Employment Income Details"
+                  children={
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Calculation Breakdown
+                      </Typography>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Gross Employment Income:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(grossEmploymentIncome)}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</td>
+                          </tr>
+                          <tr style={{ borderTop: '1px solid #ddd' }}>
+                            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
+                            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(results.netEmploymentIncome)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <EmploymentIncomeDeductionTooltip />
+                    </Box>
+                  }
                 />
               </span>
             }
-            value={formatJPY(results.netEmploymentIncome)} 
-            type="default" 
+            value={formatJPY(results.netEmploymentIncome)}
+            type="default"
           />
         )}
 
+        {hasBusinessOrMiscIncome && (
+          <ResultRow
+            label={
+              <span>
+                Net Business / Misc Income
+                {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+                  <DetailInfoTooltip
+                    title="Business & Miscellaneous Income Details"
+                    children={
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                          Calculation Breakdown
+                        </Typography>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(results.blueFilerDeduction)}</td>
+                            </tr>
+                            <tr style={{ borderTop: '1px solid #ddd' }}>
+                              <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
+                              <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                                {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                        <Box>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Blue-Filer Special Deduction
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            A special deduction for business operators with permission to file a Blue Return. This amount is deducted from business income after expenses before calculating taxable income.
+                          </Typography>
+                          <Box sx={{ mt: 1 }}>
+                            Official Sources:
+                            <ul>
+                              <li>
+                                <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                                  青色申告特別控除 - NTA
+                                </a>
+                              </li>
+                            </ul>
+                          </Box>
+                        </Box>
+                      </Box>
+                    }
+                  />
+                )}
+              </span>
+            }
+            // Value is Total Net - Net Employment (effectively Taxable Business/Misc)
+            value={formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+            type="default"
+          />
+        )}
+
+        {/* Total Net Income Row */}
+        {hasEmploymentIncome && hasBusinessOrMiscIncome &&
+          <ResultRow label="Total Net Income" value={formatJPY(results.totalNetIncome)} type="subtotal" sx={{ mt: 0.5, mb: 0.5 }} />
+        }
+
         {results.dcPlanContributions > 0 && (
-          <ResultRow 
+          <ResultRow
             label={
               <span>
                 iDeCo/Corp DC Deduction
@@ -274,28 +295,28 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                       <Box sx={{ mt: 1 }}>
                         Official Sources:
                         <ul>
-                            <li>
+                          <li>
                             <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1135.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', fontSize: '0.95em' }}>
                               小規模企業共済等掛金控除 (NTA)
                             </a>
-                            </li>
-                            <li>
+                          </li>
+                          <li>
                             <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', fontSize: '0.95em' }}>
                               確定拠出年金制度の概要 (MHLW)
                             </a>
-                            </li>
+                          </li>
                         </ul>
                       </Box>
                     </Box>
                   }
                 />
               </span>
-            } 
-            value={formatJPY(-results.dcPlanContributions)} 
-            type="default" 
+            }
+            value={formatJPY(-results.dcPlanContributions)}
+            type="default"
           />
         )}
-        
+
         <ResultRow label="Social Insurance Deduction" value={formatJPY(-totalSocialInsurance)} type="default" />
         <ResultRow label="Subtotal Taxable Income" value={formatJPY(subtotalIncome)} type="subtotal" sx={{ mt: 0.5 }} />
       </Box>
@@ -305,8 +326,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
         <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
           Income Tax Calculation
         </Typography>
-        
-        <ResultRow 
+
+        <ResultRow
           label={
             <span>
               Basic Deduction
@@ -398,12 +419,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
               />
             </span>
           }
-          value={formatJPY(-(results.nationalIncomeTaxBasicDeduction ?? 0))} 
-          type="detail" 
+          value={formatJPY(-(results.nationalIncomeTaxBasicDeduction ?? 0))}
+          type="detail"
         />
-        
+
         {results.dependentDeductions && results.dependentDeductions.nationalTax.total > 0 && (
-          <ResultRow 
+          <ResultRow
             label={
               <span>
                 Dependent Deductions
@@ -413,13 +434,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                 />
               </span>
             }
-            value={formatJPY(-results.dependentDeductions.nationalTax.total)} 
-            type="detail" 
+            value={formatJPY(-results.dependentDeductions.nationalTax.total)}
+            type="detail"
           />
         )}
-        
+
         {results.taxableIncomeForNationalIncomeTax !== undefined && (
-          <ResultRow 
+          <ResultRow
             label={
               <span>
                 Taxable Income
@@ -456,9 +477,9 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
             }
             value={formatJPY(results.taxableIncomeForNationalIncomeTax)} type="detail-subtotal" sx={{ mt: 0.5 }} />
         )}
-        
+
         {results.nationalIncomeTaxBase !== undefined && (
-          <ResultRow 
+          <ResultRow
             label={
               <span>
                 Base Income Tax
@@ -552,14 +573,14 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                   }
                 />
               </span>
-            } 
-            value={formatJPY(results.nationalIncomeTaxBase)} 
-            type="detail" 
+            }
+            value={formatJPY(results.nationalIncomeTaxBase)}
+            type="detail"
           />
         )}
-        
+
         {results.reconstructionSurtax !== undefined && (
-          <ResultRow 
+          <ResultRow
             label={
               <span>
                 Reconstruction Surtax
@@ -598,13 +619,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                   }
                 />
               </span>
-            } 
-            value={formatJPY(results.reconstructionSurtax)} 
-            type="detail" 
+            }
+            value={formatJPY(results.reconstructionSurtax)}
+            type="detail"
           />
         )}
-        
-        <ResultRow 
+
+        <ResultRow
           label={
             <span>
               Total Income Tax
@@ -635,9 +656,9 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                 }
               />
             </span>
-          } 
-          value={formatJPY(results.nationalIncomeTax)} 
-          type="subtotal" 
+          }
+          value={formatJPY(results.nationalIncomeTax)}
+          type="subtotal"
         />
       </Box>
 
@@ -646,7 +667,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
         <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
           Residence Tax Calculation
         </Typography>
-        
+
         {/* Detailed breakdown toggle */}
         <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>
           <FormControlLabel
@@ -670,8 +691,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
             }}
           />
         </Box>
-        
-        <ResultRow 
+
+        <ResultRow
           label={
             <span>
               Basic Deduction
@@ -733,12 +754,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
               />
             </span>
           }
-          value={formatJPY(-(results.residenceTaxBasicDeduction ?? 0))} 
-          type="detail" 
+          value={formatJPY(-(results.residenceTaxBasicDeduction ?? 0))}
+          type="detail"
         />
-        
+
         {results.dependentDeductions && results.dependentDeductions.residenceTax.total > 0 && (
-          <ResultRow 
+          <ResultRow
             label={
               <span>
                 Dependent Deductions
@@ -748,13 +769,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                 />
               </span>
             }
-            value={formatJPY(-results.dependentDeductions.residenceTax.total)} 
-            type="detail" 
+            value={formatJPY(-results.dependentDeductions.residenceTax.total)}
+            type="detail"
           />
         )}
-        
+
         {results.taxableIncomeForResidenceTax !== undefined && (
-          <ResultRow 
+          <ResultRow
             label={
               <span>
                 Taxable Income
@@ -791,9 +812,9 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
             }
             value={formatJPY(results.taxableIncomeForResidenceTax)} type="detail-subtotal" sx={{ mt: 0.5 }} />
         )}
-        
+
         {/* Income-based portion breakdown */}
-        <ResultRow 
+        <ResultRow
           label={
             <span>
               Income-based Portion
@@ -862,21 +883,21 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
               />
             </span>
           }
-          value={formatJPY(results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax)} 
-          type="detail" 
+          value={formatJPY(results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax)}
+          type="detail"
         />
-        
+
         {/* Municipal/Prefectural breakdown for income-based portion */}
         <Collapse in={showDetailedBreakdown}>
           <Box sx={{ ml: 2, mb: 1 }}>
-            <ResultRow 
+            <ResultRow
               label="Municipal portion (6%)"
-              value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.06))} 
-              type="detail" 
+              value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.06))}
+              type="detail"
               sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
             />
             {results.residenceTax.city.cityAdjustmentCredit > 0 && (
-              <ResultRow 
+              <ResultRow
                 label={
                   <span>
                     Tax credit (municipal)
@@ -890,7 +911,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                           <Typography variant="body2" sx={{ mb: 1, fontSize: '0.9em' }}>
                             The following tax credits (税額控除) reduce the municipal portion of residence tax:
                           </Typography>
-                          
+
                           {/* Adjustment Credit */}
                           <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -905,7 +926,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                             <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 1 }}>
                               The adjustment credit is calculated:
                             </Typography>
-                            
+
                             <Box sx={{ pl: 1, borderLeft: '2px solid #eee', mb: 1 }}>
                               <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
                                 If Taxable Income ≤ 2,000,000 JPY:
@@ -913,7 +934,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                               <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
                                 Min(Difference, Taxable Income) × 5%
                               </Typography>
-                              
+
                               <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
                                 If Taxable Income &gt; 2,000,000 JPY:
                               </Typography>
@@ -923,7 +944,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                               <Typography variant="caption" display="block" sx={{ color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
                                 (Minimum credit: 2,500 JPY)
                               </Typography>
-                              
+
                               <Typography variant="caption" display="block" sx={{ fontWeight: 600, color: 'error.main' }}>
                                 If Net Income &gt; 25,000,000 JPY, no credit.
                               </Typography>
@@ -933,7 +954,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                               Municipal portion (60%): ¥{results.residenceTax.city.cityAdjustmentCredit.toLocaleString()}
                             </Typography>
                           </Box>
-                          
+
                           <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
                             Total Municipal Tax Credit: ¥{results.residenceTax.city.cityAdjustmentCredit.toLocaleString()}
                           </Typography>
@@ -942,20 +963,20 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                     />
                   </span>
                 }
-                value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)} 
-                type="detail" 
+                value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)}
+                type="detail"
                 sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
               />
             )}
-            
-            <ResultRow 
+
+            <ResultRow
               label="Prefectural portion (4%)"
-              value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.04))} 
-              type="detail" 
+              value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.04))}
+              type="detail"
               sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
             />
             {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
-              <ResultRow 
+              <ResultRow
                 label={
                   <span>
                     Tax credit (prefectural)
@@ -969,7 +990,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                           <Typography variant="body2" sx={{ mb: 1, fontSize: '0.9em' }}>
                             The following tax credits (税額控除) reduce the prefectural portion of residence tax:
                           </Typography>
-                          
+
                           {/* Adjustment Credit */}
                           <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -992,7 +1013,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                               <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
                                 Min(Difference, Taxable Income) × 5%
                               </Typography>
-                              
+
                               <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
                                 If Taxable Income &gt; 2,000,000 JPY:
                               </Typography>
@@ -1002,7 +1023,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                               <Typography variant="caption" display="block" sx={{ color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
                                 (Minimum credit: 2,500 JPY)
                               </Typography>
-                              
+
                               <Typography variant="caption" display="block" sx={{ fontWeight: 600, color: 'error.main' }}>
                                 If Net Income &gt; 25,000,000 JPY, no credit.
                               </Typography>
@@ -1012,7 +1033,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                               Prefectural portion (40%): ¥{results.residenceTax.prefecture.prefecturalAdjustmentCredit.toLocaleString()}
                             </Typography>
                           </Box>
-                          
+
                           <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
                             Total Prefectural Tax Credit: ¥{results.residenceTax.prefecture.prefecturalAdjustmentCredit.toLocaleString()}
                           </Typography>
@@ -1021,16 +1042,16 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
                     />
                   </span>
                 }
-                value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)} 
-                type="detail" 
+                value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)}
+                type="detail"
                 sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
               />
             )}
           </Box>
         </Collapse>
-        
+
         {/* Per capita portion */}
-        <ResultRow 
+        <ResultRow
           label={
             <span>
               Per Capita Portion
@@ -1103,25 +1124,25 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results }) => {
               />
             </span>
           }
-          value={formatJPY(results.residenceTax.perCapitaTax)} 
-          type="detail" 
+          value={formatJPY(results.residenceTax.perCapitaTax)}
+          type="detail"
         />
-        
 
-        
-        <ResultRow 
-          label="Total Residence Tax" 
-          value={formatJPY(results.residenceTax.totalResidenceTax)} 
-          type="subtotal" 
+
+
+        <ResultRow
+          label="Total Residence Tax"
+          value={formatJPY(results.residenceTax.totalResidenceTax)}
+          type="subtotal"
         />
       </Box>
 
       {/* Total */}
       <Box sx={{ mt: 2 }}>
-        <ResultRow 
-          label="Total Taxes" 
-          value={formatJPY(totalTaxes)} 
-          type="total" 
+        <ResultRow
+          label="Total Taxes"
+          value={formatJPY(totalTaxes)}
+          type="total"
         />
       </Box>
     </Box>

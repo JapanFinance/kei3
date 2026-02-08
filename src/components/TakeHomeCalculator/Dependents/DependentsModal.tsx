@@ -114,37 +114,37 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
   const getDependentChips = (dependent: OtherDependent): React.ReactNode[] => {
     const chips: React.ReactNode[] = [];
-    
+
     if (dependent.disability !== 'none') {
       let disabilityLabel = dependent.disability === 'regular' ? 'Disabled' : 'Special Disability';
       // Add cohabiting info to special disability chip
       if (dependent.disability === 'special' && dependent.isCohabiting) {
         disabilityLabel += ' (Cohabiting)';
       }
-      
+
       chips.push(
-        <Chip 
-          key="disability" 
+        <Chip
+          key="disability"
           label={disabilityLabel}
-          size="small" 
+          size="small"
           color="secondary"
         />
       );
     }
-    
+
     // Only show separate cohabiting chip if not special disability
     // (to avoid redundancy since special disability chip already shows it)
     if (dependent.isCohabiting && dependent.disability !== 'special') {
       chips.push(
-        <Chip 
-          key="cohabiting" 
-          label="Cohabiting" 
-          size="small" 
+        <Chip
+          key="cohabiting"
+          label="Cohabiting"
+          size="small"
           variant="outlined"
         />
       );
     }
-    
+
     return chips;
   };
 
@@ -178,9 +178,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
         }
       }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      <DialogTitle sx={{
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'space-between',
         pb: 1,
         // Add safe area padding for iOS notch
@@ -209,7 +209,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
       <Divider />
 
-      <DialogContent sx={{ 
+      <DialogContent sx={{
         p: { xs: 2, sm: 3 },
         px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
       }}>
@@ -223,7 +223,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           <Box>
 
             {/* Spouse Section */}
-            <SpouseSection 
+            <SpouseSection
               spouse={spouse || null}
               onChange={handleSpouseChange}
             />
@@ -237,9 +237,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
             {/* List of other dependents */}
             {otherDependents.length === 0 ? (
-              <Box 
-                sx={{ 
-                  textAlign: 'center', 
+              <Box
+                sx={{
+                  textAlign: 'center',
                   py: 4,
                   color: 'text.secondary',
                 }}
@@ -340,7 +340,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                     <TableBody>
                       {(() => {
                         const allDependents: Dependent[] = [...(spouse ? [spouse] : []), ...otherDependents];
-                        
+
                         if (allDependents.length === 0) {
                           return (
                             <TableRow>
@@ -352,9 +352,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                             </TableRow>
                           );
                         }
-                        
+
                         const deductionResults = calculateDependentDeductions(allDependents, taxpayerNetIncome);
-                        
+
                         // Group deductions by type and amount
                         interface DeductionGroup {
                           type: string;
@@ -362,9 +362,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           resAmount: number;
                           count: number;
                         }
-                        
+
                         const deductionMap = new Map<string, DeductionGroup>();
-                        
+
                         // Process each breakdown
                         deductionResults.breakdown.forEach((breakdown: DependentDeductionBreakdown) => {
                           // Skip if not eligible
@@ -374,7 +374,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
                           const key = `${breakdown.deductionType}-${breakdown.nationalTaxAmount}-${breakdown.residenceTaxAmount}`;
                           const existing = deductionMap.get(key);
-                          
+
                           if (existing) {
                             existing.count++;
                           } else {
@@ -386,22 +386,22 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                             });
                           }
                         });
-                        
+
                         // Convert to array and sort
                         const deductionGroups = Array.from(deductionMap.values()).sort((a, b) => {
                           // Sort by total amount descending
                           return (b.natAmount + b.resAmount) - (a.natAmount + a.resAmount);
                         });
-                        
+
                         const rows: React.ReactNode[] = [];
                         let totalNat = 0;
                         let totalRes = 0;
-                        
+
                         // Add row for each deduction group
                         deductionGroups.forEach((group, index) => {
                           totalNat += group.natAmount * group.count;
                           totalRes += group.resAmount * group.count;
-                          
+
                           rows.push(
                             <TableRow key={`deduction-${index}`}>
                               <TableCell>{group.type}</TableCell>
@@ -425,7 +425,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                             </TableRow>
                           );
                         });
-                        
+
                         // Add total row
                         rows.push(
                           <TableRow key="total" sx={{ backgroundColor: 'action.hover', fontWeight: 'bold' }}>
@@ -434,7 +434,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                             <TableCell align="right"><strong>{formatJPY(totalRes)}</strong></TableCell>
                           </TableRow>
                         );
-                        
+
                         return rows;
                       })()}
                     </TableBody>
@@ -448,7 +448,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
       <Divider />
 
-      <DialogActions sx={{ 
+      <DialogActions sx={{
         px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
         py: 2,
         pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
@@ -463,7 +463,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               {spouse ? '1 spouse, ' : ''}{otherDependents.length} other dependent{otherDependents.length !== 1 ? 's' : ''}
             </Typography>
             <Button onClick={onClose} variant="contained">
-              Done
+              Close
             </Button>
           </>
         )}
