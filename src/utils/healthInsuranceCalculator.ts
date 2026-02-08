@@ -93,7 +93,7 @@ export function calculateHealthInsuranceBreakdown(
         let totalPremium = monthlyPremium * 12;
         let bonusPortion = 0;
 
-        if (bonuses.length > 0) {
+        if (bonuses.some(b => b.amount > 0)) {
             const bonusDetails = calculateEmployeesHealthInsuranceBonusBreakdown(
                 bonuses,
                 regionalRates,

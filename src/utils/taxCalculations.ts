@@ -49,13 +49,12 @@ export interface EmploymentInsuranceBreakdown {
 /**
  * Calculates employment insurance premiums breakdown based on income
  */
-export const calculateEmploymentInsuranceBreakdown = (
-    regularIncome: number,
-    bonuses: BonusIncomeStream[],
-    isEmploymentIncome: boolean
+const calculateEmploymentInsuranceBreakdown = (
+    salaryIncome: number,
+    bonuses: BonusIncomeStream[]
 ): EmploymentInsuranceBreakdown => {
-    // If not employment income, no employment insurance is required
-    if (!isEmploymentIncome || (regularIncome <= 0 && bonuses.length === 0)) {
+    // If no employment income, no employment insurance is required
+    if (salaryIncome <= 0 && !bonuses.some(b => b.amount > 0)) {
         return { total: 0, bonusPortion: 0 };
     }
 
@@ -63,8 +62,8 @@ export const calculateEmploymentInsuranceBreakdown = (
     let bonusPortion = 0;
 
     // Calculate on regular monthly salary
-    if (regularIncome > 0) {
-        const monthlySalary = regularIncome / 12;
+    if (salaryIncome > 0) {
+        const monthlySalary = salaryIncome / 12;
         for (let i = 0; i < 12; i++) {
             const monthlyPremium = monthlySalary * employmentInsuranceRate;
             // Apply special rounding rules
@@ -114,12 +113,12 @@ export const calculateEmploymentInsuranceBreakdown = (
  *   - If decimal is 0.51 yen or more → round up
  * - Annual total is the sum of 12 monthly premiums
  */
+// Only exported for testing
 export const calculateEmploymentInsurance = (
-    regularIncome: number,
-    bonuses: BonusIncomeStream[],
-    isEmploymentIncome: boolean
+    salaryIncome: number,
+    bonuses: BonusIncomeStream[] = []
 ): number => {
-    return calculateEmploymentInsuranceBreakdown(regularIncome, bonuses, isEmploymentIncome).total;
+    return calculateEmploymentInsuranceBreakdown(salaryIncome, bonuses).total;
 }
 
 /**
@@ -320,8 +319,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         totalAnnualIncome
     } = calculateIncomeBreakdown(inputs.incomeStreams);
 
-
-
     if (totalAnnualIncome <= 0) {
         return DEFAULT_TAKE_HOME_RESULTS;
     }
@@ -330,7 +327,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const annualIncome = totalAnnualIncome;
 
     // Determine if there is any employment income (salary or bonus)
-    const isEmploymentIncome = salaryIncome > 0 || bonusIncome.length > 0;
+    const hasEmploymentIncome = salaryIncome > 0 || bonusIncome.some(b => b.amount > 0);
 
     // Calculate net income for tax purposes
     // Employment income deduction applies to the sum of salary and bonuses
@@ -417,7 +414,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             pensionOnBonus = pensionResult.bonusPortion;
         }
 
-        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome, bonusIncome, isEmploymentIncome);
+        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome, bonusIncome);
         employmentInsurance = eiResult.total;
         employmentInsuranceOnBonus = eiResult.bonusPortion;
 
@@ -453,7 +450,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     return {
         annualIncome,
-        isEmploymentIncome,
+        isEmploymentIncome: hasEmploymentIncome,
         blueFilerDeduction: blueFilerDeduction,
         nationalIncomeTax,
         residenceTax,
@@ -466,7 +463,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         healthInsuranceOnBonus,
         pensionOnBonus,
         employmentInsuranceOnBonus,
-        netEmploymentIncome: isEmploymentIncome ? netEmploymentIncome : undefined,
+        netEmploymentIncome: hasEmploymentIncome ? netEmploymentIncome : undefined,
         totalNetIncome: netIncome,
         nationalIncomeTaxBasicDeduction,
         taxableIncomeForNationalIncomeTax,

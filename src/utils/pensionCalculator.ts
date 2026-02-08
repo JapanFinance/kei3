@@ -96,7 +96,7 @@ export function calculatePensionBreakdown(
   let totalPremium = (isHalfAmount ? monthlyPremium.halfAmount : monthlyPremium.fullAmount) * 12;
   let bonusPortion = 0;
 
-  if (bonuses.length > 0) {
+  if (bonuses.some(b => b.amount > 0)) {
     const bonusBreakdown = calculatePensionBonusBreakdown(bonuses, isHalfAmount);
     bonusPortion = bonusBreakdown.reduce((sum, item) => sum + item.premium, 0);
     totalPremium += bonusPortion;

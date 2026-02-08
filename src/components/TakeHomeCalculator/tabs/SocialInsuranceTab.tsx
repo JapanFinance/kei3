@@ -51,7 +51,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
   // We need to determine the rates here to pass to the breakdown calculator
-  const bonuses = inputs.incomeStreams.filter((s): s is BonusIncomeStream => s.type === 'bonus');
+  const bonuses = inputs.incomeStreams.filter((s): s is BonusIncomeStream => s.type === 'bonus' && s.amount > 0);
   let healthInsuranceBreakdown = undefined;
 
   if (bonuses.length > 0 && !isNationalHealthInsurance) {
