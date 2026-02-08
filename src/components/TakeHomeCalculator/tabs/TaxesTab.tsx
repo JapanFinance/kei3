@@ -293,34 +293,32 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Net Business / Misc Income
-                <DetailInfoTooltip
-                  title="Business & Miscellaneous Income Details"
-                  children={
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        Calculation Breakdown
-                      </Typography>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
-                        <tbody>
-                          <tr>
-                            <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
-                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
-                          </tr>
-                          {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+                {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+                  <DetailInfoTooltip
+                    title="Business & Miscellaneous Income Details"
+                    children={
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                          Calculation Breakdown
+                        </Typography>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
+                            </tr>
                             <tr>
                               <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
                               <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(results.blueFilerDeduction)}</td>
                             </tr>
-                          )}
-                          <tr style={{ borderTop: '1px solid #ddd' }}>
-                            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
-                            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                              {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                      {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+                            <tr style={{ borderTop: '1px solid #ddd' }}>
+                              <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
+                              <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                                {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                         <Box>
                           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                             Blue-Filer Special Deduction
@@ -339,10 +337,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                             </ul>
                           </Box>
                         </Box>
-                      )}
-                    </Box>
-                  }
-                />
+                      </Box>
+                    }
+                  />
+                )}
               </span>
             }
             // Value is Total Net - Net Employment (effectively Taxable Business/Misc)

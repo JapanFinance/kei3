@@ -57,8 +57,6 @@ const mockInputs: TakeHomeInputs = {
 };
 
 describe('Blue-Filer Deduction Display', () => {
-    // Skipped due to test environment rendering issues with dynamic content injection
-    // Manual verification required for TaxesTab layout
     it('displays Net Business Income and Blue-Filer info in TaxesTab (Single Income)', () => {
         render(<TaxesTab results={mockResults} inputs={mockInputs} />);
 
@@ -74,7 +72,7 @@ describe('Blue-Filer Deduction Display', () => {
         expect(screen.getAllByText('¥4,350,000')).toHaveLength(1);
 
         // Should NOT display a standalone "Blue-Filer Deduction" row anymore
-        expect(screen.queryByText(/Blue-Filer Deduction/, { selector: '.MuiTypography-root' })).not.toBeInTheDocument();
+        expect(screen.queryByText(/Blue-Filer Deduction/)).not.toBeInTheDocument();
     });
 
     it('displays Total Net Income row when there are mixed income sources', () => {
@@ -141,5 +139,39 @@ describe('Blue-Filer Deduction Display', () => {
         // Should show "Monthly Salary Income"
         expect(screen.getByText('Monthly Salary Income')).toBeInTheDocument();
         expect(screen.getByText('¥250,000')).toBeInTheDocument(); // 3M / 12
+    });
+
+    it('does not display instructions tooltip for Net Business / Misc Income when there is no Blue-Filer deduction', () => {
+        const noBlueFilerResults: TakeHomeResults = {
+            ...mockResults,
+            blueFilerDeduction: 0,
+        };
+        const noBlueFilerInputs: TakeHomeInputs = {
+            ...mockInputs,
+            incomeStreams: [{
+                id: 'mock-advanced-business',
+                type: 'business',
+                amount: 5_000_000,
+                blueFilerDeduction: 0
+            }]
+        };
+
+        render(<TaxesTab results={noBlueFilerResults} inputs={noBlueFilerInputs} />);
+
+        // Verify the row exists
+        const rowLabel = screen.getByText((content, element) => {
+            return element?.tagName.toLowerCase() === 'span' && content.includes('Net Business / Misc Income');
+        });
+        expect(rowLabel).toBeInTheDocument();
+
+        // Verify the tooltip is NOT present within that area
+        expect(screen.queryByTitle("Business & Miscellaneous Income Details")).not.toBeInTheDocument();
+    });
+
+    it('displays instructions tooltip for Net Business / Misc Income when there IS a Blue-Filer deduction', () => {
+        // mockResults already has blueFilerDeduction: 650_000
+        render(<TaxesTab results={mockResults} inputs={mockInputs} />);
+
+        expect(screen.getByTitle("Business & Miscellaneous Income Details")).toBeInTheDocument();
     });
 });
