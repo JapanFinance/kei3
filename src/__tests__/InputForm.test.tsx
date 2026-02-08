@@ -6,9 +6,10 @@ import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import type { TakeHomeFormState } from '../types/tax';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
-import { getProviderDisplayName, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
+import { getProviderDisplayName, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION, DEFAULT_PROVIDER } from '../types/healthInsurance';
+import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
 
-describe('TakeHomeInputForm - Available Providers Logic', () => {
+describe('TakeHomeInputForm Tests', () => {
   const mockOnInputChange = vi.fn();
 
   const baseInputs: TakeHomeFormState = {
@@ -175,7 +176,7 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
       const user = userEvent.setup();
       const employmentInputs = { ...baseInputs, incomeMode: 'salary' as const };
 
-      render(
+      const { rerender } = render(
         <TakeHomeInputForm
           inputs={employmentInputs}
           onInputChange={mockOnInputChange}
@@ -199,6 +200,21 @@ describe('TakeHomeInputForm - Available Providers Logic', () => {
           })
         })
       );
+
+      // Update props to simulate the mode change taking effect
+      rerender(
+        <TakeHomeInputForm
+          inputs={{ ...baseInputs, incomeMode: 'business' as const }}
+          onInputChange={mockOnInputChange}
+        />
+      );
+
+      // For business income at 5M (baseInputs), only NHI is available
+      const updatedSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+
+      // Verify it's now disabled (single option)
+      expect(updatedSelect).toHaveAttribute('aria-disabled', 'true');
+      expect(screen.getByText(/Only National Health Insurance available/i)).toBeInTheDocument();
     });
   });
 
@@ -534,5 +550,53 @@ describe('Age Range Selection', () => {
         })
       })
     );
+  });
+});
+
+describe('TakeHomeInputForm Dependents Modal', () => {
+
+  // Mock DependentsModal to inspect props
+  vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
+    DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
+      <div data-testid="dependents-modal" data-net-income={taxpayerNetIncome}>
+        Mocked Modal
+      </div>
+    )
+  }));
+
+  const defaultInputs: TakeHomeFormState = {
+    annualIncome: 0,
+    incomeMode: 'advanced',
+    incomeStreams: [],
+    isSubjectToLongTermCarePremium: false,
+    region: DEFAULT_PROVIDER_REGION,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  test('correctly calculates net income passed to dependents modal for mixed income streams', () => {
+    const inputs: TakeHomeFormState = {
+      ...defaultInputs,
+      incomeMode: 'advanced',
+      incomeStreams: [
+        { id: '1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+        { id: '2', type: 'business', amount: 5_000_000 }
+      ]
+    };
+
+    const mockOnInputChange = vi.fn();
+
+    render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
+
+    const modal = screen.getByTestId('dependents-modal');
+    const netIncomePassed = Number(modal.getAttribute('data-net-income'));
+
+    const expectedNetSalary = calculateNetEmploymentIncome(5_000_000);
+    const expectedTotalNet = expectedNetSalary + 5_000_000;
+
+    expect(netIncomePassed).toBe(expectedTotalNet);
   });
 });

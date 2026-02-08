@@ -7,15 +7,6 @@ import { IncomeDetailsModal } from '../components/TakeHomeCalculator/Income/Inco
 import { describe, it, expect, vi } from 'vitest';
 import type { IncomeStream } from '../types/tax';
 
-// Mock matchMedia
-window.matchMedia = window.matchMedia || function () {
-    return {
-        matches: false,
-        addListener: function () { },
-        removeListener: function () { }
-    };
-};
-
 describe('IncomeDetailsModal - Business Income', () => {
     it('allows adding business income with blue-filer deduction', async () => {
         const user = userEvent.setup();
@@ -63,7 +54,7 @@ describe('IncomeDetailsModal - Business Income', () => {
         // SpinnerNumberField renders as a textbox type="text" for formatting
         const amountInput = screen.getByRole('textbox', { name: /annual net income/i });
         await user.clear(amountInput);
-        await user.type(amountInput, '5000000');
+        await user.type(amountInput, '6000000');
 
         // 6. Save
         await user.click(screen.getByRole('button', { name: /add/i }));
@@ -72,7 +63,7 @@ describe('IncomeDetailsModal - Business Income', () => {
         expect(handleStreamsChange).toHaveBeenCalledWith([
             expect.objectContaining({
                 type: 'business',
-                amount: 5000000,
+                amount: 6000000,
                 blueFilerDeduction: 650000,
             })
         ]);

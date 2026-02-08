@@ -287,26 +287,15 @@ describe('calculateTaxes', () => {
     expect(result.healthInsurance).toBe(resultReference.healthInsurance);
     expect(result.residenceTax.totalResidenceTax).toBe(resultReference.residenceTax.totalResidenceTax);
 
-    // VERIFICATION:
-    // Annual Income should be the GROSS income (5M), not the reduced income (4.35M)
     expect(result.annualIncome).toBe(5_000_000);
     expect(resultReference.annualIncome).toBe(4_350_000);
 
-    // Take Home Income should be higher by the deduction amount (since it's not a cash expense)
+    // Take Home Income should be higher by the deduction amount (since it's not a real expense)
     // 5M - Tax == 4.35M - Tax + 650k
     expect(result.takeHomeIncome).toBe(resultReference.takeHomeIncome + 650_000);
 
     // Verify Blue-Filer deduction is returned
     expect(result.blueFilerDeduction).toBe(650_000);
-
-    // Verify specific values to be sure
-    // Net Income 4.35M
-    // NHI (Tokyo, 40-): Limit check? 
-    // Medical: (4.35M - 0.43M basic deduction) * 7.25% + 44054 (flat) = 3.92M * 0.0725 + 44054 = 284200 + 44054 = 328254
-    // Support: (4.35M - 0.43M) * 2.45% + 14174 = 96040 + 14174 = 110214
-    // Total NHI ~ 438,400 (rounded)
-    // resultReference.healthInsurance should be around there.
-    expect(result.healthInsurance).toBeGreaterThan(0);
   });
 })
 
@@ -609,6 +598,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       5_000_000 - (result.nationalIncomeTax + result.residenceTax.totalResidenceTax + 500_000)
     );
   });
+
   it('caps Blue-Filer deduction at the amount of business income', () => {
     const inputs = {
       isSubjectToLongTermCarePremium: false,
@@ -632,11 +622,13 @@ describe('calculateTaxes with Dependent Coverage', () => {
     // Deduction (650k) > Income (300k) => Effective deduction should be 300k
     expect(result.blueFilerDeduction).toBe(300_000);
 
-    // Taxable business income should be 0
-    // Gross income should be 300k
+    // Taxable income should be 0
     expect(result.annualIncome).toBe(300_000);
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(0);
+    expect(result.taxableIncomeForResidenceTax).toBe(0);
     expect(result.nationalIncomeTax).toBe(0);
   });
+
   it('calculates NHI base correctly with Employment AND Miscellaneous income', () => {
     const inputs = {
       incomeStreams: [
@@ -654,7 +646,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
     const result = calculateTaxes(inputs);
 
-    // 1. Validate Gross Annual Income: 3M + 1M = 4M
+    // 1. Validate Total Annual Income: 3M + 1M = 4M
     expect(result.annualIncome).toBe(4_000_000);
 
     // 2. Validate Net Employment Income

@@ -108,7 +108,7 @@ describe('Income Mode Transitions (State Assertion)', () => {
         expect(getState().incomeStreams[0]?.type).toBe('salary');
     });
 
-    test('3. Salary -> Advanced (Clean): Should create single stream', () => {
+    test('3. Salary -> Advanced (Clean): Should have single stream', () => {
         // Switch to Advanced
         fireEvent.click(screen.getByRole('button', { name: /advanced/i }));
 
@@ -118,7 +118,7 @@ describe('Income Mode Transitions (State Assertion)', () => {
         expect(getState().incomeStreams[0]?.type).toBe('salary');
     });
 
-    test('4. Business -> Advanced (Clean): Should create single business stream', () => {
+    test('4. Business -> Advanced (Clean): Should have single business stream', () => {
         // To Business
         fireEvent.click(screen.getByRole('button', { name: /business/i }));
 
