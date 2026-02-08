@@ -25,7 +25,6 @@ interface IncomeStreamFormProps {
   disabledTypes?: string[];
 }
 
-
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   initialData,
   onSave,
@@ -68,7 +67,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const getAmountHelperText = () => {
     switch (type) {
       case 'business':
-        return 'Business income minus business expenses (combine from all businesses)';
+        return 'Business income minus business expenses. If you operate multiple businesses, combine for all businesses.';
       case 'miscellaneous':
         return 'Income minus necessary expenses';
       case 'salary':

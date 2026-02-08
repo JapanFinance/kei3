@@ -137,8 +137,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           {groupStreams.map((stream) => (
             <Card key={stream.id} variant="outlined">
               <CardContent sx={{
-                p: 2,
-                '&:last-child': { pb: 2 },
+                paddingX: 2,
+                paddingY: { xs: 1, sm: 2 },
+                '&:last-child': { pb: { xs: 1, sm: 2 } },
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
@@ -269,8 +270,20 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           </Stack>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+      <DialogActions sx={{
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        py: 2,
+        pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+        position: isMobile ? 'sticky' : 'relative',
+        bottom: 0,
+        zIndex: 1,
+        backgroundColor: 'background.paper',
+      }}>
+        {!(isAddingNew || editingStream) && (
+          <Button onClick={onClose} variant="contained">
+            Close
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );
