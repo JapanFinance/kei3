@@ -12,7 +12,7 @@ import { calculateDependentDeductions } from './dependentDeductions';
 export const employmentInsuranceRate = 0.0055; // 0.55%
 
 /**
- * Calculates the net employment income based on the tax rules for 2025 income, applying the employment income deduction.
+ * Calculates the net employment income based on the tax rules for 2025/2026 income, applying the employment income deduction.
  * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
  */
 export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): number => {
@@ -226,39 +226,101 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     totalNetIncome: 0,
 };
 
-export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
-    // Determine income components
-    let regularEmploymentIncome = 0;
-    const bonusIncome: BonusIncomeStream[] = [];
-    let grossBusinessAndMiscIncome = 0; // The revenue/income before special deductions (for cash flow)
-    let taxableBusinessAndMiscIncome = 0; // The income after special deductions (for tax base)
-    let totalBlueFilerDeduction = 0;
+/**
+ * Intermediate breakdown of income streams for calculation
+ */
+interface IncomeBreakdown {
+    salaryIncome: number;
+    bonusIncome: BonusIncomeStream[];
+    netBusinessAndMiscIncomeBeforeBlueFilerDeduction: number;
+    netBusinessAndMiscIncome: number;
+    blueFilerDeduction: number;
+    totalAnnualIncome: number;
+}
 
-    for (const stream of inputs.incomeStreams) {
-        if (stream.type === 'salary') {
-            if (stream.frequency === 'monthly') {
-                regularEmploymentIncome += stream.amount * 12;
+/**
+ * Processes income streams to categorize them and calculate totals.
+ * This is used by both the main tax calculation and the net income calculation.
+ */
+const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdown => {
+    let salaryIncome = 0;
+    const bonusIncome: BonusIncomeStream[] = [];
+    let netBusinessAndMiscIncomeBeforeBlueFilerDeduction = 0;
+    let netBusinessAndMiscIncome = 0;
+    let blueFilerDeduction = 0;
+    let processedBusinessIncome = false;
+
+    for (const income of incomeStreams) {
+        if (income.type === 'salary') {
+            if (income.frequency === 'monthly') {
+                salaryIncome += income.amount * 12;
             } else {
-                regularEmploymentIncome += stream.amount;
+                salaryIncome += income.amount;
             }
-        } else if (stream.type === 'bonus') {
-            bonusIncome.push(stream);
-        } else if (stream.type === 'business') {
-            const deduction = stream.blueFilerDeduction || 0;
-            grossBusinessAndMiscIncome += stream.amount;
-            // Taxable business income is reduced by the deduction
-            const effectiveDeduction = Math.min(stream.amount, deduction);
-            taxableBusinessAndMiscIncome += Math.max(0, stream.amount - deduction);
-            totalBlueFilerDeduction += effectiveDeduction;
-        } else if (stream.type === 'miscellaneous') {
-            grossBusinessAndMiscIncome += stream.amount;
-            taxableBusinessAndMiscIncome += stream.amount;
+        } else if (income.type === 'bonus') {
+            bonusIncome.push(income);
+        } else if (income.type === 'business') {
+            if (processedBusinessIncome) {
+                throw new Error('Only one business income stream is allowed.');
+            }
+            if (income.amount < 0) {
+                throw new Error('Business income losses are not currently supported.');
+            }
+            const maxDeduction = income.blueFilerDeduction || 0;
+            netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
+            // Net business income is reduced by the deduction, up to the amount of income
+            const effectiveDeduction = Math.min(income.amount, maxDeduction);
+            netBusinessAndMiscIncome += income.amount - effectiveDeduction;
+            blueFilerDeduction = effectiveDeduction;
+            processedBusinessIncome = true;
+        } else if (income.type === 'miscellaneous') {
+            netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
+            netBusinessAndMiscIncome += income.amount;
         }
     }
 
-    // Total of all gross income sources (for Annual Income display)
-    // Note: This sums gross amounts (before blue filer deduction)
-    const totalAnnualIncome = regularEmploymentIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + grossBusinessAndMiscIncome;
+    const totalAnnualIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + netBusinessAndMiscIncomeBeforeBlueFilerDeduction;
+
+    return {
+        salaryIncome,
+        bonusIncome,
+        netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
+        netBusinessAndMiscIncome,
+        blueFilerDeduction,
+        totalAnnualIncome
+    };
+};
+
+/**
+ * Calculates just the total net income (Employment Net + Business Taxable).
+ * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
+ */
+export const calculateTotalNetIncome = (incomeStreams: IncomeStream[]): number => {
+    const {
+        salaryIncome,
+        bonusIncome,
+        netBusinessAndMiscIncome
+    } = calculateIncomeBreakdown(incomeStreams);
+
+    // Calculate net income for tax purposes
+    // Employment income deduction applies to the sum of salary and bonuses
+    const grossEmploymentIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+
+    // Total net income = Net Employment Income + Taxable Business Income
+    return netEmploymentIncome + netBusinessAndMiscIncome;
+};
+
+export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
+    const {
+        salaryIncome,
+        bonusIncome,
+        netBusinessAndMiscIncome,
+        blueFilerDeduction,
+        totalAnnualIncome
+    } = calculateIncomeBreakdown(inputs.incomeStreams);
+
+
 
     if (totalAnnualIncome <= 0) {
         return DEFAULT_TAKE_HOME_RESULTS;
@@ -268,15 +330,15 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const annualIncome = totalAnnualIncome;
 
     // Determine if there is any employment income (salary or bonus)
-    const isEmploymentIncome = regularEmploymentIncome > 0 || bonusIncome.length > 0;
+    const isEmploymentIncome = salaryIncome > 0 || bonusIncome.length > 0;
 
     // Calculate net income for tax purposes
     // Employment income deduction applies to the sum of salary and bonuses
-    const grossEmploymentIncome = regularEmploymentIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    const grossEmploymentIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
 
     // Total net income = Net Employment Income + Taxable Business Income
-    const netIncome = netEmploymentIncome + taxableBusinessAndMiscIncome;
+    const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;
 
     let healthInsurance = 0;
     let pensionPayments = 0;
@@ -295,7 +357,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         // For health insurance calculation, we need to use the appropriate income:
         // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
         // - National Health Insurance: uses net income (after employment income deduction if applicable)
-        //   This is because NHI premiums are based on taxable income, while employee health insurance
+        //   This is because NHI premiums are based on net income, while employee health insurance
         //   is based on standard monthly remuneration before deductions.
 
         // If using NHI, we use the total net income
@@ -323,7 +385,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             // Employee Health Insurance
             // We pass the regular employment income (annualized) and the list of bonuses
             const hiResult = calculateHealthInsuranceBreakdown(
-                regularEmploymentIncome,
+                salaryIncome,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.healthInsuranceProvider,
                 inputs.region,
@@ -346,7 +408,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
             pensionPayments = 0;
         } else if (isInEmployeePensionSystem) {
-            const pensionResult = calculatePensionBreakdown(true, regularEmploymentIncome / 12, true, bonusIncome);
+            const pensionResult = calculatePensionBreakdown(true, salaryIncome / 12, true, bonusIncome);
             pensionPayments = pensionResult.total;
             pensionOnBonus = pensionResult.bonusPortion;
         } else {
@@ -356,7 +418,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             pensionOnBonus = pensionResult.bonusPortion;
         }
 
-        const eiResult = calculateEmploymentInsuranceBreakdown(regularEmploymentIncome, bonusIncome, isEmploymentIncome);
+        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome, bonusIncome, isEmploymentIncome);
         employmentInsurance = eiResult.total;
         employmentInsuranceOnBonus = eiResult.bonusPortion;
 
@@ -393,7 +455,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     return {
         annualIncome,
         isEmploymentIncome,
-        blueFilerDeduction: totalBlueFilerDeduction,
+        blueFilerDeduction: blueFilerDeduction,
         nationalIncomeTax,
         residenceTax,
         healthInsurance,
@@ -431,31 +493,3 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         }),
     };
 }
-
-/**
- * Normalizes income streams from the form state into a standard array of streams.
- * Handles the conversion of simple "Salary" and "Business" modes into explicit income streams.
- */
-export const normalizeIncomeStreams = (
-    incomeMode: string,
-    annualIncome: number,
-    currentStreams: IncomeStream[]
-): IncomeStream[] => {
-    if (incomeMode === 'advanced') {
-        return currentStreams;
-    } else if (incomeMode === 'business') {
-        return [{
-            id: 'simple-business',
-            type: 'business',
-            amount: annualIncome,
-            blueFilerDeduction: 0,
-        }];
-    } else {
-        return [{
-            id: 'simple-salary',
-            type: 'salary',
-            amount: annualIncome,
-            frequency: 'annual'
-        }];
-    }
-};

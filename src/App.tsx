@@ -1,14 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, useMemo, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ThemeToggle from './components/ThemeToggle'
 import ChangelogButton from './components/ChangelogButton'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
-import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults, IncomeStream } from './types/tax'
-import { calculateTaxes, normalizeIncomeStreams } from './utils/taxCalculations'
+import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types/tax'
+import { calculateTaxes } from './utils/taxCalculations'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, DEPENDENT_COVERAGE_ID, isDependentCoverageEligible } from './types/healthInsurance'
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData'
 import { PROVIDER_DEFINITIONS } from './data/employeesHealthInsurance/providerRateData'
@@ -32,7 +32,12 @@ function App({ mode, toggleColorMode }: AppProps) {
   const defaultInputs: TakeHomeFormState = {
     annualIncome: 5_000_000, // 5 million yen
     incomeMode: 'salary',
-    incomeStreams: [],
+    incomeStreams: [{
+      id: 'default-salary',
+      type: 'salary',
+      amount: 5_000_000,
+      frequency: 'annual'
+    }],
     isSubjectToLongTermCarePremium: false,
     region: "Tokyo",
     healthInsuranceProvider: DEFAULT_PROVIDER,
@@ -48,16 +53,11 @@ function App({ mode, toggleColorMode }: AppProps) {
   // State for calculation results
   const [results, setResults] = useState<TakeHomeResults | null>(null)
 
-  // Normalize inputs for calculation (memoized for use in both calculation and validation/charts)
-  const normalizedIncomeStreams = useMemo<IncomeStream[]>(() => {
-    return normalizeIncomeStreams(inputs.incomeMode, inputs.annualIncome, inputs.incomeStreams);
-  }, [inputs.incomeMode, inputs.incomeStreams, inputs.annualIncome]);
-
   // Debounce the tax calculation to prevent excessive updates from rapid slider changes
   useEffect(() => {
     const calculateAndSetResults = () => {
       const calculationInputs: TakeHomeInputs = {
-        incomeStreams: normalizedIncomeStreams,
+        incomeStreams: inputs.incomeStreams,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
         region: inputs.region,
         healthInsuranceProvider: inputs.healthInsuranceProvider,
@@ -78,7 +78,17 @@ function App({ mode, toggleColorMode }: AppProps) {
 
     // Cleanup function: clear the timeout if the effect re-runs before the timeout completes
     return () => clearTimeout(handler);
-  }, [inputs, normalizedIncomeStreams]);
+  }, [
+    inputs.incomeStreams,
+    inputs.isSubjectToLongTermCarePremium,
+    inputs.region,
+    inputs.healthInsuranceProvider,
+    inputs.dependents,
+    inputs.dcPlanContributions,
+    inputs.manualSocialInsuranceEntry,
+    inputs.manualSocialInsuranceAmount,
+    inputs.customEHIRates
+  ]);
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => {
@@ -250,7 +260,7 @@ function App({ mode, toggleColorMode }: AppProps) {
       }>
         <TakeHomeChart
           currentIncome={inputs.annualIncome}
-          isEmploymentIncome={normalizedIncomeStreams.some(s => s.type === 'salary' || s.type === 'bonus')}
+          isEmploymentIncome={inputs.incomeStreams.some(s => s.type === 'salary' || s.type === 'bonus')}
           isSubjectToLongTermCarePremium={inputs.isSubjectToLongTermCarePremium}
           healthInsuranceProvider={inputs.healthInsuranceProvider}
           region={inputs.region}
@@ -259,7 +269,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           customEHIRates={inputs.customEHIRates}
           manualSocialInsuranceEntry={inputs.manualSocialInsuranceEntry}
           manualSocialInsuranceAmount={inputs.manualSocialInsuranceAmount}
-          incomeStreams={normalizedIncomeStreams}
+          incomeStreams={inputs.incomeStreams}
         />
       </Suspense>
 

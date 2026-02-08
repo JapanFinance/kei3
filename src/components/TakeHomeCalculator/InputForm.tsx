@@ -28,7 +28,7 @@ import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
-import { calculateTaxes, normalizeIncomeStreams } from '../../utils/taxCalculations';
+import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
 import type { TakeHomeFormState, IncomeMode, IncomeStream } from '../../types/tax';
@@ -394,15 +394,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     }
   };
 
-  // Normalize inputs for calculation to get accurate Net Income for the dependents modal
-  const normalizedIncomeStreams = React.useMemo<IncomeStream[]>(() => {
-    return normalizeIncomeStreams(inputs.incomeMode, inputs.annualIncome, inputs.incomeStreams);
-  }, [inputs.incomeMode, inputs.incomeStreams, inputs.annualIncome]);
-
-  const calculatedTaxResults = React.useMemo(() => calculateTaxes({
-    ...inputs,
-    incomeStreams: normalizedIncomeStreams,
-  }), [inputs, normalizedIncomeStreams]);
+  // We only need the total net income for the dependents modal.
+  const taxpayerNetIncome = React.useMemo(() => calculateTotalNetIncome(inputs.incomeStreams), [inputs.incomeStreams]);
 
   return (
     <Box className="form-container" sx={{ p: { xs: 1.2, sm: 2 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 2 }}>
@@ -894,7 +887,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onClose={handleCloseDependentsModal}
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
-        taxpayerNetIncome={calculatedTaxResults.totalNetIncome}
+        taxpayerNetIncome={taxpayerNetIncome}
       />
 
       <IncomeDetailsModal

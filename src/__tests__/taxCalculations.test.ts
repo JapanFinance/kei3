@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { calculateTaxes, calculateNetEmploymentIncome, calculateEmploymentInsurance, calculateNationalIncomeTaxBasicDeduction, calculateNationalIncomeTax } from '../utils/taxCalculations'
+import { calculateTaxes, calculateNetEmploymentIncome, calculateEmploymentInsurance, calculateNationalIncomeTaxBasicDeduction, calculateNationalIncomeTax, calculateTotalNetIncome } from '../utils/taxCalculations'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
 
 describe('calculateNetEmploymentIncome', () => {
@@ -663,3 +663,41 @@ describe('calculateTaxes with Dependent Coverage', () => {
     expect(result.healthInsurance).toBeGreaterThan(200_000);
   });
 })
+
+describe('calculateTotalNetIncome', () => {
+  it('calculates total net income correctly for salary only', () => {
+    // Salary 5M -> Net Employment Income (5M - 1.44M deduction) = 3.56M
+    const incomeStreams = [{ type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' }];
+    expect(calculateTotalNetIncome(incomeStreams)).toBe(3_560_000);
+  });
+
+  it('calculates total net income correctly for business only', () => {
+    // Business 5M, Deduction 650k -> Taxable Business Income = 4.35M
+    const incomeStreams = [{ type: 'business' as const, amount: 5_000_000, blueFilerDeduction: 650_000, id: 'test' }];
+    expect(calculateTotalNetIncome(incomeStreams)).toBe(4_350_000);
+  });
+
+  it('calculates total net income correctly for mixed income', () => {
+    // Salary 3M -> Net Employment (3M - 980k) = 2.02M
+    // Business 1M -> Taxable Business = 1M
+    // Total = 3.02M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+      { type: 'business' as const, amount: 1_000_000, blueFilerDeduction: 0, id: 'b1' }
+    ];
+    expect(calculateTotalNetIncome(incomeStreams)).toBe(3_020_000);
+  });
+
+  it('handles business income less than blue-filer deduction and misc income', () => {
+    // Salary 3M -> Net Employment (3M - 980k) = 2.02M
+    // Business 200k, Deduction 650k -> Net Business = 0 (Deduction limited to 200k)
+    // Misc 100k -> Net Misc = 100k (Deduction does NOT apply to Misc)
+    // Total Net = 2.02M + 0 + 100k = 2.12M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+      { type: 'business' as const, amount: 200_000, blueFilerDeduction: 650_000, id: 'b1' },
+      { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' }
+    ];
+    expect(calculateTotalNetIncome(incomeStreams)).toBe(2_120_000);
+  });
+});
