@@ -5,7 +5,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { PENSION_RATE, type PensionBonusBreakdownItem } from '../../../utils/pensionCalculator';
-import { formatJPY } from '../../../utils/formatters';
+import { formatJPY, formatPercent } from '../../../utils/formatters';
 
 interface PensionBonusTooltipProps {
   breakdown?: PensionBonusBreakdownItem[];
@@ -28,21 +28,21 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
         Bonus Pension Contribution
       </Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        The contribution is calculated by multiplying the Standard Bonus Amount (gross bonus amount rounded down to nearest 1,000 yen) by the contribution rate.
+        The premium is calculated as follows, where the Standard Bonus Amount is the gross bonus rounded down to the nearest 1,000 yen.
       </Typography>
 
       <Box sx={{ bgcolor: 'background.default', p: 1.5, borderRadius: 1, mb: 1 }}>
         <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-          Standard Bonus Amount × {(employeeRate * 100).toFixed(3)}%
+          Standard Bonus Amount × {formatPercent(employeeRate)}
         </Typography>
       </Box>
 
       <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-        The rate shown is the employee's share (50% of the total rate).
+        The employer also pays an equal amount.
       </Typography>
 
       {breakdown && breakdown.length > 0 && (
-        <Box sx={{ mb: 2 }}>
+        <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.9em' }}>
             Calculation Detail
           </Typography>
@@ -96,9 +96,19 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
         </Box>
       )}
 
+      {/* Cap Note */}
+      {breakdown?.some(item => item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000) && (
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="caption" color="text.secondary">
+            <span style={{ color: 'orange', marginRight: 4 }}>*</span>
+            Indicates the standard bonus amount is capped.
+          </Typography>
+        </Box>
+      )}
+
       <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.contrastText' }}>
         <Typography variant="caption" fontWeight="bold">
-          Standard Bonus Amount Limit:
+          Standard Bonus Amount Monthly Limit:
         </Typography>
         <Typography variant="caption" display="block">
           The standard bonus amount is capped at 1.5 million yen per month (adding all bonuses paid in the same month).
