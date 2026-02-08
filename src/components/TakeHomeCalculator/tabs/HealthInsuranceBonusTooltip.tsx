@@ -9,12 +9,12 @@ import { CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
-import type { HealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
+import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 
 interface HealthInsuranceBonusTooltipProps {
   results: TakeHomeResults;
   inputs: TakeHomeInputs;
-  breakdown?: HealthInsuranceBonusBreakdownItem[] | undefined;
+  breakdown?: EmployeesHealthInsuranceBonusBreakdownItem[] | undefined;
 }
 
 const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = ({ inputs, breakdown }) => {

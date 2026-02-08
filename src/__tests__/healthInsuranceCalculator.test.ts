@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { calculateHealthInsurancePremium, calculateHealthInsuranceBreakdown, calculateHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator'
+import { calculateHealthInsurancePremium, calculateHealthInsuranceBreakdown, calculateEmployeesHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
@@ -304,7 +304,7 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
 
   it('returns correct breakdown for single bonus below cap', () => {
     const bonuses = [{ amount: 1_000_500, id: '1', type: 'bonus' as const, month: 6 }];
-    const breakdown = calculateHealthInsuranceBonusBreakdown(bonuses, rates, true);
+    const breakdown = calculateEmployeesHealthInsuranceBonusBreakdown(bonuses, rates, true);
 
     expect(breakdown).toHaveLength(1);
     expect(breakdown[0]!.bonusAmount).toBe(1_000_500);
@@ -320,7 +320,7 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
       { amount: 4_000_000, id: '1', type: 'bonus' as const, month: 6 },
       { amount: 3_000_000, id: '2', type: 'bonus' as const, month: 12 }
     ];
-    const breakdown = calculateHealthInsuranceBonusBreakdown(bonuses, rates, false);
+    const breakdown = calculateEmployeesHealthInsuranceBonusBreakdown(bonuses, rates, false);
 
     expect(breakdown).toHaveLength(2);
 

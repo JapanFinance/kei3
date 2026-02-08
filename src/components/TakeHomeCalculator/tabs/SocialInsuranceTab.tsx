@@ -19,7 +19,7 @@ import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import { calculatePensionBonusBreakdown } from '../../../utils/pensionCalculator';
-import { calculateHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
+import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
 import type { BonusIncomeStream } from '../../../types/tax';
 import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
@@ -78,7 +78,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     }
 
     if (rates) {
-      healthInsuranceBreakdown = calculateHealthInsuranceBonusBreakdown(
+      healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
         inputs.isSubjectToLongTermCarePremium

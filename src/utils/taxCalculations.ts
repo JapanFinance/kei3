@@ -369,8 +369,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.healthInsuranceProvider,
                 inputs.region,
-                undefined,
-                [] // No separate bonus calculation for NHI
+                undefined
             );
             healthInsurance = hiResult.total;
             healthInsuranceOnBonus = hiResult.bonusPortion;

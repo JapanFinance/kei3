@@ -94,7 +94,7 @@ export function calculateHealthInsuranceBreakdown(
         let bonusPortion = 0;
 
         if (bonuses.length > 0) {
-            const bonusDetails = calculateHealthInsuranceBonusBreakdown(
+            const bonusDetails = calculateEmployeesHealthInsuranceBonusBreakdown(
                 bonuses,
                 regionalRates,
                 isSubjectToLongTermCarePremium
@@ -109,9 +109,9 @@ export function calculateHealthInsuranceBreakdown(
 }
 
 /**
- * Breakdown of a single bonus payment's health insurance premium
+ * Breakdown of a single bonus payment's employeehealth insurance premium
  */
-export interface HealthInsuranceBonusBreakdownItem {
+export interface EmployeesHealthInsuranceBonusBreakdownItem {
     month: number;
     bonusAmount: number;
     standardBonusAmount: number; // The rounded down, potentially capped amount
@@ -121,20 +121,24 @@ export interface HealthInsuranceBonusBreakdownItem {
     longTermCarePremium: number;
 }
 
+/**
+ * The cumulative maximum amount of bonus income that is subject to health insurance premiums in a year (April to March).
+ * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20141203.html
+ */
 const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
 
 /**
  * Calculates detailed breakdown for health insurance bonuses
  */
-export function calculateHealthInsuranceBonusBreakdown(
+export function calculateEmployeesHealthInsuranceBonusBreakdown(
     bonuses: BonusIncomeStream[],
     regionalRates: { employeeHealthInsuranceRate: number, employeeLongTermCareRate: number },
     isSubjectToLongTermCarePremium: boolean
-): HealthInsuranceBonusBreakdownItem[] {
+): EmployeesHealthInsuranceBonusBreakdownItem[] {
     // Sort bonuses by month to apply cumulative cap correctly
     const sortedBonuses = [...bonuses].sort((a, b) => a.month - b.month);
 
-    const breakdown: HealthInsuranceBonusBreakdownItem[] = [];
+    const breakdown: EmployeesHealthInsuranceBonusBreakdownItem[] = [];
     let cumulativeStandardBonus = 0;
 
     for (const bonus of sortedBonuses) {

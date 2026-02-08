@@ -4,7 +4,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { PENSION_RATE, type PensionBonusBreakdownItem } from '../../../utils/pensionCalculator';
+import { EMPLOYEES_PENSION_RATE, type PensionBonusBreakdownItem } from '../../../utils/pensionCalculator';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 
 interface PensionBonusTooltipProps {
@@ -13,7 +13,7 @@ interface PensionBonusTooltipProps {
 
 const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) => {
   // Employee share is half
-  const employeeRate = PENSION_RATE / 2;
+  const employeeRate = EMPLOYEES_PENSION_RATE / 2;
 
   // Helper to format month index to name
   const getMonthName = (monthIndex: number) => {

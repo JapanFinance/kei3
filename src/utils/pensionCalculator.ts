@@ -15,8 +15,16 @@ export interface IncomeBracketToPensionPremium {
  */
 export const monthlyNationalPensionContribution = 17510;
 
-export const PENSION_RATE = 0.183; // 18.3%
+/**
+ * Employees' pension insurance rate (厚生年金保険料率)
+ * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
+ */
+export const EMPLOYEES_PENSION_RATE = 0.183; // 18.3%
 
+/**
+ * Employees' pension insurance premiums by income bracket
+ * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
+ */
 export const EMPLOYEES_PENSION_PREMIUM: IncomeBracketToPensionPremium[] = [
   { min: 0, max: 93000, fullAmount: 16104.00, halfAmount: 8052.00 },
   { min: 93000, max: 101000, fullAmount: 17934.00, halfAmount: 8967.00 },
@@ -70,7 +78,7 @@ export function calculatePensionBreakdown(
   bonuses: BonusIncomeStream[] = []
 ): PensionBreakdown {
   if (!isEmployeesPension) {
-    return { total: monthlyNationalPensionContribution * 12, bonusPortion: 0 }; // Annual contribution
+    return { total: monthlyNationalPensionContribution * 12, bonusPortion: 0 };
   }
   if (monthlyIncome < 0) {
     throw new Error('Monthly income must be a positive number');
@@ -98,7 +106,7 @@ export function calculatePensionBreakdown(
 }
 
 /**
- * Breakdown of a single month's bonus pension calculation
+ * Breakdown of a single month's bonus pension premium calculation
  */
 export interface PensionBonusBreakdownItem {
   month: number;
@@ -120,8 +128,7 @@ export function calculatePensionBonusBreakdown(
     return [];
   }
 
-  const bonusRate = PENSION_RATE;
-  const effectiveRate = isHalfAmount ? bonusRate / 2 : bonusRate;
+  const effectiveRate = isHalfAmount ? EMPLOYEES_PENSION_RATE / 2 : EMPLOYEES_PENSION_RATE;
   const breakdown: PensionBonusBreakdownItem[] = [];
 
   // Group bonuses by month (0-11)
