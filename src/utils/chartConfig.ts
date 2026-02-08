@@ -58,10 +58,7 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
   }
 };
 
-// Context for chart calculation, including mode which isn't in base inputs
-export interface ChartCalculationContext extends Omit<TakeHomeInputs, 'incomeStreams'> {
-  // IncomeStreams are now required and normalized
-  incomeStreams: IncomeStream[];
+export interface ChartCalculationContext extends TakeHomeInputs {
   isEmploymentIncome: boolean;
 }
 
