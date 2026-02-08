@@ -92,23 +92,17 @@ function App({ mode, toggleColorMode }: AppProps) {
 
   // Handle input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => {
-    const target = e.target;
-    const name = target.name || '';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const value = (target as any).value;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const type = (target as any).type;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const checked = (target as any).checked;
+    const target = e.target as HTMLInputElement;
+    const { name, value, type } = target;
 
     const isCheckbox = type === 'checkbox';
     const isNumber = type === 'number' || type === 'range';
 
     setInputs(prev => {
-      let processedInputValue: unknown;
+      let processedInputValue: string | number | boolean;
 
       if (isCheckbox) {
-        processedInputValue = checked;
+        processedInputValue = target.checked;
       } else if (isNumber) {
         processedInputValue = parseFloat(value as string) || 0;
       } else {
