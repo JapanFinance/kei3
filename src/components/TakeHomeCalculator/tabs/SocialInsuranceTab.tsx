@@ -266,7 +266,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <ResultRow label="Basic Deduction" value={formatJPY(-results.residenceTaxBasicDeduction!)} type="default" />
           <ResultRow
             label="NHI Calculation Base"
-            value={formatJPY(Math.max(0, (results.totalNetIncome ?? results.annualIncome) - results.residenceTaxBasicDeduction!))}
+            value={formatJPY(Math.max(0, results.totalNetIncome - results.residenceTaxBasicDeduction!))}
             type="subtotal"
           />
         </>
@@ -458,7 +458,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           />
           {results.employmentInsuranceOnBonus !== undefined && results.employmentInsuranceOnBonus > 0 && (
             <ResultRow
-              label="Bonus Premium"
+              label={`Bonus Premium (${(employmentInsuranceRate * 100).toFixed(2)}%)`}
               value={formatJPY(results.employmentInsuranceOnBonus)}
               type="indented"
             />

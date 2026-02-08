@@ -205,7 +205,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
         {includeNursingCareInsurance && regionData.ltcRateForEligible && (
           <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.9rem', color: 'primary.main' }}>
-              🏠 Long-Term Care Portion (介護納付金分) - Ages 40-64
+              🏠 Long-Term Care Portion (介護分) - Ages 40-64
             </Typography>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
               Income-based (所得割): <strong>{(regionData.ltcRateForEligible * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedLtc)}

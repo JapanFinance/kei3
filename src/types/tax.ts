@@ -86,7 +86,7 @@ export interface TakeHomeResults {
   employmentInsuranceOnBonus?: number;
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
-  totalNetIncome: number; // Total net income (Employment Net + Business Taxable)
+  totalNetIncome: number;
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;
