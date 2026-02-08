@@ -38,6 +38,9 @@ const mockResults: TakeHomeResults = {
     isSubjectToLongTermCarePremium: false,
     residenceTaxBasicDeduction: 430_000,
     totalNetIncome: 4_350_000,
+    nhiMedicalPortion: 150_000,
+    nhiElderlySupportPortion: 50_000,
+    nhiLongTermCarePortion: 0
 };
 
 const mockInputs: TakeHomeInputs = {
@@ -99,17 +102,22 @@ describe('Blue-Filer Deduction Display', () => {
         expect(screen.getByText('¥3,900,000')).toBeInTheDocument();
     });
 
-    it('displays Blue-Filer Deduction in SocialInsuranceTab for NHI', () => {
+    it('Blue-Filer Deduction affects NHI Calculation Base in SocialInsuranceTab for NHI', () => {
         render(<SocialInsuranceTab results={mockResults} inputs={mockInputs} />);
-        // Should show deduction row
-        expect(screen.getByText('Blue-Filer Deduction')).toBeInTheDocument();
-        expect(screen.getByText('-¥650,000')).toBeInTheDocument();
 
-        // Should affect NHI Base Calculation visually?
+        // Should show Net Business / Misc Income row (consistent with TaxesTab)
+        expect(screen.getByText(/Net Business.*Misc Income/)).toBeInTheDocument();
+        expect(screen.getByText('¥4,350,000')).toBeInTheDocument(); // 5M - 650k
+
+        // Should NOT show standalone deduction row (it's in the tooltip now)
+        expect(screen.queryByText('Blue-Filer Deduction', { selector: '.MuiTypography-root' })).not.toBeInTheDocument();
+
+        // Should affect NHI Calculation Base visually
         // Base = 5,000,000 - 650,000 - 430,000 = 3,920,000
         expect(screen.getByText('NHI Calculation Base')).toBeInTheDocument();
         expect(screen.getByText('¥3,920,000')).toBeInTheDocument();
     });
+
     it('displays Salary Income specifically for Employee Insurance with mixed income', () => {
         const mixedInputs: TakeHomeInputs = {
             ...mockInputs,
