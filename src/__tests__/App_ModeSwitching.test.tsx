@@ -19,11 +19,11 @@ describe('App Integration - Income Mode Switching', () => {
         // Verify provider is Kyokai Kenpo (or default employee provider)
         expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toHaveTextContent('Kyokai Kenpo');
 
-        // 2. Switch to Business Mode
-        await user.click(screen.getByRole('button', { name: /business/i }));
+        // 2. Switch to Miscellaneous Mode
+        await user.click(screen.getByRole('button', { name: /misc/i }));
 
         // Verify mode changed
-        expect(screen.getByRole('button', { name: /business/i })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', { name: /misc/i })).toHaveAttribute('aria-pressed', 'true');
 
         // 3. Verify Provider Switched to National Health Insurance
         expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toHaveTextContent('National Health Insurance');

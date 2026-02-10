@@ -124,7 +124,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           const providerRegions = providerDefinition ? Object.keys(providerDefinition.regions) : [];
           newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' :
             (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
-        } else if (newMode === 'business') {
+        } else if (newMode === 'miscellaneous') {
           newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
           newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' :
             (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);

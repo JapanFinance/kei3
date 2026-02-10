@@ -158,16 +158,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             }],
           }
         } as unknown as React.ChangeEvent<HTMLInputElement>);
-      } else if (newMode === 'business') {
+      } else if (newMode === 'miscellaneous') {
         // Sync streams to strictly match the simple mode
         onInputChange({
           target: {
             name: 'incomeStreams',
             value: [{
-              id: 'simple-business',
-              type: 'business',
+              id: 'simple-miscellaneous',
+              type: 'miscellaneous',
               amount: inputs.annualIncome,
-              blueFilerDeduction: 0 // Always 0 for simple business mode
             }],
           }
         } as unknown as React.ChangeEvent<HTMLInputElement>);
@@ -200,7 +199,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           // Mismatch or empty: Reset to single stream matching Total
           const initialStream: IncomeStream = hasEmploymentIncome
             ? { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'salary', frequency: 'annual', amount: inputs.annualIncome }
-            : { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'business', amount: inputs.annualIncome };
+            : { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'miscellaneous', amount: inputs.annualIncome };
 
           onInputChange({
             target: {
@@ -248,15 +247,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           }],
         }
       } as unknown as React.ChangeEvent<HTMLInputElement>);
-    } else if (inputs.incomeMode === 'business') {
+    } else if (inputs.incomeMode === 'miscellaneous') {
       onInputChange({
         target: {
           name: 'incomeStreams',
           value: [{
-            id: 'simple-business',
-            type: 'business',
+            id: 'simple-miscellaneous',
+            type: 'miscellaneous',
             amount: Number(e.target.value),
-            blueFilerDeduction: 0
           }],
         }
       } as unknown as React.ChangeEvent<HTMLInputElement>);
@@ -437,7 +435,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 fullWidth
               >
                 <ToggleButton value="salary">Salary</ToggleButton>
-                <ToggleButton value="business">Business</ToggleButton>
+                <ToggleButton value="miscellaneous">{isMobile ? 'Misc' : 'Miscellaneous'}</ToggleButton>
                 <ToggleButton value="advanced">Advanced</ToggleButton>
               </ToggleButtonGroup>
             </Box>

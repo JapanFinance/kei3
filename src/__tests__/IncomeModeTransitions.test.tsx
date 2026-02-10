@@ -63,7 +63,7 @@ describe('Income Mode Transitions (State Assertion)', () => {
         return JSON.parse(el.textContent || '{}');
     };
 
-    test('1. Salary -> Business: Should switch mode and preserve amount', () => {
+    test('1. Salary -> Miscellaneous: Should switch mode and preserve amount', () => {
         // Initial state check
         expect(getState().incomeMode).toBe('salary');
         expect(getState().annualIncome).toBe(5000000);
@@ -71,32 +71,32 @@ describe('Income Mode Transitions (State Assertion)', () => {
         expect(getState().incomeStreams[0]?.amount).toBe(5000000);
         expect(getState().incomeStreams[0]?.type).toBe('salary');
 
-        // Switch to Business
-        fireEvent.click(screen.getByRole('button', { name: /business/i }));
+        // Switch to Miscellaneous
+        fireEvent.click(screen.getByRole('button', { name: /misc/i }));
 
-        expect(getState().incomeMode).toBe('business');
+        expect(getState().incomeMode).toBe('miscellaneous');
         expect(getState().annualIncome).toBe(5000000);
         expect(getState().incomeStreams).toHaveLength(1);
         expect(getState().incomeStreams[0]?.amount).toBe(5000000);
-        expect(getState().incomeStreams[0]?.type).toBe('business');
+        expect(getState().incomeStreams[0]?.type).toBe('miscellaneous');
     });
 
-    test('2. Business -> Salary: Should switch mode and preserve amount', () => {
-        // To Business, change income to 6M
-        fireEvent.click(screen.getByRole('button', { name: /business/i }));
-        expect(getState().incomeMode).toBe('business');
+    test('2. Miscellaneous -> Salary: Should switch mode and preserve amount', () => {
+        // To Miscellaneous, change income to 6M
+        fireEvent.click(screen.getByRole('button', { name: /misc/i }));
+        expect(getState().incomeMode).toBe('miscellaneous');
         expect(getState().annualIncome).toBe(5_000_000);
         expect(getState().incomeStreams).toHaveLength(1);
         expect(getState().incomeStreams[0]?.amount).toBe(5_000_000);
-        expect(getState().incomeStreams[0]?.type).toBe('business');
+        expect(getState().incomeStreams[0]?.type).toBe('miscellaneous');
 
         fireEvent.change(screen.getByRole('textbox', { name: /annual income/i }), { target: { value: '6000000' } });
 
-        expect(getState().incomeMode).toBe('business');
+        expect(getState().incomeMode).toBe('miscellaneous');
         expect(getState().annualIncome).toBe(6_000_000);
         expect(getState().incomeStreams).toHaveLength(1);
         expect(getState().incomeStreams[0]?.amount).toBe(6_000_000);
-        expect(getState().incomeStreams[0]?.type).toBe('business');
+        expect(getState().incomeStreams[0]?.type).toBe('miscellaneous');
 
         // To Salary
         fireEvent.click(screen.getByRole('button', { name: /salary/i }));
@@ -118,9 +118,9 @@ describe('Income Mode Transitions (State Assertion)', () => {
         expect(getState().incomeStreams[0]?.type).toBe('salary');
     });
 
-    test('4. Business -> Advanced (Clean): Should have single business stream', () => {
-        // To Business
-        fireEvent.click(screen.getByRole('button', { name: /business/i }));
+    test('4. Miscellaneous -> Advanced (Clean): Should have single miscellaneous stream', () => {
+        // To Miscellaneous
+        fireEvent.click(screen.getByRole('button', { name: /misc/i }));
 
         // To Advanced
         fireEvent.click(screen.getByRole('button', { name: /advanced/i }));
@@ -129,7 +129,7 @@ describe('Income Mode Transitions (State Assertion)', () => {
         expect(state.incomeMode).toBe('advanced');
         expect(state.incomeStreams).toHaveLength(1);
         expect(state.incomeStreams[0]?.amount).toBe(5000000);
-        expect(state.incomeStreams[0]?.type).toBe('business');
+        expect(state.incomeStreams[0]?.type).toBe('miscellaneous');
     });
 
     test('5. Advanced -> Salary: Should preserve annual income', () => {
@@ -146,16 +146,16 @@ describe('Income Mode Transitions (State Assertion)', () => {
         expect(getState().incomeStreams[0]?.type).toBe('salary');
     });
 
-    test('6. Advanced -> Business: Should preserve annual income', () => {
-        // To Advanced -> Business
+    test('6. Advanced -> Miscellaneous: Should preserve annual income', () => {
+        // To Advanced -> Miscellaneous
         fireEvent.click(screen.getByRole('button', { name: /advanced/i }));
-        fireEvent.click(screen.getByRole('button', { name: /business/i }));
+        fireEvent.click(screen.getByRole('button', { name: /misc/i }));
 
-        expect(getState().incomeMode).toBe('business');
+        expect(getState().incomeMode).toBe('miscellaneous');
         expect(getState().annualIncome).toBe(5000000);
         expect(getState().incomeStreams).toHaveLength(1);
         expect(getState().incomeStreams[0]?.amount).toBe(5000000);
-        expect(getState().incomeStreams[0]?.type).toBe('business');
+        expect(getState().incomeStreams[0]?.type).toBe('miscellaneous');
     });
 
     test('7. Advanced -> Salary -> Modify -> Advanced: Should RESET streams to match new total', async () => {

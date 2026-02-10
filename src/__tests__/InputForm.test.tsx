@@ -88,12 +88,12 @@ describe('TakeHomeInputForm Tests', () => {
     });
   });
 
-  describe('when in business income mode (non-employment income)', () => {
+  describe('when in miscellaneous income mode (non-employment income)', () => {
     it('should show dependent coverage and NHI when income is below threshold', async () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
         ...baseInputs,
-        incomeMode: 'business' as const,
+        incomeMode: 'miscellaneous' as const,
         annualIncome: 1_000_000, // Below threshold
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
@@ -121,7 +121,7 @@ describe('TakeHomeInputForm Tests', () => {
     it('should only show NHI when non-employment income is above threshold', () => {
       const nonEmploymentInputs = {
         ...baseInputs,
-        incomeMode: 'business' as const,
+        incomeMode: 'miscellaneous' as const,
         annualIncome: 1_500_000, // Above threshold
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
@@ -145,7 +145,7 @@ describe('TakeHomeInputForm Tests', () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
         ...baseInputs,
-        incomeMode: 'business' as const,
+        incomeMode: 'miscellaneous' as const,
         annualIncome: 1_000_000, // Below threshold to have options
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
@@ -187,16 +187,16 @@ describe('TakeHomeInputForm Tests', () => {
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
       expect(providerSelect).not.toBeDisabled();
 
-      // Find and click the Business toggle
-      const businessToggle = screen.getByRole('button', { name: /business/i });
-      await user.click(businessToggle);
+      // Find and click the Miscellaneous toggle
+      const miscToggle = screen.getByRole('button', { name: /misc/i });
+      await user.click(miscToggle);
 
       // Verify that the mode change was registered
       expect(mockOnInputChange).toHaveBeenCalledWith(
         expect.objectContaining({
           target: expect.objectContaining({
             name: 'incomeMode',
-            value: 'business'
+            value: 'miscellaneous'
           })
         })
       );
@@ -204,12 +204,12 @@ describe('TakeHomeInputForm Tests', () => {
       // Update props to simulate the mode change taking effect
       rerender(
         <TakeHomeInputForm
-          inputs={{ ...baseInputs, incomeMode: 'business' as const }}
+          inputs={{ ...baseInputs, incomeMode: 'miscellaneous' as const }}
           onInputChange={mockOnInputChange}
         />
       );
 
-      // For business income at 5M (baseInputs), only NHI is available
+      // For miscellaneous income at 5M (baseInputs), only NHI is available
       const updatedSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
 
       // Verify it's now disabled (single option)
@@ -247,7 +247,7 @@ describe('TakeHomeInputForm Tests', () => {
     it('should maintain consistency with provider display names', () => {
       const nonEmploymentInputs = {
         ...baseInputs,
-        incomeMode: 'business' as const,
+        incomeMode: 'miscellaneous' as const,
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -280,7 +280,7 @@ describe('TakeHomeInputForm Tests', () => {
       // Income mode selection should be present
       expect(screen.getByRole('group', { name: /income mode/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /salary/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /business/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /misc/i })).toBeInTheDocument();
     });
 
     it('should show helpful tooltips and explanatory text', () => {
@@ -355,7 +355,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should include dependent coverage option for non-employment income when below threshold', async () => {
     const user = userEvent.setup();
-    const inputs = { ...baseInputs, annualIncome: 1_000_000, incomeMode: 'business' as const };
+    const inputs = { ...baseInputs, annualIncome: 1_000_000, incomeMode: 'miscellaneous' as const };
 
     render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
 
@@ -370,7 +370,7 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 
   it('should NOT include dependent coverage option for non-employment income above threshold', () => {
-    const inputs = { ...baseInputs, annualIncome: 1_500_000, incomeMode: 'business' as const };
+    const inputs = { ...baseInputs, annualIncome: 1_500_000, incomeMode: 'miscellaneous' as const };
 
     render(<TakeHomeInputForm inputs={inputs} onInputChange={mockOnInputChange} />);
 

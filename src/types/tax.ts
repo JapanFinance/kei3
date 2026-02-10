@@ -4,7 +4,7 @@
 import type { HealthInsuranceProviderId } from "./healthInsurance";
 import type { Dependent, DependentDeductionResults } from "./dependents";
 
-export type IncomeMode = 'salary' | 'business' | 'advanced';
+export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
 
 export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous';
 
