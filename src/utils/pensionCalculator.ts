@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { BonusIncomeStream } from '../types/tax';
+import { roundSocialInsurancePremium } from './taxCalculations';
 
 export interface IncomeBracketToPensionPremium {
   min: number;
@@ -148,7 +149,7 @@ export function calculatePensionBonusBreakdown(
     const standardBonusAmount = Math.min(roundedBonusAmount, 1_500_000);
 
     // 3. Calculate premium
-    const premium = Math.round(standardBonusAmount * effectiveRate);
+    const premium = roundSocialInsurancePremium(standardBonusAmount * effectiveRate);
 
     breakdown.push({
       month,

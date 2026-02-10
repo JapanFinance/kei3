@@ -99,13 +99,13 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(120_700)
     expect(result.residenceTax.totalResidenceTax).toBe(243_200)
-    expect(result.healthInsurance).toBe(243_792)
+    expect(result.healthInsurance).toBe(243_780) // 410k * 4.955% = 20,315.5 -> 20,315 * 12
     expect(result.pensionPayments).toBe(450_180)
     // 5,000,000 / 12 ≈ 416,666.67 per month
     // 416,666.67 * 0.55% ≈ 2,291.67 per month → 2,292 yen (round up)
     // 2,292 * 12 = 27,504 yen annually
     expect(result.employmentInsurance).toBe(27_504)
-    expect(result.takeHomeIncome).toBe(3_914_624)
+    expect(result.takeHomeIncome).toBe(3_914_636)
   })
 
   // Test cases for high income brackets
@@ -120,13 +120,13 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(16_345_400) // 50M - 1.95M (employment deduction) - 1.815194M (social insurance) - 0 (basic deduction) = 46.234806M, rounded to 46.234M, then 45% - 4.796M = 16.0093M, + 2.1% = 16.345495M, rounded down to 16.3454M
     expect(result.residenceTax.totalResidenceTax).toBe(4_628_300) // (50M - 1.95M - 1.815194M - 0) = 46.234806M, rounded to 46.234M, then 6% city tax (2.774M) + 4% prefectural tax (1.8493M) + 5K 均等割
-    expect(result.healthInsurance).toBe(826_500) // Capped at 68,874.5 * 12
+    expect(result.healthInsurance).toBe(826_488) // Capped at 68,874.5 -> 68,874 * 12
     expect(result.pensionPayments).toBe(713_700) // Capped at 59,475 * 12
     // 50,000,000 / 12 ≈ 4,166,666.67 per month
     // 4,166,666.67 * 0.55% = 22,916.67 per month → 22,917 yen (round up)
     // 22,917 * 12 = 275,004 yen annually
     expect(result.employmentInsurance).toBe(275_004)
-    expect(result.takeHomeIncome).toBe(27_211_096)
+    expect(result.takeHomeIncome).toBe(27_211_108)
   })
 
   // Test edge cases
@@ -345,8 +345,6 @@ describe('calculateEmploymentInsurance', () => {
     // 917 * 12 = 11,004 yen annually
     expect(calculateEmploymentInsurance(1_999_999)).toBe(11_004)
   })
-
-
 
   it('returns 0 for zero income', () => {
     expect(calculateEmploymentInsurance(0)).toBe(0)

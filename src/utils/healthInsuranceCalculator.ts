@@ -7,6 +7,7 @@ import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsuranc
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { calculateMonthlyEmployeePremium, getRegionalRates } from '../data/employeesHealthInsurance/providerRates';
+import { roundSocialInsurancePremium } from './taxCalculations';
 
 /**
  * Breakdown of National Health Insurance premium components
@@ -100,7 +101,7 @@ export function calculateHealthInsuranceBreakdown(
                 isSubjectToLongTermCarePremium
             );
 
-            bonusPortion = bonusDetails.reduce((sum, item) => sum + item.healthInsurancePremium + item.longTermCarePremium, 0);
+            bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
             totalPremium += bonusPortion;
         }
 
@@ -109,7 +110,7 @@ export function calculateHealthInsuranceBreakdown(
 }
 
 /**
- * Breakdown of a single bonus payment's employeehealth insurance premium
+ * Breakdown of a single bonus payment's employee health insurance premium
  */
 export interface EmployeesHealthInsuranceBonusBreakdownItem {
     month: number;
@@ -117,8 +118,8 @@ export interface EmployeesHealthInsuranceBonusBreakdownItem {
     standardBonusAmount: number; // The rounded down, potentially capped amount
     /** Annual cumulative standard bonus amount */
     cumulativeStandardBonus: number;
-    healthInsurancePremium: number;
-    longTermCarePremium: number;
+    premium: number;
+    includesLongTermCare: boolean;
 }
 
 /**
@@ -153,18 +154,16 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
 
         cumulativeStandardBonus += standardBonusAmount;
 
-        const healthInsurancePremium = standardBonusAmount * regionalRates.employeeHealthInsuranceRate;
-        const longTermCarePremium = isSubjectToLongTermCarePremium
-            ? standardBonusAmount * regionalRates.employeeLongTermCareRate
-            : 0;
+        const rate = regionalRates.employeeHealthInsuranceRate + (isSubjectToLongTermCarePremium ? regionalRates.employeeLongTermCareRate : 0);
+        const premium = roundSocialInsurancePremium(standardBonusAmount * rate);
 
         breakdown.push({
             month: bonus.month,
             bonusAmount: bonus.amount,
             standardBonusAmount,
             cumulativeStandardBonus,
-            healthInsurancePremium: Math.round(healthInsurancePremium),
-            longTermCarePremium: Math.round(longTermCarePremium)
+            premium,
+            includesLongTermCare: isSubjectToLongTermCarePremium
         });
     }
 

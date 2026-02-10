@@ -12,6 +12,22 @@ import { calculateDependentDeductions } from './dependentDeductions';
 export const employmentInsuranceRate = 0.0055; // 0.55%
 
 /**
+ * Rounds the premium to a nearby whole yen according to the given mode.
+ * By default, it rounds using halfTrunc mode:
+ * - 0.50 yen or less rounds down
+ * - more than 0.50 yen rounds up
+ * @see https://www.nenkin.go.jp/service/kounen/hokenryo/nofu/20121026.html
+ */
+export const roundSocialInsurancePremium = (amount: number, mode: 'halfTrunc' | 'halfExpand' = 'halfTrunc'): number => {
+    const roundedAmount = new Intl.NumberFormat('en', {
+        maximumFractionDigits: 0,
+        useGrouping: false,
+        roundingMode: mode,
+    }).format(amount);
+    return Number.parseInt(roundedAmount);
+}
+
+/**
  * Calculates the net employment income based on the tax rules for 2025/2026 income, applying the employment income deduction.
  * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
  */
@@ -65,36 +81,18 @@ const calculateEmploymentInsuranceBreakdown = (
     if (salaryIncome > 0) {
         const monthlySalary = salaryIncome / 12;
         for (let i = 0; i < 12; i++) {
-            const monthlyPremium = monthlySalary * employmentInsuranceRate;
-            // Apply special rounding rules
-            const decimal = monthlyPremium - Math.floor(monthlyPremium);
-            let roundedPremium: number;
+            const monthlyPremium = roundSocialInsurancePremium(monthlySalary * employmentInsuranceRate);
 
-            if (decimal <= 0.5) {
-                roundedPremium = Math.floor(monthlyPremium);
-            } else {
-                roundedPremium = Math.ceil(monthlyPremium);
-            }
-
-            annualPremium += roundedPremium;
+            annualPremium += monthlyPremium;
         }
     }
 
     // Calculate on bonuses
     for (const bonus of bonuses) {
-        const bonusPremium = bonus.amount * employmentInsuranceRate;
-        // Apply special rounding rules
-        const decimal = bonusPremium - Math.floor(bonusPremium);
-        let roundedPremium: number;
+        const bonusPremium = roundSocialInsurancePremium(bonus.amount * employmentInsuranceRate);
 
-        if (decimal <= 0.5) {
-            roundedPremium = Math.floor(bonusPremium);
-        } else {
-            roundedPremium = Math.ceil(bonusPremium);
-        }
-
-        bonusPortion += roundedPremium;
-        annualPremium += roundedPremium;
+        bonusPortion += bonusPremium;
+        annualPremium += bonusPremium;
     }
 
     return { total: Math.max(annualPremium, 0), bonusPortion };

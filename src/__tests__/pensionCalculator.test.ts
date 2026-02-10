@@ -159,7 +159,7 @@ describe('calculatePensionBonusBreakdown', () => {
     // Bonus 2: 100,600
     // Total raw: 301,100
     // Rounded Standard Bonus Amount: 301,000 (NOT 200,000 + 100,000 = 300,000)
-    // Premium: 301,000 * 0.0915 = 27,541.5 -> 27,542
+    // Premium: 301,000 * 0.0915 = 27,541.5 -> 27,541 (halfTrunc)
     const bonuses = [
       { amount: 200_500, id: '1', type: 'bonus' as const, month: 6 },
       { amount: 100_600, id: '2', type: 'bonus' as const, month: 6 }
@@ -169,6 +169,6 @@ describe('calculatePensionBonusBreakdown', () => {
     expect(breakdown).toHaveLength(1);
     expect(breakdown[0]!.totalBonusAmount).toBe(301_100);
     expect(breakdown[0]!.standardBonusAmount).toBe(301_000);
-    expect(breakdown[0]!.premium).toBe(27_542);
+    expect(breakdown[0]!.premium).toBe(27_541);
   });
 })

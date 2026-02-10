@@ -132,7 +132,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                       <span style={{ color: 'orange', marginLeft: 4 }} title={`Capped: Cumulative Standard Bonus (${formatJPY(item.cumulativeStandardBonus)}) reached annnual limit`}>*</span>
                     )}
                   </td>
-                  <td style={{ fontWeight: 600 }}>{formatJPY(item.healthInsurancePremium + item.longTermCarePremium)}</td>
+                  <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
                 </tr>
               ))}
             </tbody>
@@ -146,7 +146,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                   {formatJPY(breakdown.reduce((sum, item) => sum + item.standardBonusAmount, 0))}
                 </td>
                 <td style={{ paddingTop: 4 }}>
-                  {formatJPY(breakdown.reduce((sum, item) => sum + item.healthInsurancePremium + item.longTermCarePremium, 0))}
+                  {formatJPY(breakdown.reduce((sum, item) => sum + item.premium, 0))}
                 </td>
               </tr>
             </tfoot>

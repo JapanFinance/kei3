@@ -11,11 +11,11 @@ const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
 describe('calculateHealthInsurancePremium for employees', () => {
   describe('Kyokai Kenpo (Tokyo)', () => {
     it('calculates premium for people under 40', () => {
-      expect(calculateHealthInsurancePremium(5_000_000, false, KYOKAI_KENPO_PROVIDER, "Tokyo")).toBe(243_792)
+      expect(calculateHealthInsurancePremium(5_000_000, false, KYOKAI_KENPO_PROVIDER, "Tokyo")).toBe(243_780)
     })
 
     it('calculates employees health insurance premium for people under 40 with cap', () => {
-      expect(calculateHealthInsurancePremium(20_000_000, false, KYOKAI_KENPO_PROVIDER, "Tokyo")).toBe(826_500)
+      expect(calculateHealthInsurancePremium(20_000_000, false, KYOKAI_KENPO_PROVIDER, "Tokyo")).toBe(826_488)
     })
 
     it('calculates employees health insurance premium with nursing care for people over 40', () => {
@@ -227,18 +227,18 @@ describe('calculateHealthInsuranceBreakdown with bonuses', () => {
     const result = calculateHealthInsuranceBreakdown(5_000_000, false, KYOKAI_KENPO_PROVIDER, "Tokyo", undefined, bonuses);
     expect(result.bonusPortion).toBe(49_550);
 
-    // Total should include monthly premium (243,792 from previous test) + bonus (49,550)
-    expect(result.total).toBe(243_792 + 49_550);
+    // Total should include monthly premium (243,780 from previous test) + bonus (49,550)
+    expect(result.total).toBe(243_780 + 49_550);
   });
 
   it('calculates premium for a single bonus above annual cap', () => {
     // Annual Cap for bonuses is 5.73 million yen
     // Bonus: 10,000,000 => Capped at 5,730,000
-    // Health: 5,730,000 * 0.04955 = 283,921.5 -> 283,922
-    // Total: 283,922
+    // Health: 5,730,000 * 0.04955 = 283,921.5 -> 283,921
+    // Total: 283,921
     const bonuses = [{ amount: 10_000_000, id: '1', type: 'bonus' as const, month: 6 }];
     const result = calculateHealthInsuranceBreakdown(5_000_000, false, KYOKAI_KENPO_PROVIDER, "Tokyo", undefined, bonuses);
-    expect(result.bonusPortion).toBe(283_922);
+    expect(result.bonusPortion).toBe(283_921);
   });
 
   it('calculates premium for multiple bonuses summing below cap', () => {
@@ -259,13 +259,13 @@ describe('calculateHealthInsuranceBreakdown with bonuses', () => {
     // Bonus 2: 3,000,000
     // Total Standard Bonus: 6,000,000
     // Capped Total: 5,730,000
-    // Health: 5,730,000 * 0.04955 = 283,921.5 -> 283,922
+    // Health: 5,730,000 * 0.04955 = 283,921.5 -> 283,921
     const bonuses = [
       { amount: 3_000_000, id: '1', type: 'bonus' as const, month: 6 },
       { amount: 3_000_000, id: '2', type: 'bonus' as const, month: 12 }
     ];
     const result = calculateHealthInsuranceBreakdown(5_000_000, false, KYOKAI_KENPO_PROVIDER, "Tokyo", undefined, bonuses);
-    expect(result.bonusPortion).toBe(283_922);
+    expect(result.bonusPortion).toBe(283_921);
   });
 
   it('applies rounding to standard bonus amount before summing', () => {
@@ -311,7 +311,9 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
     expect(breakdown[0]!.standardBonusAmount).toBe(1_000_000);
     expect(breakdown[0]!.cumulativeStandardBonus).toBe(1_000_000);
     // Premium: 1,000,000 * (0.04955 + 0.00795) = 1,000,000 * 0.0575 = 57,500
-    expect(breakdown[0]!.healthInsurancePremium + breakdown[0]!.longTermCarePremium).toBe(57_500);
+    // Premium: 1,000,000 * (0.04955 + 0.00795) = 1,000,000 * 0.0575 = 57,500
+    expect(breakdown[0]!.premium).toBe(57_500);
+    expect(breakdown[0]!.includesLongTermCare).toBe(true);
   });
 
   it('returns correct breakdown for multiple bonuses reaching cap', () => {
@@ -328,13 +330,15 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
     expect(breakdown[0]!.month).toBe(6);
     expect(breakdown[0]!.standardBonusAmount).toBe(4_000_000);
     expect(breakdown[0]!.cumulativeStandardBonus).toBe(4_000_000);
-    expect(breakdown[0]!.healthInsurancePremium).toBe(Math.round(4_000_000 * 0.04955)); // 198,200
+    expect(breakdown[0]!.premium).toBe(198_200); // 4,000,000 * 0.04955
+    expect(breakdown[0]!.includesLongTermCare).toBe(false);
 
     // Second bonus
     // Remaining Cap: 5,730,000 - 4,000,000 = 1,730,000
     expect(breakdown[1]!.month).toBe(12);
     expect(breakdown[1]!.standardBonusAmount).toBe(1_730_000); // Capped
     expect(breakdown[1]!.cumulativeStandardBonus).toBe(5_730_000);
-    expect(breakdown[1]!.healthInsurancePremium).toBe(Math.round(1_730_000 * 0.04955)); // 85,721.5 -> 85,722
+    expect(breakdown[1]!.premium).toBe(85_721); // 1,730,000 * 0.04955 = 85,721.5 -> 85,721
+    expect(breakdown[1]!.includesLongTermCare).toBe(false);
   });
 });

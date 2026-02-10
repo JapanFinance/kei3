@@ -6,6 +6,7 @@
  * Works directly with provider rate data without intermediate transformations
  */
 
+import { roundSocialInsurancePremium } from '../../utils/taxCalculations';
 import { PROVIDER_DEFINITIONS, type RegionalRates } from './providerRateData';
 import { STANDARD_SMR_BRACKETS } from './smrBrackets';
 
@@ -17,21 +18,15 @@ export function calculateMonthlyEmployeePremium(
   regionalRates: RegionalRates,
   includeLongTermCare: boolean
 ): number {
-  // Calculate the total premium first, then round - this matches the original table behavior better
-  const healthInsuranceTotal = smrAmount * regionalRates.employeeHealthInsuranceRate;
-  const longTermCareTotal = includeLongTermCare 
-    ? smrAmount * regionalRates.employeeLongTermCareRate
-    : 0;
-  
-  // Round the combined total to match original table rounding behavior
-  return Math.round(healthInsuranceTotal + longTermCareTotal);
+  const rate = regionalRates.employeeHealthInsuranceRate + (includeLongTermCare ? regionalRates.employeeLongTermCareRate : 0);
+  return roundSocialInsurancePremium(smrAmount * rate);
 }
 
 /**
  * Get regional rates for a specific provider and region
  */
 export function getRegionalRates(
-  providerId: string, 
+  providerId: string,
   region: string = 'DEFAULT'
 ): RegionalRates | undefined {
   return PROVIDER_DEFINITIONS[providerId]?.regions[region];
@@ -48,7 +43,7 @@ export function getAvailableRegions(providerId: string): string[] {
 /**
  * Get all available providers
  */
-export function getAvailableProviders(): Array<{providerId: string, providerName: string}> {
+export function getAvailableProviders(): Array<{ providerId: string, providerName: string }> {
   return Object.entries(PROVIDER_DEFINITIONS).map(([providerId, provider]) => ({
     providerId,
     providerName: provider.providerName
@@ -71,14 +66,14 @@ export function generatePremiumTableFromRates(
   return STANDARD_SMR_BRACKETS.map((bracket) => {
     const employeePremiumNoLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, false);
     const employeePremiumWithLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, true);
-    
+
     // Calculate full premiums (employee + employer)
     const employerHealthRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
     const employerLTCRate = regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
-    
+
     const fullHealthPremium = Math.round(bracket.smrAmount * (regionalRates.employeeHealthInsuranceRate + employerHealthRate));
     const fullLTCPremium = Math.round(bracket.smrAmount * (regionalRates.employeeLongTermCareRate + employerLTCRate));
-    
+
     return {
       minIncomeInclusive: bracket.minIncomeInclusive,
       maxIncomeExclusive: bracket.maxIncomeExclusive,
