@@ -71,7 +71,7 @@ export interface CustomEmployeesHealthInsuranceRates {
 
 export interface TakeHomeResults {
   annualIncome: number;
-  isEmploymentIncome: boolean;
+  hasEmploymentIncome: boolean;
   blueFilerDeduction?: number;
   nationalIncomeTax: number;
   residenceTax: ResidenceTaxDetails;

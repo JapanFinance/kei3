@@ -47,7 +47,7 @@ export function calculateHealthInsuranceBreakdown(
     }
 
     if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
-        // For NHI, bonuses are just part of the total income.
+        // For NHI, bonuses are part of the total net income.
         const total = calculateNationalHealthInsurancePremiumWithBreakdown(annualIncome, isSubjectToLongTermCarePremium, region).total;
         return { total, bonusPortion: 0 };
     } else {

@@ -19,7 +19,7 @@ vi.mock('../components/ui/DetailInfoTooltip', () => ({
 
 const mockResults: TakeHomeResults = {
     annualIncome: 5_000_000,
-    isEmploymentIncome: false,
+    hasEmploymentIncome: false,
     blueFilerDeduction: 650_000,
     nationalIncomeTax: 100_000,
     residenceTax: {
@@ -89,7 +89,7 @@ describe('Blue-Filer Deduction Display', () => {
 
         const mixedResults: TakeHomeResults = {
             ...mockResults,
-            isEmploymentIncome: true, // Has employment income
+            hasEmploymentIncome: true, // Has employment income
             // Mocking other necessary values
             netEmploymentIncome: 2_000_000, // Dummy
             totalNetIncome: 3_900_000 // Dummy total

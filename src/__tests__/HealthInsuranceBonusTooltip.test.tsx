@@ -46,7 +46,7 @@ describe('HealthInsuranceBonusTooltip', () => {
 
     const mockResults: TakeHomeResults = {
         annualIncome: 0,
-        isEmploymentIncome: true,
+        hasEmploymentIncome: true,
         nationalIncomeTax: 0,
         residenceTax: {} as unknown as TakeHomeResults['residenceTax'],
         healthInsurance: 0,

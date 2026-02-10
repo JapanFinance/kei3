@@ -124,7 +124,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     ? inputs.incomeStreams
       .filter(s => s.type === 'salary')
       .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0)
-    : (results.isEmploymentIncome ? results.annualIncome : 0);
+    : (results.hasEmploymentIncome ? results.annualIncome : 0);
 
   const bonusIncome = inputs.incomeStreams
     .filter(s => s.type === 'bonus')
@@ -331,7 +331,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               type="subtotal"
             />
           </>
-        ) : (
+        ) : ( // Employee Health Insurance
           <>
             <ResultRow
               label="Monthly Premium"
@@ -422,7 +422,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       </Box>
 
       {/* Employment Insurance */}
-      {results.isEmploymentIncome && (
+      {results.hasEmploymentIncome && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
             Employment Insurance
@@ -474,7 +474,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {/* Total */}
       <Box sx={{ mt: 2 }}>
         <ResultRow
-          label={`Monthly ${results.isEmploymentIncome ? 'Total' : 'Average'}`}
+          label={`Monthly ${results.hasEmploymentIncome ? 'Total' : 'Average'}`}
           value={formatJPY(Math.round(totalSocialInsurance / 12))}
           type="total"
         />
