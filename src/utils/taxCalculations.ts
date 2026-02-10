@@ -80,11 +80,8 @@ const calculateEmploymentInsuranceBreakdown = (
     // Calculate on regular monthly salary
     if (salaryIncome > 0) {
         const monthlySalary = salaryIncome / 12;
-        for (let i = 0; i < 12; i++) {
-            const monthlyPremium = roundSocialInsurancePremium(monthlySalary * employmentInsuranceRate);
-
-            annualPremium += monthlyPremium;
-        }
+        const monthlyPremium = roundSocialInsurancePremium(monthlySalary * employmentInsuranceRate);
+        annualPremium += monthlyPremium * 12;
     }
 
     // Calculate on bonuses
