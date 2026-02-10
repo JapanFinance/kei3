@@ -55,11 +55,9 @@ describe('calculateFurusatoNozeiLimit', () => {
 
   it('furusato nozei limit is reduced by DC plan contributions', () => {
     const fn = calculateTaxes({
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
       isSubjectToLongTermCarePremium: false,
       region: 'Tokyo',
-      showDetailedInput: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
       dcPlanContributions: 240_000, // 20,000 yen per month
@@ -78,11 +76,9 @@ describe('calculateFurusatoNozeiLimit', () => {
     // Standard calculation for 5M income has limit of 61,000
     // If we increase social insurance deduction manually, taxable income decreases, so limit should decrease
     const fnWithHighSocialInsurance = calculateTaxes({
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
       isSubjectToLongTermCarePremium: false,
       region: 'Tokyo',
-      showDetailedInput: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
       dcPlanContributions: 0,
@@ -91,14 +87,12 @@ describe('calculateFurusatoNozeiLimit', () => {
     }).furusatoNozei;
 
     expect(fnWithHighSocialInsurance.limit).toBeLessThan(61_000);
-    
+
     // If we decrease social insurance deduction manually, taxable income increases, so limit should increase
     const fnWithLowSocialInsurance = calculateTaxes({
-      annualIncome: 5_000_000,
-      isEmploymentIncome: true,
+      incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
       isSubjectToLongTermCarePremium: false,
       region: 'Tokyo',
-      showDetailedInput: false,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
       dcPlanContributions: 0,
@@ -110,13 +104,11 @@ describe('calculateFurusatoNozeiLimit', () => {
   });
 });
 
-function calculateFNForIncome(income: number) : FurusatoNozeiDetails {
+function calculateFNForIncome(income: number): FurusatoNozeiDetails {
   return calculateTaxes({
-    annualIncome: income,
-    isEmploymentIncome: true,
+    incomeStreams: [{ id: 'test', type: 'salary', amount: income, frequency: 'annual' }],
     isSubjectToLongTermCarePremium: false,
     region: 'Tokyo',
-    showDetailedInput: false,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
     dcPlanContributions: 0,

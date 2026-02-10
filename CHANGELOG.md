@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-02-10
+
+### New
+
+- Added an "Advanced" income input mode for multiple incomes (e.g. Salary, Bonus, Business). This mode also supports the Blue-Filer special deduction for sole proprietors.
+
 ## 2025-12-08
 
 ### New

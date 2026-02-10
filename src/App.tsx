@@ -1,13 +1,13 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, useEffect, Suspense, lazy } from 'react'
+import { useState, useEffect, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ThemeToggle from './components/ThemeToggle'
 import ChangelogButton from './components/ChangelogButton'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
-import type { TakeHomeInputs, TakeHomeResults } from './types/tax'
+import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types/tax'
 import { calculateTaxes } from './utils/taxCalculations'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, DEPENDENT_COVERAGE_ID, isDependentCoverageEligible } from './types/healthInsurance'
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData'
@@ -29,12 +29,17 @@ function App({ mode, toggleColorMode }: AppProps) {
   const { isOpen: isChangelogOpen, openModal: openChangelog, closeModal: closeChangelog } = useChangelogModal();
 
   // Default values for the form
-  const defaultInputs: TakeHomeInputs = {
+  const defaultInputs: TakeHomeFormState = {
     annualIncome: 5_000_000, // 5 million yen
-    isEmploymentIncome: true,
+    incomeMode: 'salary',
+    incomeStreams: [{
+      id: 'default-salary',
+      type: 'salary',
+      amount: 5_000_000,
+      frequency: 'annual'
+    }],
     isSubjectToLongTermCarePremium: false,
     region: "Tokyo",
-    showDetailedInput: false,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
     dcPlanContributions: 0,
@@ -43,7 +48,7 @@ function App({ mode, toggleColorMode }: AppProps) {
   }
 
   // State for form inputs
-  const [inputs, setInputs] = useState<TakeHomeInputs>(defaultInputs)
+  const [inputs, setInputs] = useState<TakeHomeFormState>(defaultInputs)
 
   // State for calculation results
   const [results, setResults] = useState<TakeHomeResults | null>(null)
@@ -51,7 +56,19 @@ function App({ mode, toggleColorMode }: AppProps) {
   // Debounce the tax calculation to prevent excessive updates from rapid slider changes
   useEffect(() => {
     const calculateAndSetResults = () => {
-      const takeHomePayResults = calculateTaxes(inputs);
+      const calculationInputs: TakeHomeInputs = {
+        incomeStreams: inputs.incomeStreams,
+        isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
+        region: inputs.region,
+        healthInsuranceProvider: inputs.healthInsuranceProvider,
+        dependents: inputs.dependents,
+        dcPlanContributions: inputs.dcPlanContributions,
+        manualSocialInsuranceEntry: inputs.manualSocialInsuranceEntry,
+        manualSocialInsuranceAmount: inputs.manualSocialInsuranceAmount,
+        customEHIRates: inputs.customEHIRates,
+      };
+
+      const takeHomePayResults = calculateTaxes(calculationInputs);
       setResults(takeHomePayResults);
     };
 
@@ -60,27 +77,36 @@ function App({ mode, toggleColorMode }: AppProps) {
     }, 50);
 
     // Cleanup function: clear the timeout if the effect re-runs before the timeout completes
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [inputs]); // Depend on the entire inputs object
+    return () => clearTimeout(handler);
+  }, [
+    inputs.incomeStreams,
+    inputs.isSubjectToLongTermCarePremium,
+    inputs.region,
+    inputs.healthInsuranceProvider,
+    inputs.dependents,
+    inputs.dcPlanContributions,
+    inputs.manualSocialInsuranceEntry,
+    inputs.manualSocialInsuranceAmount,
+    inputs.customEHIRates
+  ]);
 
   // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => {
     const target = e.target as HTMLInputElement;
     const { name, value, type } = target;
+
     const isCheckbox = type === 'checkbox';
     const isNumber = type === 'number' || type === 'range';
 
     setInputs(prev => {
       let processedInputValue: string | number | boolean;
-      
+
       if (isCheckbox) {
         processedInputValue = target.checked;
       } else if (isNumber) {
         processedInputValue = parseFloat(value as string) || 0;
       } else {
-        // For select and other text-based inputs
+        // For select and other text-based inputs, as well as complex objects
         processedInputValue = value;
       }
 
@@ -90,27 +116,25 @@ function App({ mode, toggleColorMode }: AppProps) {
       };
 
       // Cascading updates for health insurance provider and region
-      if (name === 'isEmploymentIncome') {
-        const isNowEmploymentIncome = processedInputValue as boolean;
-        if (isNowEmploymentIncome) {
+      if (name === 'incomeMode') {
+        const newMode = processedInputValue as string;
+        if (newMode === 'salary') {
           newInputs.healthInsuranceProvider = 'KyokaiKenpo';
           const providerDefinition = PROVIDER_DEFINITIONS['KyokaiKenpo'];
           const providerRegions = providerDefinition ? Object.keys(providerDefinition.regions) : [];
-          // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-          newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' : 
-                                 (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
-        } else {
+          newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' :
+            (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
+        } else if (newMode === 'miscellaneous') {
           newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-          // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
-                                 (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
+          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' :
+            (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         }
       } else if (name === 'healthInsuranceProvider') {
         newInputs.healthInsuranceProvider = processedInputValue as string;
         if (processedInputValue === NATIONAL_HEALTH_INSURANCE_ID) {
           // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
-                                 (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
+          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' :
+            (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         } else if (processedInputValue === DEPENDENT_COVERAGE_ID) {
           // Dependent coverage doesn't need a region
           newInputs.region = DEFAULT_PROVIDER_REGION;
@@ -120,11 +144,11 @@ function App({ mode, toggleColorMode }: AppProps) {
           if (providerDefinition) {
             const providerRegions = Object.keys(providerDefinition.regions);
             // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-            newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' : 
-                                   (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
+            newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' :
+              (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
           } else {
             newInputs.region = DEFAULT_PROVIDER_REGION;
-            console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data. Defaulting region.`);
+            console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data.Defaulting region.`);
           }
         }
       } else if (name === 'annualIncome') {
@@ -133,8 +157,8 @@ function App({ mode, toggleColorMode }: AppProps) {
         if (prev.healthInsuranceProvider === DEPENDENT_COVERAGE_ID && !isDependentCoverageEligible(newIncome)) {
           // Income exceeded threshold, automatically switch to NHI
           newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' : 
-                                 (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
+          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' :
+            (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
         }
       }
       return newInputs;
@@ -176,8 +200,8 @@ function App({ mode, toggleColorMode }: AppProps) {
         >
           Japan Take-Home Pay Calculator
         </Typography>
-        <Box sx={{ 
-          flexShrink: 0, 
+        <Box sx={{
+          flexShrink: 0,
           ml: { xs: 1, sm: 2 },
           display: 'flex',
           alignItems: 'center',
@@ -211,7 +235,7 @@ function App({ mode, toggleColorMode }: AppProps) {
               },
             }} />
           }>
-            <TakeHomeResultsDisplay 
+            <TakeHomeResultsDisplay
               results={results}
               inputs={inputs}
             />
@@ -228,9 +252,9 @@ function App({ mode, toggleColorMode }: AppProps) {
           animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         }} />
       }>
-        <TakeHomeChart 
+        <TakeHomeChart
           currentIncome={inputs.annualIncome}
-          isEmploymentIncome={inputs.isEmploymentIncome}
+          isEmploymentIncome={inputs.incomeStreams.some(s => s.type === 'salary' || s.type === 'bonus')}
           isSubjectToLongTermCarePremium={inputs.isSubjectToLongTermCarePremium}
           healthInsuranceProvider={inputs.healthInsuranceProvider}
           region={inputs.region}
@@ -239,6 +263,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           customEHIRates={inputs.customEHIRates}
           manualSocialInsuranceEntry={inputs.manualSocialInsuranceEntry}
           manualSocialInsuranceAmount={inputs.manualSocialInsuranceAmount}
+          incomeStreams={inputs.incomeStreams}
         />
       </Suspense>
 

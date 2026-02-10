@@ -1,10 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TakeHomeInputs, TakeHomeResults } from '../types/tax'
+import type { TakeHomeInputs, TakeHomeResults, BonusIncomeStream, IncomeStream } from '../types/tax'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
-import { calculatePensionPremium } from './pensionCalculator';
-import { calculateHealthInsurancePremium, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
+import { calculatePensionBreakdown } from './pensionCalculator';
+import { calculateHealthInsuranceBreakdown, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
 import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
 import { calculateDependentDeductions } from './dependentDeductions';
 
@@ -12,13 +12,13 @@ import { calculateDependentDeductions } from './dependentDeductions';
 export const employmentInsuranceRate = 0.0055; // 0.55%
 
 /**
- * Calculates the net employment income based on the tax rules for 2025 income, applying the employment income deduction.
+ * Calculates the net employment income based on the tax rules for 2025/2026 income, applying the employment income deduction.
  * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
  */
 export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): number => {
-    if (grossEmploymentIncome < 651_000) 
+    if (grossEmploymentIncome < 651_000)
         return 0;
-    
+
     if (grossEmploymentIncome < 1_900_000)
         return grossEmploymentIncome - 650_000;
 
@@ -29,13 +29,75 @@ export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): num
         return Math.floor(roundedGrossIncome * 0.7) - 80_000
     } else if (grossEmploymentIncome <= 6_600_000) {
         return Math.floor(roundedGrossIncome * 0.8) - 440_000
-    } 
-    
+    }
+
     if (grossEmploymentIncome <= 8_500_000) {
         return Math.floor(grossEmploymentIncome * 0.9) - 1_100_000
     } else {
         return grossEmploymentIncome - 1_950_000
     }
+}
+
+/**
+ * Breakdown of Employment Insurance premium components
+ */
+export interface EmploymentInsuranceBreakdown {
+    total: number;
+    bonusPortion: number;
+}
+
+/**
+ * Calculates employment insurance premiums breakdown based on income
+ */
+const calculateEmploymentInsuranceBreakdown = (
+    salaryIncome: number,
+    bonuses: BonusIncomeStream[]
+): EmploymentInsuranceBreakdown => {
+    // If no employment income, no employment insurance is required
+    if (salaryIncome <= 0 && !bonuses.some(b => b.amount > 0)) {
+        return { total: 0, bonusPortion: 0 };
+    }
+
+    let annualPremium = 0;
+    let bonusPortion = 0;
+
+    // Calculate on regular monthly salary
+    if (salaryIncome > 0) {
+        const monthlySalary = salaryIncome / 12;
+        for (let i = 0; i < 12; i++) {
+            const monthlyPremium = monthlySalary * employmentInsuranceRate;
+            // Apply special rounding rules
+            const decimal = monthlyPremium - Math.floor(monthlyPremium);
+            let roundedPremium: number;
+
+            if (decimal <= 0.5) {
+                roundedPremium = Math.floor(monthlyPremium);
+            } else {
+                roundedPremium = Math.ceil(monthlyPremium);
+            }
+
+            annualPremium += roundedPremium;
+        }
+    }
+
+    // Calculate on bonuses
+    for (const bonus of bonuses) {
+        const bonusPremium = bonus.amount * employmentInsuranceRate;
+        // Apply special rounding rules
+        const decimal = bonusPremium - Math.floor(bonusPremium);
+        let roundedPremium: number;
+
+        if (decimal <= 0.5) {
+            roundedPremium = Math.floor(bonusPremium);
+        } else {
+            roundedPremium = Math.ceil(bonusPremium);
+        }
+
+        bonusPortion += roundedPremium;
+        annualPremium += roundedPremium;
+    }
+
+    return { total: Math.max(annualPremium, 0), bonusPortion };
 }
 
 /**
@@ -51,32 +113,12 @@ export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): num
  *   - If decimal is 0.51 yen or more → round up
  * - Annual total is the sum of 12 monthly premiums
  */
-export const calculateEmploymentInsurance = (annualIncome: number, isEmploymentIncome: boolean): number => {
-    // If not employment income, no employment insurance is required
-    if (!isEmploymentIncome || annualIncome <= 0) {
-        return 0;
-    }
-
-    const monthlySalary = annualIncome / 12;
-    let annualPremium = 0;
-
-
-    for (let i = 0; i < 12; i++) {
-        const monthlyPremium = monthlySalary * employmentInsuranceRate;
-        // Apply special rounding rules
-        const decimal = monthlyPremium - Math.floor(monthlyPremium);
-        let roundedPremium: number;
-        
-        if (decimal <= 0.5) {
-            roundedPremium = Math.floor(monthlyPremium);
-        } else {
-            roundedPremium = Math.ceil(monthlyPremium);
-        }
-        
-        annualPremium += roundedPremium;
-    }
-
-    return Math.max(annualPremium, 0);
+// Only exported for testing
+export const calculateEmploymentInsurance = (
+    salaryIncome: number,
+    bonuses: BonusIncomeStream[] = []
+): number => {
+    return calculateEmploymentInsuranceBreakdown(salaryIncome, bonuses).total;
 }
 
 /**
@@ -160,14 +202,14 @@ export const calculateReconstructionSurtax = (baseTax: number): number => {
 export const calculateNationalIncomeTax = (taxableIncome: number): number => {
     const baseTax = calculateNationalIncomeTaxBase(taxableIncome);
     const reconstructionSurtax = calculateReconstructionSurtax(baseTax);
-    
+
     // Round down to the nearest 100 yen (total tax)
     return Math.floor((baseTax + reconstructionSurtax) / 100) * 100;
 }
 
 const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     annualIncome: 0,
-    isEmploymentIncome: true,
+    hasEmploymentIncome: true,
     nationalIncomeTax: 0,
     residenceTax: NON_TAXABLE_RESIDENCE_TAX_DETAIL,
     healthInsurance: 0,
@@ -180,15 +222,114 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
     isSubjectToLongTermCarePremium: false,
+    totalNetIncome: 0,
+};
+
+/**
+ * Intermediate breakdown of income streams for calculation
+ */
+interface IncomeBreakdown {
+    salaryIncome: number;
+    bonusIncome: BonusIncomeStream[];
+    netBusinessAndMiscIncomeBeforeBlueFilerDeduction: number;
+    netBusinessAndMiscIncome: number;
+    blueFilerDeduction: number;
+    totalAnnualIncome: number;
+}
+
+/**
+ * Processes income streams to categorize them and calculate totals.
+ * This is used by both the main tax calculation and the net income calculation.
+ */
+const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdown => {
+    let salaryIncome = 0;
+    const bonusIncome: BonusIncomeStream[] = [];
+    let netBusinessAndMiscIncomeBeforeBlueFilerDeduction = 0;
+    let netBusinessAndMiscIncome = 0;
+    let blueFilerDeduction = 0;
+    let processedBusinessIncome = false;
+
+    for (const income of incomeStreams) {
+        if (income.type === 'salary') {
+            if (income.frequency === 'monthly') {
+                salaryIncome += income.amount * 12;
+            } else {
+                salaryIncome += income.amount;
+            }
+        } else if (income.type === 'bonus') {
+            bonusIncome.push(income);
+        } else if (income.type === 'business') {
+            if (processedBusinessIncome) {
+                throw new Error('Only one business income stream is allowed.');
+            }
+            if (income.amount < 0) {
+                throw new Error('Business income losses are not currently supported.');
+            }
+            const maxDeduction = income.blueFilerDeduction || 0;
+            netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
+            // Net business income is reduced by the deduction, up to the amount of income
+            const effectiveDeduction = Math.min(income.amount, maxDeduction);
+            netBusinessAndMiscIncome += income.amount - effectiveDeduction;
+            blueFilerDeduction = effectiveDeduction;
+            processedBusinessIncome = true;
+        } else if (income.type === 'miscellaneous') {
+            netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
+            netBusinessAndMiscIncome += income.amount;
+        }
+    }
+
+    const totalAnnualIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + netBusinessAndMiscIncomeBeforeBlueFilerDeduction;
+
+    return {
+        salaryIncome,
+        bonusIncome,
+        netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
+        netBusinessAndMiscIncome,
+        blueFilerDeduction,
+        totalAnnualIncome
+    };
+};
+
+/**
+ * Calculates just the total net income.
+ * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
+ */
+export const calculateTotalNetIncome = (incomeStreams: IncomeStream[]): number => {
+    const {
+        salaryIncome,
+        bonusIncome,
+        netBusinessAndMiscIncome
+    } = calculateIncomeBreakdown(incomeStreams);
+
+    const grossEmploymentIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+
+    return netEmploymentIncome + netBusinessAndMiscIncome;
 };
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
-    if (inputs.annualIncome <= 0) {
+    const {
+        salaryIncome,
+        bonusIncome,
+        netBusinessAndMiscIncome,
+        blueFilerDeduction,
+        totalAnnualIncome
+    } = calculateIncomeBreakdown(inputs.incomeStreams);
+
+    if (totalAnnualIncome <= 0) {
         return DEFAULT_TAKE_HOME_RESULTS;
     }
-    const annualIncome = inputs.annualIncome;
-    const isEmploymentIncome = inputs.isEmploymentIncome;
-    const netIncome = isEmploymentIncome ? calculateNetEmploymentIncome(annualIncome) : annualIncome;
+
+    // Use the calculated total annual income instead of inputs.annualIncome for consistency
+    const annualIncome = totalAnnualIncome;
+
+    // Determine if there is any employment income (salary or bonus)
+    const hasEmploymentIncome = salaryIncome > 0 || bonusIncome.some(b => b.amount > 0);
+
+    const grossEmploymentIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+
+    const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;
 
     let healthInsurance = 0;
     let pensionPayments = 0;
@@ -196,37 +337,48 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     let socialInsuranceDeduction = 0;
     let nhiBreakdown = null;
 
+    // Bonus breakdown variables
+    let healthInsuranceOnBonus = 0;
+    let pensionOnBonus = 0;
+    let employmentInsuranceOnBonus = 0;
+
     if (inputs.manualSocialInsuranceEntry) {
         socialInsuranceDeduction = inputs.manualSocialInsuranceAmount;
     } else {
         // For health insurance calculation, we need to use the appropriate income:
-        // - Employee health insurance: uses gross employment income (monthly salary-based calculation)
-        // - National Health Insurance: uses net income (after employment income deduction if applicable)
-        //   This is because NHI premiums are based on taxable income, while employee health insurance
-        //   is based on standard monthly remuneration before deductions.
-        const incomeForHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID
-            ? netIncome
-            : inputs.annualIncome;
+        // - Employee health insurance: based on standard monthly remuneration
+        // - National Health Insurance: based on net income
 
-        healthInsurance = calculateHealthInsurancePremium(
-            incomeForHealthInsurance,
-            inputs.isSubjectToLongTermCarePremium,
-            inputs.healthInsuranceProvider,
-            inputs.region,
-            inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates ? {
-                healthRate: inputs.customEHIRates.healthInsuranceRate,
-                ltcRate: inputs.customEHIRates.longTermCareRate
-            } : undefined
-        );
-
-        // Calculate NHI breakdown if National Health Insurance is selected
         if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
+            const hiResult = calculateHealthInsuranceBreakdown(
+                netIncome,
+                inputs.isSubjectToLongTermCarePremium,
+                inputs.healthInsuranceProvider,
+                inputs.region
+            );
+            healthInsurance = hiResult.total;
+            healthInsuranceOnBonus = hiResult.bonusPortion;
+
             // For NHI breakdown, also use net income
             nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
                 netIncome,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.region as string
             );
+        } else { // Employee Health Insurance
+            const hiResult = calculateHealthInsuranceBreakdown(
+                salaryIncome,
+                inputs.isSubjectToLongTermCarePremium,
+                inputs.healthInsuranceProvider,
+                inputs.region,
+                inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates ? {
+                    healthRate: inputs.customEHIRates.healthInsuranceRate,
+                    ltcRate: inputs.customEHIRates.longTermCareRate
+                } : undefined,
+                bonusIncome
+            );
+            healthInsurance = hiResult.total;
+            healthInsuranceOnBonus = hiResult.bonusPortion;
         }
 
         // Calculate pension based on health insurance type
@@ -234,11 +386,22 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         // People on employee health insurance are in Employee Pension system
         // People covered as dependents do not pay pension premiums
         const isInEmployeePensionSystem = inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID && inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
-        pensionPayments = inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID 
-            ? 0 
-            : calculatePensionPremium(isInEmployeePensionSystem, annualIncome / 12);
 
-        employmentInsurance = calculateEmploymentInsurance(annualIncome, isEmploymentIncome);
+        if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
+            pensionPayments = 0;
+        } else if (isInEmployeePensionSystem) {
+            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem, salaryIncome / 12, true, bonusIncome);
+            pensionPayments = pensionResult.total;
+            pensionOnBonus = pensionResult.bonusPortion;
+        } else { // National Pension
+            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem);
+            pensionPayments = pensionResult.total;
+            pensionOnBonus = pensionResult.bonusPortion;
+        }
+
+        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome, bonusIncome);
+        employmentInsurance = eiResult.total;
+        employmentInsuranceOnBonus = eiResult.bonusPortion;
 
         socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
     }
@@ -253,7 +416,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
 
     const nationalIncomeTax = calculateNationalIncomeTax(taxableIncomeForNationalIncomeTax);
-    
+
     // Calculate base tax and reconstruction surtax breakdown for display
     // Show the actual calculated amounts (before final rounding)
     const nationalIncomeTaxBase = calculateNationalIncomeTaxBase(taxableIncomeForNationalIncomeTax);
@@ -272,7 +435,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     return {
         annualIncome,
-        isEmploymentIncome,
+        hasEmploymentIncome,
+        blueFilerDeduction,
         nationalIncomeTax,
         residenceTax,
         healthInsurance,
@@ -280,7 +444,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         employmentInsurance,
         takeHomeIncome,
         socialInsuranceOverride: inputs.manualSocialInsuranceEntry ? inputs.manualSocialInsuranceAmount : undefined,
-        netEmploymentIncome: isEmploymentIncome ? netIncome : undefined,
+        // Bonus breakdown
+        healthInsuranceOnBonus,
+        pensionOnBonus,
+        employmentInsuranceOnBonus,
+        netEmploymentIncome: hasEmploymentIncome ? netEmploymentIncome : undefined,
+        totalNetIncome: netIncome,
         nationalIncomeTaxBasicDeduction,
         taxableIncomeForNationalIncomeTax,
         residenceTaxBasicDeduction,

@@ -4,18 +4,63 @@
 import type { HealthInsuranceProviderId } from "./healthInsurance";
 import type { Dependent, DependentDeductionResults } from "./dependents";
 
-export interface TakeHomeInputs {
+export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
+
+export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous';
+
+export interface BaseIncomeStream {
+  id: string;
+  type: IncomeStreamType;
+  amount: number;
+}
+
+export interface SalaryIncomeStream extends BaseIncomeStream {
+  type: 'salary';
+  frequency: 'monthly' | 'annual';
+}
+
+export interface BonusIncomeStream extends BaseIncomeStream {
+  type: 'bonus';
+  month: number; // 0-11 for Jan-Dec
+}
+
+export interface BusinessIncomeStream extends BaseIncomeStream {
+  type: 'business';
+  blueFilerDeduction?: number; // 0, 100000, 550000, or 650000
+}
+
+export interface MiscellaneousIncomeStream extends BaseIncomeStream {
+  type: 'miscellaneous';
+}
+
+export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream;
+
+/** Interface for the UI Form State */
+export interface TakeHomeFormState {
   annualIncome: number;
-  isEmploymentIncome: boolean;
-  isSubjectToLongTermCarePremium: boolean; // Person is 40-64 years old (must pay long-term care insurance premiums)
+  incomeMode: IncomeMode;
+  incomeStreams: IncomeStream[];
+  isSubjectToLongTermCarePremium: boolean;
   region: string;
-  showDetailedInput: boolean;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
   dcPlanContributions: number;
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
-  // Custom provider rates (percentages, e.g. 5.0 for 5%)
+  customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+  savedIncomeStreams?: IncomeStream[];
+}
+
+/** Interface for Calculation Logic (clean, normalized inputs) */
+export interface TakeHomeInputs {
+  incomeStreams: IncomeStream[];
+  isSubjectToLongTermCarePremium: boolean;
+  region: string;
+  healthInsuranceProvider: HealthInsuranceProviderId;
+  dependents: Dependent[];
+  dcPlanContributions: number;
+  manualSocialInsuranceEntry: boolean;
+  manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
 }
 
@@ -26,7 +71,8 @@ export interface CustomEmployeesHealthInsuranceRates {
 
 export interface TakeHomeResults {
   annualIncome: number;
-  isEmploymentIncome: boolean;
+  hasEmploymentIncome: boolean;
+  blueFilerDeduction?: number;
   nationalIncomeTax: number;
   residenceTax: ResidenceTaxDetails;
   healthInsurance: number;
@@ -34,8 +80,13 @@ export interface TakeHomeResults {
   employmentInsurance?: number | undefined;
   takeHomeIncome: number;
   socialInsuranceOverride?: number | undefined;
+  // Bonus breakdown
+  healthInsuranceOnBonus?: number;
+  pensionOnBonus?: number;
+  employmentInsuranceOnBonus?: number;
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
+  totalNetIncome: number;
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;

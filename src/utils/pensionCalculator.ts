@@ -1,6 +1,8 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { BonusIncomeStream } from '../types/tax';
+
 export interface IncomeBracketToPensionPremium {
   min: number;
   max: number | null;
@@ -13,6 +15,16 @@ export interface IncomeBracketToPensionPremium {
  */
 export const monthlyNationalPensionContribution = 17510;
 
+/**
+ * Employees' pension insurance rate (厚生年金保険料率)
+ * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
+ */
+export const EMPLOYEES_PENSION_RATE = 0.183; // 18.3%
+
+/**
+ * Employees' pension insurance premiums by income bracket
+ * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
+ */
 export const EMPLOYEES_PENSION_PREMIUM: IncomeBracketToPensionPremium[] = [
   { min: 0, max: 93000, fullAmount: 16104.00, halfAmount: 8052.00 },
   { min: 93000, max: 101000, fullAmount: 17934.00, halfAmount: 8967.00 },
@@ -49,24 +61,31 @@ export const EMPLOYEES_PENSION_PREMIUM: IncomeBracketToPensionPremium[] = [
 ];
 
 /**
- * Calculates the annual insurance premium based on monthly income
- * @param isEmployeesPension - Whether the person is enrolled in employees pension (厚生年金)
- * @param monthlyIncome - Monthly income in JPY
- * @param isHalfAmount - Whether to return the half amount (折半額) instead of full amount (全額)
- * @returns The calculated annual insurance premium amount
- * @see https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/20200825.html
- * @see https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01
+ * Breakdown of Pension premium components
  */
-export function calculatePensionPremium(isEmployeesPension: boolean = true, monthlyIncome: number = 0, isHalfAmount: boolean = true): number {
+export interface PensionBreakdown {
+  total: number;
+  bonusPortion: number;
+}
+
+/**
+ * Calculates the annual insurance premium breakdown based on monthly income
+ */
+export function calculatePensionBreakdown(
+  isEmployeesPension: boolean = true,
+  monthlyIncome: number = 0,
+  isHalfAmount: boolean = true,
+  bonuses: BonusIncomeStream[] = []
+): PensionBreakdown {
   if (!isEmployeesPension) {
-    return monthlyNationalPensionContribution * 12; // Annual contribution
+    return { total: monthlyNationalPensionContribution * 12, bonusPortion: 0 };
   }
   if (monthlyIncome < 0) {
     throw new Error('Monthly income must be a positive number');
   }
 
-  const monthlyPremium = EMPLOYEES_PENSION_PREMIUM.find(bracket => 
-    monthlyIncome >= bracket.min && 
+  const monthlyPremium = EMPLOYEES_PENSION_PREMIUM.find(bracket =>
+    monthlyIncome >= bracket.min &&
     (bracket.max === null || monthlyIncome < bracket.max)
   );
 
@@ -74,5 +93,90 @@ export function calculatePensionPremium(isEmployeesPension: boolean = true, mont
     throw new Error('No matching income bracket found');
   }
 
-  return (isHalfAmount ? monthlyPremium.halfAmount : monthlyPremium.fullAmount) * 12;
+  let totalPremium = (isHalfAmount ? monthlyPremium.halfAmount : monthlyPremium.fullAmount) * 12;
+  let bonusPortion = 0;
+
+  if (bonuses.some(b => b.amount > 0)) {
+    const bonusBreakdown = calculatePensionBonusBreakdown(bonuses, isHalfAmount);
+    bonusPortion = bonusBreakdown.reduce((sum, item) => sum + item.premium, 0);
+    totalPremium += bonusPortion;
+  }
+
+  return { total: totalPremium, bonusPortion };
+}
+
+/**
+ * Breakdown of a single month's bonus pension premium calculation
+ */
+export interface PensionBonusBreakdownItem {
+  month: number;
+  totalBonusAmount: number;
+  standardBonusAmount: number;
+  premium: number;
+}
+
+/**
+ * Calculates the detailed breakdown of pension premiums for bonuses
+ * @param bonuses - List of bonus payments
+ * @param isHalfAmount - Whether to return the half amount (折半額)
+ */
+export function calculatePensionBonusBreakdown(
+  bonuses: BonusIncomeStream[],
+  isHalfAmount: boolean = true
+): PensionBonusBreakdownItem[] {
+  if (bonuses.length === 0) {
+    return [];
+  }
+
+  const effectiveRate = isHalfAmount ? EMPLOYEES_PENSION_RATE / 2 : EMPLOYEES_PENSION_RATE;
+  const breakdown: PensionBonusBreakdownItem[] = [];
+
+  // Group bonuses by month (0-11)
+  const monthlyBonusTotals = new Map<number, number>();
+
+  for (const bonus of bonuses) {
+    const currentMonthTotal = monthlyBonusTotals.get(bonus.month) || 0;
+    monthlyBonusTotals.set(bonus.month, currentMonthTotal + bonus.amount);
+  }
+
+  // Calculate premium for each month with bonuses
+  for (const [month, totalAmount] of monthlyBonusTotals) {
+    // 1. Round down to nearest 1,000 yen
+    const roundedBonusAmount = Math.floor(totalAmount / 1000) * 1000;
+
+    // 2. Cap at 1.5 million yen per month to get Standard Bonus Amount
+    const standardBonusAmount = Math.min(roundedBonusAmount, 1_500_000);
+
+    // 3. Calculate premium
+    const premium = Math.round(standardBonusAmount * effectiveRate);
+
+    breakdown.push({
+      month,
+      totalBonusAmount: totalAmount,
+      standardBonusAmount,
+      premium,
+    });
+  }
+
+  // Sort by month
+  return breakdown.sort((a, b) => a.month - b.month);
+}
+
+/**
+ * Calculates the annual insurance premium based on monthly income
+ * @param isEmployeesPension - Whether the person is enrolled in employees pension (厚生年金)
+ * @param monthlyIncome - Monthly income in JPY
+ * @param isHalfAmount - Whether to return the half amount (折半額) instead of full amount (全額)
+ * @param bonuses - List of bonus payments
+ * @returns The calculated annual insurance premium amount
+ * @see https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/20200825.html
+ * @see https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01
+ */
+export function calculatePensionPremium(
+  isEmployeesPension: boolean = true,
+  monthlyIncome: number = 0,
+  isHalfAmount: boolean = true,
+  bonuses: BonusIncomeStream[] = []
+): number {
+  return calculatePensionBreakdown(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses).total;
 }
