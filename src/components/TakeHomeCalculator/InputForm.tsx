@@ -513,7 +513,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
             {/* Annual Income Slider - Only show for simple modes */}
             {inputs.incomeMode !== 'advanced' && (
-              <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 1 }}>
+              <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 0.5 }}>
                 <Slider
                   className="income-slider"
                   value={inputs.annualIncome}
