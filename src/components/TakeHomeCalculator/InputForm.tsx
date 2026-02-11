@@ -98,6 +98,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
     // Calculate total annual income from streams
     const totalIncome = newStreams.reduce((sum, s) => {
+      // Commuting allowance is not included in annual income
+      if (s.type === 'commutingAllowance') {
+        return sum;
+      }
       if (s.type === 'salary' && s.frequency === 'monthly') {
         return sum + s.amount * 12;
       }
@@ -181,6 +185,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
         // Calculate total of candidate streams
         const streamTotal = streamsToUse.reduce((sum, s) => {
+          // Commuting allowance is not included in annual income
+          if (s.type === 'commutingAllowance') {
+            return sum;
+          }
           if (s.type === 'salary' && s.frequency === 'monthly') {
             return sum + s.amount * 12;
           }
@@ -443,11 +451,34 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             {/* Income Input or Advanced Details */}
             {inputs.incomeMode === 'advanced' ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
-                  <Typography variant="body1">Total Annual Income</Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {formatJPY(inputs.annualIncome)}
-                  </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
+                    <Typography variant="body1">Total Annual Income</Typography>
+                    <Typography variant="h6" fontWeight="bold">
+                      {formatJPY(inputs.annualIncome)}
+                    </Typography>
+                  </Box>
+
+                  {(() => {
+                    const totalNontaxableBenefits = inputs.incomeStreams.reduce((sum, s) => {
+                      if (s.type === 'commutingAllowance') {
+                        if (s.frequency === 'monthly') return sum + s.amount * 12;
+                        if (s.frequency === '3-months') return sum + s.amount * 4;
+                        if (s.frequency === '6-months') return sum + s.amount * 2;
+                        return sum + s.amount;
+                      }
+                      return sum;
+                    }, 0);
+
+                    return totalNontaxableBenefits > 0 ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
+                        <Typography variant="body2" color="text.secondary">Total Nontaxable Benefits</Typography>
+                        <Typography variant="subtitle1" fontWeight="medium" color="text.secondary">
+                          {formatJPY(totalNontaxableBenefits)}
+                        </Typography>
+                      </Box>
+                    ) : null;
+                  })()}
                 </Box>
 
                 <Badge
@@ -468,9 +499,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     startIcon={<EditIcon />}
                     onClick={() => setIncomeModalOpen(true)}
                     fullWidth
-                    sx={{ height: 48 }}
                   >
-                    Edit Income
+                    Edit Income/Benefits
                   </Button>
                 </Badge>
               </Box>

@@ -230,6 +230,7 @@ interface IncomeBreakdown {
     netBusinessAndMiscIncome: number;
     blueFilerDeduction: number;
     totalAnnualIncome: number;
+    commutingAllowance: number;
 }
 
 /**
@@ -242,6 +243,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     let netBusinessAndMiscIncomeBeforeBlueFilerDeduction = 0;
     let netBusinessAndMiscIncome = 0;
     let blueFilerDeduction = 0;
+    let commutingAllowance = 0;
     let processedBusinessIncome = false;
 
     for (const income of incomeStreams) {
@@ -250,6 +252,16 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
                 salaryIncome += income.amount * 12;
             } else {
                 salaryIncome += income.amount;
+            }
+        } else if (income.type === 'commutingAllowance') {
+            if (income.frequency === 'monthly') {
+                commutingAllowance += income.amount * 12;
+            } else if (income.frequency === '3-months') {
+                commutingAllowance += income.amount * 4;
+            } else if (income.frequency === '6-months') {
+                commutingAllowance += income.amount * 2;
+            } else {
+                commutingAllowance += income.amount;
             }
         } else if (income.type === 'bonus') {
             bonusIncome.push(income);
@@ -281,7 +293,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
         netBusinessAndMiscIncome,
         blueFilerDeduction,
-        totalAnnualIncome
+        totalAnnualIncome,
+        commutingAllowance
     };
 };
 
@@ -293,10 +306,15 @@ export const calculateTotalNetIncome = (incomeStreams: IncomeStream[]): number =
     const {
         salaryIncome,
         bonusIncome,
-        netBusinessAndMiscIncome
+        netBusinessAndMiscIncome,
+        commutingAllowance
     } = calculateIncomeBreakdown(incomeStreams);
 
-    const grossEmploymentIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    // Apply strict 150,000 JPY/month limit for non-taxable commuting allowance
+    // Since we're working with annual amounts, we use 150,000 * 12 = 1,800,000
+    const taxableCommutingAllowance = Math.max(0, commutingAllowance - 1_800_000);
+
+    const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
 
     return netEmploymentIncome + netBusinessAndMiscIncome;
@@ -308,7 +326,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         bonusIncome,
         netBusinessAndMiscIncome,
         blueFilerDeduction,
-        totalAnnualIncome
+        totalAnnualIncome,
+        commutingAllowance
     } = calculateIncomeBreakdown(inputs.incomeStreams);
 
     if (totalAnnualIncome <= 0) {
@@ -318,10 +337,14 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // Use the calculated total annual income instead of inputs.annualIncome for consistency
     const annualIncome = totalAnnualIncome;
 
-    // Determine if there is any employment income (salary or bonus)
-    const hasEmploymentIncome = salaryIncome > 0 || bonusIncome.some(b => b.amount > 0);
+    // Determine if there is any employment income (salary, bonus, or taxable commuting allowance)
+    const hasEmploymentIncome = salaryIncome > 0 || bonusIncome.some(b => b.amount > 0) || commutingAllowance > 0;
 
-    const grossEmploymentIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    // Apply strict 150,000 JPY/month limit for non-taxable commuting allowance
+    const nonTaxableCommutingAllowance = Math.min(commutingAllowance, 1_800_000);
+    const taxableCommutingAllowance = Math.max(0, commutingAllowance - 1_800_000);
+
+    const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
 
     const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;
@@ -361,8 +384,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
                 inputs.region as string
             );
         } else { // Employee Health Insurance
+            // For Employee Health Insurance, the premiums are based on standard monthly remuneration,
+            // which INCLUDES the full commuting allowance (taxable + non-taxable).
             const hiResult = calculateHealthInsuranceBreakdown(
-                salaryIncome,
+                salaryIncome + commutingAllowance,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.healthInsuranceProvider,
                 inputs.region,
@@ -385,7 +410,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
             pensionPayments = 0;
         } else if (isInEmployeePensionSystem) {
-            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem, salaryIncome / 12, true, bonusIncome);
+            // Pension also includes full commuting allowance in SMR
+            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem, (salaryIncome + commutingAllowance) / 12, true, bonusIncome);
             pensionPayments = pensionResult.total;
             pensionOnBonus = pensionResult.bonusPortion;
         } else { // National Pension
@@ -394,7 +420,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             pensionOnBonus = pensionResult.bonusPortion;
         }
 
-        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome, bonusIncome);
+
+
+        // Employment Insurance also includes full commuting allowance
+        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome + commutingAllowance, bonusIncome);
         employmentInsurance = eiResult.total;
         employmentInsuranceOnBonus = eiResult.bonusPortion;
 
@@ -439,6 +468,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         employmentInsurance,
         takeHomeIncome,
         socialInsuranceOverride: inputs.manualSocialInsuranceEntry ? inputs.manualSocialInsuranceAmount : undefined,
+        // Commuting Allowance details
+        commuterAllowanceIncome: commutingAllowance,
+        commuterAllowanceTaxable: taxableCommutingAllowance,
+        commuterAllowanceNonTaxable: nonTaxableCommutingAllowance,
         // Bonus breakdown
         healthInsuranceOnBonus,
         pensionOnBonus,

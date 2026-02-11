@@ -31,9 +31,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   onCancel,
   disabledTypes = [],
 }) => {
+
   const [type, setType] = useState<IncomeStreamType>(initialData?.type || 'salary');
   const [amount, setAmount] = useState<number>(initialData?.amount || 0);
-  const [frequency, setFrequency] = useState<'monthly' | 'annual'>((initialData?.type === 'salary' && initialData.frequency) || 'annual');
+  const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(((initialData?.type === 'salary' || initialData?.type === 'commutingAllowance') && initialData.frequency) || 'annual');
   const [month, setMonth] = useState<number>((initialData?.type === 'bonus' && initialData.month) || 0); // 0 = Jan
   const [blueFilerDeduction, setBlueFilerDeduction] = useState<number>((initialData?.type === 'business' && initialData.blueFilerDeduction) || 0);
 
@@ -42,11 +43,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     let stream: IncomeStream;
 
     if (type === 'salary') {
-      stream = { id, type: 'salary', amount, frequency };
+      stream = { id, type: 'salary', amount, frequency: frequency as 'monthly' | 'annual' };
     } else if (type === 'bonus') {
       stream = { id, type: 'bonus', amount, month };
     } else if (type === 'business') {
       stream = { id, type: 'business', amount, blueFilerDeduction };
+    } else if (type === 'commutingAllowance') {
+      stream = { id, type: 'commutingAllowance', amount, frequency };
     } else {
       stream = { id, type: 'miscellaneous', amount };
     }
@@ -59,6 +62,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       case 'business':
       case 'miscellaneous':
         return 'Annual Net Income';
+      case 'commutingAllowance':
+        return 'Allowance Amount';
       default:
         return 'Gross Income';
     }
@@ -74,6 +79,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         return 'Gross income before taxes and deductions';
       case 'bonus':
         return 'Gross bonus amount before taxes and deductions';
+      case 'commutingAllowance':
+        return 'Commuting allowance up to 150,000 yen per month is non-taxable for income tax, but the full amount affects social insurance premiums.';
       default:
         return undefined;
     }
@@ -83,15 +90,16 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, mb: 2 }}>
       <Stack spacing={2}>
         <FormControl fullWidth>
-          <InputLabel id="income-type-label">Income Type</InputLabel>
+          <InputLabel id="income-type-label">Income/Benefit Type</InputLabel>
           <Select
             labelId="income-type-label"
             value={type}
-            label="Income Type"
+            label="Income/Benefit Type"
             onChange={(e) => setType(e.target.value as IncomeStreamType)}
           >
             <MenuItem value="salary" disabled={disabledTypes.includes('salary')}>Salary</MenuItem>
             <MenuItem value="bonus" disabled={disabledTypes.includes('bonus')}>Bonus</MenuItem>
+            <MenuItem value="commutingAllowance" disabled={disabledTypes.includes('commutingAllowance')}>Commuting Allowance</MenuItem>
             <MenuItem value="business" disabled={disabledTypes.includes('business')}>Business</MenuItem>
             <MenuItem value="miscellaneous" disabled={disabledTypes.includes('miscellaneous')}>Miscellaneous</MenuItem>
           </Select>
@@ -106,6 +114,22 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               onChange={(e) => setFrequency(e.target.value as 'monthly' | 'annual')}
             >
               <MenuItem value="monthly">Monthly</MenuItem>
+              <MenuItem value="annual">Annual</MenuItem>
+            </Select>
+          </FormControl>
+        )}
+
+        {type === 'commutingAllowance' && (
+          <FormControl fullWidth>
+            <InputLabel>Frequency</InputLabel>
+            <Select
+              value={frequency}
+              label="Frequency"
+              onChange={(e) => setFrequency(e.target.value as 'monthly' | '3-months' | '6-months' | 'annual')}
+            >
+              <MenuItem value="monthly">1 Month</MenuItem>
+              <MenuItem value="3-months">3 Months</MenuItem>
+              <MenuItem value="6-months">6 Months</MenuItem>
               <MenuItem value="annual">Annual</MenuItem>
             </Select>
           </FormControl>
@@ -253,6 +277,26 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <Typography variant="body2" color="text.secondary" align="right" sx={{ mt: 0.5 }}>
               Annual: {formatJPY(amount * 12)}
             </Typography>
+          )}
+          {type === 'commutingAllowance' && amount > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Monthly: {formatJPY(
+                  frequency === 'monthly' ? amount :
+                    frequency === '3-months' ? amount / 3 :
+                      frequency === '6-months' ? amount / 6 :
+                        amount / 12
+                )}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Annual: {formatJPY(
+                  frequency === 'monthly' ? amount * 12 :
+                    frequency === '3-months' ? amount * 4 :
+                      frequency === '6-months' ? amount * 2 :
+                        amount
+                )}
+              </Typography>
+            </Box>
           )}
         </Box>
 

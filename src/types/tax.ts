@@ -6,7 +6,7 @@ import type { Dependent, DependentDeductionResults } from "./dependents";
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
 
-export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous';
+export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous' | 'commutingAllowance';
 
 export interface BaseIncomeStream {
   id: string;
@@ -17,6 +17,11 @@ export interface BaseIncomeStream {
 export interface SalaryIncomeStream extends BaseIncomeStream {
   type: 'salary';
   frequency: 'monthly' | 'annual';
+}
+
+export interface CommutingAllowanceIncomeStream extends BaseIncomeStream {
+  type: 'commutingAllowance';
+  frequency: 'monthly' | '3-months' | '6-months' | 'annual';
 }
 
 export interface BonusIncomeStream extends BaseIncomeStream {
@@ -33,7 +38,7 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
   type: 'miscellaneous';
 }
 
-export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream;
+export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream;
 
 /** Interface for the UI Form State */
 export interface TakeHomeFormState {
@@ -87,6 +92,9 @@ export interface TakeHomeResults {
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
   totalNetIncome: number;
+  commuterAllowanceIncome?: number; // Total amount
+  commuterAllowanceTaxable?: number;
+  commuterAllowanceNonTaxable?: number;
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;

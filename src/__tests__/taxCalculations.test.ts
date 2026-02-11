@@ -693,3 +693,129 @@ describe('calculateTotalNetIncome', () => {
     expect(calculateTotalNetIncome(incomeStreams)).toBe(2_120_000);
   });
 });
+
+describe('Commuting Allowance', () => {
+  it('is non-taxable up to 150,000 JPY/month but subject to social insurance', () => {
+    const inputs = {
+      incomeStreams: [
+        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
+        { type: 'commutingAllowance' as const, amount: 20_000, frequency: 'monthly' as const, id: 'c1' }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. Social Insurance Base
+    // Salary 300k + Commuting 20k = 320k
+    // SMR for 320k is 320k (Bracket 23: 310k-330k -> 320k)
+    // Health Insurance (Tokyo, Kyokai Kenpo ~9.98% split? No, total rate. Employee pays half.)
+    // Let's verify against standard calculation without commuting but with higher salary
+    const inputsComparison = {
+      ...inputs,
+      incomeStreams: [{ type: 'salary' as const, amount: 320_000, frequency: 'monthly' as const, id: 's2' }]
+    };
+    const resultComparison = calculateTaxes(inputsComparison);
+
+    expect(result.healthInsurance).toBe(resultComparison.healthInsurance);
+    expect(result.pensionPayments).toBe(resultComparison.pensionPayments);
+    expect(result.employmentInsurance).toBe(resultComparison.employmentInsurance);
+
+    // 2. Income Tax Base
+    // CommutingAllowance (20k) is fully non-taxable (<= 150k)
+    // Tax Base should be based on 300k salary only (3.6M annual)
+    // Compare with 300k salary case
+    const inputsSalaryOnly = {
+      ...inputs,
+      incomeStreams: [{ type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's3' }]
+    };
+    const resultSalaryOnly = calculateTaxes(inputsSalaryOnly);
+
+    // Tax should be identical to salary-only case
+    // expect(result.nationalIncomeTax).toBe(resultSalaryOnly.nationalIncomeTax);
+    // ^ INCORRECT: Higher social insurance (from commuting) means larger deduction -> lower tax.
+
+    // Instead, verify that the Net Employment Income (base for tax) is identical
+    // This confirms that the Commuting Allowance was excluded from the tax base.
+    expect(result.netEmploymentIncome).toBe(resultSalaryOnly.netEmploymentIncome);
+
+    // And verify Tax is LOWER than salary-only case due to higher Social Insurance deduction
+    expect(result.nationalIncomeTax).toBeLessThan(resultSalaryOnly.nationalIncomeTax);
+
+    // And different from the 320k salary case (which has higher tax due to higher income)
+    expect(result.nationalIncomeTax).toBeLessThan(resultComparison.nationalIncomeTax);
+  });
+
+  it('excess over 150,000 JPY/month is taxable', () => {
+    const inputs = {
+      incomeStreams: [
+        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
+        { type: 'commutingAllowance' as const, amount: 200_000, frequency: 'monthly' as const, id: 'c1' } // 50k taxable excess
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. Social Insurance Base
+    // Salary 300k + Commuting 200k = 500k
+    // Compare with 500k salary
+    const inputsComparison = {
+      ...inputs,
+      incomeStreams: [{ type: 'salary' as const, amount: 500_000, frequency: 'monthly' as const, id: 's2' }]
+    };
+    const resultComparison = calculateTaxes(inputsComparison);
+
+    expect(result.healthInsurance).toBe(resultComparison.healthInsurance);
+    expect(result.pensionPayments).toBe(resultComparison.pensionPayments);
+
+    // 2. Income Tax Base
+    // Taxable Income = Salary 300k + (Commuting 200k - 150k) = 350k
+    // Compare with 350k salary
+    const inputsTaxableEquivalent = {
+      ...inputs,
+      incomeStreams: [{ type: 'salary' as const, amount: 350_000, frequency: 'monthly' as const, id: 's3' }]
+    };
+    const resultTaxableEquivalent = calculateTaxes(inputsTaxableEquivalent);
+
+    // Verify Net Employment Income is identical
+    expect(result.netEmploymentIncome).toBe(resultTaxableEquivalent.netEmploymentIncome);
+
+    // Tax will be lower because Social Insurance on 500k base > Social Insurance on 350k base
+    expect(result.nationalIncomeTax).toBeLessThan(resultTaxableEquivalent.nationalIncomeTax);
+
+    // Verify breakdown fields
+    expect(result.commuterAllowanceIncome).toBe(200_000 * 12);
+    expect(result.commuterAllowanceTaxable).toBe(50_000 * 12);
+    expect(result.commuterAllowanceNonTaxable).toBe(150_000 * 12);
+  });
+
+  it('handles 6-month pass correctly', () => {
+    // 6-month pass costs 120,000 (20,000/month equivalent).
+    // Should be fully non-taxable.
+    const inputs = {
+      incomeStreams: [
+        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
+        { type: 'commutingAllowance' as const, amount: 120_000, frequency: '6-months' as const, id: 'c1' }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // Annual Commuting: 120,000 * 2 = 240,000
+    // Taxable part: 0 (20k/month < 150k/month)
+    expect(result.commuterAllowanceIncome).toBe(240_000);
+    expect(result.commuterAllowanceTaxable).toBe(0);
+    expect(result.commuterAllowanceNonTaxable).toBe(240_000);
+  });
+});
