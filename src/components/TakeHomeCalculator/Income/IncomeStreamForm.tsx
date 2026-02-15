@@ -25,6 +25,8 @@ interface IncomeStreamFormProps {
   disabledTypes?: string[];
 }
 
+const validSalaryFrequencies = ['monthly', 'annual'];
+
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   initialData,
   onSave,
@@ -113,7 +115,15 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             labelId="income-type-label"
             value={type}
             label="Income/Benefit Type"
-            onChange={(e) => setType(e.target.value as IncomeStreamType)}
+            onChange={(e) => {
+              const newType = e.target.value as IncomeStreamType;
+              setType(newType);
+              if (newType === 'commutingAllowance') {
+                setFrequency('monthly');
+              } else if (newType === 'salary' && !validSalaryFrequencies.includes(frequency)) {
+                setFrequency('annual');
+              }
+            }}
           >
             <MenuItem value="salary" disabled={disabledTypes.includes('salary')}>Salary</MenuItem>
             <MenuItem value="bonus" disabled={disabledTypes.includes('bonus')}>Bonus</MenuItem>
