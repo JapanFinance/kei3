@@ -5,39 +5,32 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { formatJPY } from '../../../utils/formatters';
+import type { StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
-interface PremiumTableRow {
-  [key: string]: unknown;
-  min?: number;
-  max?: number | null;
-  halfAmount?: number;
-  fullAmount?: number;
-}
-
-interface PremiumTableColumn {
+interface SMRTableColumn {
   header: string;
-  getValue?: (row: PremiumTableRow) => number;
-  render?: (row: PremiumTableRow) => React.ReactNode;
+  getValue?: (row: StandardMonthlyRemunerationBracket) => number;
+  render?: (row: StandardMonthlyRemunerationBracket) => React.ReactNode;
   align?: 'left' | 'right';
 }
 
-interface PremiumTableTooltipProps {
+interface SMRTableTooltipProps {
   title: string;
   description: string;
   hint?: string;
-  tableData: PremiumTableRow[];
-  columns: PremiumTableColumn[];
-  currentRow: PremiumTableRow | null;
+  tableData: StandardMonthlyRemunerationBracket[];
+  columns: SMRTableColumn[];
+  currentRow: StandardMonthlyRemunerationBracket | null;
   tableContainerDataAttr: string;
   currentRowId: string;
-  getCurrentRowSummary: (row: PremiumTableRow) => string;
+  getCurrentRowSummary: (row: StandardMonthlyRemunerationBracket) => string;
   officialSourceLink?: {
     url: string;
     text: string;
   };
 }
 
-const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
+const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
   title,
   description,
   hint,
@@ -261,4 +254,4 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
   );
 };
 
-export default PremiumTableTooltip;
+export default SMRTableTooltip;

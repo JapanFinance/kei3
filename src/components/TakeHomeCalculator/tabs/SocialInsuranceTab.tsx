@@ -13,8 +13,8 @@ import InfoTooltip from '../../ui/InfoTooltip';
 import DetailInfoTooltip from '../../ui/DetailInfoTooltip';
 import { ResultRow } from '../ResultRow';
 import { employmentInsuranceRate } from '../../../utils/taxCalculations';
-import HealthInsurancePremiumTableTooltip from './HealthInsurancePremiumTableTooltip';
-import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
+import HealthInsurancePremiumTooltip from './HealthInsurancePremiumTooltip';
+import PensionPremiumTooltip from './PensionPremiumTooltip';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
@@ -354,7 +354,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance && (
               <DetailInfoTooltip
                 title="Health Insurance Premium Details"
-                children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
+                children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
               />
             )}
           </Typography>
@@ -403,7 +403,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               labelSuffix={
                 <DetailInfoTooltip
                   title="Health Insurance Premium Details"
-                  children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
+                  children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
                 />
               }
               value={formatJPY((results.healthInsurance - (results.healthInsuranceOnBonus ?? 0)) / 12)}
@@ -467,7 +467,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             !isNationalHealthInsurance && (
               <DetailInfoTooltip
                 title="Pension Contribution Details"
-                children={<PensionPremiumTableTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />}
+                children={<PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />}
               />
             )
           }

@@ -8,18 +8,18 @@ import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
 import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
-import PremiumTableTooltip from './PremiumTableTooltip';
+import SMRTableTooltip from './SMRTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { EHI_SMR_BRACKETS, type StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
-interface HealthInsurancePremiumTableTooltipProps {
+interface HealthInsurancePremiumTooltipProps {
   results: TakeHomeResults;
   inputs: TakeHomeInputs;
   standardMonthlyRemuneration: number;
 }
 
-const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTooltipProps> = ({ results, inputs, standardMonthlyRemuneration }) => {
+const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps> = ({ results, inputs, standardMonthlyRemuneration }) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
 
@@ -309,15 +309,14 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     // Highlight the row corresponding to the current SMR
     const currentRow = EHI_SMR_BRACKETS.find(bracket => bracket.smrAmount === standardMonthlyRemuneration) || null;
 
-    const getIncomeRange = (row: Record<string, unknown>) => {
-      const bracket = row as unknown as StandardMonthlyRemunerationBracket;
-      return `${formatJPY(bracket.minIncomeInclusive)} - ${bracket.maxIncomeExclusive === Infinity ? '∞' : formatJPY(bracket.maxIncomeExclusive)}`;
+    const getIncomeRange = (row: StandardMonthlyRemunerationBracket) => {
+      return `${formatJPY(row.minIncomeInclusive)} - ${row.maxIncomeExclusive === Infinity ? '∞' : formatJPY(row.maxIncomeExclusive)}`;
     };
 
     const columns = [
       {
         header: 'Grade',
-        render: (row: Record<string, unknown>) => (row as unknown as StandardMonthlyRemunerationBracket).grade,
+        render: (row: StandardMonthlyRemunerationBracket) => row.grade,
         align: 'left' as const
       },
       {
@@ -327,13 +326,12 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
       },
       {
         header: 'SMR',
-        getValue: (row: Record<string, unknown>) => (row as unknown as StandardMonthlyRemunerationBracket).smrAmount
+        getValue: (row: StandardMonthlyRemunerationBracket) => row.smrAmount
       },
     ];
 
-    const getCurrentRowSummary = (row: Record<string, unknown>) => {
-      const bracket = row as unknown as StandardMonthlyRemunerationBracket;
-      return `Your Grade: ${bracket.grade} (SMR: ${formatJPY(bracket.smrAmount)})`;
+    const getCurrentRowSummary = (row: StandardMonthlyRemunerationBracket) => {
+      return `Your Grade: ${row.grade} (SMR: ${formatJPY(row.smrAmount)})`;
     };
 
     return (
@@ -413,12 +411,12 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
           }
         </Typography>
 
-        <PremiumTableTooltip
+        <SMRTableTooltip
           title="Employee Health Insurance SMR Table"
           description="Standard Monthly Remuneration (SMR or 標準報酬月額) is determined by the below table."
-          tableData={EHI_SMR_BRACKETS as unknown as Record<string, unknown>[]}
+          tableData={EHI_SMR_BRACKETS}
           columns={columns}
-          currentRow={currentRow as unknown as Record<string, unknown> | null}
+          currentRow={currentRow}
           tableContainerDataAttr="data-smr-table-container"
           currentRowId="current-smr-row"
           getCurrentRowSummary={getCurrentRowSummary}
@@ -431,4 +429,4 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
   }
 };
 
-export default HealthInsurancePremiumTableTooltip;
+export default HealthInsurancePremiumTooltip;

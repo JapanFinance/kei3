@@ -7,16 +7,16 @@ import Typography from '@mui/material/Typography';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 import { EMPLOYEES_PENSION_BRACKETS, EMPLOYEES_PENSION_RATE, type StandardMonthlyRemunerationBracket } from '../../../utils/pensionCalculator';
-import PremiumTableTooltip from './PremiumTableTooltip';
+import SMRTableTooltip from './SMRTableTooltip';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
-interface PensionPremiumTableTooltipProps {
+interface PensionPremiumTooltipProps {
   inputs: TakeHomeInputs;
   standardMonthlyRemuneration: number;
 }
 
-const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({ inputs, standardMonthlyRemuneration }) => {
+const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, standardMonthlyRemuneration }) => {
 
   if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
     throw new Error("Wrong tooltip used for National Health Insurance");
@@ -27,32 +27,30 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
     standardMonthlyRemuneration >= bracket.minIncomeInclusive && standardMonthlyRemuneration < bracket.maxIncomeExclusive
   ) || null; // Force null if undefined
 
-  const getIncomeRange = (row: Record<string, unknown>) => {
-    const bracket = row as unknown as StandardMonthlyRemunerationBracket;
-    return `${formatJPY(bracket.minIncomeInclusive)} - ${bracket.maxIncomeExclusive === Infinity ? '∞' : formatJPY(bracket.maxIncomeExclusive)}`;
+  const getIncomeRange = (row: StandardMonthlyRemunerationBracket) => {
+    return `${formatJPY(row.minIncomeInclusive)} - ${row.maxIncomeExclusive === Infinity ? '∞' : formatJPY(row.maxIncomeExclusive)}`;
   };
 
   const columns = [
     {
       header: 'Grade',
-      render: (row: Record<string, unknown>) => (row as unknown as StandardMonthlyRemunerationBracket).grade,
+      render: (row: StandardMonthlyRemunerationBracket) => row.grade,
       align: 'left' as const
     },
     {
-      header: 'Income Range',
+      header: 'Monthly Remuneration',
       render: getIncomeRange,
       align: 'left' as const
     },
     {
       header: 'Pension SMR',
-      getValue: (row: Record<string, unknown>) => (row as unknown as StandardMonthlyRemunerationBracket).smrAmount
+      getValue: (row: StandardMonthlyRemunerationBracket) => row.smrAmount
     },
   ];
 
-  const getCurrentRowSummary = (row: Record<string, unknown>) => {
-    const bracket = row as unknown as StandardMonthlyRemunerationBracket;
-    const isCapped = bracket.maxIncomeExclusive === Infinity;
-    const baseSummary = `Grade: ${bracket.grade} (SMR: ${formatJPY(bracket.smrAmount)})`;
+  const getCurrentRowSummary = (row: StandardMonthlyRemunerationBracket) => {
+    const isCapped = row.maxIncomeExclusive === Infinity;
+    const baseSummary = `Grade: ${row.grade} (SMR: ${formatJPY(row.smrAmount)})`;
 
     if (isCapped) {
       return `${baseSummary} (Maximum Cap)`;
@@ -132,12 +130,12 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
         The employer also pays {formatPercent(employeeRate)}.
       </Typography>
 
-      <PremiumTableTooltip
+      <SMRTableTooltip
         title="Employees Pension (厚生年金) SMR Table"
         description="Standard Monthly Remuneration (SMR or 標準報酬月額) is determined by the below table."
-        tableData={EMPLOYEES_PENSION_BRACKETS as unknown as Record<string, unknown>[]}
+        tableData={EMPLOYEES_PENSION_BRACKETS}
         columns={columns}
-        currentRow={currentRow as unknown as Record<string, unknown> | null}
+        currentRow={currentRow}
         tableContainerDataAttr="data-pension-table-container"
         currentRowId="current-pension-row"
         getCurrentRowSummary={getCurrentRowSummary}
@@ -150,4 +148,4 @@ const PensionPremiumTableTooltip: React.FC<PensionPremiumTableTooltipProps> = ({
   );
 };
 
-export default PensionPremiumTableTooltip;
+export default PensionPremiumTooltip;
