@@ -111,6 +111,7 @@ export interface TakeHomeResults {
   nhiElderlySupportPortion?: number | undefined;
   nhiLongTermCarePortion?: number | undefined;
   // Context needed for cap detection
+  salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
   isSubjectToLongTermCarePremium: boolean;

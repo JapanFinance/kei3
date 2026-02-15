@@ -213,7 +213,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     takeHomeIncome: 0,
     furusatoNozei: calculateFurusatoNozeiDetails(0, NON_TAXABLE_RESIDENCE_TAX_DETAIL),
     dcPlanContributions: 0,
-    // Add the new required properties with default values
+    salaryIncome: 0,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
     isSubjectToLongTermCarePremium: false,
@@ -492,6 +492,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         nhiElderlySupportPortion: nhiBreakdown?.elderlySupportPortion,
         nhiLongTermCarePortion: nhiBreakdown?.longTermCarePortion,
         // Context needed for cap detection
+        salaryIncome,
         healthInsuranceProvider: inputs.healthInsuranceProvider,
         region: inputs.region,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,

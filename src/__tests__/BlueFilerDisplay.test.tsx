@@ -47,7 +47,8 @@ const mockResults: TakeHomeResults = {
     totalNetIncome: 4_350_000,
     nhiMedicalPortion: 150_000,
     nhiElderlySupportPortion: 50_000,
-    nhiLongTermCarePortion: 0
+    nhiLongTermCarePortion: 0,
+    salaryIncome: 0,
 };
 
 const mockInputs: TakeHomeInputs = {
@@ -110,7 +111,8 @@ describe('Blue-Filer Deduction Display', () => {
             hasEmploymentIncome: true, // Has employment income
             // Mocking other necessary values
             netEmploymentIncome: 2_000_000, // Dummy
-            totalNetIncome: 3_900_000 // Dummy total
+            totalNetIncome: 3_900_000, // Dummy total
+            salaryIncome: 3_000_000,
         };
 
         render(<TaxesTab results={mixedResults} inputs={mixedInputs} />);

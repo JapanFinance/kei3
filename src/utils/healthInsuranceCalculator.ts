@@ -126,7 +126,7 @@ export interface EmployeesHealthInsuranceBonusBreakdownItem {
  * The cumulative maximum amount of bonus income that is subject to health insurance premiums in a year (April to March).
  * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20141203.html
  */
-const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
+export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
 
 /**
  * Calculates detailed breakdown for health insurance bonuses

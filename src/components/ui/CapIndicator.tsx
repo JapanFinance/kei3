@@ -7,38 +7,62 @@ import Typography from '@mui/material/Typography';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import InfoTooltip from './InfoTooltip';
 import type { CapStatus } from '../../utils/capDetection';
+import { formatJPY } from '../../utils/formatters';
+import { ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP } from '../../utils/healthInsuranceCalculator';
 
 interface CapIndicatorProps {
   capStatus: CapStatus;
   iconOnly?: boolean;
-  contributionType: 'pension' | 'health insurance' | 'medical portion' | 'elderly support portion' | 'long-term care portion';
+  contributionType: 'pension' | 'health insurance' | 'medical portion' | 'elderly support portion' | 'long-term care portion' | 'health insurance bonus';
 }
 
 /**
  * Visual indicator that shows when health insurance and pension contributions are capped or fixed
  */
 export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly = false, contributionType }) => {
-  const hasAnyCaps = capStatus.healthInsuranceCapped || capStatus.pensionCapped;
-  if (!hasAnyCaps) {
+  // Determine if this specific contribution type is capped or fixed
+  let isIndicatorActive = false;
+  let isNationalPension = false;
+  const isNationalHealthInsurance = !!capStatus.pensionFixed;
+
+  if (contributionType === 'pension') {
+    isNationalPension = !!capStatus.pensionFixed;
+    isIndicatorActive = capStatus.pensionCapped || isNationalPension;
+  } else if (contributionType === 'health insurance') {
+    isIndicatorActive = capStatus.healthInsuranceCapped || isNationalHealthInsurance;
+  } else if (contributionType === 'medical portion') {
+    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.medicalCapped;
+  } else if (contributionType === 'elderly support portion') {
+    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.supportCapped;
+  } else if (contributionType === 'long-term care portion') {
+    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.ltcCapped;
+  } else if (contributionType === 'health insurance bonus') {
+    isIndicatorActive = !!capStatus.healthInsuranceBonusCapped;
+  }
+
+  if (!isIndicatorActive) {
     return null;
   }
 
-  // Determine the appropriate label and tooltip content based on contribution type and status
-  const isNationalPension = contributionType === 'pension' && capStatus.pensionFixed;
+  // Determine label and tooltip
   const labelText = isNationalPension ? 'Fixed' : 'Capped';
-  
+
   const tooltipContent = (
     <Box>
       <Typography variant="body2" sx={{ mb: 1 }}>
         {isNationalPension
           ? `This ${contributionType} contribution is fixed and does not increase with income.`
-          : `This ${contributionType} contribution has reached its maximum amount.`
+          : contributionType === 'health insurance bonus'
+            ? `Total bonus income subject to health insurance premiums is capped at ${formatJPY(ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP)} per year.`
+            : `This ${contributionType} contribution has reached its maximum amount.`
         }
       </Typography>
       <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-        {isNationalPension
-          ? '💡 Additional income will not change this contribution.'
-          : '💡 Additional income won\'t increase this contribution further.'}
+        {isNationalPension || isNationalHealthInsurance
+          ? '💡 Additional income will not change this amount.'
+          : contributionType === 'health insurance bonus'
+            ? '💡 Additional bonus income will not increase this amount.'
+            : `💡 Additional salary income will not increase this amount.`}
       </Typography>
     </Box>
   );
@@ -60,11 +84,11 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
               borderColor: 'warning.main',
             }}
           >
-            <VerticalAlignTopIcon 
-              sx={{ 
-                fontSize: 14, 
+            <VerticalAlignTopIcon
+              sx={{
+                fontSize: 14,
                 color: 'warning.main'
-              }} 
+              }}
             />
           </Box>
         }
