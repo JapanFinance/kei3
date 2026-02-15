@@ -16,7 +16,8 @@ interface PremiumTableRow {
 
 interface PremiumTableColumn {
   header: string;
-  getValue: (row: PremiumTableRow) => number;
+  getValue?: (row: PremiumTableRow) => number;
+  render?: (row: PremiumTableRow) => React.ReactNode;
   align?: 'left' | 'right';
 }
 
@@ -27,16 +28,13 @@ interface PremiumTableTooltipProps {
   tableData: PremiumTableRow[];
   columns: PremiumTableColumn[];
   currentRow: PremiumTableRow | null;
-  monthlyIncome: number;
   tableContainerDataAttr: string;
   currentRowId: string;
-  getIncomeRange: (row: PremiumTableRow) => string;
   getCurrentRowSummary: (row: PremiumTableRow) => string;
   officialSourceLink?: {
     url: string;
     text: string;
   };
-  fallbackContent?: React.ReactNode;
 }
 
 const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
@@ -46,13 +44,10 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
   tableData,
   columns,
   currentRow,
-  monthlyIncome,
   tableContainerDataAttr,
   currentRowId,
-  getIncomeRange,
   getCurrentRowSummary,
   officialSourceLink,
-  fallbackContent,
 }) => {
   // Auto-scroll to the current row when component mounts or income changes
   React.useEffect(() => {
@@ -62,22 +57,22 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
 
     const currentRowElement = document.getElementById(currentRowId);
     const tableContainer = currentRowElement?.closest(`[${tableContainerDataAttr}]`);
-    
+
     if (currentRowElement && tableContainer) {
       // Use setTimeout to ensure the DOM has been updated
       setTimeout(() => {
         const containerRect = tableContainer.getBoundingClientRect();
         const rowRect = currentRowElement.getBoundingClientRect();
-        
+
         // Calculate the scroll position relative to the container
         const containerScrollTop = tableContainer.scrollTop;
         const relativeRowTop = rowRect.top - containerRect.top + containerScrollTop;
         const containerHeight = containerRect.height;
         const rowHeight = rowRect.height;
-        
+
         // Center the row in the container
         const targetScrollTop = relativeRowTop - (containerHeight / 2) + (rowHeight / 2);
-        
+
         // Smooth scroll within the container only
         tableContainer.scrollTo({
           top: targetScrollTop,
@@ -85,12 +80,7 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
         });
       }, 100);
     }
-  }, [currentRow, monthlyIncome, currentRowId, tableContainerDataAttr]);
-
-  // Show fallback content if provided (e.g., for National Insurance types)
-  if (fallbackContent) {
-    return <>{fallbackContent}</>;
-  }
+  }, [currentRow, currentRowId, tableContainerDataAttr]);
 
   if (!tableData || tableData.length === 0) {
     return (
@@ -111,16 +101,16 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
         {title}
       </Typography>
       <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
-        {description.replace('{monthlyIncome}', formatJPY(monthlyIncome))}
+        {description}
         <br />
         <Typography component="span" sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'text.secondary' }}>
           💡 Scroll through the table to view all brackets
         </Typography>
       </Typography>
-      
-      <Box 
+
+      <Box
         {...{ [tableContainerDataAttr]: true }} // Dynamic data attribute
-        sx={{ 
+        sx={{
           height: '280px', // Fixed height to show ~10 rows
           overflowY: 'auto',
           overscrollBehavior: 'contain', // Prevent scroll chaining
@@ -153,10 +143,10 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
           e.stopPropagation();
         }}
       >
-        <Box 
-          component="table" 
-          sx={{ 
-            width: '100%', 
+        <Box
+          component="table"
+          sx={{
+            width: '100%',
             borderCollapse: 'collapse',
             fontSize: '0.75rem',
             '& th, & td': {
@@ -183,9 +173,9 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
           <Box component="thead">
             <Box component="tr">
               {columns.map((column, index) => (
-                <Box 
+                <Box
                   key={index}
-                  component="th" 
+                  component="th"
                   sx={{ textAlign: column.align === 'left' ? 'left' : 'right' }}
                 >
                   {column.header}
@@ -197,11 +187,11 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
             {tableData.map((row, index) => {
               const isCurrentRow = currentRow === row;
               return (
-                <Box 
-                  component="tr" 
+                <Box
+                  component="tr"
                   key={index}
                   id={isCurrentRow ? currentRowId : undefined}
-                  sx={{ 
+                  sx={{
                     backgroundColor: isCurrentRow ? 'primary.main' : 'transparent',
                     color: isCurrentRow ? 'primary.contrastText' : 'text.primary',
                     cursor: 'default',
@@ -218,12 +208,16 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
                   }}
                 >
                   {columns.map((column, colIndex) => (
-                    <Box 
+                    <Box
                       key={colIndex}
                       component="td"
                       sx={{ textAlign: column.align === 'left' ? 'left' : 'right' }}
                     >
-                      {colIndex === 0 ? getIncomeRange(row) : formatJPY(column.getValue(row))}
+                      {column.render
+                        ? column.render(row)
+                        : column.getValue
+                          ? formatJPY(column.getValue(row))
+                          : null}
                     </Box>
                   ))}
                 </Box>
@@ -234,13 +228,13 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
       </Box>
 
       {hint && (
-          <>
-            <Typography component="span" sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'text.secondary' }}>
-              {hint}
-            </Typography>
-          </>
-        )}
-      
+        <>
+          <Typography component="span" sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'text.secondary' }}>
+            {hint}
+          </Typography>
+        </>
+      )}
+
       {currentRow && (
         <Box sx={{ mt: 1, p: 1, bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
@@ -252,10 +246,10 @@ const PremiumTableTooltip: React.FC<PremiumTableTooltipProps> = ({
       {officialSourceLink && (
         <Box sx={{ mt: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            <strong>Official Source:</strong> <a 
-              href={officialSourceLink.url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <strong>Official Source:</strong> <a
+              href={officialSourceLink.url}
+              target="_blank"
+              rel="noopener noreferrer"
               style={{ color: '#1976d2', textDecoration: 'underline' }}
             >
               {officialSourceLink.text}

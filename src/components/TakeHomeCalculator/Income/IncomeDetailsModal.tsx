@@ -249,7 +249,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           <IncomeStreamForm
             onSave={handleSaveStream}
             onCancel={() => setIsAddingNew(false)}
-            disabledTypes={streams.some(s => s.type === 'business') ? ['business'] : []}
+            disabledTypes={[
+              ...(streams.some(s => s.type === 'business') ? ['business'] : []),
+              ...(streams.some(s => s.type === 'commutingAllowance') ? ['commutingAllowance'] : [])
+            ]}
           />
         ) : editingStream ? (
           <IncomeStreamForm

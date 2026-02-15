@@ -3,13 +3,9 @@
 
 import type { BonusIncomeStream } from '../types/tax';
 import { roundSocialInsurancePremium } from './taxCalculations';
+import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 
-export interface IncomeBracketToPensionPremium {
-  min: number;
-  max: number | null;
-  fullAmount: number;
-  halfAmount: number;
-}
+export type { StandardMonthlyRemunerationBracket };
 
 /** National pension (国民年金) - fixed monthly contribution.
  * Source: https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01
@@ -23,43 +19,55 @@ export const monthlyNationalPensionContribution = 17510;
 export const EMPLOYEES_PENSION_RATE = 0.183; // 18.3%
 
 /**
- * Employees' pension insurance premiums by income bracket
+ * Employees' pension insurance SMR brackets
  * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
  */
-export const EMPLOYEES_PENSION_PREMIUM: IncomeBracketToPensionPremium[] = [
-  { min: 0, max: 93000, fullAmount: 16104.00, halfAmount: 8052.00 },
-  { min: 93000, max: 101000, fullAmount: 17934.00, halfAmount: 8967.00 },
-  { min: 101000, max: 107000, fullAmount: 19032.00, halfAmount: 9516.00 },
-  { min: 107000, max: 114000, fullAmount: 20130.00, halfAmount: 10065.00 },
-  { min: 114000, max: 122000, fullAmount: 21594.00, halfAmount: 10797.00 },
-  { min: 122000, max: 130000, fullAmount: 23058.00, halfAmount: 11529.00 },
-  { min: 130000, max: 138000, fullAmount: 24522.00, halfAmount: 12261.00 },
-  { min: 138000, max: 146000, fullAmount: 25986.00, halfAmount: 12993.00 },
-  { min: 146000, max: 155000, fullAmount: 27450.00, halfAmount: 13725.00 },
-  { min: 155000, max: 165000, fullAmount: 29280.00, halfAmount: 14640.00 },
-  { min: 165000, max: 175000, fullAmount: 31110.00, halfAmount: 15555.00 },
-  { min: 175000, max: 185000, fullAmount: 32940.00, halfAmount: 16470.00 },
-  { min: 185000, max: 195000, fullAmount: 34770.00, halfAmount: 17385.00 },
-  { min: 195000, max: 210000, fullAmount: 36600.00, halfAmount: 18300.00 },
-  { min: 210000, max: 230000, fullAmount: 40260.00, halfAmount: 20130.00 },
-  { min: 230000, max: 250000, fullAmount: 43920.00, halfAmount: 21960.00 },
-  { min: 250000, max: 270000, fullAmount: 47580.00, halfAmount: 23790.00 },
-  { min: 270000, max: 290000, fullAmount: 51240.00, halfAmount: 25620.00 },
-  { min: 290000, max: 310000, fullAmount: 54900.00, halfAmount: 27450.00 },
-  { min: 310000, max: 330000, fullAmount: 58560.00, halfAmount: 29280.00 },
-  { min: 330000, max: 350000, fullAmount: 62220.00, halfAmount: 31110.00 },
-  { min: 350000, max: 370000, fullAmount: 65880.00, halfAmount: 32940.00 },
-  { min: 370000, max: 395000, fullAmount: 69540.00, halfAmount: 34770.00 },
-  { min: 395000, max: 425000, fullAmount: 75030.00, halfAmount: 37515.00 },
-  { min: 425000, max: 455000, fullAmount: 80520.00, halfAmount: 40260.00 },
-  { min: 455000, max: 485000, fullAmount: 86010.00, halfAmount: 43005.00 },
-  { min: 485000, max: 515000, fullAmount: 91500.00, halfAmount: 45750.00 },
-  { min: 515000, max: 545000, fullAmount: 96990.00, halfAmount: 48495.00 },
-  { min: 545000, max: 575000, fullAmount: 102480.00, halfAmount: 51240.00 },
-  { min: 575000, max: 605000, fullAmount: 107970.00, halfAmount: 53985.00 },
-  { min: 605000, max: 635000, fullAmount: 113460.00, halfAmount: 56730.00 },
-  { min: 635000, max: null, fullAmount: 118950.00, halfAmount: 59475.00 },
+export const EMPLOYEES_PENSION_BRACKETS: StandardMonthlyRemunerationBracket[] = [
+  { grade: 1, smrAmount: 88000, minIncomeInclusive: 0, maxIncomeExclusive: 93000 },
+  { grade: 2, smrAmount: 98000, minIncomeInclusive: 93000, maxIncomeExclusive: 101000 },
+  { grade: 3, smrAmount: 104000, minIncomeInclusive: 101000, maxIncomeExclusive: 107000 },
+  { grade: 4, smrAmount: 110000, minIncomeInclusive: 107000, maxIncomeExclusive: 114000 },
+  { grade: 5, smrAmount: 118000, minIncomeInclusive: 114000, maxIncomeExclusive: 122000 },
+  { grade: 6, smrAmount: 126000, minIncomeInclusive: 122000, maxIncomeExclusive: 130000 },
+  { grade: 7, smrAmount: 134000, minIncomeInclusive: 130000, maxIncomeExclusive: 138000 },
+  { grade: 8, smrAmount: 142000, minIncomeInclusive: 138000, maxIncomeExclusive: 146000 },
+  { grade: 9, smrAmount: 150000, minIncomeInclusive: 146000, maxIncomeExclusive: 155000 },
+  { grade: 10, smrAmount: 160000, minIncomeInclusive: 155000, maxIncomeExclusive: 165000 },
+  { grade: 11, smrAmount: 170000, minIncomeInclusive: 165000, maxIncomeExclusive: 175000 },
+  { grade: 12, smrAmount: 180000, minIncomeInclusive: 175000, maxIncomeExclusive: 185000 },
+  { grade: 13, smrAmount: 190000, minIncomeInclusive: 185000, maxIncomeExclusive: 195000 },
+  { grade: 14, smrAmount: 200000, minIncomeInclusive: 195000, maxIncomeExclusive: 210000 },
+  { grade: 15, smrAmount: 220000, minIncomeInclusive: 210000, maxIncomeExclusive: 230000 },
+  { grade: 16, smrAmount: 240000, minIncomeInclusive: 230000, maxIncomeExclusive: 250000 },
+  { grade: 17, smrAmount: 260000, minIncomeInclusive: 250000, maxIncomeExclusive: 270000 },
+  { grade: 18, smrAmount: 280000, minIncomeInclusive: 270000, maxIncomeExclusive: 290000 },
+  { grade: 19, smrAmount: 300000, minIncomeInclusive: 290000, maxIncomeExclusive: 310000 },
+  { grade: 20, smrAmount: 320000, minIncomeInclusive: 310000, maxIncomeExclusive: 330000 },
+  { grade: 21, smrAmount: 340000, minIncomeInclusive: 330000, maxIncomeExclusive: 350000 },
+  { grade: 22, smrAmount: 360000, minIncomeInclusive: 350000, maxIncomeExclusive: 370000 },
+  { grade: 23, smrAmount: 380000, minIncomeInclusive: 370000, maxIncomeExclusive: 395000 },
+  { grade: 24, smrAmount: 410000, minIncomeInclusive: 395000, maxIncomeExclusive: 425000 },
+  { grade: 25, smrAmount: 440000, minIncomeInclusive: 425000, maxIncomeExclusive: 455000 },
+  { grade: 26, smrAmount: 470000, minIncomeInclusive: 455000, maxIncomeExclusive: 485000 },
+  { grade: 27, smrAmount: 500000, minIncomeInclusive: 485000, maxIncomeExclusive: 515000 },
+  { grade: 28, smrAmount: 530000, minIncomeInclusive: 515000, maxIncomeExclusive: 545000 },
+  { grade: 29, smrAmount: 560000, minIncomeInclusive: 545000, maxIncomeExclusive: 575000 },
+  { grade: 30, smrAmount: 590000, minIncomeInclusive: 575000, maxIncomeExclusive: 605000 },
+  { grade: 31, smrAmount: 620000, minIncomeInclusive: 605000, maxIncomeExclusive: 635000 },
+  { grade: 32, smrAmount: 650000, minIncomeInclusive: 635000, maxIncomeExclusive: Infinity },
 ];
+
+/**
+ * Utility function to find the Pension SMR bracket for a given monthly income
+ */
+export function findPensionBracket(monthlyIncome: number): StandardMonthlyRemunerationBracket {
+  if (monthlyIncome < 0) {
+    throw new Error('Monthly income must be non-negative');
+  }
+  return EMPLOYEES_PENSION_BRACKETS.find(bracket =>
+    monthlyIncome >= bracket.minIncomeInclusive && monthlyIncome < bracket.maxIncomeExclusive
+  )!; // Invariant: there is always a matching bracket for non-negative income
+}
 
 /**
  * Breakdown of Pension premium components
@@ -85,16 +93,16 @@ export function calculatePensionBreakdown(
     throw new Error('Monthly income must be a positive number');
   }
 
-  const monthlyPremium = EMPLOYEES_PENSION_PREMIUM.find(bracket =>
-    monthlyIncome >= bracket.min &&
-    (bracket.max === null || monthlyIncome < bracket.max)
-  );
+  const bracket = findPensionBracket(monthlyIncome);
 
-  if (!monthlyPremium) {
+  if (!bracket) {
     throw new Error('No matching income bracket found');
   }
 
-  let totalPremium = (isHalfAmount ? monthlyPremium.halfAmount : monthlyPremium.fullAmount) * 12;
+  const fullPremium = bracket.smrAmount * EMPLOYEES_PENSION_RATE;
+  const monthlyAmount = roundSocialInsurancePremium(isHalfAmount ? fullPremium / 2 : fullPremium);
+
+  let totalPremium = monthlyAmount * 12;
   let bonusPortion = 0;
 
   if (bonuses.some(b => b.amount > 0)) {

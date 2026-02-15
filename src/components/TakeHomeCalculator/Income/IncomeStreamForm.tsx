@@ -37,8 +37,26 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(((initialData?.type === 'salary' || initialData?.type === 'commutingAllowance') && initialData.frequency) || 'annual');
   const [month, setMonth] = useState<number>((initialData?.type === 'bonus' && initialData.month) || 0); // 0 = Jan
   const [blueFilerDeduction, setBlueFilerDeduction] = useState<number>((initialData?.type === 'business' && initialData.blueFilerDeduction) || 0);
+  const [error, setError] = useState<string | null>(null);
+
+  const validate = (): boolean => {
+    if (type === 'commutingAllowance') {
+      let monthlyAmount = amount;
+      if (frequency === '3-months') monthlyAmount = amount / 3;
+      if (frequency === '6-months') monthlyAmount = amount / 6;
+      if (frequency === 'annual') monthlyAmount = amount / 12;
+
+      if (monthlyAmount > 150000) {
+        setError('Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of your salary.');
+        return false;
+      }
+    }
+    setError(null);
+    return true;
+  };
 
   const handleSave = () => {
+    if (!validate()) return;
     const id = initialData?.id || Date.now().toString(36) + Math.random().toString(36).substring(2);
     let stream: IncomeStream;
 
@@ -107,8 +125,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
         {type === 'salary' && (
           <FormControl fullWidth>
-            <InputLabel>Frequency</InputLabel>
+            <InputLabel id="salary-frequency-label">Frequency</InputLabel>
             <Select
+              labelId="salary-frequency-label"
               value={frequency}
               label="Frequency"
               onChange={(e) => setFrequency(e.target.value as 'monthly' | 'annual')}
@@ -121,8 +140,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
         {type === 'commutingAllowance' && (
           <FormControl fullWidth>
-            <InputLabel>Frequency</InputLabel>
+            <InputLabel id="commuting-allowance-frequency-label">Frequency</InputLabel>
             <Select
+              labelId="commuting-allowance-frequency-label"
               value={frequency}
               label="Frequency"
               onChange={(e) => setFrequency(e.target.value as 'monthly' | '3-months' | '6-months' | 'annual')}
@@ -271,7 +291,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             value={amount}
             onChange={(val) => setAmount(val)}
             sx={{ width: '100%' }}
-            helperText={getAmountHelperText()}
+            helperText={error || getAmountHelperText()}
+            error={!!error}
           />
           {type === 'salary' && frequency === 'monthly' && amount > 0 && (
             <Typography variant="body2" color="text.secondary" align="right" sx={{ mt: 0.5 }}>

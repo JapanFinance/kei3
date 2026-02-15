@@ -8,7 +8,7 @@
 
 import { roundSocialInsurancePremium } from '../../utils/taxCalculations';
 import { PROVIDER_DEFINITIONS, type RegionalRates } from './providerRateData';
-import { STANDARD_SMR_BRACKETS } from './smrBrackets';
+import { EHI_SMR_BRACKETS } from './smrBrackets';
 
 /**
  * Calculate monthly premium for an employee based on SMR and regional rates
@@ -63,7 +63,7 @@ export function generatePremiumTableFromRates(
   fullPremiumNoLTC: number;
   fullPremiumWithLTC: number;
 }> {
-  return STANDARD_SMR_BRACKETS.map((bracket) => {
+  return EHI_SMR_BRACKETS.map((bracket) => {
     const employeePremiumNoLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, false);
     const employeePremiumWithLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, true);
 

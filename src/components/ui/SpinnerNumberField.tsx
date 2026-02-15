@@ -28,6 +28,7 @@ interface SpinnerNumberFieldProps {
   min?: number;
   max?: number;
   helperText?: React.ReactNode;
+  error?: boolean;
 }
 
 export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
@@ -46,10 +47,11 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   min = 0,
   max,
   helperText,
+  error,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  
+
   const handleChange = (newValue: number) => {
     let clampedValue = newValue;
     if (typeof min === 'number') clampedValue = Math.max(min, clampedValue);
@@ -87,8 +89,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
       const currentStep = e.shiftKey ? shiftStep : step;
-      const newValue = e.key === 'ArrowUp' 
-        ? roundFloatingPoint(value + currentStep) 
+      const newValue = e.key === 'ArrowUp'
+        ? roundFloatingPoint(value + currentStep)
         : roundFloatingPoint(value - currentStep);
       handleChange(newValue);
     }
@@ -117,6 +119,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       allowNegative={min < 0}
       {...(label && { label })}
       {...(helperText && { helperText })}
+      {...(error && { error })}
       size="small"
       slotProps={{
         htmlInput: {
