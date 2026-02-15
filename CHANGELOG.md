@@ -2,6 +2,16 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-02-15
+
+### Updated
+
+- Commuting allowance can now be entered in the "Advanced" income input mode. While commuting allowance is generally non-taxable, it affects the calculation of social insurance premiums.
+
+### Fixed
+
+- The "capped" indicators for health insurance and pension premiums were being incorrectly shown in some mixed income scenarios (e.g. salary + bonus, salary + business income) even when the relevant income was not high enough to be capped. This has been fixed and the indicators will now only show on the specific premium component in the Social Insurance tab.
+
 ## 2026-02-10
 
 ### New
