@@ -15,8 +15,6 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import { ResultRow } from '../ResultRow';
 import InfoTooltip from '../../ui/InfoTooltip';
-import CapIndicator from '../../ui/CapIndicator';
-import { detectCaps } from '../../../utils/capDetection';
 
 interface SummaryTabProps {
   results: TakeHomeResults;
@@ -30,9 +28,6 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage = results.annualIncome > 0 ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%` : '100%';
-
-  // Detect caps using results (all context is now in results)
-  const capStatus = detectCaps(results);
 
   return (
     <Box>
@@ -69,9 +64,6 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
           <>
             <ResultRow
               label="Health Insurance"
-              labelSuffix={capStatus && capStatus.healthInsuranceCapped && (
-                <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="health insurance" />
-              )}
               value={
                 !isMobile ?
                   `${formatJPY(results.healthInsurance)} (${((results.healthInsurance / results.annualIncome) * 100).toFixed(1)}%)` :
@@ -81,9 +73,6 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             />
             <ResultRow
               label="Pension Payments"
-              labelSuffix={capStatus && (capStatus.pensionCapped || capStatus.pensionFixed) && (
-                <CapIndicator capStatus={capStatus} iconOnly={isMobile} contributionType="pension" />
-              )}
               value={
                 !isMobile ?
                   `${formatJPY(results.pensionPayments)} (${((results.pensionPayments / results.annualIncome) * 100).toFixed(1)}%)` :

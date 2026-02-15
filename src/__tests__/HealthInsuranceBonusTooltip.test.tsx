@@ -53,6 +53,7 @@ describe('HealthInsuranceBonusTooltip', () => {
         pensionPayments: 0,
         takeHomeIncome: 0,
         totalNetIncome: 0,
+        salaryIncome: 0,
         furusatoNozei: {} as unknown as TakeHomeResults['furusatoNozei'],
         dcPlanContributions: 0,
         healthInsuranceProvider: 'TestProvider' as unknown as HealthInsuranceProviderId,

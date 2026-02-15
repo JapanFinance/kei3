@@ -6,11 +6,13 @@ import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
 import { generateHealthInsurancePremiumTable, generatePremiumTableFromRates } from '../data/employeesHealthInsurance/providerRates';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
+import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
 
 export interface CapStatus {
   healthInsuranceCapped: boolean;
   pensionCapped: boolean;
   pensionFixed?: boolean;
+  healthInsuranceBonusCapped?: boolean;
   healthInsuranceCapDetails?: {
     medicalCapped?: boolean;
     supportCapped?: boolean;
@@ -22,19 +24,35 @@ export interface CapStatus {
  * Determines if health insurance and pension contributions are capped for the given results.
  * All necessary context is now included in the results object.
  */
-export function detectCaps(results: TakeHomeResults): CapStatus {
-  const monthlyIncome = results.annualIncome / 12;
+export function detectCaps(
+  results: TakeHomeResults,
+  healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[]
+): CapStatus {
+  // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
+  // instead of total annual income which might include business/misc income or bonuses.
+  const monthlyRemuneration = (results.salaryIncome + (results.commuterAllowanceIncome ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
   // Check pension cap
-  const pensionCapped = checkPensionCap(!isNationalPension, monthlyIncome);
+  const pensionCapped = checkPensionCap(isNationalPension, monthlyRemuneration);
   // Check health insurance cap
-  const healthInsuranceCapInfo = checkHealthInsuranceCap(results);
+  const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration);
+
+  // Check health insurance bonus cap
+  let healthInsuranceBonusCapped = false;
+  if (healthInsuranceBonusBreakdown && healthInsuranceBonusBreakdown.length > 0) {
+    // If any bonus payment was capped (standard amount < rounded amount), then the cumulative cap was hit.
+    healthInsuranceBonusCapped = healthInsuranceBonusBreakdown.some(item => {
+      const roundedAmount = Math.floor(item.bonusAmount / 1000) * 1000;
+      return item.standardBonusAmount < roundedAmount;
+    });
+  }
 
   return {
     healthInsuranceCapped: healthInsuranceCapInfo.capped,
     pensionCapped,
     pensionFixed: isNationalPension,
+    healthInsuranceBonusCapped,
     healthInsuranceCapDetails: healthInsuranceCapInfo.details,
   };
 }
@@ -42,8 +60,8 @@ export function detectCaps(results: TakeHomeResults): CapStatus {
 /**
  * Checks if pension contributions are at the maximum
  */
-function checkPensionCap(isEmployeesPension: boolean, monthlyIncome: number): boolean {
-  if (!isEmployeesPension) {
+function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number): boolean {
+  if (isNationalPension) {
     // National pension is a fixed amount, so never "capped" based on income
     return false;
   }
@@ -53,13 +71,16 @@ function checkPensionCap(isEmployeesPension: boolean, monthlyIncome: number): bo
   if (!lastBracket) {
     return false;
   }
-  return monthlyIncome >= lastBracket.minIncomeInclusive && lastBracket.maxIncomeExclusive === Infinity;
+  return monthlyRemuneration >= lastBracket.minIncomeInclusive && lastBracket.maxIncomeExclusive === Infinity;
 }
 
 /**
  * Checks if health insurance contributions are at the maximum
+ * @param results - The results of the tax calculations
+ * @param monthlyRemuneration - The monthly remuneration, as needed for EHI/EPI calculations
+ * @returns An object containing the cap status and details
  */
-function checkHealthInsuranceCap(results: TakeHomeResults): {
+function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: number): {
   capped: boolean;
   details?: {
     medicalCapped?: boolean;
@@ -67,7 +88,6 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     ltcCapped?: boolean;
   };
 } {
-  const monthlyIncome = results.annualIncome / 12;
   if (results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
     if (results.nhiMedicalPortion === undefined || results.nhiElderlySupportPortion === undefined) {
       // This shouldn't happen anymore since all context is in results
@@ -135,7 +155,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults): {
     if (!lastBracket) {
       return { capped: false };
     }
-    const capped = monthlyIncome >= lastBracket.minIncomeInclusive && lastBracket.maxIncomeExclusive === Infinity;
+    const capped = monthlyRemuneration >= lastBracket.minIncomeInclusive && lastBracket.maxIncomeExclusive === Infinity;
 
     return { capped };
   }

@@ -47,9 +47,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
 
-  // Detect if any caps are applied
-  const capStatus = detectCaps(results);
-
   // Calculate Health Insurance Bonus Breakdown for Tooltip
   // We need to determine the rates here to pass to the breakdown calculator
   const bonuses = inputs.incomeStreams.filter((s): s is BonusIncomeStream => s.type === 'bonus' && s.amount > 0);
@@ -86,6 +83,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       );
     }
   }
+
+  // Detect if any caps are applied
+  const capStatus = detectCaps(results, healthInsuranceBreakdown);
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -358,9 +358,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               />
             )}
           </Typography>
-          {!isNationalHealthInsurance && capStatus.healthInsuranceCapped && (
-            <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />
-          )}
         </Box>
         {isNationalHealthInsurance ? (
           <>
@@ -401,10 +398,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             <ResultRow
               label="Monthly Premium"
               labelSuffix={
-                <DetailInfoTooltip
-                  title="Health Insurance Premium Details"
-                  children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
-                />
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <DetailInfoTooltip
+                    title="Health Insurance Premium Details"
+                    children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
+                  />
+                  {capStatus.healthInsuranceCapped && (
+                    <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />
+                  )}
+                </Box>
               }
               value={formatJPY((results.healthInsurance - (results.healthInsuranceOnBonus ?? 0)) / 12)}
               type="indented"
@@ -413,10 +415,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               <ResultRow
                 label="Bonus Premium"
                 labelSuffix={
-                  <DetailInfoTooltip
-                    title="Bonus Health Insurance Details"
-                    children={<HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />}
-                  />
+                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DetailInfoTooltip
+                      title="Bonus Health Insurance Details"
+                      children={<HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />}
+                    />
+                    {capStatus.healthInsuranceBonusCapped && (
+                      <CapIndicator capStatus={capStatus} contributionType="health insurance bonus" iconOnly={isMobile} />
+                    )}
+                  </Box>
                 }
                 value={formatJPY(results.healthInsuranceOnBonus)}
                 type="indented"
@@ -457,19 +464,21 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               />
             )}
           </Typography>
-          {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-            <CapIndicator capStatus={capStatus} contributionType="pension" />
-          )}
         </Box>
         <ResultRow
           label="Monthly Contribution"
           labelSuffix={
-            !isNationalHealthInsurance && (
-              <DetailInfoTooltip
-                title="Pension Contribution Details"
-                children={<PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />}
-              />
-            )
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+              {!isNationalHealthInsurance && (
+                <DetailInfoTooltip
+                  title="Pension Contribution Details"
+                  children={<PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />}
+                />
+              )}
+              {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                <CapIndicator capStatus={capStatus} contributionType="pension" iconOnly={isMobile} />
+              )}
+            </Box>
           }
           value={formatJPY(Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12))}
           type="indented"
