@@ -5,22 +5,21 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
-import { formatJPY } from '../../../utils/formatters';
+import { formatJPY, formatPercent } from '../../../utils/formatters';
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
-import { generateHealthInsurancePremiumTable, generatePremiumTableFromRates } from '../../../data/employeesHealthInsurance/providerRates';
 import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
-import PremiumTableTooltip from './PremiumTableTooltip';
+import SMRTableTooltip from './SMRTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
+import { EHI_SMR_BRACKETS, type StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
-// TODO: Refactor this to use a more specific type. Clearly this was made to ignore typescript errors rather than define a proper type.
-type PremiumTableRow = Record<string, unknown>;
-
-interface HealthInsurancePremiumTableTooltipProps {
+interface HealthInsurancePremiumTooltipProps {
   results: TakeHomeResults;
   inputs: TakeHomeInputs;
+  standardMonthlyRemuneration: number;
 }
 
-const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTooltipProps> = ({ results, inputs }) => {
+const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps> = ({ results, inputs, standardMonthlyRemuneration }) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
 
@@ -28,7 +27,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
     // National Health Insurance - show region parameters
     const regionData = getNationalHealthInsuranceParams(region);
     if (!regionData) {
-      const fallbackContent = (
+      return (
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
             National Health Insurance Parameters
@@ -40,22 +39,6 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
             💡 National Health Insurance premiums vary by municipality. Please check with your local city/ward office for specific rates.
           </Typography>
         </Box>
-      );
-
-      return (
-        <PremiumTableTooltip
-          title=""
-          description=""
-          tableData={[]}
-          columns={[]}
-          currentRow={null}
-          monthlyIncome={0}
-          tableContainerDataAttr="data-table-container"
-          currentRowId="current-income-row"
-          getIncomeRange={() => ''}
-          getCurrentRowSummary={() => ''}
-          fallbackContent={fallbackContent}
-        />
       );
     }
 
@@ -96,7 +79,7 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
 
     const totalCalculatedPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium;
 
-    const fallbackContent = (
+    return (
       <Box sx={{ minWidth: { xs: 0, sm: 400 }, maxWidth: { xs: '100vw', sm: 460 } }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
           National Health Insurance - {regionData.regionName}
@@ -285,139 +268,165 @@ const HealthInsurancePremiumTableTooltip: React.FC<HealthInsurancePremiumTableTo
         )}
       </Box>
     );
-
-    return (
-      <PremiumTableTooltip
-        title=""
-        description=""
-        tableData={[]}
-        columns={[]}
-        currentRow={null}
-        monthlyIncome={0}
-        tableContainerDataAttr="data-table-container"
-        currentRowId="current-income-row"
-        getIncomeRange={() => ''}
-        getCurrentRowSummary={() => ''}
-        fallbackContent={fallbackContent}
-      />
-    );
   } else {
-    // Employee Health Insurance - show premium table
-    let premiumTableAsRows;
+    // Employee Health Insurance
+    let employeeRate = 0;
+    let employeeLtcRate = 0;
+    let employerRate: number | undefined;
     let sourceUrl;
     let providerLabel;
-    const monthlyIncome = inputs.incomeStreams.length > 0 ? inputs.incomeStreams
-      .filter(s => s.type === 'salary')
-      .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0) / 12 : results.annualIncome / 12;
+
+    if (standardMonthlyRemuneration === undefined) {
+      throw new Error('standardMonthlyRemuneration is required for the Employee Health Insurance tooltip');
+    }
 
     if (provider === CUSTOM_PROVIDER_ID) {
-      // Generate table for custom provider using input rates
-      const customRates = {
-        employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
-        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100,
-        // Employer rates not needed for this table as we only show employee portion
-      };
-
-      premiumTableAsRows = generatePremiumTableFromRates(customRates);
-
+      employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
+      employeeLtcRate = (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
+      // For custom provider, we don't know the employer rate, so we leave it undefined.
       providerLabel = "Custom Provider";
     } else {
-      premiumTableAsRows = generateHealthInsurancePremiumTable(provider, region);
       const providerDef = PROVIDER_DEFINITIONS[provider];
       const regionalRates = providerDef?.regions[region] || providerDef?.regions['DEFAULT'];
-      sourceUrl = regionalRates?.source || providerDef?.defaultSource;
-      providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
+
+      if (regionalRates) {
+        employeeRate = regionalRates.employeeHealthInsuranceRate;
+        employeeLtcRate = regionalRates.employeeLongTermCareRate;
+        employerRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
+        if (inputs.isSubjectToLongTermCarePremium) {
+          employerRate += regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
+        }
+        sourceUrl = regionalRates?.source || providerDef?.defaultSource;
+        providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
+      }
     }
 
-    if (!premiumTableAsRows) {
-      const fallbackContent = (
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-            Premium Table
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Premium table for {provider} in {region} is not available in the current data.
-          </Typography>
-          {sourceUrl && (
-            <Typography variant="body2" sx={{ fontSize: '0.8rem', mt: 1 }}>
-              <strong>Source:</strong>{' '}
-              <a
-                href={sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'inherit', textDecoration: 'underline' }}
-              >
-                {sourceUrl}
-              </a>
-            </Typography>
-          )}
-        </Box>
-      );
+    const includeLTC: boolean = inputs.isSubjectToLongTermCarePremium;
+    const finalRate = employeeRate + (includeLTC ? employeeLtcRate : 0);
+    const totalPremium = roundSocialInsurancePremium(standardMonthlyRemuneration * finalRate);
 
-      return (
-        <PremiumTableTooltip
-          title=""
-          description=""
-          tableData={[]}
-          columns={[]}
-          currentRow={null}
-          monthlyIncome={monthlyIncome}
-          tableContainerDataAttr="data-table-container"
-          currentRowId="current-income-row"
-          getIncomeRange={() => ''}
-          getCurrentRowSummary={() => ''}
-          fallbackContent={fallbackContent}
-        />
-      );
-    }
+    // Prepare table data for the lookup table
+    // Highlight the row corresponding to the current SMR
+    const currentRow = EHI_SMR_BRACKETS.find(bracket => bracket.smrAmount === standardMonthlyRemuneration) || null;
 
-
-    // Find the current row for the user's income
-    const currentRow = premiumTableAsRows.find((row) =>
-      monthlyIncome >= row.minIncomeInclusive &&
-      monthlyIncome < row.maxIncomeExclusive
-    );
+    const getIncomeRange = (row: StandardMonthlyRemunerationBracket) => {
+      return `${formatJPY(row.minIncomeInclusive)} - ${row.maxIncomeExclusive === Infinity ? '∞' : formatJPY(row.maxIncomeExclusive)}`;
+    };
 
     const columns = [
-      { header: 'Monthly Salary', getValue: () => 0, align: 'left' as const },
-      { header: 'Employee', getValue: (row: PremiumTableRow) => (row as unknown as { employeePremiumNoLTC: number }).employeePremiumNoLTC },
-      { header: 'With LTC', getValue: (row: PremiumTableRow) => (row as unknown as { employeePremiumWithLTC: number }).employeePremiumWithLTC },
+      {
+        header: 'Grade',
+        render: (row: StandardMonthlyRemunerationBracket) => row.grade,
+        align: 'left' as const
+      },
+      {
+        header: 'Monthly Remuneration',
+        render: getIncomeRange,
+        align: 'left' as const
+      },
+      {
+        header: 'SMR',
+        getValue: (row: StandardMonthlyRemunerationBracket) => row.smrAmount
+      },
     ];
 
-    const getIncomeRange = (row: PremiumTableRow) => {
-      const healthRow = row as unknown as { minIncomeInclusive: number; maxIncomeExclusive: number };
-      return `${formatJPY(healthRow.minIncomeInclusive)} - ${healthRow.maxIncomeExclusive === Infinity ? '∞' : formatJPY(healthRow.maxIncomeExclusive)
-        }`;
-    };
-
-    const getCurrentRowSummary = (row: PremiumTableRow) => {
-      const healthRow = row as unknown as { employeePremiumNoLTC: number; employeePremiumWithLTC: number };
-      return `Your premium: ${formatJPY(inputs.isSubjectToLongTermCarePremium ? healthRow.employeePremiumWithLTC : healthRow.employeePremiumNoLTC)}/month`;
-    };
-
-    const premiumTableAsTypedRows = premiumTableAsRows as unknown as PremiumTableRow[];
-
-    const baseProps = {
-      title: `Health Insurance Premium Table - ${providerLabel}`,
-      description: "Monthly premiums by income bracket. Your income: {monthlyIncome}/month",
-      hint: "💡 LTC stands for Long-Term Care, which is an additional premium insured people ages 40-64 need to pay.",
-      tableData: premiumTableAsTypedRows,
-      columns,
-      currentRow: currentRow || null,
-      monthlyIncome,
-      tableContainerDataAttr: "data-table-container",
-      currentRowId: "current-income-row",
-      getIncomeRange,
-      getCurrentRowSummary,
+    const getCurrentRowSummary = (row: StandardMonthlyRemunerationBracket) => {
+      return `Your Grade: ${row.grade} (SMR: ${formatJPY(row.smrAmount)})`;
     };
 
     return (
-      <PremiumTableTooltip
-        {...baseProps}
-        {...(sourceUrl ? { officialSourceLink: { url: sourceUrl, text: `${providerLabel} Premium Rates` } } : {})}
-      />
+      <Box sx={{ minWidth: { xs: 0, sm: 400 }, maxWidth: { xs: '100vw', sm: 500 } }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+          Health Insurance Calculation - {providerLabel}
+        </Typography>
+
+        <Box sx={{ mb: 0.5, p: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+          {/* Supporting Details */}
+          <Box sx={{ p: 1.5, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">Monthly Remuneration</Typography>
+              <Typography variant="caption" fontWeight={500}>
+                {formatJPY(
+                  inputs.incomeStreams
+                    .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
+                    .reduce((sum, s) => {
+                      if (s.frequency === 'monthly') return sum + s.amount;
+                      if (s.frequency === '3-months') return sum + s.amount / 3;
+                      if (s.frequency === '6-months') return sum + s.amount / 6;
+                      return sum + s.amount / 12;
+                    }, 0)
+                )}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.secondary">
+                Standard Monthly Remuneration
+              </Typography>
+              <Typography variant="caption" fontWeight={500}>{formatJPY(standardMonthlyRemuneration)}</Typography>
+            </Box>
+          </Box>
+
+          {/* Main Calculation Highlight */}
+          <Box sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+              Monthly Insurance Premium
+            </Typography>
+
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              width: '100%',
+              my: 0.5,
+              '& math': {
+                fontSize: '1.1rem',
+                fontFamily: 'Roboto, Helvetica, Arial, sans-serif'
+              },
+              '& mn': { fontWeight: 500 },
+              '& mo': { mx: 1, color: 'text.secondary' },
+              '& mn:last-child': { fontWeight: 700, color: 'primary.main' }
+            }}>
+              <math>
+                <mrow>
+                  <mn>{formatJPY(standardMonthlyRemuneration)}</mn>
+                  <mo>×</mo>
+                  <mn>{formatPercent(finalRate)}</mn>
+                  <mo>=</mo>
+                  <mn>{formatJPY(totalPremium)}</mn>
+                </mrow>
+              </math>
+            </Box>
+          </Box>
+        </Box>
+
+        {includeLTC && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: -0.5 }}>
+            Rate breakdown: Health {formatPercent(employeeRate)} + LTC {formatPercent(employeeLtcRate)}
+          </Typography>
+        )}
+
+        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block' }}>
+          {employerRate !== undefined
+            ? `The employer also pays at a rate of ${formatPercent(employerRate)}.`
+            : `The employer also contributes separately.`
+          }
+        </Typography>
+
+        <SMRTableTooltip
+          title="Employee Health Insurance SMR Table"
+          description="Standard Monthly Remuneration (SMR or 標準報酬月額) is determined by the below table."
+          tableData={EHI_SMR_BRACKETS}
+          columns={columns}
+          currentRow={currentRow}
+          tableContainerDataAttr="data-smr-table-container"
+          currentRowId="current-smr-row"
+          getCurrentRowSummary={getCurrentRowSummary}
+          {...(sourceUrl ? {
+            officialSourceLink: { url: sourceUrl, text: `${providerLabel} Rates` }
+          } : {})}
+        />
+      </Box>
     );
   }
 };
 
-export default HealthInsurancePremiumTableTooltip;
+export default HealthInsurancePremiumTooltip;

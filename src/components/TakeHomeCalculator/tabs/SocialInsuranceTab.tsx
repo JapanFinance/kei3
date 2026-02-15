@@ -13,12 +13,12 @@ import InfoTooltip from '../../ui/InfoTooltip';
 import DetailInfoTooltip from '../../ui/DetailInfoTooltip';
 import { ResultRow } from '../ResultRow';
 import { employmentInsuranceRate } from '../../../utils/taxCalculations';
-import HealthInsurancePremiumTableTooltip from './HealthInsurancePremiumTableTooltip';
-import PensionPremiumTableTooltip from './PensionPremiumTableTooltip';
+import HealthInsurancePremiumTooltip from './HealthInsurancePremiumTooltip';
+import PensionPremiumTooltip from './PensionPremiumTooltip';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
-import { calculatePensionBonusBreakdown } from '../../../utils/pensionCalculator';
+import { calculatePensionBonusBreakdown, findPensionBracket } from '../../../utils/pensionCalculator';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
 import type { BonusIncomeStream } from '../../../types/tax';
 import CapIndicator from '../../ui/CapIndicator';
@@ -29,6 +29,7 @@ import {
   DEFAULT_PROVIDER_REGION
 } from '../../../types/healthInsurance';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
+import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -141,6 +142,29 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   const hasEmploymentIncome = grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
+
+  const monthlyCommutingAllowance = inputs.incomeStreams
+    .filter(s => s.type === 'commutingAllowance')
+    .reduce((sum, s) => {
+      if (s.frequency === 'monthly') return sum + s.amount;
+      if (s.frequency === '3-months') return sum + s.amount / 3;
+      if (s.frequency === '6-months') return sum + s.amount / 6;
+      return sum + s.amount / 12;
+    }, 0);
+
+  // Calculate Raw Monthly Remuneration (Salary + Commuting)
+  const rawMonthlyRemuneration = inputs.incomeStreams
+    .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
+    .reduce((sum, s) => {
+      if (s.frequency === 'monthly') return sum + s.amount;
+      if (s.frequency === '3-months') return sum + s.amount / 3;
+      if (s.frequency === '6-months') return sum + s.amount / 6;
+      return sum + s.amount / 12;
+    }, 0);
+
+  // Find SMR Brackets
+  const healthSMR = findSMRBracket(rawMonthlyRemuneration).smrAmount;
+  const pensionSMR = findPensionBracket(rawMonthlyRemuneration).smrAmount;
 
   return (
     <Box>
@@ -274,7 +298,48 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <>
           {/* For Employees' Health Insurance, show the salary info, since that is the basis for calculations */}
           <ResultRow label="Annual Salary Income" value={formatJPY(salaryIncome)} type="header" />
-          <ResultRow label="Monthly Salary Income" value={formatJPY(salaryIncome / 12)} type="default" />
+          <ResultRow
+            label="Monthly Remuneration"
+            labelSuffix={
+              <DetailInfoTooltip
+                title="Monthly Remuneration Details"
+                children={
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Breakdown
+                    </Typography>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '2px 0' }}>Base Monthly Salary:</td>
+                          <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                            {formatJPY(salaryIncome / 12)}
+                          </td>
+                        </tr>
+                        {monthlyCommutingAllowance > 0 && (
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Monthly Commuting Allowance:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                              {formatJPY(monthlyCommutingAllowance)}
+                            </td>
+                          </tr>
+                        )}
+                        <tr style={{ borderTop: '1px solid #ddd' }}>
+                          <td style={{ padding: '4px 0', fontWeight: 600 }}>Total:</td>
+                          <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(rawMonthlyRemuneration)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <Typography variant="body2" color="text.secondary">
+                      Monthly remuneration includes base salary and various allowances (e.g. commuting allowance, housing allowance).
+                    </Typography>
+                  </Box>
+                }
+              />
+            }
+            value={formatJPY(rawMonthlyRemuneration)}
+            type="default"
+          />
           {bonusIncome > 0 && (
             <ResultRow label="Annual Bonus Income" value={formatJPY(bonusIncome)} type="default" />
           )}
@@ -289,7 +354,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance && (
               <DetailInfoTooltip
                 title="Health Insurance Premium Details"
-                children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
+                children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
               />
             )}
           </Typography>
@@ -338,7 +403,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               labelSuffix={
                 <DetailInfoTooltip
                   title="Health Insurance Premium Details"
-                  children={<HealthInsurancePremiumTableTooltip results={results} inputs={inputs} />}
+                  children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
                 />
               }
               value={formatJPY((results.healthInsurance - (results.healthInsuranceOnBonus ?? 0)) / 12)}
@@ -374,7 +439,21 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance && (
               <DetailInfoTooltip
                 title="Pension Contribution Details"
-                children={<PensionPremiumTableTooltip inputs={inputs} />}
+                children={(
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      National Pension (国民年金)
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
+                      National pension contributions are a fixed amount regardless of income level.
+                    </Typography>
+                    <Box sx={{ mt: 1 }}>
+                      Source:<a href="https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                        国民年金保険料の金額 (Japan Pension Service)
+                      </a>
+                    </Box >
+                  </Box >
+                )}
               />
             )}
           </Typography>
@@ -388,7 +467,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             !isNationalHealthInsurance && (
               <DetailInfoTooltip
                 title="Pension Contribution Details"
-                children={<PensionPremiumTableTooltip inputs={inputs} />}
+                children={<PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />}
               />
             )
           }

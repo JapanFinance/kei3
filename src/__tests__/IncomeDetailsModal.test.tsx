@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IncomeDetailsModal } from '../components/TakeHomeCalculator/Income/IncomeDetailsModal';
 import { describe, it, expect, vi } from 'vitest';
@@ -27,7 +27,7 @@ describe('IncomeDetailsModal - Business Income', () => {
 
         // 2. Select "Business" type
         // Use getByRole 'combobox' for the MUI Select trigger
-        const typeSelect = screen.getByRole('combobox', { name: /income type/i });
+        const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
         await user.click(typeSelect);
 
         // Select option from the listbox
@@ -94,7 +94,7 @@ describe('IncomeDetailsModal - Business Income', () => {
         await user.click(screen.getByRole('button', { name: /add income/i }));
 
         // 2. Open Type Dropdown
-        const typeSelect = screen.getByRole('combobox', { name: /income type/i });
+        const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
         await user.click(typeSelect);
 
         // 3. Verify Business option is disabled
@@ -169,6 +169,116 @@ describe('IncomeDetailsModal - Business Income', () => {
 
         // Should NOT display a stray "0"
         expect(screen.queryByText('0')).not.toBeInTheDocument();
+    });
+});
+
+describe('IncomeDetailsModal - Commuting Allowance', () => {
+    it('displays Commuting Allowance in the Employment Income section', () => {
+        const streams: IncomeStream[] = [{
+            id: 'commute-1',
+            type: 'commutingAllowance',
+            amount: 20000,
+            frequency: 'monthly'
+        }];
+
+        render(
+            <IncomeDetailsModal
+                open={true}
+                onClose={() => { }}
+                streams={streams}
+                onStreamsChange={() => { }}
+            />
+        );
+
+        // Section title "Employment Income (給与所得)" should be present
+        expect(screen.getByText(/Employment Income/i)).toBeInTheDocument();
+
+        // Separate "Commuting Allowance" section title should NOT be present
+        expect(screen.queryByText('Commuting Allowance (通勤手当)')).not.toBeInTheDocument();
+
+        // Should check for the amount
+        expect(screen.getByText('¥20,000')).toBeInTheDocument();
+
+        // Should check for the description "Monthly"
+        expect(screen.getByText('Monthly')).toBeInTheDocument();
+
+        // Should check for the annual calculation hint
+        expect(screen.getByText(/\(Annual: ¥240,000\)/i)).toBeInTheDocument();
+    });
+
+    it('validates commuting allowance limit', async () => {
+        const user = userEvent.setup();
+        const handleStreamsChange = vi.fn();
+
+        render(
+            <IncomeDetailsModal
+                open={true}
+                onClose={() => { }}
+                streams={[]}
+                onStreamsChange={handleStreamsChange}
+            />
+        );
+
+        // Click Add Income
+        await user.click(screen.getByText(/Add Income\/Benefit/i));
+
+        // Select Commuting Allowance
+        const typeSelect = screen.getByLabelText(/Income\/Benefit Type/i);
+        await user.click(typeSelect);
+        await user.click(screen.getByRole('option', { name: /Commuting Allowance/i }));
+
+        // Select Frequency: Monthly
+        const frequencySelect = screen.getByLabelText(/Frequency/i);
+        await user.click(frequencySelect);
+        await user.click(screen.getByRole('option', { name: /1 Month/i }));
+
+        // Enter amount > 150,000
+        const amountInput = screen.getByLabelText(/Allowance Amount/i);
+
+        // Verify initial helper text is present
+        expect(screen.getByText(/Commuting allowance up to 150,000 yen/i)).toBeInTheDocument();
+
+        await user.clear(amountInput);
+        await user.type(amountInput, '200000');
+
+        // Click Add
+        await user.click(screen.getByRole('button', { name: 'Add' }));
+
+        // Check for error message
+        await waitFor(() => {
+            expect(screen.getByText(/exceed 150,000 JPY\/month/i)).toBeInTheDocument();
+        });
+        expect(handleStreamsChange).not.toHaveBeenCalled();
+    });
+
+    it('disables Commuting Allowance option if one already exists', async () => {
+        const user = userEvent.setup();
+        const streams: IncomeStream[] = [{
+            id: 'commute-1',
+            type: 'commutingAllowance',
+            amount: 20000,
+            frequency: 'monthly'
+        }];
+
+        render(
+            <IncomeDetailsModal
+                open={true}
+                onClose={() => { }}
+                streams={streams}
+                onStreamsChange={() => { }}
+            />
+        );
+
+        // Click Add Income
+        await user.click(screen.getByText(/Add Income\/Benefit/i));
+
+        // Open Type Select
+        const typeSelect = screen.getByLabelText(/Income\/Benefit Type/i);
+        await user.click(typeSelect);
+
+        // Check if Commuting Allowance option is disabled
+        const option = screen.getByRole('option', { name: /Commuting Allowance/i });
+        expect(option).toHaveAttribute('aria-disabled', 'true');
     });
 });
 

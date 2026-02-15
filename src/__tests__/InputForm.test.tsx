@@ -600,3 +600,90 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     expect(netIncomePassed).toBe(expectedTotalNet);
   });
 });
+
+describe('Commuting Allowance Integration', () => {
+  // Mock for onInputChange
+  const mockOnInputChange = vi.fn();
+
+  const baseInputs: TakeHomeFormState = {
+    annualIncome: 5000000,
+    incomeMode: 'advanced',
+    incomeStreams: [
+      { id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }
+    ],
+    isSubjectToLongTermCarePremium: false,
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  it('should exclude commuting allowance from total annual income when added via UI', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TakeHomeInputForm
+        inputs={baseInputs}
+        onInputChange={mockOnInputChange}
+      />
+    );
+
+    // 1. Open Income Details Modal
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    // 2. Click Add Income
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+
+    // 3. Select Commuting Allowance
+    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
+    await user.click(typeSelect);
+    const listbox = screen.getByRole('listbox');
+    await user.click(within(listbox).getByRole('option', { name: /commuting allowance/i }));
+
+    // 4. Enter Amount and Frequency
+    const amountInput = screen.getByRole('textbox', { name: /allowance amount/i });
+    await user.type(amountInput, '20000');
+
+    // Frequency is Monthly by default, but let's be sure
+    // The frequency select is only shown for salary and commuting allowance
+    // It defaults to 'monthly' in IncomeStreamForm if not set? 
+    // Let's assume default is fine or select it if needed.
+    // Doing the simple path first.
+
+    // 5. Save
+    await user.click(screen.getByRole('button', { name: /add/i }));
+
+    // 6. Close Modal (optional, but good practice if it didn't close automatically - handleSaveStream doesn't close modal, just goes back to list)
+    // We just need to check if mockOnInputChange was called.
+    // handleSaveStream calls onStreamsChange which calls onInputChange immediately in TakeHomeInputForm.
+
+    // Verify calls
+    // We expect onInputChange to be called with updated streams
+    expect(mockOnInputChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: expect.objectContaining({
+          name: 'incomeStreams',
+          value: expect.arrayContaining([
+            expect.objectContaining({
+              type: 'commutingAllowance',
+              amount: 20000
+            })
+          ])
+        })
+      })
+    );
+
+    // We expect onInputChange to be called with annualIncome
+    // It SHOULD be 5,000,000 (unchanged)
+    expect(mockOnInputChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: expect.objectContaining({
+          name: 'annualIncome',
+          value: 5000000
+        })
+      })
+    );
+  });
+});

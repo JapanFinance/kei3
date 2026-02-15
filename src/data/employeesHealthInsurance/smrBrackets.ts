@@ -23,7 +23,7 @@ export interface StandardMonthlyRemunerationBracket {
  * Standardized SMR brackets for all employee health insurance providers in Japan
  * Source: Ministry of Health, Labour and Welfare (MHLW) standardized grade system
  */
-export const STANDARD_SMR_BRACKETS: StandardMonthlyRemunerationBracket[] = [
+export const EHI_SMR_BRACKETS: StandardMonthlyRemunerationBracket[] = [
   { grade: 1, smrAmount: 58000, minIncomeInclusive: 0, maxIncomeExclusive: 63000 },
   { grade: 2, smrAmount: 68000, minIncomeInclusive: 63000, maxIncomeExclusive: 73000 },
   { grade: 3, smrAmount: 78000, minIncomeInclusive: 73000, maxIncomeExclusive: 83000 },
@@ -79,8 +79,11 @@ export const STANDARD_SMR_BRACKETS: StandardMonthlyRemunerationBracket[] = [
 /**
  * Utility function to find the SMR bracket for a given monthly income
  */
-export function findSMRBracket(monthlyIncome: number): StandardMonthlyRemunerationBracket | undefined {
-  return STANDARD_SMR_BRACKETS.find(bracket => 
+export function findSMRBracket(monthlyIncome: number): StandardMonthlyRemunerationBracket {
+  if (monthlyIncome < 0) {
+    throw new Error('Monthly income must be non-negative');
+  }
+  return EHI_SMR_BRACKETS.find(bracket =>
     monthlyIncome >= bracket.minIncomeInclusive && monthlyIncome < bracket.maxIncomeExclusive
-  );
+  )!; // Invariant: brackets cover all incomes >= 0
 }

@@ -57,6 +57,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   const totalIncome = streams.reduce((sum, s) => {
+    // Exclude commuting allowance from total income
+    if (s.type === 'commutingAllowance') return sum;
+
     if (s.type === 'salary' && s.frequency === 'monthly') {
       return sum + s.amount * 12;
     }
@@ -67,6 +70,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     switch (stream.type) {
       case 'salary':
         return stream.frequency === 'monthly' ? 'Monthly' : 'Annual';
+      case 'commutingAllowance':
+        if (stream.frequency === 'monthly') return 'Monthly';
+        if (stream.frequency === '3-months') return '3 Months';
+        if (stream.frequency === '6-months') return '6 Months';
+        return 'Annual';
       case 'bonus':
         return new Date(0, stream.month).toLocaleString('default', { month: 'long' });
       default:
@@ -76,11 +84,16 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
 
   const getStreamColor = (type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'default' => {
     switch (type) {
-      case 'salary': return 'primary';
-      case 'bonus': return 'primary'; // Bonus is employment income, same as salary
-      case 'business': return 'success';
-      case 'miscellaneous': return 'warning';
-      default: return 'default';
+      case 'salary':
+      case 'bonus':
+      case 'commutingAllowance':
+        return 'primary';
+      case 'business':
+        return 'success';
+      case 'miscellaneous':
+        return 'warning';
+      default:
+        return 'default';
     }
   };
 
@@ -88,6 +101,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     let employmentIncome = 0;
     let businessIncome = 0;
     let miscellaneousIncome = 0;
+    let commutingAllowance = 0;
 
     streams.forEach(s => {
       let annualAmount = 0;
@@ -103,14 +117,25 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         businessIncome += annualAmount;
       } else if (s.type === 'miscellaneous') {
         miscellaneousIncome += annualAmount;
+      } else if (s.type === 'commutingAllowance') {
+        // Calculate annual amount based on frequency
+        if (s.frequency === 'monthly') {
+          commutingAllowance += s.amount * 12;
+        } else if (s.frequency === '3-months') {
+          commutingAllowance += s.amount * 4;
+        } else if (s.frequency === '6-months') {
+          commutingAllowance += s.amount * 2;
+        } else {
+          commutingAllowance += s.amount;
+        }
       }
     });
 
-    return { employmentIncome, businessIncome, miscellaneousIncome };
+    return { employmentIncome, businessIncome, miscellaneousIncome, commutingAllowance };
   };
 
   const groupStreams = () => {
-    const employment = streams.filter(s => s.type === 'salary' || s.type === 'bonus');
+    const employment = streams.filter(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'commutingAllowance');
     const business = streams.filter(s => s.type === 'business');
     const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
 
@@ -147,7 +172,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
-                      label={stream.type.toUpperCase()}
+                      label={stream.type === 'commutingAllowance' ? 'COMMUTING' : stream.type.toUpperCase()}
                       size="small"
                       color={getStreamColor(stream.type)}
                       sx={{ fontSize: '0.7rem', height: 20 }}
@@ -169,6 +194,16 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   {stream.type === 'business' && !!stream.blueFilerDeduction && (
                     <Typography variant="caption" color="text.secondary" display="block" align="right">
                       (Blue-filer Deduction: -{formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
+                    </Typography>
+                  )}
+                  {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
+                    <Typography variant="caption" color="text.secondary" display="block" align="right">
+                      (Annual: {formatJPY(
+                        stream.frequency === 'monthly' ? stream.amount * 12 :
+                          stream.frequency === '3-months' ? stream.amount * 4 :
+                            stream.frequency === '6-months' ? stream.amount * 2 :
+                              stream.amount
+                      )})
                     </Typography>
                   )}
                 </Box>
@@ -200,7 +235,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Income Details</Typography>
+          <Typography variant="h6">Income/Benefit Details</Typography>
           <Chip
             label={`Total: ${formatJPY(totalIncome)}`}
             color="primary"
@@ -214,7 +249,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           <IncomeStreamForm
             onSave={handleSaveStream}
             onCancel={() => setIsAddingNew(false)}
-            disabledTypes={streams.some(s => s.type === 'business') ? ['business'] : []}
+            disabledTypes={[
+              ...(streams.some(s => s.type === 'business') ? ['business'] : []),
+              ...(streams.some(s => s.type === 'commutingAllowance') ? ['commutingAllowance'] : [])
+            ]}
           />
         ) : editingStream ? (
           <IncomeStreamForm
@@ -265,7 +303,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 mt: 2
               }}
             >
-              Add Income
+              Add Income/Benefit
             </Button>
           </Stack>
         )}
