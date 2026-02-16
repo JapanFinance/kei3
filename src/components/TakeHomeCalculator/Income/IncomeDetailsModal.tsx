@@ -208,10 +208,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   )}
                 </Box>
                 <Box>
-                  <IconButton onClick={() => setEditingStream(stream)} color="primary" size="small">
+                  <IconButton onClick={() => setEditingStream(stream)} color="primary" size="small" aria-label="edit income">
                     <EditIcon />
                   </IconButton>
-                  <IconButton onClick={() => handleDeleteStream(stream.id)} color="error" size="small">
+                  <IconButton onClick={() => handleDeleteStream(stream.id)} color="error" size="small" aria-label="delete income">
                     <DeleteIcon />
                   </IconButton>
                 </Box>

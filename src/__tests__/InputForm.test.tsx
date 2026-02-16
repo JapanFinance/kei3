@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { useState } from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
@@ -687,3 +688,78 @@ describe('Commuting Allowance Integration', () => {
     );
   });
 });
+
+describe('Regression: Health Insurance Provider Auto-Correction', () => {
+  // Wrapper component to manage state like the real application
+  const TestWrapper = () => {
+    const [inputs, setInputs] = useState<TakeHomeFormState>({
+      annualIncome: 10000000,
+      incomeMode: 'advanced',
+      incomeStreams: [
+        { id: '1', type: 'salary', amount: 6000000, frequency: 'annual' },
+        { id: '2', type: 'business', amount: 4000000 }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: 'KyokaiKenpo', // An employee provider
+      region: 'Tokyo',
+      dcPlanContributions: 0,
+      dependents: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    });
+
+    const handleInputChange = (e: { target: { name: string; value: unknown; type?: string; checked?: boolean } } | React.ChangeEvent<unknown>) => {
+      // Simple state update logic mirroring the parent app's behavior
+      const target = e.target as HTMLInputElement;
+      const name = target.name;
+      // Handle checkbox vs value
+      const value = target.type === 'checkbox' ? target.checked : target.value;
+
+      setInputs(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    };
+
+    return (
+      <TakeHomeInputForm
+        inputs={inputs}
+        onInputChange={handleInputChange}
+      />
+    );
+  };
+
+  it('should auto-switch to National Health Insurance when last employment income is removed via UI', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper />);
+
+    // 1. Verify initial state (Kyokai Kenpo selected)
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    expect(providerSelect).toHaveTextContent('Kyokai Kenpo');
+
+    // 2. Open Income Details Modal
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    // 3. Find and Delete the Salary stream
+    // Look for the "SALARY" chip/text to find the right card
+    const salaryChip = screen.getByText('SALARY');
+    const salaryCard = salaryChip.closest('.MuiCard-root');
+    expect(salaryCard).toBeInTheDocument();
+    if (!salaryCard) throw new Error('Salary card not found');
+
+    // Find the delete button within this card using the accessible name
+    const deleteButton = within(salaryCard as HTMLElement).getByRole('button', { name: /delete income/i });
+    expect(deleteButton).toBeInTheDocument();
+
+    await user.click(deleteButton);
+
+    // 4. Close the Modal
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    await user.click(closeButton);
+
+    // 5. Assert UI Outcome
+    // The provider should now be "National Health Insurance"
+    expect(providerSelect).toHaveTextContent('National Health Insurance');
+  });
+});
+

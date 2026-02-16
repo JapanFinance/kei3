@@ -326,6 +326,29 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     }
   }, [hasEmploymentIncome, isDependentEligible]);
 
+  // Effect to validate and correct the selected provider if it's no longer available
+  React.useEffect(() => {
+    // If we have available providers but the current one isn't in the list
+    if (availableProviders.length > 0) {
+      const isCurrentProviderAvailable = availableProviders.some(p => p.id === inputs.healthInsuranceProvider);
+
+      if (!isCurrentProviderAvailable) {
+        // Default to NHI if available, otherwise the first one
+        const nhiOption = availableProviders.find(p => p.id === NATIONAL_HEALTH_INSURANCE_ID);
+        const fallbackProvider = nhiOption || availableProviders[0];
+
+        if (fallbackProvider) {
+          onInputChange({
+            target: {
+              name: 'healthInsuranceProvider',
+              value: fallbackProvider.id,
+            }
+          } as unknown as React.ChangeEvent<HTMLInputElement>);
+        }
+      }
+    }
+  }, [availableProviders, inputs.healthInsuranceProvider, onInputChange]);
+
   const isHealthInsuranceProviderDropdownDisabled = availableProviders.length <= 1;
 
   // Derive regions for the currently selected health insurance provider
