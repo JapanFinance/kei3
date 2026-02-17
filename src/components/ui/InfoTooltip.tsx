@@ -67,12 +67,14 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
           onClose={handleClose}
           maxWidth="sm"
           fullWidth
-          PaperProps={{
-            sx: {
-              m: 2,
-              width: '100%',
-              maxWidth: 'calc(100% - 32px)',
-              borderRadius: 2,
+          slotProps={{
+            paper: {
+              sx: {
+                m: 2,
+                width: '100%',
+                maxWidth: 'calc(100% - 32px)',
+                borderRadius: 2,
+              }
             }
           }}
         >
