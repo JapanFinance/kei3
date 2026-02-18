@@ -14,12 +14,23 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { SIMPLE_TOOLTIP_ICON, DETAILED_TOOLTIP_ICON } from './constants';
 
+/**
+ * Default styles for tooltip icon buttons.
+ * Ensures consistent appearance across mobile dialog and desktop tooltip.
+ */
+const DEFAULT_ICON_BUTTON_SX = {
+  p: 0.25,
+  ml: 0.3,
+  color: 'text.secondary',
+  verticalAlign: 'middle'
+} as const;
+
 interface BaseTooltipProps {
   children: React.ReactNode;
   title?: string;             // Optional: if provided, shows as dialog header on mobile
   icon: React.ReactNode;      // Required: the icon to display
-  iconSx?: object;
-  iconAriaLabel?: string;
+  iconSx?: object;            // Optional: icon/button styling
+  iconAriaLabel?: string;     // Optional: aria-label for icon button (default: 'More information')
 }
 
 /**
@@ -53,9 +64,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
           onClick={handleOpen}
           size="small"
           sx={{
-            p: 0.5,
-            ml: 0.5,
-            color: 'text.secondary',
+            ...DEFAULT_ICON_BUTTON_SX,
             ...(iconSx || {})
           }}
           aria-label={iconAriaLabel || 'More information'}
@@ -120,10 +129,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
       <IconButton
         size="small"
         sx={{
-          p: 0.5,
-          ml: 0.5,
-          color: 'text.secondary',
-          verticalAlign: 'middle',
+          ...DEFAULT_ICON_BUTTON_SX,
           ...(iconSx || {})
         }}
         aria-label={iconAriaLabel || 'More information'}
