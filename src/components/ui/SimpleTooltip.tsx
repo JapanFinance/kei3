@@ -6,27 +6,35 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import { SIMPLE_TOOLTIP_ICON } from './constants';
 
-interface InfoTooltipProps {
-  title: string;
-  children?: React.ReactNode;
-  mobileOnly?: boolean;
-  icon?: React.ReactNode; // Custom icon
-  iconSx?: object; // Custom icon/button style
-  iconAriaLabel?: string; // Custom aria-label
+interface SimpleTooltipProps {
+  children: string;           // Required: brief explanation
+  icon?: React.ReactNode;     // Optional: custom icon (default: HelpOutlineIcon)
+  iconSx?: object;            // Optional: icon/button styling
+  iconAriaLabel?: string;     // Optional: aria-label for icon button
 }
 
-export const InfoTooltip: React.FC<InfoTooltipProps> = ({ 
-  title, 
+/**
+ * SimpleTooltip displays brief, single-line explanations with minimal UI overhead.
+ *
+ * **Desktop behavior:** Shows as a standard hover tooltip.
+ *
+ * **Mobile behavior:** Opens a compact dialog with the content only—no separate header
+ * to conserve screen space on constrained devices.
+ *
+ * @example
+ * ```tsx
+ * <SimpleTooltip>People aged 40-64 are required to pay long-term care insurance.</SimpleTooltip>
+ * ```
+ */
+export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
   children,
-  mobileOnly = false,
   icon,
   iconSx,
   iconAriaLabel
@@ -34,34 +42,34 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   const [open, setOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const showDialog = isMobile || mobileOnly;
+  const showDialog = isMobile;
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const tooltipContent = (
     <Box sx={{ maxWidth: 420, p: 1, fontSize: isMobile ? '0.85rem' : '1rem' }}>
-      {children || title}
+      {children}
     </Box>
   );
 
   if (showDialog) {
     return (
       <>
-        <IconButton 
+        <IconButton
           onClick={handleOpen}
           size="small"
-          sx={{ 
-            p: 0.5, 
-            ml: 0.5, 
-            color: 'text.secondary', 
-            ...(iconSx || {}) 
+          sx={{
+            p: 0.5,
+            ml: 0.5,
+            color: 'text.secondary',
+            ...(iconSx || {})
           }}
           aria-label={iconAriaLabel || 'More information'}
         >
-          {icon || <HelpOutlineIcon fontSize="small" />}
+          {icon || SIMPLE_TOOLTIP_ICON}
         </IconButton>
-        
+
         <Dialog
           open={open}
           onClose={handleClose}
@@ -73,14 +81,13 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                 m: 2,
                 width: '100%',
                 maxWidth: 'calc(100% - 32px)',
-                borderRadius: 2,
+                borderRadius: 2
               }
             }
           }}
         >
-          <DialogTitle sx={{ pb: 1 }}>More Information</DialogTitle>
-          <DialogContent dividers>
-            {children || title}
+          <DialogContent dividers sx={{ p: 2 }}>
+            {children}
           </DialogContent>
           <DialogActions sx={{ p: 2 }}>
             <Button onClick={handleClose} variant="contained" color="primary">
@@ -93,8 +100,8 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
   }
 
   return (
-    <Tooltip 
-      title={tooltipContent} 
+    <Tooltip
+      title={tooltipContent}
       arrow
       slotProps={{
         tooltip: {
@@ -109,28 +116,28 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
               color: 'background.paper',
               '&:before': {
                 border: '1px solid',
-                borderColor: 'divider',
-              },
-            },
-          },
-        },
+                borderColor: 'divider'
+              }
+            }
+          }
+        }
       }}
     >
-      <IconButton 
+      <IconButton
         size="small"
-        sx={{ 
-          p: 0.5, 
-          ml: 0.5, 
-          color: 'text.secondary', 
-          verticalAlign: 'middle', 
-          ...(iconSx || {}) 
+        sx={{
+          p: 0.5,
+          ml: 0.5,
+          color: 'text.secondary',
+          verticalAlign: 'middle',
+          ...(iconSx || {})
         }}
         aria-label={iconAriaLabel || 'More information'}
       >
-        {icon || <HelpOutlineIcon fontSize="small" />}
+        {icon || SIMPLE_TOOLTIP_ICON}
       </IconButton>
     </Tooltip>
   );
 };
 
-export default InfoTooltip;
+export default SimpleTooltip;

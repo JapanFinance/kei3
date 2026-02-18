@@ -5,7 +5,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
-import InfoTooltip from './InfoTooltip';
+import { DetailedTooltip } from './DetailedTooltip';
 import type { CapStatus } from '../../utils/capDetection';
 import { formatJPY } from '../../utils/formatters';
 import { ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP } from '../../utils/healthInsuranceCalculator';
@@ -69,7 +69,7 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
 
   if (iconOnly) {
     return (
-      <InfoTooltip
+      <DetailedTooltip
         title={isNationalPension ? 'Contribution Fixed' : 'Contribution Cap Applied'}
         icon={
           <Box
@@ -93,13 +93,14 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
           </Box>
         }
         iconSx={{ p: 0, ml: 0.5 }}
-        children={tooltipContent}
-      />
+      >
+        {tooltipContent}
+      </DetailedTooltip>
     );
   }
 
   return (
-    <InfoTooltip
+    <DetailedTooltip
       title={isNationalPension ? 'Contribution Fixed' : 'Contribution Cap Applied'}
       icon={
         <Box
@@ -124,8 +125,9 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
         </Box>
       }
       iconSx={{ p: 0, ml: 0.5 }}
-      children={tooltipContent}
-    />
+    >
+      {tooltipContent}
+    </DetailedTooltip>
   );
 };
 

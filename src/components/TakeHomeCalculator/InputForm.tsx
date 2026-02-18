@@ -23,7 +23,7 @@ import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
 import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
-import { InfoTooltip } from '../ui/InfoTooltip';
+import { SimpleTooltip } from '../ui/SimpleTooltip';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
@@ -625,7 +625,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               }}
             >
               Age Range
-              <InfoTooltip title="People aged 40-64 are required to pay long-term care insurance premiums as part of their health insurance." />
+              <SimpleTooltip>People aged 40-64 are required to pay long-term care insurance premiums as part of their health insurance.</SimpleTooltip>
             </Typography>
             <ToggleButtonGroup
               value={inputs.isSubjectToLongTermCarePremium}
@@ -692,7 +692,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               }}
             >
               Dependents
-              <InfoTooltip title="Add spouse and dependents to calculate applicable tax deductions." />
+              <SimpleTooltip>Add spouse and dependents to calculate applicable tax deductions.</SimpleTooltip>
             </Typography>
             <Badge
               badgeContent={inputs.dependents.length}
@@ -739,7 +739,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
                     Enter Social Insurance Manually
                   </Typography>
-                  <InfoTooltip title="Manually enter the total social insurance amount paid in the year (e.g. Health Insurance + Pension + Employment Insurance). This option should be used only if you have a situation where the automatic calculation does not reflect your actual payments. Employees generally can find this amount on their annual withholding statement (源泉徴収票) as the item labelled 社会保険料等の金額." />
+                  <SimpleTooltip>Manually enter the total social insurance amount paid in the year (e.g. Health Insurance + Pension + Employment Insurance). This option should be used only if you have a situation where the automatic calculation does not reflect your actual payments. Employees generally can find this amount on their annual withholding statement (源泉徴収票) as the item labelled 社会保険料等の金額.</SimpleTooltip>
                 </Box>
               }
             />
@@ -774,7 +774,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   }}
                 >
                   Health Insurance Provider
-                  <InfoTooltip title="Your health insurance provider affects your premium calculations. Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds." />
+                  <SimpleTooltip>Your health insurance provider affects your premium calculations. Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds.</SimpleTooltip>
                 </Typography>
                 <InputLabel
                   id="healthInsuranceProvider-label"
@@ -819,7 +819,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   <FormControl fullWidth>
                     <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
                       Health Insurance
-                      <InfoTooltip title="Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率." />
+                      <SimpleTooltip>Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率.</SimpleTooltip>
                     </Typography>
                     <SpinnerNumberField
                       id="customHealthInsuranceRate"
@@ -838,7 +838,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   <FormControl fullWidth>
                     <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
                       Long-term Care
-                      <InfoTooltip title="Enter the employee's share of the Long-term Care premium rate (usually half of the total rate). This only applies if you are aged 40-64. Look for 介護保険料率 on the provider's website." />
+                      <SimpleTooltip>Enter the employee's share of the Long-term Care premium rate (usually half of the total rate). This only applies if you are aged 40-64. Look for 介護保険料率 on the provider's website.</SimpleTooltip>
                     </Typography>
                     <SpinnerNumberField
                       id="customLongTermCareRate"
@@ -917,7 +917,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 rel="noopener noreferrer"
                 style={{ color: 'inherit', fontWeight: 500 }}
               >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
-              <InfoTooltip title="Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation." />
+              <SimpleTooltip>Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation.</SimpleTooltip>
             </Typography>
             <SpinnerNumberField
               id="dcPlanContributions"

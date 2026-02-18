@@ -14,7 +14,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import { ResultRow } from '../ResultRow';
-import InfoTooltip from '../../ui/InfoTooltip';
+import { DetailedTooltip } from '../../ui/DetailedTooltip';
 
 interface SummaryTabProps {
   results: TakeHomeResults;
@@ -208,22 +208,21 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
               <span>
                 Furusato Nozei Limit
                 {results.furusatoNozei.outOfPocketCost > 2200 && (
-                  <InfoTooltip
+                  <DetailedTooltip
                     title="Warning: High Out-of-Pocket Cost"
                     icon={<WarningIcon fontSize="small" />}
                     iconSx={{ color: 'error.main' }}
                     iconAriaLabel="Warning: High out-of-pocket cost"
-                    children={
-                      <Box>
-                        <Typography variant="body2" sx={{ mb: 0.5 }}>
-                          Your out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)}) is higher than the expected ≈2,000 yen.
-                        </Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          See the Furusato Nozei tab for details.
-                        </Typography>
-                      </Box>
-                    }
-                  />
+                  >
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 0.5 }}>
+                        Your out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)}) is higher than the expected ≈2,000 yen.
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        See the Furusato Nozei tab for details.
+                      </Typography>
+                    </Box>
+                  </DetailedTooltip>
                 )}
               </span>
             }

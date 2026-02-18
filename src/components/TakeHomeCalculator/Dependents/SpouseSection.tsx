@@ -25,7 +25,7 @@ import {
 import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
 import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { InfoTooltip } from '../../ui/InfoTooltip';
+import { SimpleTooltip } from '../../ui/SimpleTooltip';
 import { formatJPY } from '../../../utils/formatters';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -97,7 +97,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
           <Box>
             <Typography variant="subtitle2" gutterBottom>
               Income Information{' '}
-              <InfoTooltip title="Enter income amounts to calculate total net income (合計所得金額) and determine deduction eligibility." />
+              <SimpleTooltip>Enter income amounts to calculate total net income (合計所得金額) and determine deduction eligibility.</SimpleTooltip>
             </Typography>
             
             {isMobile ? (

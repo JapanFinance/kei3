@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { SxProps, Theme } from '@mui/material/styles';
-import InfoTooltip from '../ui/InfoTooltip';
+import { SimpleTooltip } from '../ui/SimpleTooltip';
 
 const labelTooltips: Record<string, string> = {
   'Health Insurance': 'Mandatory health insurance contributions.',
@@ -156,7 +156,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       {iconMap[typeof label === 'string' ? label : ''] || null}
       {label}
       {typeof label === 'string' && labelTooltips[label] && (
-        <InfoTooltip title={labelTooltips[label]} />
+        <SimpleTooltip>{labelTooltips[label]}</SimpleTooltip>
       )}
       {labelSuffix}
     </Box>

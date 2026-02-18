@@ -10,7 +10,8 @@ import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
-import InfoTooltip from '../../ui/InfoTooltip';
+import { DetailedTooltip } from '../../ui/DetailedTooltip';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
 
 interface FurusatoNozeiTabProps {
@@ -78,29 +79,29 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           label={
             <span>
               Furusato Nozei Limit
-              <InfoTooltip
+              <DetailedTooltip
                 title="Donation Limit Explanation"
-                children={
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      This limit is the maximum donation for which your out-of-pocket cost is only 2,000 yen, based on the input income and other options.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Actual limits may vary depending on your deductions and municipality.
-                    </Typography>
-                    <Typography variant="body2">
-                      If you claim deductions or tax credits not supported by this calculator, this limit will not be accurate for you (it will likely be too high).
-                    </Typography>
-                    <Box sx={{ mt: 1 }}>
-                      You can use{' '}
-                      <a href="https://kaikei7.com/furusato_nouzei_keisan/" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
-                        kaikei7
-                      </a>{' '}
-                      for calculations that support virtually all deductions and credits.
-                    </Box>
+                icon={SIMPLE_TOOLTIP_ICON}
+              >
+                <Box>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    This limit is the maximum donation for which your out-of-pocket cost is only 2,000 yen, based on the input income and other options.
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Actual limits may vary depending on your deductions and municipality.
+                  </Typography>
+                  <Typography variant="body2">
+                    If you claim deductions or tax credits not supported by this calculator, this limit will not be accurate for you (it will likely be too high).
+                  </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    You can use{' '}
+                    <a href="https://kaikei7.com/furusato_nouzei_keisan/" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
+                      kaikei7
+                    </a>{' '}
+                    for calculations that support virtually all deductions and credits.
                   </Box>
-                }
-              />
+                </Box>
+              </DetailedTooltip>
             </span>
           }
           value={formatJPY(results.furusatoNozei.limit)}
@@ -118,33 +119,33 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           label={
             <span>
               Income Tax Reduction
-              <InfoTooltip
+              <DetailedTooltip
                 title="Income Tax Reduction"
-                children={
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Income Tax Reduction (Furusato Nozei)
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      This reduction is received if you file a tax return (確定申告) including your Furusato Nozei donations. It is applied in the form of a donation deduction that reduces your taxable income.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Donation Deduction (寄付金控除):</strong> {formatJPY(Math.max(results.furusatoNozei.limit - 2000, 0))} (donation amount minus 2,000 yen)
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      The income tax reduction is calculated as the difference in income tax with and without this donation deduction.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      If you use the One-Stop Exception system (ワンストップ特例制度), this reduction will be applied to your residence tax instead of your income tax.
-                    </Typography>
-                    <Box sx={{ mt: 1 }}>
-                      <a href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/" target="_blank" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                        More about Furusato Nozei
-                      </a>
-                    </Box>
+                icon={SIMPLE_TOOLTIP_ICON}
+              >
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Income Tax Reduction (Furusato Nozei)
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    This reduction is received if you file a tax return (確定申告) including your Furusato Nozei donations. It is applied in the form of a donation deduction that reduces your taxable income.
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Donation Deduction (寄付金控除):</strong> {formatJPY(Math.max(results.furusatoNozei.limit - 2000, 0))} (donation amount minus 2,000 yen)
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    The income tax reduction is calculated as the difference in income tax with and without this donation deduction.
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    If you use the One-Stop Exception system (ワンストップ特例制度), this reduction will be applied to your residence tax instead of your income tax.
+                  </Typography>
+                  <Box sx={{ mt: 1 }}>
+                    <a href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/" target="_blank" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                      More about Furusato Nozei
+                    </a>
                   </Box>
-                }
-              />
+                </Box>
+              </DetailedTooltip>
             </span>
           }
           value={formatJPY(results.furusatoNozei.incomeTaxReduction)}
@@ -155,28 +156,28 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           label={
             <span>
               Residence Tax Reduction
-              <InfoTooltip
+              <DetailedTooltip
                 title="Residence Tax Credits on Tax Notice"
-                children={
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Tax Credits vs. Realized Reduction
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      The total tax credits shown on your residence tax notice may differ slightly from the effective tax reduction due to rounding in the calculation process.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Basic Deduction (基本控除):</strong> {formatJPY(results.furusatoNozei.residenceTaxDonationBasicDeduction)} (10% of donation amount minus 2,000 yen)
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Special Deduction (特例控除):</strong> {formatJPY(results.furusatoNozei.residenceTaxSpecialDeduction)} (remaining amount to keep out-of-pocket cost at 2,000 yen, up to a limit)
-                    </Typography>
-                    <Typography variant="body2">
-                      The residence tax reduction is calculated as the difference in residence tax with and without the above tax credits.
-                    </Typography>
-                  </Box>
-                }
-              />
+                icon={SIMPLE_TOOLTIP_ICON}
+              >
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Tax Credits vs. Realized Reduction
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    The total tax credits shown on your residence tax notice may differ slightly from the effective tax reduction due to rounding in the calculation process.
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Basic Deduction (基本控除):</strong> {formatJPY(results.furusatoNozei.residenceTaxDonationBasicDeduction)} (10% of donation amount minus 2,000 yen)
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Special Deduction (特例控除):</strong> {formatJPY(results.furusatoNozei.residenceTaxSpecialDeduction)} (remaining amount to keep out-of-pocket cost at 2,000 yen, up to a limit)
+                  </Typography>
+                  <Typography variant="body2">
+                    The residence tax reduction is calculated as the difference in residence tax with and without the above tax credits.
+                  </Typography>
+                </Box>
+              </DetailedTooltip>
             </span>
           }
           value={formatJPY(results.furusatoNozei.residenceTaxReduction)}

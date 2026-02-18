@@ -9,12 +9,12 @@ import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
 
 // Mock dependencies
-vi.mock('../components/ui/InfoTooltip', () => ({
+vi.mock('../components/ui/SimpleTooltip', () => ({
     default: () => <div data-testid="info-tooltip" />
 }));
-// Updated mock to return span for inline usage
-vi.mock('../components/ui/DetailInfoTooltip', () => ({
-    default: ({ title, children }: { title: string, children?: React.ReactNode }) => (
+
+vi.mock('../components/ui/DetailedTooltip', () => ({
+    DetailedTooltip: ({ title, children }: { title: string, children: React.ReactNode }) => (
         <span data-testid="detail-info-tooltip" title={title}>
             {children}
         </span>

@@ -28,9 +28,10 @@ import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin }
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type { Dependent } from '../../types/dependents';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
-import { InfoTooltip } from '../ui/InfoTooltip';
+import { DetailedTooltip } from '../ui/DetailedTooltip';
 import { detectCaps } from '../../utils/capDetection';
 import { calculateTaxes } from '../../utils/taxCalculations';
+import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 
 // Percentile bands configuration
 const QUINTILE_BANDS = [
@@ -524,13 +525,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           >
             Background colors show income distribution quintiles
           </Typography>
-          <InfoTooltip
+          <DetailedTooltip
             title="Income Distribution Quintiles"
-            iconSx={{
-              width: 18,
-              height: 18,
-              color: 'text.secondary',
-            }}
+            icon={SIMPLE_TOOLTIP_ICON}
             iconAriaLabel="Learn more about income distribution quintiles"
           >
             <Box>
@@ -654,7 +651,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 </Typography>
               </Box>
             </Box>
-          </InfoTooltip>
+          </DetailedTooltip>
         </Box>
       </Box>
 
