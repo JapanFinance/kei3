@@ -531,9 +531,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             iconAriaLabel="Learn more about income distribution quintiles"
           >
             <Box>
-              <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600 }}>
-                Income Distribution Quintiles in Japan
-              </Typography>
               <Typography variant="body2" sx={{ mb: 1.5 }}>
                 The colored background bands represent household income distribution quintiles based on official Japanese government data:
               </Typography>

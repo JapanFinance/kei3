@@ -199,6 +199,6 @@ describe('Blue-Filer Deduction Display', () => {
         // mockResults already has blueFilerDeduction: 650_000
         render(<TaxesTab results={mockResults} inputs={mockInputs} />);
 
-        expect(screen.getByTitle("Business & Miscellaneous Income Details")).toBeInTheDocument();
+        expect(screen.getByTitle("Business & Miscellaneous Income")).toBeInTheDocument();
     });
 });

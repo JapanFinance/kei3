@@ -124,9 +124,6 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                 icon={SIMPLE_TOOLTIP_ICON}
               >
                 <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Income Tax Reduction (Furusato Nozei)
-                  </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     This reduction is received if you file a tax return (確定申告) including your Furusato Nozei donations. It is applied in the form of a donation deduction that reduces your taxable income.
                   </Typography>
@@ -157,7 +154,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             <span>
               Residence Tax Reduction
               <DetailedTooltip
-                title="Residence Tax Credits on Tax Notice"
+                title="Residence Tax Reduction"
                 icon={SIMPLE_TOOLTIP_ICON}
               >
                 <Box>

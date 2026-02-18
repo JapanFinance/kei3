@@ -230,7 +230,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   Net Business / Misc Income
                   {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
                     <DetailedTooltip
-                      title="Business & Miscellaneous Income Details"
+                      title="Business & Miscellaneous Income"
                     >
                       <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -300,7 +300,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             label="Monthly Remuneration"
             labelSuffix={
               <DetailedTooltip
-                title="Monthly Remuneration Details"
+                title="Monthly Remuneration"
               >
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -350,7 +350,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
             {isNationalHealthInsurance && (
               <DetailedTooltip
-                title="Health Insurance Premium Details"
+                title="Health Insurance Premium"
               >
                 <HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />
               </DetailedTooltip>
@@ -398,7 +398,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               labelSuffix={
                 <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                   <DetailedTooltip
-                    title="Health Insurance Premium Details"
+                    title="Health Insurance Premium"
                   >
                     <HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />
                   </DetailedTooltip>
@@ -416,7 +416,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 labelSuffix={
                   <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                     <DetailedTooltip
-                      title="Bonus Health Insurance Details"
+                      title="Bonus Health Insurance Premium"
                     >
                       <HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />
                     </DetailedTooltip>
@@ -445,7 +445,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance ? "National Pension" : "Employees' Pension"}
             {isNationalHealthInsurance && (
               <DetailedTooltip
-                title="Pension Contribution Details"
+                title="Pension Contribution"
                 icon={SIMPLE_TOOLTIP_ICON}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -469,7 +469,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
               {!isNationalHealthInsurance && (
                 <DetailedTooltip
-                  title="Pension Contribution Details"
+                  title="Pension Contribution"
                 >
                   <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
                 </DetailedTooltip>
@@ -487,7 +487,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             label="Bonus Contribution"
             labelSuffix={
               <DetailedTooltip
-                title="Bonus Pension Contribution Details"
+                title="Bonus Pension Contribution"
               >
                 <PensionBonusTooltip
                   breakdown={calculatePensionBonusBreakdown(
@@ -513,11 +513,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
             Employment Insurance
             <DetailedTooltip
-              title="Employment Insurance (雇用保険)"
+              title="Employment Insurance"
               icon={SIMPLE_TOOLTIP_ICON}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                Employment Insurance (雇用保険)
+                雇用保険
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 Insurance for unemployment and work-related benefits.

@@ -79,11 +79,11 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
             }
           }}
         >
-          {title && <DialogTitle sx={{ pb: 1 }}>{title}</DialogTitle>}
-          <DialogContent dividers={!!title} sx={title ? {} : { p: 2 }}>
+          {title && <DialogTitle sx={{ pb: 0 }}>{title}</DialogTitle>}
+          <DialogContent dividers sx={title ? {} : { p: 2, pb: 1 }}>
             {children}
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
+          <DialogActions sx={{ p: 1, pr: 1.5, pb: 1.5 }}>
             <Button onClick={handleClose} variant="contained" color="primary">
               Close
             </Button>

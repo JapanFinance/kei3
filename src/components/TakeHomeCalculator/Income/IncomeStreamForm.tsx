@@ -214,7 +214,6 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   icon={<InfoOutlinedIcon fontSize="small" />}
                   iconAriaLabel="requirements"
                 >
-                  <Typography variant="subtitle2" gutterBottom>Blue-Filer Requirements:</Typography>
                   <Typography variant="caption" display="block" sx={{ mb: 1, lineHeight: 1.2 }}>
                     Requires prior tax office approval (see{' '}
                     <a

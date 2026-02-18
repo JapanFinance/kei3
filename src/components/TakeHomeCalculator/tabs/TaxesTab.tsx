@@ -216,7 +216,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 Net Business / Misc Income
                 {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
                   <DetailedTooltip
-                    title="Business & Miscellaneous Income Details"
+                    title="Business & Miscellaneous Income"
                   >
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -280,11 +280,11 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <span>
                 iDeCo/Corp DC Deduction
                 <DetailedTooltip
-                  title="iDeCo and Corporate DC Contributions (小規模企業共済等掛金控除)"
+                  title="iDeCo and Corporate DC Contributions"
                 >
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Small Enterprise Mutual Aid Contribution Deduction
+                      Small Enterprise Mutual Aid Contribution Deduction (小規模企業共済等掛金控除)
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       Contributions to iDeCo (individual defined contribution pension) and corporate defined contribution plans reduce your taxable income for income tax and residence tax.
@@ -332,9 +332,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 title="National Income Tax Basic Deduction"
               >
                 <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    National Income Tax Basic Deduction (2025)
-                  </Typography>
                   <Box
                     component="table"
                     sx={{
@@ -480,19 +477,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <span>
                 Base Income Tax
                 <DetailedTooltip
-                  title="Base Income Tax Calculation"
+                  title="Base Income Tax"
                 >
                   <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Base Income Tax (before reconstruction surtax)
-                    </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      This is the income tax calculated using the standard progressive tax brackets.
+                      This is the income tax calculated using the standard progressive tax brackets, before applying the special reconstruction surtax.
                     </Typography>
                     <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        2025 Income Tax Brackets:
-                      </Typography>
                       <Box
                         component="table"
                         sx={{
@@ -580,11 +571,11 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <span>
                 Reconstruction Surtax
                 <DetailedTooltip
-                  title="Special Reconstruction Surtax (復興特別所得税)"
+                  title="Special Reconstruction Surtax"
                 >
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Special Reconstruction Surtax (復興特別所得税)
+                      復興特別所得税
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       A temporary surtax of 2.1% applied to the base income tax amount. Originally introduced to help fund reconstruction efforts after the 2011 Great East Japan Earthquake and tsunami.
@@ -631,10 +622,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     Total Income Tax = Base Income Tax + Reconstruction Surtax
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    The total income tax is calculated by adding the base income tax (calculated using progressive tax brackets) and the 2.1% reconstruction surtax.
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Rounding:</strong> The sum of base tax + surtax is rounded down to the nearest 100 yen for the final amount.
+                    <strong>Rounding:</strong> The sum of base income tax and surtax is rounded down to the nearest 100 yen for the final amount.
                   </Typography>
                   <Box sx={{ mt: 1 }}>
                     Official Sources:
@@ -692,10 +680,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <DetailedTooltip
                 title="Residence Tax Basic Deduction"
               >
-                <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Residence Tax Basic Deduction (2025)
-                  </Typography>
+                <>
                   <Box
                     component="table"
                     sx={{
@@ -742,7 +727,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       Official Source (Yokohama City)
                     </a>
                   </Box>
-                </Box>
+                </>
               </DetailedTooltip>
             </span>
           }
@@ -811,7 +796,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             <span>
               Income-based Portion
               <DetailedTooltip
-                title="Income-based Residence Tax Breakdown"
+                title="Income-based Residence Tax"
               >
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
