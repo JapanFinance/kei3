@@ -9,8 +9,8 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
-import InfoTooltip from '../../ui/InfoTooltip';
-import DetailInfoTooltip from '../../ui/DetailInfoTooltip';
+import { DetailedTooltip } from '../../ui/Tooltips';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
 import { employmentInsuranceRate } from '../../../utils/taxCalculations';
 import HealthInsurancePremiumTooltip from './HealthInsurancePremiumTooltip';
@@ -191,33 +191,32 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               label={
                 <span>
                   Net Employment Income
-                  <DetailInfoTooltip
+                  <DetailedTooltip
                     title="Employment Income Details"
-                    children={
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          Calculation Breakdown
-                        </Typography>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
-                          <tbody>
-                            <tr>
-                              <td style={{ padding: '2px 0' }}>Gross Employment Income:</td>
-                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(grossEmploymentIncome)}</td>
-                            </tr>
-                            <tr>
-                              <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
-                              <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</td>
-                            </tr>
-                            <tr style={{ borderTop: '1px solid #ddd' }}>
-                              <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
-                              <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(results.netEmploymentIncome)}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <EmploymentIncomeDeductionTooltip />
-                      </Box>
-                    }
-                  />
+                  >
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Calculation Breakdown
+                      </Typography>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Gross Employment Income:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(grossEmploymentIncome)}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
+                            <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</td>
+                          </tr>
+                          <tr style={{ borderTop: '1px solid #ddd' }}>
+                            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
+                            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(results.netEmploymentIncome)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <EmploymentIncomeDeductionTooltip />
+                    </Box>
+                  </DetailedTooltip>
                 </span>
               }
               value={formatJPY(results.netEmploymentIncome)}
@@ -230,52 +229,51 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 <span>
                   Net Business / Misc Income
                   {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
-                    <DetailInfoTooltip
-                      title="Business & Miscellaneous Income Details"
-                      children={
+                    <DetailedTooltip
+                      title="Business & Miscellaneous Income"
+                    >
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                          Calculation Breakdown
+                        </Typography>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(results.blueFilerDeduction)}</td>
+                            </tr>
+                            <tr style={{ borderTop: '1px solid #ddd' }}>
+                              <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
+                              <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                                {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                         <Box>
                           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                            Calculation Breakdown
+                            Blue-Filer Special Deduction
                           </Typography>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
-                            <tbody>
-                              <tr>
-                                <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
-                                <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
-                              </tr>
-                              <tr>
-                                <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
-                                <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(results.blueFilerDeduction)}</td>
-                              </tr>
-                              <tr style={{ borderTop: '1px solid #ddd' }}>
-                                <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
-                                <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                                  {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                          <Box>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                              Blue-Filer Special Deduction
-                            </Typography>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                              A special deduction for business operators with permission to file a Blue Return. This amount is deducted from business income after expenses before calculating taxable income.
-                            </Typography>
-                            <Box sx={{ mt: 1 }}>
-                              Official Sources:
-                              <ul>
-                                <li>
-                                  <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                                    青色申告特別控除 - NTA
-                                  </a>
-                                </li>
-                              </ul>
-                            </Box>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            A special deduction for business operators with permission to file a Blue Return. This amount is deducted from business income after expenses before calculating taxable income.
+                          </Typography>
+                          <Box sx={{ mt: 1 }}>
+                            Official Sources:
+                            <ul>
+                              <li>
+                                <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                                  青色申告特別控除 - NTA
+                                </a>
+                              </li>
+                            </ul>
                           </Box>
                         </Box>
-                      }
-                    />
+                      </Box>
+                    </DetailedTooltip>
                   )}
                 </span>
               }
@@ -301,41 +299,40 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <ResultRow
             label="Monthly Remuneration"
             labelSuffix={
-              <DetailInfoTooltip
-                title="Monthly Remuneration Details"
-                children={
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Breakdown
-                    </Typography>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
-                      <tbody>
+              <DetailedTooltip
+                title="Monthly Remuneration"
+              >
+                <Box>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    Breakdown
+                  </Typography>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '2px 0' }}>Base Monthly Salary:</td>
+                        <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                          {formatJPY(salaryIncome / 12)}
+                        </td>
+                      </tr>
+                      {monthlyCommutingAllowance > 0 && (
                         <tr>
-                          <td style={{ padding: '2px 0' }}>Base Monthly Salary:</td>
+                          <td style={{ padding: '2px 0' }}>Monthly Commuting Allowance:</td>
                           <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                            {formatJPY(salaryIncome / 12)}
+                            {formatJPY(monthlyCommutingAllowance)}
                           </td>
                         </tr>
-                        {monthlyCommutingAllowance > 0 && (
-                          <tr>
-                            <td style={{ padding: '2px 0' }}>Monthly Commuting Allowance:</td>
-                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                              {formatJPY(monthlyCommutingAllowance)}
-                            </td>
-                          </tr>
-                        )}
-                        <tr style={{ borderTop: '1px solid #ddd' }}>
-                          <td style={{ padding: '4px 0', fontWeight: 600 }}>Total:</td>
-                          <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(rawMonthlyRemuneration)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <Typography variant="body2" color="text.secondary">
-                      Monthly remuneration includes base salary and various allowances (e.g. commuting allowance, housing allowance).
-                    </Typography>
-                  </Box>
-                }
-              />
+                      )}
+                      <tr style={{ borderTop: '1px solid #ddd' }}>
+                        <td style={{ padding: '4px 0', fontWeight: 600 }}>Total:</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(rawMonthlyRemuneration)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <Typography variant="body2" color="text.secondary">
+                    Monthly remuneration includes base salary and various allowances (e.g. commuting allowance, housing allowance).
+                  </Typography>
+                </Box>
+              </DetailedTooltip>
             }
             value={formatJPY(rawMonthlyRemuneration)}
             type="default"
@@ -352,10 +349,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
             {isNationalHealthInsurance && (
-              <DetailInfoTooltip
-                title="Health Insurance Premium Details"
-                children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
-              />
+              <DetailedTooltip
+                title="Health Insurance Premium"
+              >
+                <HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />
+              </DetailedTooltip>
             )}
           </Typography>
         </Box>
@@ -399,10 +397,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               label="Monthly Premium"
               labelSuffix={
                 <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                  <DetailInfoTooltip
-                    title="Health Insurance Premium Details"
-                    children={<HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />}
-                  />
+                  <DetailedTooltip
+                    title="Health Insurance Premium"
+                  >
+                    <HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />
+                  </DetailedTooltip>
                   {capStatus.healthInsuranceCapped && (
                     <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />
                   )}
@@ -416,10 +415,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 label="Bonus Premium"
                 labelSuffix={
                   <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                    <DetailInfoTooltip
-                      title="Bonus Health Insurance Details"
-                      children={<HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />}
-                    />
+                    <DetailedTooltip
+                      title="Bonus Health Insurance Premium"
+                    >
+                      <HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />
+                    </DetailedTooltip>
                     {capStatus.healthInsuranceBonusCapped && (
                       <CapIndicator capStatus={capStatus} contributionType="health insurance bonus" iconOnly={isMobile} />
                     )}
@@ -444,24 +444,22 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isNationalHealthInsurance ? "National Pension" : "Employees' Pension"}
             {isNationalHealthInsurance && (
-              <DetailInfoTooltip
-                title="Pension Contribution Details"
-                children={(
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      National Pension (国民年金)
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
-                      National pension contributions are a fixed amount regardless of income level.
-                    </Typography>
-                    <Box sx={{ mt: 1 }}>
-                      Source:<a href="https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                        国民年金保険料の金額 (Japan Pension Service)
-                      </a>
-                    </Box >
-                  </Box >
-                )}
-              />
+              <DetailedTooltip
+                title="Pension Contribution"
+                icon={SIMPLE_TOOLTIP_ICON}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  National Pension (国民年金)
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
+                  National pension contributions are a fixed amount regardless of income level.
+                </Typography>
+                <Box sx={{ mt: 1 }}>
+                  Source:<a href="https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                    国民年金保険料の金額 (Japan Pension Service)
+                  </a>
+                </Box >
+              </DetailedTooltip>
             )}
           </Typography>
         </Box>
@@ -470,10 +468,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           labelSuffix={
             <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
               {!isNationalHealthInsurance && (
-                <DetailInfoTooltip
-                  title="Pension Contribution Details"
-                  children={<PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />}
-                />
+                <DetailedTooltip
+                  title="Pension Contribution"
+                >
+                  <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
+                </DetailedTooltip>
               )}
               {(capStatus.pensionCapped || capStatus.pensionFixed) && (
                 <CapIndicator capStatus={capStatus} contributionType="pension" iconOnly={isMobile} />
@@ -487,16 +486,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <ResultRow
             label="Bonus Contribution"
             labelSuffix={
-              <DetailInfoTooltip
-                title="Bonus Pension Contribution Details"
-                children={
-                  <PensionBonusTooltip
-                    breakdown={calculatePensionBonusBreakdown(
-                      bonuses
-                    )}
-                  />
-                }
-              />
+              <DetailedTooltip
+                title="Bonus Pension Contribution"
+              >
+                <PensionBonusTooltip
+                  breakdown={calculatePensionBonusBreakdown(
+                    bonuses
+                  )}
+                />
+              </DetailedTooltip>
             }
             value={formatJPY(results.pensionOnBonus)}
             type="indented"
@@ -514,30 +512,28 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
             Employment Insurance
-            <InfoTooltip
-              title="Employment Insurance (雇用保険)"
-              children={
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Employment Insurance (雇用保険)
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    Insurance for unemployment and work-related benefits.
-                    This amount includes only the employment insurance premium paid by the employee. The rate is applied to your gross salary. The employer also contributes to employment insurance separately.
-                  </Typography>
-                  <Box sx={{ mt: 1 }}>
-                    Official Source:
-                    <ul>
-                      <li>
-                        <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
-                          Employment Insurance Premium Rate (MHLW)
-                        </a>
-                      </li>
-                    </ul>
-                  </Box>
-                </Box>
-              }
-            />
+            <DetailedTooltip
+              title="Employment Insurance"
+              icon={SIMPLE_TOOLTIP_ICON}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                雇用保険
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Insurance for unemployment and work-related benefits.
+                This amount includes only the employment insurance premium paid by the employee. The rate is applied to your gross salary. The employer also contributes to employment insurance separately.
+              </Typography>
+              <Box sx={{ mt: 1 }}>
+                Official Source:
+                <ul>
+                  <li>
+                    <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                      Employment Insurance Premium Rate (MHLW)
+                    </a>
+                  </li>
+                </ul>
+              </Box>
+            </DetailedTooltip>
           </Typography>
           <ResultRow
             label={`Monthly Premium (${(employmentInsuranceRate * 100).toFixed(2)}%)`}

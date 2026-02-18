@@ -28,7 +28,7 @@ import {
   DISABILITY_LEVELS,
   DEPENDENT_AGE_CATEGORIES,
 } from '../../../types/dependents';
-import { InfoTooltip } from '../../ui/InfoTooltip';
+import { SimpleTooltip } from '../../ui/Tooltips';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { formatJPY } from '../../../utils/formatters';
 import { 
@@ -138,7 +138,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           }}
         >
           Income Information
-          <InfoTooltip title="Enter income amounts to calculate total net income (合計所得金額) and determine deduction eligibility." />
+          <SimpleTooltip>Enter income amounts to calculate total net income (合計所得金額) and determine deduction eligibility.</SimpleTooltip>
         </Typography>
         
         {isMobile ? (
@@ -315,7 +315,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           label={
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               Living Together
-              <InfoTooltip title="Check this if the dependent lives with you. This may affect deduction amounts for elderly parents or special disability cases." />
+              <SimpleTooltip>Check this if the dependent lives with you. This may affect deduction amounts for elderly parents or special disability cases.</SimpleTooltip>
             </Box>
           }
           sx={{ flex: 1, mt: 1 }}

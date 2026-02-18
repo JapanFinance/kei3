@@ -23,10 +23,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
   };
 
   return (
-    <Box sx={{ p: 1, maxWidth: 500 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-        Bonus Pension Contribution
-      </Typography>
+    <>
       <Typography variant="body2" sx={{ mb: 1 }}>
         The premium is calculated as follows, where the Standard Bonus Amount is the gross bonus rounded down to the nearest 1,000 yen.
       </Typography>
@@ -119,7 +116,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
           厚生年金保険の保険料 (Japan Pension Service)
         </a>
       </Typography>
-    </Box>
+    </>
   );
 };
 

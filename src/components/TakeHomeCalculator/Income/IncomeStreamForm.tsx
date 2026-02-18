@@ -16,7 +16,7 @@ import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import Typography from '@mui/material/Typography';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { formatJPY } from '../../../utils/formatters';
-import { InfoTooltip } from '../../ui/InfoTooltip';
+import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface IncomeStreamFormProps {
   initialData?: IncomeStream;
@@ -209,12 +209,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     No.2072 青色申告特別控除 (NTA)
                   </a>.
                 </span>
-                <InfoTooltip
+                <DetailedTooltip
                   title="Blue-Filer Requirements"
                   icon={<InfoOutlinedIcon fontSize="small" />}
                   iconAriaLabel="requirements"
                 >
-                  <Typography variant="subtitle2" gutterBottom>Blue-Filer Requirements:</Typography>
                   <Typography variant="caption" display="block" sx={{ mb: 1, lineHeight: 1.2 }}>
                     Requires prior tax office approval (see{' '}
                     <a
@@ -290,7 +289,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                       </tr>
                     </tbody>
                   </Box>
-                </InfoTooltip>
+                </DetailedTooltip>
               </FormHelperText>
             </FormControl>
           )}

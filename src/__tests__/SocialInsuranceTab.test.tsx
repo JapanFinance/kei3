@@ -6,11 +6,11 @@ import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsu
 import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails } from '../types/tax';
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
-// Mock DetailInfoTooltip to render children directly for easier testing
-vi.mock('../components/ui/DetailInfoTooltip', async () => {
+// Mock DetailedTooltip to render children directly for easier testing
+vi.mock('../components/ui/Tooltips', async () => {
     const { createPortal } = await import('react-dom');
     return {
-        default: ({ title, children }: { title: string, children?: React.ReactNode }) => (
+        DetailedTooltip: ({ title, children }: { title: string, children?: React.ReactNode }) => (
             <>
                 <span data-testid="detail-info-tooltip-trigger" title={title}>ℹ️</span>
                 {createPortal(
@@ -18,7 +18,8 @@ vi.mock('../components/ui/DetailInfoTooltip', async () => {
                     document.body
                 )}
             </>
-        )
+        ),
+        SimpleTooltip: () => <div data-testid="info-tooltip" />
     };
 });
 

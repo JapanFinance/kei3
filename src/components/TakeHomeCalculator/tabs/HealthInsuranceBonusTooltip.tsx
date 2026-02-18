@@ -77,10 +77,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   };
 
   return (
-    <Box sx={{ p: 1, maxWidth: 500 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-        Bonus Health Insurance Premium
-      </Typography>
+    <>
       <Typography variant="body2" sx={{ mb: 1 }}>
         The premium is calculated as follows, where the Standard Bonus Amount is the gross bonus rounded down to the nearest 1,000 yen.
       </Typography>
@@ -189,7 +186,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
           </Typography>
         </Box>
       )}
-    </Box>
+    </>
   );
 };
 
