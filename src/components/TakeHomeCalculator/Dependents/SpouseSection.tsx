@@ -25,7 +25,7 @@ import {
 import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
 import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../../ui/SimpleTooltip';
+import { SimpleTooltip } from '../../ui/Tooltips';
 import { formatJPY } from '../../../utils/formatters';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';

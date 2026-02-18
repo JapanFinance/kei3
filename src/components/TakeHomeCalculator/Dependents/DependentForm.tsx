@@ -28,7 +28,7 @@ import {
   DISABILITY_LEVELS,
   DEPENDENT_AGE_CATEGORIES,
 } from '../../../types/dependents';
-import { SimpleTooltip } from '../../ui/SimpleTooltip';
+import { SimpleTooltip } from '../../ui/Tooltips';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { formatJPY } from '../../../utils/formatters';
 import { 

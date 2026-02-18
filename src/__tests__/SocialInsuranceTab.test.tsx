@@ -7,7 +7,7 @@ import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails } from '../ty
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 // Mock DetailedTooltip to render children directly for easier testing
-vi.mock('../components/ui/DetailedTooltip', async () => {
+vi.mock('../components/ui/Tooltips', async () => {
     const { createPortal } = await import('react-dom');
     return {
         DetailedTooltip: ({ title, children }: { title: string, children?: React.ReactNode }) => (
@@ -18,7 +18,8 @@ vi.mock('../components/ui/DetailedTooltip', async () => {
                     document.body
                 )}
             </>
-        )
+        ),
+        SimpleTooltip: () => <div data-testid="info-tooltip" />
     };
 });
 

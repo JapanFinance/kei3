@@ -16,7 +16,7 @@ import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import Typography from '@mui/material/Typography';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { formatJPY } from '../../../utils/formatters';
-import { DetailedTooltip } from '../../ui/DetailedTooltip';
+import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface IncomeStreamFormProps {
   initialData?: IncomeStream;

@@ -4,9 +4,7 @@
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import CalculateIcon from '@mui/icons-material/Calculate';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type SimpleTooltip from './SimpleTooltip';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type DetailedTooltip from './DetailedTooltip';
+import type { SimpleTooltip, DetailedTooltip } from './Tooltips';
 
 /**
  * Default icon for {@link SimpleTooltip} component.

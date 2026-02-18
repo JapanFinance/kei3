@@ -10,7 +10,7 @@ import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
-import { DetailedTooltip } from '../../ui/DetailedTooltip';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
 

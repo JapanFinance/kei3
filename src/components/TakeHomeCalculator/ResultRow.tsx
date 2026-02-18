@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { SimpleTooltip } from '../ui/SimpleTooltip';
+import { SimpleTooltip } from '../ui/Tooltips';
 
 const labelTooltips: Record<string, string> = {
   'Health Insurance': 'Mandatory health insurance contributions.',

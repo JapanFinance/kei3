@@ -23,7 +23,7 @@ import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
 import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
-import { SimpleTooltip } from '../ui/SimpleTooltip';
+import { SimpleTooltip } from '../ui/Tooltips';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';

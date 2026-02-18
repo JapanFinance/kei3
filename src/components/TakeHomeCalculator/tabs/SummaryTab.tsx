@@ -14,7 +14,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import { ResultRow } from '../ResultRow';
-import { DetailedTooltip } from '../../ui/DetailedTooltip';
+import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface SummaryTabProps {
   results: TakeHomeResults;

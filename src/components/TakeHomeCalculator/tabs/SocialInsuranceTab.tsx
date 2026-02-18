@@ -9,7 +9,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
-import { DetailedTooltip } from '../../ui/DetailedTooltip';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
 import { employmentInsuranceRate } from '../../../utils/taxCalculations';

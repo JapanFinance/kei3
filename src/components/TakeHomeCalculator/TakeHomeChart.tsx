@@ -28,7 +28,7 @@ import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin }
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type { Dependent } from '../../types/dependents';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
-import { DetailedTooltip } from '../ui/DetailedTooltip';
+import { DetailedTooltip } from '../ui/Tooltips';
 import { detectCaps } from '../../utils/capDetection';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';

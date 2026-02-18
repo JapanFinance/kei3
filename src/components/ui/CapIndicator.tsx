@@ -5,7 +5,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
-import { DetailedTooltip } from './DetailedTooltip';
+import { DetailedTooltip } from './Tooltips';
 import type { CapStatus } from '../../utils/capDetection';
 import { formatJPY } from '../../utils/formatters';
 import { ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP } from '../../utils/healthInsuranceCalculator';

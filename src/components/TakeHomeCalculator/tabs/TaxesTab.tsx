@@ -19,7 +19,7 @@ import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import { DetailedTooltip } from '../../ui/DetailedTooltip';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
 
