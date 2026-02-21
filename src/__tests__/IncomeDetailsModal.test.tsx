@@ -282,3 +282,53 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     });
 });
 
+describe('IncomeDetailsModal - Stock Compensation', () => {
+    it('keeps Stock-Based Compensation option enabled and allows adding multiple streams', async () => {
+        const user = userEvent.setup();
+        const handleStreamsChange = vi.fn();
+        const streams: IncomeStream[] = [
+            {
+                id: 'stock-1',
+                type: 'stockCompensation',
+                amount: 1_000_000,
+                issuerDomicile: 'foreign'
+            }
+        ];
+
+        render(
+            <IncomeDetailsModal
+                open={true}
+                onClose={() => { }}
+                streams={streams}
+                onStreamsChange={handleStreamsChange}
+            />
+        );
+
+        await user.click(screen.getByRole('button', { name: /add income/i }));
+
+        const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
+        await user.click(typeSelect);
+
+        const listbox = screen.getByRole('listbox');
+        const stockOption = within(listbox).getByRole('option', { name: /stock-based compensation/i });
+        expect(stockOption).not.toHaveAttribute('aria-disabled', 'true');
+
+        await user.click(stockOption);
+
+        const amountInput = screen.getByRole('textbox', { name: /stock-based compensation income/i });
+        await user.clear(amountInput);
+        await user.type(amountInput, '500000');
+
+        await user.click(screen.getByRole('button', { name: 'Add' }));
+
+        expect(handleStreamsChange).toHaveBeenCalledWith([
+            streams[0],
+            expect.objectContaining({
+                type: 'stockCompensation',
+                amount: 500000,
+                issuerDomicile: 'foreign',
+            })
+        ]);
+    });
+});
+

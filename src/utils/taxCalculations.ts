@@ -231,6 +231,7 @@ interface IncomeBreakdown {
     blueFilerDeduction: number;
     totalAnnualIncome: number;
     commutingAllowance: number;
+    stockCompensationIncome: number;
 }
 
 /**
@@ -244,6 +245,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     let netBusinessAndMiscIncome = 0;
     let blueFilerDeduction = 0;
     let commutingAllowance = 0;
+    let stockCompensationIncome = 0;
     let processedBusinessIncome = false;
 
     for (const income of incomeStreams) {
@@ -265,6 +267,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
             }
         } else if (income.type === 'bonus') {
             bonusIncome.push(income);
+        } else if (income.type === 'stockCompensation') {
+            stockCompensationIncome += income.amount;
         } else if (income.type === 'business') {
             if (processedBusinessIncome) {
                 throw new Error('Only one business income stream is allowed.');
@@ -285,7 +289,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         }
     }
 
-    const totalAnnualIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + netBusinessAndMiscIncomeBeforeBlueFilerDeduction;
+    const totalAnnualIncome = salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + netBusinessAndMiscIncomeBeforeBlueFilerDeduction + stockCompensationIncome;
 
     return {
         salaryIncome,
@@ -294,7 +298,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         netBusinessAndMiscIncome,
         blueFilerDeduction,
         totalAnnualIncome,
-        commutingAllowance
+        commutingAllowance,
+        stockCompensationIncome
     };
 };
 
@@ -307,14 +312,15 @@ export const calculateTotalNetIncome = (incomeStreams: IncomeStream[]): number =
         salaryIncome,
         bonusIncome,
         netBusinessAndMiscIncome,
-        commutingAllowance
+        commutingAllowance,
+        stockCompensationIncome
     } = calculateIncomeBreakdown(incomeStreams);
 
     // Apply strict 150,000 JPY/month limit for non-taxable commuting allowance
     // Since we're working with annual amounts, we use 150,000 * 12 = 1,800,000
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - 1_800_000);
 
-    const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
 
     return netEmploymentIncome + netBusinessAndMiscIncome;
@@ -327,7 +333,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         netBusinessAndMiscIncome,
         blueFilerDeduction,
         totalAnnualIncome,
-        commutingAllowance
+        commutingAllowance,
+        stockCompensationIncome
     } = calculateIncomeBreakdown(inputs.incomeStreams);
 
     if (totalAnnualIncome <= 0) {
@@ -338,13 +345,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const annualIncome = totalAnnualIncome;
 
     // Determine if there is any employment income (salary, bonus, or taxable commuting allowance)
-    const hasEmploymentIncome = salaryIncome > 0 || bonusIncome.some(b => b.amount > 0) || commutingAllowance > 0;
+    const hasEmploymentIncome = salaryIncome > 0 || bonusIncome.some(b => b.amount > 0) || commutingAllowance > 0 || stockCompensationIncome > 0;
 
     // Apply strict 150,000 JPY/month limit for non-taxable commuting allowance
     const nonTaxableCommutingAllowance = Math.min(commutingAllowance, 1_800_000);
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - 1_800_000);
 
-    const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+    const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
 
     const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;

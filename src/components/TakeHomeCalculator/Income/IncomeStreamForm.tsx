@@ -7,6 +7,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import FormControl from '@mui/material/FormControl';
+import FormLabel from '@mui/material/FormLabel';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import FormHelperText from '@mui/material/FormHelperText';
@@ -15,8 +16,15 @@ import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 
 import Typography from '@mui/material/Typography';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 
 interface IncomeStreamFormProps {
   initialData?: IncomeStream;
@@ -39,6 +47,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(((initialData?.type === 'salary' || initialData?.type === 'commutingAllowance') && initialData.frequency) || 'annual');
   const [month, setMonth] = useState<number>((initialData?.type === 'bonus' && initialData.month) || 0); // 0 = Jan
   const [blueFilerDeduction, setBlueFilerDeduction] = useState<number>((initialData?.type === 'business' && initialData.blueFilerDeduction) || 0);
+  const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>((initialData?.type === 'stockCompensation' && initialData.issuerDomicile) || 'foreign');
   const [error, setError] = useState<string | null>(null);
 
   const validate = (): boolean => {
@@ -70,6 +79,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       stream = { id, type: 'business', amount, blueFilerDeduction };
     } else if (type === 'commutingAllowance') {
       stream = { id, type: 'commutingAllowance', amount, frequency };
+    } else if (type === 'stockCompensation') {
+      stream = { id, type: 'stockCompensation', amount, issuerDomicile };
     } else {
       stream = { id, type: 'miscellaneous', amount };
     }
@@ -101,6 +112,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         return 'Gross bonus amount before taxes and deductions';
       case 'commutingAllowance':
         return 'Commuting allowance up to 150,000 yen per month is non-taxable for income tax, but the full amount affects social insurance premiums.';
+      case 'stockCompensation':
+        return undefined;
       default:
         return undefined;
     }
@@ -128,6 +141,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <MenuItem value="salary" disabled={disabledTypes.includes('salary')}>Salary</MenuItem>
             <MenuItem value="bonus" disabled={disabledTypes.includes('bonus')}>Bonus</MenuItem>
             <MenuItem value="commutingAllowance" disabled={disabledTypes.includes('commutingAllowance')}>Commuting Allowance</MenuItem>
+            <MenuItem value="stockCompensation" disabled={disabledTypes.includes('stockCompensation')}>Stock-Based Compensation</MenuItem>
             <MenuItem value="business" disabled={disabledTypes.includes('business')}>Business</MenuItem>
             <MenuItem value="miscellaneous" disabled={disabledTypes.includes('miscellaneous')}>Miscellaneous</MenuItem>
           </Select>
@@ -180,6 +194,69 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               ))}
             </Select>
           </FormControl>
+        )}
+
+        {type === 'stockCompensation' && (
+          <Box>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <FormLabel
+                id="stock-issuer-label"
+                sx={{
+                  mb: 0.5,
+                  fontWeight: 500,
+                  color: 'text.primary',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}
+              >
+                <span>Stock Issuer</span>
+                <DetailedTooltip
+                  title="Stock Issuer"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                  iconAriaLabel="issuance info"
+                >
+                  <Typography variant="caption" display="block" sx={{ mb: 1, lineHeight: 1.4 }}>
+                    <strong>Foreign-issued stock compensation</strong> means grants from a non-Japanese company, such as the parent company of a Japanese subsidiary. It is not subject to social insurance premiums (社会保険料).
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ lineHeight: 1.4 }}>
+                    <strong>Domestic-issued stock compensation</strong> is not currently supported. It is subject to social insurance premiums.
+                  </Typography>
+                </DetailedTooltip>
+              </FormLabel>
+              <ToggleButtonGroup
+                value={issuerDomicile}
+                exclusive
+                onChange={(_, newValue) => {
+                  if (newValue) {
+                    setIssuerDomicile(newValue);
+                  }
+                }}
+                aria-labelledby="stock-issuer-label"
+                aria-label="stock compensation issuance"
+                size="small"
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    px: 2,
+                    py: 0.5,
+                    fontSize: '0.85rem',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  },
+                  '& .MuiToggleButton-root.Mui-selected': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                    }
+                  }
+                }}
+              >
+                <ToggleButton value="domestic" disabled>Domestic</ToggleButton>
+                <ToggleButton value="foreign">Foreign</ToggleButton>
+              </ToggleButtonGroup>
+            </FormControl>
+          </Box>
         )}
 
         <Box>
@@ -325,6 +402,70 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                       frequency === '6-months' ? amount * 2 :
                         amount
                 )}
+              </Typography>
+            </Box>
+          )}
+
+          {type === 'stockCompensation' && (
+            <Box sx={{ p: 1.5, backgroundColor: '#f5f5f5', borderRadius: 1, mt: 2, border: '1px solid #e0e0e0' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                How to Calculate Your Stock-Based Compensation Income
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                Select the category below that matches your grant. Compute each taxable event in JPY, then enter the annual total.
+              </Typography>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>RS / RSU (Restricted Stock / Restricted Stock Units)</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                    Use the fair market value (FMV) at vesting or restriction-lapse date × vested shares.
+                    If priced in foreign currency, convert using the vesting-date exchange rate and sum all vesting events.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>PS / PSU (Performance Shares / Units)</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                    Use the FMV at delivery/settlement date × shares or units actually delivered after performance evaluation.
+                    Include only amounts that became taxable in the current tax year.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>SO (Stock Options)</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                    For options taxed at exercise, use (FMV at exercise − strike price) × exercised shares.
+                    If your plan is taxed at a different event in your payroll/tax statement, follow that statement amount.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>ESPP (Employee Stock Purchase Plan)</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                    Use the taxable discount and/or compensation amount shown on your payroll or broker tax documents.
+                    Convert to JPY at the relevant transaction date(s), then total for the year.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.5 }}>
+                Example conversion: $15,000 × 150 JPY/USD = ¥2,250,000.
+                If you had multiple taxable events, add all event amounts and enter one annual total.
               </Typography>
             </Box>
           )}

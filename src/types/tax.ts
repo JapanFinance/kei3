@@ -6,7 +6,7 @@ import type { Dependent, DependentDeductionResults } from "./dependents";
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
 
-export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous' | 'commutingAllowance';
+export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous' | 'commutingAllowance' | 'stockCompensation';
 
 export interface BaseIncomeStream {
   id: string;
@@ -38,7 +38,12 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
   type: 'miscellaneous';
 }
 
-export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream;
+export interface StockCompensationIncomeStream extends BaseIncomeStream {
+  type: 'stockCompensation';
+  issuerDomicile: 'foreign' | 'domestic';
+}
+
+export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream | StockCompensationIncomeStream;
 
 /** Interface for the UI Form State */
 export interface TakeHomeFormState {
