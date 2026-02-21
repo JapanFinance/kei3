@@ -315,7 +315,7 @@ describe('IncomeDetailsModal - Stock Compensation', () => {
 
         await user.click(stockOption);
 
-        const amountInput = screen.getByRole('textbox', { name: /stock-based compensation income/i });
+        const amountInput = screen.getByRole('textbox', { name: /gross income/i });
         await user.clear(amountInput);
         await user.type(amountInput, '500000');
 
