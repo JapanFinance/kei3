@@ -197,11 +197,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         )}
 
         {type === 'stockCompensation' && (
-          <Box>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <FormLabel
-                id="stock-issuer-label"
-                sx={{
+          <FormControl fullWidth>
+            <FormLabel
+              id="stock-issuer-label"
+              sx={{
                   mb: 0.5,
                   fontWeight: 500,
                   color: 'text.primary',
@@ -216,10 +215,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   icon={SIMPLE_TOOLTIP_ICON}
                   iconAriaLabel="issuance info"
                 >
-                  <Typography variant="caption" display="block" sx={{ mb: 1, lineHeight: 1.4 }}>
-                    <strong>Foreign-issued stock compensation</strong> means grants from a non-Japanese company, such as the parent company of a Japanese subsidiary. It is not subject to social insurance premiums (社会保険料).
+                  <Typography display="block" sx={{ mb: 1 }}>
+                    <strong>Foreign-issued stock compensation</strong> means grants from a non-Japanese company, such as the foreign parent company of a Japanese subsidiary. It is not subject to social insurance premiums (社会保険料).
                   </Typography>
-                  <Typography variant="caption" display="block" sx={{ lineHeight: 1.4 }}>
+                  <Typography display="block">
                     <strong>Domestic-issued stock compensation</strong> is not currently supported. It is subject to social insurance premiums.
                   </Typography>
                 </DetailedTooltip>
@@ -256,7 +255,6 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 <ToggleButton value="foreign">Foreign</ToggleButton>
               </ToggleButtonGroup>
             </FormControl>
-          </Box>
         )}
 
         <Box>
@@ -412,29 +410,34 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 How to Calculate Your Stock-Based Compensation Income
               </Typography>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                Select the category below that matches your grant. Compute each taxable event in JPY, then enter the annual total.
+                See the notes below for more specific information. In general, calculate the JPY amount of financial benefit realized.
               </Typography>
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>RS / RSU (Restricted Stock / Restricted Stock Units)</Typography>
+                  <Typography variant="body2" fontWeight={600}>Exchange Rate</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                    Use the fair market value (FMV) at vesting or restriction-lapse date × vested shares.
-                    If priced in foreign currency, convert using the vesting-date exchange rate and sum all vesting events.
+                  <Typography variant="body2">
+                    Use the TTM (Telegraphic Transfer Middle) exchange rate on the day of the taxable event for converting foreign currency denominated share value to JPY.
+                    If that date's exchange rate is not available, use the closest available prior date's TTM rate.
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Example conversion: $15,000 × 150 JPY/USD = ¥2,250,000.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>PS / PSU (Performance Shares / Units)</Typography>
+                  <Typography variant="body2" fontWeight={600}>RS / RSU / PS / PSU </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                    Use the FMV at delivery/settlement date × shares or units actually delivered after performance evaluation.
-                    Include only amounts that became taxable in the current tax year.
+                  <Typography variant="body2" fontWeight={600} marginBottom={0.5}>
+                    Restricted Stock (Units) / Performance Shares (Units)
+                  </Typography>
+                  <Typography variant="body2">
+                    Use the fair market value on the vesting date of the vested shares.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
@@ -444,9 +447,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   <Typography variant="body2" fontWeight={600}>SO (Stock Options)</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                    For options taxed at exercise, use (FMV at exercise − strike price) × exercised shares.
-                    If your plan is taxed at a different event in your payroll/tax statement, follow that statement amount.
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Use (share price at exercise − strike price) × exercised shares.
+                  </Typography>
+                  <Typography variant="body2">
+                    Only <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1543.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-qualified stock options</a> income should be entered here. <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1540.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Qualified stock options</a> are not currently supported.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
@@ -456,17 +461,24 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   <Typography variant="body2" fontWeight={600}>ESPP (Employee Stock Purchase Plan)</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                    Use the taxable discount and/or compensation amount shown on your payroll or broker tax documents.
-                    Convert to JPY at the relevant transaction date(s), then total for the year.
+                  <Typography variant="body2">
+                    Use the discount amount. For example, if you purchased shares with a fair market value of $10,000 at a 15% discount (i.e. for $8,500), the taxable amount is $1,500.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
 
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.5 }}>
-                Example conversion: $15,000 × 150 JPY/USD = ¥2,250,000.
-                If you had multiple taxable events, add all event amounts and enter one annual total.
-              </Typography>
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>Foreign-Source Income & Non-Permanent Tax Residents</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2">
+                    If you worked outside Japan for a period of time between grant and vest/exercise, the proportion of the income realized equal to the proportion of time worked outside Japan would be foreign-source income.
+                    If you are a <a href="https://wiki.japanfinance.org/tax/income/#non-permanent-tax-residents" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-permanent tax resident</a> when that income is realized, the foreign-source income will not be taxable in Japan unless <a href="https://wiki.japanfinance.org/tax/income/#income-that-is-neither-japan-source-nor-foreign-source" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>remittances to Japan</a> were made in the same year that make some or all of it taxable.
+                    Taxpayers who are not non-permanent tax residents would have to use foreign tax credits to alleviate Japanese taxation on the foreign-source income that will be taxable in the foreign country.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
             </Box>
           )}
         </Box>
