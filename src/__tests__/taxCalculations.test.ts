@@ -819,3 +819,209 @@ describe('Commuting Allowance', () => {
     expect(result.commuterAllowanceNonTaxable).toBe(240_000);
   });
 });
+
+describe('RSU (Restricted Stock Unit) income', () => {
+  it('calculates foreign RSU income only correctly', () => {
+    // RSU foreign income of 2M should be subject to employment income deduction
+    const inputs = {
+      incomeStreams: [
+        { id: 'rsu1', type: 'stockCompensation' as const, amount: 2_000_000, issuerDomicile: 'foreign' as const }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. RSU is employment income, so it goes through employment income deduction
+    // Gross EI = 2M (in 1.9M-3.6M range)
+    // Rounded: 2M, Net = 2M * 0.7 - 80k = 1.32M
+    expect(result.netEmploymentIncome).toBe(1_320_000);
+
+    // 2. RSU should be included in total net income
+    expect(result.totalNetIncome).toBe(1_320_000);
+
+    // 3. RSU should NOT be in social insurance bases (no salary/bonus/commuting allowance)
+    // With 0 salary income, health insurance base for SMR is 0
+    // Foreign RSU does NOT contribute to social insurance premium base
+    expect(result.healthInsurance).toBeLessThan(40_000); // Minimal premium for 0 salary base
+
+    // 4. Pension should also not include RSU in its base
+    expect(result.pensionPayments).toBeLessThan(110_000);
+
+    // 5. Employment insurance requires employment via salary/bonus
+    expect(result.employmentInsurance).toBe(0);
+
+    // 6. Income tax should apply
+    expect(result.nationalIncomeTax).toBeGreaterThan(0);
+  });
+
+  it('calculates salary + RSU foreign income correctly', () => {
+    // Salary 3M + RSU 2M should both go through employment income deduction
+    // But RSU should NOT be in social insurance base
+    const inputs = {
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const },
+        { id: 'rsu1', type: 'stockCompensation' as const, amount: 2_000_000, issuerDomicile: 'foreign' as const }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. Total annual income: 3M + 2M = 5M
+    expect(result.annualIncome).toBe(5_000_000);
+
+    // 2. Gross employment income: 3M + 2M = 5M (for employment income deduction)
+    // 5M is in 3.6M-6.6M range: Net = 5M * 0.8 - 440k = 3.56M
+    expect(result.netEmploymentIncome).toBe(3_560_000);
+
+    // 3. Total net income should include both
+    expect(result.totalNetIncome).toBe(3_560_000);
+
+    // 4. Social insurance should be based on SALARY ONLY (3M)
+    // Not on salary + RSU
+    // SMR for 3M / 12 = 250k: should be Grade 27 (SMR 500k bracket)
+    // Monthly premium: 500k * rates, approx 118,920
+    expect(result.healthInsurance).toBeLessThan(170_000); // Less than if using 5M base
+
+    // 5. Pension should also be based on salary only
+    // Monthly: 500k * 18.3% * 0.5 = 45,750 per month
+    expect(result.pensionPayments).toBeLessThan(300_000);
+
+    // 6. Employment insurance should be based on salary only
+    // 3M / 12 * 0.55% * 12 ≈ 16.5k
+    expect(result.employmentInsurance).toBe(16_500);
+
+    // 7. Income tax should be applied to full net income
+    expect(result.nationalIncomeTax).toBeGreaterThan(0);
+  });
+
+  it('calculates salary + bonus + RSU foreign income correctly', () => {
+    // Salary 2M + Bonus 1M + RSU 1.5M
+    // All three should go through employment income deduction
+    // But only salary/bonus in social insurance base
+    const inputs = {
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 2_000_000, frequency: 'annual' as const },
+        { id: 'b1', type: 'bonus' as const, amount: 1_000_000, month: 5 },
+        { id: 'rsu1', type: 'stockCompensation' as const, amount: 1_500_000, issuerDomicile: 'foreign' as const }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. Total annual income: 2M + 1M + 1.5M = 4.5M
+    expect(result.annualIncome).toBe(4_500_000);
+
+    // 2. Gross employment income for deduction: 2M + 1M + 1.5M = 4.5M
+    // 4.5M is in 3.6M-6.6M range: Net = 4.5M * 0.8 - 440k = 3.16M
+    expect(result.netEmploymentIncome).toBe(3_160_000);
+
+    // 3. Social insurance base should be 2M + 1M = 3M (NO RSU)
+    // SMR for 3M / 12 ≈ 250k
+    expect(result.healthInsurance).toBeGreaterThan(100_000);
+    expect(result.healthInsurance).toBeLessThan(240_000);
+
+    // 4. Pension also based on 3M salary + bonus
+    expect(result.pensionPayments).toBeGreaterThan(200_000);
+    expect(result.pensionPayments).toBeLessThan(350_000);
+  });
+
+  it('RSU foreign income with NHI includes RSU in net income base', () => {
+    // With NHI, RSU should be included in the net income that forms the NHI base
+    const inputs = {
+      incomeStreams: [
+        { id: 'rsu1', type: 'stockCompensation' as const, amount: 2_000_000, issuerDomicile: 'foreign' as const }
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: "Tokyo",
+      dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. Total net income: 2M - 1.32M deduction = not used for NHI, instead total income is
+    // For NHI with RSU only, the net income includes the full amount after deduction
+    // 2M in 1.9M-3.6M range: Net = 2M * 0.7 - 80k = 1.32M
+    expect(result.totalNetIncome).toBe(1_320_000);
+
+    // 2. NHI is based on total net income (including RSU)
+    expect(result.healthInsurance).toBeGreaterThan(0);
+
+    // 3. Pension is National Pension (fixed)
+    expect(result.pensionPayments).toBe(210_120); // 17,510 * 12
+
+    // 4. No employment insurance for NHI (NHI people don't have employment insurance)
+    expect(result.employmentInsurance).toBe(0);
+  });
+
+  it('calculateTotalNetIncome includes RSU in employment income deduction', () => {
+    // RSU 2M should receive employment income deduction
+    // 2M in 1.9M-3.6M range: Net = 2M * 0.7 - 80k = 1.32M
+    const incomeStreams = [
+      { type: 'stockCompensation' as const, amount: 2_000_000, issuerDomicile: 'foreign' as const, id: 'rsu1' }
+    ];
+    expect(calculateTotalNetIncome(incomeStreams)).toBe(1_320_000);
+  });
+
+  it('calculateTotalNetIncome includes RSU with salary correctly', () => {
+    // Salary 3M + RSU 2M
+    // Gross EI: 5M, 5M in 3.6M-6.6M range: Net = 5M * 0.8 - 440k = 3.56M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+      { type: 'stockCompensation' as const, amount: 2_000_000, issuerDomicile: 'foreign' as const, id: 'rsu1' }
+    ];
+    expect(calculateTotalNetIncome(incomeStreams)).toBe(3_560_000);
+  });
+
+  it('supports multiple stock compensation streams and sums them in tax calculations', () => {
+    const inputs = {
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const },
+        { id: 'sc1', type: 'stockCompensation' as const, amount: 1_200_000, issuerDomicile: 'foreign' as const },
+        { id: 'sc2', type: 'stockCompensation' as const, amount: 800_000, issuerDomicile: 'foreign' as const },
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // Annual total includes both stock compensation streams
+    expect(result.annualIncome).toBe(5_000_000);
+
+    // Net employment income is based on salary + stock compensation (5M total)
+    expect(result.netEmploymentIncome).toBe(3_560_000);
+    expect(result.totalNetIncome).toBe(3_560_000);
+
+    // Social insurance should still be based on salary-only remuneration base
+    expect(result.healthInsurance).toBeLessThan(240_000);
+    expect(result.pensionPayments).toBeLessThan(550_000);
+  });
+
+  it('calculateTotalNetIncome sums multiple stock compensation streams', () => {
+    const incomeStreams = [
+      { type: 'stockCompensation' as const, amount: 1_200_000, issuerDomicile: 'foreign' as const, id: 'sc1' },
+      { type: 'stockCompensation' as const, amount: 800_000, issuerDomicile: 'foreign' as const, id: 'sc2' },
+    ];
+
+    // Combined 2M in 1.9M-3.6M range: net = 2M * 0.7 - 80k = 1.32M
+    expect(calculateTotalNetIncome(incomeStreams)).toBe(1_320_000);
+  });
+});

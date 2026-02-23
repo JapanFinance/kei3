@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-02-22
+
+### Updated
+
+- Foreign stock-based compenstion is supported in the "Advanced" income input mode. Taxpayers who receive compensation such as RSUs from a foreign parent company should enter such income using this.
+
 ## 2026-02-15
 
 ### Updated

@@ -125,7 +125,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   };
 
   const hasEmploymentIncome = inputs.incomeMode === 'salary' ||
-    (inputs.incomeMode === 'advanced' && inputs.incomeStreams.some(s => s.type === 'salary' || s.type === 'bonus'));
+    (inputs.incomeMode === 'advanced' && inputs.incomeStreams.some(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation'));
 
   const handleIncomeModeChange = (
     _: React.MouseEvent<HTMLElement>,

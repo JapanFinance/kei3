@@ -77,6 +77,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return 'Annual';
       case 'bonus':
         return new Date(0, stream.month).toLocaleString('default', { month: 'long' });
+      case 'stockCompensation':
+        return stream.issuerDomicile === 'foreign' ? 'Foreign' : 'Domestic';
       default:
         return null;
     }
@@ -87,6 +89,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       case 'salary':
       case 'bonus':
       case 'commutingAllowance':
+      case 'stockCompensation':
         return 'primary';
       case 'business':
         return 'success';
@@ -111,7 +114,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         annualAmount = s.amount;
       }
 
-      if (s.type === 'salary' || s.type === 'bonus') {
+      if (s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation') {
         employmentIncome += annualAmount;
       } else if (s.type === 'business') {
         businessIncome += annualAmount;
@@ -135,7 +138,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   const groupStreams = () => {
-    const employment = streams.filter(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'commutingAllowance');
+    const employment = streams.filter(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'commutingAllowance' || s.type === 'stockCompensation');
     const business = streams.filter(s => s.type === 'business');
     const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
 
@@ -172,7 +175,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
-                      label={stream.type === 'commutingAllowance' ? 'COMMUTING' : stream.type.toUpperCase()}
+                      label={
+                        stream.type === 'commutingAllowance' ? 'COMMUTING' :
+                        stream.type === 'stockCompensation' ? 'STOCK' :
+                        stream.type.toUpperCase()
+                      }
                       size="small"
                       color={getStreamColor(stream.type)}
                       sx={{ fontSize: '0.7rem', height: 20 }}

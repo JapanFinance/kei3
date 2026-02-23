@@ -7,6 +7,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import FormControl from '@mui/material/FormControl';
+import FormLabel from '@mui/material/FormLabel';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import FormHelperText from '@mui/material/FormHelperText';
@@ -15,8 +16,15 @@ import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 
 import Typography from '@mui/material/Typography';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 
 interface IncomeStreamFormProps {
   initialData?: IncomeStream;
@@ -39,6 +47,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(((initialData?.type === 'salary' || initialData?.type === 'commutingAllowance') && initialData.frequency) || 'annual');
   const [month, setMonth] = useState<number>((initialData?.type === 'bonus' && initialData.month) || 0); // 0 = Jan
   const [blueFilerDeduction, setBlueFilerDeduction] = useState<number>((initialData?.type === 'business' && initialData.blueFilerDeduction) || 0);
+  const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>((initialData?.type === 'stockCompensation' && initialData.issuerDomicile) || 'foreign');
   const [error, setError] = useState<string | null>(null);
 
   const validate = (): boolean => {
@@ -70,6 +79,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       stream = { id, type: 'business', amount, blueFilerDeduction };
     } else if (type === 'commutingAllowance') {
       stream = { id, type: 'commutingAllowance', amount, frequency };
+    } else if (type === 'stockCompensation') {
+      stream = { id, type: 'stockCompensation', amount, issuerDomicile };
     } else {
       stream = { id, type: 'miscellaneous', amount };
     }
@@ -101,6 +112,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         return 'Gross bonus amount before taxes and deductions';
       case 'commutingAllowance':
         return 'Commuting allowance up to 150,000 yen per month is non-taxable for income tax, but the full amount affects social insurance premiums.';
+      case 'stockCompensation':
+        return undefined;
       default:
         return undefined;
     }
@@ -128,6 +141,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <MenuItem value="salary" disabled={disabledTypes.includes('salary')}>Salary</MenuItem>
             <MenuItem value="bonus" disabled={disabledTypes.includes('bonus')}>Bonus</MenuItem>
             <MenuItem value="commutingAllowance" disabled={disabledTypes.includes('commutingAllowance')}>Commuting Allowance</MenuItem>
+            <MenuItem value="stockCompensation" disabled={disabledTypes.includes('stockCompensation')}>Stock-Based Compensation</MenuItem>
             <MenuItem value="business" disabled={disabledTypes.includes('business')}>Business</MenuItem>
             <MenuItem value="miscellaneous" disabled={disabledTypes.includes('miscellaneous')}>Miscellaneous</MenuItem>
           </Select>
@@ -180,6 +194,67 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               ))}
             </Select>
           </FormControl>
+        )}
+
+        {type === 'stockCompensation' && (
+          <FormControl fullWidth>
+            <FormLabel
+              id="stock-issuer-label"
+              sx={{
+                  mb: 0.5,
+                  fontWeight: 500,
+                  color: 'text.primary',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}
+              >
+                <span>Stock Issuer</span>
+                <DetailedTooltip
+                  title="Stock Issuer"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                  iconAriaLabel="issuance info"
+                >
+                  <Typography display="block" sx={{ mb: 1 }}>
+                    <strong>Foreign-issued stock compensation</strong> means grants from a non-Japanese company, such as the foreign parent company of a Japanese subsidiary. It is not subject to social insurance premiums (社会保険料).
+                  </Typography>
+                  <Typography display="block">
+                    <strong>Domestic-issued stock compensation</strong> is not currently supported. It is subject to social insurance premiums.
+                  </Typography>
+                </DetailedTooltip>
+              </FormLabel>
+              <ToggleButtonGroup
+                value={issuerDomicile}
+                exclusive
+                onChange={(_, newValue) => {
+                  if (newValue) {
+                    setIssuerDomicile(newValue);
+                  }
+                }}
+                aria-labelledby="stock-issuer-label"
+                aria-label="stock compensation issuance"
+                size="small"
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    px: 2,
+                    py: 0.5,
+                    fontSize: '0.85rem',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  },
+                  '& .MuiToggleButton-root.Mui-selected': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    '&:hover': {
+                      bgcolor: 'primary.dark',
+                    }
+                  }
+                }}
+              >
+                <ToggleButton value="domestic" disabled>Domestic</ToggleButton>
+                <ToggleButton value="foreign">Foreign</ToggleButton>
+              </ToggleButtonGroup>
+            </FormControl>
         )}
 
         <Box>
@@ -326,6 +401,87 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                         amount
                 )}
               </Typography>
+            </Box>
+          )}
+
+          {type === 'stockCompensation' && (
+            <Box sx={{ p: 1.5, backgroundColor: '#f5f5f5', borderRadius: 1, mt: 2, border: '1px solid #e0e0e0' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                How to Calculate Your Stock-Based Compensation Income
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                See the notes below for more specific information. In general, calculate the JPY amount of financial benefit realized.
+              </Typography>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>Exchange Rate</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2">
+                    Use the TTM (Telegraphic Transfer Middle) exchange rate on the day of the taxable event for converting foreign currency denominated share value to JPY.
+                    If that date's exchange rate is not available, use the closest available prior date's TTM rate.
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                    Example conversion: $15,000 × 150 JPY/USD = ¥2,250,000.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>RS / RSU / PS / PSU </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" fontWeight={600} marginBottom={0.5}>
+                    Restricted Stock (Units) / Performance Shares (Units)
+                  </Typography>
+                  <Typography variant="body2">
+                    Use the fair market value on the vesting date of the vested shares.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>Stock Options</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Use (share price at exercise − strike price) × exercised shares.
+                  </Typography>
+                  <Typography variant="body2">
+                    Only <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1543.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-qualified stock options</a> income should be entered here. <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1540.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Qualified stock options</a> are not currently supported.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>ESPP (Employee Stock Purchase Plan)</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2">
+                    Use the discount amount when shares are purchased. For example, if you purchased shares with a fair market value of $10,000 at a 15% discount (i.e. for $8,500), the taxable amount is $1,500.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" fontWeight={600}>Foreign-Source Income & Non-Permanent Tax Residents</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2">
+                    If you worked outside Japan for a period of time between grant and vest/exercise, the proportion of the income realized equal to the proportion of time worked outside Japan would be foreign-source income.
+                    If you are a <a href="https://wiki.japanfinance.org/tax/income/#non-permanent-tax-residents" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-permanent tax resident</a> when that income is realized, the foreign-source income will not be taxable in Japan unless <a href="https://wiki.japanfinance.org/tax/income/#income-that-is-neither-japan-source-nor-foreign-source" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>remittances to Japan</a> were made in the same year that make some or all of it taxable.
+                    Taxpayers who are not non-permanent tax residents would have to use foreign tax credits to alleviate Japanese taxation on the foreign-source income that will be taxable in the foreign country.
+                  </Typography>
+                  <Typography variant="body2" marginTop={1.5}>
+                    Only input the amount of stock-based compensation income that is taxable in Japan.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
             </Box>
           )}
         </Box>

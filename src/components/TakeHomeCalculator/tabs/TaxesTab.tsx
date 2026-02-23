@@ -142,7 +142,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
   // Calculate separated gross income
   const grossEmploymentIncome = inputs.incomeStreams
-    .filter(s => s.type === 'salary' || s.type === 'bonus')
+    .filter(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation')
     .reduce((sum, s) => sum + (s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0);
 
   const businessAndMiscIncome = inputs.incomeStreams
