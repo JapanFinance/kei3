@@ -11,7 +11,6 @@ import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import CloseIcon from '@mui/icons-material/Close';
@@ -95,24 +94,41 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
   };
 
   return (
-    <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.5, sm: 1 } }}>
-        <SectionIcon type={type} />
-      </Box>
-      <List dense sx={{ pl: { xs: 1.5, sm: 2 } }}>
+    <Box sx={{ mb: { xs: 1, sm: 1.5 } }}>
+      <List dense sx={{ p: 0 }}>
         {items.map((item, index) => (
-          <ListItem key={index} sx={{ py: { xs: 0.125, sm: 0.25 }, px: 0 }}>
-            <ListItemText 
-              primary={
+          <ListItem key={index} sx={{ py: { xs: 0.25, sm: 0.5 }, px: 0, alignItems: 'flex-start' }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+              <Typography 
+                component="span" 
+                sx={{ 
+                  mr: 1, 
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.875rem', sm: '0.875rem' },
+                  lineHeight: 1.5
+                }}
+              >
+                •
+              </Typography>
+              <Box sx={{ flexGrow: 1 }}>
+                {index === 0 && (
+                  <Box component="span" sx={{ mr: 1, display: 'inline-block', verticalAlign: 'middle', mb: '2px' }}>
+                    <SectionIcon type={type} />
+                  </Box>
+                )}
                 <Typography
+                  component="span"
                   variant="body2"
                   color="text.secondary"
-                  sx={{ fontSize: { xs: '0.875rem', sm: '0.875rem' } }}
+                  sx={{ 
+                    fontSize: { xs: '0.875rem', sm: '0.875rem' },
+                    lineHeight: 1.5
+                  }}
                 >
-                  • {parseMarkdownLinks(item)}
+                  {parseMarkdownLinks(item)}
                 </Typography>
-              }
-            />
+              </Box>
+            </Box>
           </ListItem>
         ))}
       </List>
