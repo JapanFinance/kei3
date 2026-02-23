@@ -444,7 +444,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>SO (Stock Options)</Typography>
+                  <Typography variant="body2" fontWeight={600}>Stock Options</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2" sx={{ mb: 1 }}>
@@ -462,7 +462,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
-                    Use the discount amount. For example, if you purchased shares with a fair market value of $10,000 at a 15% discount (i.e. for $8,500), the taxable amount is $1,500.
+                    Use the discount amount when shares are purchased. For example, if you purchased shares with a fair market value of $10,000 at a 15% discount (i.e. for $8,500), the taxable amount is $1,500.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
@@ -476,6 +476,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     If you worked outside Japan for a period of time between grant and vest/exercise, the proportion of the income realized equal to the proportion of time worked outside Japan would be foreign-source income.
                     If you are a <a href="https://wiki.japanfinance.org/tax/income/#non-permanent-tax-residents" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-permanent tax resident</a> when that income is realized, the foreign-source income will not be taxable in Japan unless <a href="https://wiki.japanfinance.org/tax/income/#income-that-is-neither-japan-source-nor-foreign-source" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>remittances to Japan</a> were made in the same year that make some or all of it taxable.
                     Taxpayers who are not non-permanent tax residents would have to use foreign tax credits to alleviate Japanese taxation on the foreign-source income that will be taxable in the foreign country.
+                  </Typography>
+                  <Typography variant="body2" marginTop={1.5}>
+                    Only input the amount of stock-based compensation income that is taxable in Japan.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
