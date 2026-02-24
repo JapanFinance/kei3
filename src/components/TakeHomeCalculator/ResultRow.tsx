@@ -3,7 +3,6 @@
 
 import React from 'react';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { SxProps, Theme } from '@mui/material/styles';
@@ -164,12 +163,12 @@ export const ResultRow: React.FC<ResultRowProps> = ({
 
   return (
     <Box sx={boxSx}>
-      <Typography sx={{ ...leftColumnLayoutSx, ...labelSpecificSx }}>
+      <Box sx={{ ...leftColumnLayoutSx, ...labelSpecificSx }}>
         {labelContent}
-      </Typography>
-      <Typography sx={{ ...rightColumnLayoutSx, ...valueSpecificSx }}>
+      </Box>
+      <Box sx={{ ...rightColumnLayoutSx, ...valueSpecificSx }}>
         {valuePrefix}{value}
-      </Typography>
+      </Box>
     </Box>
   );
 };

@@ -55,7 +55,7 @@ const NationalTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipPr
                 <TableCell align="right">{formatJPY(item.nationalTaxAmount)}</TableCell>
               </TableRow>
             ))}
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableRow sx={{ backgroundColor: 'action.hover' }}>
               <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
               <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.nationalTax.total)}</TableCell>
             </TableRow>
@@ -73,11 +73,11 @@ const NationalTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipPr
     <Box sx={{ mt: 1 }}>
       Official NTA Sources:
       <ul>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>扶養控除 (Dependent Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>特定親族特別控除 (Specific Relative Special Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者控除 (Spouse Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者特別控除 (Spouse Special Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>障害者控除 (Disability Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>扶養控除 (Dependent Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>特定親族特別控除 (Specific Relative Special Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者控除 (Spouse Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者特別控除 (Spouse Special Deduction)</a></li>
+        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>障害者控除 (Disability Deduction)</a></li>
       </ul>
     </Box>
   </Box>
@@ -106,7 +106,7 @@ const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipP
                 <TableCell align="right">{formatJPY(item.residenceTaxAmount)}</TableCell>
               </TableRow>
             ))}
-            <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+            <TableRow sx={{ backgroundColor: 'action.hover' }}>
               <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
               <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.residenceTax.total)}</TableCell>
             </TableRow>
@@ -124,8 +124,8 @@ const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipP
     <Box sx={{ mt: 1 }}>
       Official Sources:
       <ul>
-        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>人的控除 (Residence tax deduction amounts - Nerima City)</a></li>
-        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>令和7年度税制改正 (2025 Tax Reform - Nerima City)</a></li>
+        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>人的控除 (Residence tax deduction amounts - Nerima City)</a></li>
+        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>令和7年度税制改正 (2025 Tax Reform - Nerima City)</a></li>
       </ul>
     </Box>
   </Box>
@@ -191,12 +191,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         </tr>
                         <tr>
                           <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
-                          <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</td>
+                          <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</Box>
                         </tr>
-                        <tr style={{ borderTop: '1px solid #ddd' }}>
+                        <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
                           <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
                           <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(results.netEmploymentIncome)}</td>
-                        </tr>
+                        </Box>
                       </tbody>
                     </table>
                     <EmploymentIncomeDeductionTooltip />
@@ -230,14 +230,14 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           </tr>
                           <tr>
                             <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
-                            <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(results.blueFilerDeduction)}</td>
+                            <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(results.blueFilerDeduction)}</Box>
                           </tr>
-                          <tr style={{ borderTop: '1px solid #ddd' }}>
+                          <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
                             <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
                             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
                               {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
                             </td>
-                          </tr>
+                          </Box>
                         </tbody>
                       </table>
                       <Box>
@@ -251,7 +251,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           Official Sources:
                           <ul>
                             <li>
-                              <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                              <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                                 青色申告特別控除 - NTA
                               </a>
                             </li>
@@ -294,12 +294,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       Official Sources:
                       <ul>
                         <li>
-                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1135.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', fontSize: '0.95em' }}>
+                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1135.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', fontSize: '0.95em' }}>
                             小規模企業共済等掛金控除 (NTA)
                           </a>
                         </li>
                         <li>
-                          <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', fontSize: '0.95em' }}>
+                          <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', fontSize: '0.95em' }}>
                             確定拠出年金制度の概要 (MHLW)
                           </a>
                         </li>
@@ -397,12 +397,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     Official Sources (NTA):
                     <ul>
                       <li>
-                        <a href="https://www.nta.go.jp/users/gensen/2025kiso/index.htm#a-01" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                        <a href="https://www.nta.go.jp/users/gensen/2025kiso/index.htm#a-01" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                           令和７年度税制改正による所得税の基礎控除の見直し等について
                         </a>
                       </li>
                       <li>
-                        <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                        <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                           基礎控除
                         </a>
                       </li>
@@ -458,7 +458,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       Official Sources:
                       <ul>
                         <li>
-                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                             所得税の税率 - NTA
                           </a>
                         </li>
@@ -549,7 +549,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         Official Sources:
                         <ul>
                           <li>
-                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                            <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                               所得税の税率 - NTA
                             </a>
                           </li>
@@ -590,12 +590,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       Official Sources:
                       <ul>
                         <li>
-                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                             所得税の税率 - NTA
                           </a>
                         </li>
                         <li>
-                          <a href="https://www.nta.go.jp/publication/pamph/shotoku/fukko_tokubetsu/index.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                          <a href="https://www.nta.go.jp/publication/pamph/shotoku/fukko_tokubetsu/index.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                             個人の方に係る復興特別所得税のあらまし - NTA
                           </a>
                         </li>
@@ -628,7 +628,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     Official Sources:
                     <ul>
                       <li>
-                        <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                        <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                           所得税の税率 - NTA
                         </a>
                       </li>
@@ -723,7 +723,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     </tbody>
                   </Box>
                   <Box sx={{ mt: 1 }}>
-                    <a href="https://www.city.yokohama.lg.jp/kurashi/koseki-zei-hoken/zeikin/y-shizei/kojin-shiminzei-kenminzei/kaisei/R3zeiseikaisei.html#4" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                    <a href="https://www.city.yokohama.lg.jp/kurashi/koseki-zei-hoken/zeikin/y-shizei/kojin-shiminzei-kenminzei/kaisei/R3zeiseikaisei.html#4" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                       Official Source (Yokohama City)
                     </a>
                   </Box>
@@ -777,7 +777,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       Official Sources:
                       <ul>
                         <li>
-                          <a href="https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                          <a href="https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                             個人住民税 (Tokyo Bureau of Taxation)
                           </a>
                         </li>
@@ -849,7 +849,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     Official Sources:
                     <ul>
                       <li>
-                        <a href="https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                        <a href="https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                           個人住民税 (Tokyo Bureau of Taxation)
                         </a>
                       </li>
@@ -1087,7 +1087,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     Official Sources:
                     <ul>
                       <li>
-                        <a href="https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                        <a href="https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                           個人住民税 (Tokyo Bureau of Taxation)
                         </a>
                       </li>

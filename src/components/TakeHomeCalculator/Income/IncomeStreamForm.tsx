@@ -120,7 +120,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   };
 
   return (
-    <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, mb: 2 }}>
+    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 2 }}>
       <Stack spacing={2}>
         <FormControl fullWidth>
           <InputLabel id="income-type-label">Income/Benefit Type</InputLabel>
@@ -331,36 +331,36 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   >
                     <thead>
                       <tr>
-                        <th style={{ width: '30%', textAlign: 'left' }}>Requirement</th>
-                        <th style={{ color: '#1976d2' }}>¥650k</th>
-                        <th style={{ color: '#424242' }}>¥550k</th>
-                        <th style={{ color: '#757575' }}>¥100k</th>
+                        <Box component="th" sx={{ width: '30%', textAlign: 'left' }}>Requirement</Box>
+                        <Box component="th" sx={{ color: 'primary.main' }}>¥650k</Box>
+                        <Box component="th" sx={{ color: 'text.primary' }}>¥550k</Box>
+                        <Box component="th" sx={{ color: 'text.secondary' }}>¥100k</Box>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
                         <td>Bookkeeping</td>
-                        <td style={{ color: '#2e7d32' }}>Double Entry</td>
-                        <td style={{ color: '#2e7d32' }}>Double Entry</td>
-                        <td style={{ color: '#757575' }}>Simple</td>
+                        <Box component="td" sx={{ color: 'success.main' }}>Double Entry</Box>
+                        <Box component="td" sx={{ color: 'success.main' }}>Double Entry</Box>
+                        <Box component="td" sx={{ color: 'text.secondary' }}>Simple</Box>
                       </tr>
                       <tr>
                         <td>Balance Sheet, Profit & Loss Statement</td>
-                        <td style={{ color: '#2e7d32', fontSize: '1rem' }}>○</td>
-                        <td style={{ color: '#2e7d32', fontSize: '1rem' }}>○</td>
-                        <td style={{ color: '#bdbdbd' }}>—</td>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
                       </tr>
                       <tr>
                         <td>On-time Filing</td>
-                        <td style={{ color: '#2e7d32', fontSize: '1rem' }}>○</td>
-                        <td style={{ color: '#2e7d32', fontSize: '1rem' }}>○</td>
-                        <td style={{ color: '#bdbdbd' }}>—</td>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
                       </tr>
                       <tr>
                         <td>e-Tax or Electronic Books</td>
-                        <td style={{ color: '#2e7d32', fontSize: '1rem' }}>○</td>
-                        <td style={{ color: '#bdbdbd' }}>—</td>
-                        <td style={{ color: '#bdbdbd' }}>—</td>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
                       </tr>
                     </tbody>
                   </Box>
@@ -405,7 +405,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
 
           {type === 'stockCompensation' && (
-            <Box sx={{ p: 1.5, backgroundColor: '#f5f5f5', borderRadius: 1, mt: 2, border: '1px solid #e0e0e0' }}>
+            <Box sx={{ p: 1.5, backgroundColor: 'background.default', borderRadius: 1, mt: 2, border: '1px solid', borderColor: 'divider' }}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 How to Calculate Your Stock-Based Compensation Income
               </Typography>
