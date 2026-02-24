@@ -206,7 +206,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                           </tr>
                           <tr>
                             <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
-                            <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</td>
+                            <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</Box>
                           </tr>
                           <tr style={{ borderTop: '1px solid #ddd' }}>
                             <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
@@ -244,7 +244,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                             </tr>
                             <tr>
                               <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
-                              <td style={{ padding: '2px 0', textAlign: 'right', color: '#d32f2f' }}>-{formatJPY(results.blueFilerDeduction)}</td>
+                              <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(results.blueFilerDeduction)}</Box>
                             </tr>
                             <tr style={{ borderTop: '1px solid #ddd' }}>
                               <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
@@ -265,7 +265,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                             Official Sources:
                             <ul>
                               <li>
-                                <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                                <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                                   青色申告特別控除 - NTA
                                 </a>
                               </li>
@@ -455,7 +455,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   National pension contributions are a fixed amount regardless of income level.
                 </Typography>
                 <Box sx={{ mt: 1 }}>
-                  Source:<a href="https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                  Source:<a href="https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                     国民年金保険料の金額 (Japan Pension Service)
                   </a>
                 </Box >
@@ -527,7 +527,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 Official Source:
                 <ul>
                   <li>
-                    <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontSize: '0.95em' }}>
+                    <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                       Employment Insurance Premium Rate (MHLW)
                     </a>
                   </li>

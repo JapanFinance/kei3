@@ -70,7 +70,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
                   <td>
                     {formatJPY(item.standardBonusAmount)}
                     {item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000 && (
-                      <span style={{ color: 'orange', marginLeft: 4 }} title="Capped at 1,500,000 JPY">*</span>
+                      <Box component="span" sx={{ color: 'warning.main', ml: 0.5 }} title="Capped at 1,500,000 JPY">*</Box>
                     )}
                   </td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
@@ -97,7 +97,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
       {breakdown?.some(item => item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000) && (
         <Box sx={{ mb: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
-            <span style={{ color: 'orange', marginRight: 4 }}>*</span>
+            <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>*</Box>
             Indicates the standard bonus amount is capped.
           </Typography>
         </Box>

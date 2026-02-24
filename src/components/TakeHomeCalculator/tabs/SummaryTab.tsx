@@ -5,7 +5,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Divider from '@mui/material/Divider';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
@@ -35,7 +35,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       <Divider sx={{ my: { xs: 1, sm: 1.5 } }} />
 
       {/* Social Insurance Section */}
-      <Box sx={{ bgcolor: 'rgba(33,150,243,0.03)', borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
+      <Box sx={{ bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03), borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
         <Typography
           variant="subtitle2"
           sx={{
@@ -105,7 +105,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       </Box>
 
       {/* Taxes Section */}
-      <Box sx={{ bgcolor: 'rgba(255,193,7,0.03)', borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
+      <Box sx={{ bgcolor: (theme) => alpha(theme.palette.warning.main, 0.03), borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
         <Typography
           variant="subtitle2"
           sx={{
@@ -188,7 +188,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
 
       {/* Furusato Nozei Summary */}
       {results.furusatoNozei !== undefined && results.furusatoNozei.limit > 0 && (
-        <Box sx={{ bgcolor: 'rgba(156,39,176,0.07)', borderRadius: 2, px: 1, py: 1, mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 } }}>
+        <Box sx={{ bgcolor: (theme) => alpha(theme.palette.secondary.main, 0.07), borderRadius: 2, px: 1, py: 1, mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 } }}>
           <Typography
             variant="subtitle2"
             sx={{

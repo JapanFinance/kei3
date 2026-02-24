@@ -126,7 +126,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                   <td>
                     {formatJPY(item.standardBonusAmount)}
                     {item.standardBonusAmount < (Math.floor(item.bonusAmount / 1000) * 1000) && (
-                      <span style={{ color: 'orange', marginLeft: 4 }} title={`Capped: Cumulative Standard Bonus (${formatJPY(item.cumulativeStandardBonus)}) reached annnual limit`}>*</span>
+                      <Box component="span" sx={{ color: 'warning.main', ml: 0.5 }} title={`Capped: Cumulative Standard Bonus (${formatJPY(item.cumulativeStandardBonus)}) reached annnual limit`}>*</Box>
                     )}
                   </td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
@@ -155,7 +155,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
       {breakdown?.some(item => item.standardBonusAmount < (Math.floor(item.bonusAmount / 1000) * 1000)) && (
         <Box sx={{ mb: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
-            <span style={{ color: 'orange', marginRight: 4 }}>*</span>
+            <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>*</Box>
             Indicates the cumulative standard bonus amount has reached the annual cap.
           </Typography>
         </Box>

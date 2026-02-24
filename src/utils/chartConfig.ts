@@ -149,7 +149,7 @@ export const generateChartData = (
     {
       label: 'Health Insurance',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.healthInsurance, breakdown })),
-      borderColor: '#222',
+      borderColor: 'var(--text-primary)',
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) => caps.healthInsuranceCapped ? 2 : 0),
       yAxisID: 'y',
@@ -159,7 +159,7 @@ export const generateChartData = (
     {
       label: 'Pension',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.pensionPayments, breakdown })),
-      borderColor: '#222',
+      borderColor: 'var(--text-primary)',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) => caps.pensionCapped || caps.pensionFixed ? 2 : 0),
       yAxisID: 'y',

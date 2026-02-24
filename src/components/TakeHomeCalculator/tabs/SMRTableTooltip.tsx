@@ -156,7 +156,7 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
               position: 'sticky',
               top: 0,
               zIndex: 1,
-              boxShadow: '0 1px 0 0 rgba(0,0,0,0.12)', // Subtle shadow to separate from content
+              boxShadow: '0 1px 0 0 var(--divider)', // Subtle shadow to separate from content
             },
             '& td:first-of-type': {
               textAlign: 'left',
@@ -243,7 +243,7 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
               href={officialSourceLink.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#1976d2', textDecoration: 'underline' }}
+              style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
             >
               {officialSourceLink.text}
             </a>
