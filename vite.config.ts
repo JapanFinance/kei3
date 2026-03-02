@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import { cloudflare } from "@cloudflare/vite-plugin";
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -15,7 +15,7 @@ export default defineConfig({
         filename: 'dist/stats.html',
         gzipSize: true,
         brotliSize: true,
-      })
+      }) as PluginOption
   ],
   build: {
     outDir: 'dist',
