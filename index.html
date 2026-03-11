@@ -2,13 +2,54 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!--<link rel="icon" type="image/svg+xml" href="/vite.svg" />-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Japan Take-Home Pay Calculator</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Calculate your take-home pay in Japan. Calculate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance." />
+    <link rel="canonical" href="https://kei3.japanfinance.org/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://kei3.japanfinance.org/" />
+    <meta property="og:title" content="Japan Take-Home Pay Calculator" />
+    <meta property="og:description" content="Calculate your take-home pay in Japan. Calculate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance." />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary" />
+    <meta property="twitter:url" content="https://kei3.japanfinance.org/" />
+    <meta property="twitter:title" content="Japan Take-Home Pay Calculator" />
+    <meta property="twitter:description" content="Calculate your take-home pay in Japan. Calculate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance." />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Japan Take-Home Pay Calculator",
+      "applicationCategory": "FinanceApplication",
+      "description": "A comprehensive calculator for Japan take-home pay, including income tax, residence tax, health insurance, pension, and Furusato Nozei limits.",
+      "url": "https://kei3.japanfinance.org/",
+      "offers": {
+        "@type": "Offer",
+        "price": "0"
+      }
+    }
+    </script>
+
     <link rel="stylesheet" href="/src/index.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <noscript>
+        <h1>Japan Take-Home Pay Calculator</h1>
+        <p>Calculate your take-home pay in Japan. Estimate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance.</p>
+        <p>You need to enable JavaScript to run this app.</p>
+      </noscript>
+      <!-- Fallback content for search engines if they don't hydrate JS immediately -->
+      <h2>Calculate your take-home pay in Japan</h2>
+      <p>Enter your annual income to calculate your take-home pay in Japan. This tool calculates National Income Tax, Residence Tax, Health Insurance, Pension, and Furusato Nozei limit.</p>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
