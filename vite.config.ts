@@ -8,20 +8,21 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import Sitemap from 'vite-plugin-sitemap'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
-      cloudflare(),
-      react(),
-      Sitemap({
-        hostname: 'https://kei3.japanfinance.org/',
-        generateRobotsTxt: true,
-        robots: [] // Only include the sitemap in robots.txt
-      }),
-      visualizer({
-        filename: 'dist/stats.html',
-        gzipSize: true,
-        brotliSize: true,
-      }) as PluginOption
+    cloudflare(),
+    react(),
+    Sitemap({
+      hostname: 'https://kei3.japanfinance.org/',
+      generateRobotsTxt: true,
+      robots: [] // Only include the sitemap in robots.txt
+    }),
+    mode === 'analyze' ? visualizer({
+      filename: 'dist/stats.html',
+      open: true,
+      gzipSize: true,
+      brotliSize: true,
+    }) as PluginOption : null
   ],
   build: {
     outDir: 'dist',
@@ -44,4 +45,4 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-dom/client']
   }
-})
+}))
