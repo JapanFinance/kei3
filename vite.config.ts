@@ -5,12 +5,18 @@ import { defineConfig, type PluginOption } from 'vite'
 import { cloudflare } from "@cloudflare/vite-plugin";
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
+import Sitemap from 'vite-plugin-sitemap'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
       cloudflare(),
       react(),
+      Sitemap({
+        hostname: 'https://kei3.japanfinance.org/',
+        generateRobotsTxt: true,
+        robots: [] // Only include the sitemap in robots.txt
+      }),
       visualizer({
         filename: 'dist/stats.html',
         gzipSize: true,
