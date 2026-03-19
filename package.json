@@ -44,6 +44,6 @@
     "vite": "^7.3.1",
     "vite-plugin-sitemap": "^0.8.2",
     "vitest": "^4.1.0",
-    "wrangler": "^4.72.0"
+    "wrangler": "^4.75.0"
   }
 }
