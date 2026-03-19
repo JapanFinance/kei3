@@ -6,14 +6,18 @@ updates:
     schedule:
       interval: "weekly"
     groups:
-      mui:
-        patterns:
-          - "@mui*"
       eslint:
         patterns:
           - "@eslint*"
           - "eslint"
+      mui:
+        patterns:
+          - "@mui*"
       react:
         patterns:
           - "react"
           - "react-dom"
+      vite:
+        patterns:
+          - "vite"
+          - "@vite*"
