@@ -17,7 +17,3 @@ updates:
         patterns:
           - "react"
           - "react-dom"
-      vite:
-        patterns:
-          - "vite"
-          - "@vite*"
