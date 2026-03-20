@@ -28,18 +28,27 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: true,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'react-dom-client': ['react-dom/client'],
-          mui: ['@mui/material'],
-          charts: ['chart.js', 'react-chartjs-2']
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react',
+              test: /node_modules[\\/](react|react-dom)[\\/]/
+            },
+            {
+              name: 'mui',
+              test: /node_modules[\\/]@mui[\\/]/
+            },
+            {
+              name: 'charts',
+              test: /node_modules[\\/](chart\.js|react-chartjs-2)[\\/]/
+            }
+          ]
         }
       }
     },
     chunkSizeWarningLimit: 1000,
-    minify: 'esbuild',
     target: 'es2020'
   },
   optimizeDeps: {
