@@ -48,8 +48,7 @@ export default defineConfig(({ mode }) => ({
         }
       }
     },
-    chunkSizeWarningLimit: 1000,
-    target: 'es2020'
+    chunkSizeWarningLimit: 1000
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-dom/client']
