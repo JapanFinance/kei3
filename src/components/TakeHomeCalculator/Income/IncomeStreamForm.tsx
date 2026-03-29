@@ -22,7 +22,7 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { formatJPY } from '../../../utils/formatters';
+import { formatJPY, getFrequencyAnnualMultiplier } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 
@@ -52,10 +52,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
   const validate = (): boolean => {
     if (type === 'commutingAllowance') {
-      let monthlyAmount = amount;
-      if (frequency === '3-months') monthlyAmount = amount / 3;
-      if (frequency === '6-months') monthlyAmount = amount / 6;
-      if (frequency === 'annual') monthlyAmount = amount / 12;
+      const monthlyAmount = amount * getFrequencyAnnualMultiplier(frequency) / 12;
 
       if (monthlyAmount > 150000) {
         setError('Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of your salary.');

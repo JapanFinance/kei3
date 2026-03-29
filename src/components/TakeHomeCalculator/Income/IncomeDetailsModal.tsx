@@ -22,7 +22,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type { IncomeStream } from '../../../types/tax';
 import { IncomeStreamForm } from './IncomeStreamForm';
-import { formatJPY } from '../../../utils/formatters';
+import { formatJPY, getCommutingAllowanceAnnualAmount } from '../../../utils/formatters';
 
 interface IncomeDetailsModalProps {
   open: boolean;
@@ -121,16 +121,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       } else if (s.type === 'miscellaneous') {
         miscellaneousIncome += annualAmount;
       } else if (s.type === 'commutingAllowance') {
-        // Calculate annual amount based on frequency
-        if (s.frequency === 'monthly') {
-          commutingAllowance += s.amount * 12;
-        } else if (s.frequency === '3-months') {
-          commutingAllowance += s.amount * 4;
-        } else if (s.frequency === '6-months') {
-          commutingAllowance += s.amount * 2;
-        } else {
-          commutingAllowance += s.amount;
-        }
+        commutingAllowance += getCommutingAllowanceAnnualAmount(s);
       }
     });
 
@@ -205,12 +196,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   )}
                   {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
                     <Typography variant="caption" color="text.secondary" display="block" align="right">
-                      (Annual: {formatJPY(
-                        stream.frequency === 'monthly' ? stream.amount * 12 :
-                          stream.frequency === '3-months' ? stream.amount * 4 :
-                            stream.frequency === '6-months' ? stream.amount * 2 :
-                              stream.amount
-                      )})
+                      (Annual: {formatJPY(getCommutingAllowanceAnnualAmount(stream))})
                     </Typography>
                   )}
                 </Box>

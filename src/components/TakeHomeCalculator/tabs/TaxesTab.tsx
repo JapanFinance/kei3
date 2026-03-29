@@ -30,106 +30,76 @@ interface TaxesTabProps {
 
 interface DependentDeductionTooltipProps {
   deductions: DependentDeductionResults;
+  taxType: 'national' | 'residence';
 }
 
-const NationalTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({ deductions }) => (
-  <Box sx={{ minWidth: { xs: 0, sm: 350 }, maxWidth: { xs: '100vw', sm: 500 } }}>
-    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-      Applied Deductions Breakdown
-    </Typography>
-    {deductions.breakdown.filter(b => b.nationalTaxAmount > 0).length > 0 ? (
-      <TableContainer component={Box} sx={{ mb: 2 }}>
-        <Table size="small" sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Dependent / Type</TableCell>
-              <TableCell align="right">Amount</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {deductions.breakdown.filter(b => b.nationalTaxAmount > 0).map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
-                </TableCell>
-                <TableCell align="right">{formatJPY(item.nationalTaxAmount)}</TableCell>
-              </TableRow>
-            ))}
-            <TableRow sx={{ backgroundColor: 'action.hover' }}>
-              <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.nationalTax.total)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-    ) : (
-      <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
-        No dependent deductions applied.
+const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({ deductions, taxType }) => {
+  const isNational = taxType === 'national';
+  const rows = deductions.breakdown.filter(b => isNational ? b.nationalTaxAmount > 0 : b.residenceTaxAmount > 0);
+  const total = isNational ? deductions.nationalTax.total : deductions.residenceTax.total;
+  const getAmount = (item: (typeof deductions.breakdown)[number]) =>
+    isNational ? item.nationalTaxAmount : item.residenceTaxAmount;
+
+  return (
+    <Box sx={{ minWidth: { xs: 0, sm: 350 }, maxWidth: { xs: '100vw', sm: 500 } }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+        Applied Deductions Breakdown
       </Typography>
-    )}
-
-
-
-    <Box sx={{ mt: 1 }}>
-      Official NTA Sources:
-      <ul>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>扶養控除 (Dependent Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>特定親族特別控除 (Specific Relative Special Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者控除 (Spouse Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者特別控除 (Spouse Special Deduction)</a></li>
-        <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>障害者控除 (Disability Deduction)</a></li>
-      </ul>
-    </Box>
-  </Box>
-);
-
-const ResidenceTaxDependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({ deductions }) => (
-  <Box sx={{ minWidth: { xs: 0, sm: 350 }, maxWidth: { xs: '100vw', sm: 500 } }}>
-    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-      Applied Deductions Breakdown
-    </Typography>
-    {deductions.breakdown.filter(b => b.residenceTaxAmount > 0).length > 0 ? (
-      <TableContainer component={Box} sx={{ mb: 2 }}>
-        <Table size="small" sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Dependent / Type</TableCell>
-              <TableCell align="right">Amount</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {deductions.breakdown.filter(b => b.residenceTaxAmount > 0).map((item, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
-                </TableCell>
-                <TableCell align="right">{formatJPY(item.residenceTaxAmount)}</TableCell>
+      {rows.length > 0 ? (
+        <TableContainer component={Box} sx={{ mb: 2 }}>
+          <Table size="small" sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Dependent / Type</TableCell>
+                <TableCell align="right">Amount</TableCell>
               </TableRow>
-            ))}
-            <TableRow sx={{ backgroundColor: 'action.hover' }}>
-              <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(deductions.residenceTax.total)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-    ) : (
-      <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
-        No dependent deductions applied.
-      </Typography>
-    )}
-
-
-
-    <Box sx={{ mt: 1 }}>
-      Official Sources:
-      <ul>
-        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>人的控除 (Residence tax deduction amounts - Nerima City)</a></li>
-        <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>令和7年度税制改正 (2025 Tax Reform - Nerima City)</a></li>
-      </ul>
+            </TableHead>
+            <TableBody>
+              {rows.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <div style={{ fontWeight: 500 }}>{item.deductionType}</div>
+                  </TableCell>
+                  <TableCell align="right">{formatJPY(getAmount(item))}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>{formatJPY(total)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
+          No dependent deductions applied.
+        </Typography>
+      )}
+      <Box sx={{ mt: 1 }}>
+        {isNational ? (
+          <>
+            Official NTA Sources:
+            <ul>
+              <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>扶養控除 (Dependent Deduction)</a></li>
+              <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>特定親族特別控除 (Specific Relative Special Deduction)</a></li>
+              <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者控除 (Spouse Deduction)</a></li>
+              <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>配偶者特別控除 (Spouse Special Deduction)</a></li>
+              <li><a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>障害者控除 (Disability Deduction)</a></li>
+            </ul>
+          </>
+        ) : (
+          <>
+            Official Sources:
+            <ul>
+              <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>人的控除 (Residence tax deduction amounts - Nerima City)</a></li>
+              <li><a href="https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>令和7年度税制改正 (2025 Tax Reform - Nerima City)</a></li>
+            </ul>
+          </>
+        )}
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
 
 const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
@@ -424,7 +394,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <DetailedTooltip
                   title="Dependent-Related Deductions (National Tax)"
                 >
-                  <NationalTaxDependentDeductionTooltip deductions={results.dependentDeductions} />
+                  <DependentDeductionTooltip deductions={results.dependentDeductions} taxType="national" />
                 </DetailedTooltip>
               </span>
             }
@@ -743,7 +713,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <DetailedTooltip
                   title="Dependent-Related Deductions (Residence Tax)"
                 >
-                  <ResidenceTaxDependentDeductionTooltip deductions={results.dependentDeductions} />
+                  <DependentDeductionTooltip deductions={results.dependentDeductions} taxType="residence" />
                 </DetailedTooltip>
               </span>
             }

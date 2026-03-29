@@ -30,7 +30,7 @@ export function detectCaps(
 ): CapStatus {
   // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
   // instead of total annual income which might include business/misc income or bonuses.
-  const monthlyRemuneration = (results.salaryIncome + (results.commuterAllowanceIncome ?? 0)) / 12;
+  const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowanceIncome ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
   // Check pension cap

@@ -1,12 +1,27 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TakeHomeInputs, TakeHomeResults, BonusIncomeStream, IncomeStream } from '../types/tax'
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
-import { calculatePensionBreakdown } from './pensionCalculator';
-import { calculateHealthInsuranceBreakdown, calculateNationalHealthInsurancePremiumWithBreakdown } from './healthInsuranceCalculator';
-import { calculateFurusatoNozeiDetails, calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from './residenceTax';
-import { calculateDependentDeductions } from './dependentDeductions';
+import type {BonusIncomeStream, IncomeStream, TakeHomeInputs, TakeHomeResults} from '../types/tax'
+import {
+    CUSTOM_PROVIDER_ID,
+    DEFAULT_PROVIDER,
+    DEPENDENT_COVERAGE_ID,
+    NATIONAL_HEALTH_INSURANCE_ID
+} from '../types/healthInsurance';
+import {calculatePensionBreakdown} from './pensionCalculator';
+import {
+    calculateHealthInsuranceBreakdown,
+    calculateNationalHealthInsurancePremiumWithBreakdown
+} from './healthInsuranceCalculator';
+import {
+    calculateFurusatoNozeiDetails,
+    calculateResidenceTax,
+    calculateResidenceTaxBasicDeduction,
+    NON_TAXABLE_RESIDENCE_TAX_DETAIL
+} from './residenceTax';
+import {calculateDependentDeductions} from './dependentDeductions';
+import {COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP, NATIONAL_BASIC_DEDUCTION_TIERS,} from '../constants/taxThresholds';
+import {getCommutingAllowanceAnnualAmount} from './formatters';
 
 /** https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html */
 export const employmentInsuranceRate = 0.0055; // 0.55%
@@ -42,15 +57,15 @@ export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): num
     const roundedGrossIncome = Math.floor(grossEmploymentIncome / 4000) * 4000;
 
     if (grossEmploymentIncome <= 3_600_000) {
-        return Math.floor(roundedGrossIncome * 0.7) - 80_000
+        return Math.floor(roundedGrossIncome * 0.7) - 80_000;
     } else if (grossEmploymentIncome <= 6_600_000) {
-        return Math.floor(roundedGrossIncome * 0.8) - 440_000
+        return Math.floor(roundedGrossIncome * 0.8) - 440_000;
     }
 
     if (grossEmploymentIncome <= 8_500_000) {
-        return Math.floor(grossEmploymentIncome * 0.9) - 1_100_000
+        return Math.floor(grossEmploymentIncome * 0.9) - 1_100_000;
     } else {
-        return grossEmploymentIncome - 1_950_000
+        return grossEmploymentIncome - 1_950_000;
     }
 }
 
@@ -120,35 +135,12 @@ export const calculateEmploymentInsurance = (
  * Calculates the basic deduction (基礎控除) for national income tax based on income
  * Source: National Tax Agency https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm
  * 2025 Update: https://www.nta.go.jp/users/gensen/2025kiso/index.htm#a-01
- * 
- * 2025 Changes:
- * - 1,320,000 yen or less: 950,000 yen (was 480,000 yen)
- * - 1,320,001 - 3,360,000 yen: 880,000 yen (will be 580,000 from 2027) (was 480,000 yen)
- * - 3,360,001 - 4,890,000 yen: 680,000 yen (will be 580,000 from 2027) (was 480,000 yen)
- * - 4,890,001 - 6,550,000 yen: 630,000 yen (will be 580,000 from 2027) (was 480,000 yen)
- * - 6,550,001 - 23,500,000 yen: 580,000 yen (was 480,000 yen)
- * - Over 23,500,000 yen: no change
  */
 export const calculateNationalIncomeTaxBasicDeduction = (netIncome: number): number => {
-    if (netIncome <= 1_320_000) {
-        return 950_000; // Up from 480,000 yen
-    } else if (netIncome <= 3_360_000) {
-        return 880_000; // Will be 580,000 from 2027 (currently 480,000 in 2024)
-    } else if (netIncome <= 4_890_000) {
-        return 680_000; // Will be 580,000 from 2027 (currently 480,000 in 2024)
-    } else if (netIncome <= 6_550_000) {
-        return 630_000; // Will be 580,000 from 2027 (currently 480,000 in 2024)
-    } else if (netIncome <= 23_500_000) {
-        return 580_000; // Up from 480,000 yen
-    } else if (netIncome <= 24000000) { // No change for income over 23.5M yen
-        return 480000;
-    } else if (netIncome <= 24500000) { // No change for income over 23.5M yen
-        return 320000;
-    } else if (netIncome <= 25000000) { // No change for income over 23.5M yen
-        return 160000;
-    } else {
-        return 0;
+    for (const { maxIncomeInclusive, deduction } of NATIONAL_BASIC_DEDUCTION_TIERS) {
+        if (netIncome <= maxIncomeInclusive) return deduction;
     }
+    return 0;
 }
 
 /**
@@ -256,15 +248,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
                 salaryIncome += income.amount;
             }
         } else if (income.type === 'commutingAllowance') {
-            if (income.frequency === 'monthly') {
-                commutingAllowance += income.amount * 12;
-            } else if (income.frequency === '3-months') {
-                commutingAllowance += income.amount * 4;
-            } else if (income.frequency === '6-months') {
-                commutingAllowance += income.amount * 2;
-            } else {
-                commutingAllowance += income.amount;
-            }
+            commutingAllowance += getCommutingAllowanceAnnualAmount(income);
         } else if (income.type === 'bonus') {
             bonusIncome.push(income);
         } else if (income.type === 'stockCompensation') {
@@ -316,9 +300,7 @@ export const calculateTotalNetIncome = (incomeStreams: IncomeStream[]): number =
         stockCompensationIncome
     } = calculateIncomeBreakdown(incomeStreams);
 
-    // Apply strict 150,000 JPY/month limit for non-taxable commuting allowance
-    // Since we're working with annual amounts, we use 150,000 * 12 = 1,800,000
-    const taxableCommutingAllowance = Math.max(0, commutingAllowance - 1_800_000);
+    const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
@@ -347,9 +329,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // Determine if there is any employment income (salary, bonus, or taxable commuting allowance)
     const hasEmploymentIncome = salaryIncome > 0 || bonusIncome.some(b => b.amount > 0) || commutingAllowance > 0 || stockCompensationIncome > 0;
 
-    // Apply strict 150,000 JPY/month limit for non-taxable commuting allowance
-    const nonTaxableCommutingAllowance = Math.min(commutingAllowance, 1_800_000);
-    const taxableCommutingAllowance = Math.max(0, commutingAllowance - 1_800_000);
+    const nonTaxableCommutingAllowance = Math.min(commutingAllowance, COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
+    const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
@@ -476,9 +457,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         takeHomeIncome,
         socialInsuranceOverride: inputs.manualSocialInsuranceEntry ? inputs.manualSocialInsuranceAmount : undefined,
         // Commuting Allowance details
-        commuterAllowanceIncome: commutingAllowance,
-        commuterAllowanceTaxable: taxableCommutingAllowance,
-        commuterAllowanceNonTaxable: nonTaxableCommutingAllowance,
+        commutingAllowanceIncome: commutingAllowance,
+        commutingAllowanceTaxable: taxableCommutingAllowance,
+        commutingAllowanceNonTaxable: nonTaxableCommutingAllowance,
         // Bonus breakdown
         healthInsuranceOnBonus,
         pensionOnBonus,

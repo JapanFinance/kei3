@@ -24,6 +24,12 @@ interface AppProps {
   toggleColorMode: () => void;
 }
 
+function selectDefaultRegion(regions: readonly string[]): string {
+  return regions.includes('Tokyo') ? 'Tokyo'
+    : regions.length > 0 ? regions[0]!
+    : DEFAULT_PROVIDER_REGION;
+}
+
 function App({ mode, toggleColorMode }: AppProps) {
   // Changelog modal management
   const { isOpen: isChangelogOpen, openModal: openChangelog, closeModal: closeChangelog } = useChangelogModal();
@@ -122,19 +128,15 @@ function App({ mode, toggleColorMode }: AppProps) {
           newInputs.healthInsuranceProvider = 'KyokaiKenpo';
           const providerDefinition = PROVIDER_DEFINITIONS['KyokaiKenpo'];
           const providerRegions = providerDefinition ? Object.keys(providerDefinition.regions) : [];
-          newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' :
-            (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
+          newInputs.region = selectDefaultRegion(providerRegions);
         } else if (newMode === 'miscellaneous') {
           newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' :
-            (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
+          newInputs.region = selectDefaultRegion(NATIONAL_HEALTH_INSURANCE_REGIONS);
         }
       } else if (name === 'healthInsuranceProvider') {
         newInputs.healthInsuranceProvider = processedInputValue as string;
         if (processedInputValue === NATIONAL_HEALTH_INSURANCE_ID) {
-          // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' :
-            (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
+          newInputs.region = selectDefaultRegion(NATIONAL_HEALTH_INSURANCE_REGIONS);
         } else if (processedInputValue === DEPENDENT_COVERAGE_ID) {
           // Dependent coverage doesn't need a region
           newInputs.region = DEFAULT_PROVIDER_REGION;
@@ -143,9 +145,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           const providerDefinition = PROVIDER_DEFINITIONS[processedInputValue as string];
           if (providerDefinition) {
             const providerRegions = Object.keys(providerDefinition.regions);
-            // Default to Tokyo if available, otherwise fall back to first region or DEFAULT_PROVIDER_REGION
-            newInputs.region = providerRegions.includes('Tokyo') ? 'Tokyo' :
-              (providerRegions.length > 0 ? providerRegions[0]! : DEFAULT_PROVIDER_REGION);
+            newInputs.region = selectDefaultRegion(providerRegions);
           } else {
             newInputs.region = DEFAULT_PROVIDER_REGION;
             console.warn(`Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data.Defaulting region.`);
@@ -157,8 +157,7 @@ function App({ mode, toggleColorMode }: AppProps) {
         if (prev.healthInsuranceProvider === DEPENDENT_COVERAGE_ID && !isDependentCoverageEligible(newIncome)) {
           // Income exceeded threshold, automatically switch to NHI
           newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-          newInputs.region = NATIONAL_HEALTH_INSURANCE_REGIONS.includes('Tokyo') ? 'Tokyo' :
-            (NATIONAL_HEALTH_INSURANCE_REGIONS.length > 0 ? NATIONAL_HEALTH_INSURANCE_REGIONS[0]! : DEFAULT_PROVIDER_REGION);
+          newInputs.region = selectDefaultRegion(NATIONAL_HEALTH_INSURANCE_REGIONS);
         }
       }
       return newInputs;

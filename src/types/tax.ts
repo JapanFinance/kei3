@@ -97,9 +97,9 @@ export interface TakeHomeResults {
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
   totalNetIncome: number;
-  commuterAllowanceIncome?: number; // Total amount
-  commuterAllowanceTaxable?: number;
-  commuterAllowanceNonTaxable?: number;
+  commutingAllowanceIncome?: number; // Total amount
+  commutingAllowanceTaxable?: number;
+  commutingAllowanceNonTaxable?: number;
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;

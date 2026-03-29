@@ -791,9 +791,9 @@ describe('Commuting Allowance', () => {
     expect(result.nationalIncomeTax).toBeLessThan(resultTaxableEquivalent.nationalIncomeTax);
 
     // Verify breakdown fields
-    expect(result.commuterAllowanceIncome).toBe(200_000 * 12);
-    expect(result.commuterAllowanceTaxable).toBe(50_000 * 12);
-    expect(result.commuterAllowanceNonTaxable).toBe(150_000 * 12);
+    expect(result.commutingAllowanceIncome).toBe(200_000 * 12);
+    expect(result.commutingAllowanceTaxable).toBe(50_000 * 12);
+    expect(result.commutingAllowanceNonTaxable).toBe(150_000 * 12);
   });
 
   it('handles 6-month pass correctly', () => {
@@ -814,9 +814,9 @@ describe('Commuting Allowance', () => {
 
     // Annual Commuting: 120,000 * 2 = 240,000
     // Taxable part: 0 (20k/month < 150k/month)
-    expect(result.commuterAllowanceIncome).toBe(240_000);
-    expect(result.commuterAllowanceTaxable).toBe(0);
-    expect(result.commuterAllowanceNonTaxable).toBe(240_000);
+    expect(result.commutingAllowanceIncome).toBe(240_000);
+    expect(result.commutingAllowanceTaxable).toBe(0);
+    expect(result.commutingAllowanceNonTaxable).toBe(240_000);
   });
 });
 
