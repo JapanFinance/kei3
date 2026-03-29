@@ -12,7 +12,7 @@ import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
-import EmploymentInsuranceRateTooltip from './EmploymentInsuranceRateTooltip';
+import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsurancePremiumTooltip from './HealthInsurancePremiumTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
@@ -536,17 +536,17 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             </DetailedTooltip>
           </Typography>
           <ResultRow
-            label="Monthly Premium"
-            value={formatJPY(Math.round(((results.employmentInsurance ?? 0) - (results.employmentInsuranceOnBonus ?? 0)) / 12))}
+            label="Salary Premium"
+            value={formatJPY((results.employmentInsurance ?? 0) - (results.employmentInsuranceOnBonus ?? 0))}
             type="indented"
-            labelSuffix={<EmploymentInsuranceRateTooltip />}
+            labelSuffix={<SalaryBreakdownTooltip monthlyIncome={rawMonthlyRemuneration} />}
           />
           {results.employmentInsuranceOnBonus !== undefined && results.employmentInsuranceOnBonus > 0 && (
             <ResultRow
               label="Bonus Premium"
               value={formatJPY(results.employmentInsuranceOnBonus)}
               type="indented"
-              labelSuffix={<EmploymentInsuranceRateTooltip />}
+              labelSuffix={<BonusBreakdownTooltip bonuses={bonuses} />}
             />
           )}
           <ResultRow
