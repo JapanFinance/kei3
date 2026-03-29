@@ -11,6 +11,46 @@ import { PROVIDER_DEFINITIONS, type RegionalRates } from './providerRateData';
 import { EHI_SMR_BRACKETS } from './smrBrackets';
 
 /**
+ * Returns the applicable regional rates for a given provider, region, year, and month.
+ * Finds the most recent rate period whose effective date is on or before the given date.
+ *
+ * @param providerId The provider key (e.g., 'KyokaiKenpo')
+ * @param region The region key (e.g., 'Tokyo' or 'DEFAULT')
+ * @param year Calendar year
+ * @param month 0-indexed month (0=Jan, 11=Dec)
+ */
+export function getRegionalRatesForMonth(
+  providerId: string,
+  region: string,
+  year: number,
+  month: number
+): RegionalRates | undefined {
+  const periods = PROVIDER_DEFINITIONS[providerId]?.regions[region];
+  if (!periods || periods.length === 0) return undefined;
+
+  for (const period of periods) {
+    const { effectiveFrom } = period;
+    if (year > effectiveFrom.year || (year === effectiveFrom.year && month >= effectiveFrom.month)) {
+      return period.rates;
+    }
+  }
+  // Fallback to the oldest known rate
+  return periods[periods.length - 1]!.rates;
+}
+
+/**
+ * Get regional rates for a specific provider and region using the current date.
+ * Convenience wrapper around getRegionalRatesForMonth.
+ */
+export function getRegionalRates(
+  providerId: string,
+  region: string = 'DEFAULT'
+): RegionalRates | undefined {
+  const now = new Date();
+  return getRegionalRatesForMonth(providerId, region, now.getFullYear(), now.getMonth());
+}
+
+/**
  * Calculate monthly premium for an employee based on SMR and regional rates
  */
 export function calculateMonthlyEmployeePremium(
@@ -20,16 +60,6 @@ export function calculateMonthlyEmployeePremium(
 ): number {
   const rate = regionalRates.employeeHealthInsuranceRate + (includeLongTermCare ? regionalRates.employeeLongTermCareRate : 0);
   return roundSocialInsurancePremium(smrAmount * rate);
-}
-
-/**
- * Get regional rates for a specific provider and region
- */
-export function getRegionalRates(
-  providerId: string,
-  region: string = 'DEFAULT'
-): RegionalRates | undefined {
-  return PROVIDER_DEFINITIONS[providerId]?.regions[region];
 }
 
 /**
@@ -87,10 +117,17 @@ export function generatePremiumTableFromRates(
 
 /**
  * Generate a premium table for display purposes
+ *
+ * @param providerId Provider key
+ * @param region Region key
+ * @param year Optional calendar year for rate lookup (defaults to current year)
+ * @param month Optional 0-indexed month for rate lookup (defaults to current month)
  */
 export function generateHealthInsurancePremiumTable(
   providerId: string,
-  region: string = 'DEFAULT'
+  region: string = 'DEFAULT',
+  year?: number,
+  month?: number
 ): Array<{
   minIncomeInclusive: number;
   maxIncomeExclusive: number;
@@ -99,7 +136,12 @@ export function generateHealthInsurancePremiumTable(
   fullPremiumNoLTC: number;
   fullPremiumWithLTC: number;
 }> | undefined {
-  const regionalRates = getRegionalRates(providerId, region);
+  let regionalRates: RegionalRates | undefined;
+  if (year !== undefined && month !== undefined) {
+    regionalRates = getRegionalRatesForMonth(providerId, region, year, month);
+  } else {
+    regionalRates = getRegionalRates(providerId, region);
+  }
   if (!regionalRates) return undefined;
 
   return generatePremiumTableFromRates(regionalRates);

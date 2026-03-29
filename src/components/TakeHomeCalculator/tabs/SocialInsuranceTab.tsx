@@ -25,10 +25,8 @@ import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
-  CUSTOM_PROVIDER_ID,
-  DEFAULT_PROVIDER_REGION
+  CUSTOM_PROVIDER_ID
 } from '../../../types/healthInsurance';
-import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
 interface SocialInsuranceTabProps {
@@ -55,30 +53,22 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   if (bonuses.length > 0 && !isNationalHealthInsurance) {
     const provider = inputs.healthInsuranceProvider;
     const region = inputs.region;
-    let rates = undefined;
 
     if (provider === CUSTOM_PROVIDER_ID) {
-      rates = {
+      const rates = {
         employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
         employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100
       };
-    } else {
-      const providerDef = PROVIDER_DEFINITIONS[provider];
-      if (providerDef) {
-        const regionalRates = providerDef.regions[region] || providerDef.regions[DEFAULT_PROVIDER_REGION];
-        if (regionalRates) {
-          rates = {
-            employeeHealthInsuranceRate: regionalRates.employeeHealthInsuranceRate,
-            employeeLongTermCareRate: regionalRates.employeeLongTermCareRate
-          };
-        }
-      }
-    }
-
-    if (rates) {
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
+        inputs.isSubjectToLongTermCarePremium
+      );
+    } else {
+      healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
+        bonuses,
+        provider,
+        region,
         inputs.isSubjectToLongTermCarePremium
       );
     }

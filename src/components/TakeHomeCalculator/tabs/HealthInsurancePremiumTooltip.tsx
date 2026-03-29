@@ -10,6 +10,7 @@ import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_
 import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
+import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import { EHI_SMR_BRACKETS, type StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
@@ -280,14 +281,18 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       throw new Error('standardMonthlyRemuneration is required for the Employee Health Insurance tooltip');
     }
 
+    const year = new Date().getFullYear();
+
     if (provider === CUSTOM_PROVIDER_ID) {
       employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
       employeeLtcRate = (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
       // For custom provider, we don't know the employer rate, so we leave it undefined.
       providerLabel = "Custom Provider";
     } else {
+      // Use the current month's rates for display
+      const now = new Date();
+      const regionalRates = getRegionalRatesForMonth(provider, region, now.getFullYear(), now.getMonth());
       const providerDef = PROVIDER_DEFINITIONS[provider];
-      const regionalRates = providerDef?.regions[region] || providerDef?.regions['DEFAULT'];
 
       if (regionalRates) {
         employeeRate = regionalRates.employeeHealthInsuranceRate;
@@ -296,14 +301,30 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         if (inputs.isSubjectToLongTermCarePremium) {
           employerRate += regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
         }
-        sourceUrl = regionalRates?.source || providerDef?.defaultSource;
-        providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
+        sourceUrl = regionalRates.source || providerDef?.defaultSource;
+        providerLabel = `${providerDef!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
       }
     }
 
     const includeLTC: boolean = inputs.isSubjectToLongTermCarePremium;
     const finalRate = employeeRate + (includeLTC ? employeeLtcRate : 0);
     const totalPremium = roundSocialInsurancePremium(standardMonthlyRemuneration * finalRate);
+
+    // Check if rates differ across the 12 months of the year
+    const monthlyRates: { rate: number; premium: number }[] = [];
+    let ratesVary = false;
+
+    if (provider !== CUSTOM_PROVIDER_ID) {
+      for (let m = 0; m < 12; m++) {
+        const monthRates = getRegionalRatesForMonth(provider, region, year, m);
+        if (monthRates) {
+          const r = monthRates.employeeHealthInsuranceRate + (includeLTC ? monthRates.employeeLongTermCareRate : 0);
+          const p = roundSocialInsurancePremium(standardMonthlyRemuneration * r);
+          monthlyRates.push({ rate: r, premium: p });
+          if (m > 0 && r !== monthlyRates[0]!.rate) ratesVary = true;
+        }
+      }
+    }
 
     // Prepare table data for the lookup table
     // Highlight the row corresponding to the current SMR
@@ -397,6 +418,41 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
             </Box>
           </Box>
         </Box>
+
+        {ratesVary && monthlyRates.length === 12 && (
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.85rem' }}>
+              Monthly Breakdown ({year})
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+              Rates change during the year. Each month's premium is calculated individually.
+            </Typography>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'left' }}>Month</th>
+                  <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Rate</th>
+                  <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Premium</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyRates.map((mr, idx) => (
+                  <tr key={idx}>
+                    <td style={{ padding: '2px 8px 2px 0' }}>{new Date(2000, idx).toLocaleString('en', { month: 'short' })}</td>
+                    <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatPercent(mr.rate)}</td>
+                    <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(mr.premium)}</td>
+                  </tr>
+                ))}
+                <tr>
+                  <td colSpan={2} style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>Annual Total</td>
+                  <td style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>
+                    {formatJPY(monthlyRates.reduce((sum, mr) => sum + mr.premium, 0))}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Box>
+        )}
 
         {includeLTC && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -0.5 }}>

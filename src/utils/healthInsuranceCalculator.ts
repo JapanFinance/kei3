@@ -6,7 +6,7 @@ import type { BonusIncomeStream } from '../types/tax';
 import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
-import { calculateMonthlyEmployeePremium, getRegionalRates } from '../data/employeesHealthInsurance/providerRates';
+import { calculateMonthlyEmployeePremium, getRegionalRatesForMonth } from '../data/employeesHealthInsurance/providerRates';
 import { roundSocialInsurancePremium } from './taxCalculations';
 
 /**
@@ -36,7 +36,8 @@ export function calculateHealthInsuranceBreakdown(
     provider: HealthInsuranceProviderId,
     region: ProviderRegion = DEFAULT_PROVIDER_REGION,
     customRates?: { healthRate: number, ltcRate: number },
-    bonuses: BonusIncomeStream[] = []
+    bonuses: BonusIncomeStream[] = [],
+    year: number = new Date().getFullYear()
 ): HealthInsuranceBreakdown {
     if (annualIncome < 0) {
         throw new Error('Income cannot be negative.');
@@ -60,45 +61,62 @@ export function calculateHealthInsuranceBreakdown(
             throw new Error(`Monthly income ${monthlyIncome.toLocaleString()} is outside the defined SMR ranges.`);
         }
 
-        let regionalRates;
-
         if (provider === CUSTOM_PROVIDER_ID) {
             if (!customRates) {
                 // Fallback if custom rates are missing but provider is custom
                 return { total: 0, bonusPortion: 0 };
             }
-            regionalRates = {
+            const staticRates = {
                 employeeHealthInsuranceRate: customRates.healthRate / 100,
                 employeeLongTermCareRate: customRates.ltcRate / 100,
-                // Employer rates not needed for employee premium calculation
                 employerHealthInsuranceRate: 0,
                 employerLongTermCareRate: 0
             };
-        } else {
-            // Get the regional rates directly
-            regionalRates = getRegionalRates(provider, region);
+
+            // Custom rates don't vary by month
+            const monthlyPremium = calculateMonthlyEmployeePremium(
+                smrBracket.smrAmount,
+                staticRates,
+                isSubjectToLongTermCarePremium
+            );
+            let totalPremium = monthlyPremium * 12;
+            let bonusPortion = 0;
+
+            if (bonuses.some(b => b.amount > 0)) {
+                const bonusDetails = calculateEmployeesHealthInsuranceBonusBreakdown(
+                    bonuses,
+                    staticRates,
+                    isSubjectToLongTermCarePremium
+                );
+                bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
+                totalPremium += bonusPortion;
+            }
+
+            return { total: totalPremium, bonusPortion };
         }
 
-        if (!regionalRates) {
-            console.error(`Regional rates not found for provider ${provider} and region ${region}. Returning 0 premium.`);
-            return { total: 0, bonusPortion: 0 };
+        // Calculate per-month premiums — rate may differ by month within a calendar year
+        let totalPremium = 0;
+        for (let month = 0; month < 12; month++) {
+            const monthRates = getRegionalRatesForMonth(provider, region, year, month);
+            if (monthRates) {
+                totalPremium += calculateMonthlyEmployeePremium(
+                    smrBracket.smrAmount,
+                    monthRates,
+                    isSubjectToLongTermCarePremium
+                );
+            }
         }
 
-        // Calculate monthly premium and multiply by 12
-        const monthlyPremium = calculateMonthlyEmployeePremium(
-            smrBracket.smrAmount,
-            regionalRates,
-            isSubjectToLongTermCarePremium
-        );
-
-        let totalPremium = monthlyPremium * 12;
         let bonusPortion = 0;
 
         if (bonuses.some(b => b.amount > 0)) {
             const bonusDetails = calculateEmployeesHealthInsuranceBonusBreakdown(
                 bonuses,
-                regionalRates,
-                isSubjectToLongTermCarePremium
+                provider,
+                region,
+                isSubjectToLongTermCarePremium,
+                year
             );
 
             bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
@@ -129,13 +147,26 @@ export interface EmployeesHealthInsuranceBonusBreakdownItem {
 export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
 
 /**
- * Calculates detailed breakdown for health insurance bonuses
+ * Calculates detailed breakdown for health insurance bonuses.
+ *
+ * Accepts either provider/region/year for time-series rate lookup,
+ * or a static rates object (for custom providers).
  */
 export function calculateEmployeesHealthInsuranceBonusBreakdown(
     bonuses: BonusIncomeStream[],
-    regionalRates: { employeeHealthInsuranceRate: number, employeeLongTermCareRate: number },
-    isSubjectToLongTermCarePremium: boolean
+    providerOrRates: string | { employeeHealthInsuranceRate: number, employeeLongTermCareRate: number },
+    regionOrLTC: string | boolean,
+    isSubjectToLongTermCarePremium?: boolean,
+    year?: number
 ): EmployeesHealthInsuranceBonusBreakdownItem[] {
+    // Determine whether we're using time-series lookup or static rates
+    const useTimeSeries = typeof providerOrRates === 'string';
+    const providerId = useTimeSeries ? providerOrRates : undefined;
+    const region = useTimeSeries ? regionOrLTC as string : undefined;
+    const staticRates = useTimeSeries ? undefined : providerOrRates as { employeeHealthInsuranceRate: number, employeeLongTermCareRate: number };
+    const includeLTC = useTimeSeries ? isSubjectToLongTermCarePremium! : regionOrLTC as boolean;
+    const lookupYear = year ?? new Date().getFullYear();
+
     // Sort bonuses by month to apply cumulative cap correctly
     const sortedBonuses = [...bonuses].sort((a, b) => a.month - b.month);
 
@@ -154,7 +185,24 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
 
         cumulativeStandardBonus += standardBonusAmount;
 
-        const rate = regionalRates.employeeHealthInsuranceRate + (isSubjectToLongTermCarePremium ? regionalRates.employeeLongTermCareRate : 0);
+        // Look up rates for this bonus's month (or use static rates)
+        const rates = useTimeSeries
+            ? getRegionalRatesForMonth(providerId!, region!, lookupYear, bonus.month)
+            : staticRates!;
+
+        if (!rates) {
+            breakdown.push({
+                month: bonus.month,
+                bonusAmount: bonus.amount,
+                standardBonusAmount,
+                cumulativeStandardBonus,
+                premium: 0,
+                includesLongTermCare: includeLTC
+            });
+            continue;
+        }
+
+        const rate = rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
         const premium = roundSocialInsurancePremium(standardBonusAmount * rate);
 
         breakdown.push({
@@ -163,7 +211,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
             standardBonusAmount,
             cumulativeStandardBonus,
             premium,
-            includesLongTermCare: isSubjectToLongTermCarePremium
+            includesLongTermCare: includeLTC
         });
     }
 
@@ -188,7 +236,8 @@ export function calculateHealthInsurancePremium(
     provider: HealthInsuranceProviderId,
     region: ProviderRegion = DEFAULT_PROVIDER_REGION,
     customRates?: { healthRate: number, ltcRate: number },
-    bonuses: BonusIncomeStream[] = []
+    bonuses: BonusIncomeStream[] = [],
+    year?: number
 ): number {
     return calculateHealthInsuranceBreakdown(
         annualIncome,
@@ -196,7 +245,8 @@ export function calculateHealthInsurancePremium(
         provider,
         region,
         customRates,
-        bonuses
+        bonuses,
+        year
     ).total;
 }
 

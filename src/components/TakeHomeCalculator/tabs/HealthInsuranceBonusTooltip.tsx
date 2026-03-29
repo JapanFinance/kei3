@@ -5,9 +5,9 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
-import { CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
+import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
-import { DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
+import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 
@@ -26,46 +26,35 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   let providerLabel = '';
   let sourceUrl: string | undefined;
 
+  const now = new Date();
+
   if (provider === CUSTOM_PROVIDER_ID) {
     // Custom rates are entered as percentages (e.g. 5 for 5%)
     employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
+    if (inputs.isSubjectToLongTermCarePremium) {
+      employeeRate += (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
+    }
     // For custom provider, we don't know the employer rate, so we leave it undefined.
     providerLabel = "Custom Provider";
   } else {
     const providerDef = PROVIDER_DEFINITIONS[provider];
-    if (providerDef) {
-      const regionalRates = providerDef.regions[region] || providerDef.regions[DEFAULT_PROVIDER_REGION];
-      if (regionalRates) {
-        // Regional rates are stored as decimals (e.g. 0.05 for 5%)
-        employeeRate = regionalRates.employeeHealthInsuranceRate;
-        employerRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
-        sourceUrl = regionalRates.source;
-      }
-      // Fallback for source if not in regional rates
-      if (!sourceUrl) {
-        sourceUrl = providerDef.defaultSource;
-      }
-      providerLabel = `${providerDef.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
-    }
-  }
+    const regionalRates = getRegionalRatesForMonth(provider, region, now.getFullYear(), now.getMonth());
 
-  // Add Long Term Care rate if applicable
-  if (inputs.isSubjectToLongTermCarePremium) {
-    if (provider === CUSTOM_PROVIDER_ID) {
-      const ltcRate = (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
-      employeeRate += ltcRate;
-      // Employer rate remains undefined for custom provider
-    } else {
-      const providerDef = PROVIDER_DEFINITIONS[provider];
-      if (providerDef) {
-        const regionalRates = providerDef.regions[region] || providerDef.regions[DEFAULT_PROVIDER_REGION];
-        if (regionalRates) {
-          employeeRate += regionalRates.employeeLongTermCareRate;
-          if (employerRate !== undefined) {
-            employerRate += regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
-          }
-        }
+    if (regionalRates) {
+      employeeRate = regionalRates.employeeHealthInsuranceRate;
+      employerRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
+      sourceUrl = regionalRates.source;
+
+      if (inputs.isSubjectToLongTermCarePremium) {
+        employeeRate += regionalRates.employeeLongTermCareRate;
+        employerRate += regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
       }
+    }
+    if (!sourceUrl && providerDef) {
+      sourceUrl = providerDef.defaultSource;
+    }
+    if (providerDef) {
+      providerLabel = `${providerDef.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
     }
   }
 

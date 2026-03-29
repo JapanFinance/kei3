@@ -6,29 +6,52 @@ import HealthInsuranceBonusTooltip from '../components/TakeHomeCalculator/tabs/H
 import { DEFAULT_PROVIDER_REGION, CUSTOM_PROVIDER_ID, type HealthInsuranceProviderId } from '../types/healthInsurance';
 import type { TakeHomeInputs, TakeHomeResults } from '../types/tax';
 
-// Mock the provider data
+// Mock the provider data (time-series structure: regions map to arrays of rate periods)
 vi.mock('../data/employeesHealthInsurance/providerRateData', () => ({
     PROVIDER_DEFINITIONS: {
         'TestProvider': {
             providerName: 'Test Provider',
             regions: {
-                'DEFAULT': {
-                    employeeHealthInsuranceRate: 0.05,
-                    employerHealthInsuranceRate: 0.06,
-                    employeeLongTermCareRate: 0.01,
-                    employerLongTermCareRate: 0.01,
-                }
+                'DEFAULT': [
+                    { effectiveFrom: { year: 2025, month: 3 }, rates: {
+                        employeeHealthInsuranceRate: 0.05,
+                        employerHealthInsuranceRate: 0.06,
+                        employeeLongTermCareRate: 0.01,
+                        employerLongTermCareRate: 0.01,
+                    }}
+                ]
             }
         },
-        'TestProviderNoEmployerRate': { // Emulate case where employer rate is missing (should fallback to employee)
+        'TestProviderNoEmployerRate': {
             providerName: 'Test Provider No Employer',
             regions: {
-                'DEFAULT': {
-                    employeeHealthInsuranceRate: 0.04,
-                    employeeLongTermCareRate: 0.01,
-                }
+                'DEFAULT': [
+                    { effectiveFrom: { year: 2025, month: 3 }, rates: {
+                        employeeHealthInsuranceRate: 0.04,
+                        employeeLongTermCareRate: 0.01,
+                    }}
+                ]
             }
         }
+    }
+}));
+
+// Mock the rate lookup to use the mocked data
+vi.mock('../data/employeesHealthInsurance/providerRates', () => ({
+    getRegionalRatesForMonth: (providerId: string) => {
+        const providers: Record<string, Record<string, unknown>> = {
+            'TestProvider': {
+                employeeHealthInsuranceRate: 0.05,
+                employerHealthInsuranceRate: 0.06,
+                employeeLongTermCareRate: 0.01,
+                employerLongTermCareRate: 0.01,
+            },
+            'TestProviderNoEmployerRate': {
+                employeeHealthInsuranceRate: 0.04,
+                employeeLongTermCareRate: 0.01,
+            }
+        };
+        return providers[providerId];
     }
 }));
 

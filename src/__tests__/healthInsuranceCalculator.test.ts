@@ -1,12 +1,17 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import { calculateHealthInsurancePremium, calculateHealthInsuranceBreakdown, calculateEmployeesHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
 const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
+
+// Pin to June 2025 — well within FY2025 rate period for all providers.
+// This ensures rate lookups are deterministic regardless of when tests run.
+beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) });
+afterAll(() => { vi.useRealTimers() });
 
 describe('calculateHealthInsurancePremium for employees', () => {
   describe('Kyokai Kenpo (Tokyo)', () => {
@@ -340,5 +345,59 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
     expect(breakdown[1]!.cumulativeStandardBonus).toBe(5_730_000);
     expect(breakdown[1]!.premium).toBe(85_721); // 1,730,000 * 0.04955 = 85,721.5 -> 85,721
     expect(breakdown[1]!.includesLongTermCare).toBe(false);
+  });
+});
+
+describe('FY2026 time-series rate support', () => {
+  // Calendar year 2026 for Kyokai Kenpo (Tokyo):
+  // - Months 0-2 (Jan-Mar): FY2025 rates — health 4.955%, LTC 0.795%
+  // - Month 3 (Apr): FY2026 without levy — health 4.925%, LTC 0.81%
+  // - Months 4-11 (May-Dec): FY2026 with levy — health 5.04%, LTC 0.81%
+  //
+  // SMR for 5M income = 410,000
+
+  it('calculates split-year premium for Kyokai Kenpo Tokyo in 2026 (no LTC)', () => {
+    // Jan-Mar (3 months): 410,000 × 0.04955 = 20,315.5 → 20,315 each → 60,945
+    // Apr (1 month):       410,000 × 0.04925 = 20,192.5 → 20,192
+    // May-Dec (8 months):  410,000 × 0.05040 = 20,664.0 → 20,664 each → 165,312
+    // Annual: 60,945 + 20,192 + 165,312 = 246,449
+    expect(calculateHealthInsurancePremium(5_000_000, false, KYOKAI_KENPO_PROVIDER, 'Tokyo', undefined, [], 2026)).toBe(246_449);
+  });
+
+  it('calculates split-year premium for Kyokai Kenpo Tokyo in 2026 (with LTC)', () => {
+    // Jan-Mar (3 months): 410,000 × (0.04955 + 0.00795) = 410,000 × 0.05750 = 23,575.0 → 23,575 each → 70,725
+    // Apr (1 month):       410,000 × (0.04925 + 0.00810) = 410,000 × 0.05735 = 23,513.5 → 23,513
+    // May-Dec (8 months):  410,000 × (0.05040 + 0.00810) = 410,000 × 0.05850 = 23,985.0 → 23,985 each → 191,880
+    // Annual: 70,725 + 23,513 + 191,880 = 286,118
+    expect(calculateHealthInsurancePremium(5_000_000, true, KYOKAI_KENPO_PROVIDER, 'Tokyo', undefined, [], 2026)).toBe(286_118);
+  });
+
+  it('FY2025 year parameter produces same result as default for 2025', () => {
+    // Passing year=2025 explicitly should match the default (pinned to 2025)
+    expect(calculateHealthInsurancePremium(5_000_000, false, KYOKAI_KENPO_PROVIDER, 'Tokyo', undefined, [], 2025))
+      .toBe(calculateHealthInsurancePremium(5_000_000, false, KYOKAI_KENPO_PROVIDER, 'Tokyo'));
+  });
+
+  it('applies correct rate to bonuses based on month in 2026', () => {
+    // Bonus in March (month 2) → FY2025 rate: 0.04955
+    // 500,000 × 0.04955 = 24,775
+    const marchBonus = [{ amount: 500_000, id: 'b1', type: 'bonus' as const, month: 2 }];
+    const marchResult = calculateHealthInsuranceBreakdown(0, false, KYOKAI_KENPO_PROVIDER, 'Tokyo', undefined, marchBonus, 2026);
+    expect(marchResult.bonusPortion).toBe(24_775);
+
+    // Bonus in May (month 4) → FY2026 with levy rate: 0.05040
+    // 500,000 × 0.05040 = 25,200
+    const mayBonus = [{ amount: 500_000, id: 'b2', type: 'bonus' as const, month: 4 }];
+    const mayResult = calculateHealthInsuranceBreakdown(0, false, KYOKAI_KENPO_PROVIDER, 'Tokyo', undefined, mayBonus, 2026);
+    expect(mayResult.bonusPortion).toBe(25_200);
+  });
+
+  it('ITS Kenpo rates in 2026 reflect levy', () => {
+    // ITS in 2026:
+    // Jan-Mar: FY2025 rate 4.75% → 410,000 × 0.0475 = 19,475 × 3 = 58,425
+    // Apr: FY2026 no levy 4.635% → 410,000 × 0.04635 = 19,003.5 → 19,003
+    // May-Dec: FY2026 with levy 4.75% → 410,000 × 0.0475 = 19,475 × 8 = 155,800
+    // Annual: 58,425 + 19,003 + 155,800 = 233,228
+    expect(calculateHealthInsurancePremium(5_000_000, false, ITS_KENPO_PROVIDER, DEFAULT_PROVIDER_REGION, undefined, [], 2026)).toBe(233_228);
   });
 });
