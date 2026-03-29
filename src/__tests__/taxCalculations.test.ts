@@ -1,9 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import { calculateTaxes, calculateNetEmploymentIncome, calculateEmploymentInsurance, calculateNationalIncomeTaxBasicDeduction, calculateNationalIncomeTax, calculateTotalNetIncome } from '../utils/taxCalculations'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
+
+// Pin the year so employment insurance rate lookups are deterministic.
+// Year 2025: all 12 months use the FY2025 rate (0.55%).
+beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) })
+afterAll(() => { vi.useRealTimers() })
 
 describe('calculateNetEmploymentIncome', () => {
   it('deduction of 650,000 yen for income up to 1,900,000 yen', () => {
@@ -367,6 +372,38 @@ describe('calculateEmploymentInsurance', () => {
     // Rounded to 4 yen per month (decimal .17 < .50 → round down)
     // 4 * 12 = 48 yen annually
     expect(calculateEmploymentInsurance(9_090)).toBe(48)
+  })
+
+  it('applies split rates when the rate changes mid-year (2026: 0.55% Jan-Mar, 0.50% Apr-Dec)', () => {
+    // 1,200,000 / 12 = 100,000 per month
+    // Jan-Mar: 100,000 * 0.55% = 550 × 3 = 1,650
+    // Apr-Dec: 100,000 * 0.50% = 500 × 9 = 4,500
+    // Total: 6,150
+    expect(calculateEmploymentInsurance(1_200_000, [], 2026)).toBe(6_150)
+
+    // 5,000,000 / 12 ≈ 416,666.67 per month
+    // Jan-Mar: 416,666.67 * 0.55% = 2,291.67 → 2,292 × 3 = 6,876
+    // Apr-Dec: 416,666.67 * 0.50% = 2,083.33 → 2,083 × 9 = 18,747
+    // Total: 25,623
+    expect(calculateEmploymentInsurance(5_000_000, [], 2026)).toBe(25_623)
+  })
+
+  it('uses uniform rate for years within a single fiscal year period', () => {
+    // Year 2025: all 12 months use 0.55% (FY2025: Apr 2025 – Mar 2026)
+    expect(calculateEmploymentInsurance(1_200_000, [], 2025)).toBe(6_600)
+
+    // Year 2027: all 12 months use 0.50% (FY2026 rate applies to Jan-Mar, FY2026 also Apr-Dec)
+    expect(calculateEmploymentInsurance(1_200_000, [], 2027)).toBe(6_000)
+  })
+
+  it('applies the correct rate for bonuses based on their month (2026)', () => {
+    // Bonus in February (month 1) → 0.55% rate
+    // 500,000 * 0.55% = 2,750
+    expect(calculateEmploymentInsurance(0, [{ id: 'b1', type: 'bonus', amount: 500_000, month: 1 }], 2026)).toBe(2_750)
+
+    // Bonus in June (month 5) → 0.50% rate
+    // 500,000 * 0.50% = 2,500
+    expect(calculateEmploymentInsurance(0, [{ id: 'b2', type: 'bonus', amount: 500_000, month: 5 }], 2026)).toBe(2_500)
   })
 })
 

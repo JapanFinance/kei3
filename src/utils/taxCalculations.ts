@@ -22,9 +22,7 @@ import {
 import {calculateDependentDeductions} from './dependentDeductions';
 import {COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP, NATIONAL_BASIC_DEDUCTION_TIERS,} from '../constants/taxThresholds';
 import {getCommutingAllowanceAnnualAmount} from './formatters';
-
-/** https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html */
-export const employmentInsuranceRate = 0.0055; // 0.55%
+import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
 
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.
@@ -78,11 +76,13 @@ export interface EmploymentInsuranceBreakdown {
 }
 
 /**
- * Calculates employment insurance premiums breakdown based on income
+ * Calculates employment insurance premiums breakdown based on income.
+ * The rate may vary by month within a calendar year (fiscal year changes in April).
  */
 const calculateEmploymentInsuranceBreakdown = (
     salaryIncome: number,
-    bonuses: BonusIncomeStream[]
+    bonuses: BonusIncomeStream[],
+    year: number = new Date().getFullYear()
 ): EmploymentInsuranceBreakdown => {
     // If no employment income, no employment insurance is required
     if (salaryIncome <= 0 && !bonuses.some(b => b.amount > 0)) {
@@ -92,16 +92,19 @@ const calculateEmploymentInsuranceBreakdown = (
     let annualPremium = 0;
     let bonusPortion = 0;
 
-    // Calculate on regular monthly salary
+    // Calculate on regular monthly salary — each month may have a different rate
     if (salaryIncome > 0) {
         const monthlySalary = salaryIncome / 12;
-        const monthlyPremium = roundSocialInsurancePremium(monthlySalary * employmentInsuranceRate);
-        annualPremium += monthlyPremium * 12;
+        for (let month = 0; month < 12; month++) {
+            const rate = getEmploymentInsuranceRate(year, month);
+            annualPremium += roundSocialInsurancePremium(monthlySalary * rate);
+        }
     }
 
-    // Calculate on bonuses
+    // Calculate on bonuses — use the rate for the month the bonus is paid
     for (const bonus of bonuses) {
-        const bonusPremium = roundSocialInsurancePremium(bonus.amount * employmentInsuranceRate);
+        const rate = getEmploymentInsuranceRate(year, bonus.month);
+        const bonusPremium = roundSocialInsurancePremium(bonus.amount * rate);
 
         bonusPortion += bonusPremium;
         annualPremium += bonusPremium;
@@ -112,13 +115,13 @@ const calculateEmploymentInsuranceBreakdown = (
 
 /**
  * Calculates employment insurance premiums based on income
- * Source: Ministry of Health, Labour and Welfare (MHLW) rates for 2025
+ * Source: Ministry of Health, Labour and Welfare (MHLW)
  * https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html
- * Note: Only calculates employee portion of the premium.
- * 
+ * Note: Only calculates the employee portion of the premium.
+ *
  * The premium is calculated monthly with special rounding rules:
- * - 0.55% of monthly salary
- * - Rounding: 
+ * - Rate is looked up per month from the time-series data (rate changes in April each fiscal year)
+ * - Rounding:
  *   - If decimal is 0.50 yen or less → round down
  *   - If decimal is 0.51 yen or more → round up
  * - Annual total is the sum of 12 monthly premiums
@@ -126,9 +129,10 @@ const calculateEmploymentInsuranceBreakdown = (
 // Only exported for testing
 export const calculateEmploymentInsurance = (
     salaryIncome: number,
-    bonuses: BonusIncomeStream[] = []
+    bonuses: BonusIncomeStream[] = [],
+    year?: number
 ): number => {
-    return calculateEmploymentInsuranceBreakdown(salaryIncome, bonuses).total;
+    return calculateEmploymentInsuranceBreakdown(salaryIncome, bonuses, year).total;
 }
 
 /**
