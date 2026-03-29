@@ -2,11 +2,17 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-03-29
+
+### Updated
+
+- Updated Employment Insurance calculation to use the new rate from April 2026 (0.55% to 0.5%)
+
 ## 2026-02-22
 
 ### Updated
 
-- Foreign stock-based compenstion is supported in the "Advanced" income input mode. Taxpayers who receive compensation such as RSUs from a foreign parent company should enter such income using this.
+- Foreign stock-based compensation is supported in the "Advanced" income input mode. Taxpayers who receive compensation such as RSUs from a foreign parent company should enter such income using this.
 
 ## 2026-02-15
 
