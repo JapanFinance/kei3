@@ -3,6 +3,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import { defineConfig } from 'eslint/config'
 
 const fileHeaderRule = {
   meta: {
@@ -12,7 +13,7 @@ const fileHeaderRule = {
   create(context) {
     return {
       Program(node) {
-        const sourceCode = context.sourceCode || context.getSourceCode();
+        const sourceCode = context.sourceCode;
         const text = sourceCode.getText();
         
         // Detect line ending style from the file
@@ -37,7 +38,7 @@ const fileHeaderRule = {
   },
 };
 
-export default tseslint.config(
+export default defineConfig(
   { ignores: ['dist'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
