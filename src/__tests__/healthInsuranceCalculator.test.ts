@@ -392,12 +392,10 @@ describe('FY2026 time-series rate support', () => {
     expect(mayResult.bonusPortion).toBe(25_200);
   });
 
-  it('ITS Kenpo rates in 2026 reflect levy', () => {
+  it('ITS Kenpo rates in 2026 are uniform (levy offsets health rate reduction)', () => {
     // ITS in 2026:
-    // Jan-Mar: FY2025 rate 4.75% → 410,000 × 0.0475 = 19,475 × 3 = 58,425
-    // Apr: FY2026 no levy 4.635% → 410,000 × 0.04635 = 19,003.5 → 19,003
-    // May-Dec: FY2026 with levy 4.75% → 410,000 × 0.0475 = 19,475 × 8 = 155,800
-    // Annual: 58,425 + 19,003 + 155,800 = 233,228
-    expect(calculateHealthInsurancePremium(5_000_000, false, ITS_KENPO_PROVIDER, DEFAULT_PROVIDER_REGION, undefined, [], 2026)).toBe(233_228);
+    // All months: 4.75% (FY2025: 4.75%, FY2026 Apr: 4.75%, FY2026 May+: 4.635% + 0.115% levy = 4.75%)
+    // 410,000 × 0.0475 = 19,475 × 12 = 233,700
+    expect(calculateHealthInsurancePremium(5_000_000, false, ITS_KENPO_PROVIDER, DEFAULT_PROVIDER_REGION, undefined, [], 2026)).toBe(233_700);
   });
 });

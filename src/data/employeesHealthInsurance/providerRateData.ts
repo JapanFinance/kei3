@@ -60,7 +60,6 @@ export interface ProviderDefinition {
  * - Child/Childcare Support Levy (子ども・子育て支援金) of 0.23% (0.115% employee) is folded
  *   into employeeHealthInsuranceRate starting from its effective paycheck month. It is calculated
  *   on the same SMR base with the same rounding, so combining it is exact.
- * - LTC rate for Kyokai Kenpo changed from 1.59% to 1.62% (employee: 0.00795 → 0.0081)
  */
 export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
   'KantoItsKenpo': {
@@ -77,8 +76,8 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
         }},
         // FY2026 without levy (April 2026 paycheck — March billing, new health rate)
         { effectiveFrom: { year: 2026, month: 3 }, rates: {
-          source: 'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/20260301kara_hokenryouichiran.pdf',
-          employeeHealthInsuranceRate: 0.04635, // 4.635%
+          source: 'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/20260331made_hokenryouichiran.pdf',
+          employeeHealthInsuranceRate: 0.0475, // 4.75%
           employeeLongTermCareRate: 0.009, // 0.9%
         }},
         // FY2025 (April 2025 paycheck — March billing)
@@ -362,8 +361,8 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
           employeeHealthInsuranceRate: 0.04815, // 4.815%
           employeeLongTermCareRate: 0.01, // 1.0%
         }},
-        // FY2025 (May 2025 paycheck — April billing)
-        { effectiveFrom: { year: 2025, month: 4 }, rates: {
+        // FY2025 (April 2025)
+        { effectiveFrom: { year: 2025, month: 3 }, rates: {
           source: 'https://kenpo.rakuten.or.jp/member/outline/files/fee.pdf',
           employeeHealthInsuranceRate: 0.047, // 4.7% (total 9.4% split evenly)
           employeeLongTermCareRate: 0.01, // 1.0% (total 2.0% split evenly)
@@ -384,8 +383,8 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
           employerHealthInsuranceRate: 0.04765, // 4.765%
           employeeLongTermCareRate: 0.01, // 1.0%
         }},
-        // FY2025 (May 2025 paycheck — April billing)
-        { effectiveFrom: { year: 2025, month: 4 }, rates: {
+        // FY2025 (April 2025)
+        { effectiveFrom: { year: 2025, month: 3 }, rates: {
           source: 'https://kempo.recruit.co.jp/member/info/pdf/r7_fee.pdf',
           employeeHealthInsuranceRate: 0.0435, // 4.35%
           employerHealthInsuranceRate: 0.0465, // 4.65%
@@ -407,8 +406,8 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
           employerHealthInsuranceRate: 0.05215, // 5.215%
           employeeLongTermCareRate: 0.0083, // 0.83%
         }},
-        // FY2025 (May 2025 paycheck — April billing)
-        { effectiveFrom: { year: 2025, month: 4 }, rates: {
+        // FY2025 (April 2025)
+        { effectiveFrom: { year: 2025, month: 3 }, rates: {
           source: 'https://www.shoken-kenpo.or.jp/member/outline/files/hokenryou_getsugaku_2025.pdf',
           employeeHealthInsuranceRate: 0.033, // 3.3% (total 8.4% split 33/51)
           employerHealthInsuranceRate: 0.051, // 5.1%
