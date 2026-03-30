@@ -25,10 +25,8 @@ import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
-  CUSTOM_PROVIDER_ID,
-  DEFAULT_PROVIDER_REGION
+  CUSTOM_PROVIDER_ID
 } from '../../../types/healthInsurance';
-import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
 interface SocialInsuranceTabProps {
@@ -55,30 +53,22 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   if (bonuses.length > 0 && !isNationalHealthInsurance) {
     const provider = inputs.healthInsuranceProvider;
     const region = inputs.region;
-    let rates = undefined;
 
     if (provider === CUSTOM_PROVIDER_ID) {
-      rates = {
+      const rates = {
         employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
         employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100
       };
-    } else {
-      const providerDef = PROVIDER_DEFINITIONS[provider];
-      if (providerDef) {
-        const regionalRates = providerDef.regions[region] || providerDef.regions[DEFAULT_PROVIDER_REGION];
-        if (regionalRates) {
-          rates = {
-            employeeHealthInsuranceRate: regionalRates.employeeHealthInsuranceRate,
-            employeeLongTermCareRate: regionalRates.employeeLongTermCareRate
-          };
-        }
-      }
-    }
-
-    if (rates) {
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
+        inputs.isSubjectToLongTermCarePremium
+      );
+    } else {
+      healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
+        bonuses,
+        provider,
+        region,
         inputs.isSubjectToLongTermCarePremium
       );
     }
@@ -394,7 +384,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         ) : ( // Employee Health Insurance
           <>
             <ResultRow
-              label="Monthly Premium"
+              label="Salary Premium"
               labelSuffix={
                 <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                   <DetailedTooltip
@@ -407,7 +397,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   )}
                 </Box>
               }
-              value={formatJPY((results.healthInsurance - (results.healthInsuranceOnBonus ?? 0)) / 12)}
+              value={formatJPY(results.healthInsurance - (results.healthInsuranceOnBonus ?? 0))}
               type="indented"
             />
             {results.healthInsuranceOnBonus !== undefined && results.healthInsuranceOnBonus > 0 && (
@@ -418,7 +408,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     <DetailedTooltip
                       title="Bonus Health Insurance Premium"
                     >
-                      <HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />
+                      <HealthInsuranceBonusTooltip inputs={inputs} breakdown={healthInsuranceBreakdown} />
                     </DetailedTooltip>
                     {capStatus.healthInsuranceBonusCapped && (
                       <CapIndicator capStatus={capStatus} contributionType="health insurance bonus" iconOnly={isMobile} />
@@ -559,11 +549,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Total */}
       <Box sx={{ mt: 2 }}>
-        <ResultRow
-          label={`Monthly ${results.hasEmploymentIncome ? 'Total' : 'Average'}`}
-          value={formatJPY(Math.round(totalSocialInsurance / 12))}
-          type="total"
-        />
         <ResultRow
           label="Annual Social Insurance"
           value={formatJPY(totalSocialInsurance)}

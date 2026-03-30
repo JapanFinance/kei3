@@ -10,6 +10,7 @@ import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_
 import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
+import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import { EHI_SMR_BRACKETS, type StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
@@ -272,7 +273,6 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     // Employee Health Insurance
     let employeeRate = 0;
     let employeeLtcRate = 0;
-    let employerRate: number | undefined;
     let sourceUrl;
     let providerLabel;
 
@@ -280,30 +280,46 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       throw new Error('standardMonthlyRemuneration is required for the Employee Health Insurance tooltip');
     }
 
+    const year = new Date().getFullYear();
+
     if (provider === CUSTOM_PROVIDER_ID) {
       employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
       employeeLtcRate = (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
       // For custom provider, we don't know the employer rate, so we leave it undefined.
       providerLabel = "Custom Provider";
     } else {
+      // Use the current month's rates for display
+      const now = new Date();
+      const regionalRates = getRegionalRatesForMonth(provider, region, now.getFullYear(), now.getMonth());
       const providerDef = PROVIDER_DEFINITIONS[provider];
-      const regionalRates = providerDef?.regions[region] || providerDef?.regions['DEFAULT'];
 
       if (regionalRates) {
         employeeRate = regionalRates.employeeHealthInsuranceRate;
         employeeLtcRate = regionalRates.employeeLongTermCareRate;
-        employerRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
-        if (inputs.isSubjectToLongTermCarePremium) {
-          employerRate += regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
-        }
-        sourceUrl = regionalRates?.source || providerDef?.defaultSource;
-        providerLabel = `${PROVIDER_DEFINITIONS[provider]!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
+        sourceUrl = regionalRates.source || providerDef?.defaultSource;
+        providerLabel = `${providerDef!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
       }
     }
 
     const includeLTC: boolean = inputs.isSubjectToLongTermCarePremium;
     const finalRate = employeeRate + (includeLTC ? employeeLtcRate : 0);
     const totalPremium = roundSocialInsurancePremium(standardMonthlyRemuneration * finalRate);
+
+    // Check if rates differ across the 12 months of the year
+    const monthlyRates: { rate: number; premium: number }[] = [];
+    let ratesVary = false;
+
+    if (provider !== CUSTOM_PROVIDER_ID) {
+      for (let m = 0; m < 12; m++) {
+        const monthRates = getRegionalRatesForMonth(provider, region, year, m);
+        if (monthRates) {
+          const r = monthRates.employeeHealthInsuranceRate + (includeLTC ? monthRates.employeeLongTermCareRate : 0);
+          const p = roundSocialInsurancePremium(standardMonthlyRemuneration * r);
+          monthlyRates.push({ rate: r, premium: p });
+          if (m > 0 && r !== monthlyRates[0]!.rate) ratesVary = true;
+        }
+      }
+    }
 
     // Prepare table data for the lookup table
     // Highlight the row corresponding to the current SMR
@@ -368,33 +384,91 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
           {/* Main Calculation Highlight */}
           <Box sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
-              Monthly Insurance Premium
-            </Typography>
-
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              width: '100%',
-              my: 0.5,
-              '& math': {
-                fontSize: '1.1rem',
-                fontFamily: 'Roboto, Helvetica, Arial, sans-serif'
-              },
-              '& mn': { fontWeight: 500 },
-              '& mo': { mx: 1, color: 'text.secondary' },
-              '& mn:last-child': { fontWeight: 700, color: 'primary.main' }
-            }}>
-              <math>
-                <mrow>
-                  <mn>{formatJPY(standardMonthlyRemuneration)}</mn>
-                  <mo>×</mo>
-                  <mn>{formatPercent(finalRate)}</mn>
-                  <mo>=</mo>
-                  <mn>{formatJPY(totalPremium)}</mn>
-                </mrow>
-              </math>
-            </Box>
+            {ratesVary && monthlyRates.length === 12 ? (
+              <>
+                <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+                  Salary Premium ({year})
+                </Typography>
+                {(() => {
+                  // Group consecutive months with the same rate
+                  const groups: { startMonth: number; endMonth: number; rate: number; premium: number }[] = [];
+                  for (let i = 0; i < monthlyRates.length; i++) {
+                    const mr = monthlyRates[i]!;
+                    const lastGroup = groups[groups.length - 1];
+                    if (lastGroup && lastGroup.rate === mr.rate) {
+                      lastGroup.endMonth = i;
+                    } else {
+                      groups.push({ startMonth: i, endMonth: i, rate: mr.rate, premium: mr.premium });
+                    }
+                  }
+                  const formatMonth = (m: number) => new Date(2000, m).toLocaleString('en', { month: 'short' });
+                  const annualTotal = monthlyRates.reduce((sum, mr) => sum + mr.premium, 0);
+                  return (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'left' }}>Months</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Rate</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Monthly</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groups.map((g, idx) => {
+                          const count = g.endMonth - g.startMonth + 1;
+                          const monthLabel = g.startMonth === g.endMonth
+                            ? formatMonth(g.startMonth)
+                            : `${formatMonth(g.startMonth)}\u2013${formatMonth(g.endMonth)}`;
+                          return (
+                            <tr key={idx}>
+                              <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatPercent(g.rate)}</td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(g.premium)}</td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(g.premium * count)}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr>
+                          <td colSpan={3} style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>Annual Total</td>
+                          <td style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>
+                            {formatJPY(annualTotal)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </>
+            ) : (
+              <>
+                <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+                  Monthly Insurance Premium
+                </Typography>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  width: '100%',
+                  my: 0.5,
+                  '& math': {
+                    fontSize: '1.1rem',
+                    fontFamily: 'Roboto, Helvetica, Arial, sans-serif'
+                  },
+                  '& mn': { fontWeight: 500 },
+                  '& mo': { mx: 1, color: 'text.secondary' },
+                  '& mn:last-child': { fontWeight: 700, color: 'primary.main' }
+                }}>
+                  <math>
+                    <mrow>
+                      <mn>{formatJPY(standardMonthlyRemuneration)}</mn>
+                      <mo>×</mo>
+                      <mn>{formatPercent(finalRate)}</mn>
+                      <mo>=</mo>
+                      <mn>{formatJPY(totalPremium)}</mn>
+                    </mrow>
+                  </math>
+                </Box>
+              </>
+            )}
           </Box>
         </Box>
 
@@ -405,10 +479,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         )}
 
         <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block' }}>
-          {employerRate !== undefined
-            ? `The employer also pays at a rate of ${formatPercent(employerRate)}.`
-            : `The employer also contributes separately.`
-          }
+          The employer also contributes separately.
         </Typography>
 
         <SMRTableTooltip

@@ -4,7 +4,7 @@
 import { render, screen } from '@testing-library/react';
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails } from '../types/tax';
-import { vi, describe, it, expect, beforeAll } from 'vitest';
+import { vi, describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 // Mock DetailedTooltip to render children directly for easier testing
 vi.mock('../components/ui/Tooltips', async () => {
@@ -33,6 +33,10 @@ vi.mock('../utils/formatters', () => ({
 beforeAll(() => {
     Element.prototype.scrollTo = vi.fn();
 });
+
+// Pin to June 2025 — within FY2025 rate period, rates are uniform across all months
+beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) });
+afterAll(() => { vi.useRealTimers() });
 
 describe('SocialInsuranceTab', () => {
     const mockInputs: TakeHomeInputs = {

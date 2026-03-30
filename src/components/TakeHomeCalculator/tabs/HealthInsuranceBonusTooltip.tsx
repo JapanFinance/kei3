@@ -4,15 +4,14 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
-import { CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
+import type { TakeHomeInputs } from '../../../types/tax';
+import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
-import { DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
+import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 
 interface HealthInsuranceBonusTooltipProps {
-  results: TakeHomeResults;
   inputs: TakeHomeInputs;
   breakdown?: EmployeesHealthInsuranceBonusBreakdownItem[] | undefined;
 }
@@ -20,54 +19,39 @@ interface HealthInsuranceBonusTooltipProps {
 const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = ({ inputs, breakdown }) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
+  const includeLTC = inputs.isSubjectToLongTermCarePremium;
+  const year = new Date().getFullYear();
 
-  let employeeRate = 0;
-  let employerRate: number | undefined;
   let providerLabel = '';
   let sourceUrl: string | undefined;
 
   if (provider === CUSTOM_PROVIDER_ID) {
-    // Custom rates are entered as percentages (e.g. 5 for 5%)
-    employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
-    // For custom provider, we don't know the employer rate, so we leave it undefined.
     providerLabel = "Custom Provider";
   } else {
     const providerDef = PROVIDER_DEFINITIONS[provider];
+    const regionalRates = getRegionalRatesForMonth(provider, region, new Date().getFullYear(), new Date().getMonth());
+    if (regionalRates) {
+      sourceUrl = regionalRates.source;
+    }
+    if (!sourceUrl && providerDef) {
+      sourceUrl = providerDef.defaultSource;
+    }
     if (providerDef) {
-      const regionalRates = providerDef.regions[region] || providerDef.regions[DEFAULT_PROVIDER_REGION];
-      if (regionalRates) {
-        // Regional rates are stored as decimals (e.g. 0.05 for 5%)
-        employeeRate = regionalRates.employeeHealthInsuranceRate;
-        employerRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
-        sourceUrl = regionalRates.source;
-      }
-      // Fallback for source if not in regional rates
-      if (!sourceUrl) {
-        sourceUrl = providerDef.defaultSource;
-      }
       providerLabel = `${providerDef.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
     }
   }
 
-  // Add Long Term Care rate if applicable
-  if (inputs.isSubjectToLongTermCarePremium) {
+  // Look up the applicable rate for a given bonus month
+  const getRateForMonth = (month: number): number => {
     if (provider === CUSTOM_PROVIDER_ID) {
-      const ltcRate = (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
-      employeeRate += ltcRate;
-      // Employer rate remains undefined for custom provider
-    } else {
-      const providerDef = PROVIDER_DEFINITIONS[provider];
-      if (providerDef) {
-        const regionalRates = providerDef.regions[region] || providerDef.regions[DEFAULT_PROVIDER_REGION];
-        if (regionalRates) {
-          employeeRate += regionalRates.employeeLongTermCareRate;
-          if (employerRate !== undefined) {
-            employerRate += regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
-          }
-        }
-      }
+      let rate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
+      if (includeLTC) rate += (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
+      return rate;
     }
-  }
+    const rates = getRegionalRatesForMonth(provider, region, year, month);
+    if (!rates) return 0;
+    return rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
+  };
 
   // Helper to format month index to name
   const getMonthName = (monthIndex: number) => {
@@ -79,26 +63,11 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   return (
     <>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        The premium is calculated as follows, where the Standard Bonus Amount is the gross bonus rounded down to the nearest 1,000 yen.
-      </Typography>
-
-      <Box sx={{ bgcolor: 'background.default', p: 1.5, borderRadius: 1, mb: 1 }}>
-        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-          Standard Bonus Amount × {formatPercent(employeeRate)}
-        </Typography>
-      </Box>
-
-      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-        {employerRate !== undefined
-          ? `The employer also pays at a rate of ${formatPercent(employerRate)}.`
-          : `The employer also contributes separately.`}
+        The premium is calculated on the Standard Bonus Amount, which is the gross bonus rounded down to the nearest 1,000 yen. The employer also contributes separately.
       </Typography>
 
       {breakdown && breakdown.length > 0 && (
         <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.9em' }}>
-            Calculation Detail
-          </Typography>
           <Box
             component="table"
             sx={{
@@ -115,6 +84,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                 <th>Month</th>
                 <th>Bonus</th>
                 <th>Std. Bonus Amount</th>
+                <th>Rate</th>
                 <th>Premium</th>
               </tr>
             </thead>
@@ -126,9 +96,10 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                   <td>
                     {formatJPY(item.standardBonusAmount)}
                     {item.standardBonusAmount < (Math.floor(item.bonusAmount / 1000) * 1000) && (
-                      <Box component="span" sx={{ color: 'warning.main', ml: 0.5 }} title={`Capped: Cumulative Standard Bonus (${formatJPY(item.cumulativeStandardBonus)}) reached annnual limit`}>*</Box>
+                      <Box component="span" sx={{ color: 'warning.main', ml: 0.5 }} title={`Capped: Cumulative Standard Bonus (${formatJPY(item.cumulativeStandardBonus)}) reached annual limit`}>*</Box>
                     )}
                   </td>
+                  <td>{formatPercent(getRateForMonth(item.month))}</td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
                 </tr>
               ))}
@@ -142,6 +113,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                 <td style={{ paddingTop: 4 }}>
                   {formatJPY(breakdown.reduce((sum, item) => sum + item.standardBonusAmount, 0))}
                 </td>
+                <td style={{ paddingTop: 4 }} />
                 <td style={{ paddingTop: 4 }}>
                   {formatJPY(breakdown.reduce((sum, item) => sum + item.premium, 0))}
                 </td>
