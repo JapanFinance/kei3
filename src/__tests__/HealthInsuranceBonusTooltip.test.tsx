@@ -4,7 +4,7 @@
 import { render, screen } from '@testing-library/react';
 import HealthInsuranceBonusTooltip from '../components/TakeHomeCalculator/tabs/HealthInsuranceBonusTooltip';
 import { DEFAULT_PROVIDER_REGION, CUSTOM_PROVIDER_ID, type HealthInsuranceProviderId } from '../types/healthInsurance';
-import type { TakeHomeInputs, TakeHomeResults } from '../types/tax';
+import type { TakeHomeInputs } from '../types/tax';
 
 // Mock the provider data (time-series structure: regions map to arrays of rate periods)
 vi.mock('../data/employeesHealthInsurance/providerRateData', () => ({
@@ -67,50 +67,13 @@ describe('HealthInsuranceBonusTooltip', () => {
         manualSocialInsuranceAmount: 0,
     };
 
-    const mockResults: TakeHomeResults = {
-        annualIncome: 0,
-        hasEmploymentIncome: true,
-        nationalIncomeTax: 0,
-        residenceTax: {} as unknown as TakeHomeResults['residenceTax'],
-        healthInsurance: 0,
-        pensionPayments: 0,
-        takeHomeIncome: 0,
-        totalNetIncome: 0,
-        salaryIncome: 0,
-        furusatoNozei: {} as unknown as TakeHomeResults['furusatoNozei'],
-        dcPlanContributions: 0,
-        healthInsuranceProvider: 'TestProvider' as unknown as HealthInsuranceProviderId,
-        region: DEFAULT_PROVIDER_REGION,
-        isSubjectToLongTermCarePremium: false,
-    };
+    test('displays generic employer note for standard provider', () => {
+        render(<HealthInsuranceBonusTooltip inputs={mockInputs} />);
 
-    test('displays correct employer rate for standard provider', () => {
-        render(<HealthInsuranceBonusTooltip inputs={mockInputs} results={mockResults} />);
-
-        // Employee rate: 5% -> 5%
-        // Employer rate: 6% -> 6%
-        expect(screen.getByText(/The employer also pays at a rate of 6.0%./)).toBeInTheDocument();
+        expect(screen.getByText(/The employer also contributes separately./)).toBeInTheDocument();
     });
 
-    test('displays correct employer rate with LTC', () => {
-        const ltcInputs = { ...mockInputs, isSubjectToLongTermCarePremium: true };
-        render(<HealthInsuranceBonusTooltip inputs={ltcInputs} results={mockResults} />);
-
-        // Employee: 5% + 1% = 6%
-        // Employer: 6% + 1% = 7%
-        expect(screen.getByText(/The employer also pays at a rate of 7.0%./)).toBeInTheDocument();
-    });
-
-    test('falls back to employee rate when employer rate is not defined (standard provider)', () => {
-        const inputs = { ...mockInputs, healthInsuranceProvider: 'TestProviderNoEmployerRate' as unknown as HealthInsuranceProviderId };
-        render(<HealthInsuranceBonusTooltip inputs={inputs} results={mockResults} />);
-
-        // Employee: 4%
-        // Employer: 4% (fallback)
-        expect(screen.getByText(/The employer also pays at a rate of 4.0%./)).toBeInTheDocument();
-    });
-
-    test('displays correct rate for custom provider', () => {
+    test('displays generic employer note for custom provider', () => {
         const customInputs: TakeHomeInputs = {
             ...mockInputs,
             healthInsuranceProvider: CUSTOM_PROVIDER_ID,
@@ -121,9 +84,8 @@ describe('HealthInsuranceBonusTooltip', () => {
             isSubjectToLongTermCarePremium: false,
         };
 
-        render(<HealthInsuranceBonusTooltip inputs={customInputs} results={mockResults} />);
+        render(<HealthInsuranceBonusTooltip inputs={customInputs} />);
 
-        // Custom provider assumes symmetric rates currently
         expect(screen.getByText(/The employer also contributes separately./)).toBeInTheDocument();
     });
 });

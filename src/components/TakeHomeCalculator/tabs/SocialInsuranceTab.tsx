@@ -408,7 +408,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     <DetailedTooltip
                       title="Bonus Health Insurance Premium"
                     >
-                      <HealthInsuranceBonusTooltip results={results} inputs={inputs} breakdown={healthInsuranceBreakdown} />
+                      <HealthInsuranceBonusTooltip inputs={inputs} breakdown={healthInsuranceBreakdown} />
                     </DetailedTooltip>
                     {capStatus.healthInsuranceBonusCapped && (
                       <CapIndicator capStatus={capStatus} contributionType="health insurance bonus" iconOnly={isMobile} />
