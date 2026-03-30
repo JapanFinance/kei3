@@ -384,7 +384,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         ) : ( // Employee Health Insurance
           <>
             <ResultRow
-              label="Monthly Premium"
+              label="Salary Premium"
               labelSuffix={
                 <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                   <DetailedTooltip
@@ -397,7 +397,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   )}
                 </Box>
               }
-              value={formatJPY((results.healthInsurance - (results.healthInsuranceOnBonus ?? 0)) / 12)}
+              value={formatJPY(results.healthInsurance - (results.healthInsuranceOnBonus ?? 0))}
               type="indented"
             />
             {results.healthInsuranceOnBonus !== undefined && results.healthInsuranceOnBonus > 0 && (
@@ -549,11 +549,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Total */}
       <Box sx={{ mt: 2 }}>
-        <ResultRow
-          label={`Monthly ${results.hasEmploymentIncome ? 'Total' : 'Average'}`}
-          value={formatJPY(Math.round(totalSocialInsurance / 12))}
-          type="total"
-        />
         <ResultRow
           label="Annual Social Insurance"
           value={formatJPY(totalSocialInsurance)}

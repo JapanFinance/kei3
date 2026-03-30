@@ -273,7 +273,6 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     // Employee Health Insurance
     let employeeRate = 0;
     let employeeLtcRate = 0;
-    let employerRate: number | undefined;
     let sourceUrl;
     let providerLabel;
 
@@ -297,10 +296,6 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       if (regionalRates) {
         employeeRate = regionalRates.employeeHealthInsuranceRate;
         employeeLtcRate = regionalRates.employeeLongTermCareRate;
-        employerRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
-        if (inputs.isSubjectToLongTermCarePremium) {
-          employerRate += regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
-        }
         sourceUrl = regionalRates.source || providerDef?.defaultSource;
         providerLabel = `${providerDef!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
       }
@@ -389,70 +384,93 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
           {/* Main Calculation Highlight */}
           <Box sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
-              Monthly Insurance Premium
-            </Typography>
-
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              width: '100%',
-              my: 0.5,
-              '& math': {
-                fontSize: '1.1rem',
-                fontFamily: 'Roboto, Helvetica, Arial, sans-serif'
-              },
-              '& mn': { fontWeight: 500 },
-              '& mo': { mx: 1, color: 'text.secondary' },
-              '& mn:last-child': { fontWeight: 700, color: 'primary.main' }
-            }}>
-              <math>
-                <mrow>
-                  <mn>{formatJPY(standardMonthlyRemuneration)}</mn>
-                  <mo>×</mo>
-                  <mn>{formatPercent(finalRate)}</mn>
-                  <mo>=</mo>
-                  <mn>{formatJPY(totalPremium)}</mn>
-                </mrow>
-              </math>
-            </Box>
+            {ratesVary && monthlyRates.length === 12 ? (
+              <>
+                <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+                  Salary Premium ({year})
+                </Typography>
+                {(() => {
+                  // Group consecutive months with the same rate
+                  const groups: { startMonth: number; endMonth: number; rate: number; premium: number }[] = [];
+                  for (let i = 0; i < monthlyRates.length; i++) {
+                    const mr = monthlyRates[i]!;
+                    const lastGroup = groups[groups.length - 1];
+                    if (lastGroup && lastGroup.rate === mr.rate) {
+                      lastGroup.endMonth = i;
+                    } else {
+                      groups.push({ startMonth: i, endMonth: i, rate: mr.rate, premium: mr.premium });
+                    }
+                  }
+                  const formatMonth = (m: number) => new Date(2000, m).toLocaleString('en', { month: 'short' });
+                  const annualTotal = monthlyRates.reduce((sum, mr) => sum + mr.premium, 0);
+                  return (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'left' }}>Months</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Rate</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Monthly</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groups.map((g, idx) => {
+                          const count = g.endMonth - g.startMonth + 1;
+                          const monthLabel = g.startMonth === g.endMonth
+                            ? formatMonth(g.startMonth)
+                            : `${formatMonth(g.startMonth)}\u2013${formatMonth(g.endMonth)}`;
+                          return (
+                            <tr key={idx}>
+                              <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatPercent(g.rate)}</td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(g.premium)}</td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(g.premium * count)}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr>
+                          <td colSpan={3} style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>Annual Total</td>
+                          <td style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>
+                            {formatJPY(annualTotal)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </>
+            ) : (
+              <>
+                <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+                  Monthly Insurance Premium
+                </Typography>
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  width: '100%',
+                  my: 0.5,
+                  '& math': {
+                    fontSize: '1.1rem',
+                    fontFamily: 'Roboto, Helvetica, Arial, sans-serif'
+                  },
+                  '& mn': { fontWeight: 500 },
+                  '& mo': { mx: 1, color: 'text.secondary' },
+                  '& mn:last-child': { fontWeight: 700, color: 'primary.main' }
+                }}>
+                  <math>
+                    <mrow>
+                      <mn>{formatJPY(standardMonthlyRemuneration)}</mn>
+                      <mo>×</mo>
+                      <mn>{formatPercent(finalRate)}</mn>
+                      <mo>=</mo>
+                      <mn>{formatJPY(totalPremium)}</mn>
+                    </mrow>
+                  </math>
+                </Box>
+              </>
+            )}
           </Box>
         </Box>
-
-        {ratesVary && monthlyRates.length === 12 && (
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5, fontSize: '0.85rem' }}>
-              Monthly Breakdown ({year})
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-              Rates change during the year. Each month's premium is calculated individually.
-            </Typography>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead>
-                <tr>
-                  <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'left' }}>Month</th>
-                  <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Rate</th>
-                  <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Premium</th>
-                </tr>
-              </thead>
-              <tbody>
-                {monthlyRates.map((mr, idx) => (
-                  <tr key={idx}>
-                    <td style={{ padding: '2px 8px 2px 0' }}>{new Date(2000, idx).toLocaleString('en', { month: 'short' })}</td>
-                    <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatPercent(mr.rate)}</td>
-                    <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(mr.premium)}</td>
-                  </tr>
-                ))}
-                <tr>
-                  <td colSpan={2} style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>Annual Total</td>
-                  <td style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>
-                    {formatJPY(monthlyRates.reduce((sum, mr) => sum + mr.premium, 0))}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Box>
-        )}
 
         {includeLTC && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -0.5 }}>
@@ -461,10 +479,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         )}
 
         <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block' }}>
-          {employerRate !== undefined
-            ? `The employer also pays at a rate of ${formatPercent(employerRate)}.`
-            : `The employer also contributes separately.`
-          }
+          The employer also contributes separately.
         </Typography>
 
         <SMRTableTooltip
