@@ -425,7 +425,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const dependentDeductions = calculateDependentDeductions(inputs.dependents, netIncome, incomeYear);
 
-    const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome, inputs.incomeYear ?? new Date().getFullYear());
+    const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome, incomeYear);
 
     const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
 
