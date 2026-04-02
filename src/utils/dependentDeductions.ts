@@ -27,56 +27,33 @@ import type {
 } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
+import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
 
-/**
- * Income thresholds for dependent deductions (2025 tax year - 令和7年)
- * 
- * These thresholds determine eligibility for various dependent deductions.
- * The amounts are inclusive, meaning the dependent can have income up to and including these values.
- * Updated December 1, 2025 per 令和7年度税制改正.
- * 
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm - 扶養控除
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm - 配偶者控除  
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm - 配偶者特別控除
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm - 特定親族特別控除
+export { getDependentEligibilityMax };
+
+/** Maximum total net income (合計所得金額) for spouse special deduction eligibility (配偶者特別控除).
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
  */
-export const DEPENDENT_INCOME_THRESHOLDS = {
-  /**
-   * Maximum total net income for dependent deduction eligibility (扶養控除)
-   * Changed from 480,000 yen to 580,000 yen in 2025 tax reform
-   */
-  DEPENDENT_DEDUCTION_MAX: 580_000,
-  
-  /**
-   * Maximum total net income for spouse deduction eligibility (配偶者控除)
-   * Changed from 480,000 yen to 580,000 yen in 2025 tax reform
-   */
-  SPOUSE_DEDUCTION_MAX: 580_000,
-  
-  /**
-   * Maximum total net income for spouse special deduction eligibility (配偶者特別控除)
-   * Upper limit remains at 1,330,000 yen (no change in 2025)
-   */
-  SPOUSE_SPECIAL_DEDUCTION_MAX: 1_330_000,
-  
-  /**
-   * Maximum total net income for specific relative special deduction (特定親族特別控除)
-   * Upper limit is 1,230,000 yen (123万円)
-   * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
-   */
-  SPECIFIC_RELATIVE_DEDUCTION_MAX: 1_230_000,
-} as const;
+const SPOUSE_SPECIAL_DEDUCTION_MAX_INCOME = 1_330_000;
+
+/** Maximum total net income (合計所得金額) for specific relative special deduction (特定親族特別控除).
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
+ */
+const SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME = 1_230_000;
 
 /**
  * Calculate total net income (合計所得金額) for a dependent
  * This is used to determine eligibility for various dependent deductions
+ *
+ * @param income  The dependent's income breakdown
+ * @param year    Income year for the employment income deduction lookup; defaults to current year
  */
-export function calculateDependentTotalNetIncome(income: DependentIncome): number {
+export function calculateDependentTotalNetIncome(income: DependentIncome, year: number = new Date().getFullYear()): number {
   const { grossEmploymentIncome, otherNetIncome } = income;
-  
+
   // Calculate net employment income using employment income deduction formula
-  const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
-  
+  const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year);
+
   // Total net income = net employment income + other net income
   return netEmploymentIncome + otherNetIncome;
 }
@@ -85,7 +62,7 @@ export function calculateDependentTotalNetIncome(income: DependentIncome): numbe
  * Check if dependent is eligible for Dependent Deduction (扶養控除).
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
  */
-function isEligibleForDependentDeduction(dependent: Dependent): boolean {
+function isEligibleForDependentDeduction(dependent: Dependent, year: number): boolean {
   if (dependent.relationship === 'spouse') {
     // Spouse is a special case because of the spouse deduction and spouse special deduction.
     return false;
@@ -98,8 +75,8 @@ function isEligibleForDependentDeduction(dependent: Dependent): boolean {
     return false;
   }
 
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX;
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  return totalNetIncome <= getDependentEligibilityMax(year);
 }
 
 /**
@@ -109,8 +86,8 @@ function isEligibleForDependentDeduction(dependent: Dependent): boolean {
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/yogo/senmon.htm#word9
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
  */
-function isSpecialDependent(dependent: Dependent): boolean {
-  return isEligibleForDependentDeduction(dependent) && 
+function isSpecialDependent(dependent: Dependent, year: number): boolean {
+  return isEligibleForDependentDeduction(dependent, year) &&
          (dependent as OtherDependent).ageCategory === '19to22';
 }
 
@@ -121,8 +98,8 @@ function isSpecialDependent(dependent: Dependent): boolean {
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/yogo/senmon.htm#word10
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
  */
-function isElderlyDependent(dependent: Dependent): boolean {
-  return isEligibleForDependentDeduction(dependent) &&
+function isElderlyDependent(dependent: Dependent, year: number): boolean {
+  return isEligibleForDependentDeduction(dependent, year) &&
          (dependent as OtherDependent).ageCategory === '70plus';
 }
 
@@ -130,25 +107,25 @@ function isElderlyDependent(dependent: Dependent): boolean {
  * Check if dependent is eligible for Spouse Deduction (配偶者控除).
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
  */
-function isEligibleForSpouseDeduction(dependent: Dependent): boolean {
+function isEligibleForSpouseDeduction(dependent: Dependent, year: number): boolean {
   if (dependent.relationship !== 'spouse') {
     return false;
   }
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX;
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  return totalNetIncome <= getDependentEligibilityMax(year);
 }
 
 /**
  * Check if dependent is eligible for Spouse Special Deduction (配偶者特別控除).
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
  */
-function isEligibleForSpouseSpecialDeduction(dependent: Dependent): boolean {
+function isEligibleForSpouseSpecialDeduction(dependent: Dependent, year: number): boolean {
   if (dependent.relationship !== 'spouse') {
     return false;
   }
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX && 
-         totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_SPECIAL_DEDUCTION_MAX;
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  return totalNetIncome > getDependentEligibilityMax(year) &&
+         totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_MAX_INCOME;
 }
 
 /**
@@ -156,21 +133,21 @@ function isEligibleForSpouseSpecialDeduction(dependent: Dependent): boolean {
  * Age 19-22 (19歳以上23歳未満) on December 31st, not spouse.
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
  */
-function isEligibleForSpecificRelativeSpecialDeduction(dependent: Dependent): boolean {
+function isEligibleForSpecificRelativeSpecialDeduction(dependent: Dependent, year: number): boolean {
   if (dependent.relationship === 'spouse') {
     return false;
   }
   const otherDependent = dependent as OtherDependent;
   const ageCategory = otherDependent.ageCategory;
-  
+
   // Only age 19-22 are eligible (19歳以上23歳未満)
   if (ageCategory !== '19to22') {
     return false;
   }
-  
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-  return totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX && 
-         totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPECIFIC_RELATIVE_DEDUCTION_MAX;
+
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  return totalNetIncome > getDependentEligibilityMax(year) &&
+         totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME;
 }
 
 /**
@@ -347,32 +324,34 @@ const SPOUSE_DEDUCTION_PHASE_OUT = {
  * The deduction amounts are legislated values from the tax tables, not calculated ratios.
  * National tax and residence tax have different bracket structures and phase-out patterns.
  * 
- * Each entry specifies:
- * - minIncome: Lower bound of spouse income bracket (exclusive, in yen)
- * - maxIncome: Upper bound of spouse income bracket (inclusive, in yen)
- * - amounts: Deduction amounts for each taxpayer income level
+ * Brackets are ordered by maxIncome ascending. The lower bound of the first bracket is
+ * the year-dependent eligibility threshold (getDependentEligibilityMax); subsequent brackets
+ * are contiguous so only maxIncome is needed.
+ *
+ * Bracket structure is the same for R7 (2025) and R8 (2026) onward (令和7年分以降).
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
  */
 const SPOUSE_SPECIAL_DEDUCTION_TABLE = {
   NATIONAL: [
-    { minIncome: 580_000, maxIncome: 950_000, amounts: { under900: 380_000, bracket900_950: 260_000, bracket950_1000: 130_000 } },
-    { minIncome: 950_000, maxIncome: 1_000_000, amounts: { under900: 360_000, bracket900_950: 240_000, bracket950_1000: 120_000 } },
-    { minIncome: 1_000_000, maxIncome: 1_050_000, amounts: { under900: 310_000, bracket900_950: 210_000, bracket950_1000: 110_000 } },
-    { minIncome: 1_050_000, maxIncome: 1_100_000, amounts: { under900: 260_000, bracket900_950: 180_000, bracket950_1000: 90_000 } },
-    { minIncome: 1_100_000, maxIncome: 1_150_000, amounts: { under900: 210_000, bracket900_950: 140_000, bracket950_1000: 70_000 } },
-    { minIncome: 1_150_000, maxIncome: 1_200_000, amounts: { under900: 160_000, bracket900_950: 110_000, bracket950_1000: 60_000 } },
-    { minIncome: 1_200_000, maxIncome: 1_250_000, amounts: { under900: 110_000, bracket900_950: 80_000, bracket950_1000: 40_000 } },
-    { minIncome: 1_250_000, maxIncome: 1_300_000, amounts: { under900: 60_000, bracket900_950: 40_000, bracket950_1000: 20_000 } },
-    { minIncome: 1_300_000, maxIncome: 1_330_000, amounts: { under900: 30_000, bracket900_950: 20_000, bracket950_1000: 10_000 } },
+    { maxIncome:   950_000, amounts: { under900: 380_000, bracket900_950: 260_000, bracket950_1000: 130_000 } },
+    { maxIncome: 1_000_000, amounts: { under900: 360_000, bracket900_950: 240_000, bracket950_1000: 120_000 } },
+    { maxIncome: 1_050_000, amounts: { under900: 310_000, bracket900_950: 210_000, bracket950_1000: 110_000 } },
+    { maxIncome: 1_100_000, amounts: { under900: 260_000, bracket900_950: 180_000, bracket950_1000: 90_000 } },
+    { maxIncome: 1_150_000, amounts: { under900: 210_000, bracket900_950: 140_000, bracket950_1000: 70_000 } },
+    { maxIncome: 1_200_000, amounts: { under900: 160_000, bracket900_950: 110_000, bracket950_1000: 60_000 } },
+    { maxIncome: 1_250_000, amounts: { under900: 110_000, bracket900_950: 80_000, bracket950_1000: 40_000 } },
+    { maxIncome: 1_300_000, amounts: { under900: 60_000, bracket900_950: 40_000, bracket950_1000: 20_000 } },
+    { maxIncome: 1_330_000, amounts: { under900: 30_000, bracket900_950: 20_000, bracket950_1000: 10_000 } },
   ],
   RESIDENCE: [
-    { minIncome: 580_000, maxIncome: 1_000_000, amounts: { under900: 330_000, bracket900_950: 220_000, bracket950_1000: 110_000 } },
-    { minIncome: 1_000_000, maxIncome: 1_050_000, amounts: { under900: 310_000, bracket900_950: 210_000, bracket950_1000: 110_000 } },
-    { minIncome: 1_050_000, maxIncome: 1_100_000, amounts: { under900: 260_000, bracket900_950: 180_000, bracket950_1000: 90_000 } },
-    { minIncome: 1_100_000, maxIncome: 1_150_000, amounts: { under900: 210_000, bracket900_950: 140_000, bracket950_1000: 70_000 } },
-    { minIncome: 1_150_000, maxIncome: 1_200_000, amounts: { under900: 160_000, bracket900_950: 110_000, bracket950_1000: 60_000 } },
-    { minIncome: 1_200_000, maxIncome: 1_250_000, amounts: { under900: 110_000, bracket900_950: 80_000, bracket950_1000: 40_000 } },
-    { minIncome: 1_250_000, maxIncome: 1_300_000, amounts: { under900: 60_000, bracket900_950: 40_000, bracket950_1000: 20_000 } },
-    { minIncome: 1_300_000, maxIncome: 1_330_000, amounts: { under900: 30_000, bracket900_950: 20_000, bracket950_1000: 10_000 } },
+    { maxIncome: 1_000_000, amounts: { under900: 330_000, bracket900_950: 220_000, bracket950_1000: 110_000 } },
+    { maxIncome: 1_050_000, amounts: { under900: 310_000, bracket900_950: 210_000, bracket950_1000: 110_000 } },
+    { maxIncome: 1_100_000, amounts: { under900: 260_000, bracket900_950: 180_000, bracket950_1000: 90_000 } },
+    { maxIncome: 1_150_000, amounts: { under900: 210_000, bracket900_950: 140_000, bracket950_1000: 70_000 } },
+    { maxIncome: 1_200_000, amounts: { under900: 160_000, bracket900_950: 110_000, bracket950_1000: 60_000 } },
+    { maxIncome: 1_250_000, amounts: { under900: 110_000, bracket900_950: 80_000, bracket950_1000: 40_000 } },
+    { maxIncome: 1_300_000, amounts: { under900: 60_000, bracket900_950: 40_000, bracket950_1000: 20_000 } },
+    { maxIncome: 1_330_000, amounts: { under900: 30_000, bracket900_950: 20_000, bracket950_1000: 10_000 } },
   ],
 } as const;
 
@@ -387,21 +366,25 @@ const SPOUSE_SPECIAL_DEDUCTION_TABLE = {
  * 
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
  */
-function getSpouseSpecialDeduction(spouseNetIncome: number, taxpayerNetIncome: number): DeductionAmount {
+function getSpouseSpecialDeduction(spouseNetIncome: number, taxpayerNetIncome: number, year: number): DeductionAmount {
   // No deduction if taxpayer income exceeds 10,000,000
   if (taxpayerNetIncome > 10_000_000) {
     return { national: 0, residence: 0 };
   }
-  
+
+  const eligibilityMax = getDependentEligibilityMax(year);
+
   // Must be in spouse special deduction income range
-  if (spouseNetIncome <= DEPENDENT_INCOME_THRESHOLDS.SPOUSE_DEDUCTION_MAX || 
-      spouseNetIncome > DEPENDENT_INCOME_THRESHOLDS.SPOUSE_SPECIAL_DEDUCTION_MAX) {
+  if (spouseNetIncome <= eligibilityMax ||
+      spouseNetIncome > SPOUSE_SPECIAL_DEDUCTION_MAX_INCOME) {
     return { national: 0, residence: 0 };
   }
-  
+
   const getAmount = (table: typeof SPOUSE_SPECIAL_DEDUCTION_TABLE.NATIONAL | typeof SPOUSE_SPECIAL_DEDUCTION_TABLE.RESIDENCE) => {
-    // Find the bracket that matches the spouse's income
-    const bracket = table.find(b => spouseNetIncome > b.minIncome && spouseNetIncome <= b.maxIncome);
+    // Brackets are ordered ascending by maxIncome; the eligibility range check above
+    // already guarantees spouseNetIncome > eligibilityMax, so just find the first
+    // bracket whose maxIncome covers the income.
+    const bracket = table.find(b => spouseNetIncome <= b.maxIncome);
     
     if (!bracket) {
       return 0;
@@ -425,17 +408,22 @@ function getSpouseSpecialDeduction(spouseNetIncome: number, taxpayerNetIncome: n
 
 /**
  * Get specific relative special deduction amount based on actual total net income
- * Applies to age 19-22 dependents with income between 58万円 and 123万円 (2025 tax reform)
+ * Applies to age 19-22 dependents with income more than the dependent deduction eligibility threshold but below the specific relative special deduction max income.
+ * The deduction amount is determined by which bracket the dependent's total net income falls into.
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
+ * @see getDependentEligibilityMax(year) for the lower income limit for eligibility.
+ * @see SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME for the upper income limit for eligibility.
+ * @see SPECIFIC_RELATIVE_DEDUCTION_BRACKETS for the specific income brackets and corresponding deduction amounts.
  */
-function getSpecificRelativeDeduction(totalNetIncome: number): DeductionAmount {
+function getSpecificRelativeDeduction(totalNetIncome: number, year: number): DeductionAmount {
+  const eligibilityMax = getDependentEligibilityMax(year);
   const getAmount = (deductions: typeof NATIONAL_TAX_DEDUCTIONS | typeof RESIDENCE_TAX_DEDUCTIONS) => {
     // Specific relative special deduction brackets (all values in yen)
-    if (totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX || 
-        totalNetIncome > DEPENDENT_INCOME_THRESHOLDS.SPECIFIC_RELATIVE_DEDUCTION_MAX) {
+    if (totalNetIncome <= eligibilityMax ||
+        totalNetIncome > SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME) {
       return 0;
     } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_85) {
-      return deductions.SPECIFIC_RELATIVE_58TO85; // 58万円超～85万円以下
+      return deductions.SPECIFIC_RELATIVE_58TO85; // 62万円超～85万円以下
     } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_90) {
       return deductions.SPECIFIC_RELATIVE_85TO90; // 85万円超～90万円以下
     } else if (totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_BRACKETS.BRACKET_95) {
@@ -467,19 +455,19 @@ function getSpecificRelativeDeduction(totalNetIncome: number): DeductionAmount {
  * @returns Deduction amounts for national and residence tax
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
  */
-function calculateDependentDeduction(dependent: Dependent): DeductionAmount {
-  if (!isEligibleForDependentDeduction(dependent)) {
+function calculateDependentDeduction(dependent: Dependent, year: number): DeductionAmount {
+  if (!isEligibleForDependentDeduction(dependent, year)) {
     return { national: 0, residence: 0 };
   }
-  
+
   const getAmount = (deductions: typeof NATIONAL_TAX_DEDUCTIONS | typeof RESIDENCE_TAX_DEDUCTIONS) => {
     // Check for special dependent (age 19-22)
-    if (isSpecialDependent(dependent)) {
+    if (isSpecialDependent(dependent, year)) {
       return deductions.SPECIAL_DEPENDENT;
     }
-    
+
     // Check for elderly dependent (age 70+)
-    if (isElderlyDependent(dependent)) {
+    if (isElderlyDependent(dependent, year)) {
       // Additional deduction if cohabiting parent or grandparent
       if (dependent.isCohabiting && (dependent.relationship === 'parent')) {
         return deductions.ELDERLY_COHABITING;
@@ -504,8 +492,8 @@ function calculateDependentDeduction(dependent: Dependent): DeductionAmount {
  * @returns Deduction amounts for national and residence tax
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
  */
-function calculateSpouseDeduction(dependent: Dependent, taxpayerNetIncome: number): DeductionAmount {
-  if (!isEligibleForSpouseDeduction(dependent) || taxpayerNetIncome > 10_000_000) {
+function calculateSpouseDeduction(dependent: Dependent, taxpayerNetIncome: number, year: number): DeductionAmount {
+  if (!isEligibleForSpouseDeduction(dependent, year) || taxpayerNetIncome > 10_000_000) {
     return { national: 0, residence: 0 };
   }
 
@@ -541,7 +529,8 @@ function calculateSpouseDeduction(dependent: Dependent, taxpayerNetIncome: numbe
  */
 export function calculateDependentDeductions(
   dependents: Dependent[],
-  taxpayerNetIncome: number = 0
+  taxpayerNetIncome: number = 0,
+  year: number = new Date().getFullYear()
 ): DependentDeductionResults {
   const results: DependentDeductionResults = {
     nationalTax: {
@@ -603,9 +592,9 @@ export function calculateDependentDeductions(
 
     // Spouse deductions
     if (dependent.relationship === 'spouse') {
-      if (isEligibleForSpouseDeduction(dependent)) {
-        const spouseDeduction = calculateSpouseDeduction(dependent, taxpayerNetIncome);
-        
+      if (isEligibleForSpouseDeduction(dependent, year)) {
+        const spouseDeduction = calculateSpouseDeduction(dependent, taxpayerNetIncome, year);
+
         results.nationalTax.spouseDeduction += spouseDeduction.national;
         results.residenceTax.spouseDeduction += spouseDeduction.residence;
 
@@ -615,13 +604,13 @@ export function calculateDependentDeductions(
           residenceTaxAmount: spouseDeduction.residence,
           deductionType: DEDUCTION_TYPES.SPOUSE,
         });
-      } else if (isEligibleForSpouseSpecialDeduction(dependent)) {
-        const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-        const spouseSpecialDeduction = getSpouseSpecialDeduction(totalNetIncome, taxpayerNetIncome);
-        
+      } else if (isEligibleForSpouseSpecialDeduction(dependent, year)) {
+        const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+        const spouseSpecialDeduction = getSpouseSpecialDeduction(totalNetIncome, taxpayerNetIncome, year);
+
         results.nationalTax.spouseSpecialDeduction += spouseSpecialDeduction.national;
         results.residenceTax.spouseSpecialDeduction += spouseSpecialDeduction.residence;
-        
+
         results.breakdown.push({
           dependent,
           nationalTaxAmount: spouseSpecialDeduction.national,
@@ -631,9 +620,9 @@ export function calculateDependentDeductions(
       }
     }
     // Specific relative special deduction
-    else if (isEligibleForSpecificRelativeSpecialDeduction(dependent)) {
-      const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-      const specificRelativeDeduction = getSpecificRelativeDeduction(totalNetIncome);
+    else if (isEligibleForSpecificRelativeSpecialDeduction(dependent, year)) {
+      const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+      const specificRelativeDeduction = getSpecificRelativeDeduction(totalNetIncome, year);
       
       results.nationalTax.specificRelativeDeduction += specificRelativeDeduction.national;
       results.residenceTax.specificRelativeDeduction += specificRelativeDeduction.residence;
@@ -646,8 +635,8 @@ export function calculateDependentDeductions(
       });
     }
     // Standard dependent deduction
-    else if (isEligibleForDependentDeduction(dependent)) {
-      const dependentDeduction = calculateDependentDeduction(dependent);
+    else if (isEligibleForDependentDeduction(dependent, year)) {
+      const dependentDeduction = calculateDependentDeduction(dependent, year);
       
       results.nationalTax.dependentDeduction += dependentDeduction.national;
       results.residenceTax.dependentDeduction += dependentDeduction.residence;
@@ -656,8 +645,8 @@ export function calculateDependentDeductions(
         dependent,
         nationalTaxAmount: dependentDeduction.national,
         residenceTaxAmount: dependentDeduction.residence,
-        deductionType: isSpecialDependent(dependent) ? DEDUCTION_TYPES.SPECIAL_DEPENDENT :
-                       isElderlyDependent(dependent) ? DEDUCTION_TYPES.ELDERLY_DEPENDENT :
+        deductionType: isSpecialDependent(dependent, year) ? DEDUCTION_TYPES.SPECIAL_DEPENDENT :
+                       isElderlyDependent(dependent, year) ? DEDUCTION_TYPES.ELDERLY_DEPENDENT :
                        DEDUCTION_TYPES.GENERAL_DEPENDENT,
       });
     } else {

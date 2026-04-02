@@ -604,7 +604,7 @@ describe('Specific Relative Special Deduction (特定親族特別控除)', () =>
       isCohabiting: false,
       disability: 'none',
       income: {
-        grossEmploymentIncome: 1_300_000, // Net = 750,000 (qualifies for specific relative special)
+        grossEmploymentIncome: 1_490_000, // Net = 750,000 (qualifies for specific relative special)
         otherNetIncome: 0,
       },
     }

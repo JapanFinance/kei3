@@ -5,7 +5,7 @@ import type { FurusatoNozeiDetails, ResidenceTaxDetails } from "../types/tax";
 import { calculateNationalIncomeTax } from "./taxCalculations";
 import type { DependentDeductionResults } from "../types/dependents";
 import { DEDUCTION_TYPES } from "../types/dependents";
-import { calculateDependentTotalNetIncome, DEPENDENT_INCOME_THRESHOLDS } from './dependentDeductions';
+import { calculateDependentTotalNetIncome, getDependentEligibilityMax } from './dependentDeductions';
 
 /**
  * Calculates the basic deduction (基礎控除) for residence tax based on income
@@ -78,9 +78,10 @@ export const calculateResidenceTax = (
     netIncome: number,
     nonBasicDeductions: number,
     dependentDeductions: DependentDeductionResults,
-    taxCredit: number = 0
+    taxCredit: number = 0,
+    year: number = new Date().getFullYear()
 ): ResidenceTaxDetails => {
-    const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions);
+    const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions, year);
     const { perCapitaLimit, incomeBasedLimit } = getResidenceTaxExemptionLimits(qualifiedDependentsCount);
 
     if (netIncome <= perCapitaLimit) {
@@ -162,16 +163,16 @@ export const calculateResidenceTax = (
  * 扶養親族は、年齢16歳未満の者及び地方税法第314条の2第1項第11号に規定する控除対象扶養親族に限ります。
  * @see https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
  */
-function countQualifiedDependents(dependentDeductions: DependentDeductionResults): number {
+function countQualifiedDependents(dependentDeductions: DependentDeductionResults, year: number): number {
     const uniqueDependents = new Map();
     dependentDeductions.breakdown.forEach(b => {
         uniqueDependents.set(b.dependent.id, b.dependent);
     });
-    
+
     let qualifiedDependentsCount = 0;
     uniqueDependents.forEach((dependent) => {
-        const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
-        if (totalNetIncome <= DEPENDENT_INCOME_THRESHOLDS.DEPENDENT_DEDUCTION_MAX) {
+        const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+        if (totalNetIncome <= getDependentEligibilityMax(year)) {
             qualifiedDependentsCount++;
         }
     });

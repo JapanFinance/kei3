@@ -20,9 +20,11 @@ import {
     NON_TAXABLE_RESIDENCE_TAX_DETAIL
 } from './residenceTax';
 import {calculateDependentDeductions} from './dependentDeductions';
-import {COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP, NATIONAL_BASIC_DEDUCTION_TIERS,} from '../constants/taxThresholds';
+import {COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP} from '../constants/taxThresholds';
 import {getCommutingAllowanceAnnualAmount} from './formatters';
 import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
+import {getNationalBasicDeductionTiers} from '../data/nationalBasicDeduction';
+import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/employmentIncomeDeduction';
 
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.
@@ -41,31 +43,21 @@ export const roundSocialInsurancePremium = (amount: number, mode: 'halfTrunc' | 
 }
 
 /**
- * Calculates the net employment income based on the tax rules for 2025/2026 income, applying the employment income deduction.
- * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
+ * Calculates the net employment income (給与所得の金額) for the given income year,
+ * applying the employment income deduction (給与所得控除) rules for that year.
+ *
+ * Delegates to the year-indexed period data in `src/data/employmentIncomeDeduction.ts`.
+ *
+ * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
+ * @param year                   Income year; defaults to the current calendar year
  */
-export const calculateNetEmploymentIncome = (grossEmploymentIncome: number): number => {
-    if (grossEmploymentIncome < 651_000)
-        return 0;
-
-    if (grossEmploymentIncome < 1_900_000)
-        return grossEmploymentIncome - 650_000;
-
-    // From 1.9M yen through 6.6M yen, gross income is rounded down to the nearest 4,000 yen
-    const roundedGrossIncome = Math.floor(grossEmploymentIncome / 4000) * 4000;
-
-    if (grossEmploymentIncome <= 3_600_000) {
-        return Math.floor(roundedGrossIncome * 0.7) - 80_000;
-    } else if (grossEmploymentIncome <= 6_600_000) {
-        return Math.floor(roundedGrossIncome * 0.8) - 440_000;
-    }
-
-    if (grossEmploymentIncome <= 8_500_000) {
-        return Math.floor(grossEmploymentIncome * 0.9) - 1_100_000;
-    } else {
-        return grossEmploymentIncome - 1_950_000;
-    }
-}
+export const calculateNetEmploymentIncome = (
+    grossEmploymentIncome: number,
+    year: number = new Date().getFullYear()
+): number => calculateNetEmploymentIncomeForPeriod(
+    grossEmploymentIncome,
+    getEmploymentIncomeDeductionPeriod(year)
+);
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -136,12 +128,14 @@ export const calculateEmploymentInsurance = (
 }
 
 /**
- * Calculates the basic deduction (基礎控除) for national income tax based on income
+ * Calculates the basic deduction (基礎控除) for national income tax based on income and year.
  * Source: National Tax Agency https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm
- * 2025 Update: https://www.nta.go.jp/users/gensen/2025kiso/index.htm#a-01
+ *
+ * @param netIncome Taxpayer's net income (合計所得金額) in yen
+ * @param year Income year (calendar year the income was earned); defaults to current year
  */
-export const calculateNationalIncomeTaxBasicDeduction = (netIncome: number): number => {
-    for (const { maxIncomeInclusive, deduction } of NATIONAL_BASIC_DEDUCTION_TIERS) {
+export const calculateNationalIncomeTaxBasicDeduction = (netIncome: number, year: number = new Date().getFullYear()): number => {
+    for (const { maxIncomeInclusive, deduction } of getNationalBasicDeductionTiers(year)) {
         if (netIncome <= maxIncomeInclusive) return deduction;
     }
     return 0;
@@ -294,8 +288,11 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
 /**
  * Calculates just the total net income.
  * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
+ *
+ * @param incomeStreams  Income streams to calculate net income for
+ * @param year          Income year for the employment income deduction lookup; defaults to current year
  */
-export const calculateTotalNetIncome = (incomeStreams: IncomeStream[]): number => {
+export const calculateTotalNetIncome = (incomeStreams: IncomeStream[], year: number = new Date().getFullYear()): number => {
     const {
         salaryIncome,
         bonusIncome,
@@ -307,7 +304,7 @@ export const calculateTotalNetIncome = (incomeStreams: IncomeStream[]): number =
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
-    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year);
 
     return netEmploymentIncome + netBusinessAndMiscIncome;
 };
@@ -337,7 +334,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
-    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome);
+    const incomeYear = inputs.incomeYear ?? new Date().getFullYear();
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, incomeYear);
 
     const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;
 
@@ -403,11 +401,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             pensionPayments = 0;
         } else if (isInEmployeePensionSystem) {
             // Pension also includes full commuting allowance in SMR
-            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem, (salaryIncome + commutingAllowance) / 12, true, bonusIncome);
+            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem, (salaryIncome + commutingAllowance) / 12, true, bonusIncome, incomeYear);
             pensionPayments = pensionResult.total;
             pensionOnBonus = pensionResult.bonusPortion;
         } else { // National Pension
-            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem);
+            const pensionResult = calculatePensionBreakdown(isInEmployeePensionSystem, 0, true, [], incomeYear);
             pensionPayments = pensionResult.total;
             pensionOnBonus = pensionResult.bonusPortion;
         }
@@ -425,9 +423,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
-    const dependentDeductions = calculateDependentDeductions(inputs.dependents, netIncome);
+    const dependentDeductions = calculateDependentDeductions(inputs.dependents, netIncome, incomeYear);
 
-    const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome);
+    const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome, inputs.incomeYear ?? new Date().getFullYear());
 
     const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
 
@@ -441,7 +439,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const residenceTaxBasicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
     const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction - dependentDeductions.residenceTax.total) / 1000) * 1000);
 
-    const residenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions);
+    const residenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
 
     // Calculate totals
     const totalSocialsAndTax = nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;

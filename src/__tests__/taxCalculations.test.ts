@@ -11,43 +11,83 @@ beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) })
 afterAll(() => { vi.useRealTimers() })
 
 describe('calculateNetEmploymentIncome', () => {
-  it('deduction of 650,000 yen for income up to 1,900,000 yen', () => {
-    expect(calculateNetEmploymentIncome(1_500_000)).toBe(850_000)
-    expect(calculateNetEmploymentIncome(1_899_999)).toBe(1_249_999)
+  describe('2026 tiers (R8)', () => {
+    it('deduction of 740,000 yen for income up to 2,200,000 yen (R8 temporary provision)', () => {
+      expect(calculateNetEmploymentIncome(1_500_000, 2026)).toBe(760_000)
+      expect(calculateNetEmploymentIncome(1_899_999, 2026)).toBe(1_159_999)
+    })
+
+    it('between 2,200,000 and 6,600,000 yen, income is rounded down to the nearest 4000 yen', () => {
+      expect(calculateNetEmploymentIncome(2_200_000, 2026)).toBe(1_460_000)
+      expect(calculateNetEmploymentIncome(2_201_123, 2026)).toBe(1_460_000)
+      expect(calculateNetEmploymentIncome(2_203_333, 2026)).toBe(1_460_000)
+      expect(calculateNetEmploymentIncome(2_204_000, 2026)).toBe(1_462_800)
+
+      expect(calculateNetEmploymentIncome(3_600_000, 2026)).toBe(2_440_000)
+      expect(calculateNetEmploymentIncome(3_603_999, 2026)).toBe(2_440_000)
+      expect(calculateNetEmploymentIncome(3_604_000, 2026)).toBe(2_443_200)
+    })
+
+    it('calculates deduction correctly for income between 2,200,000 and 3,600,000 yen', () => {
+      expect(calculateNetEmploymentIncome(2_500_000, 2026)).toBe(2_500_000 - (2_500_000 * 0.3 + 80_000))
+    })
+
+    it('calculates deduction correctly for income between 3,600,001 and 6,600,000 yen', () => {
+      expect(calculateNetEmploymentIncome(5_000_000, 2026)).toBe(5_000_000 - (5_000_000 * 0.2 + 440_000))
+    })
+
+    it('calculates deduction correctly for income between 6,600,001 and 8,500,000 yen', () => {
+      expect(calculateNetEmploymentIncome(7_500_000, 2026)).toBe(7_500_000 - (7_500_000 * 0.1 + 1_100_000))
+    })
+
+    it('From 6.6 million yen, income is not rounded down to the nearest 4000 yen', () => {
+      expect(calculateNetEmploymentIncome(6_600_100, 2026)).toBe(Math.floor(6_600_100 * 0.9) - 1_100_000)
+      expect(calculateNetEmploymentIncome(6_600_123, 2026)).toBe((Math.floor(6_600_123 * 0.9) - 1_100_000))
+      expect(calculateNetEmploymentIncome(6_601_000, 2026)).not.toBe(calculateNetEmploymentIncome(6_600_100, 2026))
+    })
+
+    it('returns maximum deduction of 1,950,000 yen for income above 8,500,000 yen', () => {
+      expect(calculateNetEmploymentIncome(9_000_000, 2026)).toBe(9_000_000 - 1_950_000)
+      expect(calculateNetEmploymentIncome(10_000_000, 2026)).toBe(10_000_000 - 1_950_000)
+    })
   })
 
-  it('between 1,900,000 and 6,600,000 yen, income is rounded down to the nearest 4000 yen', () => {
-    expect(calculateNetEmploymentIncome(1_900_000)).toBe(1_250_000)
-    expect(calculateNetEmploymentIncome(1_901_123)).toBe(1_250_000)
-    expect(calculateNetEmploymentIncome(1_903_333)).toBe(1_250_000)
-    expect(calculateNetEmploymentIncome(1_904_000)).toBe(1_252_800)
+  describe('2025 tiers (R7)', () => {
+    it('returns 0 for income at or below 650,000 yen', () => {
+      expect(calculateNetEmploymentIncome(0, 2025)).toBe(0)
+      expect(calculateNetEmploymentIncome(650_000, 2025)).toBe(0)
+    })
 
-    expect(calculateNetEmploymentIncome(3_600_000)).toBe(2_440_000)
-    expect(calculateNetEmploymentIncome(3_603_999)).toBe(2_440_000)
-    expect(calculateNetEmploymentIncome(3_604_000)).toBe(2_443_200)
-  })
+    it('deduction of 650,000 yen for income up to 1,900,000 yen', () => {
+      expect(calculateNetEmploymentIncome(650_001, 2025)).toBe(1)
+      expect(calculateNetEmploymentIncome(1_500_000, 2025)).toBe(850_000)
+      expect(calculateNetEmploymentIncome(1_900_000, 2025)).toBe(1_250_000)
+    })
 
-  it('calculates deduction correctly for income between 1,900,001 and 3,600,000 yen', () => {
-    expect(calculateNetEmploymentIncome(2_500_000)).toBe(2_500_000 - (2_500_000 * 0.3 + 80_000))
-  })
+    it('smooth join at 1,900,000 yen: flat floor and standard formula give same result', () => {
+      // Floor formula: 1,900,000 - 650,000 = 1,250,000
+      // Standard formula: floor(1,900,000 / 4000) * 4000 * 0.7 - 80,000 = 1,900,000 * 0.7 - 80,000 = 1,250,000
+      expect(calculateNetEmploymentIncome(1_900_000, 2025)).toBe(1_250_000)
+      expect(calculateNetEmploymentIncome(1_900_001, 2025)).toBe(1_250_000) // rounds down to 1,900,000
+    })
 
-  it('calculates deduction correctly for income between 3,600,001 and 6,600,000 yen', () => {
-    expect(calculateNetEmploymentIncome(5_000_000)).toBe(5_000_000 - (5_000_000 * 0.2 + 440_000))
-  })
+    it('calculates deduction correctly for income between 1,900,001 and 3,600,000 yen', () => {
+      expect(calculateNetEmploymentIncome(2_200_000, 2025)).toBe(1_460_000) // 2,200,000 * 0.7 - 80,000
+      expect(calculateNetEmploymentIncome(2_500_000, 2025)).toBe(2_500_000 - (2_500_000 * 0.3 + 80_000))
+    })
 
-  it('calculates deduction correctly for income between 6,600,001 and 8,500,000 yen', () => {
-    expect(calculateNetEmploymentIncome(7_500_000)).toBe(7_500_000 - (7_500_000 * 0.1 + 1_100_000))
-  })
+    it('calculates deduction correctly for income between 3,600,001 and 6,600,000 yen', () => {
+      expect(calculateNetEmploymentIncome(5_000_000, 2025)).toBe(5_000_000 - (5_000_000 * 0.2 + 440_000))
+    })
 
-  it('From 6.6 million yen, income is not rounded down to the nearest 4000 yen', () => {
-    expect(calculateNetEmploymentIncome(6_600_100)).toBe(6_600_100 - (6_600_100 * 0.1 + 1_100_000))
-    expect(calculateNetEmploymentIncome(6_600_123)).toBe((Math.floor(6_600_123 * 0.9) - 1_100_000))
-    expect(calculateNetEmploymentIncome(6_601_000)).not.toBe(calculateNetEmploymentIncome(6_600_100))
-  })
+    it('calculates deduction correctly for income between 6,600,001 and 8,500,000 yen', () => {
+      expect(calculateNetEmploymentIncome(7_500_000, 2025)).toBe(7_500_000 - (7_500_000 * 0.1 + 1_100_000))
+    })
 
-  it('returns maximum deduction of 1,950,000 yen for income above 8,500,000 yen', () => {
-    expect(calculateNetEmploymentIncome(9_000_000)).toBe(9_000_000 - 1_950_000)
-    expect(calculateNetEmploymentIncome(10_000_000)).toBe(10_000_000 - 1_950_000)
+    it('returns maximum deduction of 1,950,000 yen for income above 8,500,000 yen', () => {
+      expect(calculateNetEmploymentIncome(9_000_000, 2025)).toBe(9_000_000 - 1_950_000)
+      expect(calculateNetEmploymentIncome(10_000_000, 2025)).toBe(10_000_000 - 1_950_000)
+    })
   })
 })
 
@@ -60,17 +100,18 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo", // Default for Kyokai Kenpo in tests
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
-    expect(result.residenceTax.totalResidenceTax).toBe(22_200)
+    expect(result.residenceTax.totalResidenceTax).toBe(13_200)
     expect(result.healthInsurance).toBe(74_916)
     expect(result.pensionPayments).toBe(138_348)
     // 1,500,000 / 12 = 125,000 per month
     // 125,000 * 0.55% = 687.5 per month → 687 yen (exactly 0.5 yen → round down)
     // 687 * 12 = 8,244 yen annually
     expect(result.employmentInsurance).toBe(8_244)
-    expect(result.takeHomeIncome).toBe(1_256_292)
+    expect(result.takeHomeIncome).toBe(1_265_292)
   })
 
   it('calculates taxes correctly for income between 1,950,000 and 3,300,000 yen', () => {
@@ -80,9 +121,10 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
-    expect(result.nationalIncomeTax).toBe(22_300)
+    expect(result.nationalIncomeTax).toBe(14_100)
     expect(result.residenceTax.totalResidenceTax).toBe(91_100)
     expect(result.healthInsurance).toBe(118_920)
     expect(result.pensionPayments).toBe(219_600)
@@ -90,7 +132,7 @@ describe('calculateTaxes', () => {
     // 208,333.33 * 0.55% ≈ 1,145.83 per month → 1,146 yen (round up)
     // 1,146 * 12 = 13,752 yen annually
     expect(result.employmentInsurance).toBe(13_752)
-    expect(result.takeHomeIncome).toBe(2_034_328)
+    expect(result.takeHomeIncome).toBe(2_042_528)
   })
 
   it('calculates taxes correctly for income between 3,300,000 and 6,950,000 yen', () => {
@@ -100,9 +142,10 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
-    expect(result.nationalIncomeTax).toBe(120_700)
+    expect(result.nationalIncomeTax).toBe(91_700)
     expect(result.residenceTax.totalResidenceTax).toBe(243_200)
     expect(result.healthInsurance).toBe(243_780) // 410k * 4.955% = 20,315.5 -> 20,315 * 12
     expect(result.pensionPayments).toBe(450_180)
@@ -110,7 +153,7 @@ describe('calculateTaxes', () => {
     // 416,666.67 * 0.55% ≈ 2,291.67 per month → 2,292 yen (round up)
     // 2,292 * 12 = 27,504 yen annually
     expect(result.employmentInsurance).toBe(27_504)
-    expect(result.takeHomeIncome).toBe(3_914_636)
+    expect(result.takeHomeIncome).toBe(3_943_636)
   })
 
   // Test cases for high income brackets
@@ -121,10 +164,11 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
-    expect(result.nationalIncomeTax).toBe(16_345_400) // 50M - 1.95M (employment deduction) - 1.815194M (social insurance) - 0 (basic deduction) = 46.234806M, rounded to 46.234M, then 45% - 4.796M = 16.0093M, + 2.1% = 16.345495M, rounded down to 16.3454M
-    expect(result.residenceTax.totalResidenceTax).toBe(4_628_300) // (50M - 1.95M - 1.815194M - 0) = 46.234806M, rounded to 46.234M, then 6% city tax (2.774M) + 4% prefectural tax (1.8493M) + 5K 均等割
+    expect(result.nationalIncomeTax).toBe(16_345_400) // 50M - 1.95M (employment deduction) - 1.815192M (social insurance) - 0 (basic deduction, income > 25M)
+    expect(result.residenceTax.totalResidenceTax).toBe(4_628_300)
     expect(result.healthInsurance).toBe(826_488) // Capped at 68,874.5 -> 68,874 * 12
     expect(result.pensionPayments).toBe(713_700) // Capped at 59,475 * 12
     // 50,000,000 / 12 ≈ 4,166,666.67 per month
@@ -176,14 +220,15 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
-    expect(result.nationalIncomeTax).toBe(302_700)
-    expect(result.residenceTax.totalResidenceTax).toBe(384_500)
+    expect(result.nationalIncomeTax).toBe(293_700)
+    expect(result.residenceTax.totalResidenceTax).toBe(384_000)
     expect(result.healthInsurance).toBe(539_380)
-    expect(result.pensionPayments).toBe(210_120)
+    expect(result.pensionPayments).toBe(213_810)
     expect(result.employmentInsurance).toBe(0)
-    expect(result.takeHomeIncome).toBe(3_563_300)
+    expect(result.takeHomeIncome).toBe(3_569_110)
   })
 
   it('calculates taxes correctly for employment income with NHI', () => {
@@ -195,6 +240,7 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo", // For NHI
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
 
@@ -206,16 +252,16 @@ describe('calculateTaxes', () => {
     expect(result.healthInsurance).toBe(389_620)
 
     // Should pay national pension (not employee pension, since they're on NHI)
-    expect(result.pensionPayments).toBe(210_120)
+    expect(result.pensionPayments).toBe(213_810)
 
     // Tax calculations should use employment income deduction
     expect(result.netEmploymentIncome).toBe(3_560_000)
-    expect(result.nationalIncomeTax).toBe(130_300)
-    expect(result.residenceTax.totalResidenceTax).toBe(252_600)
+    expect(result.nationalIncomeTax).toBe(96_400)
+    expect(result.residenceTax.totalResidenceTax).toBe(252_300)
 
     // Total take-home should reflect employment income with NHI and National Pension
     // NHI calculated on net employment income results in lower premiums and higher take-home
-    expect(result.takeHomeIncome).toBe(3_989_856)
+    expect(result.takeHomeIncome).toBe(4_020_366)
   })
 
   it('calculates taxes correctly with DC plan contributions', () => {
@@ -226,6 +272,7 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const resultWithoutIdeco = calculateTaxes(inputsWithoutDcPlan);
 
@@ -248,9 +295,9 @@ describe('calculateTaxes', () => {
     const incomeTaxSavings = resultWithoutIdeco.nationalIncomeTax - resultWithIdeco.nationalIncomeTax;
     const residenceTaxSavings = resultWithoutIdeco.residenceTax.totalResidenceTax - resultWithIdeco.residenceTax.totalResidenceTax;
 
-    // With 240,000 yen contribution at ~10% marginal tax rate, we expect around 24,000 yen in income tax savings
+    // With 240,000 yen contribution at ~5% marginal tax rate (basic deduction increase reduces taxable income into lower bracket)
     // and around 24,000 yen in residence tax savings (10% rate)
-    expect(incomeTaxSavings).equals(22_800); // less because it crosses into the 5% bracket
+    expect(incomeTaxSavings).equals(12_200);
     expect(residenceTaxSavings).equals(24_000);
   });
 
@@ -408,58 +455,105 @@ describe('calculateEmploymentInsurance', () => {
 })
 
 describe('calculateNationalIncomeTaxBasicDeduction', () => {
-  it('returns 950,000 yen for income up to 1,320,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(0)).toBe(950_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(1_000_000)).toBe(950_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(1_320_000)).toBe(950_000)
+  describe('2026 tiers (R8: 62万 base + temporary additions via Art. 41-16-2)', () => {
+    it('returns 1,040,000 yen for income up to 1,320,000 yen (62万 base + 42万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(0, 2026)).toBe(1_040_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(1_000_000, 2026)).toBe(1_040_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(1_320_000, 2026)).toBe(1_040_000)
+    })
+
+    it('returns 1,040,000 yen for income between 1,320,001 and 3,360,000 yen (62万 base + 42万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(1_320_001, 2026)).toBe(1_040_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(2_000_000, 2026)).toBe(1_040_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(3_360_000, 2026)).toBe(1_040_000)
+    })
+
+    it('returns 1,040,000 yen for income between 3,360,001 and 4,890,000 yen (62万 base + 42万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(3_360_001, 2026)).toBe(1_040_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(4_000_000, 2026)).toBe(1_040_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(4_890_000, 2026)).toBe(1_040_000)
+    })
+
+    it('returns 670,000 yen for income between 4,890,001 and 6,550,000 yen (62万 base + 5万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(4_890_001, 2026)).toBe(670_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(5_000_000, 2026)).toBe(670_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(6_550_000, 2026)).toBe(670_000)
+    })
+
+    it('returns 620,000 yen for income between 6,550,001 and 23,500,000 yen (62万 base)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(6_550_001, 2026)).toBe(620_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(10_000_000, 2026)).toBe(620_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(23_500_000, 2026)).toBe(620_000)
+    })
+
+    it('returns 480,000 yen for income between 23,500,001 and 24,000,000 yen', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(23_500_001, 2026)).toBe(480_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(24_000_000, 2026)).toBe(480_000)
+    })
+
+    it('returns 320,000 yen for income between 24,000,001 and 24,500,000 yen', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(24_000_001, 2026)).toBe(320_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(24_500_000, 2026)).toBe(320_000)
+    })
+
+    it('returns 160,000 yen for income between 24,500,001 and 25,000,000 yen', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(24_500_001, 2026)).toBe(160_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(25_000_000, 2026)).toBe(160_000)
+    })
+
+    it('returns 0 yen for income above 25,000,000 yen', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(25_000_001, 2026)).toBe(0)
+      expect(calculateNationalIncomeTaxBasicDeduction(30_000_000, 2026)).toBe(0)
+    })
+
+    it('handles negative income correctly', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(-1_000_000, 2026)).toBe(1_040_000)
+    })
   })
 
-  it('returns 880,000 yen for income between 1,320,001 and 3,360,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(1_320_001)).toBe(880_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(2_000_000)).toBe(880_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(3_360_000)).toBe(880_000)
-  })
+  describe('2025 tiers (R7: 58万 base + temporary additions via Art. 41-16-2)', () => {
+    it('returns 950,000 yen for income up to 1,320,000 yen (58万 base + 37万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(0, 2025)).toBe(950_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(1_000_000, 2025)).toBe(950_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(1_320_000, 2025)).toBe(950_000)
+    })
 
-  it('returns 680,000 yen for income between 3,360,001 and 4,890,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(3_360_001)).toBe(680_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(4_000_000)).toBe(680_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(4_890_000)).toBe(680_000)
-  })
+    it('returns 880,000 yen for income between 1,320,001 and 3,360,000 yen (58万 base + 30万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(1_320_001, 2025)).toBe(880_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(2_000_000, 2025)).toBe(880_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(3_360_000, 2025)).toBe(880_000)
+    })
 
-  it('returns 630,000 yen for income between 4,890,001 and 6,550,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(4_890_001)).toBe(630_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(5_000_000)).toBe(630_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(6_550_000)).toBe(630_000)
-  })
+    it('returns 680,000 yen for income between 3,360,001 and 4,890,000 yen (58万 base + 10万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(3_360_001, 2025)).toBe(680_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(4_000_000, 2025)).toBe(680_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(4_890_000, 2025)).toBe(680_000)
+    })
 
-  it('returns 580,000 yen for income between 6,550,001 and 23,500,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(6_550_001)).toBe(580_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(10_000_000)).toBe(580_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(23_500_000)).toBe(580_000)
-  })
+    it('returns 630,000 yen for income between 4,890,001 and 6,550,000 yen (58万 base + 5万 temp)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(4_890_001, 2025)).toBe(630_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(5_000_000, 2025)).toBe(630_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(6_550_000, 2025)).toBe(630_000)
+    })
 
-  it('returns 480,000 yen for income between 23,500,001 and 24,000,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(23_500_001)).toBe(480_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(24_000_000)).toBe(480_000)
-  })
+    it('returns 580,000 yen for income between 6,550,001 and 23,500,000 yen (58万 base)', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(6_550_001, 2025)).toBe(580_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(10_000_000, 2025)).toBe(580_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(23_500_000, 2025)).toBe(580_000)
+    })
 
-  it('returns 320,000 yen for income between 24,000,001 and 24,500,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(24_000_001)).toBe(320_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(24_500_000)).toBe(320_000)
-  })
+    it('returns 480,000 yen for income between 23,500,001 and 24,000,000 yen', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(23_500_001, 2025)).toBe(480_000)
+      expect(calculateNationalIncomeTaxBasicDeduction(24_000_000, 2025)).toBe(480_000)
+    })
 
-  it('returns 160,000 yen for income between 24,500,001 and 25,000,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(24_500_001)).toBe(160_000)
-    expect(calculateNationalIncomeTaxBasicDeduction(25_000_000)).toBe(160_000)
-  })
+    it('returns 0 yen for income above 25,000,000 yen', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(25_000_001, 2025)).toBe(0)
+    })
 
-  it('returns 0 yen for income above 25,000,000 yen', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(25_000_001)).toBe(0)
-    expect(calculateNationalIncomeTaxBasicDeduction(30_000_000)).toBe(0)
-  })
-
-  it('handles negative income correctly', () => {
-    expect(calculateNationalIncomeTaxBasicDeduction(-1_000_000)).toBe(950_000)
+    it('handles negative income correctly', () => {
+      expect(calculateNationalIncomeTaxBasicDeduction(-1_000_000, 2025)).toBe(950_000)
+    })
   })
 })
 
@@ -533,9 +627,9 @@ describe('calculateTaxes with Dependent Coverage', () => {
     expect(result.employmentInsurance).toBe(5_496)
 
     // Income tax and residence tax should still be calculated normally
-    // Net income: 1,000,000 - 650,000 = 350,000
+    // Net income: 1,000,000 - 740,000 = 260,000 (R8 minimum deduction)
     // Social insurance deduction: 0 + 0 + 5,496 = 5,496
-    // Taxable income: 350,000 - 5,496 - 950,000 = negative, so 0
+    // Taxable income: 260,000 - 5,496 - 1,040,000 = negative, so 0
     expect(result.nationalIncomeTax).toBe(0)
   })
 
@@ -671,6 +765,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
@@ -679,7 +774,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
     expect(result.annualIncome).toBe(4_000_000);
 
     // 2. Validate Net Employment Income
-    // Deduction for 3M: 3M * 30% + 80k = 980k; Net = 2.02M
+    // Deduction for 3M (R8): floor(3M * 0.7) - 80k = 2.1M - 80k = 2.02M
     expect(result.netEmploymentIncome).toBe(2_020_000);
 
     // 3. Validate Total Net Income (The base for NHI)
@@ -688,16 +783,16 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
     // 4. Validate NHI Premium is calculated broadly correctly (non-zero)
     // Base = 3.02M - 430k = 2.59M
-    // Rough calc: 2.59M * ~10% = ~260k. 
+    // Rough calc: 2.59M * ~10% = ~260k.
     expect(result.healthInsurance).toBeGreaterThan(200_000);
   });
 })
 
 describe('calculateTotalNetIncome', () => {
   it('calculates total net income correctly for salary only', () => {
-    // Salary 5M -> Net Employment Income (5M - 1.44M deduction) = 3.56M
+    // Salary 5M -> Net Employment Income (R8: floor(5M * 0.8) - 440k = 4M - 440k = 3.56M)
     const incomeStreams = [{ type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' }];
-    expect(calculateTotalNetIncome(incomeStreams)).toBe(3_560_000);
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(3_560_000);
   });
 
   it('calculates total net income correctly for business only', () => {
@@ -707,18 +802,18 @@ describe('calculateTotalNetIncome', () => {
   });
 
   it('calculates total net income correctly for mixed income', () => {
-    // Salary 3M -> Net Employment (3M - 980k) = 2.02M
+    // Salary 3M -> Net Employment (R8: floor(3M * 0.7) - 80k = 2.1M - 80k = 2.02M)
     // Business 1M -> Taxable Business = 1M
     // Total = 3.02M
     const incomeStreams = [
       { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
       { type: 'business' as const, amount: 1_000_000, blueFilerDeduction: 0, id: 'b1' }
     ];
-    expect(calculateTotalNetIncome(incomeStreams)).toBe(3_020_000);
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(3_020_000);
   });
 
   it('handles business income less than blue-filer deduction and misc income', () => {
-    // Salary 3M -> Net Employment (3M - 980k) = 2.02M
+    // Salary 3M -> Net Employment (R8: floor(3M * 0.7) - 80k = 2.02M)
     // Business 200k, Deduction 650k -> Net Business = 0 (Deduction limited to 200k)
     // Misc 100k -> Net Misc = 100k (Deduction does NOT apply to Misc)
     // Total Net = 2.02M + 0 + 100k = 2.12M
@@ -727,7 +822,7 @@ describe('calculateTotalNetIncome', () => {
       { type: 'business' as const, amount: 200_000, blueFilerDeduction: 650_000, id: 'b1' },
       { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' }
     ];
-    expect(calculateTotalNetIncome(incomeStreams)).toBe(2_120_000);
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(2_120_000);
   });
 });
 
@@ -868,17 +963,17 @@ describe('RSU (Restricted Stock Unit) income', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
 
     // 1. RSU is employment income, so it goes through employment income deduction
-    // Gross EI = 2M (in 1.9M-3.6M range)
-    // Rounded: 2M, Net = 2M * 0.7 - 80k = 1.32M
-    expect(result.netEmploymentIncome).toBe(1_320_000);
+    // Gross EI = 2M (below 2.2M): Net = 2M - 740k = 1.26M
+    expect(result.netEmploymentIncome).toBe(1_260_000);
 
     // 2. RSU should be included in total net income
-    expect(result.totalNetIncome).toBe(1_320_000);
+    expect(result.totalNetIncome).toBe(1_260_000);
 
     // 3. RSU should NOT be in social insurance bases (no salary/bonus/commuting allowance)
     // With 0 salary income, health insurance base for SMR is 0
@@ -907,6 +1002,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
@@ -953,6 +1049,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
@@ -984,20 +1081,19 @@ describe('RSU (Restricted Stock Unit) income', () => {
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
 
-    // 1. Total net income: 2M - 1.32M deduction = not used for NHI, instead total income is
-    // For NHI with RSU only, the net income includes the full amount after deduction
-    // 2M in 1.9M-3.6M range: Net = 2M * 0.7 - 80k = 1.32M
-    expect(result.totalNetIncome).toBe(1_320_000);
+    // 1. Total net income: RSU 2M below 2.2M: Net = 2M - 740k = 1.26M
+    expect(result.totalNetIncome).toBe(1_260_000);
 
     // 2. NHI is based on total net income (including RSU)
     expect(result.healthInsurance).toBeGreaterThan(0);
 
-    // 3. Pension is National Pension (fixed)
-    expect(result.pensionPayments).toBe(210_120); // 17,510 * 12
+    // 3. Pension is National Pension (3 months FY2025 + 9 months FY2026)
+    expect(result.pensionPayments).toBe(213_810);
 
     // 4. No employment insurance for NHI (NHI people don't have employment insurance)
     expect(result.employmentInsurance).toBe(0);
@@ -1005,11 +1101,11 @@ describe('RSU (Restricted Stock Unit) income', () => {
 
   it('calculateTotalNetIncome includes RSU in employment income deduction', () => {
     // RSU 2M should receive employment income deduction
-    // 2M in 1.9M-3.6M range: Net = 2M * 0.7 - 80k = 1.32M
+    // 2M below 2.2M: Net = 2M - 740k = 1.26M
     const incomeStreams = [
       { type: 'stockCompensation' as const, amount: 2_000_000, issuerDomicile: 'foreign' as const, id: 'rsu1' }
     ];
-    expect(calculateTotalNetIncome(incomeStreams)).toBe(1_320_000);
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(1_260_000);
   });
 
   it('calculateTotalNetIncome includes RSU with salary correctly', () => {
@@ -1019,7 +1115,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
       { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
       { type: 'stockCompensation' as const, amount: 2_000_000, issuerDomicile: 'foreign' as const, id: 'rsu1' }
     ];
-    expect(calculateTotalNetIncome(incomeStreams)).toBe(3_560_000);
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(3_560_000);
   });
 
   it('supports multiple stock compensation streams and sums them in tax calculations', () => {
@@ -1036,6 +1132,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
@@ -1044,6 +1141,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
     expect(result.annualIncome).toBe(5_000_000);
 
     // Net employment income is based on salary + stock compensation (5M total)
+    // 5M in 3.6M-6.6M range: Net = 5M * 0.8 - 440k = 3.56M
     expect(result.netEmploymentIncome).toBe(3_560_000);
     expect(result.totalNetIncome).toBe(3_560_000);
 
@@ -1058,7 +1156,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
       { type: 'stockCompensation' as const, amount: 800_000, issuerDomicile: 'foreign' as const, id: 'sc2' },
     ];
 
-    // Combined 2M in 1.9M-3.6M range: net = 2M * 0.7 - 80k = 1.32M
-    expect(calculateTotalNetIncome(incomeStreams)).toBe(1_320_000);
+    // Combined 2M below 2.2M: net = 2M - 740k = 1.26M
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(1_260_000);
   });
 });
