@@ -2,6 +2,14 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-04-02
+
+### Updated
+
+- Support 2026 tax deduction changes to income tax basic deduction, employment income, and spouse/dependent deduction income threshold.
+
+- Updated National Pension contribution amount for FY2026.
+
 ## 2026-03-30
 
 ### Updated
