@@ -4,13 +4,9 @@
 import type { BonusIncomeStream } from '../types/tax';
 import { roundSocialInsurancePremium } from './taxCalculations';
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
+import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
 
 export type { StandardMonthlyRemunerationBracket };
-
-/** National pension (国民年金) - fixed monthly contribution.
- * Source: https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01
- */
-export const monthlyNationalPensionContribution = 17510;
 
 /**
  * Employees' pension insurance rate (厚生年金保険料率)
@@ -84,10 +80,11 @@ export function calculatePensionBreakdown(
   isEmployeesPension: boolean = true,
   monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
-  bonuses: BonusIncomeStream[] = []
+  bonuses: BonusIncomeStream[] = [],
+  year: number = new Date().getFullYear()
 ): PensionBreakdown {
   if (!isEmployeesPension) {
-    return { total: monthlyNationalPensionContribution * 12, bonusPortion: 0 };
+    return { total: getNationalPensionAnnualTotal(year), bonusPortion: 0 };
   }
   if (monthlyIncome < 0) {
     throw new Error('Monthly income must be a positive number');
@@ -185,7 +182,8 @@ export function calculatePensionPremium(
   isEmployeesPension: boolean = true,
   monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
-  bonuses: BonusIncomeStream[] = []
+  bonuses: BonusIncomeStream[] = [],
+  year: number = new Date().getFullYear()
 ): number {
-  return calculatePensionBreakdown(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses).total;
+  return calculatePensionBreakdown(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year).total;
 }

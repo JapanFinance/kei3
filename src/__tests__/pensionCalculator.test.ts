@@ -13,19 +13,27 @@ describe('calculatePensionPremium', () => {
     expect(calculatePensionPremium(true, 10_000_000 / 12, true)).toBe(713_700) // Capped at 59,475 * 12
   })
 
-  it('calculates fixed national pension for non-employment income', () => {
-    expect(calculatePensionPremium(false, 5_000_000 / 12, true)).toBe(210_120) // 17,510 * 12 months
-    expect(calculatePensionPremium(false, 10_000_000 / 12, true)).toBe(210_120) // Same fixed amount regardless of income
+  it('calculates fixed national pension for non-employment income (2026)', () => {
+    // 3 months FY2025 (17,510) + 9 months FY2026 (17,920) = 52,530 + 161,280 = 213,810
+    expect(calculatePensionPremium(false, 5_000_000 / 12, true, [], 2026)).toBe(213_810)
+    expect(calculatePensionPremium(false, 10_000_000 / 12, true, [], 2026)).toBe(213_810) // Same fixed amount regardless of income
+  })
+
+  it('calculates fixed national pension for non-employment income (2025)', () => {
+    // 3 months FY2024 (16,980) + 9 months FY2025 (17,510) = 50,940 + 157,590 = 208,530
+    expect(calculatePensionPremium(false, 5_000_000 / 12, true, [], 2025)).toBe(208_530)
+    expect(calculatePensionPremium(false, 10_000_000 / 12, true, [], 2025)).toBe(208_530)
   })
 
   it('handles zero income correctly', () => {
     expect(calculatePensionPremium(true, 0, true)).toBe(96_624)
-    expect(calculatePensionPremium(false, 0, true)).toBe(210_120) // Still pays fixed amount
+    expect(calculatePensionPremium(false, 0, true, [], 2026)).toBe(213_810) // Fixed amount (2026)
+    expect(calculatePensionPremium(false, 0, true, [], 2025)).toBe(208_530) // Fixed amount (2025)
   })
 
   it('handles negative income correctly', () => {
-    expect(() => calculatePensionPremium(true, -1_000_000, true)).toThrowError('Monthly income must be a positive number')
-    expect(calculatePensionPremium(false, -1_000_000, true)).toBe(210_120) // Still pays fixed amount
+    expect(() => calculatePensionPremium(true, -1_000_000, true)).toThrow('Monthly income must be a positive number')
+    expect(calculatePensionPremium(false, -1_000_000, true, [], 2026)).toBe(213_810) // Still pays fixed amount
   })
 })
 

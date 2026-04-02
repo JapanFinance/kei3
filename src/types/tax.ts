@@ -72,6 +72,7 @@ export interface TakeHomeInputs {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+  incomeYear?: number;
 }
 
 export interface CustomEmployeesHealthInsuranceRates {
