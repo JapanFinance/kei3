@@ -22,6 +22,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
+import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
 
 interface TaxesTabProps {
   results: TakeHomeResults;
@@ -109,6 +110,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome = (results.totalNetIncome ?? results.annualIncome) - totalSocialInsurance - (results.dcPlanContributions ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
+  const incomeYear = inputs.incomeYear ?? new Date().getFullYear();
+  const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
 
   // Calculate separated gross income
   const grossEmploymentIncome = inputs.incomeStreams
@@ -169,7 +172,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         </Box>
                       </tbody>
                     </table>
-                    <EmploymentIncomeDeductionTooltip />
+                    <EmploymentIncomeDeductionTooltip year={incomeYear} />
                   </Box>
                 </DetailedTooltip>
               </span>
@@ -325,40 +328,17 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       </tr>
                     </thead>
                     <tbody>
+                      {/* Deduplicate consecutive tiers with the same deduction */}
+                      {basicDeductionTiers
+                        .filter((tier, i, arr) => i === arr.length - 1 || tier.deduction !== arr[i + 1]!.deduction)
+                        .map((tier, i) => (
+                          <tr key={i}>
+                            <td>Up to {tier.maxIncomeInclusive.toLocaleString('en')}</td>
+                            <td>{tier.deduction.toLocaleString('en')}</td>
+                          </tr>
+                        ))}
                       <tr>
-                        <td>Up to 1,320,000</td>
-                        <td>950,000</td>
-                      </tr>
-                      <tr>
-                        <td>Up to 3,360,000</td>
-                        <td>880,000</td>
-                      </tr>
-                      <tr>
-                        <td>Up to 4,890,000</td>
-                        <td>680,000</td>
-                      </tr>
-                      <tr>
-                        <td>Up to 6,550,000</td>
-                        <td>630,000</td>
-                      </tr>
-                      <tr>
-                        <td>Up to 23,500,000</td>
-                        <td>580,000</td>
-                      </tr>
-                      <tr>
-                        <td>Up to 24,000,000</td>
-                        <td>480,000</td>
-                      </tr>
-                      <tr>
-                        <td>Up to 24,500,000</td>
-                        <td>320,000</td>
-                      </tr>
-                      <tr>
-                        <td>Up to 25,000,000</td>
-                        <td>160,000</td>
-                      </tr>
-                      <tr>
-                        <td>Over 25,000,000</td>
+                        <td>Over {basicDeductionTiers[basicDeductionTiers.length - 1]!.maxIncomeInclusive.toLocaleString('en')}</td>
                         <td>0</td>
                       </tr>
                     </tbody>

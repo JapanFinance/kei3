@@ -18,6 +18,7 @@ import PensionPremiumTooltip from './PensionPremiumTooltip';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
+import NationalPensionTooltip from './NationalPensionTooltip';
 import { calculatePensionBonusBreakdown, findPensionBracket } from '../../../utils/pensionCalculator';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
 import type { BonusIncomeStream } from '../../../types/tax';
@@ -204,7 +205,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                           </tr>
                         </tbody>
                       </table>
-                      <EmploymentIncomeDeductionTooltip />
+                      <EmploymentIncomeDeductionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} />
                     </Box>
                   </DetailedTooltip>
                 </span>
@@ -438,17 +439,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 title="Pension Contribution"
                 icon={SIMPLE_TOOLTIP_ICON}
               >
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  National Pension (国民年金)
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
-                  National pension contributions are a fixed amount regardless of income level.
-                </Typography>
-                <Box sx={{ mt: 1 }}>
-                  Source:<a href="https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
-                    国民年金保険料の金額 (Japan Pension Service)
-                  </a>
-                </Box >
+                <NationalPensionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} />
               </DetailedTooltip>
             )}
           </Typography>
