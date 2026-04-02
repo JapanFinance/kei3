@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { detectCaps } from '../utils/capDetection';
 import type { TakeHomeResults, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
@@ -25,6 +25,10 @@ const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults
     salaryIncome: 0,
     ...overrides,
 } as TakeHomeResults);
+
+// Pin to June 2025 so NHI cap lookups use FY2025 params deterministically.
+beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) });
+afterAll(() => { vi.useRealTimers() });
 
 describe('detectCaps', () => {
     it('should explicitly fail or return false positive currently when high business income is present', () => {

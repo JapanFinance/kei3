@@ -79,6 +79,32 @@ export interface NationalHealthInsuranceRegionParams {
   medicalCap: number;         // 医療分賦課限度額 (e.g., 660,000 JPY)
   supportCap: number;         // 後期高齢者支援金等分賦課限度額 (e.g., 260,000 JPY)
   ltcCapForEligible?: number;    // 介護納付金分賦課限度額 (e.g., 170,000 JPY)
+  // Child/childcare support levy (子ども・子育て支援納付金分) — introduced FY2026
+  childSupportRate?: number;          // 子ども・子育て支援納付金分所得割率 (e.g., 0.27%)
+  childSupportPerCapita?: number;     // 子ども・子育て支援納付金分均等割額 (e.g., 73 JPY)
+  childSupportHouseholdFlat?: number; // 子ども・子育て支援納付金分平等割額
+  childSupportCap?: number;           // 子ども・子育て支援納付金分賦課限度額 (e.g., 30,000 JPY)
   // Standard deduction used for calculating NHI taxable income (e.g., 430,000 JPY, often same as residence tax basic deduction)
   nhiStandardDeduction: number;
+}
+
+/**
+ * A rate period with an effective date and the NHI parameters for that period.
+ */
+export interface NHIRatePeriod {
+  /**
+   * The month from which these rates take effect.
+   * Month is 0-indexed (0=Jan, 3=Apr). NHI rates typically change in April (month 3).
+   */
+  effectiveFrom: { year: number; month: number };
+  params: Omit<NationalHealthInsuranceRegionParams, 'regionName'>;
+}
+
+/**
+ * NHI region definition with metadata and time-series rate periods.
+ */
+export interface NHIRegionDefinition {
+  regionName: string;
+  /** Rate periods sorted newest-first. Use getNHIParamsForMonth() for lookup. */
+  periods: NHIRatePeriod[];
 }

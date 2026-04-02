@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
-import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
+import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
@@ -26,7 +26,11 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
     // National Health Insurance - show region parameters
-    const regionData = getNationalHealthInsuranceParams(region);
+    // Look up rates for both fiscal years that overlap this calendar year
+    const year = new Date().getFullYear();
+    const prevFYData = getNHIParamsForMonth(region, year, 0);  // Jan → previous FY
+    const currFYData = getNHIParamsForMonth(region, year, 3);  // Apr → current FY
+    const regionData = currFYData; // Use current FY rates for the detailed breakdown display
     if (!regionData) {
       return (
         <Box>
@@ -42,6 +46,17 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         </Box>
       );
     }
+
+    // Check if rates differ across the two fiscal years
+    const ratesBlended = prevFYData && prevFYData !== currFYData && (
+      prevFYData.medicalRate !== regionData.medicalRate ||
+      prevFYData.supportRate !== regionData.supportRate ||
+      prevFYData.medicalCap !== regionData.medicalCap ||
+      prevFYData.supportCap !== regionData.supportCap ||
+      prevFYData.ltcRateForEligible !== regionData.ltcRateForEligible ||
+      prevFYData.childSupportRate !== regionData.childSupportRate ||
+      prevFYData.childSupportCap !== regionData.childSupportCap
+    );
 
     // Return National Health Insurance parameters display
     const includeNursingCareInsurance = inputs.isSubjectToLongTermCarePremium;
@@ -78,7 +93,22 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       totalLtcPremium = Math.min(uncappedLtc, regionData.ltcCapForEligible);
     }
 
-    const totalCalculatedPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium;
+    // 4. Child Support Portion (子ども・子育て支援納付金分) - from FY2026
+    let incomeBasedChildSupport = 0;
+    let perCapitaChildSupport = 0;
+    let householdFlatChildSupport = 0;
+    let uncappedChildSupport = 0;
+    let totalChildSupportPremium = 0;
+    const hasChildSupportLevy = regionData.childSupportRate && regionData.childSupportCap;
+    if (hasChildSupportLevy) {
+      incomeBasedChildSupport = nhiTaxableIncome * regionData.childSupportRate!;
+      perCapitaChildSupport = regionData.childSupportPerCapita || 0;
+      householdFlatChildSupport = regionData.childSupportHouseholdFlat || 0;
+      uncappedChildSupport = incomeBasedChildSupport + perCapitaChildSupport + householdFlatChildSupport;
+      totalChildSupportPremium = Math.min(uncappedChildSupport, regionData.childSupportCap!);
+    }
+
+    const totalCalculatedPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium + totalChildSupportPremium;
 
     return (
       <Box sx={{ minWidth: { xs: 0, sm: 400 }, maxWidth: { xs: '100vw', sm: 460 } }}>
@@ -87,9 +117,14 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         </Typography>
         <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
           NHI premiums are calculated using income-based rates plus per-capita amounts, with annual caps applied to each portion.
-          NHI premiums are based on last year's reported income.
+          NHI premiums are based on last year&apos;s reported income.
           These calculations assume your income is the same as the previous year.
         </Typography>
+        {ratesBlended && (
+          <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem', fontStyle: 'italic', color: 'info.main' }}>
+            NHI rates changed in April. Since premiums are paid in 10 installments (Jun&ndash;Mar), this calendar year straddles two fiscal years: 3/10 from Jan&ndash;Mar (previous FY) + 7/10 from Jun&ndash;Dec (current FY). The rates shown below are the current fiscal year&apos;s rates. The reported premium is a weighted blend of both fiscal years.
+          </Typography>
+        )}
 
         {/* Medical Portion */}
         <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
@@ -238,6 +273,57 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'action.hover' }}>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'text.secondary' }}>
               🏠 Long-Term Care Portion: Not applicable (under 40 or over 64 years old)
+            </Typography>
+          </Box>
+        )}
+
+        {/* Child Support Portion (from FY2026) */}
+        {hasChildSupportLevy && (
+          <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.9rem', color: 'primary.main' }}>
+              👶 Child Support Portion (子ども・子育て支援納付金分)
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+              Income-based (所得割): <strong>{(regionData.childSupportRate! * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedChildSupport)}
+            </Typography>
+            {perCapitaChildSupport > 0 && (
+              <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+                Per-capita (均等割): {formatJPY(perCapitaChildSupport)}
+              </Typography>
+            )}
+            {householdFlatChildSupport > 0 && (
+              <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+                Household flat rate (平等割): {formatJPY(householdFlatChildSupport)}
+              </Typography>
+            )}
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+              Subtotal: {formatJPY(uncappedChildSupport)}
+            </Typography>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+              Annual Cap: {formatJPY(regionData.childSupportCap!)}
+            </Typography>
+            <Typography variant="body2" sx={{
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: uncappedChildSupport > regionData.childSupportCap! ? 'warning.main' : 'success.main',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5
+            }}>
+              = Final: {formatJPY(totalChildSupportPremium)}
+              {uncappedChildSupport > regionData.childSupportCap! && (
+                <Box component="span" sx={{
+                  px: 0.5,
+                  py: 0.2,
+                  borderRadius: 0.5,
+                  bgcolor: 'warning.light',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'warning.contrastText'
+                }}>
+                  🔒 CAPPED
+                </Box>
+              )}
             </Typography>
           </Box>
         )}

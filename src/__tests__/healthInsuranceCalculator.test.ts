@@ -399,3 +399,66 @@ describe('FY2026 time-series rate support', () => {
     expect(calculateHealthInsurancePremium(5_000_000, false, ITS_KENPO_PROVIDER, DEFAULT_PROVIDER_REGION, undefined, [], 2026)).toBe(233_700);
   });
 });
+
+describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
+  // NHI premiums are paid in 10 installments (Jun-Mar). In calendar year N:
+  //   Jan-Mar: 3 installments of FY(N-1) → 3/10 of that annual premium
+  //   Jun-Dec: 7 installments of FY(N)   → 7/10 of that annual premium
+  //
+  // Nakano FY2025: medical 7.92%, support 2.87%, LTC 2.25%, no child support
+  // Nakano FY2026: medical 8.03%, support 2.94%, LTC 2.53%, child support 0.27%
+
+  it('year=2025 uses single FY (both Jan and Apr resolve to same FY2025 params)', () => {
+    // No blending needed — FY2024 has no separate entry, falls back to FY2025
+    expect(calculateHealthInsurancePremium(5_000_000, false, NATIONAL_HEALTH_INSURANCE_ID, 'Tokyo-Nakano', undefined, [], 2025)).toBe(554_903);
+  });
+
+  it('year=2026 blends FY2025 and FY2026 for Nakano (no LTC)', () => {
+    // FY2025: medical 407,544 + support 147,359 + child 0 = 554,903
+    // FY2026: medical 414,071 + support 151,758 + child 12,412 = 578,241
+    // Blended: medical round(407,544×0.3 + 414,071×0.7) = 412,113
+    //          support round(147,359×0.3 + 151,758×0.7) = 150,438
+    //          child   round(0×0.3 + 12,412×0.7)        = 8,688
+    //          total: 412,113 + 150,438 + 8,688          = 571,239
+    expect(calculateHealthInsurancePremium(5_000_000, false, NATIONAL_HEALTH_INSURANCE_ID, 'Tokyo-Nakano', undefined, [], 2026)).toBe(571_239);
+  });
+
+  it('year=2026 blends FY2025 and FY2026 for Nakano (with LTC)', () => {
+    // FY2025 LTC (rate 2.20%, per-capita 17,400): 117,940
+    // FY2026 LTC (rate 2.53%, per-capita 17,700): 133,321
+    // Blended LTC: round(117,940×0.3 + 133,321×0.7) = 128,707
+    // Total: 571,239 + 128,707 = 699,946
+    expect(calculateHealthInsurancePremium(5_000_000, true, NATIONAL_HEALTH_INSURANCE_ID, 'Tokyo-Nakano', undefined, [], 2026)).toBe(699_946);
+  });
+
+  it('year=2026 blends Osaka FY2025 and FY2026 (no LTC)', () => {
+    // FY2025 (rates 9.30%/3.02%, caps 650k/240k): medical 493,008 + support 159,809 = 652,817
+    // FY2026 (rates 9.50%/3.06%, caps 660k/260k): medical 503,048 + support 161,878 + child 14,637 = 679,563
+    // Blended: medical round(493,008×0.3 + 503,048×0.7) = 500,036
+    //          support round(159,809×0.3 + 161,878×0.7) = 161,257
+    //          child   round(0×0.3 + 14,637×0.7)        = 10,246
+    //          total: 500,036 + 161,257 + 10,246         = 671,539
+    expect(calculateHealthInsurancePremium(5_000_000, false, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka', undefined, [], 2026)).toBe(671_539);
+  });
+
+  it('year=2026 blends caps correctly for Osaka at high income', () => {
+    // FY2025 caps: medical 650k, support 240k, LTC 170k, child 0
+    // FY2026 caps: medical 660k, support 260k, LTC 170k, child 30k
+    // Blended: medical round(650k×0.3 + 660k×0.7) = 657,000
+    //          support round(240k×0.3 + 260k×0.7) = 254,000
+    //          LTC: 170,000 (same both FYs)
+    //          child round(0×0.3 + 30k×0.7) = 21,000
+    //          total: 657,000 + 254,000 + 170,000 + 21,000 = 1,102,000
+    expect(calculateHealthInsurancePremium(20_000_000, true, NATIONAL_HEALTH_INSURANCE_ID, 'Osaka', undefined, [], 2026)).toBe(1_102_000);
+  });
+
+  it('year=2026 blends caps correctly for Nakano at high income (no LTC)', () => {
+    // FY2025 caps: medical 660k, support 260k, child 0
+    // FY2026 caps: medical 670k, support 260k, child 30k
+    // Blended: medical round(660k×0.3 + 670k×0.7) = 667,000
+    //          support: 260,000 (same both FYs)
+    //          child round(0×0.3 + 30,000×0.7) = 21,000
+    //          total: 667,000 + 260,000 + 21,000 = 948,000
+    expect(calculateHealthInsurancePremium(20_000_000, false, NATIONAL_HEALTH_INSURANCE_ID, 'Tokyo-Nakano', undefined, [], 2026)).toBe(948_000);
+  });
+});

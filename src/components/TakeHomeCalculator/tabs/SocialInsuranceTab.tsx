@@ -376,6 +376,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 type="indented"
               />
             )}
+            {results.nhiChildSupportPortion !== undefined && results.nhiChildSupportPortion > 0 && (
+              <ResultRow
+                label="Child Support Portion"
+                value={formatJPY(results.nhiChildSupportPortion)}
+                type="indented"
+              />
+            )}
             <ResultRow
               label="Annual Premium"
               value={formatJPY(results.healthInsurance)}
