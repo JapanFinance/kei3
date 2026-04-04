@@ -351,8 +351,8 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
 describe('FY2026 time-series rate support', () => {
   // Calendar year 2026 for Kyokai Kenpo (Tokyo):
   // - Months 0-2 (Jan-Mar): FY2025 rates — health 4.955%, LTC 0.795%
-  // - Month 3 (Apr): FY2026 without levy — health 4.925%, LTC 0.81%
-  // - Months 4-11 (May-Dec): FY2026 with levy — health 5.04%, LTC 0.81%
+  // - Month 3 (Apr): FY2026 without contribution — health 4.925%, LTC 0.81%
+  // - Months 4-11 (May-Dec): FY2026 with contribution — health 5.04%, LTC 0.81%
   //
   // SMR for 5M income = 410,000
 
@@ -385,16 +385,16 @@ describe('FY2026 time-series rate support', () => {
     const marchResult = calculateHealthInsuranceBreakdown(0, false, KYOKAI_KENPO_PROVIDER, 'Tokyo', undefined, marchBonus, 2026);
     expect(marchResult.bonusPortion).toBe(24_775);
 
-    // Bonus in May (month 4) → FY2026 with levy rate: 0.05040
+    // Bonus in May (month 4) → FY2026 with contribution rate: 0.05040
     // 500,000 × 0.05040 = 25,200
     const mayBonus = [{ amount: 500_000, id: 'b2', type: 'bonus' as const, month: 4 }];
     const mayResult = calculateHealthInsuranceBreakdown(0, false, KYOKAI_KENPO_PROVIDER, 'Tokyo', undefined, mayBonus, 2026);
     expect(mayResult.bonusPortion).toBe(25_200);
   });
 
-  it('ITS Kenpo rates in 2026 are uniform (levy offsets health rate reduction)', () => {
+  it('ITS Kenpo rates in 2026 are uniform (contribution offsets health rate reduction)', () => {
     // ITS in 2026:
-    // All months: 4.75% (FY2025: 4.75%, FY2026 Apr: 4.75%, FY2026 May+: 4.635% + 0.115% levy = 4.75%)
+    // All months: 4.75% (FY2025: 4.75%, FY2026 Apr: 4.75%, FY2026 May+: 4.635% + 0.115% contribution = 4.75%)
     // 410,000 × 0.0475 = 19,475 × 12 = 233,700
     expect(calculateHealthInsurancePremium(5_000_000, false, ITS_KENPO_PROVIDER, DEFAULT_PROVIDER_REGION, undefined, [], 2026)).toBe(233_700);
   });

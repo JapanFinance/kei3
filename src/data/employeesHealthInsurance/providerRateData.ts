@@ -57,7 +57,7 @@ export interface ProviderDefinition {
  * National Health Insurance is handled separately as it has a different calculation structure.
  *
  * FY2026 notes:
- * - Child/Childcare Support Levy (子ども・子育て支援金) of 0.23% (0.115% employee) is folded
+ * - Childcare Support Contribution (子ども・子育て支援金) of 0.23% (0.115% employee) is folded
  *   into employeeHealthInsuranceRate starting from its effective paycheck month. It is calculated
  *   on the same SMR base with the same rounding, so combining it is exact.
  */
@@ -67,14 +67,14 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
     defaultSource: 'https://www.its-kenpo.or.jp/hoken/jimu/hokenryou/index.html',
     regions: {
       'DEFAULT': [
-        // FY2026 with child support levy (May 2026 paycheck — April billing + levy)
-        // Health 4.635% + levy 0.115% = 4.75%
+        // FY2026 with childcare support contribution (May 2026 paycheck — April billing + contribution)
+        // Health 4.635% + contribution 0.115% = 4.75%
         { effectiveFrom: { year: 2026, month: 4 }, rates: {
           source: 'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/20260401kara_hokenryouichiran.pdf',
           employeeHealthInsuranceRate: 0.0475, // 4.75%
           employeeLongTermCareRate: 0.009, // 0.9%
         }},
-        // FY2026 without levy (April 2026 paycheck — March billing, new health rate)
+        // FY2026 without contribution (April 2026 paycheck — March billing, new health rate)
         { effectiveFrom: { year: 2026, month: 3 }, rates: {
           source: 'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/20260331made_hokenryouichiran.pdf',
           employeeHealthInsuranceRate: 0.0475, // 4.75%
@@ -346,7 +346,7 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
       // FY2025 nursing insurance rate is 1.59% for all regions
       // FY2026 health insurance rates from Table 18 (effective March 2026 billing / April 2026 paycheck)
       // FY2026 nursing insurance rate is 1.62% for all regions
-      // FY2026 child support levy of 0.23% (effective April 2026 billing / May 2026 paycheck) is folded into health rate
+      // FY2026 childcare support contribution of 0.23% (effective April 2026 billing / May 2026 paycheck) is folded into health rate
     }
   },
   'RakutenKenpo': {
@@ -354,8 +354,8 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
     defaultSource: 'https://kenpo.rakuten.or.jp/member/outline/fee.html',
     regions: {
       'DEFAULT': [
-        // FY2026 with child support levy (May 2026 paycheck)
-        // Health 4.7% + levy 0.115% = 4.815%
+        // FY2026 with childcare support contribution (May 2026 paycheck)
+        // Health 4.7% + contribution 0.115% = 4.815%
         { effectiveFrom: { year: 2026, month: 4 }, rates: {
           source: 'https://kenpo.rakuten.or.jp/member/outline/files/fee.pdf',
           employeeHealthInsuranceRate: 0.04815, // 4.815%
@@ -375,8 +375,8 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
     defaultSource: 'https://kempo.recruit.co.jp/member/outline/fee.html',
     regions: {
       'DEFAULT': [
-        // FY2026 with child support levy (May 2026 paycheck)
-        // Employee health 4.35% + levy 0.115% = 4.465%, employer health 4.65% + 0.115% = 4.765%
+        // FY2026 with childcare support contribution (May 2026 paycheck)
+        // Employee health 4.35% + contribution 0.115% = 4.465%, employer health 4.65% + 0.115% = 4.765%
         { effectiveFrom: { year: 2026, month: 4 }, rates: {
           source: 'https://kempo.recruit.co.jp/member/info/pdf/r8_fee.pdf',
           employeeHealthInsuranceRate: 0.04465, // 4.465%
@@ -398,8 +398,8 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
     defaultSource: 'https://www.shoken-kenpo.or.jp/member/outline/fee.html',
     regions: {
       'DEFAULT': [
-        // FY2026 with child support levy (May 2026 paycheck)
-        // Employee health 3.3% + levy 0.115% = 3.415%, employer health 5.1% + 0.115% = 5.215%
+        // FY2026 with childcare support contribution (May 2026 paycheck)
+        // Employee health 3.3% + contribution 0.115% = 3.415%, employer health 5.1% + 0.115% = 5.215%
         { effectiveFrom: { year: 2026, month: 4 }, rates: {
           source: 'https://www.shoken-kenpo.or.jp/member/outline/files/hokenryou_getsugaku_2026.pdf',
           employeeHealthInsuranceRate: 0.03415, // 3.415%

@@ -14,7 +14,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Updated
 
-- Updated Employee Health Insurance rates for FY2026 for all supported providers, including the new Child/Childcare Support Levy (子ども・子育て支援金). Rates are now applied per-month, so premiums are calculated accurately when rates change mid-year.
+- Updated Employee Health Insurance rates for FY2026 for all supported providers, including the new Childcare Support Contribution (子ども・子育て支援金). Rates are now applied per-month, so premiums are calculated accurately when rates change mid-year.
 
 ## 2026-03-29
 
