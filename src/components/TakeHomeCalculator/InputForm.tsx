@@ -819,7 +819,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   <FormControl fullWidth>
                     <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
                       Health Insurance
-                      <SimpleTooltip>Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率.</SimpleTooltip>
+                      <SimpleTooltip>Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率 and the Childcare Support Contribution (子ども・子育て支援金率).</SimpleTooltip>
                     </Typography>
                     <SpinnerNumberField
                       id="customHealthInsuranceRate"
