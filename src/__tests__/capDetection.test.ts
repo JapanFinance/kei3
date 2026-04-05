@@ -3,6 +3,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { detectCaps } from '../utils/capDetection';
+import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 import type { TakeHomeResults, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../utils/healthInsuranceCalculator';
@@ -12,7 +13,7 @@ const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults
     annualIncome: 0,
     hasEmploymentIncome: true,
     nationalIncomeTax: 0,
-    residenceTax: {} as unknown as ResidenceTaxDetails, // Mock complex object if needed
+    residenceTax: {} as unknown as ResidenceTaxDetails,
     healthInsurance: 0,
     pensionPayments: 0,
     takeHomeIncome: 0,
@@ -26,9 +27,11 @@ const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults
     ...overrides,
 } as TakeHomeResults);
 
-// Pin to June 2025 so NHI cap lookups use FY2025 params deterministically.
-beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) });
-afterAll(() => { vi.useRealTimers() });
+// Pin to June 2026 so NHI cap lookups use FY2026 params deterministically.
+beforeAll(() => { vi.useFakeTimers({ now: new Date(2026, 5, 1) }); });
+afterAll(() => { vi.useRealTimers(); });
+
+// Tokyo-Chiyoda FY2026 caps: medical 670,000, support 260,000, LTC 170,000, child support 30,000
 
 describe('detectCaps', () => {
     it('should explicitly fail or return false positive currently when high business income is present', () => {
@@ -64,40 +67,20 @@ describe('detectCaps', () => {
         expect(caps.pensionCapped).toBe(true);
     });
 
-    it('should correctly handle NHI caps (capped case)', () => {
-        // NHI caps rely on the calculated portions in the result matching the params
-        // For Tokyo-Chiyoda: Medical Cap 660,000, Support Cap 260,000
-
-        const results = createMockResults({
-            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-            region: 'Tokyo-Chiyoda',
-            nhiMedicalPortion: 660000,
-            nhiElderlySupportPortion: 260000,
-            nhiLongTermCarePortion: 170000, // Optional, but let's set it
-            isSubjectToLongTermCarePremium: true,
-        });
-
-        const caps = detectCaps(results);
-
-        expect(caps.healthInsuranceCapped).toBe(true);
-        // NHI Pension is never "capped" in the same sense (fixed rate), or checkPensionCap returns false
-        expect(caps.pensionCapped).toBe(false);
-        expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(true);
-    });
-
     it('should correctly handle NHI caps (uncapped case)', () => {
         const results = createMockResults({
             healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
             region: 'Tokyo-Chiyoda',
-            nhiMedicalPortion: 500000, // Below 660,000
-            nhiElderlySupportPortion: 200000, // Below 260,000
+            nhiMedicalPortion: 500000,
+            nhiElderlySupportPortion: 200000,
+            nhiChildSupportPortion: 10000,
             isSubjectToLongTermCarePremium: false,
         });
 
         const caps = detectCaps(results);
 
         expect(caps.healthInsuranceCapped).toBe(false);
+        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
         expect(caps.pensionCapped).toBe(false);
     });
 
@@ -158,5 +141,84 @@ describe('detectCaps', () => {
         const caps = detectCaps(results, breakdown);
 
         expect(caps.healthInsuranceBonusCapped).toBe(false);
+    });
+});
+
+describe('NHI cap detection with real calculator output', () => {
+    // Integration tests: feed real income into the calculator, then verify detectCaps
+    // correctly identifies capped portions. This catches drift between calculator and
+    // cap detection that unit tests with hardcoded values would miss.
+
+    it('detects all NHI portion caps at very high income (Chiyoda, no LTC)', () => {
+        const region = 'Tokyo-Chiyoda';
+        const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+            50_000_000, false, region, 2026
+        );
+
+        const results = createMockResults({
+            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+            region,
+            nhiMedicalPortion: breakdown.medicalPortion,
+            nhiElderlySupportPortion: breakdown.elderlySupportPortion,
+            nhiLongTermCarePortion: breakdown.longTermCarePortion,
+            nhiChildSupportPortion: breakdown.childSupportPortion,
+            isSubjectToLongTermCarePremium: false,
+        });
+
+        const caps = detectCaps(results);
+
+        expect(caps.healthInsuranceCapped).toBe(true);
+        expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
+        expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(true);
+        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(true);
+    });
+
+    it('detects all NHI portion caps at very high income (Chiyoda, with LTC)', () => {
+        const region = 'Tokyo-Chiyoda';
+        const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+            50_000_000, true, region, 2026
+        );
+
+        const results = createMockResults({
+            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+            region,
+            nhiMedicalPortion: breakdown.medicalPortion,
+            nhiElderlySupportPortion: breakdown.elderlySupportPortion,
+            nhiLongTermCarePortion: breakdown.longTermCarePortion,
+            nhiChildSupportPortion: breakdown.childSupportPortion,
+            isSubjectToLongTermCarePremium: true,
+        });
+
+        const caps = detectCaps(results);
+
+        expect(caps.healthInsuranceCapped).toBe(true);
+        expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
+        expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(true);
+        expect(caps.healthInsuranceCapDetails?.ltcCapped).toBe(true);
+        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(true);
+    });
+
+    it('does not flag caps at moderate income (Chiyoda)', () => {
+        const region = 'Tokyo-Chiyoda';
+        const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+            5_000_000, false, region, 2026
+        );
+
+        const results = createMockResults({
+            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+            region,
+            nhiMedicalPortion: breakdown.medicalPortion,
+            nhiElderlySupportPortion: breakdown.elderlySupportPortion,
+            nhiLongTermCarePortion: breakdown.longTermCarePortion,
+            nhiChildSupportPortion: breakdown.childSupportPortion,
+            isSubjectToLongTermCarePremium: false,
+        });
+
+        const caps = detectCaps(results);
+
+        expect(caps.healthInsuranceCapped).toBe(false);
+        expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(false);
+        expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(false);
+        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
     });
 });

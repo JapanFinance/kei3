@@ -3,7 +3,7 @@
 
 import type { TakeHomeResults } from '../types/tax';
 import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
-import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
+import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import { generateHealthInsurancePremiumTable, generatePremiumTableFromRates } from '../data/employeesHealthInsurance/providerRates';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
@@ -17,6 +17,7 @@ export interface CapStatus {
     medicalCapped?: boolean;
     supportCapped?: boolean;
     ltcCapped?: boolean;
+    childSupportCapped?: boolean;
   } | undefined;
 }
 
@@ -86,6 +87,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
     medicalCapped?: boolean;
     supportCapped?: boolean;
     ltcCapped?: boolean;
+    childSupportCapped?: boolean;
   };
 } {
   if (results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
@@ -99,23 +101,60 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
       return { capped: false };
     }
 
-    // Use the pre-calculated results to check against caps
-    const nhiParams = getNationalHealthInsuranceParams(results.region);
-    if (!nhiParams) {
+    // Look up rates for both fiscal years that overlap this calendar year.
+    // A portion is truly "capped" (won't increase with more income) only when
+    // it's at the cap in *both* fiscal years. If only one FY is capped, the
+    // other FY's portion could still grow.
+    const year = new Date().getFullYear();
+    const prevFYParams = getNHIParamsForMonth(results.region, year, 0);  // Jan → previous FY
+    const currFYParams = getNHIParamsForMonth(results.region, year, 3);  // Apr → current FY
+    if (!currFYParams) {
       return { capped: false };
     }
 
-    const medicalCapped = results.nhiMedicalPortion === nhiParams.medicalCap;
-    const supportCapped = results.nhiElderlySupportPortion === nhiParams.supportCap;
+    // Helper: check if a portion is capped in both FYs.
+    // For portions that didn't exist in the previous FY (e.g., child support),
+    // the prev FY contribution is always 0 and trivially "capped".
+    const isCappedInBothFYs = (
+      portionAmount: number,
+      prevCap: number | undefined,
+      currCap: number
+    ): boolean => {
+      if (!prevFYParams || prevFYParams === currFYParams) {
+        // No blending — single FY, just compare against current cap
+        return portionAmount === currCap;
+      }
+      // Blended: compute what the blended amount would be if both FYs are at their caps
+      const prevCapValue = prevCap ?? 0; // undefined means portion didn't exist → 0
+      const blendedCap = Math.round(prevCapValue * 3 / 10 + currCap * 7 / 10);
+      return portionAmount >= blendedCap;
+    };
+
+    const medicalCapped = isCappedInBothFYs(
+      results.nhiMedicalPortion, prevFYParams?.medicalCap, currFYParams.medicalCap
+    );
+    const supportCapped = isCappedInBothFYs(
+      results.nhiElderlySupportPortion, prevFYParams?.supportCap, currFYParams.supportCap
+    );
 
     let ltcCapped = false;
     if (results.nhiLongTermCarePortion !== undefined &&
       results.isSubjectToLongTermCarePremium &&
-      nhiParams.ltcCapForEligible) {
-      ltcCapped = results.nhiLongTermCarePortion === nhiParams.ltcCapForEligible;
+      currFYParams.ltcCapForEligible) {
+      ltcCapped = isCappedInBothFYs(
+        results.nhiLongTermCarePortion, prevFYParams?.ltcCapForEligible, currFYParams.ltcCapForEligible
+      );
     }
 
-    const anyCapped = medicalCapped || supportCapped || ltcCapped;
+    let childSupportCapped = false;
+    if (results.nhiChildSupportPortion !== undefined &&
+      currFYParams.childSupportCap) {
+      childSupportCapped = isCappedInBothFYs(
+        results.nhiChildSupportPortion, prevFYParams?.childSupportCap, currFYParams.childSupportCap
+      );
+    }
+
+    const anyCapped = medicalCapped || supportCapped || ltcCapped || childSupportCapped;
 
     return {
       capped: anyCapped,
@@ -123,6 +162,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
         medicalCapped,
         supportCapped,
         ltcCapped,
+        childSupportCapped,
       },
     };
   } else {

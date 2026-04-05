@@ -402,9 +402,14 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               <ResultRow
                 label="Child Support Portion"
                 labelSuffix={
-                  <DetailedTooltip title="👶 Child Support Portion (子ども・子育て支援納付金分)">
-                    <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />
-                  </DetailedTooltip>
+                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DetailedTooltip title="👶 Child Support Portion (子ども・子育て支援納付金分)">
+                      <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />
+                    </DetailedTooltip>
+                    {capStatus.healthInsuranceCapDetails?.childSupportCapped && (
+                      <CapIndicator capStatus={capStatus} iconOnly contributionType="child support portion" />
+                    )}
+                  </Box>
                 }
                 value={formatJPY(results.nhiChildSupportPortion)}
                 type="indented"

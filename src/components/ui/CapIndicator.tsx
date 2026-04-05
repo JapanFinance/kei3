@@ -13,7 +13,7 @@ import { ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP } from '../../utils/healthI
 interface CapIndicatorProps {
   capStatus: CapStatus;
   iconOnly?: boolean;
-  contributionType: 'pension' | 'health insurance' | 'medical portion' | 'elderly support portion' | 'long-term care portion' | 'health insurance bonus';
+  contributionType: 'pension' | 'health insurance' | 'medical portion' | 'elderly support portion' | 'long-term care portion' | 'child support portion' | 'health insurance bonus';
 }
 
 /**
@@ -36,6 +36,8 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({ capStatus, iconOnly 
     isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.supportCapped;
   } else if (contributionType === 'long-term care portion') {
     isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.ltcCapped;
+  } else if (contributionType === 'child support portion') {
+    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.childSupportCapped;
   } else if (contributionType === 'health insurance bonus') {
     isIndicatorActive = !!capStatus.healthInsuranceBonusCapped;
   }
