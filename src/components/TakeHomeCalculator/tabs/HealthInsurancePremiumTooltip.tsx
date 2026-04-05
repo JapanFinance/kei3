@@ -306,7 +306,6 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
 };
 
 interface HealthInsurancePremiumTooltipProps {
-  results: TakeHomeResults;
   inputs: TakeHomeInputs;
   standardMonthlyRemuneration: number;
 }

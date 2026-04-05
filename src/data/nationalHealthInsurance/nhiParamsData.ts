@@ -734,18 +734,6 @@ export function getNHIParamsForMonth(
 }
 
 /**
- * Retrieves National Health Insurance parameters for a given region using the current date.
- * Convenience wrapper around getNHIParamsForMonth.
- *
- * @param region A string identifying the region/municipality (e.g., "Tokyo", "Osaka").
- * @returns The NHI parameters for the region, or undefined if not found.
- */
-export function getNationalHealthInsuranceParams(region: string): NationalHealthInsuranceRegionParams | undefined {
-  const now = new Date();
-  return getNHIParamsForMonth(region, now.getFullYear(), now.getMonth());
-}
-
-/**
  * Exported list of available region keys for National Health Insurance.
  */
 export const NATIONAL_HEALTH_INSURANCE_REGIONS = Object.keys(allNHIRegions);
