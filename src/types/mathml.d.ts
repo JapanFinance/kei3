@@ -12,7 +12,7 @@ declare module 'react/jsx-runtime' {
             mo: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
             mi: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
             msqrt: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
-            frac: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+            mfrac: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
         }
     }
 }
