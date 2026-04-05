@@ -27,7 +27,8 @@ export interface CapStatus {
  */
 export function detectCaps(
   results: TakeHomeResults,
-  healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[]
+  healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[],
+  year: number = new Date().getFullYear()
 ): CapStatus {
   // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
   // instead of total annual income which might include business/misc income or bonuses.
@@ -37,7 +38,7 @@ export function detectCaps(
   // Check pension cap
   const pensionCapped = checkPensionCap(isNationalPension, monthlyRemuneration);
   // Check health insurance cap
-  const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration);
+  const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration, year);
 
   // Check health insurance bonus cap
   let healthInsuranceBonusCapped = false;
@@ -81,7 +82,7 @@ function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number
  * @param monthlyRemuneration - The monthly remuneration, as needed for EHI/EPI calculations
  * @returns An object containing the cap status and details
  */
-function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: number): {
+function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: number, year: number = new Date().getFullYear()): {
   capped: boolean;
   details?: {
     medicalCapped?: boolean;
@@ -105,7 +106,6 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
     // A portion is truly "capped" (won't increase with more income) only when
     // it's at the cap in *both* fiscal years. If only one FY is capped, the
     // other FY's portion could still grow.
-    const year = new Date().getFullYear();
     const prevFYParams = getNHIParamsForMonth(results.region, year, 0);  // Jan → previous FY
     const currFYParams = getNHIParamsForMonth(results.region, year, 3);  // Apr → current FY
     if (!currFYParams) {

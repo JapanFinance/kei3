@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { detectCaps } from '../utils/capDetection';
 import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 import type { TakeHomeResults, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
@@ -26,10 +26,6 @@ const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults
     salaryIncome: 0,
     ...overrides,
 } as TakeHomeResults);
-
-// Pin to June 2026 so NHI cap lookups use FY2026 params deterministically.
-beforeAll(() => { vi.useFakeTimers({ now: new Date(2026, 5, 1) }); });
-afterAll(() => { vi.useRealTimers(); });
 
 // Tokyo-Chiyoda FY2026 caps: medical 670,000, support 260,000, LTC 170,000, child support 30,000
 
@@ -77,7 +73,7 @@ describe('detectCaps', () => {
             isSubjectToLongTermCarePremium: false,
         });
 
-        const caps = detectCaps(results);
+        const caps = detectCaps(results, undefined, 2026);
 
         expect(caps.healthInsuranceCapped).toBe(false);
         expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
@@ -165,7 +161,7 @@ describe('NHI cap detection with real calculator output', () => {
             isSubjectToLongTermCarePremium: false,
         });
 
-        const caps = detectCaps(results);
+        const caps = detectCaps(results, undefined, 2026);
 
         expect(caps.healthInsuranceCapped).toBe(true);
         expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
@@ -189,7 +185,7 @@ describe('NHI cap detection with real calculator output', () => {
             isSubjectToLongTermCarePremium: true,
         });
 
-        const caps = detectCaps(results);
+        const caps = detectCaps(results, undefined, 2026);
 
         expect(caps.healthInsuranceCapped).toBe(true);
         expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
@@ -214,7 +210,7 @@ describe('NHI cap detection with real calculator output', () => {
             isSubjectToLongTermCarePremium: false,
         });
 
-        const caps = detectCaps(results);
+        const caps = detectCaps(results, undefined, 2026);
 
         expect(caps.healthInsuranceCapped).toBe(false);
         expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(false);
