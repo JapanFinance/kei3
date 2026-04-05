@@ -473,35 +473,27 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isNationalHealthInsurance ? "National Pension" : "Employees' Pension"}
-            {isNationalHealthInsurance && (
-              <DetailedTooltip
-                title="Pension Contribution"
-                icon={SIMPLE_TOOLTIP_ICON}
-              >
-                <NationalPensionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} />
-              </DetailedTooltip>
-            )}
           </Typography>
         </Box>
-        <ResultRow
-          label="Monthly Contribution"
-          labelSuffix={
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-              {!isNationalHealthInsurance && (
+        {!isNationalHealthInsurance && (
+          <ResultRow
+            label="Monthly Contribution"
+            labelSuffix={
+              <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                 <DetailedTooltip
                   title="Pension Contribution"
                 >
                   <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
                 </DetailedTooltip>
-              )}
-              {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                <CapIndicator capStatus={capStatus} contributionType="pension" iconOnly={isMobile} />
-              )}
-            </Box>
-          }
-          value={formatJPY(Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12))}
-          type="indented"
-        />
+                {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                  <CapIndicator capStatus={capStatus} contributionType="pension" iconOnly={isMobile} />
+                )}
+              </Box>
+            }
+            value={formatJPY(Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12))}
+            type="indented"
+          />
+        )}
         {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
           <ResultRow
             label="Bonus Contribution"
@@ -522,6 +514,12 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         )}
         <ResultRow
           label="Annual Contribution"
+          labelSuffix={isNationalHealthInsurance ? (
+            <DetailedTooltip
+              title="Pension Contribution">
+              <NationalPensionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} />
+            </DetailedTooltip>
+          ) : undefined}
           value={formatJPY(results.pensionPayments)}
           type="subtotal"
         />
