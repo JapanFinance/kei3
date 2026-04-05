@@ -6,27 +6,320 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
-import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
-import { getNationalHealthInsuranceParams } from '../../../data/nationalHealthInsurance/nhiParamsData';
+import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID, type NationalHealthInsuranceRegionParams } from '../../../types/healthInsurance';
+import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import { EHI_SMR_BRACKETS, type StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
-interface HealthInsurancePremiumTooltipProps {
+export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
+
+const PORTION_CONFIG: Record<NHIPortionType, {
+  label: string;
+  rateKey: keyof NationalHealthInsuranceRegionParams;
+  perCapitaKey: keyof NationalHealthInsuranceRegionParams;
+  householdFlatKey: keyof NationalHealthInsuranceRegionParams;
+  capKey: keyof NationalHealthInsuranceRegionParams;
+}> = {
+  medical: {
+    label: 'Medical Portion',
+    rateKey: 'medicalRate',
+    perCapitaKey: 'medicalPerCapita',
+    householdFlatKey: 'medicalHouseholdFlat',
+    capKey: 'medicalCap',
+  },
+  elderlySupport: {
+    label: 'Elderly Support Portion',
+    rateKey: 'supportRate',
+    perCapitaKey: 'supportPerCapita',
+    householdFlatKey: 'supportHouseholdFlat',
+    capKey: 'supportCap',
+  },
+  longTermCare: {
+    label: 'Long-Term Care Portion',
+    rateKey: 'ltcRateForEligible',
+    perCapitaKey: 'ltcPerCapitaForEligible',
+    householdFlatKey: 'ltcHouseholdFlatForEligible',
+    capKey: 'ltcCapForEligible',
+  },
+  childSupport: {
+    label: 'Child Support Portion',
+    rateKey: 'childSupportRate',
+    perCapitaKey: 'childSupportPerCapita',
+    householdFlatKey: 'childSupportHouseholdFlat',
+    capKey: 'childSupportCap',
+  },
+};
+
+function calculatePortionForFY(
+  nhiTaxableIncome: number,
+  params: NationalHealthInsuranceRegionParams,
+  portion: NHIPortionType
+): { incomeBasedAmount: number; perCapita: number; householdFlat: number; uncapped: number; cap: number; final: number } {
+  const config = PORTION_CONFIG[portion];
+  const rate = params[config.rateKey] as number | undefined;
+  const perCapita = (params[config.perCapitaKey] as number | undefined) ?? 0;
+  const householdFlat = (params[config.householdFlatKey] as number | undefined) ?? 0;
+  const cap = params[config.capKey] as number | undefined;
+
+  if (!rate || !cap) {
+    return { incomeBasedAmount: 0, perCapita: 0, householdFlat: 0, uncapped: 0, cap: 0, final: 0 };
+  }
+
+  const incomeBasedAmount = nhiTaxableIncome * rate;
+  const uncapped = incomeBasedAmount + perCapita + householdFlat;
+  return { incomeBasedAmount, perCapita, householdFlat, uncapped, cap, final: Math.min(uncapped, cap) };
+}
+
+interface NHIPortionTooltipProps {
+  portion: NHIPortionType;
   results: TakeHomeResults;
+  inputs: TakeHomeInputs;
+}
+
+const PortionBreakdown: React.FC<{
+  label: string;
+  rate: number;
+  nhiTaxableIncome: number;
+  calc: ReturnType<typeof calculatePortionForFY>;
+}> = ({ label, rate, nhiTaxableIncome, calc }) => (
+  <Box sx={{ mb: 0.5 }}>
+    {label && (
+      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.3 }}>
+        {label}
+      </Typography>
+    )}
+    <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+      Income-based (所得割):{' '}
+      <math><mrow>
+        <mn><strong>{formatPercent(rate)}</strong></mn>
+        <mo>×</mo>
+        <mn>{formatJPY(nhiTaxableIncome)}</mn>
+        <mo>=</mo>
+        <mn>{formatJPY(calc.incomeBasedAmount)}</mn>
+      </mrow></math>
+    </Typography>
+    <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+      Per-capita (均等割): {formatJPY(calc.perCapita)}
+    </Typography>
+    {calc.householdFlat > 0 && (
+      <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+        Household flat rate (平等割): {formatJPY(calc.householdFlat)}
+      </Typography>
+    )}
+    <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
+      Subtotal: {formatJPY(calc.uncapped)} (cap: {formatJPY(calc.cap)})
+    </Typography>
+    <Typography variant="body2" sx={{
+      fontSize: '0.85rem',
+      fontWeight: 600,
+      color: calc.uncapped > calc.cap ? 'warning.main' : 'success.main',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 0.5
+    }}>
+      = <strong>{formatJPY(calc.final)}</strong>
+      {calc.uncapped > calc.cap && (
+        <Box component="span" sx={{
+          px: 0.5, py: 0.2, borderRadius: 0.5,
+          bgcolor: 'warning.light', fontSize: '0.75rem', fontWeight: 600, color: 'warning.contrastText'
+        }}>
+          🔒 CAPPED
+        </Box>
+      )}
+    </Typography>
+  </Box>
+);
+
+export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, results, inputs }) => {
+  const region = inputs.region;
+  const year = new Date().getFullYear();
+  const prevFYData = getNHIParamsForMonth(region, year, 0);  // Jan → previous FY
+  const currFYData = getNHIParamsForMonth(region, year, 3);  // Apr → current FY
+
+  if (!currFYData) {
+    return (
+      <Box>
+        <Typography variant="body2">Rate data not available for {region}.</Typography>
+      </Box>
+    );
+  }
+
+  const config = PORTION_CONFIG[portion];
+  const nhiTaxableIncome = Math.max(0, results.totalNetIncome - currFYData.nhiStandardDeduction);
+
+  // Check if this portion has rates in the current FY data
+  const currRate = currFYData[config.rateKey] as number | undefined;
+  if (!currRate) {
+    return (
+      <Box>
+        <Typography variant="body2">{config.label} data not available.</Typography>
+      </Box>
+    );
+  }
+
+  // Determine if rates are blended across fiscal years for this portion
+  const prevRate = prevFYData ? prevFYData[config.rateKey] as number | undefined : undefined;
+  const ratesBlended = prevFYData && prevFYData !== currFYData && (
+    // Portion is newly introduced (exists in current FY but not previous)
+    (!prevRate && currRate) ||
+    // Both FYs have the portion but parameters differ
+    (prevRate && (
+      prevRate !== currRate ||
+      (prevFYData[config.perCapitaKey] as number | undefined) !== (currFYData[config.perCapitaKey] as number | undefined) ||
+      (prevFYData[config.capKey] as number | undefined) !== (currFYData[config.capKey] as number | undefined) ||
+      (prevFYData[config.householdFlatKey] as number | undefined) !== (currFYData[config.householdFlatKey] as number | undefined)
+    ))
+  );
+
+  // For blended calculation, we need NHI taxable income from each FY's deduction
+  // (in practice, the deduction is usually the same, but use each FY's value for correctness)
+  const prevNhiTaxableIncome = prevFYData
+    ? Math.max(0, results.totalNetIncome - prevFYData.nhiStandardDeduction)
+    : nhiTaxableIncome;
+
+  const currCalc = calculatePortionForFY(nhiTaxableIncome, currFYData, portion);
+
+  // The tooltip's displayed total should match the authoritative value from the calculator.
+  const resultValueByPortion: Record<NHIPortionType, number | undefined> = {
+    medical: results.nhiMedicalPortion,
+    elderlySupport: results.nhiElderlySupportPortion,
+    longTermCare: results.nhiLongTermCarePortion,
+    childSupport: results.nhiChildSupportPortion,
+  };
+
+  if (ratesBlended) {
+    const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData!, portion);
+    const blendedAmount = Math.round(prevCalc.final * 3 / 10 + currCalc.final * 7 / 10);
+    const prevFYLabel = `FY${year - 1}`;
+    const currFYLabel = `FY${year}`;
+
+    if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+      const expected = resultValueByPortion[portion];
+      if (expected !== undefined && Math.abs(blendedAmount - expected) > 1) {
+        throw new Error(
+          `NHIPortionTooltip: ${config.label} blended total (${blendedAmount}) does not match calculator result (${expected}). The tooltip and calculator blending logic may have diverged.`
+        );
+      }
+    }
+
+    return (
+      <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 440 } }}>
+        <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
+          NHI Calculation Base: {formatJPY(nhiTaxableIncome)}
+        </Typography>
+
+        <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+          {prevRate ? (
+            <PortionBreakdown
+              label={`${prevFYLabel} (Jan-Mar, 3\u204410 of annual):`}
+              rate={prevRate}
+              nhiTaxableIncome={prevNhiTaxableIncome}
+              calc={prevCalc}
+            />
+          ) : (
+            <Box>
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.3 }}>
+                {prevFYLabel} (Jan-Mar, 3⁄10 of annual):
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'text.secondary' }}>
+                Not applicable — this portion was introduced in {currFYLabel}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+
+        <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+          <PortionBreakdown
+            label={`${currFYLabel} (Jun-Dec, 7\u204410 of annual):`}
+            rate={currRate}
+            nhiTaxableIncome={nhiTaxableIncome}
+            calc={currCalc}
+          />
+        </Box>
+
+        <Box sx={{ p: 1, bgcolor: 'primary.50', borderRadius: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+            Total:{' '}
+            <math><mrow>
+              <mn>{formatJPY(prevCalc.final)}</mn>
+              <mo>×</mo>
+              <mfrac><mn>3</mn><mn>10</mn></mfrac>
+              <mo>+</mo>
+              <mn>{formatJPY(currCalc.final)}</mn>
+              <mo>×</mo>
+              <mfrac><mn>7</mn><mn>10</mn></mfrac>
+              <mo>=</mo>
+              <mn><strong>{formatJPY(blendedAmount)}</strong></mn>
+            </mrow></math>
+          </Typography>
+        </Box>
+
+        {currFYData.source && (
+          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
+            Calculation parameters from{' '}
+            <a href={currFYData.source} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+              Official NHI Premium Information
+            </a>
+          </Typography>
+        )}
+      </Box>
+    );
+  }
+
+  // Non-blended: single FY calculation
+  if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+    const expected = resultValueByPortion[portion];
+    const tooltipTotal = Math.round(currCalc.final);
+    if (expected !== undefined && Math.abs(tooltipTotal - expected) > 1) {
+      throw new Error(
+        `NHIPortionTooltip: ${config.label} total (${tooltipTotal}) does not match calculator result (${expected}). The tooltip and calculator logic may have diverged.`
+      );
+    }
+  }
+
+  return (
+    <Box sx={{ minWidth: { xs: 0, sm: 280 }, maxWidth: { xs: '100vw', sm: 400 } }}>
+      <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
+        NHI Calculation Base: {formatJPY(nhiTaxableIncome)}
+      </Typography>
+
+      <PortionBreakdown
+        label=""
+        rate={currRate}
+        nhiTaxableIncome={nhiTaxableIncome}
+        calc={currCalc}
+      />
+
+      {currFYData.source && (
+        <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
+          Calculation parameters from{' '}
+          <a href={currFYData.source} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+            Official NHI Premium Information
+          </a>
+        </Typography>
+      )}
+    </Box>
+  );
+};
+
+interface HealthInsurancePremiumTooltipProps {
   inputs: TakeHomeInputs;
   standardMonthlyRemuneration: number;
 }
 
-const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps> = ({ results, inputs, standardMonthlyRemuneration }) => {
+const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps> = ({ inputs, standardMonthlyRemuneration }) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
 
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
-    // National Health Insurance - show region parameters
-    const regionData = getNationalHealthInsuranceParams(region);
+    // National Health Insurance - overview tooltip on the heading
+    const year = new Date().getFullYear();
+    const prevFYData = getNHIParamsForMonth(region, year, 0);  // Jan → previous FY
+    const currFYData = getNHIParamsForMonth(region, year, 3);  // Apr → current FY
+    const regionData = currFYData;
     if (!regionData) {
       return (
         <Box>
@@ -37,51 +330,24 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
             Premium calculation parameters for {region} are not available in the current data.
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 1 }}>
-            💡 National Health Insurance premiums vary by municipality. Please check with your local city/ward office for specific rates.
+            National Health Insurance premiums vary by municipality. Please check with your local city/ward office for specific rates.
           </Typography>
         </Box>
       );
     }
 
-    // Return National Health Insurance parameters display
-    const includeNursingCareInsurance = inputs.isSubjectToLongTermCarePremium;
-
-    // Calculate step-by-step breakdown like the actual calculation
-    // Note: NHI premiums are based on previous year's income, but we're using current year as assumption
-    const nhiTaxableIncome = Math.max(0, results.totalNetIncome - regionData.nhiStandardDeduction);
-
-    // 1. Medical Portion (医療分)
-    const incomeBasedMedical = nhiTaxableIncome * regionData.medicalRate;
-    const perCapitaMedical = regionData.medicalPerCapita;
-    const householdFlatMedical = regionData.medicalHouseholdFlat || 0;
-    const uncappedMedical = incomeBasedMedical + perCapitaMedical + householdFlatMedical;
-    const totalMedicalPremium = Math.min(uncappedMedical, regionData.medicalCap);
-
-    // 2. Elderly Support Portion (後期高齢者支援金分)
-    const incomeBasedSupport = nhiTaxableIncome * regionData.supportRate;
-    const perCapitaSupport = regionData.supportPerCapita;
-    const householdFlatSupport = regionData.supportHouseholdFlat || 0;
-    const uncappedSupport = incomeBasedSupport + perCapitaSupport + householdFlatSupport;
-    const totalSupportPremium = Math.min(uncappedSupport, regionData.supportCap);
-
-    // 3. Long-Term Care Portion (介護納付金分) - only for those aged 40-64
-    let incomeBasedLtc = 0;
-    let perCapitaLtc = 0;
-    let householdFlatLtc = 0;
-    let uncappedLtc = 0;
-    let totalLtcPremium = 0;
-    if (includeNursingCareInsurance && regionData.ltcRateForEligible && regionData.ltcPerCapitaForEligible && regionData.ltcCapForEligible) {
-      incomeBasedLtc = nhiTaxableIncome * regionData.ltcRateForEligible;
-      perCapitaLtc = regionData.ltcPerCapitaForEligible;
-      householdFlatLtc = regionData.ltcHouseholdFlatForEligible || 0;
-      uncappedLtc = incomeBasedLtc + perCapitaLtc + householdFlatLtc;
-      totalLtcPremium = Math.min(uncappedLtc, regionData.ltcCapForEligible);
-    }
-
-    const totalCalculatedPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium;
+    const ratesBlended = prevFYData && prevFYData !== currFYData && (
+      prevFYData.medicalRate !== regionData.medicalRate ||
+      prevFYData.supportRate !== regionData.supportRate ||
+      prevFYData.medicalCap !== regionData.medicalCap ||
+      prevFYData.supportCap !== regionData.supportCap ||
+      prevFYData.ltcRateForEligible !== regionData.ltcRateForEligible ||
+      prevFYData.childSupportRate !== regionData.childSupportRate ||
+      prevFYData.childSupportCap !== regionData.childSupportCap
+    );
 
     return (
-      <Box sx={{ minWidth: { xs: 0, sm: 400 }, maxWidth: { xs: '100vw', sm: 460 } }}>
+      <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
           National Health Insurance - {regionData.regionName}
         </Typography>
@@ -91,169 +357,17 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           These calculations assume your income is the same as the previous year.
         </Typography>
 
-        {/* Medical Portion */}
-        <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.9rem', color: 'primary.main' }}>
-            🏥 Medical Portion (医療分)
+        {ratesBlended && (
+          <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem', fontStyle: 'italic', color: 'info.main' }}>
+            NHI rates change in April.
+            Since premiums are paid in 10 installments (Jun-Mar), the calendar year straddles two fiscal years: 3/10 from Jan-Mar (previous FY) + 7/10 from Jun-Dec (current FY).
+            The premium paid in a calendar year is a combination of both fiscal years.
+            See the tooltip on each portion for details.
           </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Income-based (所得割): <strong>{(regionData.medicalRate * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedMedical)}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Per-capita (均等割): {formatJPY(perCapitaMedical)}
-          </Typography>
-          {householdFlatMedical > 0 && (
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Household flat rate (平等割): {formatJPY(householdFlatMedical)}
-            </Typography>
-          )}
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Subtotal: {formatJPY(uncappedMedical)}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Annual Cap: {formatJPY(regionData.medicalCap)}
-          </Typography>
-          <Typography variant="body2" sx={{
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            color: uncappedMedical > regionData.medicalCap ? 'warning.main' : 'success.main',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5
-          }}>
-            = Final: {formatJPY(totalMedicalPremium)}
-            {uncappedMedical > regionData.medicalCap && (
-              <Box component="span" sx={{
-                px: 0.5,
-                py: 0.2,
-                borderRadius: 0.5,
-                bgcolor: 'warning.light',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: 'warning.contrastText'
-              }}>
-                🔒 CAPPED
-              </Box>
-            )}
-          </Typography>
-        </Box>
-
-        {/* Support Portion */}
-        <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.9rem', color: 'primary.main' }}>
-            👥 Elderly Support Portion (後期高齢者支援金分)
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Income-based (所得割): <strong>{(regionData.supportRate * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedSupport)}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Per-capita (均等割): {formatJPY(perCapitaSupport)}
-          </Typography>
-          {householdFlatSupport > 0 && (
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Household flat rate (平等割): {formatJPY(householdFlatSupport)}
-            </Typography>
-          )}
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Subtotal: {formatJPY(uncappedSupport)}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-            Annual Cap: {formatJPY(regionData.supportCap)}
-          </Typography>
-          <Typography variant="body2" sx={{
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            color: uncappedSupport > regionData.supportCap ? 'warning.main' : 'success.main',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5
-          }}>
-            = Final: {formatJPY(totalSupportPremium)}
-            {uncappedSupport > regionData.supportCap && (
-              <Box component="span" sx={{
-                px: 0.5,
-                py: 0.2,
-                borderRadius: 0.5,
-                bgcolor: 'warning.light',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                color: 'warning.contrastText'
-              }}>
-                🔒 CAPPED
-              </Box>
-            )}
-          </Typography>
-        </Box>
-
-        {/* LTC Portion (if applicable) */}
-        {includeNursingCareInsurance && regionData.ltcRateForEligible && (
-          <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.9rem', color: 'primary.main' }}>
-              🏠 Long-Term Care Portion (介護分) - Ages 40-64
-            </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Income-based (所得割): <strong>{(regionData.ltcRateForEligible * 100).toFixed(2)}%</strong> × {formatJPY(nhiTaxableIncome)} = {formatJPY(incomeBasedLtc)}
-            </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Per-capita (均等割): {formatJPY(perCapitaLtc)}
-            </Typography>
-            {householdFlatLtc > 0 && (
-              <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-                Household flat rate (平等割): {formatJPY(householdFlatLtc)}
-              </Typography>
-            )}
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Subtotal: {formatJPY(uncappedLtc)}
-            </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-              Annual Cap: {formatJPY(regionData.ltcCapForEligible!)}
-            </Typography>
-            <Typography variant="body2" sx={{
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: uncappedLtc > regionData.ltcCapForEligible! ? 'warning.main' : 'success.main',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5
-            }}>
-              = Final: {formatJPY(totalLtcPremium)}
-              {uncappedLtc > regionData.ltcCapForEligible! && (
-                <Box component="span" sx={{
-                  px: 0.5,
-                  py: 0.2,
-                  borderRadius: 0.5,
-                  bgcolor: 'warning.light',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'warning.contrastText'
-                }}>
-                  🔒 CAPPED
-                </Box>
-              )}
-            </Typography>
-          </Box>
         )}
 
-        {!includeNursingCareInsurance && (
-          <Box sx={{ mb: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'action.hover' }}>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'text.secondary' }}>
-              🏠 Long-Term Care Portion: Not applicable (under 40 or over 64 years old)
-            </Typography>
-          </Box>
-        )}
-
-        {/* Verification note */}
-        {Math.abs(totalCalculatedPremium - results.healthInsurance) > 1 && (
-          <Box sx={{ mt: 1, p: 1, bgcolor: 'warning.light', borderRadius: 1 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'warning.contrastText' }}>
-              ⚠️ Note: Calculated total ({formatJPY(totalCalculatedPremium)}) differs from system calculation ({formatJPY(results.healthInsurance)}). This may be due to rounding or different calculation methods.
-            </Typography>
-          </Box>
-        )}
-
-        {/* Source link */}
         {regionData.source && (
-          <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
               <strong>Source:</strong>{' '}
               <a

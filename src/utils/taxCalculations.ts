@@ -481,6 +481,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         nhiMedicalPortion: nhiBreakdown?.medicalPortion,
         nhiElderlySupportPortion: nhiBreakdown?.elderlySupportPortion,
         nhiLongTermCarePortion: nhiBreakdown?.longTermCarePortion,
+        nhiChildSupportPortion: nhiBreakdown?.childSupportPortion,
         // Context needed for cap detection
         salaryIncome,
         healthInsuranceProvider: inputs.healthInsuranceProvider,

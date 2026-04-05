@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-04-05
+
+### Updated
+
+- Added FY2026 National Health Insurance rates for supported providers (except Tokyo's Chuo Ward and Nara prefecture), including the new Childcare Support Contribution (子ども・子育て支援納付金分). NHI rates are now applied considering that rates change mid calendar year. See the tooltips for details.
+
 ## 2026-04-02
 
 ### Updated

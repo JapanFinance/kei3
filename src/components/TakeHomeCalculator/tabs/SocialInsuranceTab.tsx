@@ -13,7 +13,7 @@ import { DetailedTooltip } from '../../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
-import HealthInsurancePremiumTooltip from './HealthInsurancePremiumTooltip';
+import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
@@ -342,8 +342,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance && (
               <DetailedTooltip
                 title="Health Insurance Premium"
+                icon={SIMPLE_TOOLTIP_ICON}
               >
-                <HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />
+                <HealthInsurancePremiumTooltip inputs={inputs} standardMonthlyRemuneration={healthSMR} />
               </DetailedTooltip>
             )}
           </Typography>
@@ -352,27 +353,65 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <>
             <ResultRow
               label="Medical Portion"
-              labelSuffix={capStatus.healthInsuranceCapDetails?.medicalCapped && (
-                <CapIndicator capStatus={capStatus} iconOnly contributionType="medical portion" />
-              )}
+              labelSuffix={
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <DetailedTooltip title="🏥 Medical Portion (医療分)">
+                    <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />
+                  </DetailedTooltip>
+                  {capStatus.healthInsuranceCapDetails?.medicalCapped && (
+                    <CapIndicator capStatus={capStatus} iconOnly contributionType="medical portion" />
+                  )}
+                </Box>
+              }
               value={formatJPY(results.nhiMedicalPortion ?? 0)}
               type="indented"
             />
             <ResultRow
               label="Elderly Support Portion"
-              labelSuffix={capStatus.healthInsuranceCapDetails?.supportCapped && (
-                <CapIndicator capStatus={capStatus} iconOnly contributionType="elderly support portion" />
-              )}
+              labelSuffix={
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <DetailedTooltip title="👥 Elderly Support Portion (後期高齢者支援金分)">
+                    <NHIPortionTooltip portion="elderlySupport" results={results} inputs={inputs} />
+                  </DetailedTooltip>
+                  {capStatus.healthInsuranceCapDetails?.supportCapped && (
+                    <CapIndicator capStatus={capStatus} iconOnly contributionType="elderly support portion" />
+                  )}
+                </Box>
+              }
               value={formatJPY(results.nhiElderlySupportPortion ?? 0)}
               type="indented"
             />
             {results.nhiLongTermCarePortion !== undefined && results.nhiLongTermCarePortion > 0 && (
               <ResultRow
                 label="Long-term Care Portion"
-                labelSuffix={capStatus.healthInsuranceCapDetails?.ltcCapped && (
-                  <CapIndicator capStatus={capStatus} iconOnly contributionType="long-term care portion" />
-                )}
+                labelSuffix={
+                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DetailedTooltip title="🏠 Long-Term Care Portion (介護分)">
+                      <NHIPortionTooltip portion="longTermCare" results={results} inputs={inputs} />
+                    </DetailedTooltip>
+                    {capStatus.healthInsuranceCapDetails?.ltcCapped && (
+                      <CapIndicator capStatus={capStatus} iconOnly contributionType="long-term care portion" />
+                    )}
+                  </Box>
+                }
                 value={formatJPY(results.nhiLongTermCarePortion)}
+                type="indented"
+              />
+            )}
+            {results.nhiChildSupportPortion !== undefined && results.nhiChildSupportPortion > 0 && (
+              <ResultRow
+                label="Child Support Portion"
+                labelSuffix={
+                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DetailedTooltip title="👶 Child Support Portion (子ども・子育て支援納付金分)">
+                      <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />
+                    </DetailedTooltip>
+                    {capStatus.healthInsuranceCapDetails?.childSupportCapped && (
+                      <CapIndicator capStatus={capStatus} iconOnly contributionType="child support portion" />
+                    )}
+                  </Box>
+                }
+                value={formatJPY(results.nhiChildSupportPortion)}
                 type="indented"
               />
             )}
@@ -391,7 +430,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   <DetailedTooltip
                     title="Health Insurance Premium"
                   >
-                    <HealthInsurancePremiumTooltip results={results} inputs={inputs} standardMonthlyRemuneration={healthSMR} />
+                    <HealthInsurancePremiumTooltip inputs={inputs} standardMonthlyRemuneration={healthSMR} />
                   </DetailedTooltip>
                   {capStatus.healthInsuranceCapped && (
                     <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />

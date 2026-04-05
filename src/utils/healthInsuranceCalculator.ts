@@ -3,7 +3,7 @@
 
 import type { ProviderRegion, NationalHealthInsuranceRegionParams, HealthInsuranceProviderId } from '../types/healthInsurance';
 import type { BonusIncomeStream } from '../types/tax';
-import { getNationalHealthInsuranceParams } from '../data/nationalHealthInsurance/nhiParamsData';
+import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { calculateMonthlyEmployeePremium, getRegionalRatesForMonth } from '../data/employeesHealthInsurance/providerRates';
@@ -16,6 +16,7 @@ export interface NationalHealthInsuranceBreakdown {
     medicalPortion: number;
     elderlySupportPortion: number;
     longTermCarePortion: number;
+    childSupportPortion: number;
     total: number;
 }
 
@@ -50,7 +51,7 @@ export function calculateHealthInsuranceBreakdown(
 
     if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
         // For NHI, bonuses are part of the total net income.
-        const total = calculateNationalHealthInsurancePremiumWithBreakdown(annualIncome, isSubjectToLongTermCarePremium, region).total;
+        const total = calculateNationalHealthInsurancePremiumWithBreakdown(annualIncome, isSubjectToLongTermCarePremium, region, year).total;
         return { total, bonusPortion: 0 };
     } else {
         const monthlyIncome = annualIncome / 12;
@@ -284,32 +285,94 @@ function calculateNationalHealthInsurancePremiumBreakdown(
         totalLtcPremium = Math.min(incomeBasedLtc + perCapitaLtc + householdFlatLtc, params.ltcCapForEligible);
     }
 
-    const totalPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium;
+    // 4. Child/Childcare Support Portion (子ども・子育て支援納付金分) - from FY2026
+    let totalChildSupportPremium = 0;
+    if (params.childSupportRate && params.childSupportCap) {
+        const incomeBasedChildSupport = nhiTaxableIncome * params.childSupportRate;
+        const perCapitaChildSupport = params.childSupportPerCapita || 0;
+        const householdFlatChildSupport = params.childSupportHouseholdFlat || 0;
+        totalChildSupportPremium = Math.min(incomeBasedChildSupport + perCapitaChildSupport + householdFlatChildSupport, params.childSupportCap);
+    }
+
+    const totalPremium = totalMedicalPremium + totalSupportPremium + totalLtcPremium + totalChildSupportPremium;
 
     return {
         medicalPortion: Math.round(totalMedicalPremium),
         elderlySupportPortion: Math.round(totalSupportPremium),
         longTermCarePortion: Math.round(totalLtcPremium),
+        childSupportPortion: Math.round(totalChildSupportPremium),
         total: Math.round(totalPremium)
     };
 }
 
 /**
- * Calculates National Health Insurance premium with breakdown.
- * @param annualIncome The annual income to base the premium on.
- * @param isSubjectToLongTermCarePremium Whether the person is required to pay long-term care insurance premiums (age 40-64).
- * @param region Optional region key (municipality identifier). Defaults to Tokyo.
- * @returns Object containing breakdown of Medical, Elderly Support, and LTC portions plus total.
+ * Calculates National Health Insurance premium with breakdown, blending two fiscal years.
+ *
+ * NHI premiums for non-pensioners (普通徴収) are paid in 10 equal installments from June
+ * through March. A calendar year therefore straddles two fiscal years:
+ *   - Jan, Feb, Mar: 3 remaining installments of the *previous* FY → 3/10 of that annual premium
+ *   - Apr, May: no NHI payments
+ *   - Jun–Dec: 7 of 10 installments of the *current* FY → 7/10 of that annual premium
+ *
+ * Formula: CY amount = FY(N-1) annual × 3/10 + FY(N) annual × 7/10
+ *
+ * When both fiscal years resolve to the same parameters (no rate change), this produces
+ * the same result as a single-FY calculation (3/10 + 7/10 = 1).
  */
 export function calculateNationalHealthInsurancePremiumWithBreakdown(
     annualIncome: number,
     isSubjectToLongTermCarePremium: boolean,
-    region?: string
+    region?: string,
+    year: number = new Date().getFullYear()
 ): NationalHealthInsuranceBreakdown {
-    const params = getNationalHealthInsuranceParams(region as string);
-    if (!params) {
+    const regionKey = region as string;
+
+    // Look up rates for the two fiscal years that overlap this calendar year:
+    // - January (month 0) resolves to the previous fiscal year's rates
+    // - April (month 3) resolves to the current fiscal year's rates
+    const prevFYParams = getNHIParamsForMonth(regionKey, year, 0);
+    const currFYParams = getNHIParamsForMonth(regionKey, year, 3);
+
+    if (!currFYParams) {
         console.error(`National Health Insurance parameters not found for region: ${region}. Returning zero breakdown.`);
-        return { medicalPortion: 0, elderlySupportPortion: 0, longTermCarePortion: 0, total: 0 };
+        return { medicalPortion: 0, elderlySupportPortion: 0, longTermCarePortion: 0, childSupportPortion: 0, total: 0 };
     }
-    return calculateNationalHealthInsurancePremiumBreakdown(annualIncome, isSubjectToLongTermCarePremium, params);
+
+    // If both fiscal years have the same params (no rate change), use single calculation
+    // to avoid rounding artifacts from the blending arithmetic.
+    if (!prevFYParams || prevFYParams === currFYParams) {
+        return calculateNationalHealthInsurancePremiumBreakdown(annualIncome, isSubjectToLongTermCarePremium, currFYParams);
+    }
+
+    // Check if the params are actually different by comparing key rate fields
+    const paramsMatch =
+        prevFYParams.medicalRate === currFYParams.medicalRate &&
+        prevFYParams.supportRate === currFYParams.supportRate &&
+        prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
+        prevFYParams.supportPerCapita === currFYParams.supportPerCapita &&
+        prevFYParams.medicalCap === currFYParams.medicalCap &&
+        prevFYParams.supportCap === currFYParams.supportCap &&
+        prevFYParams.ltcRateForEligible === currFYParams.ltcRateForEligible &&
+        prevFYParams.ltcPerCapitaForEligible === currFYParams.ltcPerCapitaForEligible &&
+        prevFYParams.ltcCapForEligible === currFYParams.ltcCapForEligible &&
+        prevFYParams.childSupportRate === currFYParams.childSupportRate &&
+        prevFYParams.childSupportPerCapita === currFYParams.childSupportPerCapita &&
+        prevFYParams.childSupportCap === currFYParams.childSupportCap;
+
+    if (paramsMatch) {
+        return calculateNationalHealthInsurancePremiumBreakdown(annualIncome, isSubjectToLongTermCarePremium, currFYParams);
+    }
+
+    // Calculate full annual breakdown for each fiscal year
+    const prevFY = calculateNationalHealthInsurancePremiumBreakdown(annualIncome, isSubjectToLongTermCarePremium, prevFYParams);
+    const currFY = calculateNationalHealthInsurancePremiumBreakdown(annualIncome, isSubjectToLongTermCarePremium, currFYParams);
+
+    // Blend: 3/10 of previous FY + 7/10 of current FY (10-installment payment schedule)
+    const medicalPortion = Math.round(prevFY.medicalPortion * 3 / 10 + currFY.medicalPortion * 7 / 10);
+    const elderlySupportPortion = Math.round(prevFY.elderlySupportPortion * 3 / 10 + currFY.elderlySupportPortion * 7 / 10);
+    const longTermCarePortion = Math.round(prevFY.longTermCarePortion * 3 / 10 + currFY.longTermCarePortion * 7 / 10);
+    const childSupportPortion = Math.round(prevFY.childSupportPortion * 3 / 10 + currFY.childSupportPortion * 7 / 10);
+    const total = medicalPortion + elderlySupportPortion + longTermCarePortion + childSupportPortion;
+
+    return { medicalPortion, elderlySupportPortion, longTermCarePortion, childSupportPortion, total };
 }

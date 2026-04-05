@@ -10,6 +10,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { SIMPLE_TOOLTIP_ICON, DETAILED_TOOLTIP_ICON } from './constants';
@@ -53,6 +54,11 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
 
   const tooltipContent = (
     <Box sx={{ maxWidth: 420, p: 1, fontSize: isMobile ? '0.85rem' : '1rem' }}>
+      {title && (
+        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+          {title}
+        </Typography>
+      )}
       {children}
     </Box>
   );

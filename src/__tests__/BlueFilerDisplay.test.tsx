@@ -136,8 +136,11 @@ describe('Blue-Filer Deduction Display', () => {
 
         // Should affect NHI Calculation Base visually
         // Base = 5,000,000 - 650,000 - 430,000 = 3,920,000
-        expect(screen.getByText('NHI Calculation Base')).toBeInTheDocument();
-        expect(screen.getByText('¥3,920,000')).toBeInTheDocument();
+        // Note: NHI Calculation Base appears in both the result row and tooltip content
+        const calcBaseLabels = screen.getAllByText('NHI Calculation Base');
+        expect(calcBaseLabels.length).toBeGreaterThan(0);
+        const calcBaseValues = screen.getAllByText('¥3,920,000');
+        expect(calcBaseValues.length).toBeGreaterThan(0);
     });
 
     it('displays Salary Income specifically for Employee Insurance with mixed income', () => {
