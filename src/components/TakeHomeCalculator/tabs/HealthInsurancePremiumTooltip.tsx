@@ -94,7 +94,7 @@ const PortionBreakdown: React.FC<{
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
       Income-based (所得割):{' '}
       <math><mrow>
-        <mn><strong>{(rate * 100).toFixed(2)}%</strong></mn>
+        <mn><strong>{formatPercent(rate)}</strong></mn>
         <mo>×</mo>
         <mn>{formatJPY(nhiTaxableIncome)}</mn>
         <mo>=</mo>
