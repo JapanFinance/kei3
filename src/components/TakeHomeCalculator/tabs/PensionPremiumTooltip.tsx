@@ -100,29 +100,19 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
             Monthly Pension Contribution
           </Typography>
 
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'center',
+          <Typography sx={{
+            textAlign: 'center',
             width: '100%',
             my: 0.5,
-            '& math': {
-              fontSize: '1.1rem',
-              fontFamily: 'Roboto, Helvetica, Arial, sans-serif'
-            },
-            '& mn': { fontWeight: '500' },
-            '& mo': { mx: 1, color: 'text.secondary' },
-            '& mn:last-child': { fontWeight: '700', color: 'primary.main' }
+            fontSize: '1.1rem',
+            fontWeight: 500,
           }}>
-            <math>
-              <mrow>
-                <mn>{formatJPY(standardMonthlyRemuneration)}</mn>
-                <mo>×</mo>
-                <mn>{formatPercent(employeeRate)}</mn>
-                <mo>=</mo>
-                <mn>{formatJPY(totalPremium)}</mn>
-              </mrow>
-            </math>
-          </Box>
+            {formatJPY(standardMonthlyRemuneration)}
+            <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>×</Box>
+            {formatPercent(employeeRate)}
+            <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>=</Box>
+            <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatJPY(totalPremium)}</Box>
+          </Typography>
         </Box>
       </Box>
 
