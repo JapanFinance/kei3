@@ -545,7 +545,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   );
                 })()}
               </>
-            ) : (
+            ) : ( // If rates don't vary, show the simple calculation
               <>
                 <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
                   Monthly Insurance Premium
