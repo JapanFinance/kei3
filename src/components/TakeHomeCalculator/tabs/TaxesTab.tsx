@@ -315,7 +315,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         padding: '2px 6px'
                       },
                       '& th': {
-                        borderBottom: '1px solid #ccc',
+                        borderBottom: 1,
+                        borderColor: 'divider',
                         padding: '2px 6px',
                         textAlign: 'left'
                       }
@@ -444,7 +445,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                             padding: '2px 6px'
                           },
                           '& th': {
-                            borderBottom: '1px solid #ccc',
+                            borderBottom: 1,
+                        borderColor: 'divider',
                             padding: '2px 6px',
                             textAlign: 'left'
                           }
@@ -641,7 +643,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         padding: '2px 6px'
                       },
                       '& th': {
-                        borderBottom: '1px solid #ccc',
+                        borderBottom: 1,
+                        borderColor: 'divider',
                         padding: '2px 6px',
                         textAlign: 'left'
                       }
@@ -765,7 +768,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         padding: '2px 6px'
                       },
                       '& th': {
-                        borderBottom: '1px solid #ccc',
+                        borderBottom: 1,
+                        borderColor: 'divider',
                         padding: '2px 6px',
                         textAlign: 'left'
                       }
@@ -853,7 +857,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                             The adjustment credit is calculated:
                           </Typography>
 
-                          <Box sx={{ pl: 1, borderLeft: '2px solid #eee', mb: 1 }}>
+                          <Box sx={{ pl: 1, borderLeft: 2, borderColor: 'divider', mb: 1 }}>
                             <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
                               If Taxable Income ≤ 2,000,000 JPY:
                             </Typography>
@@ -931,7 +935,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                             The adjustment credit is calculated:
                           </Typography>
 
-                          <Box sx={{ pl: 1, borderLeft: '2px solid #eee', mb: 1 }}>
+                          <Box sx={{ pl: 1, borderLeft: 2, borderColor: 'divider', mb: 1 }}>
                             <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
                               If Taxable Income ≤ 2,000,000 JPY:
                             </Typography>
@@ -999,7 +1003,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         padding: '2px 6px'
                       },
                       '& th': {
-                        borderBottom: '1px solid #ccc',
+                        borderBottom: 1,
+                        borderColor: 'divider',
                         padding: '2px 6px',
                         textAlign: 'left'
                       }

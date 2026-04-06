@@ -12,9 +12,9 @@ const formatMonthShort = (month: number): string =>
 
 const cellStyle = { padding: '2px 8px 2px 0' } as const;
 const rightCellStyle = { ...cellStyle, textAlign: 'right' as const };
-const headerStyle = { ...cellStyle, borderBottom: '1px solid #ccc', fontWeight: 'normal' as const };
-const rightHeaderStyle = { ...rightCellStyle, borderBottom: '1px solid #ccc', fontWeight: 'normal' as const };
-const totalStyle = { ...rightCellStyle, borderTop: '1px solid #ccc', fontWeight: 600 };
+const headerStyle = { ...cellStyle, borderBottom: '1px solid var(--divider)', fontWeight: 'normal' as const };
+const rightHeaderStyle = { ...rightCellStyle, borderBottom: '1px solid var(--divider)', fontWeight: 'normal' as const };
+const totalStyle = { ...rightCellStyle, borderTop: '1px solid var(--divider)', fontWeight: 600 };
 
 interface NationalPensionTooltipProps {
     year: number;

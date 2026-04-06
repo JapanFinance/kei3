@@ -464,7 +464,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
         <Box sx={{ mb: 0.5, p: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
           {/* Supporting Details */}
-          <Box sx={{ p: 1.5, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ p: 1.5, bgcolor: 'var(--action-hover)', borderBottom: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
               <Typography variant="caption" color="text.secondary">Monthly Remuneration</Typography>
               <Typography variant="caption" fontWeight={500}>
@@ -513,10 +513,10 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                       <thead>
                         <tr>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'left' }}>Months</th>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Rate</th>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Monthly</th>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid #ccc', fontWeight: 'normal', textAlign: 'right' }}>Subtotal</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'left' }}>Months</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'right' }}>Rate</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'right' }}>Monthly</th>
+                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'right' }}>Subtotal</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -535,8 +535,8 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                           );
                         })}
                         <tr>
-                          <td colSpan={3} style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>Annual Total</td>
-                          <td style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid #ccc', fontWeight: 600 }}>
+                          <td colSpan={3} style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>Annual Total</td>
+                          <td style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>
                             {formatJPY(annualTotal)}
                           </td>
                         </tr>
