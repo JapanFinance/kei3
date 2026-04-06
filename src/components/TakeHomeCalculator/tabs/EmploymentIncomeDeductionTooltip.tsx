@@ -54,7 +54,8 @@ const EmploymentIncomeDeductionTooltip: React.FC<EmploymentIncomeDeductionToolti
                         padding: '2px 6px'
                     },
                     '& th': {
-                        borderBottom: '1px solid #ccc',
+                        borderBottom: 1,
+                        borderColor: 'divider',
                         padding: '2px 6px',
                         textAlign: 'left'
                     }

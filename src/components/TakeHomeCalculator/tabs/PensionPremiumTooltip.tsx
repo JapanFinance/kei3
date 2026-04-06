@@ -70,7 +70,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
 
       <Box sx={{ mb: 0.5, p: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
         {/* Supporting Details */}
-        <Box sx={{ p: 1.5, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box sx={{ p: 1.5, bgcolor: 'var(--action-hover)', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
             <Typography variant="caption" color="text.secondary">Monthly Remuneration</Typography>
             <Typography variant="caption" fontWeight={500}>

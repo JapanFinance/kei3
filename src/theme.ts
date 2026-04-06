@@ -3,9 +3,14 @@
 
 import { createTheme } from '@mui/material/styles';
 
+declare module '@mui/material/styles' {
+  interface PaletteColor { 50?: string; }
+  interface SimplePaletteColorOptions { 50?: string; }
+}
+
 export const getTheme = (mode: 'light' | 'dark') => {
   const isDark = mode === 'dark';
-  
+
   // Set CSS variables on the root element
   const root = document.documentElement;
   root.style.setProperty('--background-default', isDark ? '#121212' : '#f5f5f5');
@@ -16,12 +21,15 @@ export const getTheme = (mode: 'light' | 'dark') => {
   root.style.setProperty('--action-hover', isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)');
   root.style.setProperty('--action-selected', isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)');
   root.style.setProperty('--primary-main', '#1976d2');
-  
+  root.style.setProperty('--border-strong', isDark ? 'rgba(255, 255, 255, 0.23)' : '#aaa');
+  root.style.setProperty('--chart-grid', isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(128, 128, 128, 0.4)');
+
   return createTheme({
     palette: {
       mode,
       primary: {
         main: '#1976d2',
+        50: isDark ? 'rgba(25, 118, 210, 0.12)' : '#e3f2fd',
       },
       secondary: {
         main: '#9c27b0',

@@ -49,8 +49,8 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
               width: '100%',
               fontSize: '0.85em',
               borderCollapse: 'collapse',
-              '& th': { textAlign: 'left', borderBottom: '1px solid #ccc', p: 0.5 },
-              '& td': { p: 0.5, borderBottom: '1px solid #eee' },
+              '& th': { textAlign: 'left', borderBottom: 1, borderColor: 'divider', p: 0.5 },
+              '& td': { p: 0.5, borderBottom: 1, borderColor: 'divider' },
               '& td:not(:first-of-type), & th:not(:first-of-type)': { textAlign: 'right' }
             }}
           >
@@ -78,7 +78,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ borderTop: '2px solid #aaa', fontWeight: 700 }}>
+              <tr style={{ borderTop: '2px solid var(--border-strong)', fontWeight: 700 }}>
                 <td style={{ paddingTop: 4 }}>Total</td>
                 <td style={{ paddingTop: 4 }}>
                   {formatJPY(breakdown.reduce((sum, item) => sum + item.totalBonusAmount, 0))}
