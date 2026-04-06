@@ -93,13 +93,11 @@ const PortionBreakdown: React.FC<{
     )}
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
       Income-based (所得割):{' '}
-      <math><mrow>
-        <mn><strong>{formatPercent(rate)}</strong></mn>
-        <mo>×</mo>
-        <mn>{formatJPY(nhiTaxableIncome)}</mn>
-        <mo>=</mo>
-        <mn>{formatJPY(calc.incomeBasedAmount)}</mn>
-      </mrow></math>
+      <strong>{formatPercent(rate)}</strong>
+      {' × '}
+      {formatJPY(nhiTaxableIncome)}
+      {' = '}
+      {formatJPY(calc.incomeBasedAmount)}
     </Typography>
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
       Per-capita (均等割): {formatJPY(calc.perCapita)}
@@ -243,17 +241,11 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
         <Box sx={{ p: 1, bgcolor: 'primary.50', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
             Total:{' '}
-            <math><mrow>
-              <mn>{formatJPY(prevCalc.final)}</mn>
-              <mo>×</mo>
-              <mfrac><mn>3</mn><mn>10</mn></mfrac>
-              <mo>+</mo>
-              <mn>{formatJPY(currCalc.final)}</mn>
-              <mo>×</mo>
-              <mfrac><mn>7</mn><mn>10</mn></mfrac>
-              <mo>=</mo>
-              <mn><strong>{formatJPY(blendedAmount)}</strong></mn>
-            </mrow></math>
+            {formatJPY(prevCalc.final)} × 3⁄10
+            {' + '}
+            {formatJPY(currCalc.final)} × 7⁄10
+            {' = '}
+            <strong>{formatJPY(blendedAmount)}</strong>
           </Typography>
         </Box>
 
@@ -553,34 +545,24 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   );
                 })()}
               </>
-            ) : (
+            ) : ( // If rates don't vary, show the simple calculation
               <>
                 <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
                   Monthly Insurance Premium
                 </Typography>
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
+                <Typography sx={{
+                  textAlign: 'center',
                   width: '100%',
                   my: 0.5,
-                  '& math': {
-                    fontSize: '1.1rem',
-                    fontFamily: 'Roboto, Helvetica, Arial, sans-serif'
-                  },
-                  '& mn': { fontWeight: 500 },
-                  '& mo': { mx: 1, color: 'text.secondary' },
-                  '& mn:last-child': { fontWeight: 700, color: 'primary.main' }
+                  fontSize: '1.1rem',
+                  fontWeight: 500,
                 }}>
-                  <math>
-                    <mrow>
-                      <mn>{formatJPY(standardMonthlyRemuneration)}</mn>
-                      <mo>×</mo>
-                      <mn>{formatPercent(finalRate)}</mn>
-                      <mo>=</mo>
-                      <mn>{formatJPY(totalPremium)}</mn>
-                    </mrow>
-                  </math>
-                </Box>
+                  {formatJPY(standardMonthlyRemuneration)}
+                  <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>×</Box>
+                  {formatPercent(finalRate)}
+                  <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>=</Box>
+                  <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatJPY(totalPremium)}</Box>
+                </Typography>
               </>
             )}
           </Box>

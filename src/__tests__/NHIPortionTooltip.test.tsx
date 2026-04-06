@@ -77,9 +77,9 @@ describe('NHIPortionTooltip consistency with calculator', () => {
             const { container } = render(
                 <NHIPortionTooltip portion={portion} results={results} inputs={inputs} />
             );
-            // The final bold value after "=" in the Total line should match the calculator
-            const boldElements = container.querySelectorAll('strong');
-            const values = Array.from(boldElements).map(el => el.textContent);
+            // The blended total is rendered in a <strong> element.
+            const values = Array.from(container.querySelectorAll('strong'))
+                .map(el => el.textContent);
             expect(values).toContain(formatJPY(expected));
         });
 
@@ -101,8 +101,8 @@ describe('NHIPortionTooltip consistency with calculator', () => {
             const { container } = render(
                 <NHIPortionTooltip portion="longTermCare" results={results} inputs={inputs} />
             );
-            const boldElements = container.querySelectorAll('strong');
-            const values = Array.from(boldElements).map(el => el.textContent);
+            const values = Array.from(container.querySelectorAll('strong'))
+                .map(el => el.textContent);
             expect(values).toContain(formatJPY(breakdown.longTermCarePortion));
         });
     });
@@ -120,8 +120,8 @@ describe('NHIPortionTooltip consistency with calculator', () => {
             const { container } = render(
                 <NHIPortionTooltip portion={portion} results={results} inputs={inputs} />
             );
-            const boldElements = container.querySelectorAll('strong');
-            const values = Array.from(boldElements).map(el => el.textContent);
+            const values = Array.from(container.querySelectorAll('strong'))
+                .map(el => el.textContent);
             expect(values).toContain(formatJPY(expected));
         });
     });
