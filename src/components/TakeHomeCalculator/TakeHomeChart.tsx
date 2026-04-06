@@ -65,7 +65,7 @@ const percentileBandsPlugin = {
     });
 
     // Draw dotted lines between bands
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--chart-grid').trim() || 'rgba(128, 128, 128, 0.4)';
+    ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]); // Create dotted line pattern
 

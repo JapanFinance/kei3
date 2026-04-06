@@ -22,7 +22,6 @@ export const getTheme = (mode: 'light' | 'dark') => {
   root.style.setProperty('--action-selected', isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)');
   root.style.setProperty('--primary-main', '#1976d2');
   root.style.setProperty('--border-strong', isDark ? 'rgba(255, 255, 255, 0.23)' : '#aaa');
-  root.style.setProperty('--chart-grid', isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(128, 128, 128, 0.4)');
 
   return createTheme({
     palette: {
