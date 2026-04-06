@@ -261,7 +261,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
           <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
             Calculation parameters from{' '}
             <a href={currFYData.source} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
-              Official NHI Premium Information
+              {currFYData.regionName} NHI Rates
             </a>
           </Typography>
         )}
@@ -297,7 +297,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
         <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
           Calculation parameters from{' '}
           <a href={currFYData.source} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
-            Official NHI Premium Information
+            {currFYData.regionName} NHI Rates
           </a>
         </Typography>
       )}
@@ -376,7 +376,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                 rel="noopener noreferrer"
                 style={{ color: 'inherit', textDecoration: 'underline' }}
               >
-                Official NHI Premium Information
+                {regionData.regionName} NHI Rates
               </a>
             </Typography>
           </Box>
