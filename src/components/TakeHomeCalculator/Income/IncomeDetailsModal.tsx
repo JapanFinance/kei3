@@ -107,12 +107,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     let commutingAllowance = 0;
 
     streams.forEach(s => {
-      let annualAmount = 0;
-      if (s.type === 'salary' && s.frequency === 'monthly') {
-        annualAmount = s.amount * 12;
-      } else {
-        annualAmount = s.amount;
-      }
+      const annualAmount = (s.type === 'salary' && s.frequency === 'monthly') ? s.amount * 12 : s.amount;
 
       if (s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation') {
         employmentIncome += annualAmount;
