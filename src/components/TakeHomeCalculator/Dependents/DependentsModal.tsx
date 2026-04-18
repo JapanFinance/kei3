@@ -288,7 +288,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                       <ListItemText
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
-                            <Typography variant="subtitle1" fontWeight={500}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
                               Dependent {index + 1}
                             </Typography>
                             {getDependentChips(dependent)}
@@ -409,7 +409,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                               <TableCell align="right">
                                 {formatJPY(group.natAmount)}
                                 {group.count > 1 && (
-                                  <Typography variant="caption" display="block" color="text.secondary">
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                                     = {formatJPY(group.natAmount * group.count)}
                                   </Typography>
                                 )}
@@ -417,7 +417,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                               <TableCell align="right">
                                 {formatJPY(group.resAmount)}
                                 {group.count > 1 && (
-                                  <Typography variant="caption" display="block" color="text.secondary">
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                                     = {formatJPY(group.resAmount * group.count)}
                                   </Typography>
                                 )}

@@ -175,7 +175,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       color={getStreamColor(stream.type)}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
-                    <Typography variant="subtitle1" fontWeight="bold">
+                    <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
                       {formatJPY(stream.amount)}
                     </Typography>
                     {getStreamDescription(stream) && (
@@ -185,17 +185,17 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                     )}
                   </Box>
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
-                    <Typography variant="caption" color="text.secondary" display="block" align="right">
+                    <Typography variant="caption" color="text.secondary" align="right" sx={{ display: "block" }}>
                       (Annual: {formatJPY(stream.amount * 12)})
                     </Typography>
                   )}
                   {stream.type === 'business' && !!stream.blueFilerDeduction && (
-                    <Typography variant="caption" color="text.secondary" display="block" align="right">
+                    <Typography variant="caption" color="text.secondary" align="right" sx={{ display: "block" }}>
                       (Blue-filer Deduction: -{formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
                     </Typography>
                   )}
                   {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
-                    <Typography variant="caption" color="text.secondary" display="block" align="right">
+                    <Typography variant="caption" color="text.secondary" align="right" sx={{ display: "block" }}>
                       (Annual: {formatJPY(getCommutingAllowanceAnnualAmount(stream))})
                     </Typography>
                   )}

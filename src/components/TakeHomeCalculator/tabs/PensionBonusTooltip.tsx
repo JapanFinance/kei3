@@ -34,7 +34,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
         </Typography>
       </Box>
 
-      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
         The employer also pays an equal amount.
       </Typography>
 
@@ -104,14 +104,14 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
       )}
 
       <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.contrastText' }}>
-        <Typography variant="caption" fontWeight="bold">
+        <Typography variant="caption" sx={{ fontWeight: "bold" }}>
           Standard Bonus Amount Monthly Limit:
         </Typography>
-        <Typography variant="caption" display="block">
+        <Typography variant="caption" sx={{ display: "block" }}>
           The standard bonus amount is capped at 1.5 million yen per month (adding all bonuses paid in the same month).
         </Typography>
       </Box>
-      <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+      <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
         Reference: <a href="https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20150515-01.html" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
           厚生年金保険の保険料 (Japan Pension Service)
         </a>

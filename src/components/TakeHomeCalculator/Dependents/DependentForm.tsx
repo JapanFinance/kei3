@@ -146,7 +146,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           <Paper variant="outlined" sx={{ p: 2 }}>
             {/* Employment Income */}
             <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" fontWeight="medium" gutterBottom>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: "medium" }}>
                 Employment Income (給与)
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -177,7 +177,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             
             {/* Other Income */}
             <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" fontWeight="medium" gutterBottom>
+              <Typography variant="body2" gutterBottom sx={{ fontWeight: "medium" }}>
                 Other Income (その他)
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -203,10 +203,10 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             {/* Total */}
             <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2" fontWeight="bold">
+                <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                   Total (合計所得金額)
                 </Typography>
-                <Typography variant="body2" fontWeight="bold">
+                <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                   {formatJPY(calculateDependentTotalNetIncome(income))}
                 </Typography>
               </Box>
@@ -275,7 +275,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   <TableCell><strong>Total (合計所得金額)</strong></TableCell>
                   <TableCell align="right"></TableCell>
                   <TableCell align="right">
-                    <Typography variant="body2" fontWeight="bold">
+                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                       {formatJPY(calculateDependentTotalNetIncome(income))}
                     </Typography>
                   </TableCell>

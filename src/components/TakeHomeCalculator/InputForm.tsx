@@ -477,7 +477,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
                     <Typography variant="body1">Total Annual Income</Typography>
-                    <Typography variant="h6" fontWeight="bold">
+                    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                       {formatJPY(inputs.annualIncome)}
                     </Typography>
                   </Box>
@@ -496,7 +496,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     return totalNontaxableBenefits > 0 ? (
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
                         <Typography variant="body2" color="text.secondary">Total Nontaxable Benefits</Typography>
-                        <Typography variant="subtitle1" fontWeight="medium" color="text.secondary">
+                        <Typography variant="subtitle1" color="text.secondary" sx={{ fontWeight: "medium" }}>
                           {formatJPY(totalNontaxableBenefits)}
                         </Typography>
                       </Box>
