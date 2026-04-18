@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';
 import Tooltip from '@mui/material/Tooltip';
@@ -22,36 +22,23 @@ interface ChangelogButtonProps {
 }
 
 export default function ChangelogButton({ onClick }: ChangelogButtonProps) {
-  const [hasNewFeatures, setHasNewFeatures] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-
-  useEffect(() => {
-    checkForUpdates();
-  }, []);
-
-  const checkForUpdates = () => {
+  const [hasNewFeatures, setHasNewFeatures] = useState(() => {
     try {
       const changelog: ParsedChangelog = parseChangelog(changelogContent);
       const lastViewed = getLastViewedDate();
-      const hasNew = hasNewUpdates(changelog, lastViewed || undefined);
-      setHasNewFeatures(hasNew);
+      return hasNewUpdates(changelog, lastViewed || undefined);
     } catch (error) {
       console.warn('Failed to check for changelog updates:', error);
-    } finally {
-      setLoading(false);
+      return false;
     }
-  };
+  });
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleClick = () => {
     setHasNewFeatures(false); // Remove badge when clicked
     onClick();
   };
-
-  if (loading) {
-    return null; // Don't show anything while loading
-  }
 
   if (isMobile) {
     // Mobile: Icon button only
