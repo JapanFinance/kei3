@@ -150,7 +150,7 @@ export const calculateNationalIncomeTaxBase = (taxableIncome: number): number =>
     // Clamp taxable income to 0 if negative
     taxableIncome = Math.max(0, taxableIncome);
 
-    let baseTax = 0;
+    let baseTax: number;
     if (taxableIncome <= 1949000) {
         baseTax = taxableIncome * 0.05;
     } else if (taxableIncome <= 3299000) {
@@ -342,7 +342,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     let healthInsurance = 0;
     let pensionPayments = 0;
     let employmentInsurance = 0;
-    let socialInsuranceDeduction = 0;
+    let socialInsuranceDeduction: number;
     let nhiBreakdown = null;
 
     // Bonus breakdown variables

@@ -93,7 +93,7 @@ export const generateChartData = (
   // Precompute results and cap status for each income point
   const resultsAndCaps = incomePoints.map(income => {
     // Scale each income stream to match the 'income' for this chart point
-    let calcStreams: IncomeStream[] = [];
+    let calcStreams: IncomeStream[];
     const baseTotal = currentInputs.incomeStreams.reduce((sum, s) => {
       if (s.type === 'salary' && s.frequency === 'monthly') return sum + (s.amount * 12);
       return sum + s.amount;

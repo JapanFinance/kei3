@@ -349,7 +349,7 @@ function getSpouseDeductionDifference(isElderly: boolean, taxpayerNetIncome: num
  * @see https://www.town.hinode.tokyo.jp/0000000519.html
  */
 function calculateAdjustmentCredit(netIncome: number, taxableIncome: number, personalDeductionDifference: number): number {
-    let adjustmentCredit = 0;
+    let adjustmentCredit: number;
     if (netIncome > 25000000) {
         adjustmentCredit = 0;
     } else if (taxableIncome <= 2000000) {
@@ -449,7 +449,7 @@ function calculateIncomeTaxReduction(taxableIncome: number, furusatoNozeiDeducti
  * @see 地方税法第37条の二
  */
 function getSpecialDeductionMultiplier(taxableIncome: number): number {
-    let incomeTaxRate = 0;
+    let incomeTaxRate: number;
     if (taxableIncome <= 1950000) incomeTaxRate = 0.05;
     else if (taxableIncome <= 3300000) incomeTaxRate = 0.10;
     else if (taxableIncome <= 6950000) incomeTaxRate = 0.20;
