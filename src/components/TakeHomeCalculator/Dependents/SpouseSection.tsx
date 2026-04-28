@@ -105,7 +105,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
               <Paper variant="outlined" sx={{ mt: 1, p: 2 }}>
                 {/* Employment Income */}
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: "medium" }}>
                     Employment Income (給与)
                   </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -138,7 +138,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                 
                 {/* Other Income */}
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: "medium" }}>
                     Other Income (その他)
                   </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -166,10 +166,10 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                 {/* Total */}
                 <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="body2" fontWeight="bold">
+                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                       Total (合計所得金額)
                     </Typography>
-                    <Typography variant="body2" fontWeight="bold">
+                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                       {formatJPY(calculateDependentTotalNetIncome(spouse.income))}
                     </Typography>
                   </Box>
@@ -242,7 +242,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                       <TableCell><strong>Total (合計所得金額)</strong></TableCell>
                       <TableCell align="right"></TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" fontWeight="bold">
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
                           {formatJPY(calculateDependentTotalNetIncome(spouse.income))}
                         </Typography>
                       </TableCell>

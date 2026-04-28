@@ -73,7 +73,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
         <Box sx={{ p: 1.5, bgcolor: 'var(--action-hover)', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
             <Typography variant="caption" color="text.secondary">Monthly Remuneration</Typography>
-            <Typography variant="caption" fontWeight={500}>
+            <Typography variant="caption" sx={{ fontWeight: 500 }}>
               {formatJPY(
                 inputs.incomeStreams
                   .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
@@ -90,13 +90,13 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
             <Typography variant="caption" color="text.secondary">
               Standard Monthly Remuneration
             </Typography>
-            <Typography variant="caption" fontWeight={500}>{formatJPY(standardMonthlyRemuneration)}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 500 }}>{formatJPY(standardMonthlyRemuneration)}</Typography>
           </Box>
         </Box>
 
         {/* Main Calculation Highlight */}
         <Box sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+          <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
             Monthly Pension Contribution
           </Typography>
 

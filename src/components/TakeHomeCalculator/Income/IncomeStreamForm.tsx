@@ -212,10 +212,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   icon={SIMPLE_TOOLTIP_ICON}
                   iconAriaLabel="issuance info"
                 >
-                  <Typography display="block" sx={{ mb: 1 }}>
+                  <Typography sx={{ display: "block", mb: 1 }}>
                     <strong>Foreign-issued stock compensation</strong> means grants from a non-Japanese company, such as the foreign parent company of a Japanese subsidiary. It is not subject to social insurance premiums (社会保険料).
                   </Typography>
-                  <Typography display="block">
+                  <Typography sx={{ display: "block" }}>
                     <strong>Domestic-issued stock compensation</strong> is not currently supported. It is subject to social insurance premiums.
                   </Typography>
                 </DetailedTooltip>
@@ -286,7 +286,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   icon={<InfoOutlinedIcon fontSize="small" />}
                   iconAriaLabel="requirements"
                 >
-                  <Typography variant="caption" display="block" sx={{ mb: 1, lineHeight: 1.2 }}>
+                  <Typography variant="caption" sx={{ display: "block", mb: 1, lineHeight: 1.2 }}>
                     Requires prior tax office approval (see{' '}
                     <a
                       href="https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/09.htm"
@@ -412,7 +412,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>Exchange Rate</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Exchange Rate</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
@@ -427,10 +427,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>RS / RSU / PS / PSU </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>RS / RSU / PS / PSU </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                  <Typography variant="body2" fontWeight={600} marginBottom={0.5}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
                     Restricted Stock (Units) / Performance Shares (Units)
                   </Typography>
                   <Typography variant="body2">
@@ -441,7 +441,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>Stock Options</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Stock Options</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2" sx={{ mb: 1 }}>
@@ -455,7 +455,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>ESPP (Employee Stock Purchase Plan)</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>ESPP (Employee Stock Purchase Plan)</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
@@ -466,7 +466,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
               <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" fontWeight={600}>Foreign-Source Income & Non-Permanent Tax Residents</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Foreign-Source Income & Non-Permanent Tax Residents</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
@@ -474,7 +474,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     If you are a <a href="https://wiki.japanfinance.org/tax/income/#non-permanent-tax-residents" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-permanent tax resident</a> when that income is realized, the foreign-source income will not be taxable in Japan unless <a href="https://wiki.japanfinance.org/tax/income/#income-that-is-neither-japan-source-nor-foreign-source" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>remittances to Japan</a> were made in the same year that make some or all of it taxable.
                     Taxpayers who are not non-permanent tax residents would have to use foreign tax credits to alleviate Japanese taxation on the foreign-source income that will be taxable in the foreign country.
                   </Typography>
-                  <Typography variant="body2" marginTop={1.5}>
+                  <Typography variant="body2" sx={{ mt: 1.5 }}>
                     Only input the amount of stock-based compensation income that is taxable in Japan.
                   </Typography>
                 </AccordionDetails>
@@ -483,7 +483,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
         </Box>
 
-        <Stack direction="row" spacing={2} justifyContent="flex-end">
+        <Stack direction="row" spacing={2} sx={{ justifyContent: "flex-end" }}>
           <Button onClick={onCancel}>Cancel</Button>
           <Button variant="contained" onClick={handleSave}>
             {initialData ? 'Update' : 'Add'}
