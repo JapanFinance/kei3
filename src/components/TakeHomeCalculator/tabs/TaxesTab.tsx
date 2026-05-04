@@ -858,24 +858,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           </Typography>
 
                           <Box sx={{ pl: 1, borderLeft: 2, borderColor: 'divider', mb: 1 }}>
-                            <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                            <Typography variant="caption" sx={{ display: "block", fontWeight: 600 }}>
                               If Taxable Income ≤ 2,000,000 JPY:
                             </Typography>
-                            <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ display: "block", mb: 0.5 }}>
                               Min(Difference, Taxable Income) × 5%
                             </Typography>
 
-                            <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                            <Typography variant="caption" sx={{ display: "block", fontWeight: 600 }}>
                               If Taxable Income &gt; 2,000,000 JPY:
                             </Typography>
-                            <Typography variant="caption" display="block">
+                            <Typography variant="caption" sx={{ display: "block" }}>
                               (Difference - (Taxable Income - 2,000,000)) × 5%
                             </Typography>
-                            <Typography variant="caption" display="block" sx={{ color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ display: "block", color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
                               (Minimum credit: 2,500 JPY)
                             </Typography>
 
-                            <Typography variant="caption" display="block" sx={{ fontWeight: 600, color: 'error.main' }}>
+                            <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: 'error.main' }}>
                               If Net Income &gt; 25,000,000 JPY, no credit.
                             </Typography>
                           </Box>
@@ -936,24 +936,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           </Typography>
 
                           <Box sx={{ pl: 1, borderLeft: 2, borderColor: 'divider', mb: 1 }}>
-                            <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                            <Typography variant="caption" sx={{ display: "block", fontWeight: 600 }}>
                               If Taxable Income ≤ 2,000,000 JPY:
                             </Typography>
-                            <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ display: "block", mb: 0.5 }}>
                               Min(Difference, Taxable Income) × 5%
                             </Typography>
 
-                            <Typography variant="caption" display="block" sx={{ fontWeight: 600 }}>
+                            <Typography variant="caption" sx={{ display: "block", fontWeight: 600 }}>
                               If Taxable Income &gt; 2,000,000 JPY:
                             </Typography>
-                            <Typography variant="caption" display="block">
+                            <Typography variant="caption" sx={{ display: "block" }}>
                               (Difference - (Taxable Income - 2,000,000)) × 5%
                             </Typography>
-                            <Typography variant="caption" display="block" sx={{ color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
+                            <Typography variant="caption" sx={{ display: "block", color: 'text.secondary', fontStyle: 'italic', mb: 0.5 }}>
                               (Minimum credit: 2,500 JPY)
                             </Typography>
 
-                            <Typography variant="caption" display="block" sx={{ fontWeight: 600, color: 'error.main' }}>
+                            <Typography variant="caption" sx={{ display: "block", fontWeight: 600, color: 'error.main' }}>
                               If Net Income &gt; 25,000,000 JPY, no credit.
                             </Typography>
                           </Box>

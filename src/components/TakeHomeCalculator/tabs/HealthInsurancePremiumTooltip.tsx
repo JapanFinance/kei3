@@ -467,7 +467,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           <Box sx={{ p: 1.5, bgcolor: 'var(--action-hover)', borderBottom: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
               <Typography variant="caption" color="text.secondary">Monthly Remuneration</Typography>
-              <Typography variant="caption" fontWeight={500}>
+              <Typography variant="caption" sx={{ fontWeight: 500 }}>
                 {formatJPY(
                   inputs.incomeStreams
                     .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
@@ -484,7 +484,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
               <Typography variant="caption" color="text.secondary">
                 Standard Monthly Remuneration
               </Typography>
-              <Typography variant="caption" fontWeight={500}>{formatJPY(standardMonthlyRemuneration)}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 500 }}>{formatJPY(standardMonthlyRemuneration)}</Typography>
             </Box>
           </Box>
 
@@ -492,7 +492,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           <Box sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}>
             {ratesVary && monthlyRates.length === 12 ? (
               <>
-                <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+                <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
                   Salary Premium ({year})
                 </Typography>
                 {(() => {
@@ -547,7 +547,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
               </>
             ) : ( // If rates don't vary, show the simple calculation
               <>
-                <Typography variant="subtitle2" color="primary.main" fontWeight={600} sx={{ mb: 0.5 }}>
+                <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
                   Monthly Insurance Premium
                 </Typography>
                 <Typography sx={{

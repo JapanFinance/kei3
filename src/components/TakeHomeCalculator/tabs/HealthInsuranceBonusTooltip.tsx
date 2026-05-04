@@ -134,10 +134,10 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
       )}
 
       <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.contrastText' }}>
-        <Typography variant="caption" fontWeight="bold">
+        <Typography variant="caption" sx={{ fontWeight: "bold" }}>
           Standard Bonus Amount Annual Limit:
         </Typography>
-        <Typography variant="caption" display="block">
+        <Typography variant="caption" sx={{ display: "block" }}>
           The cumulative standard bonus amount is capped at 5.73 million yen per year (April 1 to March 31).
         </Typography>
       </Box>
