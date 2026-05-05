@@ -41,6 +41,14 @@ const allNHIRegions: Record<string, NHIRegionDefinition> = {
   'Tokyo-Chuo': {
     regionName: "Chuo Ward, Tokyo / 中央区",
     periods: [
+      { effectiveFrom: { year: 2026, month: 3 }, params: {
+        source: "https://www.city.chuo.lg.jp/a0024/kurashi/hokennenkin/kokuho/kokuhonitsuite/noufu/hokenryo.html",
+        medicalRate: 0.0751, supportRate: 0.0280, ltcRateForEligible: 0.0243,
+        medicalPerCapita: 47600, supportPerCapita: 17600, ltcPerCapitaForEligible: 17800,
+        medicalCap: 670000, supportCap: 260000, ltcCapForEligible: 170000,
+        childSupportRate: 0.0027, childSupportPerCapita: 1873, childSupportCap: 30000,
+        nhiStandardDeduction: 430000,
+      }},
       { effectiveFrom: { year: 2025, month: 3 }, params: {
         source: "https://www.hokeniryo.metro.tokyo.lg.jp/kenkou/kokuho/aramashi/hokennryou/h30hokenryougaku",
         medicalRate: 0.0771,
