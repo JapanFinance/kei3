@@ -25,6 +25,7 @@ import {getCommutingAllowanceAnnualAmount} from './formatters';
 import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
 import {getNationalBasicDeductionTiers} from '../data/nationalBasicDeduction';
 import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/employmentIncomeDeduction';
+import {applyMortgageTaxCredit} from './mortgageTaxCredit';
 
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.
@@ -429,7 +430,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
 
-    const nationalIncomeTax = calculateNationalIncomeTax(taxableIncomeForNationalIncomeTax);
+    const preCreditNationalIncomeTax = calculateNationalIncomeTax(taxableIncomeForNationalIncomeTax);
 
     // Calculate base tax and reconstruction surtax breakdown for display
     // Show the actual calculated amounts (before final rounding)
@@ -439,13 +440,39 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const residenceTaxBasicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
     const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction - dependentDeductions.residenceTax.total) / 1000) * 1000);
 
-    const residenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
+    // Mortgage tax credit (住宅ローン控除): applied first to national income tax,
+    // then spilled over to residence tax up to the cohort's cap.
+    // Calling with appliedToResidenceTax = 0 first gives us the pre-credit residence
+    // tax, which is needed for the furusato 20% special-deduction cap.
+    const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
+
+    const mortgageTaxCreditResult = inputs.mortgageTaxCredit
+        ? applyMortgageTaxCredit({
+            input: inputs.mortgageTaxCredit,
+            netIncome,
+            nationalIncomeTax: preCreditNationalIncomeTax,
+            taxableTotalIncome: taxableIncomeForResidenceTax,
+            calculationYear: incomeYear,
+        })
+        : undefined;
+
+    const nationalIncomeTax = Math.max(0, preCreditNationalIncomeTax - (mortgageTaxCreditResult?.appliedToIncomeTax ?? 0));
+
+    const residenceTax = mortgageTaxCreditResult && mortgageTaxCreditResult.appliedToResidenceTax > 0
+        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, mortgageTaxCreditResult.appliedToResidenceTax, incomeYear)
+        : preCreditResidenceTax;
 
     // Calculate totals
     const totalSocialsAndTax = nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;
     const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
-    const furusatoNozeiLimit = calculateFurusatoNozeiDetails(netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total, residenceTax);
+    const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
+        netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total,
+        preCreditResidenceTax,
+        residenceTax,
+        mortgageTaxCreditResult?.appliedToResidenceTax ?? 0,
+        nationalIncomeTax,
+    );
 
     return {
         annualIncome,
@@ -473,6 +500,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxBasicDeduction,
         taxableIncomeForResidenceTax,
         furusatoNozei: furusatoNozeiLimit,
+        ...(mortgageTaxCreditResult && { mortgageTaxCredit: mortgageTaxCreditResult }),
         dcPlanContributions: inputs.dcPlanContributions,
         // Income tax breakdown
         nationalIncomeTaxBase: taxableIncomeForNationalIncomeTax > 0 ? nationalIncomeTaxBase : undefined,

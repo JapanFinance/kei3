@@ -23,15 +23,17 @@ import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
 import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
+import HomeIcon from '@mui/icons-material/Home';
 import { SimpleTooltip } from '../ui/Tooltips';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
+import { MortgageTaxCreditModal } from './MortgageTaxCreditModal';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
-import type { TakeHomeFormState, IncomeMode, IncomeStream } from '../../types/tax';
+import type { TakeHomeFormState, IncomeMode, IncomeStream, MortgageTaxCreditInput } from '../../types/tax';
 import {
   getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
@@ -77,6 +79,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
+  const [mortgageModalOpen, setMortgageModalOpen] = useState(false);
 
   const handleOpenDependentsModal = () => {
     setDependentsModalOpen(true);
@@ -91,6 +94,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'dependents',
         value: newDependents,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleMortgageTaxCreditChange = (newInput: MortgageTaxCreditInput | undefined) => {
+    onInputChange({
+      target: {
+        name: 'mortgageTaxCredit',
+        value: newInput,
       }
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
@@ -931,6 +943,48 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             />
           </FormControl>
         </Box>
+
+        {/* Mortgage Tax Credit */}
+        <Box sx={{ mt: { xs: 1, sm: 1.5 }, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          <Typography
+            sx={{
+              mb: 0.5,
+              fontSize: '0.97rem',
+              fontWeight: 500,
+              color: 'text.primary',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+            }}
+          >
+            Mortgage Tax Credit
+            <SimpleTooltip>The \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 tax credit. Reduces income tax (and residence tax up to a cap). Affects the furusato nozei limit too.</SimpleTooltip>
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<HomeIcon />}
+            onClick={() => setMortgageModalOpen(true)}
+            size="medium"
+            fullWidth
+            sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
+          >
+            {inputs.mortgageTaxCredit ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                  \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 enabled
+                </Typography>
+                <Typography component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                  Moved in {inputs.mortgageTaxCredit.moveInYear}
+                  {inputs.mortgageTaxCredit.mode === 'manual'
+                    ? ` \u00B7 Manual ${formatJPY(inputs.mortgageTaxCredit.manualAnnualCredit ?? 0)}/yr`
+                    : ' \u00B7 Auto-calculate'}
+                </Typography>
+              </Box>
+            ) : (
+              'Configure \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664'
+            )}
+          </Button>
+        </Box>
       </Box>
 
       <DependentsModal
@@ -946,6 +1000,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+      />
+
+      <MortgageTaxCreditModal
+        open={mortgageModalOpen}
+        onClose={() => setMortgageModalOpen(false)}
+        input={inputs.mortgageTaxCredit}
+        onChange={handleMortgageTaxCreditChange}
+        currentYear={new Date().getFullYear()}
       />
     </Box>
   );

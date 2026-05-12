@@ -368,17 +368,35 @@ const donationBasicDeductionRate = 0.1;
 /**
  * Calculate the maximum deductible ふるさと納税 (Furusato Nozei) donation limit for which the user's out-of-pocket cost is ~2,000 yen.
  *
+ * Accurate handling of mortgage tax credit interactions:
+ * - The 20% special-deduction cap (特例控除上限) uses 所得割 AFTER 調整控除 but
+ *   BEFORE 住宅ローン控除 — pass the pre-credit residence tax via
+ *   `residenceTaxDetailsForCap`. When no mortgage credit is in play, pass the
+ *   same details for both `residenceTaxDetailsForCap` and `residenceTaxDetailsForFinal`.
+ * - The income-tax refund portion is capped at the income tax actually paid
+ *   AFTER mortgage credit. Pass that figure via `remainingIncomeTax` to enforce
+ *   the cap; omit it for the legacy uncapped behavior.
+ * - `appliedMortgageCreditToResidenceTax` is the amount of mortgage credit
+ *   spillover applied to residence tax. Used to compute the raw post-credit
+ *   city/prefectural income tax for the furusato application step. Defaults to 0.
+ *
  * @param taxableIncomeForNationalIncomeTax - Taxable income for national income tax, before rounding (所得税課税所得)
- * @param residenceTaxDetails - Details of the residence tax, including taxable income and rates
+ * @param residenceTaxDetailsForCap - Residence tax details PRE mortgage credit — used for the 20% special-deduction cap
+ * @param residenceTaxDetailsForFinal - Residence tax details POST mortgage credit — used for the totalResidenceTax baseline. Defaults to `residenceTaxDetailsForCap`.
+ * @param appliedMortgageCreditToResidenceTax - Mortgage credit spillover applied to residence tax (yen). Defaults to 0.
+ * @param remainingIncomeTax - Optional cap on the income-tax refund portion (post mortgage credit).
  * @returns The various details of the Furusato Nozei deduction, including the limit, out-of-pocket cost, and tax reductions.
  * @see https://kaikei7.com/furusato_nouzei_keisan/
  * @see https://kaikei7.com/furusato_nouzei_onestop/
  */
 export function calculateFurusatoNozeiDetails(
     taxableIncomeForNationalIncomeTax: number,
-    residenceTaxDetails: ResidenceTaxDetails
+    residenceTaxDetailsForCap: ResidenceTaxDetails,
+    residenceTaxDetailsForFinal: ResidenceTaxDetails = residenceTaxDetailsForCap,
+    appliedMortgageCreditToResidenceTax: number = 0,
+    remainingIncomeTax?: number,
 ): FurusatoNozeiDetails {
-    if (taxableIncomeForNationalIncomeTax <= 0 || residenceTaxDetails.taxableIncome <= 0) {
+    if (taxableIncomeForNationalIncomeTax <= 0 || residenceTaxDetailsForCap.taxableIncome <= 0) {
         return {
             limit: 0,
             incomeTaxReduction: 0,
@@ -388,17 +406,17 @@ export function calculateFurusatoNozeiDetails(
             residenceTaxReduction: 0
         };
     }
-    // 調整控除後 所得割
-    const residentTaxAmountForIncomePortion = residenceTaxDetails.totalResidenceTax - residenceTaxDetails.perCapitaTax;
+    // 調整控除後・住宅ローン控除前の所得割 — the base for the 20% special-deduction cap.
+    const residentTaxAmountForIncomePortion = residenceTaxDetailsForCap.totalResidenceTax - residenceTaxDetailsForCap.perCapitaTax;
 
     // Special deduction rate for resident tax (特例控除割合)
-    const specialDeductionRate = getSpecialDeductionMultiplier(residenceTaxDetails.taxableIncome - residenceTaxDetails.personalDeductionDifference);
+    const specialDeductionRate = getSpecialDeductionMultiplier(residenceTaxDetailsForCap.taxableIncome - residenceTaxDetailsForCap.personalDeductionDifference);
 
     // The deduction breakdown:
     // Income tax deduction: (X - 2000) * incomeTaxRate (not used if one-stop)
     // Resident tax basic deduction (基本控除): (X - 2000) * residenceTaxRate
     // Resident tax special deduction (特例控除): (X - 2000) * (1 - residenceTaxRate - marginalIncomeTaxRate) [capped at 20% of resident tax amount for the income portion]
-    // One-stop special deduction (申告特例控除): 
+    // One-stop special deduction (申告特例控除):
 
     // We need to find X such that:
     // (X - 2000) * specialDeductionRate <= residentTaxAmountForIncomePortion * 0.2
@@ -407,23 +425,36 @@ export function calculateFurusatoNozeiDetails(
 
     // Statutory cap: donation cannot exceed 30% of resident tax taxable income
     // This will always be higher than the 20% cap for the special deduction
-    const statutoryCap = residenceTaxDetails.taxableIncome * 0.3;
+    const statutoryCap = residenceTaxDetailsForCap.taxableIncome * 0.3;
 
     // Final limit is the lower of the two, rounded down to the nearest 1,000 yen
     const finalLimit = Math.floor(Math.min(furusatoNozeiLimit, statutoryCap) / 1000) * 1000;
     const deductibleDonation = Math.max(finalLimit - FURUSATO_OUT_OF_POCKET_COST, 0);
     // const incomeTaxReduction = deductibleDonation * (1 - specialDeductionRate - donationBasicDeductionRate);
-    const incomeTaxReduction = calculateIncomeTaxReduction(taxableIncomeForNationalIncomeTax, deductibleDonation);
+    let incomeTaxReduction = calculateIncomeTaxReduction(taxableIncomeForNationalIncomeTax, deductibleDonation);
+    // When the mortgage tax credit reduces the actual income tax paid, the income-tax
+    // refund portion of furusato can only be claimed up to the remaining income tax.
+    if (remainingIncomeTax !== undefined) {
+        incomeTaxReduction = Math.min(incomeTaxReduction, Math.max(0, remainingIncomeTax));
+    }
     const residenceTaxDonationBasicDeduction = deductibleDonation * donationBasicDeductionRate;
     let residenceTaxSpecialDeduction = deductibleDonation * specialDeductionRate;
-    residenceTaxSpecialDeduction = Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetails.cityProportion) + Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetails.prefecturalProportion);
+    residenceTaxSpecialDeduction = Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetailsForFinal.cityProportion) + Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetailsForFinal.prefecturalProportion);
 
     const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
-    const beforeCityIncomeTax = residenceTaxDetails.city.cityTaxableIncome * residenceTaxDetails.residenceTaxRate - residenceTaxDetails.city.cityAdjustmentCredit;
-    const cityIncomeTaxWithFurusato = Math.floor((beforeCityIncomeTax - Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetails.cityProportion)) / 100) * 100;
-    const beforePrefectureIncomeTax = residenceTaxDetails.prefecture.prefecturalTaxableIncome * residenceTaxDetails.residenceTaxRate - residenceTaxDetails.prefecture.prefecturalAdjustmentCredit;
-    const prefectureIncomeTaxWithFurusato = Math.floor((beforePrefectureIncomeTax - Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetails.prefecturalProportion)) / 100) * 100;
-    const residenceTaxDifference = (residenceTaxDetails.totalResidenceTax) - (cityIncomeTaxWithFurusato + prefectureIncomeTaxWithFurusato + residenceTaxDetails.perCapitaTax);
+    // Use the raw (pre-rounding) city/prefectural income tax MINUS the mortgage-credit
+    // spillover (when present), then subtract the furusato tax credit. When no
+    // mortgage credit is in play, appliedMortgageCreditToResidenceTax is 0 and this
+    // matches the original formula exactly.
+    const beforeCityIncomeTax = residenceTaxDetailsForCap.city.cityTaxableIncome * residenceTaxDetailsForCap.residenceTaxRate
+        - residenceTaxDetailsForCap.city.cityAdjustmentCredit
+        - appliedMortgageCreditToResidenceTax * residenceTaxDetailsForCap.cityProportion;
+    const cityIncomeTaxWithFurusato = Math.floor(Math.max(0, beforeCityIncomeTax - Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.cityProportion)) / 100) * 100;
+    const beforePrefectureIncomeTax = residenceTaxDetailsForCap.prefecture.prefecturalTaxableIncome * residenceTaxDetailsForCap.residenceTaxRate
+        - residenceTaxDetailsForCap.prefecture.prefecturalAdjustmentCredit
+        - appliedMortgageCreditToResidenceTax * residenceTaxDetailsForCap.prefecturalProportion;
+    const prefectureIncomeTaxWithFurusato = Math.floor(Math.max(0, beforePrefectureIncomeTax - Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.prefecturalProportion)) / 100) * 100;
+    const residenceTaxDifference = (residenceTaxDetailsForFinal.totalResidenceTax) - (cityIncomeTaxWithFurusato + prefectureIncomeTaxWithFurusato + residenceTaxDetailsForFinal.perCapitaTax);
 
     return {
         limit: finalLimit,

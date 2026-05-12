@@ -45,6 +45,48 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 
 export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream | StockCompensationIncomeStream;
 
+/**
+ * Five housing energy/quality tiers used by 住宅ローン控除.
+ * Used to look up the qualifying loan-balance cap for the credit calculation.
+ */
+export type MortgageHousingTier =
+  | 'longTermExcellent'   // 認定長期優良住宅
+  | 'lowCarbon'           // 認定低炭素住宅
+  | 'zehWaterSaving'      // ZEH水準省エネ住宅
+  | 'energySaving'        // 省エネ基準適合住宅
+  | 'standard';           // その他 / standard housing
+
+export type MortgageInputMode = 'manual' | 'autoCalculate';
+
+/** User input for the mortgage tax credit (住宅ローン控除). */
+export interface MortgageTaxCreditInput {
+  /** Calendar year the user first moved into the residence. Drives cohort lookup. */
+  moveInYear: number;
+  /** Existing home flag — affects duration (10 vs 13) and qualifying caps. */
+  isExistingHome: boolean;
+  mode: MortgageInputMode;
+  /** Manual mode: the annual credit amount the user expects to receive (yen). */
+  manualAnnualCredit?: number;
+  /** Auto mode: year-end loan balance (yen). */
+  yearEndLoanBalance?: number;
+  /** Auto mode: housing tier used to pick the qualifying loan-balance cap. */
+  housingTier?: MortgageHousingTier;
+}
+
+/** Computed application of the mortgage tax credit. */
+export interface MortgageTaxCreditResult {
+  /** Pre-spillover total credit for the year (yen). */
+  annualCredit: number;
+  /** Portion applied against national income tax. */
+  appliedToIncomeTax: number;
+  /** Portion that spilled over and was applied against residence tax. */
+  appliedToResidenceTax: number;
+  /** Credit that could not be applied because of caps (informational). */
+  unusedCredit: number;
+  /** Human-readable warnings: out-of-period, income exceeds limit, etc. */
+  warnings: ReadonlyArray<string>;
+}
+
 /** Interface for the UI Form State */
 export interface TakeHomeFormState {
   annualIncome: number;
@@ -59,6 +101,7 @@ export interface TakeHomeFormState {
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   savedIncomeStreams?: IncomeStream[];
+  mortgageTaxCredit?: MortgageTaxCreditInput | undefined;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -73,6 +116,7 @@ export interface TakeHomeInputs {
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   incomeYear?: number;
+  mortgageTaxCredit?: MortgageTaxCreditInput | undefined;
 }
 
 export interface CustomEmployeesHealthInsuranceRates {
@@ -106,6 +150,7 @@ export interface TakeHomeResults {
   residenceTaxBasicDeduction?: number | undefined;
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
+  mortgageTaxCredit?: MortgageTaxCreditResult;
   dcPlanContributions: number;
   // Dependent deductions
   dependentDeductions?: DependentDeductionResults;

@@ -562,6 +562,51 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {results.mortgageTaxCredit && results.mortgageTaxCredit.appliedToIncomeTax > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Mortgage Tax Credit (住宅ローン控除)
+                <DetailedTooltip title="Mortgage Tax Credit — Income Tax Portion">
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      A tax credit (税額控除) for homeowners with a mortgage, applied first to national income tax. Any remainder spills over to residence tax up to a cohort-specific cap.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Total annual credit:</strong> {formatJPY(results.mortgageTaxCredit.annualCredit)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Applied to income tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToIncomeTax)}
+                    </Typography>
+                    {results.mortgageTaxCredit.appliedToResidenceTax > 0 && (
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Spillover to residence tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToResidenceTax)}
+                      </Typography>
+                    )}
+                    {results.mortgageTaxCredit.unusedCredit > 0 && (
+                      <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
+                        <strong>Unused (capped):</strong> {formatJPY(results.mortgageTaxCredit.unusedCredit)}
+                      </Typography>
+                    )}
+                    <Box sx={{ mt: 1 }}>
+                      Official Source:
+                      <ul>
+                        <li>
+                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1213.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                            住宅借入金等特別控除 - NTA
+                          </a>
+                        </li>
+                      </ul>
+                    </Box>
+                  </Box>
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-results.mortgageTaxCredit.appliedToIncomeTax)}
+            type="detail"
+          />
+        )}
+
         <ResultRow
           label={
             <span>
@@ -571,7 +616,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               >
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Total Income Tax = Base Income Tax + Reconstruction Surtax
+                    Total Income Tax = Base Income Tax + Reconstruction Surtax (− Mortgage Tax Credit)
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Rounding:</strong> The sum of base income tax and surtax is rounded down to the nearest 100 yen for the final amount.
@@ -1057,6 +1102,31 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
         />
 
 
+
+        {results.mortgageTaxCredit && results.mortgageTaxCredit.appliedToResidenceTax > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Mortgage Tax Credit (住宅ローン控除) spillover
+                <DetailedTooltip title="Mortgage Tax Credit — Residence Tax Spillover">
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      When the mortgage tax credit exceeds your income tax, the remainder spills over to reduce residence tax up to a cohort-specific cap.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      The income-based portion shown above already has this amount subtracted.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85em', color: 'text.secondary' }}>
+                      Note: the spillover does NOT reduce the 20% furusato special-deduction cap, but it does change the income-tax refund portion if the credit fully absorbs your income tax.
+                    </Typography>
+                  </Box>
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-results.mortgageTaxCredit.appliedToResidenceTax)}
+            type="detail"
+          />
+        )}
 
         <ResultRow
           label="Total Residence Tax"
