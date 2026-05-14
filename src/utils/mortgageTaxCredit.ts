@@ -66,10 +66,10 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
         return { ...EMPTY_RESULT, warnings };
     }
 
-    // Eligibility: credit window.
-    const durationYears = input.isExistingHome
-        ? cohort.durationYears.existingHomes
-        : cohort.durationYears.newBuilds;
+    // Eligibility: credit window. The duration depends on build type, so we only
+    // enforce it in auto-calculate mode where build type is a structural input.
+    // In manual mode we trust the user-provided credit amount and skip the check
+    // (build type isn't asked for in that mode).
     const yearsSinceMoveIn = calculationYear - input.moveInYear;
     if (yearsSinceMoveIn < 0) {
         warnings.push(
@@ -78,12 +78,17 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
         );
         return { ...EMPTY_RESULT, warnings };
     }
-    if (yearsSinceMoveIn >= durationYears) {
-        warnings.push(
-            `Mortgage tax credit not applied: the ${durationYears}-year credit period ended after ` +
-            `${input.moveInYear + durationYears - 1}.`
-        );
-        return { ...EMPTY_RESULT, warnings };
+    if (input.mode === 'autoCalculate') {
+        const durationYears = input.isExistingHome
+            ? cohort.durationYears.existingHomes
+            : cohort.durationYears.newBuilds;
+        if (yearsSinceMoveIn >= durationYears) {
+            warnings.push(
+                `Mortgage tax credit not applied: the ${durationYears}-year credit period ended after ` +
+                `${input.moveInYear + durationYears - 1}.`
+            );
+            return { ...EMPTY_RESULT, warnings };
+        }
     }
 
     // Determine annual credit.

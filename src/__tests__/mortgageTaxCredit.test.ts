@@ -156,10 +156,10 @@ describe('applyMortgageTaxCredit - eligibility', () => {
         expect(result.appliedToIncomeTax).toBe(200_000);
     });
 
-    it('rejects calculation year outside the new-build 13-year window', () => {
+    it('rejects calculation year outside the new-build 13-year window (auto mode)', () => {
         // 2024 move-in + 13y = applies for calculation years 2024..2036
         const result = applyMortgageTaxCredit({
-            input: { ...MANUAL_BASE, moveInYear: 2024, isExistingHome: false, manualAnnualCredit: 200_000 },
+            input: { ...AUTO_BASE, moveInYear: 2024, isExistingHome: false, yearEndLoanBalance: 30_000_000, housingTier: 'energySaving' },
             netIncome: 8_000_000,
             nationalIncomeTax: 500_000,
             taxableTotalIncome: 5_000_000,
@@ -169,10 +169,10 @@ describe('applyMortgageTaxCredit - eligibility', () => {
         expect(result.warnings[0]).toContain('credit period ended');
     });
 
-    it('rejects calculation year outside the existing-home 10-year window', () => {
+    it('rejects calculation year outside the existing-home 10-year window (auto mode)', () => {
         // 2024 move-in + 10y = applies for calculation years 2024..2033
         const result = applyMortgageTaxCredit({
-            input: { ...MANUAL_BASE, moveInYear: 2024, isExistingHome: true, manualAnnualCredit: 200_000 },
+            input: { ...AUTO_BASE, moveInYear: 2024, isExistingHome: true, yearEndLoanBalance: 15_000_000, housingTier: 'energySaving' },
             netIncome: 8_000_000,
             nationalIncomeTax: 500_000,
             taxableTotalIncome: 5_000_000,
@@ -182,16 +182,30 @@ describe('applyMortgageTaxCredit - eligibility', () => {
         expect(result.warnings[0]).toContain('credit period ended');
     });
 
-    it('accepts at the final year of the credit window', () => {
+    it('accepts at the final year of the credit window (auto mode)', () => {
         // 2024 move-in, new build, 13-year window: last applicable year is 2036
         const result = applyMortgageTaxCredit({
-            input: { ...MANUAL_BASE, moveInYear: 2024, isExistingHome: false, manualAnnualCredit: 200_000 },
+            input: { ...AUTO_BASE, moveInYear: 2024, isExistingHome: false, yearEndLoanBalance: 30_000_000, housingTier: 'energySaving' },
             netIncome: 8_000_000,
             nationalIncomeTax: 500_000,
             taxableTotalIncome: 5_000_000,
             calculationYear: 2036,
         });
+        expect(result.annualCredit).toBeGreaterThan(0);
+    });
+
+    it('manual mode trusts the user-provided amount even outside the typical duration window', () => {
+        // Manual mode skips the duration check. The user is responsible for entering
+        // a sensible amount; we don't second-guess them on duration.
+        const result = applyMortgageTaxCredit({
+            input: { ...MANUAL_BASE, moveInYear: 2024, manualAnnualCredit: 200_000 },
+            netIncome: 8_000_000,
+            nationalIncomeTax: 500_000,
+            taxableTotalIncome: 5_000_000,
+            calculationYear: 2040, // well past any plausible duration
+        });
         expect(result.annualCredit).toBe(200_000);
+        expect(result.appliedToIncomeTax).toBe(200_000);
     });
 
     it('rejects calculation years before move-in', () => {

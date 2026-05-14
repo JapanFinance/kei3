@@ -155,7 +155,7 @@ export const MortgageTaxCreditModal: React.FC<MortgageTaxCreditModalProps> = ({
                 <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
                   Year moved in
                   <SimpleTooltip>
-                    The year you first moved into the home and began claiming the credit. Determines which cohort's rules apply.
+                    The year you first moved into the home and began claiming the credit. Determines the cohort's residence-tax spillover cap and income-eligibility limit.
                   </SimpleTooltip>
                 </Typography>
                 <SpinnerNumberField
@@ -172,26 +172,28 @@ export const MortgageTaxCreditModal: React.FC<MortgageTaxCreditModalProps> = ({
                 />
               </FormControl>
 
-              <FormControl sx={{ flex: '1 1 220px', minWidth: 200 }}>
-                <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
-                  Build type
-                  <SimpleTooltip>
-                    Existing homes (中古) typically receive a 10-year credit; newly built energy-compliant homes typically receive 13 years.
-                  </SimpleTooltip>
-                </Typography>
-                <ToggleButtonGroup
-                  value={effectiveInput.isExistingHome ? 'existing' : 'new'}
-                  exclusive
-                  onChange={(_, value) => {
-                    if (value !== null) update({ isExistingHome: value === 'existing' });
-                  }}
-                  size="small"
-                  fullWidth
-                >
-                  <ToggleButton value="new">New build</ToggleButton>
-                  <ToggleButton value="existing">Existing</ToggleButton>
-                </ToggleButtonGroup>
-              </FormControl>
+              {effectiveInput.mode === 'autoCalculate' && (
+                <FormControl sx={{ flex: '1 1 220px', minWidth: 200 }}>
+                  <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
+                    Build type
+                    <SimpleTooltip>
+                      Existing homes (中古) typically receive a 10-year credit and a smaller qualifying-balance cap; newly built energy-compliant homes typically receive 13 years.
+                    </SimpleTooltip>
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={effectiveInput.isExistingHome ? 'existing' : 'new'}
+                    exclusive
+                    onChange={(_, value) => {
+                      if (value !== null) update({ isExistingHome: value === 'existing' });
+                    }}
+                    size="small"
+                    fullWidth
+                  >
+                    <ToggleButton value="new">New build</ToggleButton>
+                    <ToggleButton value="existing">Existing</ToggleButton>
+                  </ToggleButtonGroup>
+                </FormControl>
+              )}
             </Box>
 
             <FormControl>
