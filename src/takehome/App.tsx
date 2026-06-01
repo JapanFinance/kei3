@@ -3,8 +3,7 @@
 
 import { useState, useEffect, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import ThemeToggle from '../shared/components/ThemeToggle'
+import SiteHeader from '../shared/components/SiteHeader'
 import ChangelogButton from './components/ChangelogButton'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
 import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types/tax'
@@ -166,53 +165,27 @@ function App({ mode, toggleColorMode }: AppProps) {
 
   return (
     <Box sx={{
-      maxWidth: 1536, // max-w-6xl equivalent
-      mx: 'auto',
-      px: { xs: 2, sm: 3, md: 4 },
-      py: { xs: 4, sm: 6, md: 8 },
       minHeight: '100vh',
       bgcolor: 'background.default',
       color: 'text.primary',
       overflowX: 'hidden',
     }}>
-      <Box sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        mb: { xs: 4, sm: 6, md: 8 },
-        flexDirection: 'row',
-        gap: { xs: 1, sm: 2 },
-        '& h1': {
-          fontSize: { xs: '1.75rem', sm: '2rem' },
-          lineHeight: 1.2
-        }
-      }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            fontWeight: 'bold',
-            textAlign: { xs: 'center', sm: 'left' },
-            flex: 1,
-            maxWidth: { xs: '80vw', sm: 'none' },
-          }}
-        >
-          Japan Take-Home Pay Calculator
-        </Typography>
-        <Box sx={{
-          flexShrink: 0,
-          ml: { xs: 1, sm: 2 },
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
-          <ChangelogButton onClick={openChangelog} />
-          <ThemeToggle mode={mode} toggleColorMode={toggleColorMode} />
-        </Box>
-      </Box>
+      <SiteHeader
+        title="Take-Home Pay"
+        mode={mode}
+        toggleColorMode={toggleColorMode}
+        actions={<ChangelogButton onClick={openChangelog} />}
+      />
 
       <Box sx={{
-        display: 'grid',
+        maxWidth: 1536, // max-w-6xl equivalent
+        mx: 'auto',
+        px: { xs: 2, sm: 3, md: 4 },
+        pt: { xs: 3, sm: 4 },
+        pb: { xs: 4, sm: 6, md: 8 },
+      }}>
+        <Box sx={{
+          display: 'grid',
         gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
         gap: { xs: 3, md: 4 },
         width: '100%',
@@ -280,6 +253,7 @@ function App({ mode, toggleColorMode }: AppProps) {
       <Suspense fallback={null}>
         <ChangelogModal open={isChangelogOpen} onClose={closeChangelog} />
       </Suspense>
+      </Box>
     </Box>
   )
 }
