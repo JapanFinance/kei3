@@ -11,5 +11,10 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./test-setup.ts'],
+    server: {
+      deps: {
+        inline: ['react-transition-group'],
+      },
+    },
   },
 }) 
