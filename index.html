@@ -3,50 +3,49 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Japan Take-Home Pay Calculator</title>
+    <title>Japan Finance Calculators</title>
 
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Calculate your take-home pay in Japan. Calculate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance." />
+    <meta name="description" content="Free, open-source calculators for Japan personal finance: estimate take-home pay, and more tools coming soon." />
     <link rel="canonical" href="https://kei3.japanfinance.org/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://kei3.japanfinance.org/" />
-    <meta property="og:title" content="Japan Take-Home Pay Calculator" />
-    <meta property="og:description" content="Calculate your take-home pay in Japan. Calculate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance." />
-    
+    <meta property="og:title" content="Japan Finance Calculators" />
+    <meta property="og:description" content="Free, open-source calculators for Japan personal finance: estimate take-home pay, and more tools coming soon." />
+
     <!-- Twitter -->
     <meta property="twitter:card" content="summary" />
     <meta property="twitter:url" content="https://kei3.japanfinance.org/" />
-    <meta property="twitter:title" content="Japan Take-Home Pay Calculator" />
-    <meta property="twitter:description" content="Calculate your take-home pay in Japan. Calculate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance." />
+    <meta property="twitter:title" content="Japan Finance Calculators" />
+    <meta property="twitter:description" content="Free, open-source calculators for Japan personal finance: estimate take-home pay, and more tools coming soon." />
 
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Japan Take-Home Pay Calculator",
-      "applicationCategory": "FinanceApplication",
-      "description": "A comprehensive calculator for Japan take-home pay, including income tax, residence tax, health insurance, pension, and Furusato Nozei limits.",
+      "@type": "WebSite",
+      "name": "Japan Finance Calculators",
       "url": "https://kei3.japanfinance.org/",
-      "offers": {
-        "@type": "Offer",
-        "price": "0"
-      }
+      "description": "Free, open-source calculators for Japan personal finance."
     }
     </script>
 
-    <link rel="stylesheet" href="/src/index.css" />
+    <link rel="stylesheet" href="/src/shared/index.css" />
   </head>
   <body>
     <div id="root">
       <noscript>
-        <h1>Japan Take-Home Pay Calculator</h1>
-        <p>Calculate your take-home pay in Japan. Estimate income tax, residence tax, health insurance, pension, and Furusato Nozei allowance.</p>
-        <p>You need to enable JavaScript to run this app.</p>
+        <h1>Japan Finance Calculators</h1>
+        <p>Free, open-source calculators for Japan personal finance.</p>
+        <ul>
+          <li><a href="/takehome/">Take-Home Pay Calculator</a></li>
+          <li><a href="/loan/">Home Loan Rate Simulator</a></li>
+        </ul>
+        <p>You need to enable JavaScript to run these apps.</p>
       </noscript>
     </div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="/src/index/main.tsx"></script>
   </body>
 </html>

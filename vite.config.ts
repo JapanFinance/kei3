@@ -29,6 +29,14 @@ export default defineConfig(({ mode }) => ({
     assetsDir: 'assets',
     sourcemap: true,
     rolldownOptions: {
+      // Multi-page app: one HTML entry (and its own JS bundle) per calculator,
+      // plus the landing/index page at the site root. Paths are resolved
+      // relative to the project root.
+      input: {
+        index: 'index.html',
+        takehome: 'takehome/index.html',
+        loan: 'loan/index.html',
+      },
       output: {
         codeSplitting: {
           groups: [
