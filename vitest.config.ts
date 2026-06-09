@@ -13,7 +13,7 @@ export default defineConfig({
     setupFiles: ['./test-setup.ts'],
     server: {
       deps: {
-        inline: ['react-transition-group'],
+        inline: [/@mui\//],
       },
     },
   },
