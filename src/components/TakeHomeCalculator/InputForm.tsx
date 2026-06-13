@@ -33,7 +33,7 @@ import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
-import type { TakeHomeFormState, IncomeMode, IncomeStream, MortgageTaxCreditInput } from '../../types/tax';
+import type { TakeHomeFormState, IncomeMode, IncomeStream, HomeLoanTaxCreditInput } from '../../types/tax';
 import {
   getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
@@ -98,10 +98,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
-  const handleMortgageTaxCreditChange = (newInput: MortgageTaxCreditInput | undefined) => {
+  const handleHomeLoanTaxCreditChange = (newInput: HomeLoanTaxCreditInput | undefined) => {
     onInputChange({
       target: {
-        name: 'mortgageTaxCredit',
+        name: 'homeLoanTaxCredit',
         value: newInput,
       }
     } as unknown as React.ChangeEvent<HTMLInputElement>);
@@ -945,7 +945,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             {(() => {
               const parts: string[] = [];
               if (inputs.dcPlanContributions > 0) parts.push(`iDeCo ${formatJPY(inputs.dcPlanContributions)}`);
-              if (inputs.mortgageTaxCredit && inputs.mortgageTaxCredit.creditAmount > 0) parts.push(`Home loan tax credit ${formatJPY(inputs.mortgageTaxCredit.creditAmount)}`);
+              if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0) parts.push(`Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`);
               return parts.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
@@ -983,8 +983,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onClose={() => setAdditionalModalOpen(false)}
         dcPlanContributions={inputs.dcPlanContributions}
         onDcPlanContributionsChange={handleDcPlanContributionsChange}
-        mortgageTaxCredit={inputs.mortgageTaxCredit}
-        onMortgageTaxCreditChange={handleMortgageTaxCreditChange}
+        homeLoanTaxCredit={inputs.homeLoanTaxCredit}
+        onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
         currentYear={new Date().getFullYear()}
       />
     </Box>

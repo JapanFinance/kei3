@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Cohort-based rules for the Japanese mortgage tax credit (住宅ローン控除 /
+ * Cohort-based rules for the Japanese home loan tax credit (住宅ローン控除 /
  * 住宅借入金等特別控除). The rules a person receives are determined by the
  * **year they first moved into the residence**.
  *
@@ -11,7 +11,7 @@
  *   1. the residence-tax spillover cap (used when the credit exceeds income tax), and
  *   2. the income-eligibility limit (合計所得金額 ceiling).
  *
- * Lookup: pass the user's `moveInYear` to `getMortgageTaxCreditCohort()`.
+ * Lookup: pass the user's `moveInYear` to `getHomeLoanTaxCreditCohort()`.
  * Bands are sorted newest-first; each covers an inclusive `[moveInYearFrom, moveInYearTo]` range.
  *
  * Maintenance:
@@ -46,7 +46,7 @@
  * ---------------------------------------------------------------------------
  */
 
-export interface MortgageTaxCreditCohort {
+export interface HomeLoanTaxCreditCohort {
     /** Inclusive lower bound of move-in years this band covers. */
     moveInYearFrom: number;
     /** Inclusive upper bound of move-in years this band covers. */
@@ -66,10 +66,10 @@ export interface MortgageTaxCreditCohort {
 }
 
 /**
- * Mortgage tax credit bands, sorted newest-first. Each band defines the
+ * Home loan tax credit bands, sorted newest-first. Each band defines the
  * residence-tax spillover cap and income-eligibility limit for its move-in years.
  */
-export const MORTGAGE_TAX_CREDIT_COHORTS: ReadonlyArray<MortgageTaxCreditCohort> = [
+export const HOME_LOAN_TAX_CREDIT_COHORTS: ReadonlyArray<HomeLoanTaxCreditCohort> = [
     // 2022+ (R4 tax reform onward): income limit cut 30M → 20M; spillover cap 5% / ¥97,500.
     {
         moveInYearFrom: 2022,
@@ -95,25 +95,25 @@ export const MORTGAGE_TAX_CREDIT_COHORTS: ReadonlyArray<MortgageTaxCreditCohort>
 
 if (import.meta.env.DEV) {
     // Sorted newest-first, no gaps, no overlaps.
-    for (let i = 0; i < MORTGAGE_TAX_CREDIT_COHORTS.length; i++) {
-        const cohort = MORTGAGE_TAX_CREDIT_COHORTS[i]!;
+    for (let i = 0; i < HOME_LOAN_TAX_CREDIT_COHORTS.length; i++) {
+        const cohort = HOME_LOAN_TAX_CREDIT_COHORTS[i]!;
         if (cohort.moveInYearFrom > cohort.moveInYearTo) {
             throw new Error(
-                `MORTGAGE_TAX_CREDIT_COHORTS[${i}] has moveInYearFrom (${cohort.moveInYearFrom}) ` +
+                `HOME_LOAN_TAX_CREDIT_COHORTS[${i}] has moveInYearFrom (${cohort.moveInYearFrom}) ` +
                 `> moveInYearTo (${cohort.moveInYearTo})`
             );
         }
         if (i > 0) {
-            const prev = MORTGAGE_TAX_CREDIT_COHORTS[i - 1]!;
+            const prev = HOME_LOAN_TAX_CREDIT_COHORTS[i - 1]!;
             if (prev.moveInYearFrom <= cohort.moveInYearTo) {
                 throw new Error(
-                    `MORTGAGE_TAX_CREDIT_COHORTS must be sorted newest-first with no overlaps; ` +
+                    `HOME_LOAN_TAX_CREDIT_COHORTS must be sorted newest-first with no overlaps; ` +
                     `entry ${i - 1} starts at ${prev.moveInYearFrom} but entry ${i} ends at ${cohort.moveInYearTo}`
                 );
             }
             if (prev.moveInYearFrom - cohort.moveInYearTo > 1) {
                 throw new Error(
-                    `MORTGAGE_TAX_CREDIT_COHORTS has a gap between entries ${i - 1} ` +
+                    `HOME_LOAN_TAX_CREDIT_COHORTS has a gap between entries ${i - 1} ` +
                     `(starts ${prev.moveInYearFrom}) and ${i} (ends ${cohort.moveInYearTo})`
                 );
             }
@@ -125,8 +125,8 @@ if (import.meta.env.DEV) {
  * Returns the band whose [moveInYearFrom, moveInYearTo] range contains the given
  * move-in year, or undefined if no band covers it (pre-2009 move-in).
  */
-export const getMortgageTaxCreditCohort = (moveInYear: number): MortgageTaxCreditCohort | undefined => {
-    for (const cohort of MORTGAGE_TAX_CREDIT_COHORTS) {
+export const getHomeLoanTaxCreditCohort = (moveInYear: number): HomeLoanTaxCreditCohort | undefined => {
+    for (const cohort of HOME_LOAN_TAX_CREDIT_COHORTS) {
         if (moveInYear >= cohort.moveInYearFrom && moveInYear <= cohort.moveInYearTo) {
             return cohort;
         }

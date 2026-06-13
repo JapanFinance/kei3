@@ -25,7 +25,7 @@ import {getCommutingAllowanceAnnualAmount} from './formatters';
 import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
 import {getNationalBasicDeductionTiers} from '../data/nationalBasicDeduction';
 import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/employmentIncomeDeduction';
-import {applyMortgageTaxCredit} from './mortgageTaxCredit';
+import {applyHomeLoanTaxCredit} from './homeLoanTaxCredit';
 
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.
@@ -431,22 +431,22 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
 
     // Base national income tax (所得税額) before the reconstruction surtax. The
-    // mortgage tax credit is a 税額控除 applied to this base; the surtax is then
+    // home loan tax credit is a 税額控除 applied to this base; the surtax is then
     // recomputed on the reduced base (see below).
     const nationalIncomeTaxBase = calculateNationalIncomeTaxBase(taxableIncomeForNationalIncomeTax);
 
     const residenceTaxBasicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
     const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction - dependentDeductions.residenceTax.total) / 1000) * 1000);
 
-    // Mortgage tax credit (住宅ローン控除): applied first to the base income tax,
+    // Home loan tax credit (住宅ローン控除): applied first to the base income tax,
     // then spilled over to residence tax up to the cohort's cap.
     // Calling residence tax with appliedToResidenceTax = 0 first gives us the
     // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
     const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
 
-    const mortgageTaxCreditResult = inputs.mortgageTaxCredit
-        ? applyMortgageTaxCredit({
-            input: inputs.mortgageTaxCredit,
+    const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
+        ? applyHomeLoanTaxCredit({
+            input: inputs.homeLoanTaxCredit,
             netIncome,
             baseIncomeTax: nationalIncomeTaxBase,
             // The residence-tax spillover cap is based on the INCOME-TAX taxable income
@@ -456,13 +456,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         : undefined;
 
     // Reconstruction surtax (復興特別所得税) is 2.1% of the base income tax AFTER the
-    // mortgage credit (基準所得税額). The credit reduces the base, then the surtax applies.
-    const baseIncomeTaxAfterCredit = Math.max(0, nationalIncomeTaxBase - (mortgageTaxCreditResult?.appliedToIncomeTax ?? 0));
+    // home loan credit (基準所得税額). The credit reduces the base, then the surtax applies.
+    const baseIncomeTaxAfterCredit = Math.max(0, nationalIncomeTaxBase - (homeLoanTaxCreditResult?.appliedToIncomeTax ?? 0));
     const reconstructionSurtax = calculateReconstructionSurtax(baseIncomeTaxAfterCredit);
     const nationalIncomeTax = Math.floor((baseIncomeTaxAfterCredit + reconstructionSurtax) / 100) * 100;
 
-    const residenceTax = mortgageTaxCreditResult && mortgageTaxCreditResult.appliedToResidenceTax > 0
-        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, mortgageTaxCreditResult.appliedToResidenceTax, incomeYear)
+    const residenceTax = homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0
+        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, homeLoanTaxCreditResult.appliedToResidenceTax, incomeYear)
         : preCreditResidenceTax;
 
     // Calculate totals
@@ -473,7 +473,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total,
         preCreditResidenceTax,
         residenceTax,
-        mortgageTaxCreditResult?.appliedToResidenceTax ?? 0,
+        homeLoanTaxCreditResult?.appliedToResidenceTax ?? 0,
         nationalIncomeTax,
     );
 
@@ -503,11 +503,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxBasicDeduction,
         taxableIncomeForResidenceTax,
         furusatoNozei: furusatoNozeiLimit,
-        ...(mortgageTaxCreditResult && { mortgageTaxCredit: mortgageTaxCreditResult }),
-        // Residence income-based portion (所得割) BEFORE the mortgage spillover, so the
+        ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
+        // Residence income-based portion (所得割) BEFORE the home loan spillover, so the
         // Taxes tab can show the spillover as its own line and have the rows sum.
-        ...(mortgageTaxCreditResult && mortgageTaxCreditResult.appliedToResidenceTax > 0 && {
-            residenceTaxIncomeBasedBeforeMortgageCredit:
+        ...(homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0 && {
+            residenceTaxIncomeBasedBeforeHomeLoanCredit:
                 preCreditResidenceTax.city.cityIncomeTax + preCreditResidenceTax.prefecture.prefecturalIncomeTax,
         }),
         dcPlanContributions: inputs.dcPlanContributions,

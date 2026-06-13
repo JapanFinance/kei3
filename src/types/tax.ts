@@ -46,13 +46,13 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream | StockCompensationIncomeStream;
 
 /**
- * User input for the mortgage tax credit (住宅ローン控除).
+ * User input for the home loan tax credit (住宅ローン控除).
  *
  * The user supplies the calculated credit amount directly (the 控除可能額 — see
  * `creditAmount` below). The only other thing we need is the move-in year, which
  * determines the residence-tax spillover cap and the income-eligibility limit.
  */
-export interface MortgageTaxCreditInput {
+export interface HomeLoanTaxCreditInput {
   /**
    * Calendar year the user first moved into the residence. Drives the cohort
    * lookup for the residence-tax spillover cap and the income-eligibility limit.
@@ -67,8 +67,8 @@ export interface MortgageTaxCreditInput {
   creditAmount: number;
 }
 
-/** Computed application of the mortgage tax credit. */
-export interface MortgageTaxCreditResult {
+/** Computed application of the home loan tax credit. */
+export interface HomeLoanTaxCreditResult {
   /** Pre-spillover total credit for the year (yen). */
   annualCredit: number;
   /** Portion applied against national income tax. */
@@ -95,7 +95,7 @@ export interface TakeHomeFormState {
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   savedIncomeStreams?: IncomeStream[];
-  mortgageTaxCredit?: MortgageTaxCreditInput | undefined;
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -110,7 +110,7 @@ export interface TakeHomeInputs {
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   incomeYear?: number;
-  mortgageTaxCredit?: MortgageTaxCreditInput | undefined;
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 
 export interface CustomEmployeesHealthInsuranceRates {
@@ -144,9 +144,9 @@ export interface TakeHomeResults {
   residenceTaxBasicDeduction?: number | undefined;
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
-  mortgageTaxCredit?: MortgageTaxCreditResult;
-  /** Residence income-based portion (所得割) before the mortgage-credit spillover, for display. */
-  residenceTaxIncomeBasedBeforeMortgageCredit?: number | undefined;
+  homeLoanTaxCredit?: HomeLoanTaxCreditResult;
+  /** Residence income-based portion (所得割) before the home loan credit spillover, for display. */
+  residenceTaxIncomeBasedBeforeHomeLoanCredit?: number | undefined;
   dcPlanContributions: number;
   // Dependent deductions
   dependentDeductions?: DependentDeductionResults;

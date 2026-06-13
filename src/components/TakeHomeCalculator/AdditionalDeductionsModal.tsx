@@ -22,18 +22,18 @@ import TuneIcon from '@mui/icons-material/Tune';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { MortgageTaxCreditInput } from '../../types/tax';
+import type { HomeLoanTaxCreditInput } from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../ui/Tooltips';
-import { earliestEligibleMoveInYear } from '../../utils/mortgageTaxCredit';
+import { earliestEligibleMoveInYear } from '../../utils/homeLoanTaxCredit';
 
 interface AdditionalDeductionsModalProps {
   open: boolean;
   onClose: () => void;
   dcPlanContributions: number;
   onDcPlanContributionsChange: (value: number) => void;
-  mortgageTaxCredit?: MortgageTaxCreditInput | undefined;
-  onMortgageTaxCreditChange: (input: MortgageTaxCreditInput | undefined) => void;
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
   currentYear: number;
 }
 
@@ -58,14 +58,14 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   onClose,
   dcPlanContributions,
   onDcPlanContributionsChange,
-  mortgageTaxCredit,
-  onMortgageTaxCreditChange,
+  homeLoanTaxCredit,
+  onHomeLoanTaxCreditChange,
   currentYear,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const effectiveMortgage: MortgageTaxCreditInput = mortgageTaxCredit ?? {
+  const effectiveHomeLoan: HomeLoanTaxCreditInput = homeLoanTaxCredit ?? {
     moveInYear: currentYear,
     creditAmount: 0,
   };
@@ -77,8 +77,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
     return years;
   }, [currentYear]);
 
-  const updateMortgage = (patch: Partial<MortgageTaxCreditInput>) => {
-    onMortgageTaxCreditChange({ ...effectiveMortgage, ...patch });
+  const updateHomeLoan = (patch: Partial<HomeLoanTaxCreditInput>) => {
+    onHomeLoanTaxCreditChange({ ...effectiveHomeLoan, ...patch });
   };
 
   return (
@@ -186,10 +186,10 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 </SimpleTooltip>
               </Typography>
               <SpinnerNumberField
-                id="mortgageCreditAmount"
+                id="homeLoanCreditAmount"
                 name="creditAmount"
-                value={effectiveMortgage.creditAmount}
-                onInputChange={(e) => updateMortgage({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
+                value={effectiveHomeLoan.creditAmount}
+                onInputChange={(e) => updateHomeLoan({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
                 label="Amount"
                 step={1_000}
                 shiftStep={10_000}
@@ -204,14 +204,14 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   The year you first moved in and began claiming the credit. Determines the residence-tax spillover cap and the income-eligibility limit.
                 </SimpleTooltip>
               </Typography>
-              <InputLabel id="mortgageMoveInYear-label" sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}>
+              <InputLabel id="homeLoanMoveInYear-label" sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}>
                 Year moved in
               </InputLabel>
               <Select
-                id="mortgageMoveInYear"
-                labelId="mortgageMoveInYear-label"
-                value={effectiveMortgage.moveInYear}
-                onChange={(e) => updateMortgage({ moveInYear: Number(e.target.value) })}
+                id="homeLoanMoveInYear"
+                labelId="homeLoanMoveInYear-label"
+                value={effectiveHomeLoan.moveInYear}
+                onChange={(e) => updateHomeLoan({ moveInYear: Number(e.target.value) })}
                 fullWidth
               >
                 {moveInYearOptions.map((y) => (

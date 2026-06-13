@@ -72,7 +72,7 @@ function App({ mode, toggleColorMode }: AppProps) {
         manualSocialInsuranceEntry: inputs.manualSocialInsuranceEntry,
         manualSocialInsuranceAmount: inputs.manualSocialInsuranceAmount,
         customEHIRates: inputs.customEHIRates,
-        mortgageTaxCredit: inputs.mortgageTaxCredit,
+        homeLoanTaxCredit: inputs.homeLoanTaxCredit,
       };
 
       const takeHomePayResults = calculateTaxes(calculationInputs);
@@ -95,7 +95,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     inputs.manualSocialInsuranceEntry,
     inputs.manualSocialInsuranceAmount,
     inputs.customEHIRates,
-    inputs.mortgageTaxCredit,
+    inputs.homeLoanTaxCredit,
   ]);
 
   // Handle input changes

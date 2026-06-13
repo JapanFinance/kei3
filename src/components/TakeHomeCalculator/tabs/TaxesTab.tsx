@@ -125,15 +125,15 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const hasEmploymentIncome = grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 
-  // Residence income-based portion (所得割). When a mortgage credit spills over to
+  // Residence income-based portion (所得割). When a home loan credit spills over to
   // residence tax, show the portion BEFORE the spillover and the spillover as its own
   // row so the line items sum to the total (otherwise the portion is already net of it).
   const residenceIncomeBasedPost = results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax;
-  const residenceIncomeBasedPre = results.residenceTaxIncomeBasedBeforeMortgageCredit ?? residenceIncomeBasedPost;
-  const hasMortgageResidenceSpillover = (results.mortgageTaxCredit?.appliedToResidenceTax ?? 0) > 0;
-  const residenceIncomeBasedDisplayed = hasMortgageResidenceSpillover ? residenceIncomeBasedPre : residenceIncomeBasedPost;
+  const residenceIncomeBasedPre = results.residenceTaxIncomeBasedBeforeHomeLoanCredit ?? residenceIncomeBasedPost;
+  const hasHomeLoanResidenceSpillover = (results.homeLoanTaxCredit?.appliedToResidenceTax ?? 0) > 0;
+  const residenceIncomeBasedDisplayed = hasHomeLoanResidenceSpillover ? residenceIncomeBasedPre : residenceIncomeBasedPost;
   // Exact reduction (pre − post) so the displayed rows reconcile to the total.
-  const mortgageResidenceReduction = residenceIncomeBasedPre - residenceIncomeBasedPost;
+  const homeLoanResidenceReduction = residenceIncomeBasedPre - residenceIncomeBasedPost;
 
   return (
     <Box>
@@ -527,7 +527,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
-        {results.mortgageTaxCredit && results.mortgageTaxCredit.appliedToIncomeTax > 0 && (
+        {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToIncomeTax > 0 && (
           <ResultRow
             label={
               <span>
@@ -538,19 +538,19 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       A tax credit (税額控除) for homeowners with a home loan, applied to the base income tax (所得税額) before the reconstruction surtax. Any remainder spills over to residence tax up to a cohort-specific cap.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Total annual credit:</strong> {formatJPY(results.mortgageTaxCredit.annualCredit)}
+                      <strong>Total annual credit:</strong> {formatJPY(results.homeLoanTaxCredit.annualCredit)}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Applied to income tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToIncomeTax)}
+                      <strong>Applied to income tax:</strong> {formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}
                     </Typography>
-                    {results.mortgageTaxCredit.appliedToResidenceTax > 0 && (
+                    {results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>Spillover to residence tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToResidenceTax)}
+                        <strong>Spillover to residence tax:</strong> {formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}
                       </Typography>
                     )}
-                    {results.mortgageTaxCredit.unusedCredit > 0 && (
+                    {results.homeLoanTaxCredit.unusedCredit > 0 && (
                       <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
-                        <strong>Unused (capped):</strong> {formatJPY(results.mortgageTaxCredit.unusedCredit)}
+                        <strong>Unused (capped):</strong> {formatJPY(results.homeLoanTaxCredit.unusedCredit)}
                       </Typography>
                     )}
                     <Box sx={{ mt: 1 }}>
@@ -567,7 +567,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 </DetailedTooltip>
               </span>
             }
-            value={formatJPY(-results.mortgageTaxCredit.appliedToIncomeTax)}
+            value={formatJPY(-results.homeLoanTaxCredit.appliedToIncomeTax)}
             type="detail"
           />
         )}
@@ -1113,7 +1113,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
 
 
-        {results.mortgageTaxCredit && results.mortgageTaxCredit.appliedToResidenceTax > 0 && (
+        {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
           <ResultRow
             label={
               <span>
@@ -1133,7 +1133,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 </DetailedTooltip>
               </span>
             }
-            value={formatJPY(-mortgageResidenceReduction)}
+            value={formatJPY(-homeLoanResidenceReduction)}
             type="detail"
           />
         )}

@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Mortgage tax credit (住宅ローン控除) application.
+ * Home loan tax credit (住宅ローン控除) application.
  *
  * The user supplies the calculated credit amount (控除可能額). We apply it as a
  * 税額控除: first against the base national income tax (所得税額, before the 2.1%
  * reconstruction surtax), then any remainder spills over to residence tax up to a
  * cohort-specific cap. The cohort is determined by the user's first move-in year.
- * See `src/data/mortgageTaxCredit.ts`.
+ * See `src/data/homeLoanTaxCredit.ts`.
  */
 
-import type { MortgageTaxCreditInput, MortgageTaxCreditResult } from "../types/tax";
-import { getMortgageTaxCreditCohort, MORTGAGE_TAX_CREDIT_COHORTS } from "../data/mortgageTaxCredit";
+import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from "../types/tax";
+import { getHomeLoanTaxCreditCohort, HOME_LOAN_TAX_CREDIT_COHORTS } from "../data/homeLoanTaxCredit";
 
-export interface ApplyMortgageTaxCreditArgs {
-    input: MortgageTaxCreditInput;
+export interface ApplyHomeLoanTaxCreditArgs {
+    input: HomeLoanTaxCreditInput;
     /** Net income (合計所得金額) — used to check the cohort income-eligibility limit. */
     netIncome: number;
     /**
@@ -31,7 +31,7 @@ export interface ApplyMortgageTaxCreditArgs {
     taxableTotalIncome: number;
 }
 
-const EMPTY_RESULT: MortgageTaxCreditResult = {
+const EMPTY_RESULT: HomeLoanTaxCreditResult = {
     annualCredit: 0,
     appliedToIncomeTax: 0,
     appliedToResidenceTax: 0,
@@ -41,7 +41,7 @@ const EMPTY_RESULT: MortgageTaxCreditResult = {
 
 // Bands are sorted newest-first, so the last entry has the earliest start year.
 const EARLIEST_SUPPORTED_MOVE_IN_YEAR =
-    MORTGAGE_TAX_CREDIT_COHORTS[MORTGAGE_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
+    HOME_LOAN_TAX_CREDIT_COHORTS[HOME_LOAN_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
 
 // 13-year credits exist only for move-ins from 2019 onward (the consumption-tax-hike
 // measure, then the 2022+ new-build regime). Every other cohort is a 10-year credit.
@@ -63,16 +63,16 @@ export function earliestEligibleMoveInYear(taxYear: number): number {
 }
 
 /**
- * Computes how the user's mortgage tax credit applies, split between the base
+ * Computes how the user's home loan tax credit applies, split between the base
  * income tax and the residence-tax spillover.
  *
  * Returns an empty result (with a warning) when the user is ineligible: income
  * over the cohort limit, or an unsupported (pre-2009) move-in year.
  */
-export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): MortgageTaxCreditResult {
+export function applyHomeLoanTaxCredit(args: ApplyHomeLoanTaxCreditArgs): HomeLoanTaxCreditResult {
     const { input, netIncome, baseIncomeTax, taxableTotalIncome } = args;
 
-    const cohort = getMortgageTaxCreditCohort(input.moveInYear);
+    const cohort = getHomeLoanTaxCreditCohort(input.moveInYear);
     if (!cohort) {
         return {
             ...EMPTY_RESULT,

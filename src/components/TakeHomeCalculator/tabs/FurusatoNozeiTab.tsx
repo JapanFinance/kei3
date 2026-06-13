@@ -269,8 +269,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         </Typography>
       </Box>
 
-      {/* Mortgage tax credit interaction note */}
-      {results.mortgageTaxCredit && results.mortgageTaxCredit.annualCredit > 0 && (
+      {/* Home loan tax credit interaction note */}
+      {results.homeLoanTaxCredit && results.homeLoanTaxCredit.annualCredit > 0 && (
         <Box sx={{
           bgcolor: 'info.light',
           color: 'info.contrastText',
@@ -282,7 +282,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             Home Loan Tax Credit Interaction
           </Typography>
           <Typography variant="body2">
-            The home loan tax credit of {formatJPY(results.mortgageTaxCredit.annualCredit)}/year has been accounted for in the figures above:
+            The home loan tax credit of {formatJPY(results.homeLoanTaxCredit.annualCredit)}/year has been accounted for in the figures above:
           </Typography>
           <Box component="ul" sx={{ pl: 2, mt: 0.5, mb: 0.5 }}>
             <li>
