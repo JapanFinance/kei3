@@ -2,6 +2,16 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-05-13
+
+### New
+
+- Added support for the mortgage tax credit (住宅ローン控除). Enter the annual credit amount you've calculated (控除可能額) and the year you moved in, and the calculator applies it to your income tax and — where it exceeds your income tax — to your residence tax, up to the applicable cap. The effect on your furusato nozei limit is also reflected. Find it in the new "Additional Deductions & Credits" section; see the tooltips for how to determine your credit amount.
+
+### Updated
+
+- The iDeCo / Corporate DC (defined contribution) contributions input has moved into the new "Additional Deductions & Credits" section. Its calculation is unchanged — only its location.
+
 ## 2026-04-05
 
 ### Updated
