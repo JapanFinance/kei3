@@ -23,7 +23,11 @@ export interface ApplyMortgageTaxCreditArgs {
      * reduces this base; the surtax is recomputed by the caller on the reduced base.
      */
     baseIncomeTax: number;
-    /** 課税総所得金額: residence-tax taxable total income — used for the spillover cap. */
+    /**
+     * 所得税の課税総所得金額等 — the INCOME-TAX taxable total income (not the
+     * residence-tax taxable income). Used for the residence-tax spillover cap:
+     * the cap is min(flatCap, floor(this × taxableIncomeRate)).
+     */
     taxableTotalIncome: number;
 }
 

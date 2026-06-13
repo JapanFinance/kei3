@@ -125,6 +125,16 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const hasEmploymentIncome = grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 
+  // Residence income-based portion (所得割). When a mortgage credit spills over to
+  // residence tax, show the portion BEFORE the spillover and the spillover as its own
+  // row so the line items sum to the total (otherwise the portion is already net of it).
+  const residenceIncomeBasedPost = results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax;
+  const residenceIncomeBasedPre = results.residenceTaxIncomeBasedBeforeMortgageCredit ?? residenceIncomeBasedPost;
+  const hasMortgageResidenceSpillover = (results.mortgageTaxCredit?.appliedToResidenceTax ?? 0) > 0;
+  const residenceIncomeBasedDisplayed = hasMortgageResidenceSpillover ? residenceIncomeBasedPre : residenceIncomeBasedPost;
+  // Exact reduction (pre − post) so the displayed rows reconcile to the total.
+  const mortgageResidenceReduction = residenceIncomeBasedPre - residenceIncomeBasedPost;
+
   return (
     <Box>
       <Typography
@@ -858,7 +868,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </DetailedTooltip>
             </span>
           }
-          value={formatJPY(results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax)}
+          value={formatJPY(residenceIncomeBasedDisplayed)}
           type="detail"
         />
 
@@ -1111,10 +1121,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <DetailedTooltip title="Mortgage Tax Credit — Residence Tax Spillover">
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      When the mortgage tax credit exceeds your income tax, the remainder spills over to reduce residence tax up to a cohort-specific cap.
+                      When the mortgage tax credit exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      The income-based portion shown above already has this amount subtracted.
+                      It is subtracted from the income-based portion shown above to give the residence tax you actually pay.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85em', color: 'text.secondary' }}>
                       Note: the spillover does NOT reduce the 20% furusato special-deduction cap, but it does change the income-tax refund portion if the credit fully absorbs your income tax.
@@ -1123,7 +1133,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 </DetailedTooltip>
               </span>
             }
-            value={formatJPY(-results.mortgageTaxCredit.appliedToResidenceTax)}
+            value={formatJPY(-mortgageResidenceReduction)}
             type="detail"
           />
         )}

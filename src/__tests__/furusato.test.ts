@@ -155,6 +155,33 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withCredit.mortgageTaxCredit?.warnings.length ?? 0).toBeGreaterThan(0);
     });
 
+    it('bases the residence-tax spillover cap on income-tax taxable income (所得税の課税総所得金額等), not residence taxable income', () => {
+      // At ¥3.5M the residence-tax taxable income is well above the income-tax taxable
+      // income (the income-tax basic deduction is larger), so the two cap bases diverge.
+      const inputs = {
+        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const }],
+        isSubjectToLongTermCarePremium: false,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+      // A credit large enough that the spillover saturates the cap.
+      const r = calculateTaxes({ ...inputs, mortgageTaxCredit: { moveInYear: 2024, creditAmount: 300_000 } });
+      const incomeTaxTaxable = r.taxableIncomeForNationalIncomeTax!;
+      const residenceTaxable = r.taxableIncomeForResidenceTax!;
+      expect(residenceTaxable).toBeGreaterThan(incomeTaxTaxable); // the two bases really differ here
+
+      // Cap = 5% of the INCOME-TAX taxable income (under the ¥97,500 flat cap at this income).
+      const expectedCap = Math.floor(incomeTaxTaxable * 0.05);
+      expect(r.mortgageTaxCredit?.appliedToResidenceTax).toBe(expectedCap);
+      // Guard against the old bug, which used the (larger) residence taxable income.
+      expect(r.mortgageTaxCredit?.appliedToResidenceTax).toBeLessThan(Math.floor(residenceTaxable * 0.05));
+    });
+
     // ----------------------------------------------------------------------
     // KNOWN APPROXIMATION — furusato + mortgage overlap when income tax is wiped.
     //

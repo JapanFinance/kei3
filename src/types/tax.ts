@@ -145,6 +145,8 @@ export interface TakeHomeResults {
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
   mortgageTaxCredit?: MortgageTaxCreditResult;
+  /** Residence income-based portion (所得割) before the mortgage-credit spillover, for display. */
+  residenceTaxIncomeBasedBeforeMortgageCredit?: number | undefined;
   dcPlanContributions: number;
   // Dependent deductions
   dependentDeductions?: DependentDeductionResults;

@@ -449,7 +449,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             input: inputs.mortgageTaxCredit,
             netIncome,
             baseIncomeTax: nationalIncomeTaxBase,
-            taxableTotalIncome: taxableIncomeForResidenceTax,
+            // The residence-tax spillover cap is based on the INCOME-TAX taxable income
+            // (所得税の課税総所得金額等), NOT the residence-tax taxable income.
+            taxableTotalIncome: taxableIncomeForNationalIncomeTax,
         })
         : undefined;
 
@@ -502,6 +504,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         taxableIncomeForResidenceTax,
         furusatoNozei: furusatoNozeiLimit,
         ...(mortgageTaxCreditResult && { mortgageTaxCredit: mortgageTaxCreditResult }),
+        // Residence income-based portion (所得割) BEFORE the mortgage spillover, so the
+        // Taxes tab can show the spillover as its own line and have the rows sum.
+        ...(mortgageTaxCreditResult && mortgageTaxCreditResult.appliedToResidenceTax > 0 && {
+            residenceTaxIncomeBasedBeforeMortgageCredit:
+                preCreditResidenceTax.city.cityIncomeTax + preCreditResidenceTax.prefecture.prefecturalIncomeTax,
+        }),
         dcPlanContributions: inputs.dcPlanContributions,
         // Income tax breakdown
         nationalIncomeTaxBase: taxableIncomeForNationalIncomeTax > 0 ? nationalIncomeTaxBase : undefined,
