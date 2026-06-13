@@ -11,6 +11,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Divider from '@mui/material/Divider';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
@@ -36,8 +38,28 @@ interface AdditionalDeductionsModalProps {
 }
 
 // Bands are sorted newest-first, so the last entry has the earliest start year.
-const EARLIEST_MOVE_IN_YEAR =
+// This is the oldest move-in the cohort data can describe at all.
+const EARLIEST_KNOWN_MOVE_IN_YEAR =
   MORTGAGE_TAX_CREDIT_COHORTS[MORTGAGE_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
+
+// 13-year credits exist only for move-ins from 2019 onward (the consumption-tax-hike
+// measure, then the 2022+ new-build regime). Every other cohort is a 10-year credit.
+const FIRST_13_YEAR_MOVE_IN = 2019;
+
+/**
+ * Oldest move-in year that could still be within its credit period in `taxYear`,
+ * used to bound the move-in dropdown — there's no point offering years whose
+ * credit has already ended. A move-in Y is still claimable when taxYear ≤ Y + 9
+ * (10-year credits, all cohorts) or, for Y ≥ 2019, taxYear ≤ Y + 12 (13-year).
+ * For taxYear 2026 this yields 2017.
+ */
+function earliestEligibleMoveInYear(taxYear: number): number {
+  const tenYearFloor = taxYear - 9;
+  const thirteenYearFloor = Math.max(FIRST_13_YEAR_MOVE_IN, taxYear - 12);
+  const thirteenYearStillRunning = thirteenYearFloor + 12 >= taxYear;
+  const floor = thirteenYearStillRunning ? Math.min(tenYearFloor, thirteenYearFloor) : tenYearFloor;
+  return Math.max(EARLIEST_KNOWN_MOVE_IN_YEAR, floor);
+}
 
 const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> = ({ children, tooltip }) => (
   <Typography
@@ -73,8 +95,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   };
 
   const moveInYearOptions = React.useMemo(() => {
+    const floor = earliestEligibleMoveInYear(currentYear);
     const years: number[] = [];
-    for (let y = currentYear; y >= EARLIEST_MOVE_IN_YEAR; y--) years.push(y);
+    for (let y = currentYear; y >= floor; y--) years.push(y);
     return years;
   }, [currentYear]);
 
@@ -135,6 +158,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           <SectionHeader tooltip="Deductions (所得控除) reduce your taxable income before tax is calculated.">
             Income Deductions (所得控除)
           </SectionHeader>
+          <Card variant="outlined">
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
           <FormControl fullWidth>
             <Typography
               gutterBottom
@@ -158,17 +183,18 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               shiftStep={10_000}
             />
           </FormControl>
+            </CardContent>
+          </Card>
         </Box>
-
-        <Divider />
 
         {/* Tax Credits (税額控除) */}
         <Box>
           <SectionHeader tooltip="Tax credits (税額控除) reduce the tax you owe directly, after it has been calculated.">
             Tax Credits (税額控除)
           </SectionHeader>
-
-          <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 1, display: 'flex', alignItems: 'center' }}>
+          <Card variant="outlined">
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+          <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', color: 'text.primary' }}>
             Mortgage Tax Credit (住宅ローン控除)
             <SimpleTooltip>
               A tax credit for homeowners with a mortgage, applied for 10–13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit. Leave the amount at 0 if it doesn't apply to you.
@@ -232,6 +258,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               </a>.
             </Typography>
           </Box>
+            </CardContent>
+          </Card>
         </Box>
       </DialogContent>
 
