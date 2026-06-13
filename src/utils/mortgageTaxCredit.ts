@@ -4,10 +4,11 @@
 /**
  * Mortgage tax credit (住宅ローン控除) application.
  *
- * The credit is applied first to national income tax, with any remainder
- * spilling over to residence tax up to a cohort-specific cap. The cohort that
- * applies is determined by the user's first move-in year, not the current
- * calculation year. See `src/data/mortgageTaxCredit.ts` for cohort rules.
+ * The user supplies the calculated credit amount (控除可能額). We apply it as a
+ * 税額控除: first against the base national income tax (所得税額, before the 2.1%
+ * reconstruction surtax), then any remainder spills over to residence tax up to a
+ * cohort-specific cap. The cohort is determined by the user's first move-in year.
+ * See `src/data/mortgageTaxCredit.ts`.
  */
 
 import type { MortgageTaxCreditInput, MortgageTaxCreditResult } from "../types/tax";
@@ -15,14 +16,15 @@ import { getMortgageTaxCreditCohort, MORTGAGE_TAX_CREDIT_COHORTS } from "../data
 
 export interface ApplyMortgageTaxCreditArgs {
     input: MortgageTaxCreditInput;
-    /** Net income (合計所得金額) — used to check the cohort income limit. */
+    /** Net income (合計所得金額) — used to check the cohort income-eligibility limit. */
     netIncome: number;
-    /** National income tax before any credit is applied (yen). */
-    nationalIncomeTax: number;
+    /**
+     * Base national income tax (所得税額) BEFORE the reconstruction surtax. The credit
+     * reduces this base; the surtax is recomputed by the caller on the reduced base.
+     */
+    baseIncomeTax: number;
     /** 課税総所得金額: residence-tax taxable total income — used for the spillover cap. */
     taxableTotalIncome: number;
-    /** Year being calculated. Used to check the credit's duration window. */
-    calculationYear: number;
 }
 
 const EMPTY_RESULT: MortgageTaxCreditResult = {
@@ -33,16 +35,19 @@ const EMPTY_RESULT: MortgageTaxCreditResult = {
     warnings: [],
 };
 
+// Bands are sorted newest-first, so the last entry has the earliest start year.
+const EARLIEST_SUPPORTED_MOVE_IN_YEAR =
+    MORTGAGE_TAX_CREDIT_COHORTS[MORTGAGE_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
+
 /**
- * Computes how much of the mortgage tax credit applies for the calculation year,
- * split between income tax and residence tax spillover.
+ * Computes how the user's mortgage tax credit applies, split between the base
+ * income tax and the residence-tax spillover.
  *
- * Returns an empty result (with warnings) when the user is ineligible — income
- * over cohort limit, calculation year outside the credit's duration window, or
- * unrecognised move-in year.
+ * Returns an empty result (with a warning) when the user is ineligible: income
+ * over the cohort limit, or an unsupported (pre-2009) move-in year.
  */
 export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): MortgageTaxCreditResult {
-    const { input, netIncome, nationalIncomeTax, taxableTotalIncome, calculationYear } = args;
+    const { input, netIncome, baseIncomeTax, taxableTotalIncome } = args;
 
     const cohort = getMortgageTaxCreditCohort(input.moveInYear);
     if (!cohort) {
@@ -50,78 +55,32 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
             ...EMPTY_RESULT,
             warnings: [
                 `No mortgage tax credit rules are configured for a move-in year of ${input.moveInYear}. ` +
-                `The credit applies to move-ins from ${earliestSupportedMoveInYear()} onward.`,
+                `The credit applies to move-ins from ${EARLIEST_SUPPORTED_MOVE_IN_YEAR} onward.`,
             ],
         };
     }
 
     const warnings: string[] = [];
 
-    // Eligibility: income limit.
+    // Eligibility: income limit (合計所得金額 ceiling for the cohort).
     if (netIncome > cohort.incomeLimit) {
         warnings.push(
             `Mortgage tax credit not applied: net income exceeds the ¥${cohort.incomeLimit.toLocaleString()} ` +
-            `cohort eligibility limit.`
+            `eligibility limit for a ${input.moveInYear} move-in.`
         );
         return { ...EMPTY_RESULT, warnings };
     }
 
-    // Eligibility: credit window. The duration depends on build type, so we only
-    // enforce it in auto-calculate mode where build type is a structural input.
-    // In manual mode we trust the user-provided credit amount and skip the check
-    // (build type isn't asked for in that mode).
-    const yearsSinceMoveIn = calculationYear - input.moveInYear;
-    if (yearsSinceMoveIn < 0) {
-        warnings.push(
-            `Mortgage tax credit not applied: move-in year (${input.moveInYear}) is later than calculation ` +
-            `year (${calculationYear}).`
-        );
-        return { ...EMPTY_RESULT, warnings };
-    }
-    if (input.mode === 'autoCalculate') {
-        const durationYears = input.isExistingHome
-            ? cohort.durationYears.existingHomes
-            : cohort.durationYears.newBuilds;
-        if (yearsSinceMoveIn >= durationYears) {
-            warnings.push(
-                `Mortgage tax credit not applied: the ${durationYears}-year credit period ended after ` +
-                `${input.moveInYear + durationYears - 1}.`
-            );
-            return { ...EMPTY_RESULT, warnings };
-        }
-    }
-
-    // Determine annual credit.
-    let annualCredit: number;
-    if (input.mode === 'manual') {
-        annualCredit = Math.max(0, Math.floor(input.manualAnnualCredit ?? 0));
-    } else {
-        const housingTier = input.housingTier;
-        if (!housingTier) {
-            warnings.push("Mortgage tax credit not applied: select a housing tier in Auto mode.");
-            return { ...EMPTY_RESULT, warnings };
-        }
-        const tierCap = cohort.housingTierCaps[housingTier];
-        const balanceCap = input.isExistingHome ? tierCap.existingHomes : tierCap.newBuilds;
-        if (balanceCap <= 0) {
-            warnings.push(
-                `Mortgage tax credit not applied: housing tier "${housingTier}" with this build/existing status ` +
-                `has no qualifying loan-balance cap for the ${cohort.moveInYearFrom}-${cohort.moveInYearTo} cohort.`
-            );
-            return { ...EMPTY_RESULT, warnings };
-        }
-        const eligibleBalance = Math.min(Math.max(0, input.yearEndLoanBalance ?? 0), balanceCap);
-        // Round down to nearest ¥100, the conventional NTA rounding for this credit.
-        annualCredit = Math.floor((eligibleBalance * cohort.creditRate) / 100) * 100;
-    }
-
+    const annualCredit = Math.max(0, Math.floor(input.creditAmount));
     if (annualCredit <= 0) {
         return { ...EMPTY_RESULT, warnings };
     }
 
-    const appliedToIncomeTax = Math.min(annualCredit, Math.max(0, nationalIncomeTax));
+    // Apply to the base income tax (所得税額) first — this is a 税額控除.
+    const appliedToIncomeTax = Math.min(annualCredit, Math.max(0, baseIncomeTax));
     const spilloverEligible = annualCredit - appliedToIncomeTax;
 
+    // Remainder spills over to residence tax, capped at min(flatCap, 課税総所得金額 × rate).
     const residenceTaxCap = Math.min(
         cohort.spillover.flatCap,
         Math.floor(Math.max(0, taxableTotalIncome) * cohort.spillover.taxableIncomeRate),
@@ -131,8 +90,8 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
 
     if (unusedCredit > 0) {
         warnings.push(
-            `¥${unusedCredit.toLocaleString()} of the annual credit could not be applied because the ` +
-            `combined income-tax and residence-tax-spillover caps were reached.`
+            `¥${unusedCredit.toLocaleString()} of the credit could not be applied: it exceeds your income tax ` +
+            `plus the ¥${residenceTaxCap.toLocaleString()} residence-tax spillover cap for this year.`
         );
     }
 
@@ -143,12 +102,4 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
         unusedCredit,
         warnings,
     };
-}
-
-// Cohorts are sorted newest-first, so the last entry has the earliest start.
-const EARLIEST_SUPPORTED_MOVE_IN_YEAR =
-    MORTGAGE_TAX_CREDIT_COHORTS[MORTGAGE_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
-
-function earliestSupportedMoveInYear(): number {
-    return EARLIEST_SUPPORTED_MOVE_IN_YEAR;
 }

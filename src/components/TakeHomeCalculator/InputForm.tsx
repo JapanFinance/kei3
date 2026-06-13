@@ -23,13 +23,13 @@ import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
 import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
-import HomeIcon from '@mui/icons-material/Home';
+import TuneIcon from '@mui/icons-material/Tune';
 import { SimpleTooltip } from '../ui/Tooltips';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
-import { MortgageTaxCreditModal } from './MortgageTaxCreditModal';
+import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
@@ -79,7 +79,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
-  const [mortgageModalOpen, setMortgageModalOpen] = useState(false);
+  const [additionalModalOpen, setAdditionalModalOpen] = useState(false);
 
   const handleOpenDependentsModal = () => {
     setDependentsModalOpen(true);
@@ -103,6 +103,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'mortgageTaxCredit',
         value: newInput,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleDcPlanContributionsChange = (value: number) => {
+    onInputChange({
+      target: {
+        name: 'dcPlanContributions',
+        value,
       }
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
@@ -909,42 +918,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           )}
         </Box>
 
-        {/* iDeCo/Corporate DC Contributions */}
-        <Box sx={{ mt: { xs: 0.5, sm: 1 } }}>
-          <FormControl fullWidth>
-            <Typography
-              gutterBottom
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '0.97rem',
-                fontWeight: 500,
-                mb: 0.2,
-                color: 'text.primary',
-              }}
-            >
-              <a
-                href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'inherit', fontWeight: 500 }}
-              >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
-              <SimpleTooltip>Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation.</SimpleTooltip>
-            </Typography>
-            <SpinnerNumberField
-              id="dcPlanContributions"
-              name="dcPlanContributions"
-              value={inputs.dcPlanContributions}
-              onInputChange={onInputChange}
-              label="Annual Contributions"
-              step={1_000}
-              shiftStep={10_000}
-              sx={sharedInputSx}
-            />
-          </FormControl>
-        </Box>
-
-        {/* Mortgage Tax Credit */}
+        {/* Additional Deductions & Credits */}
         <Box sx={{ mt: { xs: 1, sm: 1.5 }, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
           <Typography
             sx={{
@@ -957,32 +931,34 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               gap: 0.5,
             }}
           >
-            Mortgage Tax Credit
-            <SimpleTooltip>The \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 tax credit. Reduces income tax (and residence tax up to a cap). Affects the furusato nozei limit too.</SimpleTooltip>
+            Additional Deductions &amp; Credits
+            <SimpleTooltip>Optional \u6240\u5F97\u63A7\u9664 (e.g. iDeCo) and \u7A0E\u984D\u63A7\u9664 (e.g. \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664) that affect your income tax, residence tax, and furusato nozei limit.</SimpleTooltip>
           </Typography>
           <Button
             variant="outlined"
-            startIcon={<HomeIcon />}
-            onClick={() => setMortgageModalOpen(true)}
+            startIcon={<TuneIcon />}
+            onClick={() => setAdditionalModalOpen(true)}
             size="medium"
             fullWidth
             sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
           >
-            {inputs.mortgageTaxCredit ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                  \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 enabled
-                </Typography>
-                <Typography component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                  Moved in {inputs.mortgageTaxCredit.moveInYear}
-                  {inputs.mortgageTaxCredit.mode === 'manual'
-                    ? ` \u00B7 Manual ${formatJPY(inputs.mortgageTaxCredit.manualAnnualCredit ?? 0)}/yr`
-                    : ' \u00B7 Auto-calculate'}
-                </Typography>
-              </Box>
-            ) : (
-              'Configure \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664'
-            )}
+            {(() => {
+              const parts: string[] = [];
+              if (inputs.dcPlanContributions > 0) parts.push(`iDeCo ${formatJPY(inputs.dcPlanContributions)}`);
+              if (inputs.mortgageTaxCredit) parts.push(`\u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 ${formatJPY(inputs.mortgageTaxCredit.creditAmount)}`);
+              return parts.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                    Configured
+                  </Typography>
+                  <Typography component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                    {parts.join(' \u00B7 ')}
+                  </Typography>
+                </Box>
+              ) : (
+                'Add iDeCo, mortgage credit, etc.'
+              );
+            })()}
           </Button>
         </Box>
       </Box>
@@ -1002,11 +978,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onStreamsChange={handleIncomeStreamsChange}
       />
 
-      <MortgageTaxCreditModal
-        open={mortgageModalOpen}
-        onClose={() => setMortgageModalOpen(false)}
-        input={inputs.mortgageTaxCredit}
-        onChange={handleMortgageTaxCreditChange}
+      <AdditionalDeductionsModal
+        open={additionalModalOpen}
+        onClose={() => setAdditionalModalOpen(false)}
+        dcPlanContributions={inputs.dcPlanContributions}
+        onDcPlanContributionsChange={handleDcPlanContributionsChange}
+        mortgageTaxCredit={inputs.mortgageTaxCredit}
+        onMortgageTaxCreditChange={handleMortgageTaxCreditChange}
         currentYear={new Date().getFullYear()}
       />
     </Box>

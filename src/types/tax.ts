@@ -46,31 +46,25 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream | StockCompensationIncomeStream;
 
 /**
- * Five housing energy/quality tiers used by 住宅ローン控除.
- * Used to look up the qualifying loan-balance cap for the credit calculation.
+ * User input for the mortgage tax credit (住宅ローン控除).
+ *
+ * The user supplies the calculated credit amount directly (the 控除可能額 — see
+ * `creditAmount` below). The only other thing we need is the move-in year, which
+ * determines the residence-tax spillover cap and the income-eligibility limit.
  */
-export type MortgageHousingTier =
-  | 'longTermExcellent'   // 認定長期優良住宅
-  | 'lowCarbon'           // 認定低炭素住宅
-  | 'zehWaterSaving'      // ZEH水準省エネ住宅
-  | 'energySaving'        // 省エネ基準適合住宅
-  | 'standard';           // その他 / standard housing
-
-export type MortgageInputMode = 'manual' | 'autoCalculate';
-
-/** User input for the mortgage tax credit (住宅ローン控除). */
 export interface MortgageTaxCreditInput {
-  /** Calendar year the user first moved into the residence. Drives cohort lookup. */
+  /**
+   * Calendar year the user first moved into the residence. Drives the cohort
+   * lookup for the residence-tax spillover cap and the income-eligibility limit.
+   */
   moveInYear: number;
-  /** Existing home flag — affects duration (10 vs 13) and qualifying caps. */
-  isExistingHome: boolean;
-  mode: MortgageInputMode;
-  /** Manual mode: the annual credit amount the user expects to receive (yen). */
-  manualAnnualCredit?: number;
-  /** Auto mode: year-end loan balance (yen). */
-  yearEndLoanBalance?: number;
-  /** Auto mode: housing tier used to pick the qualifying loan-balance cap. */
-  housingTier?: MortgageHousingTier;
+  /**
+   * The full calculated annual credit (住宅借入金等特別控除可能額) in yen — i.e.
+   * year-end loan balance × the credit rate, up to the home's qualifying maximum.
+   * This is the 控除可能額 (E2 on the 源泉徴収票), NOT the already-applied amount
+   * (E1 / 住宅借入金等特別控除の額), which is capped at the prior year's income tax.
+   */
+  creditAmount: number;
 }
 
 /** Computed application of the mortgage tax credit. */

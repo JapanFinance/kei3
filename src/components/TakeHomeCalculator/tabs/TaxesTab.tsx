@@ -517,6 +517,51 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {results.mortgageTaxCredit && results.mortgageTaxCredit.appliedToIncomeTax > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Mortgage Tax Credit (住宅ローン控除)
+                <DetailedTooltip title="Mortgage Tax Credit — Income Tax Portion">
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      A tax credit (税額控除) for homeowners with a mortgage, applied to the base income tax (所得税額) before the reconstruction surtax. Any remainder spills over to residence tax up to a cohort-specific cap.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Total annual credit:</strong> {formatJPY(results.mortgageTaxCredit.annualCredit)}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <strong>Applied to income tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToIncomeTax)}
+                    </Typography>
+                    {results.mortgageTaxCredit.appliedToResidenceTax > 0 && (
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Spillover to residence tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToResidenceTax)}
+                      </Typography>
+                    )}
+                    {results.mortgageTaxCredit.unusedCredit > 0 && (
+                      <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
+                        <strong>Unused (capped):</strong> {formatJPY(results.mortgageTaxCredit.unusedCredit)}
+                      </Typography>
+                    )}
+                    <Box sx={{ mt: 1 }}>
+                      Official Source:
+                      <ul>
+                        <li>
+                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1213.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                            住宅借入金等特別控除 - NTA
+                          </a>
+                        </li>
+                      </ul>
+                    </Box>
+                  </Box>
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-results.mortgageTaxCredit.appliedToIncomeTax)}
+            type="detail"
+          />
+        )}
+
         {results.reconstructionSurtax !== undefined && (
           <ResultRow
             label={
@@ -558,51 +603,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </span>
             }
             value={formatJPY(results.reconstructionSurtax)}
-            type="detail"
-          />
-        )}
-
-        {results.mortgageTaxCredit && results.mortgageTaxCredit.appliedToIncomeTax > 0 && (
-          <ResultRow
-            label={
-              <span>
-                Mortgage Tax Credit (住宅ローン控除)
-                <DetailedTooltip title="Mortgage Tax Credit — Income Tax Portion">
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      A tax credit (税額控除) for homeowners with a mortgage, applied first to national income tax. Any remainder spills over to residence tax up to a cohort-specific cap.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Total annual credit:</strong> {formatJPY(results.mortgageTaxCredit.annualCredit)}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Applied to income tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToIncomeTax)}
-                    </Typography>
-                    {results.mortgageTaxCredit.appliedToResidenceTax > 0 && (
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>Spillover to residence tax:</strong> {formatJPY(results.mortgageTaxCredit.appliedToResidenceTax)}
-                      </Typography>
-                    )}
-                    {results.mortgageTaxCredit.unusedCredit > 0 && (
-                      <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
-                        <strong>Unused (capped):</strong> {formatJPY(results.mortgageTaxCredit.unusedCredit)}
-                      </Typography>
-                    )}
-                    <Box sx={{ mt: 1 }}>
-                      Official Source:
-                      <ul>
-                        <li>
-                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1213.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
-                            住宅借入金等特別控除 - NTA
-                          </a>
-                        </li>
-                      </ul>
-                    </Box>
-                  </Box>
-                </DetailedTooltip>
-              </span>
-            }
-            value={formatJPY(-results.mortgageTaxCredit.appliedToIncomeTax)}
             type="detail"
           />
         )}

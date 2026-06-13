@@ -90,38 +90,33 @@ describe('calculateFurusatoNozeiLimit', () => {
       incomeYear: 2026,
     };
 
-    it('reduces national income tax by the applied credit', () => {
+    it('reduces income tax by the credit plus the recomputed surtax (correct surtax ordering)', () => {
       const baseline = calculateTaxes(baseInputs);
       const withCredit = calculateTaxes({
         ...baseInputs,
-        mortgageTaxCredit: {
-          moveInYear: 2024,
-          isExistingHome: false,
-          mode: 'manual',
-          manualAnnualCredit: 100_000,
-        },
+        mortgageTaxCredit: { moveInYear: 2024, creditAmount: 100_000 },
       });
-      expect(withCredit.nationalIncomeTax).toBe(baseline.nationalIncomeTax - 100_000);
       expect(withCredit.mortgageTaxCredit?.appliedToIncomeTax).toBe(100_000);
       expect(withCredit.mortgageTaxCredit?.appliedToResidenceTax).toBe(0);
+      // The credit reduces the base income tax, then the 2.1% surtax recomputes on the
+      // smaller base — so the total income tax falls by ~100,000 × 1.021 = 102,100, NOT
+      // a flat 100,000. (The buggy ordering would give exactly 100,000.)
+      const reduction = baseline.nationalIncomeTax - withCredit.nationalIncomeTax;
+      expect(reduction).toBeGreaterThanOrEqual(102_000);
+      expect(reduction).toBeLessThanOrEqual(102_200);
     });
 
     it('20% furusato cap is calculated against pre-credit residence tax (limit unchanged when no spillover)', () => {
       const baseline = calculateTaxes(baseInputs);
       const withCredit = calculateTaxes({
         ...baseInputs,
-        mortgageTaxCredit: {
-          moveInYear: 2024,
-          isExistingHome: false,
-          mode: 'manual',
-          manualAnnualCredit: 100_000, // small credit, all absorbed by income tax
-        },
+        mortgageTaxCredit: { moveInYear: 2024, creditAmount: 100_000 }, // small credit, all absorbed by income tax
       });
       // Residence tax unchanged because no spillover happens
       expect(withCredit.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
       // Furusato limit unchanged: 20% cap uses pre-credit residence tax (== current residence tax here)
       expect(withCredit.furusatoNozei.limit).toBe(baseline.furusatoNozei.limit);
-      // Income tax refund portion: smaller because remainingIncomeTax > 0 still, but limit shouldn't change
+      // Income tax refund portion unchanged: remaining income tax is still well above it
       expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(baseline.furusatoNozei.incomeTaxReduction);
     });
 
@@ -130,12 +125,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       const baseline = calculateTaxes(baseInputs);
       const withCredit = calculateTaxes({
         ...baseInputs,
-        mortgageTaxCredit: {
-          moveInYear: 2024,
-          isExistingHome: false,
-          mode: 'manual',
-          manualAnnualCredit: baseline.nationalIncomeTax + 50_000, // spill 50K to residence tax
-        },
+        mortgageTaxCredit: { moveInYear: 2024, creditAmount: baseline.nationalIncomeTax + 50_000 },
       });
       expect(withCredit.nationalIncomeTax).toBe(0);
       expect(withCredit.mortgageTaxCredit?.appliedToResidenceTax).toBeGreaterThan(0);
@@ -148,12 +138,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       const baseline = calculateTaxes(baseInputs);
       const withCredit = calculateTaxes({
         ...baseInputs,
-        mortgageTaxCredit: {
-          moveInYear: 2024,
-          isExistingHome: false,
-          mode: 'manual',
-          manualAnnualCredit: baseline.nationalIncomeTax + 100_000, // wipes out income tax
-        },
+        mortgageTaxCredit: { moveInYear: 2024, creditAmount: baseline.nationalIncomeTax + 100_000 }, // wipes out income tax
       });
       // With remaining income tax = 0, the income-tax refund portion of furusato must be 0.
       expect(withCredit.nationalIncomeTax).toBe(0);
@@ -164,31 +149,10 @@ describe('calculateFurusatoNozeiLimit', () => {
       const withCredit = calculateTaxes({
         ...baseInputs,
         incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 30_000_000, frequency: 'annual' as const }],
-        mortgageTaxCredit: {
-          moveInYear: 2024,
-          isExistingHome: false,
-          mode: 'manual',
-          manualAnnualCredit: 200_000,
-        },
+        mortgageTaxCredit: { moveInYear: 2024, creditAmount: 200_000 },
       });
       expect(withCredit.mortgageTaxCredit?.appliedToIncomeTax).toBe(0);
       expect(withCredit.mortgageTaxCredit?.warnings.length ?? 0).toBeGreaterThan(0);
-    });
-
-    it('auto-calculate mode computes credit from balance × rate, capped by tier', () => {
-      const result = calculateTaxes({
-        ...baseInputs,
-        mortgageTaxCredit: {
-          moveInYear: 2024,
-          isExistingHome: false,
-          mode: 'autoCalculate',
-          yearEndLoanBalance: 30_000_000,
-          housingTier: 'energySaving',
-        },
-      });
-      // 2024 cohort energySaving newBuild cap = 30M, rate 0.7%
-      // eligible = min(30M, 30M) = 30M → credit = 30M × 0.007 = 210,000
-      expect(result.mortgageTaxCredit?.annualCredit).toBe(210_000);
     });
   });
 

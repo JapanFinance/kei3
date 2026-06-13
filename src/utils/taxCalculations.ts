@@ -430,33 +430,34 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
 
-    const preCreditNationalIncomeTax = calculateNationalIncomeTax(taxableIncomeForNationalIncomeTax);
-
-    // Calculate base tax and reconstruction surtax breakdown for display
-    // Show the actual calculated amounts (before final rounding)
+    // Base national income tax (所得税額) before the reconstruction surtax. The
+    // mortgage tax credit is a 税額控除 applied to this base; the surtax is then
+    // recomputed on the reduced base (see below).
     const nationalIncomeTaxBase = calculateNationalIncomeTaxBase(taxableIncomeForNationalIncomeTax);
-    const reconstructionSurtax = calculateReconstructionSurtax(nationalIncomeTaxBase);
 
     const residenceTaxBasicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
     const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction - dependentDeductions.residenceTax.total) / 1000) * 1000);
 
-    // Mortgage tax credit (住宅ローン控除): applied first to national income tax,
+    // Mortgage tax credit (住宅ローン控除): applied first to the base income tax,
     // then spilled over to residence tax up to the cohort's cap.
-    // Calling with appliedToResidenceTax = 0 first gives us the pre-credit residence
-    // tax, which is needed for the furusato 20% special-deduction cap.
+    // Calling residence tax with appliedToResidenceTax = 0 first gives us the
+    // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
     const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
 
     const mortgageTaxCreditResult = inputs.mortgageTaxCredit
         ? applyMortgageTaxCredit({
             input: inputs.mortgageTaxCredit,
             netIncome,
-            nationalIncomeTax: preCreditNationalIncomeTax,
+            baseIncomeTax: nationalIncomeTaxBase,
             taxableTotalIncome: taxableIncomeForResidenceTax,
-            calculationYear: incomeYear,
         })
         : undefined;
 
-    const nationalIncomeTax = Math.max(0, preCreditNationalIncomeTax - (mortgageTaxCreditResult?.appliedToIncomeTax ?? 0));
+    // Reconstruction surtax (復興特別所得税) is 2.1% of the base income tax AFTER the
+    // mortgage credit (基準所得税額). The credit reduces the base, then the surtax applies.
+    const baseIncomeTaxAfterCredit = Math.max(0, nationalIncomeTaxBase - (mortgageTaxCreditResult?.appliedToIncomeTax ?? 0));
+    const reconstructionSurtax = calculateReconstructionSurtax(baseIncomeTaxAfterCredit);
+    const nationalIncomeTax = Math.floor((baseIncomeTaxAfterCredit + reconstructionSurtax) / 100) * 100;
 
     const residenceTax = mortgageTaxCreditResult && mortgageTaxCreditResult.appliedToResidenceTax > 0
         ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, mortgageTaxCreditResult.appliedToResidenceTax, incomeYear)

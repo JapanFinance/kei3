@@ -1,0 +1,267 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import React from 'react';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import CloseIcon from '@mui/icons-material/Close';
+import TuneIcon from '@mui/icons-material/Tune';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+
+import type { MortgageTaxCreditInput } from '../../types/tax';
+import { SpinnerNumberField } from '../ui/SpinnerNumberField';
+import { SimpleTooltip } from '../ui/Tooltips';
+import { MORTGAGE_TAX_CREDIT_COHORTS } from '../../data/mortgageTaxCredit';
+
+interface AdditionalDeductionsModalProps {
+  open: boolean;
+  onClose: () => void;
+  dcPlanContributions: number;
+  onDcPlanContributionsChange: (value: number) => void;
+  mortgageTaxCredit?: MortgageTaxCreditInput | undefined;
+  onMortgageTaxCreditChange: (input: MortgageTaxCreditInput | undefined) => void;
+  currentYear: number;
+}
+
+// Bands are sorted newest-first, so the last entry has the earliest start year.
+const EARLIEST_MOVE_IN_YEAR =
+  MORTGAGE_TAX_CREDIT_COHORTS[MORTGAGE_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
+
+const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> = ({ children, tooltip }) => (
+  <Typography
+    sx={{
+      fontSize: '0.95rem',
+      fontWeight: 700,
+      color: 'text.primary',
+      display: 'flex',
+      alignItems: 'center',
+      mb: 1,
+    }}
+  >
+    {children}
+    {tooltip && <SimpleTooltip>{tooltip}</SimpleTooltip>}
+  </Typography>
+);
+
+export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps> = ({
+  open,
+  onClose,
+  dcPlanContributions,
+  onDcPlanContributionsChange,
+  mortgageTaxCredit,
+  onMortgageTaxCreditChange,
+  currentYear,
+}) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const mortgageEnabled = mortgageTaxCredit !== undefined;
+  const effectiveMortgage: MortgageTaxCreditInput = mortgageTaxCredit ?? {
+    moveInYear: currentYear,
+    creditAmount: 0,
+  };
+
+  const moveInYearOptions = React.useMemo(() => {
+    const years: number[] = [];
+    for (let y = currentYear; y >= EARLIEST_MOVE_IN_YEAR; y--) years.push(y);
+    return years;
+  }, [currentYear]);
+
+  const updateMortgage = (patch: Partial<MortgageTaxCreditInput>) => {
+    onMortgageTaxCreditChange({ ...effectiveMortgage, ...patch });
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      slotProps={{
+        paper: {
+          sx: {
+            minHeight: isMobile ? '100dvh' : '480px',
+            maxHeight: isMobile ? '100dvh' : '90vh',
+            '@supports not (height: 100dvh)': {
+              minHeight: isMobile ? '100vh' : '480px',
+              maxHeight: isMobile ? '100vh' : '90vh',
+            },
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        pb: 1,
+        pt: isMobile ? 'max(16px, env(safe-area-inset-top))' : 2,
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TuneIcon />
+          <Typography variant="h6" component="span">
+            Additional Deductions &amp; Credits
+          </Typography>
+        </Box>
+        <IconButton edge="end" onClick={onClose} aria-label="close" size="small">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <Divider />
+
+      <DialogContent sx={{
+        p: { xs: 2, sm: 3 },
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+      }}>
+        {/* Income Deductions (所得控除) */}
+        <Box>
+          <SectionHeader tooltip="Deductions (所得控除) reduce your taxable income before tax is calculated.">
+            Income Deductions (所得控除)
+          </SectionHeader>
+          <FormControl fullWidth>
+            <Typography
+              gutterBottom
+              sx={{ display: 'flex', alignItems: 'center', fontSize: '0.95rem', fontWeight: 500, mb: 0.5, color: 'text.primary' }}
+            >
+              <a
+                href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', fontWeight: 500 }}
+              >iDeCo / Corporate DC</a>{' '}Contributions
+              <SimpleTooltip>Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation.</SimpleTooltip>
+            </Typography>
+            <SpinnerNumberField
+              id="dcPlanContributions"
+              name="dcPlanContributions"
+              value={dcPlanContributions}
+              onInputChange={(e) => onDcPlanContributionsChange(Number((e.target as HTMLInputElement).value) || 0)}
+              label="Annual Contributions"
+              step={1_000}
+              shiftStep={10_000}
+            />
+          </FormControl>
+        </Box>
+
+        <Divider />
+
+        {/* Tax Credits (税額控除) */}
+        <Box>
+          <SectionHeader tooltip="Tax credits (税額控除) reduce the tax you owe directly, after it has been calculated.">
+            Tax Credits (税額控除)
+          </SectionHeader>
+
+          <FormControlLabel
+            control={
+              <Switch
+                checked={mortgageEnabled}
+                onChange={(_, checked) => onMortgageTaxCreditChange(checked ? { ...effectiveMortgage } : undefined)}
+                color="primary"
+              />
+            }
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                  Mortgage Tax Credit (住宅ローン控除)
+                </Typography>
+                <SimpleTooltip>
+                  A tax credit for homeowners with a mortgage, applied for 10–13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit.
+                </SimpleTooltip>
+              </Box>
+            }
+          />
+
+          {mortgageEnabled && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1.5, pl: { xs: 0, sm: 1 } }}>
+              <FormControl fullWidth>
+                <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
+                  Annual credit amount (控除可能額)
+                  <SimpleTooltip>
+                    Enter your full calculated credit (住宅借入金等特別控除可能額) — your year-end loan balance × the credit rate (0.7% for 2022+ move-ins, 1% earlier), up to your home's qualifying maximum. On your 源泉徴収票 this is the 住宅借入金等特別控除可能額, NOT the 住宅借入金等特別控除の額 (which is already capped at last year's income tax).
+                  </SimpleTooltip>
+                </Typography>
+                <SpinnerNumberField
+                  id="mortgageCreditAmount"
+                  name="creditAmount"
+                  value={effectiveMortgage.creditAmount}
+                  onInputChange={(e) => updateMortgage({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
+                  label="Amount"
+                  step={1_000}
+                  shiftStep={10_000}
+                  min={0}
+                />
+              </FormControl>
+
+              <FormControl fullWidth>
+                <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
+                  Year moved in
+                  <SimpleTooltip>
+                    The year you first moved in and began claiming the credit. Determines the residence-tax spillover cap and the income-eligibility limit.
+                  </SimpleTooltip>
+                </Typography>
+                <InputLabel id="mortgageMoveInYear-label" sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}>
+                  Year moved in
+                </InputLabel>
+                <Select
+                  id="mortgageMoveInYear"
+                  labelId="mortgageMoveInYear-label"
+                  value={effectiveMortgage.moveInYear}
+                  onChange={(e) => updateMortgage({ moveInYear: Number(e.target.value) })}
+                  fullWidth
+                >
+                  {moveInYearOptions.map((y) => (
+                    <MenuItem key={y} value={y}>{y}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                  Don't know your credit amount? Calculate it with the{' '}
+                  <a
+                    href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'underline' }}
+                  >
+                    NTA's mortgage credit guide
+                  </a>. Move-ins before {EARLIEST_MOVE_IN_YEAR} are not yet supported.
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      </DialogContent>
+
+      <Divider />
+
+      <DialogActions sx={{
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        py: 2,
+        pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+      }}>
+        <Button onClick={onClose} variant="contained">Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
