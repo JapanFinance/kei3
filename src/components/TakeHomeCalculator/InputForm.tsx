@@ -945,7 +945,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             {(() => {
               const parts: string[] = [];
               if (inputs.dcPlanContributions > 0) parts.push(`iDeCo ${formatJPY(inputs.dcPlanContributions)}`);
-              if (inputs.mortgageTaxCredit) parts.push(`\u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 ${formatJPY(inputs.mortgageTaxCredit.creditAmount)}`);
+              if (inputs.mortgageTaxCredit && inputs.mortgageTaxCredit.creditAmount > 0) parts.push(`\u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 ${formatJPY(inputs.mortgageTaxCredit.creditAmount)}`);
               return parts.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>

@@ -15,8 +15,6 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
 import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useTheme } from '@mui/material/styles';
@@ -69,7 +67,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const mortgageEnabled = mortgageTaxCredit !== undefined;
   const effectiveMortgage: MortgageTaxCreditInput = mortgageTaxCredit ?? {
     moveInYear: currentYear,
     creditAmount: 0,
@@ -171,85 +168,70 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
             Tax Credits (税額控除)
           </SectionHeader>
 
-          <FormControlLabel
-            control={
-              <Switch
-                checked={mortgageEnabled}
-                onChange={(_, checked) => onMortgageTaxCreditChange(checked ? { ...effectiveMortgage } : undefined)}
-                color="primary"
-              />
-            }
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                  Mortgage Tax Credit (住宅ローン控除)
-                </Typography>
+          <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 1, display: 'flex', alignItems: 'center' }}>
+            Mortgage Tax Credit (住宅ローン控除)
+            <SimpleTooltip>
+              A tax credit for homeowners with a mortgage, applied for 10–13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit. Leave the amount at 0 if it doesn't apply to you.
+            </SimpleTooltip>
+          </Typography>
+
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <FormControl sx={{ flex: '1 1 200px', minWidth: 180 }}>
+              <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
+                Credit amount (控除可能額)
                 <SimpleTooltip>
-                  A tax credit for homeowners with a mortgage, applied for 10–13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit.
+                  Enter your full calculated credit (住宅借入金等特別控除可能額) — your year-end loan balance × the credit rate (0.7% for 2022+ move-ins, 1% earlier), up to your home's qualifying maximum. On your 源泉徴収票 this is the 住宅借入金等特別控除可能額, NOT the 住宅借入金等特別控除の額 (which is already capped at last year's income tax).
                 </SimpleTooltip>
-              </Box>
-            }
-          />
+              </Typography>
+              <SpinnerNumberField
+                id="mortgageCreditAmount"
+                name="creditAmount"
+                value={effectiveMortgage.creditAmount}
+                onInputChange={(e) => updateMortgage({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
+                label="Amount"
+                step={1_000}
+                shiftStep={10_000}
+                min={0}
+              />
+            </FormControl>
 
-          {mortgageEnabled && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1.5, pl: { xs: 0, sm: 1 } }}>
-              <FormControl fullWidth>
-                <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
-                  Annual credit amount (控除可能額)
-                  <SimpleTooltip>
-                    Enter your full calculated credit (住宅借入金等特別控除可能額) — your year-end loan balance × the credit rate (0.7% for 2022+ move-ins, 1% earlier), up to your home's qualifying maximum. On your 源泉徴収票 this is the 住宅借入金等特別控除可能額, NOT the 住宅借入金等特別控除の額 (which is already capped at last year's income tax).
-                  </SimpleTooltip>
-                </Typography>
-                <SpinnerNumberField
-                  id="mortgageCreditAmount"
-                  name="creditAmount"
-                  value={effectiveMortgage.creditAmount}
-                  onInputChange={(e) => updateMortgage({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
-                  label="Amount"
-                  step={1_000}
-                  shiftStep={10_000}
-                  min={0}
-                />
-              </FormControl>
+            <FormControl sx={{ flex: '0 1 140px', minWidth: 120 }}>
+              <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
+                Year moved in
+                <SimpleTooltip>
+                  The year you first moved in and began claiming the credit. Determines the residence-tax spillover cap and the income-eligibility limit.
+                </SimpleTooltip>
+              </Typography>
+              <InputLabel id="mortgageMoveInYear-label" sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}>
+                Year moved in
+              </InputLabel>
+              <Select
+                id="mortgageMoveInYear"
+                labelId="mortgageMoveInYear-label"
+                value={effectiveMortgage.moveInYear}
+                onChange={(e) => updateMortgage({ moveInYear: Number(e.target.value) })}
+                fullWidth
+              >
+                {moveInYearOptions.map((y) => (
+                  <MenuItem key={y} value={y}>{y}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
-              <FormControl fullWidth>
-                <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
-                  Year moved in
-                  <SimpleTooltip>
-                    The year you first moved in and began claiming the credit. Determines the residence-tax spillover cap and the income-eligibility limit.
-                  </SimpleTooltip>
-                </Typography>
-                <InputLabel id="mortgageMoveInYear-label" sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}>
-                  Year moved in
-                </InputLabel>
-                <Select
-                  id="mortgageMoveInYear"
-                  labelId="mortgageMoveInYear-label"
-                  value={effectiveMortgage.moveInYear}
-                  onChange={(e) => updateMortgage({ moveInYear: Number(e.target.value) })}
-                  fullWidth
-                >
-                  {moveInYearOptions.map((y) => (
-                    <MenuItem key={y} value={y}>{y}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                  Don't know your credit amount? Calculate it with the{' '}
-                  <a
-                    href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit', textDecoration: 'underline' }}
-                  >
-                    NTA's mortgage credit guide
-                  </a>. Move-ins before {EARLIEST_MOVE_IN_YEAR} are not yet supported.
-                </Typography>
-              </Box>
-            </Box>
-          )}
+          <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
+            <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+              Don't know your credit amount? Calculate it with the{' '}
+              <a
+                href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', textDecoration: 'underline' }}
+              >
+                NTA's mortgage credit guide
+              </a>.
+            </Typography>
+          </Box>
         </Box>
       </DialogContent>
 

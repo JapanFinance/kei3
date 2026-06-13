@@ -154,6 +154,54 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withCredit.mortgageTaxCredit?.appliedToIncomeTax).toBe(0);
       expect(withCredit.mortgageTaxCredit?.warnings.length ?? 0).toBeGreaterThan(0);
     });
+
+    // ----------------------------------------------------------------------
+    // KNOWN APPROXIMATION — furusato + mortgage overlap when income tax is wiped.
+    //
+    // kei3 computes the mortgage-credit spillover from the income tax WITHOUT the
+    // furusato 寄附金控除. In a real 確定申告, the furusato income deduction lowers the
+    // income tax base FIRST, so when a large mortgage credit then wipes out income
+    // tax, slightly more credit spills into residence tax — making the true residence
+    // tax about (furusato income-tax portion) LOWER than kei3 shows.
+    //
+    // This only bites when ALL of: (1) the mortgage credit fully absorbs income tax,
+    // (2) furusato is present and filed via 確定申告, and (3) the spillover is NOT
+    // already at the cohort cap. kei3 is conservative here (understates take-home by
+    // at most the furusato income-tax portion) and never overstates it. The furusato
+    // LIMIT and OUT-OF-POCKET are unaffected.
+    // ----------------------------------------------------------------------
+    it('documents the furusato + mortgage overlap approximation (income tax wiped, spillover under cap)', () => {
+      const inputs = {
+        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const }],
+        isSubjectToLongTermCarePremium: false,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+      const baseline = calculateTaxes(inputs);
+      const baseTax = baseline.nationalIncomeTaxBase!; // 所得税額 before surtax (~40,100)
+      // The furusato income-tax portion (~1,600) is exactly the amount by which the real
+      // 確定申告 mortgage spillover would exceed kei3's.
+      expect(baseline.furusatoNozei.incomeTaxReduction).toBeGreaterThan(0);
+
+      // Credit that absorbs the whole base income tax, leaving spillover under the cap.
+      const M = Math.floor(baseTax) + 40_000;
+      const withCredit = calculateTaxes({ ...inputs, mortgageTaxCredit: { moveInYear: 2024, creditAmount: M } });
+      const mc = withCredit.mortgageTaxCredit!;
+
+      expect(withCredit.nationalIncomeTax).toBe(0);          // income tax fully wiped
+      expect(mc.appliedToIncomeTax).toBe(baseTax);           // whole base absorbed
+      expect(mc.unusedCredit).toBe(0);                       // spillover under the cap
+      expect(mc.appliedToResidenceTax).toBe(mc.annualCredit - mc.appliedToIncomeTax);
+      // Furusato limit unaffected; the income-tax refund portion is correctly lost
+      // once income tax hits 0 for a 確定申告 filer.
+      expect(withCredit.furusatoNozei.limit).toBe(baseline.furusatoNozei.limit);
+      expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
+    });
   });
 
   it('furusato nozei limit is affected by manual social insurance override', () => {
