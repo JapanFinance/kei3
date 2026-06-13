@@ -932,7 +932,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             }}
           >
             Additional Deductions &amp; Credits
-            <SimpleTooltip>Optional \u6240\u5F97\u63A7\u9664 (e.g. iDeCo) and \u7A0E\u984D\u63A7\u9664 (e.g. \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664) that affect your income tax, residence tax, and furusato nozei limit.</SimpleTooltip>
+            <SimpleTooltip>{'Optional income deductions (\u6240\u5F97\u63A7\u9664, e.g. iDeCo) and tax credits (\u7A0E\u984D\u63A7\u9664, e.g. \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664). These affect your income tax, residence tax, and furusato nozei limit.'}</SimpleTooltip>
           </Typography>
           <Button
             variant="outlined"

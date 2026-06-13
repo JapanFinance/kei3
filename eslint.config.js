@@ -69,6 +69,15 @@ export default defineConfig(
           'patterns': [{ 'regex': '^@mui/[^/]+$' }]
         }
       ],
+      // Unicode escapes (\uXXXX) are NOT interpreted inside JSX text — they render
+      // literally. They only work inside string literals/expressions. Catch it at lint time.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'JSXText[value=/\\\\u[0-9a-fA-F]{4}/]',
+          message: 'Unicode escapes like \\u6240 render literally in JSX text. Use the actual character (e.g. 所得控除), or move the text into a string literal/expression.',
+        },
+      ],
     },
   },
 )
