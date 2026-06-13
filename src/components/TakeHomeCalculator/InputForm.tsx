@@ -932,7 +932,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             }}
           >
             Additional Deductions &amp; Credits
-            <SimpleTooltip>{'Optional income deductions (\u6240\u5F97\u63A7\u9664, e.g. iDeCo) and tax credits (\u7A0E\u984D\u63A7\u9664, e.g. \u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664). These affect your income tax, residence tax, and furusato nozei limit.'}</SimpleTooltip>
+            <SimpleTooltip>Optional income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. 住宅ローン控除). These affect your income tax, residence tax, and furusato nozei limit.</SimpleTooltip>
           </Typography>
           <Button
             variant="outlined"
@@ -945,14 +945,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             {(() => {
               const parts: string[] = [];
               if (inputs.dcPlanContributions > 0) parts.push(`iDeCo ${formatJPY(inputs.dcPlanContributions)}`);
-              if (inputs.mortgageTaxCredit && inputs.mortgageTaxCredit.creditAmount > 0) parts.push(`\u4F4F\u5B85\u30ED\u30FC\u30F3\u63A7\u9664 ${formatJPY(inputs.mortgageTaxCredit.creditAmount)}`);
+              if (inputs.mortgageTaxCredit && inputs.mortgageTaxCredit.creditAmount > 0) parts.push(`住宅ローン控除 ${formatJPY(inputs.mortgageTaxCredit.creditAmount)}`);
               return parts.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
                     Configured
                   </Typography>
                   <Typography component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                    {parts.join(' \u00B7 ')}
+                    {parts.join(' · ')}
                   </Typography>
                 </Box>
               ) : (
