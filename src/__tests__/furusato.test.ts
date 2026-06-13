@@ -183,21 +183,18 @@ describe('calculateFurusatoNozeiLimit', () => {
     });
 
     // ----------------------------------------------------------------------
-    // KNOWN APPROXIMATION — furusato + mortgage overlap when income tax is wiped.
+    // KNOWN LIMITATION (deferred to a follow-up) — furusato ⇄ mortgage credit.
     //
-    // kei3 computes the mortgage-credit spillover from the income tax WITHOUT the
-    // furusato 寄附金控除. In a real 確定申告, the furusato income deduction lowers the
-    // income tax base FIRST, so when a large mortgage credit then wipes out income
-    // tax, slightly more credit spills into residence tax — making the true residence
-    // tax about (furusato income-tax portion) LOWER than kei3 shows.
-    //
-    // This only bites when ALL of: (1) the mortgage credit fully absorbs income tax,
-    // (2) furusato is present and filed via 確定申告, and (3) the spillover is NOT
-    // already at the cohort cap. kei3 is conservative here (understates take-home by
-    // at most the furusato income-tax portion) and never overstates it. The furusato
-    // LIMIT and OUT-OF-POCKET are unaffected.
+    // kei3 computes the mortgage credit as if NO furusato donation is made. A real
+    // furusato 寄附金控除 lowers both the base income tax and the income-tax taxable
+    // income (所得税の課税総所得金額等), which would change how much credit income tax
+    // absorbs AND the residence-tax spillover cap. kei3 treats the two independently
+    // because there's no UI yet to apply an actual donation or to choose 確定申告 vs
+    // One-Stop. The furusato LIMIT and OUT-OF-POCKET shown are unaffected — this only
+    // concerns how an *actual* donation would feed back into the mortgage credit.
+    // This test pins kei3's current (independent) behavior in the income-tax-wiped case.
     // ----------------------------------------------------------------------
-    it('documents the furusato + mortgage overlap approximation (income tax wiped, spillover under cap)', () => {
+    it('computes the mortgage credit independently of any furusato donation (interaction deferred)', () => {
       const inputs = {
         incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const }],
         isSubjectToLongTermCarePremium: false,
@@ -211,8 +208,8 @@ describe('calculateFurusatoNozeiLimit', () => {
       };
       const baseline = calculateTaxes(inputs);
       const baseTax = baseline.nationalIncomeTaxBase!; // 所得税額 before surtax (~40,100)
-      // The furusato income-tax portion (~1,600) is exactly the amount by which the real
-      // 確定申告 mortgage spillover would exceed kei3's.
+      // There is a furusato income-tax portion at this income — i.e. a real donation would
+      // interact with the mortgage credit (the deferred feedback described above).
       expect(baseline.furusatoNozei.incomeTaxReduction).toBeGreaterThan(0);
 
       // Credit that absorbs the whole base income tax, leaving spillover under the cap.
@@ -228,6 +225,28 @@ describe('calculateFurusatoNozeiLimit', () => {
       // once income tax hits 0 for a 確定申告 filer.
       expect(withCredit.furusatoNozei.limit).toBe(baseline.furusatoNozei.limit);
       expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
+    });
+
+    it('exposes the pre-mortgage income-based residence portion so the breakdown reconciles', () => {
+      const inputs = {
+        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const }],
+        isSubjectToLongTermCarePremium: false,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+      const r = calculateTaxes({ ...inputs, mortgageTaxCredit: { moveInYear: 2024, creditAmount: 120_000 } });
+      const pre = r.residenceTaxIncomeBasedBeforeMortgageCredit!;
+      const post = r.residenceTax.city.cityIncomeTax + r.residenceTax.prefecture.prefecturalIncomeTax;
+      expect(pre).toBeGreaterThan(post); // the spillover reduced the income-based portion
+      // Income-based (post) + per-capita reconciles to the total residence tax.
+      expect(post + r.residenceTax.perCapitaTax).toBe(r.residenceTax.totalResidenceTax);
+      // The displayed reduction (pre − post) matches the applied spillover within ¥100 rounding.
+      expect(Math.abs((pre - post) - r.mortgageTaxCredit!.appliedToResidenceTax)).toBeLessThanOrEqual(100);
     });
   });
 

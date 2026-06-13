@@ -25,7 +25,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { MortgageTaxCreditInput } from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../ui/Tooltips';
-import { MORTGAGE_TAX_CREDIT_COHORTS } from '../../data/mortgageTaxCredit';
+import { earliestEligibleMoveInYear } from '../../utils/mortgageTaxCredit';
 
 interface AdditionalDeductionsModalProps {
   open: boolean;
@@ -35,30 +35,6 @@ interface AdditionalDeductionsModalProps {
   mortgageTaxCredit?: MortgageTaxCreditInput | undefined;
   onMortgageTaxCreditChange: (input: MortgageTaxCreditInput | undefined) => void;
   currentYear: number;
-}
-
-// Bands are sorted newest-first, so the last entry has the earliest start year.
-// This is the oldest move-in the cohort data can describe at all.
-const EARLIEST_KNOWN_MOVE_IN_YEAR =
-  MORTGAGE_TAX_CREDIT_COHORTS[MORTGAGE_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
-
-// 13-year credits exist only for move-ins from 2019 onward (the consumption-tax-hike
-// measure, then the 2022+ new-build regime). Every other cohort is a 10-year credit.
-const FIRST_13_YEAR_MOVE_IN = 2019;
-
-/**
- * Oldest move-in year that could still be within its credit period in `taxYear`,
- * used to bound the move-in dropdown — there's no point offering years whose
- * credit has already ended. A move-in Y is still claimable when taxYear ≤ Y + 9
- * (10-year credits, all cohorts) or, for Y ≥ 2019, taxYear ≤ Y + 12 (13-year).
- * For taxYear 2026 this yields 2017.
- */
-function earliestEligibleMoveInYear(taxYear: number): number {
-  const tenYearFloor = taxYear - 9;
-  const thirteenYearFloor = Math.max(FIRST_13_YEAR_MOVE_IN, taxYear - 12);
-  const thirteenYearStillRunning = thirteenYearFloor + 12 >= taxYear;
-  const floor = thirteenYearStillRunning ? Math.min(tenYearFloor, thirteenYearFloor) : tenYearFloor;
-  return Math.max(EARLIEST_KNOWN_MOVE_IN_YEAR, floor);
 }
 
 const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> = ({ children, tooltip }) => (

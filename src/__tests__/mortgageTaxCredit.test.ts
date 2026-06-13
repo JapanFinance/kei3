@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { applyMortgageTaxCredit } from '../utils/mortgageTaxCredit';
+import { applyMortgageTaxCredit, earliestEligibleMoveInYear } from '../utils/mortgageTaxCredit';
 import { getMortgageTaxCreditCohort } from '../data/mortgageTaxCredit';
 
 describe('getMortgageTaxCreditCohort', () => {
@@ -145,5 +145,28 @@ describe('applyMortgageTaxCredit', () => {
             expect(result.appliedToIncomeTax).toBe(0);
             expect(result.appliedToResidenceTax).toBe(0);
         }
+    });
+});
+
+describe('earliestEligibleMoveInYear (move-in dropdown floor)', () => {
+    it('returns the 10-year floor for the current era (2026 → 2017)', () => {
+        // 10-year credits: 2017 move-in is in its final year (2017+9). 13-year credits
+        // (2019+) are all ≥ 2017, so they don't push the floor lower.
+        expect(earliestEligibleMoveInYear(2026)).toBe(2017);
+        expect(earliestEligibleMoveInYear(2027)).toBe(2018);
+        expect(earliestEligibleMoveInYear(2028)).toBe(2019);
+    });
+
+    it('keeps 2019-2021 move-ins eligible while their 13-year credit still runs', () => {
+        // In 2029 the 10-year floor is 2020, but a 2019 13-year credit runs through 2031,
+        // so the floor must stay at 2019 (not drop the still-eligible 13-year cohort).
+        expect(earliestEligibleMoveInYear(2029)).toBe(2019);
+        expect(earliestEligibleMoveInYear(2031)).toBe(2019); // 2019 + 12 = 2031, last year
+        expect(earliestEligibleMoveInYear(2032)).toBe(2020); // 2019's credit has now ended
+    });
+
+    it('never returns a year before the cohort data starts (2009)', () => {
+        // Far-past tax years would compute a floor below 2009; clamp to the known data.
+        expect(earliestEligibleMoveInYear(2015)).toBe(2009);
     });
 });

@@ -43,6 +43,25 @@ const EMPTY_RESULT: MortgageTaxCreditResult = {
 const EARLIEST_SUPPORTED_MOVE_IN_YEAR =
     MORTGAGE_TAX_CREDIT_COHORTS[MORTGAGE_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
 
+// 13-year credits exist only for move-ins from 2019 onward (the consumption-tax-hike
+// measure, then the 2022+ new-build regime). Every other cohort is a 10-year credit.
+const FIRST_13_YEAR_MOVE_IN = 2019;
+
+/**
+ * Oldest move-in year that could still be within its credit period in `taxYear`.
+ * Used to bound the move-in-year dropdown — there's no point offering years whose
+ * credit has already ended. A move-in Y is still claimable when taxYear ≤ Y + 9
+ * (10-year credits, all cohorts) or, for Y ≥ 2019, taxYear ≤ Y + 12 (13-year credits).
+ * For taxYear 2026 this yields 2017.
+ */
+export function earliestEligibleMoveInYear(taxYear: number): number {
+    const tenYearFloor = taxYear - 9;
+    const thirteenYearFloor = Math.max(FIRST_13_YEAR_MOVE_IN, taxYear - 12);
+    const thirteenYearStillRunning = thirteenYearFloor + 12 >= taxYear;
+    const floor = thirteenYearStillRunning ? Math.min(tenYearFloor, thirteenYearFloor) : tenYearFloor;
+    return Math.max(EARLIEST_SUPPORTED_MOVE_IN_YEAR, floor);
+}
+
 /**
  * Computes how the user's mortgage tax credit applies, split between the base
  * income tax and the residence-tax spillover.
@@ -84,7 +103,7 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
     const appliedToIncomeTax = Math.min(annualCredit, Math.max(0, baseIncomeTax));
     const spilloverEligible = annualCredit - appliedToIncomeTax;
 
-    // Remainder spills over to residence tax, capped at min(flatCap, 課税総所得金額 × rate).
+    // Remainder spills over to residence tax, capped at min(flatCap, 課税総所得金額等 × rate).
     const residenceTaxCap = Math.min(
         cohort.spillover.flatCap,
         Math.floor(Math.max(0, taxableTotalIncome) * cohort.spillover.taxableIncomeRate),

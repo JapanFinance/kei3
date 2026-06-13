@@ -585,10 +585,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       復興特別所得税
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A temporary surtax of 2.1% applied to the base income tax amount. Originally introduced to help fund reconstruction efforts after the 2011 Great East Japan Earthquake and tsunami.
+                      A temporary surtax of 2.1% applied to the base income tax remaining after tax credits such as the mortgage tax credit (基準所得税額). Originally introduced to help fund reconstruction efforts after the 2011 Great East Japan Earthquake and tsunami.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Rate:</strong> 2.1% of base income tax
+                      <strong>Rate:</strong> 2.1% of base income tax after tax credits (基準所得税額)
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Period:</strong> January 1, 2013 - December 31, 2037 (25 years)
