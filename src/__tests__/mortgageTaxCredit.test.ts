@@ -130,7 +130,7 @@ describe('applyMortgageTaxCredit', () => {
             taxableTotalIncome: 5_000_000,
         });
         expect(result.annualCredit).toBe(0);
-        expect(result.warnings[0]).toContain('No mortgage tax credit rules');
+        expect(result.warnings[0]).toContain('No home loan tax credit rules');
     });
 
     it('treats zero or negative credit amounts as no credit', () => {

@@ -171,9 +171,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           <Card variant="outlined">
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
           <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', color: 'text.primary' }}>
-            Mortgage Tax Credit (住宅ローン控除)
+            Home Loan Tax Credit (住宅ローン控除)
             <SimpleTooltip>
-              A tax credit for homeowners with a mortgage, applied for 10–13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit. Leave the amount at 0 if it doesn't apply to you.
+              A tax credit for homeowners with a home loan, applied for 10–13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit. Leave the amount at 0 if it doesn't apply to you.
             </SimpleTooltip>
           </Typography>
 
@@ -230,7 +230,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 rel="noopener noreferrer"
                 style={{ color: 'inherit', textDecoration: 'underline' }}
               >
-                NTA's mortgage credit guide
+                NTA's home loan tax credit guide
               </a>.
             </Typography>
           </Box>

@@ -279,20 +279,20 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           mt: 2,
         }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
-            Mortgage Tax Credit Interaction
+            Home Loan Tax Credit Interaction
           </Typography>
           <Typography variant="body2">
-            The 住宅ローン控除 of {formatJPY(results.mortgageTaxCredit.annualCredit)}/year has been accounted for in the figures above:
+            The home loan tax credit of {formatJPY(results.mortgageTaxCredit.annualCredit)}/year has been accounted for in the figures above:
           </Typography>
           <Box component="ul" sx={{ pl: 2, mt: 0.5, mb: 0.5 }}>
             <li>
               <Typography variant="body2">
-                The 20% special-deduction cap continues to use the residence tax 所得割 <strong>before</strong> the mortgage credit was applied.
+                The 20% special-deduction cap continues to use the residence tax 所得割 <strong>before</strong> the home loan tax credit was applied.
               </Typography>
             </li>
             <li>
               <Typography variant="body2">
-                The income-tax refund portion shown is capped by your <strong>remaining</strong> income tax after the mortgage credit ({formatJPY(results.nationalIncomeTax)}).
+                The income-tax refund portion shown is capped by your <strong>remaining</strong> income tax after the home loan tax credit ({formatJPY(results.nationalIncomeTax)}).
               </Typography>
             </li>
           </Box>

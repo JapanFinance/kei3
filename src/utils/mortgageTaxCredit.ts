@@ -77,7 +77,7 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
         return {
             ...EMPTY_RESULT,
             warnings: [
-                `No mortgage tax credit rules are configured for a move-in year of ${input.moveInYear}. ` +
+                `No home loan tax credit rules are configured for a move-in year of ${input.moveInYear}. ` +
                 `The credit applies to move-ins from ${EARLIEST_SUPPORTED_MOVE_IN_YEAR} onward.`,
             ],
         };
@@ -88,7 +88,7 @@ export function applyMortgageTaxCredit(args: ApplyMortgageTaxCreditArgs): Mortga
     // Eligibility: income limit (合計所得金額 ceiling for the cohort).
     if (netIncome > cohort.incomeLimit) {
         warnings.push(
-            `Mortgage tax credit not applied: net income exceeds the ¥${cohort.incomeLimit.toLocaleString()} ` +
+            `Home loan tax credit not applied: net income exceeds the ¥${cohort.incomeLimit.toLocaleString()} ` +
             `eligibility limit for a ${input.moveInYear} move-in.`
         );
         return { ...EMPTY_RESULT, warnings };
