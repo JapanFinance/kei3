@@ -146,8 +146,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: 'inherit', fontWeight: 500 }}
-              >iDeCo / Corporate DC</a>{' '}Contributions
-              <SimpleTooltip>Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation.</SimpleTooltip>
+              >iDeCo / Corporate DC Plan</a>{' '}Contributions
             </Typography>
             <SpinnerNumberField
               id="dcPlanContributions"
@@ -157,6 +156,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               label="Annual Contributions"
               step={1_000}
               shiftStep={10_000}
+              helperText="Your own annual contributions. Do not include employer contributions."
             />
           </FormControl>
             </CardContent>
@@ -181,9 +181,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
             <FormControl sx={{ flex: '1 1 200px', minWidth: 180 }}>
               <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
                 Credit amount (控除可能額)
-                <SimpleTooltip>
-                  Enter your full calculated credit (住宅借入金等特別控除可能額) — your year-end loan balance × the credit rate (0.7% for 2022+ move-ins, 1% earlier), up to your home's qualifying maximum. On your 源泉徴収票 this is the 住宅借入金等特別控除可能額, NOT the 住宅借入金等特別控除の額 (which is already capped at last year's income tax).
-                </SimpleTooltip>
               </Typography>
               <SpinnerNumberField
                 id="homeLoanCreditAmount"
@@ -194,6 +191,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 step={1_000}
                 shiftStep={10_000}
                 min={0}
+                helperText={'On your 源泉徴収票, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'}
               />
             </FormControl>
 
