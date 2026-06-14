@@ -14,8 +14,7 @@ import Divider from '@mui/material/Divider';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
+import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
@@ -156,7 +155,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               label="Annual Contributions"
               step={1_000}
               shiftStep={10_000}
-              helperText="Your own annual contributions. Do not include employer contributions."
+              helperText="Not including employer contributions."
             />
           </FormControl>
             </CardContent>
@@ -173,55 +172,43 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', color: 'text.primary' }}>
             Home Loan Tax Credit (住宅ローン控除)
             <SimpleTooltip>
-              A tax credit for homeowners with a home loan, applied for 10–13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit. Leave the amount at 0 if it doesn't apply to you.
+              A tax credit for homeowners with a home loan, applied for 10-13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit.
             </SimpleTooltip>
           </Typography>
 
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <FormControl sx={{ flex: '1 1 200px', minWidth: 180 }}>
-              <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
-                Credit amount (控除可能額)
-              </Typography>
+            <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
               <SpinnerNumberField
                 id="homeLoanCreditAmount"
                 name="creditAmount"
                 value={effectiveHomeLoan.creditAmount}
                 onInputChange={(e) => updateHomeLoan({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
-                label="Amount"
+                label="Credit amount (控除可能額)"
                 step={1_000}
                 shiftStep={10_000}
                 min={0}
-                helperText={'On your 源泉徴収票, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'}
+                helperText={'From your withholding statement, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'}
               />
             </FormControl>
 
-            <FormControl sx={{ flex: '0 1 140px', minWidth: 120 }}>
-              <Typography sx={{ fontSize: '0.95rem', fontWeight: 500, mb: 0.5, display: 'flex', alignItems: 'center' }}>
-                Year moved in
-                <SimpleTooltip>
-                  The year you first moved in and began claiming the credit. Determines the residence-tax spillover cap and the income-eligibility limit.
-                </SimpleTooltip>
-              </Typography>
-              <InputLabel id="homeLoanMoveInYear-label" sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}>
-                Year moved in
-              </InputLabel>
-              <Select
-                id="homeLoanMoveInYear"
-                labelId="homeLoanMoveInYear-label"
-                value={effectiveHomeLoan.moveInYear}
-                onChange={(e) => updateHomeLoan({ moveInYear: Number(e.target.value) })}
-                fullWidth
-              >
-                {moveInYearOptions.map((y) => (
-                  <MenuItem key={y} value={y}>{y}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <TextField
+              select
+              size="small"
+              id="homeLoanMoveInYear"
+              label="Move-in Year"
+              value={effectiveHomeLoan.moveInYear}
+              onChange={(e) => updateHomeLoan({ moveInYear: Number(e.target.value) })}
+              sx={{ flex: '0 1 100px', minWidth: 100 }}
+            >
+              {moveInYearOptions.map((y) => (
+                <MenuItem key={y} value={y}>{y}</MenuItem>
+              ))}
+            </TextField>
           </Box>
 
           <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-              Don't know your credit amount? Calculate it with the{' '}
+              Is it your first year claiming the credit? See the{' '}
               <a
                 href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
                 target="_blank"

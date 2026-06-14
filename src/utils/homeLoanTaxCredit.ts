@@ -103,11 +103,9 @@ export function applyHomeLoanTaxCredit(args: ApplyHomeLoanTaxCreditArgs): HomeLo
     const appliedToIncomeTax = Math.min(annualCredit, Math.max(0, baseIncomeTax));
     const spilloverEligible = annualCredit - appliedToIncomeTax;
 
-    // Remainder spills over to residence tax, capped at min(flatCap, 課税総所得金額等 × rate).
-    const residenceTaxCap = Math.min(
-        cohort.spillover.flatCap,
-        Math.floor(Math.max(0, taxableTotalIncome) * cohort.spillover.taxableIncomeRate),
-    );
+    // Remainder spills over to residence tax, capped at min(定額限度 flatCap, 定率限度 課税総所得金額等 × rate).
+    const incomeRateCap = Math.floor(Math.max(0, taxableTotalIncome) * cohort.spillover.taxableIncomeRate);
+    const residenceTaxCap = Math.min(cohort.spillover.flatCap, incomeRateCap);
     const appliedToResidenceTax = Math.min(spilloverEligible, residenceTaxCap);
     const unusedCredit = annualCredit - appliedToIncomeTax - appliedToResidenceTax;
 
@@ -123,6 +121,11 @@ export function applyHomeLoanTaxCredit(args: ApplyHomeLoanTaxCreditArgs): HomeLo
         appliedToIncomeTax,
         appliedToResidenceTax,
         unusedCredit,
+        residenceTaxSpilloverCap: {
+            applied: residenceTaxCap,
+            flatCap: cohort.spillover.flatCap,
+            incomeRateCap,
+        },
         warnings,
     };
 }

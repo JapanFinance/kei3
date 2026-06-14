@@ -477,6 +477,21 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         nationalIncomeTax,
     );
 
+    // Furusato interaction: the home loan credit above was computed on income tax
+    // BEFORE any furusato donation. When the user files a tax return and donates up to
+    // the limit, the donation lowers taxable income, leaving less income tax for the
+    // credit to absorb. If that drops the base income tax below what the credit already
+    // takes from income tax, the furusato income-tax refund can no longer be fully
+    // realized and out-of-pocket rises above the usual ~2,000 yen. (One-Stop never
+    // touches income tax, so it avoids this.) Detect that case for the UI.
+    let furusatoDonationReducesHomeLoanCredit = false;
+    if (homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToIncomeTax > 0 && furusatoNozeiLimit.limit > 0) {
+        const deductibleDonation = Math.max(furusatoNozeiLimit.limit - 2000, 0); // donation minus the ~2,000 yen out-of-pocket
+        const taxableAfterDonation = Math.max(0, Math.floor((taxableIncomeForNationalIncomeTax - deductibleDonation) / 1000) * 1000);
+        const baseIncomeTaxAfterDonation = calculateNationalIncomeTaxBase(taxableAfterDonation);
+        furusatoDonationReducesHomeLoanCredit = baseIncomeTaxAfterDonation < homeLoanTaxCreditResult.appliedToIncomeTax;
+    }
+
     return {
         annualIncome,
         hasEmploymentIncome,
@@ -510,6 +525,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             residenceTaxIncomeBasedBeforeHomeLoanCredit:
                 preCreditResidenceTax.city.cityIncomeTax + preCreditResidenceTax.prefecture.prefecturalIncomeTax,
         }),
+        ...(furusatoDonationReducesHomeLoanCredit && { furusatoDonationReducesHomeLoanCredit: true }),
         dcPlanContributions: inputs.dcPlanContributions,
         // Income tax breakdown
         nationalIncomeTaxBase: taxableIncomeForNationalIncomeTax > 0 ? nationalIncomeTaxBase : undefined,

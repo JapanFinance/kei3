@@ -192,7 +192,10 @@ describe('calculateFurusatoNozeiLimit', () => {
     // because there's no UI yet to apply an actual donation or to choose 確定申告 vs
     // One-Stop. The furusato LIMIT and OUT-OF-POCKET shown are unaffected — this only
     // concerns how an *actual* donation would feed back into the home loan credit.
-    // This test pins kei3's current (independent) behavior in the income-tax-wiped case.
+    // kei3 computes a detection flag (furusatoDonationReducesHomeLoanCredit) for this case but
+    // does NOT surface it in the UI yet — the framing needs more work (it's the home loan credit
+    // that's squeezed, not furusato, and the residence-cap recapture isn't modeled). This test
+    // pins the independent calculation behavior.
     // ----------------------------------------------------------------------
     it('computes the home loan credit independently of any furusato donation (interaction deferred)', () => {
       const inputs = {
@@ -225,6 +228,37 @@ describe('calculateFurusatoNozeiLimit', () => {
       // once income tax hits 0 for a 確定申告 filer.
       expect(withCredit.furusatoNozei.limit).toBe(baseline.furusatoNozei.limit);
       expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
+    });
+
+    it('flags the furusato interaction only when donating the limit would squeeze the credit', () => {
+      // No squeeze: at ¥7M a small ¥100,000 credit leaves ample income tax even after a
+      // donation up to the furusato limit, so the warning flag stays off.
+      const ample = calculateTaxes({
+        ...baseInputs,
+        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 100_000 },
+      });
+      expect(ample.furusatoDonationReducesHomeLoanCredit).toBeFalsy();
+
+      // Squeeze: at ¥3.5M a credit that wipes income tax leaves nothing for the furusato
+      // income-tax refund once a donation is made (a tax-return-only effect), turning the flag on.
+      const squeezeInputs = {
+        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const }],
+        isSubjectToLongTermCarePremium: false,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+      const baseline = calculateTaxes(squeezeInputs);
+      const squeeze = calculateTaxes({
+        ...squeezeInputs,
+        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: Math.floor(baseline.nationalIncomeTaxBase!) + 40_000 },
+      });
+      expect(squeeze.nationalIncomeTax).toBe(0); // credit wipes income tax
+      expect(squeeze.furusatoDonationReducesHomeLoanCredit).toBe(true);
     });
 
     it('exposes the pre-home-loan income-based residence portion so the breakdown reconciles', () => {

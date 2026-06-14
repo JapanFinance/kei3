@@ -932,7 +932,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             }}
           >
             Additional Deductions &amp; Credits
-            <SimpleTooltip>Optional income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. 住宅ローン控除). These affect your income tax, residence tax, and furusato nozei limit.</SimpleTooltip>
+            <SimpleTooltip>Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax credit). These affect your income tax, residence tax, and furusato nozei limit.</SimpleTooltip>
           </Typography>
           <Button
             variant="outlined"
@@ -944,7 +944,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           >
             {(() => {
               const parts: string[] = [];
-              if (inputs.dcPlanContributions > 0) parts.push(`iDeCo ${formatJPY(inputs.dcPlanContributions)}`);
+              if (inputs.dcPlanContributions > 0) parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
               if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0) parts.push(`Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`);
               return parts.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>

@@ -77,6 +77,19 @@ export interface HomeLoanTaxCreditResult {
   appliedToResidenceTax: number;
   /** Credit that could not be applied because of caps (informational). */
   unusedCredit: number;
+  /**
+   * The residence-tax spillover ceiling for the year, exposed so the UI can explain
+   * why a large credit may not be fully usable: the credit can reduce residence tax
+   * by at most `applied` = min(flatCap 定額限度, incomeRateCap 定率限度).
+   */
+  residenceTaxSpilloverCap?: {
+    /** The binding cap actually used: min(flatCap, incomeRateCap). */
+    applied: number;
+    /** 定額限度 — the cohort flat cap (¥97,500 or ¥136,500). */
+    flatCap: number;
+    /** 定率限度 — floor(課税総所得金額等 × cohort rate). */
+    incomeRateCap: number;
+  };
   /** Human-readable warnings: out-of-period, income exceeds limit, etc. */
   warnings: ReadonlyArray<string>;
 }
@@ -147,6 +160,13 @@ export interface TakeHomeResults {
   homeLoanTaxCredit?: HomeLoanTaxCreditResult;
   /** Residence income-based portion (所得割) before the home loan credit spillover, for display. */
   residenceTaxIncomeBasedBeforeHomeLoanCredit?: number | undefined;
+  /**
+   * True when donating up to the furusato nozei limit would (on a filed tax return)
+   * lower taxable income enough to squeeze the home loan tax credit / furusato
+   * income-tax refund, pushing out-of-pocket above the usual ~2,000 yen. One-Stop
+   * avoids it. Drives the furusato tab's interaction warning.
+   */
+  furusatoDonationReducesHomeLoanCredit?: boolean;
   dcPlanContributions: number;
   // Dependent deductions
   dependentDeductions?: DependentDeductionResults;

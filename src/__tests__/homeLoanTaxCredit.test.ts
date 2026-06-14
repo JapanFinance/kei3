@@ -90,6 +90,18 @@ describe('applyHomeLoanTaxCredit', () => {
         expect(result.appliedToResidenceTax).toBe(136_500);
     });
 
+    it('caps the 2014-2021 spillover at 課税総所得金額 × 7% when below the ¥136,500 flat cap', () => {
+        // taxableTotalIncome 1M → 1M × 7% = 70,000 < 136,500 flat cap (定率 binds, not 定額).
+        const result = applyHomeLoanTaxCredit({
+            input: { moveInYear: 2018, creditAmount: 200_000 },
+            netIncome: 8_000_000,
+            baseIncomeTax: 0,
+            taxableTotalIncome: 1_000_000,
+        });
+        expect(result.appliedToResidenceTax).toBe(70_000);
+        expect(result.residenceTaxSpilloverCap).toEqual({ applied: 70_000, flatCap: 136_500, incomeRateCap: 70_000 });
+    });
+
     it('rejects when net income exceeds the band eligibility limit', () => {
         const result = applyHomeLoanTaxCredit({
             input: { moveInYear: 2024, creditAmount: 200_000 },

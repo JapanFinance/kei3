@@ -54,8 +54,21 @@ export interface HomeLoanTaxCreditCohort {
     /** Maximum 合計所得金額 to be eligible at all (yen). */
     incomeLimit: number;
     /**
-     * Residence-tax spillover cap when the credit exceeds income tax.
-     * Final cap = min(flatCap, floor(課税総所得金額 × taxableIncomeRate)).
+     * Residence-tax spillover cap applied when the credit exceeds income tax
+     * (個人住民税の住宅借入金等特別税額控除). Final cap =
+     *   min(flatCap, floor(所得税の課税総所得金額等 × taxableIncomeRate)).
+     *
+     * Figures are set by the 地方税法 residence-tax credit provisions (see the 総務省
+     * source above). taxableIncomeRate is 7% for 特定取得 (homes acquired under the
+     * 8%/10% consumption tax, ~2014–2021 move-ins) and 5% otherwise. flatCap is that
+     * same rate applied to ¥1,950,000 (the top of the lowest income-tax bracket):
+     * 5% → ¥97,500, 7% → ¥136,500.
+     *
+     * NOTE: the statute also caps the credit at the residence 所得割 itself, but that
+     * third sub-limit never binds here. The residence 所得割 is ~10% of a taxable base
+     * that is always ≥ the income-tax base (residence deductions are smaller), so it
+     * always exceeds 5–7% of the income-tax base — i.e. flatCap or the 課税総所得 × rate
+     * cap is always reached first. We therefore omit the 所得割 limit.
      */
     spillover: {
         flatCap: number;

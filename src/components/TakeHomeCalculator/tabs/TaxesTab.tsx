@@ -19,6 +19,7 @@ import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
@@ -535,22 +536,14 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <DetailedTooltip title="Home Loan Tax Credit — Income Tax Portion">
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A tax credit (税額控除) for homeowners with a home loan, applied to the base income tax (所得税額) before the reconstruction surtax. Any remainder spills over to residence tax up to a cohort-specific cap.
+                      A tax credit (税額控除) for homeowners with a home loan. It reduces your base income tax (所得税額) first, before the reconstruction surtax.
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Total annual credit:</strong> {formatJPY(results.homeLoanTaxCredit.annualCredit)}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
                       <strong>Applied to income tax:</strong> {formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}
                     </Typography>
                     {results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>Spillover to residence tax:</strong> {formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}
-                      </Typography>
-                    )}
-                    {results.homeLoanTaxCredit.unusedCredit > 0 && (
-                      <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
-                        <strong>Unused (capped):</strong> {formatJPY(results.homeLoanTaxCredit.unusedCredit)}
+                        Your credit is larger than your income tax, so the remainder spills over to residence tax. See the <strong>Home Loan Tax Credit</strong> line under Residence Tax (below) for the spillover cap and any amount that cannot be claimed.
                       </Typography>
                     )}
                     <Box sx={{ mt: 1 }}>
@@ -1033,6 +1026,48 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           </Box>
         </Collapse>
 
+        {/* Home loan tax credit spillover (reduces the income-based portion above) */}
+        {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Home Loan Tax Credit
+                {results.homeLoanTaxCredit.unusedCredit > 0 && (
+                  <WarningIcon
+                    fontSize="small"
+                    sx={{ ml: 0.5, color: 'warning.main', fontSize: '1rem', verticalAlign: 'text-bottom' }}
+                  />
+                )}
+                <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      When the home loan tax credit exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
+                    </Typography>
+                    {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Your spillover cap:</strong> {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.applied)} (the lower of {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.flatCap)} and {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.incomeRateCap)}).
+                      </Typography>
+                    )}
+                    {results.homeLoanTaxCredit.unusedCredit > 0 && (
+                      <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
+                        Your full credit ({formatJPY(results.homeLoanTaxCredit.annualCredit)}) is more than your income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}) combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be applied and is lost.
+                      </Typography>
+                    )}
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      It is subtracted from the income-based portion shown above to give the residence tax you actually pay.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85em', color: 'text.secondary' }}>
+                      Note: the spillover does NOT reduce the 20% furusato special-deduction cap, but it does change the income-tax refund portion if the credit fully absorbs your income tax.
+                    </Typography>
+                  </Box>
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-homeLoanResidenceReduction)}
+            type="detail"
+          />
+        )}
+
         {/* Per capita portion */}
         <ResultRow
           label={
@@ -1110,33 +1145,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           value={formatJPY(results.residenceTax.perCapitaTax)}
           type="detail"
         />
-
-
-
-        {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
-          <ResultRow
-            label={
-              <span>
-                Home Loan Tax Credit spillover
-                <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      When the home loan tax credit exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      It is subtracted from the income-based portion shown above to give the residence tax you actually pay.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85em', color: 'text.secondary' }}>
-                      Note: the spillover does NOT reduce the 20% furusato special-deduction cap, but it does change the income-tax refund portion if the credit fully absorbs your income tax.
-                    </Typography>
-                  </Box>
-                </DetailedTooltip>
-              </span>
-            }
-            value={formatJPY(-homeLoanResidenceReduction)}
-            type="detail"
-          />
-        )}
 
         <ResultRow
           label="Total Residence Tax"
