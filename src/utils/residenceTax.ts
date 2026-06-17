@@ -373,9 +373,10 @@ const donationBasicDeductionRate = 0.1;
  *   BEFORE 住宅ローン控除 — pass the pre-credit residence tax via
  *   `residenceTaxDetailsForCap`. When no home loan credit is in play, pass the
  *   same details for both `residenceTaxDetailsForCap` and `residenceTaxDetailsForFinal`.
- * - The income-tax refund portion is capped at the income tax actually paid
- *   AFTER home loan credit. Pass that figure via `remainingIncomeTax` to enforce
- *   the cap; omit it for the legacy uncapped behavior.
+ * - The income-tax refund portion can't exceed the income tax actually owed. When a home loan
+ *   credit has reduced that income tax, pass the post-credit figure via `remainingIncomeTax` to
+ *   cap the refund at it. Omit it (undefined) when nothing has reduced income tax — then the
+ *   refund is limited only by the normal furusato math (no extra cap needed).
  * - `appliedHomeLoanCreditToResidenceTax` is the amount of home loan credit
  *   spillover applied to residence tax. Used to compute the raw post-credit
  *   city/prefectural income tax for the furusato application step. Defaults to 0.
@@ -442,10 +443,10 @@ export function calculateFurusatoNozeiDetails(
     residenceTaxSpecialDeduction = Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetailsForFinal.cityProportion) + Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetailsForFinal.prefecturalProportion);
 
     const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
-    // Use the raw (pre-rounding) city/prefectural income tax MINUS the home loan credit
-    // spillover (when present), then subtract the furusato tax credit. When no
-    // home loan credit is in play, appliedHomeLoanCreditToResidenceTax is 0 and this
-    // matches the original formula exactly.
+    // City/prefectural income-based residence tax, pre-rounding, with the home loan credit
+    // spillover removed first, then the furusato tax credit subtracted. When there is no home
+    // loan credit, appliedHomeLoanCreditToResidenceTax is 0, the spillover term drops out, and
+    // this reduces to the residence income-based portion minus the furusato credit.
     const beforeCityIncomeTax = residenceTaxDetailsForCap.city.cityTaxableIncome * residenceTaxDetailsForCap.residenceTaxRate
         - residenceTaxDetailsForCap.city.cityAdjustmentCredit
         - appliedHomeLoanCreditToResidenceTax * residenceTaxDetailsForCap.cityProportion;

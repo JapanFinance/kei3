@@ -47,10 +47,6 @@ export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessInco
 
 /**
  * User input for the home loan tax credit (住宅ローン控除).
- *
- * The user supplies the calculated credit amount directly (the 控除可能額 — see
- * `creditAmount` below). The only other thing we need is the move-in year, which
- * determines the residence-tax spillover cap and the income-eligibility limit.
  */
 export interface HomeLoanTaxCreditInput {
   /**
@@ -69,7 +65,7 @@ export interface HomeLoanTaxCreditInput {
 
 /** Computed application of the home loan tax credit. */
 export interface HomeLoanTaxCreditResult {
-  /** Pre-spillover total credit for the year (yen). */
+  /** Total credit for the year (yen). Sum of {@link appliedToIncomeTax}, {@link appliedToResidenceTax}, {@link unusedCredit} */
   annualCredit: number;
   /** Portion applied against national income tax. */
   appliedToIncomeTax: number;
@@ -79,7 +75,7 @@ export interface HomeLoanTaxCreditResult {
   unusedCredit: number;
   /**
    * The residence-tax spillover ceiling for the year, exposed so the UI can explain
-   * why a large credit may not be fully usable: the credit can reduce residence tax
+   * why a credit may not be fully usable: the credit can reduce residence tax
    * by at most `applied` = min(flatCap 定額限度, incomeRateCap 定率限度).
    */
   residenceTaxSpilloverCap?: {
@@ -158,15 +154,14 @@ export interface TakeHomeResults {
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
   homeLoanTaxCredit?: HomeLoanTaxCreditResult;
-  /** Residence income-based portion (所得割) before the home loan credit spillover, for display. */
-  residenceTaxIncomeBasedBeforeHomeLoanCredit?: number | undefined;
   /**
-   * True when donating up to the furusato nozei limit would (on a filed tax return)
-   * lower taxable income enough to squeeze the home loan tax credit / furusato
-   * income-tax refund, pushing out-of-pocket above the usual ~2,000 yen. One-Stop
-   * avoids it. Drives the furusato tab's interaction warning.
+   * Residence tax income-based portion (所得割) BEFORE the home loan credit spillover, for
+   * display. Not simply (post-credit 所得割 + appliedToResidenceTax): the city and prefectural
+   * 所得割 are each floored to ¥100 after subtracting their share of the spillover, so the true
+   * pre-credit 所得割 can differ from that sum by up to ~¥100. Taken from the pre-credit residence
+   * calculation (already computed for the furusato 20% cap) so the Taxes-tab rows reconcile exactly.
    */
-  furusatoDonationReducesHomeLoanCredit?: boolean;
+  residenceTaxIncomeBasedBeforeHomeLoanCredit?: number | undefined;
   dcPlanContributions: number;
   // Dependent deductions
   dependentDeductions?: DependentDeductionResults;

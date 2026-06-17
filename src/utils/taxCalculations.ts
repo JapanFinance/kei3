@@ -428,35 +428,36 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome, incomeYear);
 
-    const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
+    // National income tax taxable income before the 1,000-yen flooring. Furusato uses this
+    // pre-rounding figure (it rounds after subtracting the donation deduction), so the two share
+    // this expression and can't drift apart if the deduction set changes.
+    const nationalTaxableIncomeBeforeRounding = netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total;
+    const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor(nationalTaxableIncomeBeforeRounding / 1000) * 1000);
 
-    // Base national income tax (所得税額) before the reconstruction surtax. The
-    // home loan tax credit is a 税額控除 applied to this base; the surtax is then
-    // recomputed on the reduced base (see below).
+    // Base national income tax (所得税額) before tax credits and the reconstruction surtax
     const nationalIncomeTaxBase = calculateNationalIncomeTaxBase(taxableIncomeForNationalIncomeTax);
 
     const residenceTaxBasicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
     const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction - dependentDeductions.residenceTax.total) / 1000) * 1000);
 
     // Home loan tax credit (住宅ローン控除): applied first to the base income tax,
-    // then spilled over to residence tax up to the cohort's cap.
+    // then spilled over to residence tax up to the cap.
     // Calling residence tax with appliedToResidenceTax = 0 first gives us the
     // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
     const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
 
     const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
-        ? applyHomeLoanTaxCredit({
-            input: inputs.homeLoanTaxCredit,
+        ? applyHomeLoanTaxCredit(
+            inputs.homeLoanTaxCredit,
             netIncome,
-            baseIncomeTax: nationalIncomeTaxBase,
-            // The residence-tax spillover cap is based on the INCOME-TAX taxable income
-            // (所得税の課税総所得金額等), NOT the residence-tax taxable income.
-            taxableTotalIncome: taxableIncomeForNationalIncomeTax,
-        })
+            nationalIncomeTaxBase,
+            // The spillover cap uses the INCOME-TAX taxable income (所得税の課税総所得金額等),
+            // NOT the residence-tax taxable income.
+            taxableIncomeForNationalIncomeTax,
+        )
         : undefined;
 
-    // Reconstruction surtax (復興特別所得税) is 2.1% of the base income tax AFTER the
-    // home loan credit (基準所得税額). The credit reduces the base, then the surtax applies.
+    // Reconstruction surtax (復興特別所得税) is 2.1% of the base income tax AFTER tax credits.
     const baseIncomeTaxAfterCredit = Math.max(0, nationalIncomeTaxBase - (homeLoanTaxCreditResult?.appliedToIncomeTax ?? 0));
     const reconstructionSurtax = calculateReconstructionSurtax(baseIncomeTaxAfterCredit);
     const nationalIncomeTax = Math.floor((baseIncomeTaxAfterCredit + reconstructionSurtax) / 100) * 100;
@@ -470,27 +471,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
     const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
-        netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total,
+        nationalTaxableIncomeBeforeRounding,
         preCreditResidenceTax,
         residenceTax,
         homeLoanTaxCreditResult?.appliedToResidenceTax ?? 0,
         nationalIncomeTax,
     );
-
-    // Furusato interaction: the home loan credit above was computed on income tax
-    // BEFORE any furusato donation. When the user files a tax return and donates up to
-    // the limit, the donation lowers taxable income, leaving less income tax for the
-    // credit to absorb. If that drops the base income tax below what the credit already
-    // takes from income tax, the furusato income-tax refund can no longer be fully
-    // realized and out-of-pocket rises above the usual ~2,000 yen. (One-Stop never
-    // touches income tax, so it avoids this.) Detect that case for the UI.
-    let furusatoDonationReducesHomeLoanCredit = false;
-    if (homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToIncomeTax > 0 && furusatoNozeiLimit.limit > 0) {
-        const deductibleDonation = Math.max(furusatoNozeiLimit.limit - 2000, 0); // donation minus the ~2,000 yen out-of-pocket
-        const taxableAfterDonation = Math.max(0, Math.floor((taxableIncomeForNationalIncomeTax - deductibleDonation) / 1000) * 1000);
-        const baseIncomeTaxAfterDonation = calculateNationalIncomeTaxBase(taxableAfterDonation);
-        furusatoDonationReducesHomeLoanCredit = baseIncomeTaxAfterDonation < homeLoanTaxCreditResult.appliedToIncomeTax;
-    }
 
     return {
         annualIncome,
@@ -525,7 +511,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             residenceTaxIncomeBasedBeforeHomeLoanCredit:
                 preCreditResidenceTax.city.cityIncomeTax + preCreditResidenceTax.prefecture.prefecturalIncomeTax,
         }),
-        ...(furusatoDonationReducesHomeLoanCredit && { furusatoDonationReducesHomeLoanCredit: true }),
         dcPlanContributions: inputs.dcPlanContributions,
         // Income tax breakdown
         nationalIncomeTaxBase: taxableIncomeForNationalIncomeTax > 0 ? nationalIncomeTaxBase : undefined,

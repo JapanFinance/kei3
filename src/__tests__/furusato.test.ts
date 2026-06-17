@@ -100,12 +100,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withCredit.homeLoanTaxCredit?.appliedToResidenceTax).toBe(0);
       // The credit reduces the base income tax, then the 2.1% surtax recomputes on the
       // smaller base — so the total income tax falls by exactly 100,000 × 1.021 = 102,100,
-      // NOT a flat 100,000 (which the buggy ordering would give). It is exact, not a range:
-      // total tax = floor(base × 1.021 / 100) × 100, and the with-credit base is reduced by
-      // 100,000, so its total is floor((base × 1.021 - 102,100) / 100) × 100. Because both the
-      // credit (100,000) and the surtax delta (100,000 × 0.021 = 2,100) are multiples of 100,
-      // the 100-yen flooring shifts both totals identically, leaving a reduction of exactly
-      // 102,100 for any income.
+      // NOT a flat 100,000 (which the buggy ordering would give).
       const reduction = baseline.nationalIncomeTax - withCredit.nationalIncomeTax;
       expect(reduction).toBe(102_100);
     });
@@ -155,8 +150,12 @@ describe('calculateFurusatoNozeiLimit', () => {
         incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 30_000_000, frequency: 'annual' as const }],
         homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 200_000 },
       });
-      expect(withCredit.homeLoanTaxCredit?.appliedToIncomeTax).toBe(0);
-      expect(withCredit.homeLoanTaxCredit?.warnings.length ?? 0).toBeGreaterThan(0);
+      const credit = withCredit.homeLoanTaxCredit!;
+      expect(credit.appliedToIncomeTax).toBe(0);
+      expect(credit.annualCredit).toBe(0);
+      // Specifically the income-eligibility warning (it names the exceeded net income and the
+      // ¥20,000,000 limit), not just any warning that happens to contain "eligibility limit".
+      expect(credit.warnings.some(w => w.includes('net income exceeds') && w.includes('20,000,000'))).toBe(true);
     });
 
     it('bases the residence-tax spillover cap on income-tax taxable income (所得税の課税総所得金額等), not residence taxable income', () => {
@@ -174,16 +173,16 @@ describe('calculateFurusatoNozeiLimit', () => {
         incomeYear: 2026,
       };
       // A credit large enough that the spillover saturates the cap.
-      const r = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 300_000 } });
-      const incomeTaxTaxable = r.taxableIncomeForNationalIncomeTax!;
-      const residenceTaxable = r.taxableIncomeForResidenceTax!;
+      const withCredit = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 300_000 } });
+      const incomeTaxTaxable = withCredit.taxableIncomeForNationalIncomeTax!;
+      const residenceTaxable = withCredit.taxableIncomeForResidenceTax!;
       expect(residenceTaxable).toBeGreaterThan(incomeTaxTaxable); // the two bases really differ here
 
       // Cap = 5% of the INCOME-TAX taxable income (under the ¥97,500 flat cap at this income).
       const expectedCap = Math.floor(incomeTaxTaxable * 0.05);
-      expect(r.homeLoanTaxCredit?.appliedToResidenceTax).toBe(expectedCap);
+      expect(withCredit.homeLoanTaxCredit?.appliedToResidenceTax).toBe(expectedCap);
       // Guard against the old bug, which used the (larger) residence taxable income.
-      expect(r.homeLoanTaxCredit?.appliedToResidenceTax).toBeLessThan(Math.floor(residenceTaxable * 0.05));
+      expect(withCredit.homeLoanTaxCredit?.appliedToResidenceTax).toBeLessThan(Math.floor(residenceTaxable * 0.05));
     });
 
     // ----------------------------------------------------------------------
@@ -196,10 +195,10 @@ describe('calculateFurusatoNozeiLimit', () => {
     // because there's no UI yet to apply an actual donation or to choose 確定申告 vs
     // One-Stop. The furusato LIMIT and OUT-OF-POCKET shown are unaffected — this only
     // concerns how an *actual* donation would feed back into the home loan credit.
-    // kei3 computes a detection flag (furusatoDonationReducesHomeLoanCredit) for this case but
-    // does NOT surface it in the UI yet — the framing needs more work (it's the home loan credit
-    // that's squeezed, not furusato, and the residence-cap recapture isn't modeled). This test
-    // pins the independent calculation behavior.
+    // kei3 does NOT model this feedback (there's no UI to apply an actual donation or to choose
+    // 確定申告 vs One-Stop), and the correct framing — it's the home loan credit that gets
+    // squeezed, not furusato, plus the residence-cap recapture — would need more work. This test
+    // pins the current independent calculation behavior.
     // ----------------------------------------------------------------------
     it('computes the home loan credit independently of any furusato donation (interaction deferred)', () => {
       const inputs = {
@@ -220,49 +219,23 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(baseline.furusatoNozei.incomeTaxReduction).toBeGreaterThan(0);
 
       // Credit that absorbs the whole base income tax, leaving spillover under the cap.
-      const M = Math.floor(baseTax) + 40_000;
-      const withCredit = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2024, creditAmount: M } });
-      const mc = withCredit.homeLoanTaxCredit!;
+      const creditAmount = Math.floor(baseTax) + 40_000;
+      const withCredit = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2024, creditAmount } });
+      const credit = withCredit.homeLoanTaxCredit!;
 
-      expect(withCredit.nationalIncomeTax).toBe(0);          // income tax fully wiped
-      expect(mc.appliedToIncomeTax).toBe(baseTax);           // whole base absorbed
-      expect(mc.unusedCredit).toBe(0);                       // spillover under the cap
-      expect(mc.appliedToResidenceTax).toBe(mc.annualCredit - mc.appliedToIncomeTax);
-      // Furusato limit unaffected; the income-tax refund portion is correctly lost
-      // once income tax hits 0 for a 確定申告 filer.
+      expect(withCredit.nationalIncomeTax).toBe(0);              // income tax fully wiped
+      expect(credit.appliedToIncomeTax).toBe(baseTax);          // whole base absorbed
+      expect(credit.unusedCredit).toBe(0);                      // spillover under the cap
+      expect(credit.appliedToResidenceTax).toBe(credit.annualCredit - credit.appliedToIncomeTax);
+      // Furusato limit is unaffected (it is based on the pre-credit 所得割)...
       expect(withCredit.furusatoNozei.limit).toBe(baseline.furusatoNozei.limit);
+      // ...but the income-tax refund portion is lost once the credit wipes income tax to 0
+      // (a 確定申告 filer can't refund tax that is no longer owed), so the out-of-pocket cost
+      // rises above the baseline by that lost refund.
+      expect(credit.appliedToIncomeTax).toBeGreaterThan(0);     // there WAS income tax to lose
+      expect(baseline.furusatoNozei.incomeTaxReduction).toBeGreaterThan(0);
       expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
-    });
-
-    it('flags the furusato interaction only when donating the limit would squeeze the credit', () => {
-      // No squeeze: at ¥7M a small ¥100,000 credit leaves ample income tax even after a
-      // donation up to the furusato limit, so the warning flag stays off.
-      const ample = calculateTaxes({
-        ...baseInputs,
-        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 100_000 },
-      });
-      expect(ample.furusatoDonationReducesHomeLoanCredit).toBeFalsy();
-
-      // Squeeze: at ¥3.5M a credit that wipes income tax leaves nothing for the furusato
-      // income-tax refund once a donation is made (a tax-return-only effect), turning the flag on.
-      const squeezeInputs = {
-        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const }],
-        isSubjectToLongTermCarePremium: false,
-        region: 'Tokyo',
-        healthInsuranceProvider: DEFAULT_PROVIDER,
-        dependents: [],
-        dcPlanContributions: 0,
-        manualSocialInsuranceEntry: false,
-        manualSocialInsuranceAmount: 0,
-        incomeYear: 2026,
-      };
-      const baseline = calculateTaxes(squeezeInputs);
-      const squeeze = calculateTaxes({
-        ...squeezeInputs,
-        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: Math.floor(baseline.nationalIncomeTaxBase!) + 40_000 },
-      });
-      expect(squeeze.nationalIncomeTax).toBe(0); // credit wipes income tax
-      expect(squeeze.furusatoDonationReducesHomeLoanCredit).toBe(true);
+      expect(withCredit.furusatoNozei.outOfPocketCost).toBeGreaterThan(baseline.furusatoNozei.outOfPocketCost);
     });
 
     it('exposes the pre-home-loan income-based residence portion so the breakdown reconciles', () => {
@@ -277,14 +250,19 @@ describe('calculateFurusatoNozeiLimit', () => {
         manualSocialInsuranceAmount: 0,
         incomeYear: 2026,
       };
-      const r = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 120_000 } });
-      const pre = r.residenceTaxIncomeBasedBeforeHomeLoanCredit!;
-      const post = r.residenceTax.city.cityIncomeTax + r.residenceTax.prefecture.prefecturalIncomeTax;
+      const withCredit = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 120_000 } });
+      const pre = withCredit.residenceTaxIncomeBasedBeforeHomeLoanCredit!;
+      const post = withCredit.residenceTax.city.cityIncomeTax + withCredit.residenceTax.prefecture.prefecturalIncomeTax;
       expect(pre).toBeGreaterThan(post); // the spillover reduced the income-based portion
       // Income-based (post) + per-capita reconciles to the total residence tax.
-      expect(post + r.residenceTax.perCapitaTax).toBe(r.residenceTax.totalResidenceTax);
-      // The displayed reduction (pre − post) matches the applied spillover within ¥100 rounding.
-      expect(Math.abs((pre - post) - r.homeLoanTaxCredit!.appliedToResidenceTax)).toBeLessThanOrEqual(100);
+      expect(post + withCredit.residenceTax.perCapitaTax).toBe(withCredit.residenceTax.totalResidenceTax);
+      // `pre` must be exactly the income-based portion computed with NO home loan credit.
+      // (We assert against an independent no-credit run rather than the applied spillover:
+      // the spillover is split 60/40 across city/prefecture and each side is floored to
+      // ¥100, so it only matches the displayed reduction up to rounding — but `pre` itself
+      // is an exact figure.)
+      const noCredit = calculateTaxes(inputs);
+      expect(pre).toBe(noCredit.residenceTax.city.cityIncomeTax + noCredit.residenceTax.prefecture.prefecturalIncomeTax);
     });
   });
 

@@ -138,29 +138,29 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           </SectionHeader>
           <Card variant="outlined">
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-          <FormControl fullWidth>
-            <Typography
-              gutterBottom
-              sx={{ display: 'flex', alignItems: 'center', fontSize: '0.95rem', fontWeight: 500, mb: 0.5, color: 'text.primary' }}
-            >
-              <a
-                href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'inherit', fontWeight: 500 }}
-              >iDeCo / Corporate DC Plan</a>{' '}Contributions
-            </Typography>
-            <SpinnerNumberField
-              id="dcPlanContributions"
-              name="dcPlanContributions"
-              value={dcPlanContributions}
-              onInputChange={(e) => onDcPlanContributionsChange(Number((e.target as HTMLInputElement).value) || 0)}
-              label="Annual Contributions"
-              step={1_000}
-              shiftStep={10_000}
-              helperText="Not including employer contributions."
-            />
-          </FormControl>
+              <FormControl fullWidth>
+                <Typography
+                  gutterBottom
+                  sx={{ display: 'flex', alignItems: 'center', fontSize: '0.95rem', fontWeight: 500, mb: 0.5, color: 'text.primary' }}
+                >
+                  <a
+                    href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', fontWeight: 500 }}
+                  >iDeCo / Corporate DC Plan</a>{' '}Contributions
+                </Typography>
+                <SpinnerNumberField
+                  id="dcPlanContributions"
+                  name="dcPlanContributions"
+                  value={dcPlanContributions}
+                  onInputChange={(e) => onDcPlanContributionsChange(Number((e.target as HTMLInputElement).value) || 0)}
+                  label="Annual Contributions"
+                  step={1_000}
+                  shiftStep={10_000}
+                  helperText="Not including employer contributions."
+                />
+              </FormControl>
             </CardContent>
           </Card>
         </Box>
@@ -172,65 +172,69 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           </SectionHeader>
           <Card variant="outlined">
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-          <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', color: 'text.primary' }}>
-            Home Loan Tax Credit (住宅ローン控除)
-            <SimpleTooltip>
-              A tax credit for homeowners with a home loan, applied for 10-13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap. Also affects your furusato nozei limit.
-            </SimpleTooltip>
-          </Typography>
-
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
-              <SpinnerNumberField
-                id="homeLoanCreditAmount"
-                name="creditAmount"
-                value={effectiveHomeLoan.creditAmount}
-                onInputChange={(e) => updateHomeLoan({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
-                label="Credit amount (控除可能額)"
-                step={1_000}
-                shiftStep={10_000}
-                min={0}
-                helperText={'From your withholding statement, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'}
-              />
-            </FormControl>
-
-            <TextField
-              select
-              size="small"
-              id="homeLoanMoveInYear"
-              label="Move-in Year"
-              value={effectiveHomeLoan.moveInYear}
-              onChange={(e) => updateHomeLoan({ moveInYear: Number(e.target.value) })}
-              sx={{ flex: '0 1 100px', minWidth: 100 }}
-            >
-              {moveInYearOptions.map((y) => (
-                <MenuItem key={y} value={y}>{y}</MenuItem>
-              ))}
-            </TextField>
-          </Box>
-
-          {homeLoanTaxCreditResult && homeLoanTaxCreditResult.annualCredit === 0 && homeLoanTaxCreditResult.warnings.length > 0 && effectiveHomeLoan.creditAmount > 0 && (
-            <Box sx={{ p: 1.5, bgcolor: 'warning.light', color: 'warning.contrastText', borderRadius: 1, mt: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-              <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
-              <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                {homeLoanTaxCreditResult.warnings.join(' ')}
+              <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', color: 'text.primary' }}>
+                Home Loan Tax Credit (住宅ローン控除)
+                <SimpleTooltip>
+                  A tax credit for homeowners with a home loan, applied for 10-13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap.
+                </SimpleTooltip>
               </Typography>
-            </Box>
-          )}
 
-          <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-              Is it your first year claiming the credit? See the{' '}
-              <a
-                href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'inherit', textDecoration: 'underline' }}
-              >
-                NTA's home loan tax credit guide
-              </a>.
-            </Typography>
-          </Box>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                  <SpinnerNumberField
+                    id="homeLoanCreditAmount"
+                    name="creditAmount"
+                    value={effectiveHomeLoan.creditAmount}
+                    onInputChange={(e) => updateHomeLoan({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
+                    label="Credit amount (控除可能額)"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                    helperText={'From your withholding statement, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'}
+                  />
+                </FormControl>
+
+                <TextField
+                  select
+                  size="small"
+                  id="homeLoanMoveInYear"
+                  label="Move-in Year"
+                  value={effectiveHomeLoan.moveInYear}
+                  onChange={(e) => updateHomeLoan({ moveInYear: Number(e.target.value) })}
+                  sx={{ flex: '0 1 100px', minWidth: 100 }}
+                >
+                  {moveInYearOptions.map((y) => (
+                    <MenuItem key={y} value={y}>{y}</MenuItem>
+                  ))}
+                </TextField>
+              </Box>
+
+              {/* Surface any warning the credit calculation produced: income over the limit
+                  (credit zeroed) OR part of the credit unusable this year (annualCredit > 0 but
+                  capped). Gated only on a positive entered amount so we don't warn before the
+                  user has entered a credit (the income-limit warning fires even at amount 0). */}
+              {homeLoanTaxCreditResult && homeLoanTaxCreditResult.warnings.length > 0 && effectiveHomeLoan.creditAmount > 0 && (
+                <Box sx={{ p: 1.5, bgcolor: 'warning.light', color: 'warning.contrastText', borderRadius: 1, mt: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                  <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    {homeLoanTaxCreditResult.warnings.join(' ')}
+                  </Typography>
+                </Box>
+              )}
+
+              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                  Is it your first year claiming the credit? See the{' '}
+                  <a
+                    href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'underline' }}
+                  >
+                    NTA's home loan tax credit guide
+                  </a>.
+                </Typography>
+              </Box>
             </CardContent>
           </Card>
         </Box>

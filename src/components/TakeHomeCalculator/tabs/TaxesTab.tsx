@@ -536,22 +536,27 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <DetailedTooltip title="Home Loan Tax Credit — Income Tax Portion">
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A tax credit (税額控除) for homeowners with a home loan. It reduces your base income tax (所得税額) first, before the reconstruction surtax.
+                      A tax credit (税額控除) for homeowners with a home loan. It reduces your base income tax before the reconstruction surtax is calculated.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
                       <strong>Applied to income tax:</strong> {formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}
                     </Typography>
                     {results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        Your credit is larger than your income tax, so the remainder spills over to residence tax. See the <strong>Home Loan Tax Credit</strong> line under Residence Tax (below) for the spillover cap and any amount that cannot be claimed.
+                        Your home loan tax credit is larger than your income tax. The remainder spills over to residence tax. See the <strong>Home Loan Tax Credit</strong> line under Residence Tax (below) for the spillover cap and any amount that cannot be claimed.
                       </Typography>
                     )}
                     <Box sx={{ mt: 1 }}>
-                      Official Source:
+                      Official Sources:
                       <ul>
                         <li>
-                          <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1213.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                          <a href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
                             住宅借入金等特別控除 - NTA
+                          </a>
+                        </li>
+                        <li>
+                          <a href="https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                            住宅ローン減税 - 国土交通省 (MLIT)
                           </a>
                         </li>
                       </ul>
@@ -619,7 +624,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               >
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Total Income Tax = Base Income Tax + Reconstruction Surtax (− Home Loan Tax Credit)
+                    Total Income Tax = Base Income Tax (− Tax Credits) + Reconstruction Surtax
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Rounding:</strong> The sum of base income tax and surtax is rounded down to the nearest 100 yen for the final amount.
@@ -1041,7 +1046,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      When the home loan tax credit exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
+                      When the home loan tax credit exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
                     </Typography>
                     {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
@@ -1054,10 +1059,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       </Typography>
                     )}
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      It is subtracted from the income-based portion shown above to give the residence tax you actually pay.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85em', color: 'text.secondary' }}>
-                      Note: the spillover does NOT reduce the 20% furusato special-deduction cap, but it does change the income-tax refund portion if the credit fully absorbs your income tax.
+                      The home loan tax credit spillover is subtracted from the income-based portion (所得割) of residence tax.
                     </Typography>
                   </Box>
                 </DetailedTooltip>

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Cohort-based rules for the Japanese home loan tax credit (住宅ローン控除 /
- * 住宅借入金等特別控除). The rules a person receives are determined by the
+ * Rules for the home loan tax credit (住宅ローン控除 / 住宅借入金等特別控除).
+ * The rules a person receives are determined by the
  * **year they first moved into the residence**.
  *
  * The user supplies the calculated credit amount directly (the 控除可能額), so
@@ -20,30 +20,9 @@
  *   tighten the `moveInYearTo` of the previous current band.
  *
  * Sources:
- *   - NTA overview: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1213.htm
- *   - Residence-tax spillover (総務省): https://www.soumu.go.jp/main_content/000094961.pdf
+ *   - NTA (home loan credit guide, with links per situation): https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm
+ *   - Residence-tax spillover (総務省): https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/090929.html
  *   - MLIT 住宅ローン減税: https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html
- *
- * ---------------------------------------------------------------------------
- * Deferred (future auto-calculate iteration): qualifying loan-balance caps per
- * housing tier, credit rate, and duration. Researched values kept here so the
- * auto-calc feature doesn't start from zero. NOT used by the manual-input MVP.
- *
- * Tiers: longTermExcellent / lowCarbon / zehWaterSaving / energySaving / standard
- * Caps are { newBuilds, existingHomes } qualifying year-end loan balance (yen):
- *
- *   2024+   rate 0.7%, 13y new / 10y existing
- *     longTermExcellent 45M/30M · lowCarbon 45M/30M · zehWaterSaving 35M/30M
- *     energySaving 30M/30M · standard 0/20M (non-energy new builds don't qualify)
- *     (child-rearing / young-couple households get higher new-build caps)
- *   2022-2023  rate 0.7%, 13y new / 10y existing
- *     longTermExcellent 50M/30M · lowCarbon 50M/30M · zehWaterSaving 45M/30M
- *     energySaving 40M/30M · standard 30M/20M
- *   2014-2021  rate 1.0%, 10y (some 2019-2021 got a 13y consumption-tax-hike extension)
- *     longTermExcellent 50M/30M · lowCarbon 50M/30M · zehWaterSaving 40M/30M
- *     energySaving 40M/30M · standard 40M/20M
- *   2009-2013  rate 1.0%, 10y, rules varied by year
- * ---------------------------------------------------------------------------
  */
 
 export interface HomeLoanTaxCreditCohort {
@@ -51,7 +30,7 @@ export interface HomeLoanTaxCreditCohort {
     moveInYearFrom: number;
     /** Inclusive upper bound of move-in years this band covers. */
     moveInYearTo: number;
-    /** Maximum 合計所得金額 to be eligible at all (yen). */
+    /** Maximum (inclusive) 合計所得金額 to be eligible at all (yen). */
     incomeLimit: number;
     /**
      * Residence-tax spillover cap applied when the credit exceeds income tax
@@ -74,8 +53,6 @@ export interface HomeLoanTaxCreditCohort {
         flatCap: number;
         taxableIncomeRate: number;
     };
-    /** Optional free-form notes for the band. */
-    notes?: string;
 }
 
 /**
@@ -90,19 +67,19 @@ export const HOME_LOAN_TAX_CREDIT_COHORTS: ReadonlyArray<HomeLoanTaxCreditCohort
         incomeLimit: 20_000_000,
         spillover: { flatCap: 97_500, taxableIncomeRate: 0.05 },
     },
-    // 2014-2021: 8%/10% consumption-tax era; spillover cap raised to 7% / ¥136,500. Income limit 30M.
+    // 2014-2021 (特定取得): home acquired under the 8%/10% consumption tax — e.g. a new build or
+    // a pre-owned home bought from a business. Spillover cap raised to 7% / ¥136,500. Income limit 30M.
+    //
+    // ASSUMPTION: we treat every 2014-2021 move-in as 特定取得. A pre-owned home bought from a
+    // private individual is NOT subject to consumption tax (非特定取得) and uses the lower
+    // 5% / ¥97,500 cap instead. We have no input to distinguish that, so for such a purchase the
+    // residence-tax spillover cap modelled here is over-stated. Move-ins before 2014 are not
+    // supported (the UI offers move-ins from ~10 years ago onward; older credits have expired).
     {
         moveInYearFrom: 2014,
         moveInYearTo: 2021,
         incomeLimit: 30_000_000,
         spillover: { flatCap: 136_500, taxableIncomeRate: 0.07 },
-    },
-    // 2009-2013: residence-tax spillover introduced for 2009 move-ins; 5% / ¥97,500. Income limit 30M.
-    {
-        moveInYearFrom: 2009,
-        moveInYearTo: 2013,
-        incomeLimit: 30_000_000,
-        spillover: { flatCap: 97_500, taxableIncomeRate: 0.05 },
     },
 ];
 
@@ -136,7 +113,7 @@ if (import.meta.env.DEV) {
 
 /**
  * Returns the band whose [moveInYearFrom, moveInYearTo] range contains the given
- * move-in year, or undefined if no band covers it (pre-2009 move-in).
+ * move-in year, or undefined if no band covers it (e.g. a pre-2014 move-in).
  */
 export const getHomeLoanTaxCreditCohort = (moveInYear: number): HomeLoanTaxCreditCohort | undefined => {
     for (const cohort of HOME_LOAN_TAX_CREDIT_COHORTS) {

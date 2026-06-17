@@ -8,28 +8,10 @@
  * 税額控除: first against the base national income tax (所得税額, before the 2.1%
  * reconstruction surtax), then any remainder spills over to residence tax up to a
  * cohort-specific cap. The cohort is determined by the user's first move-in year.
- * See `src/data/homeLoanTaxCredit.ts`.
  */
 
 import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from "../types/tax";
 import { getHomeLoanTaxCreditCohort, HOME_LOAN_TAX_CREDIT_COHORTS } from "../data/homeLoanTaxCredit";
-
-export interface ApplyHomeLoanTaxCreditArgs {
-    input: HomeLoanTaxCreditInput;
-    /** Net income (合計所得金額) — used to check the cohort income-eligibility limit. */
-    netIncome: number;
-    /**
-     * Base national income tax (所得税額) BEFORE the reconstruction surtax. The credit
-     * reduces this base; the surtax is recomputed by the caller on the reduced base.
-     */
-    baseIncomeTax: number;
-    /**
-     * 所得税の課税総所得金額等 — the INCOME-TAX taxable total income (not the
-     * residence-tax taxable income). Used for the residence-tax spillover cap:
-     * the cap is min(flatCap, floor(this × taxableIncomeRate)).
-     */
-    taxableTotalIncome: number;
-}
 
 const EMPTY_RESULT: HomeLoanTaxCreditResult = {
     annualCredit: 0,
@@ -67,11 +49,19 @@ export function earliestEligibleMoveInYear(taxYear: number): number {
  * income tax and the residence-tax spillover.
  *
  * Returns an empty result (with a warning) when the user is ineligible: income
- * over the cohort limit, or an unsupported (pre-2009) move-in year.
+ * over the cohort limit, or an unsupported (pre-2014) move-in year.
+ *
+ * @param input The home loan tax credit input (first move-in year and 控除可能額).
+ * @param netIncome Net income (合計所得金額), checked against the cohort income-eligibility limit.
+ * @param baseIncomeTax Base national income tax (所得税額) BEFORE the reconstruction surtax; the credit reduces this base and the caller recomputes the surtax on the reduced base.
+ * @param taxableTotalIncome 所得税の課税総所得金額等 — the INCOME-TAX taxable total income (not the residence-tax taxable income); used for the spillover cap min(flatCap, floor(this × taxableIncomeRate)).
  */
-export function applyHomeLoanTaxCredit(args: ApplyHomeLoanTaxCreditArgs): HomeLoanTaxCreditResult {
-    const { input, netIncome, baseIncomeTax, taxableTotalIncome } = args;
-
+export function applyHomeLoanTaxCredit(
+    input: HomeLoanTaxCreditInput,
+    netIncome: number,
+    baseIncomeTax: number,
+    taxableTotalIncome: number,
+): HomeLoanTaxCreditResult {
     const cohort = getHomeLoanTaxCreditCohort(input.moveInYear);
     if (!cohort) {
         return {
