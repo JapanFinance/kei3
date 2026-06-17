@@ -24,6 +24,7 @@ import Badge from '@mui/material/Badge';
 import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
 import TuneIcon from '@mui/icons-material/Tune';
+import WarningIcon from '@mui/icons-material/Warning';
 import { SimpleTooltip } from '../ui/Tooltips';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -33,7 +34,7 @@ import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
-import type { TakeHomeFormState, IncomeMode, IncomeStream, HomeLoanTaxCreditInput } from '../../types/tax';
+import type { TakeHomeFormState, IncomeMode, IncomeStream, HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
 import {
   getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
@@ -49,6 +50,8 @@ import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/provid
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => void;
+  /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
+  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
 }
 
 // National Health Insurance provider (used in both employment and non-employment scenarios)
@@ -69,7 +72,7 @@ const customProvider = {
   displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID)
 };
 
-export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange }) => {
+export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange, homeLoanTaxCreditResult }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -946,6 +949,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               const parts: string[] = [];
               if (inputs.dcPlanContributions > 0) parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
               if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0) parts.push(`Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`);
+              // Via the UI the move-in dropdown only offers eligible years, so a credit entered
+              // but zeroed (annualCredit 0) means income exceeded the cohort's eligibility limit.
+              const homeLoanNotApplied = !!(inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0
+                && homeLoanTaxCreditResult && homeLoanTaxCreditResult.annualCredit === 0);
               return parts.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
@@ -954,6 +961,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   <Typography component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
                     {parts.join(' · ')}
                   </Typography>
+                  {homeLoanNotApplied && (
+                    <Typography component="span" sx={{ fontSize: '0.8rem', color: 'warning.main', display: 'flex', alignItems: 'center', gap: 0.25, mt: 0.25 }}>
+                      <WarningIcon sx={{ fontSize: '0.95rem' }} />
+                      Home loan tax credit not applied (income above the eligibility limit)
+                    </Typography>
+                  )}
                 </Box>
               ) : (
                 'Add iDeCo, home loan tax credit, etc.'
@@ -985,6 +998,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onDcPlanContributionsChange={handleDcPlanContributionsChange}
         homeLoanTaxCredit={inputs.homeLoanTaxCredit}
         onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
+        homeLoanTaxCreditResult={homeLoanTaxCreditResult}
         currentYear={new Date().getFullYear()}
       />
     </Box>

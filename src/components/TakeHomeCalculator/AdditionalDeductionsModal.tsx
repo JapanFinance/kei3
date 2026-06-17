@@ -18,10 +18,11 @@ import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
+import WarningIcon from '@mui/icons-material/Warning';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { HomeLoanTaxCreditInput } from '../../types/tax';
+import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../ui/Tooltips';
 import { earliestEligibleMoveInYear } from '../../utils/homeLoanTaxCredit';
@@ -33,6 +34,7 @@ interface AdditionalDeductionsModalProps {
   onDcPlanContributionsChange: (value: number) => void;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
+  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
   currentYear: number;
 }
 
@@ -59,6 +61,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   onDcPlanContributionsChange,
   homeLoanTaxCredit,
   onHomeLoanTaxCreditChange,
+  homeLoanTaxCreditResult,
   currentYear,
 }) => {
   const theme = useTheme();
@@ -205,6 +208,15 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               ))}
             </TextField>
           </Box>
+
+          {homeLoanTaxCreditResult && homeLoanTaxCreditResult.annualCredit === 0 && homeLoanTaxCreditResult.warnings.length > 0 && effectiveHomeLoan.creditAmount > 0 && (
+            <Box sx={{ p: 1.5, bgcolor: 'warning.light', color: 'warning.contrastText', borderRadius: 1, mt: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+              <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
+              <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                {homeLoanTaxCreditResult.warnings.join(' ')}
+              </Typography>
+            </Box>
+          )}
 
           <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
             <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>

@@ -222,7 +222,7 @@ function App({ mode, toggleColorMode }: AppProps) {
           minWidth: 0, // Prevent overflow issues
         }
       }}>
-        <TakeHomeInputForm inputs={inputs} onInputChange={handleInputChange} />
+        <TakeHomeInputForm inputs={inputs} onInputChange={handleInputChange} homeLoanTaxCreditResult={results?.homeLoanTaxCredit} />
         {results && (
           <Suspense fallback={
             <Box sx={{

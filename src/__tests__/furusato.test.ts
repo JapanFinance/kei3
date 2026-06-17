@@ -99,11 +99,15 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withCredit.homeLoanTaxCredit?.appliedToIncomeTax).toBe(100_000);
       expect(withCredit.homeLoanTaxCredit?.appliedToResidenceTax).toBe(0);
       // The credit reduces the base income tax, then the 2.1% surtax recomputes on the
-      // smaller base — so the total income tax falls by ~100,000 × 1.021 = 102,100, NOT
-      // a flat 100,000. (The buggy ordering would give exactly 100,000.)
+      // smaller base — so the total income tax falls by exactly 100,000 × 1.021 = 102,100,
+      // NOT a flat 100,000 (which the buggy ordering would give). It is exact, not a range:
+      // total tax = floor(base × 1.021 / 100) × 100, and the with-credit base is reduced by
+      // 100,000, so its total is floor((base × 1.021 - 102,100) / 100) × 100. Because both the
+      // credit (100,000) and the surtax delta (100,000 × 0.021 = 2,100) are multiples of 100,
+      // the 100-yen flooring shifts both totals identically, leaving a reduction of exactly
+      // 102,100 for any income.
       const reduction = baseline.nationalIncomeTax - withCredit.nationalIncomeTax;
-      expect(reduction).toBeGreaterThanOrEqual(102_000);
-      expect(reduction).toBeLessThanOrEqual(102_200);
+      expect(reduction).toBe(102_100);
     });
 
     it('20% furusato cap is calculated against pre-credit residence tax (limit unchanged when no spillover)', () => {
