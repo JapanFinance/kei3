@@ -1,6 +1,6 @@
 # Kei3
 
-A website featuring various calculators. Currently, it has a Japan take-home pay calculator.
+A website featuring various calculators. Currently, it has a [Japan take-home pay calculator](https://kei3.japanfinance.org/).
 
 ## Getting Started
 

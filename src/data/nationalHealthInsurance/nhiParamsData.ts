@@ -690,6 +690,27 @@ const allNHIRegions: Record<string, NHIRegionDefinition> = {
   'Nara': {
     regionName: "Nara Prefecture / 奈良県",
     periods: [
+      // FY2026 (April 2026 / 令和8年度).
+      { effectiveFrom: { year: 2026, month: 3 }, params: {
+        source: "https://www.city.nara.lg.jp/site/kokuminkenkouhoken/9305.html",
+        medicalRate: 0.0764,
+        supportRate: 0.0327,
+        ltcRateForEligible: 0.0303,
+        medicalPerCapita: 27600,
+        supportPerCapita: 11500,
+        ltcPerCapitaForEligible: 16900,
+        medicalHouseholdFlat: 20000,
+        supportHouseholdFlat: 8400,
+        ltcHouseholdFlatForEligible: 0,
+        medicalCap: 660000,
+        supportCap: 260000,
+        ltcCapForEligible: 170000,
+        childSupportRate: 0.0031,
+        childSupportPerCapita: 1900, // 1,700 均等割 + 200 18歳以上均等割
+        childSupportHouseholdFlat: 0,
+        childSupportCap: 30000,
+        nhiStandardDeduction: 430000,
+      }},
       { effectiveFrom: { year: 2025, month: 3 }, params: {
         source: "https://www.city.nara.lg.jp/site/kokuminkenkouhoken/9305.html",
         medicalRate: 0.0764,
