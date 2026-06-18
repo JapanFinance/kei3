@@ -51,7 +51,7 @@ interface TaxInputFormProps {
   inputs: TakeHomeFormState;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => void;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
-  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult;
+  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
 }
 
 // National Health Insurance provider (used in both employment and non-employment scenarios)
