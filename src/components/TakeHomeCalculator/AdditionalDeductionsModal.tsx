@@ -32,9 +32,9 @@ interface AdditionalDeductionsModalProps {
   onClose: () => void;
   dcPlanContributions: number;
   onDcPlanContributionsChange: (value: number) => void;
-  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput;
   onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
-  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult;
   currentYear: number;
 }
 

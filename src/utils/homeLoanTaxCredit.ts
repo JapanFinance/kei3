@@ -23,7 +23,7 @@ const EMPTY_RESULT: HomeLoanTaxCreditResult = {
 
 // Bands are sorted newest-first, so the last entry has the earliest start year.
 const EARLIEST_SUPPORTED_MOVE_IN_YEAR =
-    HOME_LOAN_TAX_CREDIT_COHORTS[HOME_LOAN_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2009;
+    HOME_LOAN_TAX_CREDIT_COHORTS[HOME_LOAN_TAX_CREDIT_COHORTS.length - 1]?.moveInYearFrom ?? 2014;
 
 // 13-year credits exist only for move-ins from 2019 onward (the consumption-tax-hike
 // measure, then the 2022+ new-build regime). Every other cohort is a 10-year credit.
@@ -39,8 +39,7 @@ const FIRST_13_YEAR_MOVE_IN = 2019;
 export function earliestEligibleMoveInYear(taxYear: number): number {
     const tenYearFloor = taxYear - 9;
     const thirteenYearFloor = Math.max(FIRST_13_YEAR_MOVE_IN, taxYear - 12);
-    const thirteenYearStillRunning = thirteenYearFloor + 12 >= taxYear;
-    const floor = thirteenYearStillRunning ? Math.min(tenYearFloor, thirteenYearFloor) : tenYearFloor;
+    const floor = Math.min(tenYearFloor, thirteenYearFloor);
     return Math.max(EARLIEST_SUPPORTED_MOVE_IN_YEAR, floor);
 }
 
