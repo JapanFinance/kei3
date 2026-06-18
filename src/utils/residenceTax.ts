@@ -339,7 +339,7 @@ function getSpouseDeductionDifference(isElderly: boolean, taxpayerNetIncome: num
 /**
  * 調整控除額 (adjustment credit)
  * For taxable income of 2M or less: min(personal deduction difference x 5%, taxable income x 5%)
- * For taxable income over 2M: max({personal deduction difference - (taxable income - 2M)} x 5%, personal deduction difference x 5%)
+ * For taxable income over 2M: {personal deduction difference - (taxable income - 2M)} x 5%, floored at the statutory ¥2,500 minimum
  * No adjustment credit if net income exceeds 25M yen
  * @param netIncome 
  * @param taxableIncome 
@@ -348,14 +348,16 @@ function getSpouseDeductionDifference(isElderly: boolean, taxpayerNetIncome: num
  * @see https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
  * @see https://www.town.hinode.tokyo.jp/0000000519.html
  */
-function calculateAdjustmentCredit(netIncome: number, taxableIncome: number, personalDeductionDifference: number): number {
+// Exported for testing.
+export function calculateAdjustmentCredit(netIncome: number, taxableIncome: number, personalDeductionDifference: number): number {
     let adjustmentCredit: number;
     if (netIncome > 25000000) {
         adjustmentCredit = 0;
     } else if (taxableIncome <= 2000000) {
         adjustmentCredit = Math.min(personalDeductionDifference * 0.05, taxableIncome * 0.05);
     } else {
-        adjustmentCredit = Math.max((personalDeductionDifference - (taxableIncome - 2000000)) * 0.05, personalDeductionDifference * 0.05);
+        // Statutory floor: the bracketed term bottoms out at ¥50,000, i.e. a ¥2,500 minimum credit.
+        adjustmentCredit = Math.max((personalDeductionDifference - (taxableIncome - 2000000)) * 0.05, 2500);
     }
     return adjustmentCredit;
 }

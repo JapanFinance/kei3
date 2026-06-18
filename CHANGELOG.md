@@ -12,6 +12,10 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 - The iDeCo / Corporate DC (defined contribution) input has moved into the new "Additional Deductions & Credits" section.
 
+### Fixed
+
+- Corrected the residence-tax adjustment credit (調整控除) for filers with a spouse or dependents whose taxable income is above ¥2,000,000. Residence tax was being slightly under-stated for these households. Single filers, and anyone with taxable income at or below ¥2,000,000, were unaffected.
+
 ## 2026-04-05
 
 ### Updated

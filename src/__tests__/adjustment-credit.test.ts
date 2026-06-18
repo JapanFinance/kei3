@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from "vitest"
-import { calculateResidenceTax } from "../utils/residenceTax"
+import { calculateResidenceTax, calculateAdjustmentCredit } from "../utils/residenceTax"
 import { calculateDependentDeductions } from "../utils/dependentDeductions"
 import { DEDUCTION_TYPES, type Dependent } from "../types/dependents"
 
@@ -44,9 +44,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
       // Taxable income: 8M - 1M - 430K - 330K (spouse residence tax) = 6,240,000
       expect(result.taxableIncome).toBe(6_240_000)
       
-      // Adjustment credit for taxable > 2M:
-      // max((100K - (6.24M - 2M)) * 0.05, 100K * 0.05) = 5,000
-      const expectedAdjustment = 100_000 * 0.05
+      // Adjustment credit for taxable > 2M: {100K - (6.24M - 2M)} * 0.05 is negative, so it
+      // floors at the statutory ¥2,500 minimum (NOT 100K * 0.05, which was a long-standing bug).
+      const expectedAdjustment = 2_500
       expect(result.city.cityAdjustmentCredit + result.prefecture.prefecturalAdjustmentCredit).toBe(expectedAdjustment)
     })
 
@@ -592,6 +592,28 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     // - Child3 (23-69, general): 50,000
     // Total: 330,000
     expect(result.personalDeductionDifference).toBe(330_000)
+  })
+})
+
+describe('Adjustment Credit - amount formula (調整控除額)', () => {
+  // calculateAdjustmentCredit(netIncome, taxableIncome, personalDeductionDifference)
+  it('taxable ≤ 2M: min(difference, taxable) × 5%', () => {
+    expect(calculateAdjustmentCredit(5_000_000, 1_500_000, 100_000)).toBe(5_000) // min(100K, 1.5M) × 5%
+    expect(calculateAdjustmentCredit(5_000_000, 30_000, 100_000)).toBe(1_500)    // taxable is smaller → 30K × 5%
+  })
+
+  it('taxable > 2M: {difference − (taxable − 2M)} × 5% when above the floor', () => {
+    // (200K − (2.1M − 2M)) × 5% = (200K − 100K) × 5% = 5,000
+    expect(calculateAdjustmentCredit(5_000_000, 2_100_000, 200_000)).toBe(5_000)
+  })
+
+  it('taxable > 2M: floors at the statutory ¥2,500 minimum when the formula goes negative', () => {
+    // (150K − (2.389M − 2M)) × 5% is negative → ¥2,500 (the scenario that surfaced the bug)
+    expect(calculateAdjustmentCredit(6_000_000, 2_389_000, 150_000)).toBe(2_500)
+  })
+
+  it('no adjustment credit when net income exceeds ¥25,000,000', () => {
+    expect(calculateAdjustmentCredit(26_000_000, 3_000_000, 150_000)).toBe(0)
   })
 })
 
