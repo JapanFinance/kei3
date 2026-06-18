@@ -25,6 +25,7 @@ import {getCommutingAllowanceAnnualAmount} from './formatters';
 import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
 import {getNationalBasicDeductionTiers} from '../data/nationalBasicDeduction';
 import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/employmentIncomeDeduction';
+import {applyHomeLoanTaxCredit} from './homeLoanTaxCredit';
 
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.
@@ -427,25 +428,55 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome, incomeYear);
 
-    const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor((netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total) / 1000) * 1000);
+    // National income tax taxable income before the 1,000-yen flooring. Furusato uses this
+    // pre-rounding figure (it rounds after subtracting the donation deduction), so the two share
+    // this expression and can't drift apart if the deduction set changes.
+    const nationalTaxableIncomeBeforeRounding = netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total;
+    const taxableIncomeForNationalIncomeTax = Math.max(0, Math.floor(nationalTaxableIncomeBeforeRounding / 1000) * 1000);
 
-    const nationalIncomeTax = calculateNationalIncomeTax(taxableIncomeForNationalIncomeTax);
-
-    // Calculate base tax and reconstruction surtax breakdown for display
-    // Show the actual calculated amounts (before final rounding)
+    // Base national income tax (所得税額) before tax credits and the reconstruction surtax
     const nationalIncomeTaxBase = calculateNationalIncomeTaxBase(taxableIncomeForNationalIncomeTax);
-    const reconstructionSurtax = calculateReconstructionSurtax(nationalIncomeTaxBase);
 
     const residenceTaxBasicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
     const taxableIncomeForResidenceTax = Math.max(0, Math.floor(Math.max(0, netIncome - socialInsuranceDeduction - idecoDeduction - residenceTaxBasicDeduction - dependentDeductions.residenceTax.total) / 1000) * 1000);
 
-    const residenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
+    // Home loan tax credit (住宅ローン控除): applied first to the base income tax,
+    // then spilled over to residence tax up to the cap.
+    // Calling residence tax with appliedToResidenceTax = 0 first gives us the
+    // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
+    const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
+
+    const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
+        ? applyHomeLoanTaxCredit(
+            inputs.homeLoanTaxCredit,
+            netIncome,
+            nationalIncomeTaxBase,
+            // The spillover cap uses the INCOME-TAX taxable income (所得税の課税総所得金額等),
+            // NOT the residence-tax taxable income.
+            taxableIncomeForNationalIncomeTax,
+        )
+        : undefined;
+
+    // Reconstruction surtax (復興特別所得税) is 2.1% of the base income tax AFTER tax credits.
+    const baseIncomeTaxAfterCredit = Math.max(0, nationalIncomeTaxBase - (homeLoanTaxCreditResult?.appliedToIncomeTax ?? 0));
+    const reconstructionSurtax = calculateReconstructionSurtax(baseIncomeTaxAfterCredit);
+    const nationalIncomeTax = Math.floor((baseIncomeTaxAfterCredit + reconstructionSurtax) / 100) * 100;
+
+    const residenceTax = homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0
+        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, homeLoanTaxCreditResult.appliedToResidenceTax, incomeYear)
+        : preCreditResidenceTax;
 
     // Calculate totals
     const totalSocialsAndTax = nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;
     const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
-    const furusatoNozeiLimit = calculateFurusatoNozeiDetails(netIncome - socialInsuranceDeduction - idecoDeduction - nationalIncomeTaxBasicDeduction - dependentDeductions.nationalTax.total, residenceTax);
+    const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
+        nationalTaxableIncomeBeforeRounding,
+        preCreditResidenceTax,
+        residenceTax,
+        homeLoanTaxCreditResult?.appliedToResidenceTax ?? 0,
+        nationalIncomeTax,
+    );
 
     return {
         annualIncome,
@@ -473,6 +504,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         residenceTaxBasicDeduction,
         taxableIncomeForResidenceTax,
         furusatoNozei: furusatoNozeiLimit,
+        ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
+        // Residence income-based portion (所得割) BEFORE the home loan spillover, so the
+        // Taxes tab can show the spillover as its own line and have the rows sum.
+        ...(homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0 && {
+            residenceTaxIncomeBasedBeforeHomeLoanCredit:
+                preCreditResidenceTax.city.cityIncomeTax + preCreditResidenceTax.prefecture.prefecturalIncomeTax,
+        }),
         dcPlanContributions: inputs.dcPlanContributions,
         // Income tax breakdown
         nationalIncomeTaxBase: taxableIncomeForNationalIncomeTax > 0 ? nationalIncomeTaxBase : undefined,

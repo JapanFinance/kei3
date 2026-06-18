@@ -19,6 +19,7 @@ import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
@@ -124,6 +125,16 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
   const hasEmploymentIncome = grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
+
+  // Residence income-based portion (所得割). When a home loan credit spills over to
+  // residence tax, show the portion BEFORE the spillover and the spillover as its own
+  // row so the line items sum to the total (otherwise the portion is already net of it).
+  const residenceIncomeBasedPost = results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax;
+  const residenceIncomeBasedPre = results.residenceTaxIncomeBasedBeforeHomeLoanCredit ?? residenceIncomeBasedPost;
+  const hasHomeLoanResidenceSpillover = (results.homeLoanTaxCredit?.appliedToResidenceTax ?? 0) > 0;
+  const residenceIncomeBasedDisplayed = hasHomeLoanResidenceSpillover ? residenceIncomeBasedPre : residenceIncomeBasedPost;
+  // Exact reduction (pre − post) so the displayed rows reconcile to the total.
+  const homeLoanResidenceReduction = residenceIncomeBasedPre - residenceIncomeBasedPost;
 
   return (
     <Box>
@@ -517,6 +528,48 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToIncomeTax > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Home Loan Tax Credit
+                <DetailedTooltip title="Home Loan Tax Credit — Income Tax Portion">
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      A tax credit (税額控除) for homeowners with a home loan. It reduces your base income tax before the reconstruction surtax is calculated.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      <strong>Applied to income tax:</strong> {formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}
+                    </Typography>
+                    {results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        Your home loan tax credit is larger than your income tax. The remainder spills over to residence tax. See the <strong>Home Loan Tax Credit</strong> line under Residence Tax (below) for the spillover cap and any amount that cannot be claimed.
+                      </Typography>
+                    )}
+                    <Box sx={{ mt: 1 }}>
+                      Official Sources:
+                      <ul>
+                        <li>
+                          <a href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                            住宅借入金等特別控除 - NTA
+                          </a>
+                        </li>
+                        <li>
+                          <a href="https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                            住宅ローン減税 - 国土交通省 (MLIT)
+                          </a>
+                        </li>
+                      </ul>
+                    </Box>
+                  </Box>
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-results.homeLoanTaxCredit.appliedToIncomeTax)}
+            type="detail"
+          />
+        )}
+
         {results.reconstructionSurtax !== undefined && (
           <ResultRow
             label={
@@ -530,10 +583,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       復興特別所得税
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A temporary surtax of 2.1% applied to the base income tax amount. Originally introduced to help fund reconstruction efforts after the 2011 Great East Japan Earthquake and tsunami.
+                      A temporary surtax of 2.1% applied to the base income tax remaining after tax credits such as the home loan tax credit (基準所得税額). Originally introduced to help fund reconstruction efforts after the 2011 Great East Japan Earthquake and tsunami.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Rate:</strong> 2.1% of base income tax
+                      <strong>Rate:</strong> 2.1% of base income tax after tax credits (基準所得税額)
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Period:</strong> January 1, 2013 - December 31, 2037 (25 years)
@@ -571,7 +624,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               >
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Total Income Tax = Base Income Tax + Reconstruction Surtax
+                    Total Income Tax = Base Income Tax (− Tax Credits) + Reconstruction Surtax
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Rounding:</strong> The sum of base income tax and surtax is rounded down to the nearest 100 yen for the final amount.
@@ -813,7 +866,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </DetailedTooltip>
             </span>
           }
-          value={formatJPY(results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax)}
+          value={formatJPY(residenceIncomeBasedDisplayed)}
           type="detail"
         />
 
@@ -978,6 +1031,45 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           </Box>
         </Collapse>
 
+        {/* Home loan tax credit spillover (reduces the income-based portion above) */}
+        {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Home Loan Tax Credit
+                {results.homeLoanTaxCredit.unusedCredit > 0 && (
+                  <WarningIcon
+                    fontSize="small"
+                    sx={{ ml: 0.5, color: 'warning.main', fontSize: '1rem', verticalAlign: 'text-bottom' }}
+                  />
+                )}
+                <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      When the home loan tax credit exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
+                    </Typography>
+                    {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Your spillover cap:</strong> {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.applied)} (the lower of {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.flatCap)} and {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.incomeRateCap)}).
+                      </Typography>
+                    )}
+                    {results.homeLoanTaxCredit.unusedCredit > 0 && (
+                      <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
+                        Your full credit ({formatJPY(results.homeLoanTaxCredit.annualCredit)}) is more than your income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}) combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be applied and is lost.
+                      </Typography>
+                    )}
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      The home loan tax credit spillover is subtracted from the income-based portion (所得割) of residence tax.
+                    </Typography>
+                  </Box>
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-homeLoanResidenceReduction)}
+            type="detail"
+          />
+        )}
+
         {/* Per capita portion */}
         <ResultRow
           label={
@@ -1055,8 +1147,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           value={formatJPY(results.residenceTax.perCapitaTax)}
           type="detail"
         />
-
-
 
         <ResultRow
           label="Total Residence Tax"

@@ -1,0 +1,254 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import React from 'react';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Divider from '@mui/material/Divider';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import FormControl from '@mui/material/FormControl';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import CloseIcon from '@mui/icons-material/Close';
+import TuneIcon from '@mui/icons-material/Tune';
+import WarningIcon from '@mui/icons-material/Warning';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+
+import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
+import { SpinnerNumberField } from '../ui/SpinnerNumberField';
+import { SimpleTooltip } from '../ui/Tooltips';
+import { earliestEligibleMoveInYear } from '../../utils/homeLoanTaxCredit';
+
+interface AdditionalDeductionsModalProps {
+  open: boolean;
+  onClose: () => void;
+  dcPlanContributions: number;
+  onDcPlanContributionsChange: (value: number) => void;
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
+  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  currentYear: number;
+}
+
+const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> = ({ children, tooltip }) => (
+  <Typography
+    sx={{
+      fontSize: '0.95rem',
+      fontWeight: 700,
+      color: 'text.primary',
+      display: 'flex',
+      alignItems: 'center',
+      mb: 1,
+    }}
+  >
+    {children}
+    {tooltip && <SimpleTooltip>{tooltip}</SimpleTooltip>}
+  </Typography>
+);
+
+export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps> = ({
+  open,
+  onClose,
+  dcPlanContributions,
+  onDcPlanContributionsChange,
+  homeLoanTaxCredit,
+  onHomeLoanTaxCreditChange,
+  homeLoanTaxCreditResult,
+  currentYear,
+}) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const effectiveHomeLoan: HomeLoanTaxCreditInput = homeLoanTaxCredit ?? {
+    moveInYear: currentYear,
+    creditAmount: 0,
+  };
+
+  const moveInYearOptions = React.useMemo(() => {
+    const floor = earliestEligibleMoveInYear(currentYear);
+    const years: number[] = [];
+    for (let y = currentYear; y >= floor; y--) years.push(y);
+    return years;
+  }, [currentYear]);
+
+  const updateHomeLoan = (patch: Partial<HomeLoanTaxCreditInput>) => {
+    onHomeLoanTaxCreditChange({ ...effectiveHomeLoan, ...patch });
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
+      fullWidth
+      fullScreen={isMobile}
+      slotProps={{
+        paper: {
+          sx: {
+            minHeight: isMobile ? '100dvh' : '480px',
+            maxHeight: isMobile ? '100dvh' : '90vh',
+            '@supports not (height: 100dvh)': {
+              minHeight: isMobile ? '100vh' : '480px',
+              maxHeight: isMobile ? '100vh' : '90vh',
+            },
+          },
+        },
+      }}
+    >
+      <DialogTitle sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        pb: 1,
+        pt: isMobile ? 'max(16px, env(safe-area-inset-top))' : 2,
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TuneIcon />
+          <Typography variant="h6" component="span">
+            Additional Deductions &amp; Credits
+          </Typography>
+        </Box>
+        <IconButton edge="end" onClick={onClose} aria-label="close" size="small">
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+
+      <Divider />
+
+      <DialogContent sx={{
+        p: { xs: 2, sm: 3 },
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 3,
+      }}>
+        {/* Income Deductions (所得控除) */}
+        <Box>
+          <SectionHeader tooltip="Deductions (所得控除) reduce your taxable income before tax is calculated.">
+            Income Deductions (所得控除)
+          </SectionHeader>
+          <Card variant="outlined">
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <FormControl fullWidth>
+                <Typography
+                  gutterBottom
+                  sx={{ display: 'flex', alignItems: 'center', fontSize: '0.95rem', fontWeight: 500, mb: 0.5, color: 'text.primary' }}
+                >
+                  <a
+                    href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', fontWeight: 500 }}
+                  >iDeCo / Corporate DC Plan</a>{' '}Contributions
+                </Typography>
+                <SpinnerNumberField
+                  id="dcPlanContributions"
+                  name="dcPlanContributions"
+                  value={dcPlanContributions}
+                  onInputChange={(e) => onDcPlanContributionsChange(Number((e.target as HTMLInputElement).value) || 0)}
+                  label="Annual Contributions"
+                  step={1_000}
+                  shiftStep={10_000}
+                  helperText="Not including employer contributions."
+                />
+              </FormControl>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Tax Credits (税額控除) */}
+        <Box>
+          <SectionHeader tooltip="Tax credits (税額控除) reduce the tax you owe directly, after it has been calculated.">
+            Tax Credits (税額控除)
+          </SectionHeader>
+          <Card variant="outlined">
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, mb: 1, display: 'flex', alignItems: 'center', color: 'text.primary' }}>
+                Home Loan Tax Credit (住宅ローン控除)
+                <SimpleTooltip>
+                  A tax credit for homeowners with a home loan, applied for 10-13 years from move-in. Reduces income tax first, with any remainder spilling over to residence tax up to a cap.
+                </SimpleTooltip>
+              </Typography>
+
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                  <SpinnerNumberField
+                    id="homeLoanCreditAmount"
+                    name="creditAmount"
+                    value={effectiveHomeLoan.creditAmount}
+                    onInputChange={(e) => updateHomeLoan({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
+                    label="Credit amount (控除可能額)"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                    helperText={'From your withholding statement, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'}
+                  />
+                </FormControl>
+
+                <TextField
+                  select
+                  size="small"
+                  id="homeLoanMoveInYear"
+                  label="Move-in Year"
+                  value={effectiveHomeLoan.moveInYear}
+                  onChange={(e) => updateHomeLoan({ moveInYear: Number(e.target.value) })}
+                  sx={{ flex: '0 1 100px', minWidth: 100 }}
+                >
+                  {moveInYearOptions.map((y) => (
+                    <MenuItem key={y} value={y}>{y}</MenuItem>
+                  ))}
+                </TextField>
+              </Box>
+
+              {/* Surface any warning the credit calculation produced: income over the limit
+                  (credit zeroed) OR part of the credit unusable this year (annualCredit > 0 but
+                  capped). Gated only on a positive entered amount so we don't warn before the
+                  user has entered a credit (the income-limit warning fires even at amount 0). */}
+              {homeLoanTaxCreditResult && homeLoanTaxCreditResult.warnings.length > 0 && effectiveHomeLoan.creditAmount > 0 && (
+                <Box sx={{ p: 1.5, bgcolor: 'warning.light', color: 'warning.contrastText', borderRadius: 1, mt: 2, display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                  <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    {homeLoanTaxCreditResult.warnings.join(' ')}
+                  </Typography>
+                </Box>
+              )}
+
+              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
+                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                  Is it your first year claiming the credit? See the{' '}
+                  <a
+                    href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'inherit', textDecoration: 'underline' }}
+                  >
+                    NTA's home loan tax credit guide
+                  </a>.
+                </Typography>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
+      </DialogContent>
+
+      <Divider />
+
+      <DialogActions sx={{
+        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        py: 2,
+        pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+      }}>
+        <Button onClick={onClose} variant="contained">Close</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};

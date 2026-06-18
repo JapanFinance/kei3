@@ -45,6 +45,51 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 
 export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream | StockCompensationIncomeStream;
 
+/**
+ * User input for the home loan tax credit (住宅ローン控除).
+ */
+export interface HomeLoanTaxCreditInput {
+  /**
+   * Calendar year the user first moved into the residence. Drives the cohort
+   * lookup for the residence-tax spillover cap and the income-eligibility limit.
+   */
+  moveInYear: number;
+  /**
+   * The full calculated annual credit (住宅借入金等特別控除可能額) in yen — i.e.
+   * year-end loan balance × the credit rate, up to the home's qualifying maximum.
+   * This is the 控除可能額 (E2 on the 源泉徴収票), NOT the already-applied amount
+   * (E1 / 住宅借入金等特別控除の額), which is capped at the prior year's income tax.
+   */
+  creditAmount: number;
+}
+
+/** Computed application of the home loan tax credit. */
+export interface HomeLoanTaxCreditResult {
+  /** Total credit for the year (yen). Sum of {@link appliedToIncomeTax}, {@link appliedToResidenceTax}, {@link unusedCredit} */
+  annualCredit: number;
+  /** Portion applied against national income tax. */
+  appliedToIncomeTax: number;
+  /** Portion that spilled over and was applied against residence tax. */
+  appliedToResidenceTax: number;
+  /** Credit that could not be applied because of caps (informational). */
+  unusedCredit: number;
+  /**
+   * The residence-tax spillover ceiling for the year, exposed so the UI can explain
+   * why a credit may not be fully usable: the credit can reduce residence tax
+   * by at most `applied` = min(flatCap 定額限度, incomeRateCap 定率限度).
+   */
+  residenceTaxSpilloverCap?: {
+    /** The binding cap actually used: min(flatCap, incomeRateCap). */
+    applied: number;
+    /** 定額限度 — the cohort flat cap (¥97,500 or ¥136,500). */
+    flatCap: number;
+    /** 定率限度 — floor(課税総所得金額等 × cohort rate). */
+    incomeRateCap: number;
+  };
+  /** Human-readable warnings: out-of-period, income exceeds limit, etc. */
+  warnings: ReadonlyArray<string>;
+}
+
 /** Interface for the UI Form State */
 export interface TakeHomeFormState {
   annualIncome: number;
@@ -59,6 +104,7 @@ export interface TakeHomeFormState {
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   savedIncomeStreams?: IncomeStream[];
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -73,6 +119,7 @@ export interface TakeHomeInputs {
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   incomeYear?: number;
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 
 export interface CustomEmployeesHealthInsuranceRates {
@@ -106,6 +153,15 @@ export interface TakeHomeResults {
   residenceTaxBasicDeduction?: number | undefined;
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
+  homeLoanTaxCredit?: HomeLoanTaxCreditResult;
+  /**
+   * Residence tax income-based portion (所得割) BEFORE the home loan credit spillover, for
+   * display. Not simply (post-credit 所得割 + appliedToResidenceTax): the city and prefectural
+   * 所得割 are each floored to ¥100 after subtracting their share of the spillover, so the true
+   * pre-credit 所得割 can differ from that sum by up to ~¥100. Taken from the pre-credit residence
+   * calculation (already computed for the furusato 20% cap) so the Taxes-tab rows reconcile exactly.
+   */
+  residenceTaxIncomeBasedBeforeHomeLoanCredit?: number | undefined;
   dcPlanContributions: number;
   // Dependent deductions
   dependentDeductions?: DependentDeductionResults;

@@ -23,15 +23,18 @@ import Button from '@mui/material/Button';
 import Badge from '@mui/material/Badge';
 import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
+import TuneIcon from '@mui/icons-material/Tune';
+import WarningIcon from '@mui/icons-material/Warning';
 import { SimpleTooltip } from '../ui/Tooltips';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
+import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
-import type { TakeHomeFormState, IncomeMode, IncomeStream } from '../../types/tax';
+import type { TakeHomeFormState, IncomeMode, IncomeStream, HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
 import {
   getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
@@ -47,6 +50,8 @@ import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/provid
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => void;
+  /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
+  homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
 }
 
 // National Health Insurance provider (used in both employment and non-employment scenarios)
@@ -67,7 +72,7 @@ const customProvider = {
   displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID)
 };
 
-export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange }) => {
+export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange, homeLoanTaxCreditResult }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -77,6 +82,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
+  const [additionalModalOpen, setAdditionalModalOpen] = useState(false);
 
   const handleOpenDependentsModal = () => {
     setDependentsModalOpen(true);
@@ -91,6 +97,24 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'dependents',
         value: newDependents,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleHomeLoanTaxCreditChange = (newInput: HomeLoanTaxCreditInput | undefined) => {
+    onInputChange({
+      target: {
+        name: 'homeLoanTaxCredit',
+        value: newInput,
+      }
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleDcPlanContributionsChange = (value: number) => {
+    onInputChange({
+      target: {
+        name: 'dcPlanContributions',
+        value,
       }
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
@@ -897,39 +921,58 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           )}
         </Box>
 
-        {/* iDeCo/Corporate DC Contributions */}
-        <Box sx={{ mt: { xs: 0.5, sm: 1 } }}>
-          <FormControl fullWidth>
-            <Typography
-              gutterBottom
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '0.97rem',
-                fontWeight: 500,
-                mb: 0.2,
-                color: 'text.primary',
-              }}
-            >
-              <a
-                href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'inherit', fontWeight: 500 }}
-              >iDeCo/Corporate DC</a>{'\u00A0'}Contributions
-              <SimpleTooltip>Annual contributions to iDeCo (individual defined contribution pension) and corporate DC plans. Do not include employer contributions in this amount. The max allowed contribution will vary depending on your situation.</SimpleTooltip>
-            </Typography>
-            <SpinnerNumberField
-              id="dcPlanContributions"
-              name="dcPlanContributions"
-              value={inputs.dcPlanContributions}
-              onInputChange={onInputChange}
-              label="Annual Contributions"
-              step={1_000}
-              shiftStep={10_000}
-              sx={sharedInputSx}
-            />
-          </FormControl>
+        {/* Additional Deductions & Credits */}
+        <Box sx={{ mt: { xs: 1, sm: 1.5 }, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+          <Typography
+            sx={{
+              mb: 0.5,
+              fontSize: '0.97rem',
+              fontWeight: 500,
+              color: 'text.primary',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+            }}
+          >
+            Additional Deductions &amp; Credits
+            <SimpleTooltip>Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax credit). These affect your income tax, residence tax, and furusato nozei limit.</SimpleTooltip>
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<TuneIcon />}
+            onClick={() => setAdditionalModalOpen(true)}
+            size="medium"
+            fullWidth
+            sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
+          >
+            {(() => {
+              const parts: string[] = [];
+              if (inputs.dcPlanContributions > 0) parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
+              if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0) parts.push(`Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`);
+              // Via the UI the move-in dropdown only offers eligible years, so a credit entered
+              // but zeroed (annualCredit 0) means income exceeded the cohort's eligibility limit.
+              const homeLoanNotApplied = !!(inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0
+                && homeLoanTaxCreditResult && homeLoanTaxCreditResult.annualCredit === 0);
+              return parts.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                    Configured
+                  </Typography>
+                  <Typography component="span" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                    {parts.join(' · ')}
+                  </Typography>
+                  {homeLoanNotApplied && (
+                    <Typography component="span" sx={{ fontSize: '0.8rem', color: 'warning.main', display: 'flex', alignItems: 'center', gap: 0.25, mt: 0.25 }}>
+                      <WarningIcon sx={{ fontSize: '0.95rem' }} />
+                      Home loan tax credit not applied (income above the eligibility limit)
+                    </Typography>
+                  )}
+                </Box>
+              ) : (
+                'Add iDeCo, home loan tax credit, etc.'
+              );
+            })()}
+          </Button>
         </Box>
       </Box>
 
@@ -946,6 +989,17 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+      />
+
+      <AdditionalDeductionsModal
+        open={additionalModalOpen}
+        onClose={() => setAdditionalModalOpen(false)}
+        dcPlanContributions={inputs.dcPlanContributions}
+        onDcPlanContributionsChange={handleDcPlanContributionsChange}
+        homeLoanTaxCredit={inputs.homeLoanTaxCredit}
+        onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
+        homeLoanTaxCreditResult={homeLoanTaxCreditResult}
+        currentYear={new Date().getFullYear()}
       />
     </Box>
   );

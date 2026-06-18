@@ -2,6 +2,20 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-05-18
+
+### New
+
+- Added support for the home loan tax credit (住宅ローン控除). Enter the annual credit amount you've calculated (控除可能額) and the year you moved in, and the calculator applies it to your tax owed, up to the applicable cap. Find it in the new "Additional Deductions & Credits" section.
+
+### Updated
+
+- The iDeCo / Corporate DC (defined contribution) input has moved into the new "Additional Deductions & Credits" section.
+
+### Fixed
+
+- Corrected the residence-tax adjustment credit (調整控除) for filers whose taxable income is above ¥2,000,000 and claim a deduction for a spouse or dependents. Residence tax was being slightly under-stated for these households. Filers not claiming a spouse or dependent deduction, anyone with taxable income at or below ¥2,000,000, and anyone with net income exceeding ¥25,000,000, were unaffected.
+
 ## 2026-04-05
 
 ### Updated
