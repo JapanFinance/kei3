@@ -16,9 +16,13 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
 import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
 import WarningIcon from '@mui/icons-material/Warning';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
@@ -186,7 +190,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     name="creditAmount"
                     value={effectiveHomeLoan.creditAmount}
                     onInputChange={(e) => updateHomeLoan({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
-                    label="Credit amount (控除可能額)"
+                    label="Available credit amount (控除可能額)"
                     step={1_000}
                     shiftStep={10_000}
                     min={0}
@@ -222,19 +226,24 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 </Box>
               )}
 
-              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                  Is it your first year claiming the credit? See the{' '}
-                  <a
-                    href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit', textDecoration: 'underline' }}
-                  >
-                    NTA's home loan tax credit guide
-                  </a>.
-                </Typography>
-              </Box>
+              <Accordion disableGutters elevation={0} sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>How is the available credit amount calculated?</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}>
+                    For each year, your available credit amount is your <strong>year-end mortgage balance &times; the credit rate</strong> &mdash; <strong>0.7%</strong> for homes moved into from 2022, or <strong>1%</strong> for 2014-2021 move-ins.
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}>
+                    Only the balance up to a <strong>borrowing limit (借入限度額)</strong> counts. That limit depends on the home's energy-efficiency standard (認定長期優良住宅, ZEH水準, 省エネ基準, or 一般住宅), your household, and your move-in year &mdash; and the credit runs for <strong>10 or 13 years</strong>, so the amount falls each year as you pay down the loan.
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                    After the first year, this figure appears as <strong>住宅借入金等特別控除可能額</strong> on your 源泉徴収票. To work it out for the first year, or to check the limits, see the{' '}
+                    <a href="https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>MLIT overview</a> (which has the full limit table) and the{' '}
+                    <a href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>NTA guide</a>.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
             </CardContent>
           </Card>
         </Box>
