@@ -264,6 +264,55 @@ describe('calculateFurusatoNozeiLimit', () => {
       const noCredit = calculateTaxes(inputs);
       expect(pre).toBe(noCredit.residenceTax.city.cityIncomeTax + noCredit.residenceTax.prefecture.prefecturalIncomeTax);
     });
+
+    it('caps the residence-tax spillover at the ¥97,500 flat cap end-to-end (2022+, mid income)', () => {
+      const inputs = {
+        ...baseInputs,
+        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 5_500_000, frequency: 'annual' as const }],
+      };
+      const baseline = calculateTaxes(inputs);
+      // A credit larger than the income tax plus the cap. At ~¥2.7M income-tax taxable income,
+      // 5% (~¥135k) exceeds ¥97,500, so the FLAT cap binds (not the rate cap).
+      const withCredit = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 350_000 } });
+      const credit = withCredit.homeLoanTaxCredit!;
+      expect(credit.appliedToIncomeTax).toBe(baseline.nationalIncomeTaxBase); // whole base income tax absorbed
+      expect(credit.residenceTaxSpilloverCap?.flatCap).toBe(97_500);
+      expect(credit.appliedToResidenceTax).toBe(97_500); // flat cap binds
+      expect(credit.unusedCredit).toBeGreaterThan(0); // credit exceeds income tax + cap
+      expect(withCredit.residenceTax.totalResidenceTax).toBeLessThan(baseline.residenceTax.totalResidenceTax);
+    });
+
+    it('uses the 7% / ¥136,500 residence cap end-to-end for a 2014-2021 move-in', () => {
+      const inputs = {
+        ...baseInputs,
+        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 5_500_000, frequency: 'annual' as const }],
+      };
+      const withCredit = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2020, creditAmount: 350_000 } });
+      const credit = withCredit.homeLoanTaxCredit!;
+      expect(credit.residenceTaxSpilloverCap?.flatCap).toBe(136_500); // 2014-2021 cohort uses the higher cap
+      expect(credit.appliedToResidenceTax).toBe(136_500); // flat cap binds
+      expect(credit.unusedCredit).toBeGreaterThan(0);
+    });
+
+    it('flows dependent deductions through to the credit (lowers the income tax it offsets)', () => {
+      const incomeStreams = [{ id: 'test', type: 'salary' as const, amount: 6_000_000, frequency: 'annual' as const }];
+      const homeLoanTaxCredit = { moveInYear: 2024, creditAmount: 280_000 };
+      const single = calculateTaxes({ ...baseInputs, incomeStreams, homeLoanTaxCredit });
+      const withDeps = calculateTaxes({
+        ...baseInputs,
+        incomeStreams,
+        dependents: [
+          { id: 'spouse', relationship: 'spouse', ageCategory: 'under70', income: { grossEmploymentIncome: 0, otherNetIncome: 0 }, disability: 'none', isCohabiting: true },
+          { id: 'child', relationship: 'child', ageCategory: '16to18', income: { grossEmploymentIncome: 0, otherNetIncome: 0 }, disability: 'none', isCohabiting: true },
+        ],
+        homeLoanTaxCredit,
+      });
+      // The dependent deductions lower the income-tax base, so the same credit offsets less
+      // income tax with dependents (the remainder spills to residence tax, or — once income is
+      // low enough that the spillover cap binds — goes unused).
+      expect(withDeps.nationalIncomeTaxBase!).toBeLessThan(single.nationalIncomeTaxBase!);
+      expect(withDeps.homeLoanTaxCredit!.appliedToIncomeTax).toBeLessThan(single.homeLoanTaxCredit!.appliedToIncomeTax);
+    });
   });
 
   it('furusato nozei limit is affected by manual social insurance override', () => {
