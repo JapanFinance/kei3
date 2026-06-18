@@ -25,6 +25,15 @@
  *   - MLIT 住宅ローン減税: https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html
  */
 
+/**
+ * A residence-tax spillover cap: the credit remainder (after income tax) is capped at
+ *   min(flatCap, floor(所得税の課税総所得金額等 × taxableIncomeRate)).
+ */
+export interface ResidenceTaxSpilloverCap {
+    flatCap: number;
+    taxableIncomeRate: number;
+}
+
 export interface HomeLoanTaxCreditCohort {
     /** Inclusive lower bound of move-in years this band covers. */
     moveInYearFrom: number;
@@ -34,7 +43,8 @@ export interface HomeLoanTaxCreditCohort {
     incomeLimit: number;
     /**
      * Residence-tax spillover cap applied when the credit exceeds income tax
-     * (個人住民税の住宅借入金等特別税額控除). Final cap =
+     * (個人住民税の住宅借入金等特別税額控除), for a 特定取得 purchase — and the only cap on
+     * bands that don't distinguish 特定取得 (see spilloverNonTokuteiShutoku). Final cap =
      *   min(flatCap, floor(所得税の課税総所得金額等 × taxableIncomeRate)).
      *
      * Figures are set by the 地方税法 residence-tax credit provisions (see the 総務省
@@ -49,10 +59,16 @@ export interface HomeLoanTaxCreditCohort {
      * always exceeds 5–7% of the income-tax base — i.e. flatCap or the 課税総所得 × rate
      * cap is always reached first. We therefore omit the 所得割 limit.
      */
-    spillover: {
-        flatCap: number;
-        taxableIncomeRate: number;
-    };
+    spillover: ResidenceTaxSpilloverCap;
+    /**
+     * Residence-tax spillover cap for a 非特定取得 purchase — one with no 8%/10% consumption
+     * tax, e.g. a pre-owned home bought from a private individual. Present only on the
+     * 2014–2021 band, where 特定取得 raised the cap to 7%/¥136,500 while a 非特定取得 purchase
+     * keeps the baseline 5%/¥97,500. Omitted on bands where the distinction is moot (2022+
+     * already uses 5%/¥97,500 for everyone); when omitted, applyHomeLoanTaxCredit uses
+     * `spillover` regardless of the 特定取得 flag.
+     */
+    spilloverNonTokuteiShutoku?: ResidenceTaxSpilloverCap;
 }
 
 /**
@@ -67,19 +83,23 @@ export const HOME_LOAN_TAX_CREDIT_COHORTS: ReadonlyArray<HomeLoanTaxCreditCohort
         incomeLimit: 20_000_000,
         spillover: { flatCap: 97_500, taxableIncomeRate: 0.05 },
     },
-    // 2014-2021 (特定取得): home acquired under the 8%/10% consumption tax — e.g. a new build or
-    // a pre-owned home bought from a business. Spillover cap raised to 7% / ¥136,500. Income limit 30M.
-    //
-    // ASSUMPTION: we treat every 2014-2021 move-in as 特定取得. A pre-owned home bought from a
-    // private individual is NOT subject to consumption tax (非特定取得) and uses the lower
-    // 5% / ¥97,500 cap instead. We have no input to distinguish that, so for such a purchase the
-    // residence-tax spillover cap modelled here is over-stated. Move-ins before 2014 are not
+    // 2014-2021: the 特定取得 distinction applies. A 特定取得 (home acquired under the 8%/10%
+    // consumption tax — e.g. a new build or a pre-owned home bought from a business) raises the
+    // spillover cap to 7% / ¥136,500; a 非特定取得 (no consumption tax, e.g. a pre-owned home
+    // bought from a private individual) keeps the baseline 5% / ¥97,500. The input's 特定取得 flag
+    // selects between them (default 特定取得). Income limit 30M. Move-ins before 2014 are not
     // supported (the UI offers move-ins from ~10 years ago onward; older credits have expired).
+    //
+    // The 8% consumption tax took effect 2014/4/1, so a 特定取得 is only possible from then on;
+    // a 2014/1/1–3/31 move-in is always 非特定取得. The move-in-year dropdown floor is ~10 years
+    // back (2017 for a 2026 calc), so those early-2014 move-ins are already past every credit
+    // period and never reach this band in practice — we don't model that sub-year boundary.
     {
         moveInYearFrom: 2014,
         moveInYearTo: 2021,
         incomeLimit: 30_000_000,
         spillover: { flatCap: 136_500, taxableIncomeRate: 0.07 },
+        spilloverNonTokuteiShutoku: { flatCap: 97_500, taxableIncomeRate: 0.05 },
     },
 ];
 

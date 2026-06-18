@@ -294,6 +294,28 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(credit.unusedCredit).toBeGreaterThan(0);
     });
 
+    it('applies the lower 5% / ¥97,500 residence cap for a 非特定取得 2014-2021 move-in', () => {
+      // Same scenario as the 特定取得 test above, but the 2020 purchase was 非特定取得 (no
+      // consumption tax — e.g. bought from a private individual): the residence cap drops to
+      // ¥97,500, so the credit reduces residence tax by ¥39,000 less and leaves more unused.
+      const inputs = {
+        ...baseInputs,
+        incomeStreams: [{ id: 'test', type: 'salary' as const, amount: 5_500_000, frequency: 'annual' as const }],
+      };
+      const tokutei = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2020, creditAmount: 350_000, isTokuteiShutoku: true } });
+      const nonTokutei = calculateTaxes({ ...inputs, homeLoanTaxCredit: { moveInYear: 2020, creditAmount: 350_000, isTokuteiShutoku: false } });
+
+      const nonTokuteiCredit = nonTokutei.homeLoanTaxCredit!;
+      expect(nonTokuteiCredit.residenceTaxSpilloverCap?.flatCap).toBe(97_500); // 非特定取得 cap
+      expect(nonTokuteiCredit.appliedToResidenceTax).toBe(97_500); // flat cap binds
+
+      // 非特定取得 spills ¥39,000 less to residence tax than 特定取得 (¥136,500 − ¥97,500),
+      // so residence tax ends up higher and the income tax is unchanged.
+      expect(tokutei.homeLoanTaxCredit!.appliedToResidenceTax - nonTokuteiCredit.appliedToResidenceTax).toBe(39_000);
+      expect(nonTokutei.residenceTax.totalResidenceTax).toBeGreaterThan(tokutei.residenceTax.totalResidenceTax);
+      expect(nonTokutei.nationalIncomeTax).toBe(tokutei.nationalIncomeTax);
+    });
+
     it('flows dependent deductions through to the credit (lowers the income tax it offsets)', () => {
       const incomeStreams = [{ id: 'test', type: 'salary' as const, amount: 6_000_000, frequency: 'annual' as const }];
       const homeLoanTaxCredit = { moveInYear: 2024, creditAmount: 280_000 };

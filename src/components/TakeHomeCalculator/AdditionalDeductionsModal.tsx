@@ -14,6 +14,8 @@ import Divider from '@mui/material/Divider';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Accordion from '@mui/material/Accordion';
@@ -29,7 +31,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../ui/Tooltips';
-import { earliestEligibleMoveInYear } from '../../utils/homeLoanTaxCredit';
+import { earliestEligibleMoveInYear, homeLoanCreditDistinguishesTokuteiShutoku } from '../../utils/homeLoanTaxCredit';
 
 interface AdditionalDeductionsModalProps {
   open: boolean;
@@ -212,6 +214,36 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   ))}
                 </TextField>
               </Box>
+
+              {/* 特定取得 toggle, shown only for move-in years where it changes the residence-tax
+                  spillover cap (the 2014–2021 cohort). Defaults to checked = 特定取得. */}
+              {homeLoanCreditDistinguishesTokuteiShutoku(effectiveHomeLoan.moveInYear) && (
+                <FormControlLabel
+                  sx={{ mt: 1.5, ml: 0, alignItems: 'flex-start' }}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={effectiveHomeLoan.isTokuteiShutoku ?? true}
+                      onChange={(e) => updateHomeLoan({ isTokuteiShutoku: e.target.checked })}
+                      sx={{ py: 0, mr: 0.5 }}
+                    />
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                        特定取得 (8% or 10% consumption tax was paid)
+                      </Typography>
+                      <SimpleTooltip>
+                        Check this if 8% or 10% consumption tax was charged on the purchase — i.e. a new build,
+                        or a pre-owned home bought from a business. Uncheck it for a 非特定取得 purchase with no
+                        consumption tax, such as a pre-owned home bought from a private individual. For 2014–2021
+                        move-ins this changes the residence-tax spillover cap (特定取得 → 7% / ¥136,500;
+                        非特定取得 → 5% / ¥97,500). Most purchases are 特定取得.
+                      </SimpleTooltip>
+                    </Box>
+                  }
+                />
+              )}
 
               {/* Surface any warning the credit calculation produced: income over the limit
                   (credit zeroed) OR part of the credit unusable this year (availableCredit > 0 but

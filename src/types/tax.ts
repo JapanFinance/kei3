@@ -61,6 +61,14 @@ export interface HomeLoanTaxCreditInput {
    * (E1 / 住宅借入金等特別控除の額), which is capped at the prior year's income tax.
    */
   creditAmount: number;
+  /**
+   * Whether the home was a 特定取得 — acquired under the 8%/10% consumption tax (a new build,
+   * or a pre-owned home bought from a business). A 非特定取得 (e.g. a pre-owned home bought from
+   * a private individual, with no consumption tax) uses a lower residence-tax spillover cap.
+   * Only affects the 2014–2021 move-in cohort (特定取得 → 7%/¥136,500; 非特定取得 → 5%/¥97,500);
+   * 2022+ move-ins use 5%/¥97,500 regardless. Defaults to true (特定取得) when omitted.
+   */
+  isTokuteiShutoku?: boolean;
 }
 
 /** Computed application of the home loan tax credit. */
