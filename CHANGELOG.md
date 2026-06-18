@@ -14,7 +14,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Fixed
 
-- Corrected the residence-tax adjustment credit (調整控除) for filers with a spouse or dependents whose taxable income is above ¥2,000,000. Residence tax was being slightly under-stated for these households. Single filers, and anyone with taxable income at or below ¥2,000,000, were unaffected.
+- Corrected the residence-tax adjustment credit (調整控除) for filers whose taxable income is above ¥2,000,000 and claim a deduction for a spouse or dependents. Residence tax was being slightly under-stated for these households. Filers not claiming a spouse or dependent deduction, anyone with taxable income at or below ¥2,000,000, and anyone with net income exceeding ¥25,000,000, were unaffected.
 
 ## 2026-04-05
 
