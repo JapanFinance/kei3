@@ -232,13 +232,13 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}>
-                    For each year, your available credit amount is your <strong>year-end mortgage balance &times; the credit rate</strong> &mdash; <strong>0.7%</strong> for homes moved into from 2022, or <strong>1%</strong> for 2014-2021 move-ins.
+                    The available credit amount is the <strong>year-end mortgage balance &times; the credit rate</strong> (<strong>0.7%</strong> for homes moved into from 2022, or <strong>1%</strong> for move-ins before 2022).
                   </Typography>
                   <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}>
-                    Only the balance up to a <strong>borrowing limit (借入限度額)</strong> counts. That limit depends on the home's energy-efficiency standard (認定長期優良住宅, ZEH水準, 省エネ基準, or 一般住宅), your household, and your move-in year &mdash; and the credit runs for <strong>10 or 13 years</strong>, so the amount falls each year as you pay down the loan.
+                    The year-end balance is capped by a <strong>borrowing limit (借入限度額)</strong>. That limit depends on the home's energy-efficiency standard (認定長期優良住宅, ZEH水準, 省エネ基準, or 一般住宅), your household, and your move-in year. The credit runs for <strong>10 or 13 years</strong>.
                   </Typography>
                   <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                    After the first year, this figure appears as <strong>住宅借入金等特別控除可能額</strong> on your 源泉徴収票. To work it out for the first year, or to check the limits, see the{' '}
+                    After the first year, this figure appears as <strong>住宅借入金等特別控除可能額</strong> on your annual withholding summary (源泉徴収票). To work it out for the first year, or to check the limits, see the{' '}
                     <a href="https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>MLIT overview</a> (which has the full limit table) and the{' '}
                     <a href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>NTA guide</a>.
                   </Typography>
