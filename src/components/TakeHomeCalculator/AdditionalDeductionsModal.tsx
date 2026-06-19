@@ -16,9 +16,13 @@ import CardContent from '@mui/material/CardContent';
 import FormControl from '@mui/material/FormControl';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
 import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
 import WarningIcon from '@mui/icons-material/Warning';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
@@ -186,7 +190,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     name="creditAmount"
                     value={effectiveHomeLoan.creditAmount}
                     onInputChange={(e) => updateHomeLoan({ creditAmount: Number((e.target as HTMLInputElement).value) || 0 })}
-                    label="Credit amount (控除可能額)"
+                    label="Available credit amount (控除可能額)"
                     step={1_000}
                     shiftStep={10_000}
                     min={0}
@@ -210,7 +214,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               </Box>
 
               {/* Surface any warning the credit calculation produced: income over the limit
-                  (credit zeroed) OR part of the credit unusable this year (annualCredit > 0 but
+                  (credit zeroed) OR part of the credit unusable this year (availableCredit > 0 but
                   capped). Gated only on a positive entered amount so we don't warn before the
                   user has entered a credit (the income-limit warning fires even at amount 0). */}
               {homeLoanTaxCreditResult && homeLoanTaxCreditResult.warnings.length > 0 && effectiveHomeLoan.creditAmount > 0 && (
@@ -222,19 +226,24 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 </Box>
               )}
 
-              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mt: 2 }}>
-                <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                  Is it your first year claiming the credit? See the{' '}
-                  <a
-                    href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit', textDecoration: 'underline' }}
-                  >
-                    NTA's home loan tax credit guide
-                  </a>.
-                </Typography>
-              </Box>
+              <Accordion disableGutters elevation={0} sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>How is the available credit amount calculated?</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}>
+                    The available credit amount is the <strong>year-end mortgage balance &times; the credit rate</strong> (<strong>0.7%</strong> for homes moved into from 2022, or <strong>1%</strong> for move-ins before 2022).
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}>
+                    The year-end balance is capped by a <strong>borrowing limit (借入限度額)</strong>. That limit depends on the home's energy-efficiency standard (認定長期優良住宅, ZEH水準, 省エネ基準, or 一般住宅), your household, and your move-in year. The credit runs for <strong>10 or 13 years</strong>.
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                    After the first year, this figure appears as <strong>住宅借入金等特別控除可能額</strong> on your annual withholding summary (源泉徴収票). To work it out for the first year, or to check the limits, see the{' '}
+                    <a href="https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>MLIT overview</a> (which has the full limit table) and the{' '}
+                    <a href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>NTA guide</a>.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
             </CardContent>
           </Card>
         </Box>

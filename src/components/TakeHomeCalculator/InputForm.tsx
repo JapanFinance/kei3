@@ -951,9 +951,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               if (inputs.dcPlanContributions > 0) parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
               if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0) parts.push(`Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`);
               // Via the UI the move-in dropdown only offers eligible years, so a credit entered
-              // but zeroed (annualCredit 0) means income exceeded the cohort's eligibility limit.
+              // but zeroed (availableCredit 0) means income exceeded the cohort's eligibility limit.
               const homeLoanNotApplied = !!(inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0
-                && homeLoanTaxCreditResult && homeLoanTaxCreditResult.annualCredit === 0);
+                && homeLoanTaxCreditResult && homeLoanTaxCreditResult.availableCredit === 0);
               return parts.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
