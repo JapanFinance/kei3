@@ -14,7 +14,7 @@ import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from "../types/t
 import { getHomeLoanTaxCreditCohort, HOME_LOAN_TAX_CREDIT_COHORTS } from "../data/homeLoanTaxCredit";
 
 const EMPTY_RESULT: HomeLoanTaxCreditResult = {
-    annualCredit: 0,
+    availableCredit: 0,
     appliedToIncomeTax: 0,
     appliedToResidenceTax: 0,
     unusedCredit: 0,
@@ -83,20 +83,20 @@ export function applyHomeLoanTaxCredit(
         return { ...EMPTY_RESULT, warnings };
     }
 
-    const annualCredit = Math.max(0, Math.floor(input.creditAmount));
-    if (annualCredit <= 0) {
+    const availableCredit = Math.max(0, Math.floor(input.creditAmount));
+    if (availableCredit <= 0) {
         return { ...EMPTY_RESULT, warnings };
     }
 
     // Apply to the base income tax (所得税額) first — this is a 税額控除.
-    const appliedToIncomeTax = Math.min(annualCredit, Math.max(0, baseIncomeTax));
-    const spilloverEligible = annualCredit - appliedToIncomeTax;
+    const appliedToIncomeTax = Math.min(availableCredit, Math.max(0, baseIncomeTax));
+    const spilloverEligible = availableCredit - appliedToIncomeTax;
 
     // Remainder spills over to residence tax, capped at min(定額限度 flatCap, 定率限度 課税総所得金額等 × rate).
     const incomeRateCap = Math.floor(Math.max(0, taxableTotalIncome) * cohort.spillover.taxableIncomeRate);
     const residenceTaxCap = Math.min(cohort.spillover.flatCap, incomeRateCap);
     const appliedToResidenceTax = Math.min(spilloverEligible, residenceTaxCap);
-    const unusedCredit = annualCredit - appliedToIncomeTax - appliedToResidenceTax;
+    const unusedCredit = availableCredit - appliedToIncomeTax - appliedToResidenceTax;
 
     if (unusedCredit > 0) {
         warnings.push(
@@ -106,7 +106,7 @@ export function applyHomeLoanTaxCredit(
     }
 
     return {
-        annualCredit,
+        availableCredit,
         appliedToIncomeTax,
         appliedToResidenceTax,
         unusedCredit,

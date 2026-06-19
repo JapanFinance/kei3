@@ -42,7 +42,7 @@ describe('applyHomeLoanTaxCredit', () => {
             500_000,
             5_000_000,
         );
-        expect(result.annualCredit).toBe(200_000);
+        expect(result.availableCredit).toBe(200_000);
         expect(result.appliedToIncomeTax).toBe(200_000);
         expect(result.appliedToResidenceTax).toBe(0);
         expect(result.unusedCredit).toBe(0);
@@ -114,7 +114,7 @@ describe('applyHomeLoanTaxCredit', () => {
             1_000_000,
             18_000_000,
         );
-        expect(result.annualCredit).toBe(0);
+        expect(result.availableCredit).toBe(0);
         expect(result.appliedToIncomeTax).toBe(0);
         expect(result.warnings[0]).toContain('eligibility limit');
     });
@@ -146,7 +146,7 @@ describe('applyHomeLoanTaxCredit', () => {
             572_500,
             5_000_000,
         );
-        expect(result.annualCredit).toBe(0);
+        expect(result.availableCredit).toBe(0);
         expect(result.warnings[0]).toContain('No home loan tax credit rules');
     });
 
@@ -158,7 +158,7 @@ describe('applyHomeLoanTaxCredit', () => {
                 500_000,
                 5_000_000,
             );
-            expect(result.annualCredit).toBe(0);
+            expect(result.availableCredit).toBe(0);
             expect(result.appliedToIncomeTax).toBe(0);
             expect(result.appliedToResidenceTax).toBe(0);
         }

@@ -152,7 +152,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       });
       const credit = withCredit.homeLoanTaxCredit!;
       expect(credit.appliedToIncomeTax).toBe(0);
-      expect(credit.annualCredit).toBe(0);
+      expect(credit.availableCredit).toBe(0);
       // Specifically the income-eligibility warning (it names the exceeded net income and the
       // ¥20,000,000 limit), not just any warning that happens to contain "eligibility limit".
       expect(credit.warnings.some(w => w.includes('net income exceeds') && w.includes('20,000,000'))).toBe(true);
@@ -226,7 +226,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withCredit.nationalIncomeTax).toBe(0);              // income tax fully wiped
       expect(credit.appliedToIncomeTax).toBe(baseTax);          // whole base absorbed
       expect(credit.unusedCredit).toBe(0);                      // spillover under the cap
-      expect(credit.appliedToResidenceTax).toBe(credit.annualCredit - credit.appliedToIncomeTax);
+      expect(credit.appliedToResidenceTax).toBe(credit.availableCredit - credit.appliedToIncomeTax);
       // Furusato limit is unaffected (it is based on the pre-credit 所得割)...
       expect(withCredit.furusatoNozei.limit).toBe(baseline.furusatoNozei.limit);
       // ...but the income-tax refund portion is lost once the credit wipes income tax to 0

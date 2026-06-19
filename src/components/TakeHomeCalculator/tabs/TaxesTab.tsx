@@ -543,7 +543,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     </Typography>
                     {results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        Your home loan tax credit is larger than your income tax. The remainder spills over to residence tax. See the <strong>Home Loan Tax Credit</strong> line under Residence Tax (below) for the spillover cap and any amount that cannot be claimed.
+                        Your available credit amount is larger than your income tax. The remainder spills over to residence tax. See the <strong>Home Loan Tax Credit</strong> line under Residence Tax (below) for the spillover cap and any amount that cannot be claimed.
                       </Typography>
                     )}
                     <Box sx={{ mt: 1 }}>
@@ -1046,7 +1046,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      When the home loan tax credit exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
+                      When your available credit amount exceeds your income tax, the remainder spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of your <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
                     </Typography>
                     {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
@@ -1055,7 +1055,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     )}
                     {results.homeLoanTaxCredit.unusedCredit > 0 && (
                       <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
-                        Your full credit ({formatJPY(results.homeLoanTaxCredit.annualCredit)}) is more than your income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}) combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be applied and is lost.
+                        Your available credit amount ({formatJPY(results.homeLoanTaxCredit.availableCredit)}) is more than your income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}) combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be applied and is lost.
                       </Typography>
                     )}
                     <Typography variant="body2" sx={{ mb: 1 }}>
