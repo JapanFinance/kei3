@@ -1055,7 +1055,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     )}
                     {results.homeLoanTaxCredit.unusedCredit > 0 && (
                       <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
-                        Your available credit amount ({formatJPY(results.homeLoanTaxCredit.annualCredit)}) is more than your income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}) combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be applied and is lost.
+                        Your available credit amount ({formatJPY(results.homeLoanTaxCredit.availableCredit)}) is more than your income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}) combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be applied and is lost.
                       </Typography>
                     )}
                     <Typography variant="body2" sx={{ mb: 1 }}>

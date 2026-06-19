@@ -65,8 +65,13 @@ export interface HomeLoanTaxCreditInput {
 
 /** Computed application of the home loan tax credit. */
 export interface HomeLoanTaxCreditResult {
-  /** Total credit for the year (yen). Sum of {@link appliedToIncomeTax}, {@link appliedToResidenceTax}, {@link unusedCredit} */
-  annualCredit: number;
+  /**
+   * The credit available to apply this year (yen). Sum of {@link appliedToIncomeTax},
+   * {@link appliedToResidenceTax}, and {@link unusedCredit}. Zero when the taxpayer is
+   * ineligible (income over the cohort limit, or an unsupported move-in year), so it may
+   * be less than the entered 控除可能額 in that case.
+   */
+  availableCredit: number;
   /** Portion applied against national income tax. */
   appliedToIncomeTax: number;
   /** Portion that spilled over and was applied against residence tax. */

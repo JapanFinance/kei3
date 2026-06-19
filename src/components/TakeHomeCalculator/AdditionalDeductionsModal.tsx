@@ -214,7 +214,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               </Box>
 
               {/* Surface any warning the credit calculation produced: income over the limit
-                  (credit zeroed) OR part of the credit unusable this year (annualCredit > 0 but
+                  (credit zeroed) OR part of the credit unusable this year (availableCredit > 0 but
                   capped). Gated only on a positive entered amount so we don't warn before the
                   user has entered a credit (the income-limit warning fires even at amount 0). */}
               {homeLoanTaxCreditResult && homeLoanTaxCreditResult.warnings.length > 0 && effectiveHomeLoan.creditAmount > 0 && (
