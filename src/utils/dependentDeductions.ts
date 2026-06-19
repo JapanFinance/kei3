@@ -28,6 +28,7 @@ import type {
 import { DEDUCTION_TYPES } from '../types/dependents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
+import { calculateIncomeAdjustmentDeductionAmount } from '../data/employmentIncomeDeduction';
 
 export { getDependentEligibilityMax };
 
@@ -56,6 +57,63 @@ export function calculateDependentTotalNetIncome(income: DependentIncome, year: 
 
   // Total net income = net employment income + other net income
   return netEmploymentIncome + otherNetIncome;
+}
+
+/**
+ * Whether the taxpayer has a dependent that qualifies them for the
+ * 所得金額調整控除（子ども・特別障害者等を有する者等）. Two of the three statutory conditions are
+ * derivable from the dependent data this calculator models:
+ *
+ *  - ロ 年齢23歳未満の扶養親族: a non-spouse dependent (扶養親族) under 23 whose 合計所得金額 is
+ *    within the 扶養親族 threshold. Unlike 扶養控除, this includes children under 16.
+ *  - ハ 特別障害者である同一生計配偶者または扶養親族: a spouse or non-spouse dependent with special
+ *    disability whose 合計所得金額 is within the threshold (any age).
+ *
+ * The third condition — イ, the taxpayer being a 特別障害者 themselves — is NOT modeled, as the
+ * calculator has no input for the taxpayer's own disability status.
+ *
+ * Note: a spouse is never a 扶養親族, so condition ロ cannot apply to a spouse; a spouse qualifies
+ * only via ハ (a 特別障害者 同一生計配偶者).
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
+ */
+export function hasIncomeAdjustmentDeductionDependent(dependents: Dependent[], year: number): boolean {
+  const eligibilityMax = getDependentEligibilityMax(year);
+  return dependents.some(dependent => {
+    // 扶養親族 / 同一生計配偶者 status requires 合計所得金額 within the threshold.
+    if (calculateDependentTotalNetIncome(dependent.income, year) > eligibilityMax) {
+      return false;
+    }
+    const isSpecialDisability = dependent.disability === 'special'; // ハ
+    if (dependent.relationship === 'spouse') {
+      return isSpecialDisability;
+    }
+    const isUnder23 = dependent.ageCategory === 'under16' ||
+                      dependent.ageCategory === '16to18' ||
+                      dependent.ageCategory === '19to22'; // ロ
+    return isUnder23 || isSpecialDisability;
+  });
+}
+
+/**
+ * Calculates the 所得金額調整控除（子ども・特別障害者等を有する者等）for the taxpayer.
+ *
+ * Returns the amount only when the taxpayer both earns over ¥8.5M in employment income and has a
+ * {@link hasIncomeAdjustmentDeductionDependent qualifying dependent}; otherwise 0. The amount is
+ * subtracted from net employment income (給与所得), so it lowers 合計所得金額 and thus the taxable
+ * income for both income tax and residence tax.
+ *
+ * @param grossEmploymentIncome Gross employment income (給与等の収入金額) in yen
+ * @param dependents            The taxpayer's dependents
+ * @param year                  Income year (for the 扶養親族 income threshold)
+ */
+export function calculateIncomeAdjustmentDeduction(
+  grossEmploymentIncome: number,
+  dependents: Dependent[],
+  year: number
+): number {
+  if (!hasIncomeAdjustmentDeductionDependent(dependents, year)) return 0;
+  return calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome);
 }
 
 /**

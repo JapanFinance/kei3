@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest'
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
+  calculateIncomeAdjustmentDeduction,
+  hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions'
+import { calculateIncomeAdjustmentDeductionAmount } from '../data/employmentIncomeDeduction'
 import { DEDUCTION_TYPES, type Dependent } from '../types/dependents'
 
 // --- Helper functions to test internal logic via public API ---
@@ -1548,6 +1551,103 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
       };
       expect(isEligibleForSpecificRelativeSpecialDeduction(dependent, 2025)).toBe(true);
       expect(isEligibleForDependentDeduction(dependent, 2026)).toBe(true);
+    });
+  });
+})
+
+describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => {
+  // Helper: a non-spouse dependent with sensible defaults (no income, no disability).
+  const dependent = (overrides: Partial<Dependent> = {}): Dependent => ({
+    id: 'dep',
+    relationship: 'child',
+    ageCategory: '19to22',
+    isCohabiting: false,
+    disability: 'none',
+    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    ...overrides,
+  } as Dependent);
+
+  describe('calculateIncomeAdjustmentDeductionAmount (formula)', () => {
+    it('is 0 at or below the ¥8,500,000 threshold', () => {
+      expect(calculateIncomeAdjustmentDeductionAmount(8_000_000)).toBe(0);
+      expect(calculateIncomeAdjustmentDeductionAmount(8_500_000)).toBe(0);
+    });
+
+    it('is 10% of salary above ¥8,500,000', () => {
+      expect(calculateIncomeAdjustmentDeductionAmount(9_000_000)).toBe(50_000);
+      expect(calculateIncomeAdjustmentDeductionAmount(9_350_000)).toBe(85_000);
+    });
+
+    it('caps at ¥150,000 once salary reaches ¥10,000,000', () => {
+      expect(calculateIncomeAdjustmentDeductionAmount(10_000_000)).toBe(150_000);
+      expect(calculateIncomeAdjustmentDeductionAmount(22_000_000)).toBe(150_000);
+    });
+
+    it('rounds fractions of a yen up', () => {
+      expect(calculateIncomeAdjustmentDeductionAmount(8_500_001)).toBe(1); // ⌈0.1⌉
+      expect(calculateIncomeAdjustmentDeductionAmount(8_512_345)).toBe(1_235); // ⌈1234.5⌉
+    });
+  });
+
+  describe('hasIncomeAdjustmentDeductionDependent (eligibility)', () => {
+    it('returns false with no dependents', () => {
+      expect(hasIncomeAdjustmentDeductionDependent([], 2026)).toBe(false);
+    });
+
+    it('qualifies via ロ for a 扶養親族 under 23 (incl. under 16)', () => {
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: 'under16' })], 2026)).toBe(true);
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '16to18' })], 2026)).toBe(true);
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '19to22' })], 2026)).toBe(true);
+    });
+
+    it('does NOT qualify via ロ for a dependent 23 or older without special disability', () => {
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '23to69' })], 2026)).toBe(false);
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '70plus' })], 2026)).toBe(false);
+    });
+
+    it('qualifies via ハ for a special-disability dependent of any age', () => {
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '23to69', disability: 'special' })], 2026)).toBe(true);
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '70plus', disability: 'special' })], 2026)).toBe(true);
+    });
+
+    it('does NOT qualify via ハ for a regular (non-special) disability', () => {
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '23to69', disability: 'regular' })], 2026)).toBe(false);
+    });
+
+    it('requires the dependent to be within the 扶養親族 income threshold', () => {
+      // 2026 threshold is ¥620,000.
+      const richChild = dependent({ ageCategory: '19to22', income: { grossEmploymentIncome: 0, otherNetIncome: 700_000 } });
+      expect(hasIncomeAdjustmentDeductionDependent([richChild], 2026)).toBe(false);
+      const poorChild = dependent({ ageCategory: '19to22', income: { grossEmploymentIncome: 0, otherNetIncome: 620_000 } });
+      expect(hasIncomeAdjustmentDeductionDependent([poorChild], 2026)).toBe(true);
+    });
+
+    it('qualifies a spouse only via ハ (special disability), never via ロ', () => {
+      const spouse = (overrides: Partial<Dependent> = {}): Dependent => ({
+        id: 'sp', relationship: 'spouse', ageCategory: 'under70', isCohabiting: true,
+        disability: 'none', income: { grossEmploymentIncome: 0, otherNetIncome: 0 }, ...overrides,
+      } as Dependent);
+      expect(hasIncomeAdjustmentDeductionDependent([spouse()], 2026)).toBe(false);
+      expect(hasIncomeAdjustmentDeductionDependent([spouse({ disability: 'special' })], 2026)).toBe(true);
+      // A high-earning special-disability spouse is not a 同一生計配偶者, so does not qualify.
+      const richSpouse = spouse({ disability: 'special', income: { grossEmploymentIncome: 0, otherNetIncome: 700_000 } });
+      expect(hasIncomeAdjustmentDeductionDependent([richSpouse], 2026)).toBe(false);
+    });
+  });
+
+  describe('calculateIncomeAdjustmentDeduction (gated amount)', () => {
+    it('returns the formula amount when a qualifying dependent is present', () => {
+      expect(calculateIncomeAdjustmentDeduction(22_000_000, [dependent({ ageCategory: '19to22' })], 2026)).toBe(150_000);
+      expect(calculateIncomeAdjustmentDeduction(9_000_000, [dependent({ ageCategory: 'under16' })], 2026)).toBe(50_000);
+    });
+
+    it('returns 0 when there is no qualifying dependent, even over ¥8.5M', () => {
+      expect(calculateIncomeAdjustmentDeduction(22_000_000, [], 2026)).toBe(0);
+      expect(calculateIncomeAdjustmentDeduction(22_000_000, [dependent({ ageCategory: '23to69' })], 2026)).toBe(0);
+    });
+
+    it('returns 0 when salary is at or below ¥8.5M even with a qualifying dependent', () => {
+      expect(calculateIncomeAdjustmentDeduction(8_400_000, [dependent({ ageCategory: '19to22' })], 2026)).toBe(0);
     });
   });
 })

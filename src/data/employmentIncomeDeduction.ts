@@ -191,3 +191,34 @@ export const calculateNetEmploymentIncomeForPeriod = (
 
     return 0; // unreachable: final tier has grossMaxInclusive = Infinity
 };
+
+/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). */
+const INCOME_ADJUSTMENT_SALARY_THRESHOLD = 8_500_000;
+/** 給与等の収入金額 is capped here in the formula, yielding a maximum deduction of ¥150,000. */
+const INCOME_ADJUSTMENT_SALARY_CAP = 10_000_000;
+
+/**
+ * 所得金額調整控除（子ども・特別障害者等を有する者等）— the income amount adjustment deduction.
+ *
+ * For taxpayers whose gross employment income (給与等の収入金額) exceeds ¥8,500,000, this amount
+ * is subtracted from net employment income (給与所得) AFTER the standard 給与所得控除, which lowers
+ * 合計所得金額 and therefore the taxable income for BOTH income tax and residence tax.
+ *
+ *   amount = ⌈{min(給与等の収入金額, ¥10,000,000) − ¥8,500,000} × 10%⌉   (max ¥150,000)
+ *
+ * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer having a
+ * qualifying dependent or special-disability status) is decided by the caller — see
+ * `calculateIncomeAdjustmentDeduction` in `dependentDeductions.ts`.
+ *
+ * Legal basis: 措法41の3の11・41の3の12 (令和2年〜). Fractions of ¥1 are rounded up.
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
+ *
+ * @param grossEmploymentIncome Gross employment income (給与等の収入金額) in yen
+ * @returns The adjustment amount in yen (0 when salary ≤ ¥8,500,000)
+ */
+export const calculateIncomeAdjustmentDeductionAmount = (grossEmploymentIncome: number): number => {
+    if (grossEmploymentIncome <= INCOME_ADJUSTMENT_SALARY_THRESHOLD) return 0;
+    const cappedSalary = Math.min(grossEmploymentIncome, INCOME_ADJUSTMENT_SALARY_CAP);
+    // Divide by 10 (rather than × 0.1) to avoid binary floating-point error before rounding up.
+    return Math.ceil((cappedSalary - INCOME_ADJUSTMENT_SALARY_THRESHOLD) / 10);
+};

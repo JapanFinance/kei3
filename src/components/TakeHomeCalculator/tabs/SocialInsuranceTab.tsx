@@ -197,15 +197,21 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                           </tr>
                           <tr>
                             <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
-                            <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</Box>
+                            <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome - (results.incomeAdjustmentDeduction ?? 0))}</Box>
                           </tr>
+                          {(results.incomeAdjustmentDeduction ?? 0) > 0 && (
+                            <tr>
+                              <td style={{ padding: '2px 0' }}>Income Adjustment Deduction (所得金額調整控除):</td>
+                              <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(results.incomeAdjustmentDeduction ?? 0)}</Box>
+                            </tr>
+                          )}
                           <tr style={{ borderTop: '1px solid #ddd' }}>
                             <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
                             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(results.netEmploymentIncome)}</td>
                           </tr>
                         </tbody>
                       </table>
-                      <EmploymentIncomeDeductionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} />
+                      <EmploymentIncomeDeductionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0} />
                     </Box>
                   </DetailedTooltip>
                 </span>

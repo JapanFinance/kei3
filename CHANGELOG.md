@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-06-19
+
+### Fixed
+
+- Applied the income amount adjustment deduction (所得金額調整控除（子ども・特別障害者等を有する者等）) for taxpayers with employment income over ¥8,500,000 who have a dependent under 23 or a specially-disabled spouse/dependent. Up to ¥150,000 is now subtracted from employment income, which lowers total net income (合計所得金額) and reduces both income tax and residence tax. Because total net income feeds several eligibility limits, this also corrects cases where, for example, the home loan tax credit was wrongly denied at the ¥20,000,000 income limit. See the Net Employment Income tooltip for the breakdown. (Note: qualification based on the taxpayer's own special-disability status is not yet supported.)
+
 ## 2026-05-18
 
 ### New

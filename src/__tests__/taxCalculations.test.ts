@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import { calculateTaxes, calculateNetEmploymentIncome, calculateEmploymentInsurance, calculateNationalIncomeTaxBasicDeduction, calculateNationalIncomeTax, calculateTotalNetIncome } from '../utils/taxCalculations'
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
+import type { Dependent } from '../types/dependents'
 
 // Pin the year so employment insurance rate lookups are deterministic.
 // Year 2025: all 12 months use the FY2025 rate (0.55%).
@@ -1158,5 +1159,72 @@ describe('RSU (Restricted Stock Unit) income', () => {
 
     // Combined 2M below 2.2M: net = 2M - 740k = 1.26M
     expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(1_260_000);
+  });
+});
+
+describe('所得金額調整控除 (income amount adjustment deduction) integration', () => {
+  const childUnder23: Dependent = {
+    id: 'c1', relationship: 'child', ageCategory: '19to22',
+    isCohabiting: false, disability: 'none',
+    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+  };
+  const adultChild: Dependent = {
+    id: 'c2', relationship: 'child', ageCategory: '23to69',
+    isCohabiting: false, disability: 'none',
+    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+  };
+
+  const baseInputs = (dependents: Dependent[]) => ({
+    incomeStreams: [{ id: 's1', type: 'salary' as const, amount: 22_000_000, frequency: 'annual' as const }],
+    isSubjectToLongTermCarePremium: false,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents,
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+
+  it('reduces 給与所得 / 合計所得金額 by the adjustment for the worked example (¥22M salary, child under 23)', () => {
+    const result = calculateTaxes(baseInputs([childUnder23]));
+    // 給与所得控除: 22M - 1.95M = 20.05M; 所得金額調整控除: (10M - 8.5M) × 10% = 150k
+    expect(result.incomeAdjustmentDeduction).toBe(150_000);
+    expect(result.netEmploymentIncome).toBe(19_900_000);
+    expect(result.totalNetIncome).toBe(19_900_000);
+  });
+
+  it('does NOT apply when the only dependent is 23 or older without special disability', () => {
+    const result = calculateTaxes(baseInputs([adultChild]));
+    expect(result.incomeAdjustmentDeduction).toBe(0);
+    expect(result.netEmploymentIncome).toBe(20_050_000);
+    expect(result.totalNetIncome).toBe(20_050_000);
+  });
+
+  it('does NOT apply with no dependents', () => {
+    const result = calculateTaxes(baseInputs([]));
+    expect(result.incomeAdjustmentDeduction).toBe(0);
+    expect(result.totalNetIncome).toBe(20_050_000);
+  });
+
+  it('lets the adjustment bring 合計所得金額 under the ¥20M home-loan-credit limit (the bug in #344)', () => {
+    // With the qualifying child, 合計所得金額 = 19.9M ≤ 20M, so the credit applies.
+    const eligible = calculateTaxes({ ...baseInputs([childUnder23]), homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 200_000 } });
+    expect(eligible.totalNetIncome).toBe(19_900_000);
+    expect(eligible.homeLoanTaxCredit?.annualCredit).toBe(200_000);
+    expect(eligible.homeLoanTaxCredit?.appliedToIncomeTax).toBe(200_000);
+
+    // Without a qualifying dependent, 合計所得金額 = 20.05M > 20M, so the credit is denied.
+    const denied = calculateTaxes({ ...baseInputs([adultChild]), homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 200_000 } });
+    expect(denied.totalNetIncome).toBe(20_050_000);
+    expect(denied.homeLoanTaxCredit?.annualCredit).toBe(0);
+    expect(denied.homeLoanTaxCredit?.warnings[0]).toContain('eligibility limit');
+  });
+
+  it('calculateTotalNetIncome applies the adjustment when given qualifying dependents', () => {
+    const incomeStreams = [{ id: 's1', type: 'salary' as const, amount: 22_000_000, frequency: 'annual' as const }];
+    expect(calculateTotalNetIncome(incomeStreams, 2026, [childUnder23])).toBe(19_900_000);
+    // No dependents argument → no adjustment (backward compatible).
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(20_050_000);
   });
 });
