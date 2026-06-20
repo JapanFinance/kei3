@@ -8,8 +8,10 @@
  *  - 給与所得控除 (employment income deduction): the year-indexed tables below, applied by
  *    {@link calculateNetEmploymentIncomeForPeriod}. Each period defines the flat-floor region, any
  *    fixed transition values, and the standard percentage-formula tiers for that income year.
- *  - 所得金額調整控除（子ども・特別障害者等）: the salary-only amount, {@link calculateIncomeAdjustmentDeductionAmount}
- *    (eligibility is decided by the caller — see `dependentDeductions.ts`).
+ *  - 所得金額調整控除（子ども・特別障害者等）: {@link calculateIncomeAdjustmentDeductionAmount} computes the amount
+ *    purely from 給与等の収入金額; whether the taxpayer qualifies (a dependent under 23, or a special-disability
+ *    spouse/dependent) is decided by the caller,
+ *    {@link import("../utils/dependentDeductions").calculateIncomeAdjustmentDeduction}.
  *
  * Sources:
  *  - 給与所得控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
