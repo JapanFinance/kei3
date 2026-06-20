@@ -210,8 +210,16 @@ const INCOME_ADJUSTMENT_SALARY_CAP = 10_000_000;
  * qualifying dependent or special-disability status) is decided by the caller — see
  * `calculateIncomeAdjustmentDeduction` in `dependentDeductions.ts`.
  *
- * Legal basis: 措法41の3の11・41の3の12 (令和2年〜). Fractions of ¥1 are rounded up.
+ * Why it affects residence tax too: this is an adjustment to 給与所得 itself, NOT an 所得控除. The
+ * residence-tax 総所得金額 is computed "following the income-tax calculation" (地方税法§313②/§32②:
+ * 所得税法その他の所得税に関する法令…の計算の例によつて算定), and 措法 is one of those laws, so the
+ * adjusted 給与所得 carries straight over. Contrast 所得控除 (基礎控除, 扶養控除, …), whose amounts the
+ * Local Tax Act sets independently (地方税法§314の2/§34) — which is why those differ between the two taxes.
+ *
+ * Legal basis: 措法41の3の11・41の3の12 (income tax, 令和2年〜); applied to residence tax via
+ * 地方税法§313②・§32② from 令和3年度. Fractions of ¥1 are rounded up.
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
+ * @see https://www.keisan.nta.go.jp/r5yokuaru_sp/socat1/377.html — residence-tax application
  *
  * @param grossEmploymentIncome Gross employment income (給与等の収入金額) in yen
  * @returns The adjustment amount in yen (0 when salary ≤ ¥8,500,000)
