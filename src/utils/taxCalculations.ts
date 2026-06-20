@@ -45,27 +45,9 @@ export const roundSocialInsurancePremium = (amount: number, mode: 'halfTrunc' | 
 }
 
 /**
- * Calculates the net employment income (給与所得の金額) for the given income year,
- * applying the employment income deduction (給与所得控除) rules for that year.
- *
- * Delegates to the year-indexed period data in `src/data/netEmploymentIncome.ts`.
- *
- * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
- * @param year                   Income year; defaults to the current calendar year
- */
-export const calculateNetEmploymentIncome = (
-    grossEmploymentIncome: number,
-    year: number = new Date().getFullYear()
-): number => calculateNetEmploymentIncomeForPeriod(
-    grossEmploymentIncome,
-    getEmploymentIncomeDeductionPeriod(year)
-);
-
-/**
  * Composes the 所得金額調整控除（子ども・特別障害者等）: the salary-based amount
  * ({@link calculateIncomeAdjustmentDeductionAmount}), gated on the taxpayer having a qualifying
- * dependent ({@link hasIncomeAdjustmentDeductionDependent}). Returns 0 when not eligible. Subtracted
- * from net employment income (給与所得), so it lowers 合計所得金額 for both income tax and residence tax.
+ * dependent ({@link hasIncomeAdjustmentDeductionDependent}). Returns 0 when not eligible.
  */
 const calculateIncomeAdjustmentDeduction = (
     grossEmploymentIncome: number,
@@ -74,6 +56,28 @@ const calculateIncomeAdjustmentDeduction = (
 ): number => hasIncomeAdjustmentDeductionDependent(dependents, year)
     ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
     : 0;
+
+/**
+ * Calculates net employment income (給与所得の金額) for the given income year: gross minus the
+ * employment income deduction (給与所得控除) and — when a qualifying dependent makes the taxpayer
+ * eligible — the income amount adjustment deduction (所得金額調整控除). Pass the taxpayer's
+ * `dependents` to apply the adjustment; omit them (the default) where it can't apply, e.g. when
+ * computing a dependent's own net income.
+ *
+ * Delegates to the year-indexed period data in `src/data/netEmploymentIncome.ts`.
+ *
+ * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
+ * @param year                   Income year; defaults to the current calendar year
+ * @param dependents             Taxpayer's dependents, for the 所得金額調整控除; defaults to none
+ */
+export const calculateNetEmploymentIncome = (
+    grossEmploymentIncome: number,
+    year: number = new Date().getFullYear(),
+    dependents: Dependent[] = []
+): number => calculateNetEmploymentIncomeForPeriod(
+    grossEmploymentIncome,
+    getEmploymentIncomeDeductionPeriod(year)
+) - calculateIncomeAdjustmentDeduction(grossEmploymentIncome, dependents, year);
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -327,10 +331,9 @@ export const calculateTotalNetIncome = (
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
-    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year);
-    const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(grossEmploymentIncome, dependents, year);
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year, dependents);
 
-    return netEmploymentIncome - incomeAdjustmentDeduction + netBusinessAndMiscIncome;
+    return netEmploymentIncome + netBusinessAndMiscIncome;
 };
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
@@ -359,14 +362,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
     const incomeYear = inputs.incomeYear ?? new Date().getFullYear();
-    const netEmploymentIncomeBeforeAdjustment = calculateNetEmploymentIncome(grossEmploymentIncome, incomeYear);
 
-    // 所得金額調整控除（子ども・特別障害者等）: for salaries over ¥8.5M with a qualifying dependent,
-    // this is subtracted from 給与所得 here so the reduced 合計所得金額 flows into every downstream
-    // consumer (basic deductions, taxable income, residence-tax 調整控除 cutoff, home-loan-credit
-    // income limit, spouse/dependent thresholds) for both income tax and residence tax.
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, incomeYear, inputs.dependents);
     const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(grossEmploymentIncome, inputs.dependents, incomeYear);
-    const netEmploymentIncome = netEmploymentIncomeBeforeAdjustment - incomeAdjustmentDeduction;
 
     const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;
 

@@ -90,6 +90,28 @@ describe('calculateNetEmploymentIncome', () => {
       expect(calculateNetEmploymentIncome(10_000_000, 2025)).toBe(10_000_000 - 1_950_000)
     })
   })
+
+  describe('income amount adjustment (所得金額調整控除)', () => {
+    const childUnder23: Dependent = {
+      id: 'c', relationship: 'child', ageCategory: '19to22',
+      isCohabiting: false, disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    }
+
+    it('subtracts the 所得金額調整控除 when a qualifying dependent is passed and salary exceeds ¥8.5M', () => {
+      // 22M (R8): 給与所得控除 → 20,050,000; 所得金額調整控除 → 150,000; net = 19,900,000
+      expect(calculateNetEmploymentIncome(22_000_000, 2026, [childUnder23])).toBe(19_900_000)
+    })
+
+    it('applies no adjustment without dependents (the default)', () => {
+      expect(calculateNetEmploymentIncome(22_000_000, 2026)).toBe(20_050_000)
+    })
+
+    it('applies no adjustment at or below ¥8.5M even with a qualifying dependent', () => {
+      expect(calculateNetEmploymentIncome(8_400_000, 2026, [childUnder23]))
+        .toBe(calculateNetEmploymentIncome(8_400_000, 2026))
+    })
+  })
 })
 
 describe('calculateTaxes', () => {
