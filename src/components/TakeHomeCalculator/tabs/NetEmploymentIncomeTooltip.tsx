@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { getEmploymentIncomeDeductionPeriod } from '../../../data/employmentIncomeDeduction';
 import { formatJPY } from '../../../utils/formatters';
+import { DetailedTooltip } from '../../ui/Tooltips';
 
 const fmtNum = (n: number) => n.toLocaleString('en');
 
@@ -24,9 +25,10 @@ interface NetEmploymentIncomeTooltipProps {
 }
 
 /**
- * Tooltip body for the "Net Employment Income" row: shows how gross employment income becomes net
+ * Tooltip for the "Net Employment Income" row: shows how gross employment income becomes net
  * employment income (the 給与所得控除, then the 所得金額調整控除 when applicable), followed by the
- * 給与所得控除 rate table and source links. Shared by the Taxes and Social Insurance tabs.
+ * 給与所得控除 rate table and source links. Renders its own DetailedTooltip trigger, so callers
+ * place it directly after the row label. Shared by the Taxes and Social Insurance tabs.
  */
 const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
     grossEmploymentIncome,
@@ -65,7 +67,7 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
     });
 
     return (
-        <Box>
+        <DetailedTooltip title="Employment Income Details">
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                 Calculation Breakdown
             </Typography>
@@ -171,7 +173,7 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
                     </Box>
                 </Box>
             )}
-        </Box>
+        </DetailedTooltip>
     );
 };
 

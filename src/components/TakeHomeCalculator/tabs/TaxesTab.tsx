@@ -160,16 +160,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Net Employment Income
-                <DetailedTooltip
-                  title="Employment Income Details"
-                >
-                  <NetEmploymentIncomeTooltip
-                    grossEmploymentIncome={grossEmploymentIncome}
-                    netEmploymentIncome={results.netEmploymentIncome}
-                    incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
-                    year={incomeYear}
-                  />
-                </DetailedTooltip>
+                <NetEmploymentIncomeTooltip
+                  grossEmploymentIncome={grossEmploymentIncome}
+                  netEmploymentIncome={results.netEmploymentIncome}
+                  incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
+                  year={incomeYear}
+                />
               </span>
             }
             value={formatJPY(results.netEmploymentIncome)}

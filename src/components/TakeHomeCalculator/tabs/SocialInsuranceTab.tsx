@@ -182,16 +182,12 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               label={
                 <span>
                   Net Employment Income
-                  <DetailedTooltip
-                    title="Employment Income Details"
-                  >
-                    <NetEmploymentIncomeTooltip
-                      grossEmploymentIncome={grossEmploymentIncome}
-                      netEmploymentIncome={results.netEmploymentIncome}
-                      incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
-                      year={inputs.incomeYear ?? new Date().getFullYear()}
-                    />
-                  </DetailedTooltip>
+                  <NetEmploymentIncomeTooltip
+                    grossEmploymentIncome={grossEmploymentIncome}
+                    netEmploymentIncome={results.netEmploymentIncome}
+                    incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
+                    year={inputs.incomeYear ?? new Date().getFullYear()}
+                  />
                 </span>
               }
               value={formatJPY(results.netEmploymentIncome)}
