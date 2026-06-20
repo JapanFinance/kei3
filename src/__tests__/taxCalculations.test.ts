@@ -1211,13 +1211,13 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     // With the qualifying child, 合計所得金額 = 19.9M ≤ 20M, so the credit applies.
     const eligible = calculateTaxes({ ...baseInputs([childUnder23]), homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 200_000 } });
     expect(eligible.totalNetIncome).toBe(19_900_000);
-    expect(eligible.homeLoanTaxCredit?.annualCredit).toBe(200_000);
+    expect(eligible.homeLoanTaxCredit?.availableCredit).toBe(200_000);
     expect(eligible.homeLoanTaxCredit?.appliedToIncomeTax).toBe(200_000);
 
     // Without a qualifying dependent, 合計所得金額 = 20.05M > 20M, so the credit is denied.
     const denied = calculateTaxes({ ...baseInputs([adultChild]), homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 200_000 } });
     expect(denied.totalNetIncome).toBe(20_050_000);
-    expect(denied.homeLoanTaxCredit?.annualCredit).toBe(0);
+    expect(denied.homeLoanTaxCredit?.availableCredit).toBe(0);
     expect(denied.homeLoanTaxCredit?.warnings[0]).toContain('eligibility limit');
   });
 
