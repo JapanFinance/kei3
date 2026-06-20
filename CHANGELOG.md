@@ -2,11 +2,11 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-06-19
+## 2026-06-20
 
 ### Fixed
 
-- Applied the income amount adjustment deduction (所得金額調整控除（子ども・特別障害者等を有する者等）) for taxpayers with employment income over ¥8,500,000 who have a dependent under 23 or a specially-disabled spouse/dependent. Up to ¥150,000 is now subtracted from employment income, which lowers total net income (合計所得金額) and reduces both income tax and residence tax. Because total net income feeds several eligibility limits, this also corrects cases where, for example, the home loan tax credit was wrongly denied at the ¥20,000,000 income limit. See the Net Employment Income tooltip for the breakdown. (Note: qualification based on the taxpayer's own special-disability status is not yet supported.)
+- Added support for the income amount adjustment deduction ([所得金額調整控除（子ども・特別障害者等を有する者等）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm)) for taxpayers with employment income over ¥8,500,000 who have a qualifying dependent under 23 or a specially-disabled spouse/dependent. Up to ¥150,000 is deducted from employment income, which lowers total net income (合計所得金額). Because total net income is the basis for several eligibility limits, this also corrects cases where, for example, the home loan tax credit was wrongly denied near the ¥20,000,000 income limit. See the Net Employment Income tooltip for the breakdown.
 
 ## 2026-05-18
 
@@ -20,7 +20,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Fixed
 
-- Corrected the residence-tax adjustment credit (調整控除) for filers whose taxable income is above ¥2,000,000 and claim a deduction for a spouse or dependents. Residence tax was being slightly under-stated for these households. Filers not claiming a spouse or dependent deduction, anyone with taxable income at or below ¥2,000,000, and anyone with net income exceeding ¥25,000,000, were unaffected.
+- Corrected the residence-tax adjustment credit (調整控除) for taxpayers whose taxable income is above ¥2,000,000 and claim a deduction for a spouse or dependents. Residence tax was being slightly under-stated for these households. Taxpayers not claiming a spouse or dependent deduction, anyone with taxable income at or below ¥2,000,000, and anyone with net income exceeding ¥25,000,000, were unaffected.
 
 ## 2026-04-05
 
