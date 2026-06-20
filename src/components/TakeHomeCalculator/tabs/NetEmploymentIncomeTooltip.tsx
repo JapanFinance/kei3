@@ -5,20 +5,40 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { getEmploymentIncomeDeductionPeriod } from '../../../data/employmentIncomeDeduction';
+import { formatJPY } from '../../../utils/formatters';
 
 const fmtNum = (n: number) => n.toLocaleString('en');
 
-interface EmploymentIncomeDeductionTooltipProps {
-    year: number;
+interface NetEmploymentIncomeTooltipProps {
+    /** Gross employment income (給与等の収入金額) in yen. */
+    grossEmploymentIncome: number;
+    /** Net employment income (給与所得), already net of the 給与所得控除 and 所得金額調整控除. */
+    netEmploymentIncome: number;
     /**
-     * 所得金額調整控除 applied to this taxpayer (yen). When greater than 0, an explanatory note
-     * about the income amount adjustment deduction is shown below the 給与所得控除 table.
+     * 所得金額調整控除 applied to this taxpayer (yen). When greater than 0, it is shown as its own
+     * breakdown line and an explanatory note is added below the 給与所得控除 table.
      */
     incomeAdjustmentDeduction?: number;
+    /** Income year, for the 給与所得控除 table lookup. */
+    year: number;
 }
 
-const EmploymentIncomeDeductionTooltip: React.FC<EmploymentIncomeDeductionTooltipProps> = ({ year, incomeAdjustmentDeduction = 0 }) => {
+/**
+ * Tooltip body for the "Net Employment Income" row: shows how gross employment income becomes net
+ * employment income (the 給与所得控除, then the 所得金額調整控除 when applicable), followed by the
+ * 給与所得控除 rate table and source links. Shared by the Taxes and Social Insurance tabs.
+ */
+const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
+    grossEmploymentIncome,
+    netEmploymentIncome,
+    incomeAdjustmentDeduction = 0,
+    year,
+}) => {
     const period = getEmploymentIncomeDeductionPeriod(year);
+
+    // The 給与所得控除 portion is whatever remains after backing out the income adjustment, so the
+    // displayed rows always reconcile to net employment income regardless of which gross is passed.
+    const employmentIncomeDeduction = grossEmploymentIncome - netEmploymentIncome - incomeAdjustmentDeduction;
 
     // The effective upper boundary of the flat-floor region (including transition values).
     // For R8: transitions end at 2,199,999 → standard starts at 2,200,000.
@@ -46,6 +66,32 @@ const EmploymentIncomeDeductionTooltip: React.FC<EmploymentIncomeDeductionToolti
 
     return (
         <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                Calculation Breakdown
+            </Typography>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                <tbody>
+                    <tr>
+                        <td style={{ padding: '2px 0' }}>Gross Employment Income:</td>
+                        <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(grossEmploymentIncome)}</td>
+                    </tr>
+                    <tr>
+                        <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
+                        <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(employmentIncomeDeduction)}</Box>
+                    </tr>
+                    {incomeAdjustmentDeduction > 0 && (
+                        <tr>
+                            <td style={{ padding: '2px 0' }}>Income Adjustment Deduction:</td>
+                            <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(incomeAdjustmentDeduction)}</Box>
+                        </tr>
+                    )}
+                    <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                        <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(netEmploymentIncome)}</td>
+                    </Box>
+                </tbody>
+            </table>
+
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                 Employment Income Deduction Table
             </Typography>
@@ -129,4 +175,4 @@ const EmploymentIncomeDeductionTooltip: React.FC<EmploymentIncomeDeductionToolti
     );
 };
 
-export default EmploymentIncomeDeductionTooltip;
+export default NetEmploymentIncomeTooltip;
