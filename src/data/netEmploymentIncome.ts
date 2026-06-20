@@ -10,8 +10,9 @@
  *    fixed transition values, and the standard percentage-formula tiers for that income year.
  *  - 所得金額調整控除（子ども・特別障害者等）: {@link calculateIncomeAdjustmentDeductionAmount} computes the amount
  *    purely from 給与等の収入金額; whether the taxpayer qualifies (a dependent under 23, or a special-disability
- *    spouse/dependent) is decided by the caller,
- *    {@link import("../utils/dependentDeductions").calculateIncomeAdjustmentDeduction}.
+ *    spouse/dependent) is checked separately by
+ *    {@link import("../utils/dependentDeductions").hasIncomeAdjustmentDeductionDependent}, and the two are
+ *    combined in `taxCalculations.ts`.
  *
  * Sources:
  *  - 給与所得控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
@@ -214,8 +215,9 @@ const INCOME_ADJUSTMENT_SALARY_CAP = 10_000_000;
  *   amount = ⌈{min(給与等の収入金額, ¥10,000,000) − ¥8,500,000} × 10%⌉   (max ¥150,000)
  *
  * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer having a
- * qualifying dependent or special-disability status) is decided by the caller — see
- * `calculateIncomeAdjustmentDeduction` in `dependentDeductions.ts`.
+ * qualifying dependent or special-disability status) is checked separately by
+ * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts`, with the two combined in
+ * `taxCalculations.ts`.
  *
  * Why it affects residence tax too: this is an adjustment to 給与所得 itself, NOT an 所得控除. The
  * residence-tax 総所得金額 is computed "following the income-tax calculation" (地方税法§313②/§32②:

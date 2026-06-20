@@ -28,7 +28,6 @@ import type {
 import { DEDUCTION_TYPES } from '../types/dependents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
-import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
 
 export { getDependentEligibilityMax };
 
@@ -93,27 +92,6 @@ export function hasIncomeAdjustmentDeductionDependent(dependents: Dependent[], y
                       dependent.ageCategory === '19to22'; // ロ
     return isUnder23 || isSpecialDisability;
   });
-}
-
-/**
- * Calculates the 所得金額調整控除（子ども・特別障害者等を有する者等）for the taxpayer.
- *
- * Returns the amount only when the taxpayer both earns over ¥8.5M in employment income and has a
- * {@link hasIncomeAdjustmentDeductionDependent qualifying dependent}; otherwise 0. The amount is
- * subtracted from net employment income (給与所得), so it lowers 合計所得金額 and thus the taxable
- * income for both income tax and residence tax.
- *
- * @param grossEmploymentIncome Gross employment income (給与等の収入金額) in yen
- * @param dependents            The taxpayer's dependents
- * @param year                  Income year (for the 扶養親族 income threshold)
- */
-export function calculateIncomeAdjustmentDeduction(
-  grossEmploymentIncome: number,
-  dependents: Dependent[],
-  year: number
-): number {
-  if (!hasIncomeAdjustmentDeductionDependent(dependents, year)) return 0;
-  return calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome);
 }
 
 /**

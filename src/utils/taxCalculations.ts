@@ -20,12 +20,12 @@ import {
     calculateResidenceTaxBasicDeduction,
     NON_TAXABLE_RESIDENCE_TAX_DETAIL
 } from './residenceTax';
-import {calculateDependentDeductions, calculateIncomeAdjustmentDeduction} from './dependentDeductions';
+import {calculateDependentDeductions, hasIncomeAdjustmentDeductionDependent} from './dependentDeductions';
 import {COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP} from '../constants/taxThresholds';
 import {getCommutingAllowanceAnnualAmount} from './formatters';
 import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
 import {getNationalBasicDeductionTiers} from '../data/nationalBasicDeduction';
-import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/netEmploymentIncome';
+import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod, calculateIncomeAdjustmentDeductionAmount} from '../data/netEmploymentIncome';
 import {applyHomeLoanTaxCredit} from './homeLoanTaxCredit';
 
 /**
@@ -60,6 +60,20 @@ export const calculateNetEmploymentIncome = (
     grossEmploymentIncome,
     getEmploymentIncomeDeductionPeriod(year)
 );
+
+/**
+ * Composes the 所得金額調整控除（子ども・特別障害者等）: the salary-based amount
+ * ({@link calculateIncomeAdjustmentDeductionAmount}), gated on the taxpayer having a qualifying
+ * dependent ({@link hasIncomeAdjustmentDeductionDependent}). Returns 0 when not eligible. Subtracted
+ * from net employment income (給与所得), so it lowers 合計所得金額 for both income tax and residence tax.
+ */
+const calculateIncomeAdjustmentDeduction = (
+    grossEmploymentIncome: number,
+    dependents: Dependent[],
+    year: number
+): number => hasIncomeAdjustmentDeductionDependent(dependents, year)
+    ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
+    : 0;
 
 /**
  * Breakdown of Employment Insurance premium components

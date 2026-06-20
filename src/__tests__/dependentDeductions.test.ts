@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest'
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
-  calculateIncomeAdjustmentDeduction,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions'
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome'
@@ -1634,22 +1633,6 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
       // A high-earning special-disability spouse is not a 同一生計配偶者, so does not qualify.
       const richSpouse = spouse({ disability: 'special', income: { grossEmploymentIncome: 0, otherNetIncome: 700_000 } });
       expect(hasIncomeAdjustmentDeductionDependent([richSpouse], 2026)).toBe(false);
-    });
-  });
-
-  describe('calculateIncomeAdjustmentDeduction (gated amount)', () => {
-    it('returns the formula amount when a qualifying dependent is present', () => {
-      expect(calculateIncomeAdjustmentDeduction(22_000_000, [dependent({ ageCategory: '19to22' })], 2026)).toBe(150_000);
-      expect(calculateIncomeAdjustmentDeduction(9_000_000, [dependent({ ageCategory: 'under16' })], 2026)).toBe(50_000);
-    });
-
-    it('returns 0 when there is no qualifying dependent, even over ¥8.5M', () => {
-      expect(calculateIncomeAdjustmentDeduction(22_000_000, [], 2026)).toBe(0);
-      expect(calculateIncomeAdjustmentDeduction(22_000_000, [dependent({ ageCategory: '23to69' })], 2026)).toBe(0);
-    });
-
-    it('returns 0 when salary is at or below ¥8.5M even with a qualifying dependent', () => {
-      expect(calculateIncomeAdjustmentDeduction(8_400_000, [dependent({ ageCategory: '19to22' })], 2026)).toBe(0);
     });
   });
 })
