@@ -8,7 +8,7 @@ import {
   calculateIncomeAdjustmentDeduction,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions'
-import { calculateIncomeAdjustmentDeductionAmount } from '../data/employmentIncomeDeduction'
+import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome'
 import { DEDUCTION_TYPES, type Dependent } from '../types/dependents'
 
 // --- Helper functions to test internal logic via public API ---
@@ -1585,7 +1585,9 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
 
     it('rounds fractions of a yen up', () => {
       expect(calculateIncomeAdjustmentDeductionAmount(8_500_001)).toBe(1); // ⌈0.1⌉
-      expect(calculateIncomeAdjustmentDeductionAmount(8_512_345)).toBe(1_235); // ⌈1234.5⌉
+      expect(calculateIncomeAdjustmentDeductionAmount(8_512_345)).toBe(1_235); // ⌈1,234.5⌉
+      expect(calculateIncomeAdjustmentDeductionAmount(9_001_040)).toBe(50_104); // ⌈50,104.0⌉
+      expect(calculateIncomeAdjustmentDeductionAmount(9_001_041)).toBe(50_105); // ⌈50,104.1⌉
     });
   });
 

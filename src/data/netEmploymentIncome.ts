@@ -2,13 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Employment Income Deduction (給与所得控除) tables, indexed by income year.
+ * Net employment income (給与所得) computation data and helpers, indexed by income year.
  *
- * The deduction is determined by the taxpayer's gross employment income (給与等の収入金額).
- * Each period defines the flat-floor region, any fixed transition values, and the standard
- * percentage-formula tiers that apply for the given income year.
+ * Gross employment income (給与等の収入金額) is reduced to 給与所得 by two things, both modelled here:
+ *  - 給与所得控除 (employment income deduction): the year-indexed tables below, applied by
+ *    {@link calculateNetEmploymentIncomeForPeriod}. Each period defines the flat-floor region, any
+ *    fixed transition values, and the standard percentage-formula tiers for that income year.
+ *  - 所得金額調整控除（子ども・特別障害者等）: the salary-only amount, {@link calculateIncomeAdjustmentDeductionAmount}
+ *    (eligibility is decided by the caller — see `dependentDeductions.ts`).
  *
- * Source: NTA overview: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
+ * Sources:
+ *  - 給与所得控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
+ *  - 所得金額調整控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
  */
 
 /** One tier in the standard percentage-formula region. */

@@ -4,7 +4,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { getEmploymentIncomeDeductionPeriod } from '../../../data/employmentIncomeDeduction';
+import { getEmploymentIncomeDeductionPeriod } from '../../../data/netEmploymentIncome';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
@@ -158,8 +158,7 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
                         Because your employment income exceeds ¥8,500,000 and you have a qualifying dependent
                         (a relative under 23, or a specially-disabled spouse/dependent), a further deduction is
                         subtracted from your employment income: 10% of your gross salary less ¥8,500,000,
-                        up to ¥150,000. This lowers your total net income
-                        (合計所得金額), reducing <strong>both income tax and residence tax</strong>.
+                        up to ¥150,000. This lowers your total net income (合計所得金額).
                     </Typography>
                     <Box sx={{ mt: 1 }}>
                         Official Source:

@@ -28,7 +28,7 @@ import type {
 import { DEDUCTION_TYPES } from '../types/dependents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
-import { calculateIncomeAdjustmentDeductionAmount } from '../data/employmentIncomeDeduction';
+import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
 
 export { getDependentEligibilityMax };
 

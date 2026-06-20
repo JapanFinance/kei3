@@ -25,7 +25,7 @@ import {COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP} from '../constants/taxThresho
 import {getCommutingAllowanceAnnualAmount} from './formatters';
 import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
 import {getNationalBasicDeductionTiers} from '../data/nationalBasicDeduction';
-import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/employmentIncomeDeduction';
+import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/netEmploymentIncome';
 import {applyHomeLoanTaxCredit} from './homeLoanTaxCredit';
 
 /**
@@ -48,7 +48,7 @@ export const roundSocialInsurancePremium = (amount: number, mode: 'halfTrunc' | 
  * Calculates the net employment income (給与所得の金額) for the given income year,
  * applying the employment income deduction (給与所得控除) rules for that year.
  *
- * Delegates to the year-indexed period data in `src/data/employmentIncomeDeduction.ts`.
+ * Delegates to the year-indexed period data in `src/data/netEmploymentIncome.ts`.
  *
  * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
  * @param year                   Income year; defaults to the current calendar year
