@@ -449,7 +449,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
   // We only need the total net income for the dependents modal. Pass dependents so the
   // 所得金額調整控除 is reflected, keeping the modal's eligibility hints consistent with the results.
-  const taxpayerNetIncome = React.useMemo(() => calculateTotalNetIncome(inputs.incomeStreams, undefined, inputs.dependents), [inputs.incomeStreams, inputs.dependents]);
+  const taxpayerNetIncome = React.useMemo(() => calculateTotalNetIncome(inputs.incomeStreams, inputs.incomeYear, inputs.dependents), [inputs.incomeStreams, inputs.incomeYear, inputs.dependents]);
 
   return (
     <Box className="form-container" sx={{ p: { xs: 1.2, sm: 2 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 2 }}>
@@ -983,6 +983,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
         taxpayerNetIncome={taxpayerNetIncome}
+        incomeYear={inputs.incomeYear}
       />
 
       <IncomeDetailsModal

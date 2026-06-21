@@ -42,6 +42,8 @@ interface DependentsModalProps {
   dependents: Dependent[];
   onDependentsChange: (dependents: Dependent[]) => void;
   taxpayerNetIncome: number;
+  /** Income year used for the dependent-deduction eligibility/threshold lookup. */
+  incomeYear: number;
 }
 
 /**
@@ -54,6 +56,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   dependents,
   onDependentsChange,
   taxpayerNetIncome,
+  incomeYear,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -353,7 +356,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           );
                         }
 
-                        const deductionResults = calculateDependentDeductions(allDependents, taxpayerNetIncome);
+                        const deductionResults = calculateDependentDeductions(allDependents, taxpayerNetIncome, incomeYear);
 
                         // Group deductions by type and amount
                         interface DeductionGroup {
