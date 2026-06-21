@@ -54,6 +54,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
         dcPlanContributions: 0,
         manualSocialInsuranceEntry: false,
         manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
     };
 
     return { results, inputs, breakdown };

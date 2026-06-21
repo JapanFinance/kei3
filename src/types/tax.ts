@@ -141,7 +141,12 @@ export interface TakeHomeInputs {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  incomeYear?: number;
+  /**
+   * Calendar year the income is taxed in. Required: every caller threads it through from
+   * {@link TakeHomeFormState.incomeYear} (defaulted to {@link DEFAULT_INCOME_YEAR}), so the
+   * calculation never has to fall back to a guessed year.
+   */
+  incomeYear: number;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 

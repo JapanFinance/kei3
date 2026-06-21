@@ -209,6 +209,7 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -226,6 +227,7 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
@@ -338,6 +340,7 @@ describe('calculateTaxes', () => {
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
 
@@ -636,6 +639,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
 
@@ -666,6 +670,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
 
@@ -690,6 +695,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
 
@@ -708,6 +714,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
       customEHIRates: {
         healthInsuranceRate: 5, // 5%
         longTermCareRate: 1, // 1%
@@ -731,6 +738,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 500_000,
+      incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
 
@@ -754,6 +762,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
       incomeStreams: [
         {
           id: '1',
@@ -860,6 +869,7 @@ describe('Commuting Allowance', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
@@ -914,6 +924,7 @@ describe('Commuting Allowance', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);
@@ -963,6 +974,7 @@ describe('Commuting Allowance', () => {
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: "Tokyo",
       dependents: [], dcPlanContributions: 0, manualSocialInsuranceEntry: false, manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
     };
 
     const result = calculateTaxes(inputs);

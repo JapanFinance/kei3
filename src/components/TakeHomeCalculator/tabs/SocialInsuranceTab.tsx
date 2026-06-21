@@ -186,7 +186,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     grossEmploymentIncome={grossEmploymentIncome}
                     netEmploymentIncome={results.netEmploymentIncome}
                     incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
-                    year={inputs.incomeYear ?? new Date().getFullYear()}
+                    year={inputs.incomeYear}
                   />
                 </span>
               }
@@ -497,7 +497,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           labelSuffix={isNationalHealthInsurance ? (
             <DetailedTooltip
               title="Pension Contribution">
-              <NationalPensionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} />
+              <NationalPensionTooltip year={inputs.incomeYear} />
             </DetailedTooltip>
           ) : undefined}
           value={formatJPY(results.pensionPayments)}

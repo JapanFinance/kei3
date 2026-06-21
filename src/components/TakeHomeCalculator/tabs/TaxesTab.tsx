@@ -111,7 +111,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome = (results.totalNetIncome ?? results.annualIncome) - totalSocialInsurance - (results.dcPlanContributions ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
-  const incomeYear = inputs.incomeYear ?? new Date().getFullYear();
+  const incomeYear = inputs.incomeYear;
   const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
 
   // Calculate separated gross income

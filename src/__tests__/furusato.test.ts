@@ -327,6 +327,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 1_000_000, // Higher than standard ~726k
+      incomeYear: 2026,
     }).furusatoNozei;
 
     expect(fnWithHighSocialInsurance.limit).toBeLessThan(62_000);
@@ -341,6 +342,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       dcPlanContributions: 0,
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 500_000, // Lower than standard ~726k
+      incomeYear: 2026,
     }).furusatoNozei;
 
     expect(fnWithLowSocialInsurance.limit).toBeGreaterThan(62_000);

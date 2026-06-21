@@ -361,7 +361,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
-    const incomeYear = inputs.incomeYear ?? new Date().getFullYear();
+    const incomeYear = inputs.incomeYear;
 
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, incomeYear, inputs.dependents);
     const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(grossEmploymentIncome, inputs.dependents, incomeYear);

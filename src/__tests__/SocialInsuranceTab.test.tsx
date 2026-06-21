@@ -51,6 +51,7 @@ describe('SocialInsuranceTab', () => {
         dcPlanContributions: 0,
         manualSocialInsuranceEntry: false,
         manualSocialInsuranceAmount: 0,
+        incomeYear: 2025, // matches the fake-timer FY2025 pin above
     };
 
     const mockResidenceTax: ResidenceTaxDetails = {

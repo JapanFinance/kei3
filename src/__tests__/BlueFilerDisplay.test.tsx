@@ -61,7 +61,8 @@ const mockInputs: TakeHomeInputs = {
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
-    manualSocialInsuranceAmount: 0
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026
 };
 
 describe('Blue-Filer Deduction Display', () => {
