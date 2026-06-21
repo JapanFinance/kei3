@@ -2,13 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Employment Income Deduction (給与所得控除) tables, indexed by income year.
+ * Net employment income (給与所得) computation data and helpers, indexed by income year.
  *
- * The deduction is determined by the taxpayer's gross employment income (給与等の収入金額).
- * Each period defines the flat-floor region, any fixed transition values, and the standard
- * percentage-formula tiers that apply for the given income year.
+ * Gross employment income (給与等の収入金額) is reduced to 給与所得 by two things, both modelled here:
+ *  - 給与所得控除 (employment income deduction): the year-indexed tables below, applied by
+ *    {@link calculateNetEmploymentIncomeForPeriod}. Each period defines the flat-floor region, any
+ *    fixed transition values, and the standard percentage-formula tiers for that income year.
+ *  - 所得金額調整控除（子ども・特別障害者等）: {@link calculateIncomeAdjustmentDeductionAmount} computes the amount
+ *    purely from 給与等の収入金額; whether the taxpayer qualifies (a dependent under 23, or a special-disability
+ *    spouse/dependent) is checked separately by
+ *    {@link import("../utils/dependentDeductions").hasIncomeAdjustmentDeductionDependent}, and the two are
+ *    combined in `taxCalculations.ts`.
  *
- * Source: NTA overview: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
+ * Sources:
+ *  - 給与所得控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
+ *  - 所得金額調整控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
  */
 
 /** One tier in the standard percentage-formula region. */
@@ -190,4 +198,44 @@ export const calculateNetEmploymentIncomeForPeriod = (
     }
 
     return 0; // unreachable: final tier has grossMaxInclusive = Infinity
+};
+
+/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). */
+const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
+/** 給与等の収入金額 is capped here in the formula, yielding a maximum deduction of ¥150,000. */
+const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
+
+/**
+ * 所得金額調整控除（子ども・特別障害者等を有する者等）— the income amount adjustment deduction.
+ *
+ * For taxpayers whose gross employment income (給与等の収入金額) exceeds ¥8,500,000, this amount
+ * is subtracted from net employment income (給与所得) AFTER the standard 給与所得控除, which lowers
+ * 合計所得金額 and therefore the taxable income for BOTH income tax and residence tax.
+ *
+ *   amount = ⌈{min(給与等の収入金額, ¥10,000,000) − ¥8,500,000} × 10%⌉   (max ¥150,000)
+ *
+ * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer having a
+ * qualifying dependent or special-disability status) is checked separately by
+ * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts`, with the two combined in
+ * `taxCalculations.ts`.
+ *
+ * Why it affects residence tax too: this is an adjustment to 給与所得 itself, NOT an 所得控除. The
+ * residence-tax 総所得金額 is computed "following the income-tax calculation" (地方税法§313②/§32②:
+ * 所得税法その他の所得税に関する法令…の計算の例によつて算定), and 措法 is one of those laws, so the
+ * adjusted 給与所得 carries straight over. Contrast 所得控除 (基礎控除, 扶養控除, …), whose amounts the
+ * Local Tax Act sets independently (地方税法§314の2/§34) — which is why those differ between the two taxes.
+ *
+ * Legal basis: 措法41の3の11・41の3の12 (income tax, 令和2年〜); applied to residence tax via
+ * 地方税法§313②・§32② from 令和3年度. Fractions of ¥1 are rounded up.
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
+ * @see https://www.keisan.nta.go.jp/r5yokuaru_sp/socat1/377.html — residence-tax application
+ *
+ * @param grossEmploymentIncome Gross employment income (給与等の収入金額) in yen
+ * @returns The adjustment amount in yen (0 when salary ≤ ¥8,500,000)
+ */
+export const calculateIncomeAdjustmentDeductionAmount = (grossEmploymentIncome: number): number => {
+    if (grossEmploymentIncome <= INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD) return 0;
+    const cappedEmploymentIncome = Math.min(grossEmploymentIncome, INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP);
+    // Divide by 10 (rather than × 0.1) to avoid binary floating-point error before rounding up.
+    return Math.ceil((cappedEmploymentIncome - INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD) / 10);
 };

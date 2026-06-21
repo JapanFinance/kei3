@@ -149,6 +149,13 @@ export interface TakeHomeResults {
   employmentInsuranceOnBonus?: number;
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
+  /**
+   * 所得金額調整控除（子ども・特別障害者等を有する者等）applied to net employment income (給与所得).
+   * Subtracted after the 給与所得控除, so it lowers 合計所得金額 and the taxable income for both
+   * income tax and residence tax. 0 when the taxpayer is not eligible. {@link netEmploymentIncome}
+   * is already net of this amount.
+   */
+  incomeAdjustmentDeduction?: number | undefined;
   totalNetIncome: number;
   commutingAllowanceIncome?: number; // Total amount
   commutingAllowanceTaxable?: number;

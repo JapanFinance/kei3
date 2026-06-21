@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type {BonusIncomeStream, IncomeStream, TakeHomeInputs, TakeHomeResults} from '../types/tax'
+import type {Dependent} from '../types/dependents'
 import {
     CUSTOM_PROVIDER_ID,
     DEFAULT_PROVIDER,
@@ -19,12 +20,12 @@ import {
     calculateResidenceTaxBasicDeduction,
     NON_TAXABLE_RESIDENCE_TAX_DETAIL
 } from './residenceTax';
-import {calculateDependentDeductions} from './dependentDeductions';
+import {calculateDependentDeductions, hasIncomeAdjustmentDeductionDependent} from './dependentDeductions';
 import {COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP} from '../constants/taxThresholds';
 import {getCommutingAllowanceAnnualAmount} from './formatters';
 import {getEmploymentInsuranceRate} from '../data/employmentInsurance';
 import {getNationalBasicDeductionTiers} from '../data/nationalBasicDeduction';
-import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod} from '../data/employmentIncomeDeduction';
+import {getEmploymentIncomeDeductionPeriod, calculateNetEmploymentIncomeForPeriod, calculateIncomeAdjustmentDeductionAmount} from '../data/netEmploymentIncome';
 import {applyHomeLoanTaxCredit} from './homeLoanTaxCredit';
 
 /**
@@ -44,21 +45,39 @@ export const roundSocialInsurancePremium = (amount: number, mode: 'halfTrunc' | 
 }
 
 /**
- * Calculates the net employment income (給与所得の金額) for the given income year,
- * applying the employment income deduction (給与所得控除) rules for that year.
+ * Composes the 所得金額調整控除（子ども・特別障害者等）: the salary-based amount
+ * ({@link calculateIncomeAdjustmentDeductionAmount}), gated on the taxpayer having a qualifying
+ * dependent ({@link hasIncomeAdjustmentDeductionDependent}). Returns 0 when not eligible.
+ */
+const calculateIncomeAdjustmentDeduction = (
+    grossEmploymentIncome: number,
+    dependents: Dependent[],
+    year: number
+): number => hasIncomeAdjustmentDeductionDependent(dependents, year)
+    ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
+    : 0;
+
+/**
+ * Calculates net employment income (給与所得の金額) for the given income year: gross minus the
+ * employment income deduction (給与所得控除) and — when a qualifying dependent makes the taxpayer
+ * eligible — the income amount adjustment deduction (所得金額調整控除). Pass the taxpayer's
+ * `dependents` to apply the adjustment; omit them (the default) where it can't apply, e.g. when
+ * computing a dependent's own net income.
  *
- * Delegates to the year-indexed period data in `src/data/employmentIncomeDeduction.ts`.
+ * Delegates to the year-indexed period data in `src/data/netEmploymentIncome.ts`.
  *
  * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
  * @param year                   Income year; defaults to the current calendar year
+ * @param dependents             Taxpayer's dependents, for the 所得金額調整控除; defaults to none
  */
 export const calculateNetEmploymentIncome = (
     grossEmploymentIncome: number,
-    year: number = new Date().getFullYear()
+    year: number = new Date().getFullYear(),
+    dependents: Dependent[] = []
 ): number => calculateNetEmploymentIncomeForPeriod(
     grossEmploymentIncome,
     getEmploymentIncomeDeductionPeriod(year)
-);
+) - calculateIncomeAdjustmentDeduction(grossEmploymentIncome, dependents, year);
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -208,6 +227,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
     isSubjectToLongTermCarePremium: false,
+    incomeAdjustmentDeduction: 0,
     totalNetIncome: 0,
 };
 
@@ -287,13 +307,19 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
 };
 
 /**
- * Calculates just the total net income.
+ * Calculates just the total net income (合計所得金額).
  * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
  *
  * @param incomeStreams  Income streams to calculate net income for
  * @param year          Income year for the employment income deduction lookup; defaults to current year
+ * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
+ *                      dependent is present. Defaults to none (no adjustment).
  */
-export const calculateTotalNetIncome = (incomeStreams: IncomeStream[], year: number = new Date().getFullYear()): number => {
+export const calculateTotalNetIncome = (
+    incomeStreams: IncomeStream[],
+    year: number = new Date().getFullYear(),
+    dependents: Dependent[] = []
+): number => {
     const {
         salaryIncome,
         bonusIncome,
@@ -305,7 +331,7 @@ export const calculateTotalNetIncome = (incomeStreams: IncomeStream[], year: num
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
-    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year);
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year, dependents);
 
     return netEmploymentIncome + netBusinessAndMiscIncome;
 };
@@ -336,7 +362,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
     const incomeYear = inputs.incomeYear ?? new Date().getFullYear();
-    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, incomeYear);
+
+    const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, incomeYear, inputs.dependents);
+    const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(grossEmploymentIncome, inputs.dependents, incomeYear);
 
     const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;
 
@@ -498,6 +526,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         pensionOnBonus,
         employmentInsuranceOnBonus,
         netEmploymentIncome: hasEmploymentIncome ? netEmploymentIncome : undefined,
+        incomeAdjustmentDeduction,
         totalNetIncome: netIncome,
         nationalIncomeTaxBasicDeduction,
         taxableIncomeForNationalIncomeTax,

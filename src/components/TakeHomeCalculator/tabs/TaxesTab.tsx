@@ -22,7 +22,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
-import EmploymentIncomeDeductionTooltip from './EmploymentIncomeDeductionTooltip';
+import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
 
 interface TaxesTabProps {
@@ -160,32 +160,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Net Employment Income
-                <DetailedTooltip
-                  title="Employment Income Details"
-                >
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Calculation Breakdown
-                    </Typography>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
-                      <tbody>
-                        <tr>
-                          <td style={{ padding: '2px 0' }}>Gross Employment Income:</td>
-                          <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(grossEmploymentIncome)}</td>
-                        </tr>
-                        <tr>
-                          <td style={{ padding: '2px 0' }}>Employment Income Deduction:</td>
-                          <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(grossEmploymentIncome - results.netEmploymentIncome)}</Box>
-                        </tr>
-                        <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-                          <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
-                          <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(results.netEmploymentIncome)}</td>
-                        </Box>
-                      </tbody>
-                    </table>
-                    <EmploymentIncomeDeductionTooltip year={incomeYear} />
-                  </Box>
-                </DetailedTooltip>
+                <NetEmploymentIncomeTooltip
+                  grossEmploymentIncome={grossEmploymentIncome}
+                  netEmploymentIncome={results.netEmploymentIncome}
+                  incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
+                  year={incomeYear}
+                />
               </span>
             }
             value={formatJPY(results.netEmploymentIncome)}
