@@ -2,7 +2,7 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-06-20
+## 2026-06-21
 
 ### Fixed
 
