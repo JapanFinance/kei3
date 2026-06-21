@@ -30,7 +30,8 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../ui/Tooltips';
+import { SimpleTooltip, DetailedTooltip } from '../ui/Tooltips';
+import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import { earliestEligibleMoveInYear, homeLoanCreditDistinguishesTokuteiShutoku } from '../../utils/homeLoanTaxCredit';
 
 interface AdditionalDeductionsModalProps {
@@ -231,15 +232,29 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
                       <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                        特定取得 (8% or 10% consumption tax was paid)
+                        特定取得 (purchase subject to consumption tax)
                       </Typography>
-                      <SimpleTooltip>
-                        Check this if 8% or 10% consumption tax was charged on the purchase — i.e. a new build,
-                        or a pre-owned home bought from a business. Uncheck it for a 非特定取得 purchase with no
-                        consumption tax, such as a pre-owned home bought from a private individual. For 2014–2021
-                        move-ins this changes the residence-tax spillover cap (特定取得 → 7% / ¥136,500;
-                        非特定取得 → 5% / ¥97,500). Most purchases are 特定取得.
-                      </SimpleTooltip>
+                      <DetailedTooltip title="特定取得" icon={SIMPLE_TOOLTIP_ICON}>
+                        <Box>
+                          <Typography variant="body2">
+                            Check this if consumption tax was charged on the purchase — i.e. a new build, or a
+                            pre-owned home bought from a business. Uncheck it for a 非特定取得 purchase with no
+                            consumption tax, such as a pre-owned home bought from a private individual. For 2014–2021
+                            move-ins this changes the residence-tax spillover cap (特定取得 → 7% / ¥136,500;
+                            非特定取得 → 5% / ¥97,500).
+                          </Typography>
+                          <Box sx={{ mt: 1 }}>
+                            <a
+                              href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/090929.html"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+                            >
+                              総務省: 個人住民税の住宅ローン控除
+                            </a>
+                          </Box>
+                        </Box>
+                      </DetailedTooltip>
                     </Box>
                   }
                 />
