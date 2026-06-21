@@ -133,7 +133,7 @@ const PortionBreakdown: React.FC<{
 
 export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, results, inputs }) => {
   const region = inputs.region;
-  const year = new Date().getFullYear();
+  const year = inputs.incomeYear;
   const prevFYData = getNHIParamsForMonth(region, year, 0);  // Jan → previous FY
   const currFYData = getNHIParamsForMonth(region, year, 3);  // Apr → current FY
 
@@ -308,7 +308,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
     // National Health Insurance - overview tooltip on the heading
-    const year = new Date().getFullYear();
+    const year = inputs.incomeYear;
     const prevFYData = getNHIParamsForMonth(region, year, 0);  // Jan → previous FY
     const currFYData = getNHIParamsForMonth(region, year, 3);  // Apr → current FY
     const regionData = currFYData;
@@ -386,7 +386,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       throw new Error('standardMonthlyRemuneration is required for the Employee Health Insurance tooltip');
     }
 
-    const year = new Date().getFullYear();
+    const year = inputs.incomeYear;
 
     if (provider === CUSTOM_PROVIDER_ID) {
       employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
@@ -394,9 +394,8 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       // For custom provider, we don't know the employer rate, so we leave it undefined.
       providerLabel = "Custom Provider";
     } else {
-      // Use the current month's rates for display
-      const now = new Date();
-      const regionalRates = getRegionalRatesForMonth(provider, region, now.getFullYear(), now.getMonth());
+      // Use a representative month of the income year (April = fiscal-year start) for the headline rate.
+      const regionalRates = getRegionalRatesForMonth(provider, region, year, 3);
       const providerDef = PROVIDER_DEFINITIONS[provider];
 
       if (regionalRates) {

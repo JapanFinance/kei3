@@ -1,15 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { calculateTaxes } from '../utils/taxCalculations';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
-
-// Pin the clock for any date-dependent defaults. Year-specific rates (insurance,
-// deductions) are driven by each input's incomeYear, not the clock.
-beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) })
-afterAll(() => { vi.useRealTimers() })
 
 describe('calculateFurusatoNozeiLimit', () => {
 

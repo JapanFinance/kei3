@@ -537,14 +537,14 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             label="Salary Premium"
             value={formatJPY((results.employmentInsurance ?? 0) - (results.employmentInsuranceOnBonus ?? 0))}
             type="indented"
-            labelSuffix={<SalaryBreakdownTooltip monthlyIncome={rawMonthlyRemuneration} />}
+            labelSuffix={<SalaryBreakdownTooltip monthlyIncome={rawMonthlyRemuneration} year={inputs.incomeYear} />}
           />
           {results.employmentInsuranceOnBonus !== undefined && results.employmentInsuranceOnBonus > 0 && (
             <ResultRow
               label="Bonus Premium"
               value={formatJPY(results.employmentInsuranceOnBonus)}
               type="indented"
-              labelSuffix={<BonusBreakdownTooltip bonuses={bonuses} />}
+              labelSuffix={<BonusBreakdownTooltip bonuses={bonuses} year={inputs.incomeYear} />}
             />
           )}
           <ResultRow
