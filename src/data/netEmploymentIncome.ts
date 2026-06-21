@@ -201,9 +201,9 @@ export const calculateNetEmploymentIncomeForPeriod = (
 };
 
 /** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). */
-const INCOME_ADJUSTMENT_SALARY_THRESHOLD = 8_500_000;
+const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
 /** 給与等の収入金額 is capped here in the formula, yielding a maximum deduction of ¥150,000. */
-const INCOME_ADJUSTMENT_SALARY_CAP = 10_000_000;
+const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
 
 /**
  * 所得金額調整控除（子ども・特別障害者等を有する者等）— the income amount adjustment deduction.
@@ -234,8 +234,8 @@ const INCOME_ADJUSTMENT_SALARY_CAP = 10_000_000;
  * @returns The adjustment amount in yen (0 when salary ≤ ¥8,500,000)
  */
 export const calculateIncomeAdjustmentDeductionAmount = (grossEmploymentIncome: number): number => {
-    if (grossEmploymentIncome <= INCOME_ADJUSTMENT_SALARY_THRESHOLD) return 0;
-    const cappedSalary = Math.min(grossEmploymentIncome, INCOME_ADJUSTMENT_SALARY_CAP);
+    if (grossEmploymentIncome <= INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD) return 0;
+    const cappedEmploymentIncome = Math.min(grossEmploymentIncome, INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP);
     // Divide by 10 (rather than × 0.1) to avoid binary floating-point error before rounding up.
-    return Math.ceil((cappedSalary - INCOME_ADJUSTMENT_SALARY_THRESHOLD) / 10);
+    return Math.ceil((cappedEmploymentIncome - INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD) / 10);
 };
