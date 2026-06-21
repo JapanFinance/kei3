@@ -155,10 +155,10 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
                         Income Amount Adjustment Deduction (所得金額調整控除)
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                        Because your employment income exceeds ¥8,500,000 and you have a qualifying dependent
-                        (a dependent relative under 23, or a spouse/dependent with special disability status), a further deduction is
-                        subtracted from your employment income: 10% of your gross salary less ¥8,500,000,
-                        up to ¥150,000.
+                        Taxpayers with employment income exceeding ¥8,500,000 and who have a qualifying dependent
+                        (a dependent relative under 23, or a spouse/dependent with special disability status) 
+                        are eligible for this deduction. It reduces net employment income by 
+                        10% of gross employment income less ¥8,500,000, up to ¥150,000.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                         <strong>Rounding:</strong> Fractional yen amounts are rounded up.
