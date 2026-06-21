@@ -44,8 +44,8 @@ export function earliestEligibleMoveInYear(taxYear: number): number {
 }
 
 /**
- * Whether the 特定取得 / 非特定取得 distinction changes the residence-tax spillover cap for the
- * given move-in year — true only for cohorts that carry a separate 非特定取得 cap (the 2014–2021
+ * Whether the 特定取得 / non-特定取得 distinction changes the residence-tax spillover cap for the
+ * given move-in year — true only for cohorts that carry a separate non-特定取得 cap (the 2014–2021
  * band). The UI uses this to show the 特定取得 checkbox only for move-in years where it matters.
  */
 export function homeLoanCreditDistinguishesTokuteiShutoku(moveInYear: number): boolean {
@@ -101,10 +101,10 @@ export function applyHomeLoanTaxCredit(
     const appliedToIncomeTax = Math.min(availableCredit, Math.max(0, baseIncomeTax));
     const spilloverEligible = availableCredit - appliedToIncomeTax;
 
-    // Pick the spillover cap variant. The 2014–2021 band carries a lower 非特定取得 cap
+    // Pick the spillover cap variant. The 2014–2021 band carries a lower non-特定取得 cap
     // (5%/¥97,500) alongside its 特定取得 cap (7%/¥136,500); we use it only when the input is
-    // explicitly 非特定取得 AND the band distinguishes them. Omitting the flag means 特定取得
-    // (matching the original behavior); other bands have no 非特定取得 variant, so the flag is moot.
+    // explicitly non-特定取得 AND the band distinguishes them. Omitting the flag means 特定取得
+    // (matching the original behavior); other bands have no non-特定取得 variant, so the flag is moot.
     const spillover = input.isTokuteiShutoku === false && cohort.spilloverNonTokuteiShutoku
         ? cohort.spilloverNonTokuteiShutoku
         : cohort.spillover;

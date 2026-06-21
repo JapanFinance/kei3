@@ -19,8 +19,8 @@ describe('getHomeLoanTaxCreditCohort', () => {
         expect(band.spillover).toEqual({ flatCap: 97_500, taxableIncomeRate: 0.05 });
     });
 
-    it('returns the 2014-2021 band with both 特定取得 (7% / ¥136,500) and 非特定取得 (5% / ¥97,500) caps', () => {
-        // 特定取得 (home acquired under the 8%/10% consumption tax) → 7% / ¥136,500. A 非特定取得
+    it('returns the 2014-2021 band with both 特定取得 (7% / ¥136,500) and non-特定取得 (5% / ¥97,500) caps', () => {
+        // 特定取得 (home acquired under the 8%/10% consumption tax) → 7% / ¥136,500. A non-特定取得
         // purchase (e.g. a pre-owned home bought from a private individual) → 5% / ¥97,500.
         expect(getHomeLoanTaxCreditCohort(2014)?.moveInYearFrom).toBe(2014);
         expect(getHomeLoanTaxCreditCohort(2021)?.moveInYearFrom).toBe(2014);
@@ -30,7 +30,7 @@ describe('getHomeLoanTaxCreditCohort', () => {
         expect(band.spilloverNonTokuteiShutoku).toEqual({ flatCap: 97_500, taxableIncomeRate: 0.05 });
     });
 
-    it('does not carry a 非特定取得 cap for the 2022+ band (5% / ¥97,500 applies regardless)', () => {
+    it('does not carry a non-特定取得 cap for the 2022+ band (5% / ¥97,500 applies regardless)', () => {
         expect(getHomeLoanTaxCreditCohort(2024)?.spilloverNonTokuteiShutoku).toBeUndefined();
     });
 
@@ -115,8 +115,8 @@ describe('applyHomeLoanTaxCredit', () => {
         expect(result.residenceTaxSpilloverCap).toEqual({ applied: 70_000, flatCap: 136_500, incomeRateCap: 70_000 });
     });
 
-    it('uses the lower 5% / ¥97,500 cap for a 非特定取得 2014-2021 move-in', () => {
-        // Same inputs as the 特定取得 flat-cap test above, but 非特定取得: the flat cap drops to
+    it('uses the lower 5% / ¥97,500 cap for a non-特定取得 2014-2021 move-in', () => {
+        // Same inputs as the 特定取得 flat-cap test above, but non-特定取得: the flat cap drops to
         // ¥97,500 (7% × 3M and 5% × 3M both exceed their flat caps, so the flat cap binds either way).
         const result = applyHomeLoanTaxCredit(
             { moveInYear: 2018, creditAmount: 400_000, isTokuteiShutoku: false },
@@ -125,12 +125,12 @@ describe('applyHomeLoanTaxCredit', () => {
             3_000_000,
         );
         expect(result.appliedToIncomeTax).toBe(202_500);
-        expect(result.appliedToResidenceTax).toBe(97_500); // 非特定取得 flat cap, not ¥136,500
+        expect(result.appliedToResidenceTax).toBe(97_500); // non-特定取得 flat cap, not ¥136,500
         expect(result.unusedCredit).toBe(100_000); // 400,000 - 202,500 - 97,500
         expect(result.residenceTaxSpilloverCap?.flatCap).toBe(97_500);
     });
 
-    it('caps the 非特定取得 spillover at 課税総所得金額 × 5% when below the ¥97,500 flat cap', () => {
+    it('caps the non-特定取得 spillover at 課税総所得金額 × 5% when below the ¥97,500 flat cap', () => {
         // taxableTotalIncome 1M → 5% × 1M = 50,000 < the ¥97,500 flat cap, so the rate cap binds
         // (vs. 7% × 1M = 70,000 for 特定取得 — the lower rate produces a smaller cap).
         const result = applyHomeLoanTaxCredit(
@@ -151,7 +151,7 @@ describe('applyHomeLoanTaxCredit', () => {
         expect(defaulted.appliedToResidenceTax).toBe(136_500);
     });
 
-    it('ignores isTokuteiShutoku for the 2022+ band (no 非特定取得 variant — 5% / ¥97,500 either way)', () => {
+    it('ignores isTokuteiShutoku for the 2022+ band (no non-特定取得 variant — 5% / ¥97,500 either way)', () => {
         const tokutei = applyHomeLoanTaxCredit({ moveInYear: 2024, creditAmount: 350_000, isTokuteiShutoku: true }, 4_000_000, 202_500, 3_000_000);
         const nonTokutei = applyHomeLoanTaxCredit({ moveInYear: 2024, creditAmount: 350_000, isTokuteiShutoku: false }, 4_000_000, 202_500, 3_000_000);
         expect(tokutei.appliedToResidenceTax).toBe(97_500);

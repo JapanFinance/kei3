@@ -236,10 +236,10 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                         <Box>
                           <Typography variant="body2">
                             Check this if consumption tax was charged on the purchase — i.e. a new build, or a
-                            pre-owned home bought from a business. Uncheck it for a 非特定取得 purchase with no
+                            pre-owned home bought from a business. Uncheck it for a non-特定取得 purchase with no
                             consumption tax, such as a pre-owned home bought from a private individual. For 2014–2021
                             move-ins this changes the residence-tax spillover cap (特定取得 → 7% / ¥136,500;
-                            非特定取得 → 5% / ¥97,500).
+                            non-特定取得 → 5% / ¥97,500).
                           </Typography>
                           <Box sx={{ mt: 1 }}>
                             <a

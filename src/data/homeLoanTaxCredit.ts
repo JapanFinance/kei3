@@ -61,9 +61,9 @@ export interface HomeLoanTaxCreditCohort {
      */
     spillover: ResidenceTaxSpilloverCap;
     /**
-     * Residence-tax spillover cap for a 非特定取得 purchase — one with no 8%/10% consumption
+     * Residence-tax spillover cap for a non-特定取得 purchase — one with no 8%/10% consumption
      * tax, e.g. a pre-owned home bought from a private individual. Present only on the
-     * 2014–2021 band, where 特定取得 raised the cap to 7%/¥136,500 while a 非特定取得 purchase
+     * 2014–2021 band, where 特定取得 raised the cap to 7%/¥136,500 while a non-特定取得 purchase
      * keeps the baseline 5%/¥97,500. Omitted on bands where the distinction is moot (2022+
      * already uses 5%/¥97,500 for everyone); when omitted, applyHomeLoanTaxCredit uses
      * `spillover` regardless of the 特定取得 flag.
@@ -85,13 +85,13 @@ export const HOME_LOAN_TAX_CREDIT_COHORTS: ReadonlyArray<HomeLoanTaxCreditCohort
     },
     // 2014-2021: the 特定取得 distinction applies. A 特定取得 (home acquired under the 8%/10%
     // consumption tax — e.g. a new build or a pre-owned home bought from a business) raises the
-    // spillover cap to 7% / ¥136,500; a 非特定取得 (no consumption tax, e.g. a pre-owned home
+    // spillover cap to 7% / ¥136,500; a non-特定取得 (no consumption tax, e.g. a pre-owned home
     // bought from a private individual) keeps the baseline 5% / ¥97,500. The input's 特定取得 flag
     // selects between them (default 特定取得). Income limit 30M. Move-ins before 2014 are not
     // supported (the UI offers move-ins from ~10 years ago onward; older credits have expired).
     //
     // The 8% consumption tax took effect 2014/4/1, so a 特定取得 is only possible from then on;
-    // a 2014/1/1–3/31 move-in is always 非特定取得. The move-in-year dropdown floor is ~10 years
+    // a 2014/1/1–3/31 move-in is always non-特定取得. The move-in-year dropdown floor is ~10 years
     // back (2017 for a 2026 calc), so those early-2014 move-ins are already past every credit
     // period and never reach this band in practice — we don't model that sub-year boundary.
     {
