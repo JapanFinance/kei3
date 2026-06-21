@@ -128,13 +128,12 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0)
     expect(result.residenceTax.totalResidenceTax).toBe(13_200)
-    expect(result.healthInsurance).toBe(74_916)
+    expect(result.healthInsurance).toBe(75_734)
     expect(result.pensionPayments).toBe(138_348)
-    // 1,500,000 / 12 = 125,000 per month
-    // 125,000 * 0.55% = 687.5 per month → 687 yen (exactly 0.5 yen → round down)
-    // 687 * 12 = 8,244 yen annually
-    expect(result.employmentInsurance).toBe(8_244)
-    expect(result.takeHomeIncome).toBe(1_265_292)
+    // Employment insurance for calendar 2026 blends fiscal-year rates per month:
+    // Jan–Mar at FY2025 (5.5‰), Apr–Dec at FY2026 (5.0‰).
+    expect(result.employmentInsurance).toBe(7_686)
+    expect(result.takeHomeIncome).toBe(1_265_032)
   })
 
   it('calculates taxes correctly for income between 1,950,000 and 3,300,000 yen', () => {
@@ -149,13 +148,12 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(14_100)
     expect(result.residenceTax.totalResidenceTax).toBe(91_100)
-    expect(result.healthInsurance).toBe(118_920)
+    expect(result.healthInsurance).toBe(120_220)
     expect(result.pensionPayments).toBe(219_600)
-    // 2,500,000 / 12 ≈ 208,333.33 per month
-    // 208,333.33 * 0.55% ≈ 1,145.83 per month → 1,146 yen (round up)
-    // 1,146 * 12 = 13,752 yen annually
-    expect(result.employmentInsurance).toBe(13_752)
-    expect(result.takeHomeIncome).toBe(2_042_528)
+    // Employment insurance for calendar 2026 blends fiscal-year rates per month:
+    // Jan–Mar at FY2025 (5.5‰), Apr–Dec at FY2026 (5.0‰).
+    expect(result.employmentInsurance).toBe(12_816)
+    expect(result.takeHomeIncome).toBe(2_042_164)
   })
 
   it('calculates taxes correctly for income between 3,300,000 and 6,950,000 yen', () => {
@@ -169,14 +167,13 @@ describe('calculateTaxes', () => {
     };
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(91_700)
-    expect(result.residenceTax.totalResidenceTax).toBe(243_200)
-    expect(result.healthInsurance).toBe(243_780) // 410k * 4.955% = 20,315.5 -> 20,315 * 12
+    expect(result.residenceTax.totalResidenceTax).toBe(243_100)
+    expect(result.healthInsurance).toBe(246_449) // 410k SMR at the FY2026 employee rate
     expect(result.pensionPayments).toBe(450_180)
-    // 5,000,000 / 12 ≈ 416,666.67 per month
-    // 416,666.67 * 0.55% ≈ 2,291.67 per month → 2,292 yen (round up)
-    // 2,292 * 12 = 27,504 yen annually
-    expect(result.employmentInsurance).toBe(27_504)
-    expect(result.takeHomeIncome).toBe(3_943_636)
+    // Employment insurance for calendar 2026 blends fiscal-year rates per month:
+    // Jan–Mar at FY2025 (5.5‰), Apr–Dec at FY2026 (5.0‰).
+    expect(result.employmentInsurance).toBe(25_623)
+    expect(result.takeHomeIncome).toBe(3_942_948)
   })
 
   // Test cases for high income brackets
@@ -190,15 +187,14 @@ describe('calculateTaxes', () => {
       incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
-    expect(result.nationalIncomeTax).toBe(16_345_400) // 50M - 1.95M (employment deduction) - 1.815192M (social insurance) - 0 (basic deduction, income > 25M)
-    expect(result.residenceTax.totalResidenceTax).toBe(4_628_300)
-    expect(result.healthInsurance).toBe(826_488) // Capped at 68,874.5 -> 68,874 * 12
+    expect(result.nationalIncomeTax).toBe(16_350_000) // 50M − 1.95M employment deduction − social insurance − 0 basic deduction (income > 25M)
+    expect(result.residenceTax.totalResidenceTax).toBe(4_629_300)
+    expect(result.healthInsurance).toBe(835_527) // Capped at the FY2026 max monthly premium × 12
     expect(result.pensionPayments).toBe(713_700) // Capped at 59,475 * 12
-    // 50,000,000 / 12 ≈ 4,166,666.67 per month
-    // 4,166,666.67 * 0.55% = 22,916.67 per month → 22,917 yen (round up)
-    // 22,917 * 12 = 275,004 yen annually
-    expect(result.employmentInsurance).toBe(275_004)
-    expect(result.takeHomeIncome).toBe(27_211_108)
+    // Employment insurance for calendar 2026 blends fiscal-year rates per month:
+    // Jan–Mar at FY2025 (5.5‰), Apr–Dec at FY2026 (5.0‰).
+    expect(result.employmentInsurance).toBe(256_248)
+    expect(result.takeHomeIncome).toBe(27_215_225)
   })
 
   // Test edge cases
@@ -248,12 +244,12 @@ describe('calculateTaxes', () => {
       incomeYear: 2026,
     };
     const result = calculateTaxes(inputs);
-    expect(result.nationalIncomeTax).toBe(293_700)
-    expect(result.residenceTax.totalResidenceTax).toBe(384_000)
-    expect(result.healthInsurance).toBe(539_380)
+    expect(result.nationalIncomeTax).toBe(292_100)
+    expect(result.residenceTax.totalResidenceTax).toBe(383_200)
+    expect(result.healthInsurance).toBe(547_219)
     expect(result.pensionPayments).toBe(213_810)
     expect(result.employmentInsurance).toBe(0)
-    expect(result.takeHomeIncome).toBe(3_569_110)
+    expect(result.takeHomeIncome).toBe(3_563_671)
   })
 
   it('calculates taxes correctly for employment income with NHI', () => {
@@ -270,23 +266,23 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
 
     // Should pay employment insurance (since it's employment income)
-    expect(result.employmentInsurance).toBe(27_504);
+    expect(result.employmentInsurance).toBe(25_623);
 
     // Should pay NHI premiums (not employee health insurance)
     // NHI should be calculated on net employment income (3,560,000) not gross (5,000,000)
-    expect(result.healthInsurance).toBe(389_620)
+    expect(result.healthInsurance).toBe(395_645)
 
     // Should pay national pension (not employee pension, since they're on NHI)
     expect(result.pensionPayments).toBe(213_810)
 
     // Tax calculations should use employment income deduction
     expect(result.netEmploymentIncome).toBe(3_560_000)
-    expect(result.nationalIncomeTax).toBe(96_400)
-    expect(result.residenceTax.totalResidenceTax).toBe(252_300)
+    expect(result.nationalIncomeTax).toBe(96_100)
+    expect(result.residenceTax.totalResidenceTax).toBe(251_800)
 
     // Total take-home should reflect employment income with NHI and National Pension
     // NHI calculated on net employment income results in lower premiums and higher take-home
-    expect(result.takeHomeIncome).toBe(4_020_366)
+    expect(result.takeHomeIncome).toBe(4_017_022)
   })
 
   it('calculates taxes correctly with DC plan contributions', () => {
@@ -322,7 +318,7 @@ describe('calculateTaxes', () => {
 
     // With 240,000 yen contribution at ~5% marginal tax rate (basic deduction increase reduces taxable income into lower bracket)
     // and around 24,000 yen in residence tax savings (10% rate)
-    expect(incomeTaxSavings).equals(12_200);
+    expect(incomeTaxSavings).equals(12_300);
     expect(residenceTaxSavings).equals(24_000);
   });
 
@@ -647,16 +643,14 @@ describe('calculateTaxes with Dependent Coverage', () => {
     expect(result.healthInsurance).toBe(0)
     expect(result.pensionPayments).toBe(0)
 
-    // Employment insurance should still be calculated
-    // 1,000,000 / 12 = 83,333.33 per month
-    // 83,333.33 * 0.55% = 458.33 per month → 458 yen (round down)
-    // 458 * 12 = 5,496 yen annually
-    expect(result.employmentInsurance).toBe(5_496)
+    // Employment insurance is still calculated (FY-blended across calendar 2026:
+    // Jan–Mar at FY2025 5.5‰, Apr–Dec at FY2026 5.0‰).
+    expect(result.employmentInsurance).toBe(5_127)
 
     // Income tax and residence tax should still be calculated normally
     // Net income: 1,000,000 - 740,000 = 260,000 (R8 minimum deduction)
-    // Social insurance deduction: 0 + 0 + 5,496 = 5,496
-    // Taxable income: 260,000 - 5,496 - 1,040,000 = negative, so 0
+    // Social insurance deduction: 0 + 0 + 5,127 = 5,127
+    // Taxable income: 260,000 - 5,127 - 1,040,000 = negative, so 0
     expect(result.nationalIncomeTax).toBe(0)
   })
 
@@ -678,11 +672,9 @@ describe('calculateTaxes with Dependent Coverage', () => {
     expect(result.healthInsurance).toBe(0)
     expect(result.pensionPayments).toBe(0)
 
-    // Employment insurance should still be calculated
-    // 1,299,999 / 12 = 108,333.25 per month
-    // 108,333.25 * 0.55% = 595.83 per month → 596 yen (round up)
-    // 596 * 12 = 7,152 yen annually
-    expect(result.employmentInsurance).toBe(7_152)
+    // Employment insurance is still calculated (FY-blended across calendar 2026:
+    // Jan–Mar at FY2025 5.5‰, Apr–Dec at FY2026 5.0‰).
+    expect(result.employmentInsurance).toBe(6_666)
   })
 
   it('calculates taxes correctly with dependent coverage and long-term care premium eligibility', () => {
@@ -1063,8 +1055,8 @@ describe('RSU (Restricted Stock Unit) income', () => {
     expect(result.pensionPayments).toBeLessThan(300_000);
 
     // 6. Employment insurance should be based on salary only
-    // 3M / 12 * 0.55% * 12 ≈ 16.5k
-    expect(result.employmentInsurance).toBe(16_500);
+    // 3M salary base, FY-blended 2026 employment insurance (≈ 15.4k)
+    expect(result.employmentInsurance).toBe(15_375);
 
     // 7. Income tax should be applied to full net income
     expect(result.nationalIncomeTax).toBeGreaterThan(0);

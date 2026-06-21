@@ -6,7 +6,8 @@ import { calculateTaxes } from '../utils/taxCalculations';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
 
-// Pin the year so employment insurance rate lookups are deterministic.
+// Pin the clock for any date-dependent defaults. Year-specific rates (insurance,
+// deductions) are driven by each input's incomeYear, not the clock.
 beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) })
 afterAll(() => { vi.useRealTimers() })
 
@@ -23,24 +24,24 @@ describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the salary with lower out-of-pocket cost', () => {
     const fn = calculateFNForIncome(6_000_000);
     expect(fn.limit).toBe(77_000);
-    expect(fn.outOfPocketCost).toBe(1_900);
+    expect(fn.outOfPocketCost).toBe(2_100);
     expect(fn.incomeTaxReduction).toBe(7_600);
-    expect(fn.residenceTaxReduction).toBe(67_500);
+    expect(fn.residenceTaxReduction).toBe(67_300);
   });
 
   it('calculates furusato nozei for the salary with slightly higher out-of-pocket cost', () => {
     const fn = calculateFNForIncome(8_800_000);
     expect(fn.limit).toBe(151_000);
-    expect(fn.outOfPocketCost).toBe(2_000);
+    expect(fn.outOfPocketCost).toBe(1_800);
     expect(fn.incomeTaxReduction).toBe(30_500);
-    expect(fn.residenceTaxReduction).toBe(118_500);
+    expect(fn.residenceTaxReduction).toBe(118_700);
   });
 
   it('high-income salary, high out-of-pocket cost', () => {
     const fn = calculateFNForIncome(13_000_000);
-    expect(fn.outOfPocketCost).toBe(35_200);
+    expect(fn.outOfPocketCost).toBe(35_100);
     expect(fn.limit).toBe(327_000);
-    expect(fn.incomeTaxReduction).toBe(76_300);
+    expect(fn.incomeTaxReduction).toBe(76_400);
     expect(fn.residenceTaxReduction).toBe(215_500);
   });
 
