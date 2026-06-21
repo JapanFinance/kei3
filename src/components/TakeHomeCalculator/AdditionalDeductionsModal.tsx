@@ -230,10 +230,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     />
                   }
                   label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                        特定取得 (purchase subject to consumption tax)
-                      </Typography>
+                    <Typography variant="body2" component="span" sx={{ fontSize: '0.85rem' }}>
+                      Purchase subject to consumption tax? (特定取得)
                       <DetailedTooltip title="特定取得" icon={SIMPLE_TOOLTIP_ICON}>
                         <Box>
                           <Typography variant="body2">
@@ -255,7 +253,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                           </Box>
                         </Box>
                       </DetailedTooltip>
-                    </Box>
+                    </Typography>
                   }
                 />
               )}
