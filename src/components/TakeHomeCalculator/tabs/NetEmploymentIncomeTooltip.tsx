@@ -156,9 +156,12 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                         Because your employment income exceeds ¥8,500,000 and you have a qualifying dependent
-                        (a relative under 23, or a specially-disabled spouse/dependent), a further deduction is
+                        (a dependent relative under 23, or a spouse/dependent with special disability status), a further deduction is
                         subtracted from your employment income: 10% of your gross salary less ¥8,500,000,
-                        up to ¥150,000. This lowers your total net income (合計所得金額).
+                        up to ¥150,000.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Rounding:</strong> Fractional yen amounts are rounded up.
                     </Typography>
                     <Box sx={{ mt: 1 }}>
                         Official Source:
