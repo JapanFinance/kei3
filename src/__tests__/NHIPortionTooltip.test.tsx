@@ -15,7 +15,7 @@ import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails, FurusatoNoze
  */
 function buildNHIScenario(annualIncome: number, region: string, includeLTC: boolean) {
     const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-        annualIncome, includeLTC, region, 2026
+        annualIncome, includeLTC, 2026, region
     );
 
     const results: TakeHomeResults = {

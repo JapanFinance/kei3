@@ -391,10 +391,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
                 netIncome,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.healthInsuranceProvider,
-                inputs.region,
-                undefined,
-                [],
-                incomeYear
+                incomeYear,
+                inputs.region
             );
             healthInsurance = hiResult.total;
             healthInsuranceOnBonus = hiResult.bonusPortion;
@@ -403,8 +401,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
                 netIncome,
                 inputs.isSubjectToLongTermCarePremium,
-                inputs.region as string,
-                incomeYear
+                incomeYear,
+                inputs.region as string
             );
         } else { // Employee Health Insurance
             // For Employee Health Insurance, the premiums are based on standard monthly remuneration,
@@ -413,13 +411,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
                 salaryIncome + commutingAllowance,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.healthInsuranceProvider,
+                incomeYear,
                 inputs.region,
                 inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates ? {
                     healthRate: inputs.customEHIRates.healthInsuranceRate,
                     ltcRate: inputs.customEHIRates.longTermCareRate
                 } : undefined,
-                bonusIncome,
-                incomeYear
+                bonusIncome
             );
             healthInsurance = hiResult.total;
             healthInsuranceOnBonus = hiResult.bonusPortion;

@@ -27,8 +27,8 @@ export interface CapStatus {
  */
 export function detectCaps(
   results: TakeHomeResults,
-  healthInsuranceBonusBreakdown: EmployeesHealthInsuranceBonusBreakdownItem[] | undefined = undefined,
-  year: number
+  year: number,
+  healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[]
 ): CapStatus {
   // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
   // instead of total annual income which might include business/misc income or bonuses.
@@ -184,7 +184,9 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
       };
       premiumTable = generatePremiumTableFromRates(customRates);
     } else {
-      premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.region);
+      // Month is immaterial here — cap detection reads the (year-invariant) SMR bracket structure,
+      // not the premium values — so April (fiscal-year start) stands in for the income year.
+      premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.region, year, 3);
     }
 
     if (!premiumTable || premiumTable.length === 0) {

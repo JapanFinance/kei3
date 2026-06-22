@@ -35,10 +35,10 @@ export function calculateHealthInsuranceBreakdown(
     annualIncome: number,
     isSubjectToLongTermCarePremium: boolean,
     provider: HealthInsuranceProviderId,
+    year: number,
     region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-    customRates: { healthRate: number, ltcRate: number } | undefined = undefined,
-    bonuses: BonusIncomeStream[] = [],
-    year: number
+    customRates?: { healthRate: number, ltcRate: number },
+    bonuses: BonusIncomeStream[] = []
 ): HealthInsuranceBreakdown {
     if (annualIncome < 0) {
         throw new Error('Income cannot be negative.');
@@ -51,7 +51,7 @@ export function calculateHealthInsuranceBreakdown(
 
     if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
         // For NHI, bonuses are part of the total net income.
-        const total = calculateNationalHealthInsurancePremiumWithBreakdown(annualIncome, isSubjectToLongTermCarePremium, region, year).total;
+        const total = calculateNationalHealthInsurancePremiumWithBreakdown(annualIncome, isSubjectToLongTermCarePremium, year, region).total;
         return { total, bonusPortion: 0 };
     } else {
         const monthlyIncome = annualIncome / 12;
@@ -88,7 +88,6 @@ export function calculateHealthInsuranceBreakdown(
                     bonuses,
                     staticRates,
                     isSubjectToLongTermCarePremium,
-                    undefined,
                     year
                 );
                 bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
@@ -118,8 +117,8 @@ export function calculateHealthInsuranceBreakdown(
                 bonuses,
                 provider,
                 region,
-                isSubjectToLongTermCarePremium,
-                year
+                year,
+                isSubjectToLongTermCarePremium
             );
 
             bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
@@ -159,8 +158,8 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
     bonuses: BonusIncomeStream[],
     providerOrRates: string | { employeeHealthInsuranceRate: number, employeeLongTermCareRate: number },
     regionOrLTC: string | boolean,
-    isSubjectToLongTermCarePremium: boolean | undefined = undefined,
-    year: number
+    year: number,
+    isSubjectToLongTermCarePremium?: boolean
 ): EmployeesHealthInsuranceBonusBreakdownItem[] {
     // Determine whether we're using time-series lookup or static rates
     const useTimeSeries = typeof providerOrRates === 'string';
@@ -236,19 +235,19 @@ export function calculateHealthInsurancePremium(
     annualIncome: number,
     isSubjectToLongTermCarePremium: boolean,
     provider: HealthInsuranceProviderId,
+    year: number,
     region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-    customRates: { healthRate: number, ltcRate: number } | undefined = undefined,
-    bonuses: BonusIncomeStream[] = [],
-    year: number
+    customRates?: { healthRate: number, ltcRate: number },
+    bonuses: BonusIncomeStream[] = []
 ): number {
     return calculateHealthInsuranceBreakdown(
         annualIncome,
         isSubjectToLongTermCarePremium,
         provider,
+        year,
         region,
         customRates,
-        bonuses,
-        year
+        bonuses
     ).total;
 }
 
@@ -323,8 +322,8 @@ function calculateNationalHealthInsurancePremiumBreakdown(
 export function calculateNationalHealthInsurancePremiumWithBreakdown(
     annualIncome: number,
     isSubjectToLongTermCarePremium: boolean,
-    region: string | undefined = undefined,
-    year: number
+    year: number,
+    region?: string
 ): NationalHealthInsuranceBreakdown {
     const regionKey = region as string;
 

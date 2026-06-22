@@ -15,9 +15,9 @@ const calculateEmploymentInsurance = (
 ) => calculateEmploymentInsuranceForYear(salaryIncome, bonuses, year);
 type HIBreakdownArgs = Parameters<typeof calculateHealthInsuranceBreakdownForYear>;
 const calculateHealthInsuranceBreakdown = (
-  income: HIBreakdownArgs[0], ltc: HIBreakdownArgs[1], provider: HIBreakdownArgs[2], region?: HIBreakdownArgs[3],
-  customRates?: HIBreakdownArgs[4], bonuses?: HIBreakdownArgs[5], year: number = TEST_INCOME_YEAR,
-) => calculateHealthInsuranceBreakdownForYear(income, ltc, provider, region, customRates, bonuses, year);
+  income: HIBreakdownArgs[0], ltc: HIBreakdownArgs[1], provider: HIBreakdownArgs[2], region?: HIBreakdownArgs[4],
+  customRates?: HIBreakdownArgs[5], bonuses?: HIBreakdownArgs[6], year: number = TEST_INCOME_YEAR,
+) => calculateHealthInsuranceBreakdownForYear(income, ltc, provider, year, region, customRates, bonuses);
 type PenBreakdownArgs = Parameters<typeof calculatePensionBreakdownForYear>;
 const calculatePensionBreakdown = (
   isEmployeesPension?: PenBreakdownArgs[0], monthlyIncome?: PenBreakdownArgs[1], isHalfAmount?: PenBreakdownArgs[2],

@@ -13,8 +13,8 @@ import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../utils/health
 const TEST_INCOME_YEAR = 2026;
 const detectCaps = (
   results: Parameters<typeof detectCapsForYear>[0],
-  healthInsuranceBonusBreakdown?: Parameters<typeof detectCapsForYear>[1], year: number = TEST_INCOME_YEAR,
-) => detectCapsForYear(results, healthInsuranceBonusBreakdown, year);
+  healthInsuranceBonusBreakdown?: Parameters<typeof detectCapsForYear>[2], year: number = TEST_INCOME_YEAR,
+) => detectCapsForYear(results, year, healthInsuranceBonusBreakdown);
 
 // Mock TakeHomeResults with necessary fields
 const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults => ({
@@ -156,7 +156,7 @@ describe('NHI cap detection with real calculator output', () => {
     it('detects all NHI portion caps at very high income (Chiyoda, no LTC)', () => {
         const region = 'Tokyo-Chiyoda';
         const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            50_000_000, false, region, 2026
+            50_000_000, false, 2026, region
         );
 
         const results = createMockResults({
@@ -180,7 +180,7 @@ describe('NHI cap detection with real calculator output', () => {
     it('detects all NHI portion caps at very high income (Chiyoda, with LTC)', () => {
         const region = 'Tokyo-Chiyoda';
         const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            50_000_000, true, region, 2026
+            50_000_000, true, 2026, region
         );
 
         const results = createMockResults({
@@ -205,7 +205,7 @@ describe('NHI cap detection with real calculator output', () => {
     it('does not flag caps at moderate income (Chiyoda)', () => {
         const region = 'Tokyo-Chiyoda';
         const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            5_000_000, false, region, 2026
+            5_000_000, false, 2026, region
         );
 
         const results = createMockResults({

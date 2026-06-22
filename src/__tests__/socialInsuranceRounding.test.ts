@@ -41,7 +41,6 @@ describe('Social Insurance Rounding', () => {
                 bonuses,
                 regionalRates,
                 false,
-                undefined,
                 2026
             );
 
@@ -64,7 +63,6 @@ describe('Social Insurance Rounding', () => {
                 bonuses,
                 regionalRates,
                 true,
-                undefined,
                 2026
             );
 
