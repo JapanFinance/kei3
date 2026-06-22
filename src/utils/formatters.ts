@@ -53,10 +53,14 @@ export const formatPercent = (rate: number, decimals: number = 3) => {
 
 /**
  * Format a zero-based month index (0 = January) as its short English name.
- * Uses a fixed safe day so it never depends on the current date — seeding
- * from `new Date()` can roll over to the next month when today's day-of-month
- * exceeds the target month's length (e.g. the 31st pointing at February).
- * @param monthIndex Zero-based month index (0 = January, 11 = December).
+ *
+ * @param monthIndex - Zero-based month index (0 = January, 11 = December).
+ *
+ * @remarks
+ * Builds the date with a fixed safe day (the 1st) so the result never depends
+ * on the current date. Seeding from `new Date()` and calling `setMonth` can
+ * roll into the next month when today's day-of-month exceeds the target
+ * month's length (e.g. the 31st with February), so avoid that pattern here.
  */
 export const formatMonthShort = (monthIndex: number): string =>
   new Date(2000, monthIndex, 1).toLocaleString('en', { month: 'short' });
