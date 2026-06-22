@@ -1,17 +1,31 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
-import { calculateHealthInsurancePremium, calculateHealthInsuranceBreakdown, calculateEmployeesHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator'
+import { describe, it, expect } from 'vitest'
+import {
+  calculateHealthInsurancePremium as calculateHealthInsurancePremiumForYear,
+  calculateHealthInsuranceBreakdown as calculateHealthInsuranceBreakdownForYear,
+  calculateEmployeesHealthInsuranceBonusBreakdown as calculateEmployeesHealthInsuranceBonusBreakdownForYear,
+} from '../utils/healthInsuranceCalculator'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, CUSTOM_PROVIDER_ID } from '../types/healthInsurance'
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
 const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
 
-// Pin to June 2025 — well within FY2025 rate period for all providers.
-// This ensures rate lookups are deterministic regardless of when tests run.
-beforeAll(() => { vi.useFakeTimers({ now: new Date(2025, 5, 1) }) });
-afterAll(() => { vi.useRealTimers() });
+// Most cases here assert FY2025 rates. These thin wrappers default the income year to FY2025
+// (a fake clock used to pin it) so rate lookups don't depend on the run date, while still
+// honoring an explicit year where a case passes one (e.g. the FY2026 time-series tests). The
+// wrappers keep the originals' signatures, so call sites stay unchanged.
+const FY2025 = 2025;
+const calculateHealthInsurancePremium: typeof calculateHealthInsurancePremiumForYear =
+  (income, ltc, provider, region, customRates, bonuses, year) =>
+    calculateHealthInsurancePremiumForYear(income, ltc, provider, region, customRates, bonuses, year ?? FY2025);
+const calculateHealthInsuranceBreakdown: typeof calculateHealthInsuranceBreakdownForYear =
+  (income, ltc, provider, region, customRates, bonuses, year) =>
+    calculateHealthInsuranceBreakdownForYear(income, ltc, provider, region, customRates, bonuses, year ?? FY2025);
+const calculateEmployeesHealthInsuranceBonusBreakdown: typeof calculateEmployeesHealthInsuranceBonusBreakdownForYear =
+  (bonuses, providerOrRates, regionOrLTC, ltc, year) =>
+    calculateEmployeesHealthInsuranceBonusBreakdownForYear(bonuses, providerOrRates, regionOrLTC, ltc, year ?? FY2025);
 
 describe('calculateHealthInsurancePremium for employees', () => {
   describe('Kyokai Kenpo (Tokyo)', () => {
