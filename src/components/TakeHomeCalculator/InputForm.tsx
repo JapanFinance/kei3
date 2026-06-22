@@ -1001,7 +1001,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         homeLoanTaxCredit={inputs.homeLoanTaxCredit}
         onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
         homeLoanTaxCreditResult={homeLoanTaxCreditResult}
-        currentYear={new Date().getFullYear()}
+        incomeYear={inputs.incomeYear}
       />
     </Box>
   );
