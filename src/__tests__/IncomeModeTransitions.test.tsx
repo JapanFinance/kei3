@@ -7,7 +7,6 @@ import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { useState } from 'react';
 import type { TakeHomeFormState, IncomeStream } from '../types/tax';
-import { DEFAULT_INCOME_YEAR } from '../types/tax';
 import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_REGION } from '../types/healthInsurance';
 import { vi } from 'vitest';
 
@@ -24,7 +23,7 @@ vi.mock('../components/TakeHomeCalculator/Income/IncomeDetailsModal', () => ({
 const TestWrapper = ({ initialState }: { initialState?: Partial<TakeHomeFormState> }) => {
     const [inputs, setInputs] = useState<TakeHomeFormState>({
         annualIncome: 5000000,
-        incomeYear: DEFAULT_INCOME_YEAR,
+        incomeYear: 2026,
         incomeMode: 'salary',
         incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
         isSubjectToLongTermCarePremium: false,

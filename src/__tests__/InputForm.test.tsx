@@ -6,7 +6,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import type { TakeHomeFormState } from '../types/tax';
-import { DEFAULT_INCOME_YEAR } from '../types/tax';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 import { getProviderDisplayName, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION, DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
@@ -16,7 +15,7 @@ describe('TakeHomeInputForm Tests', () => {
 
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
-    incomeYear: DEFAULT_INCOME_YEAR,
+    incomeYear: 2026,
     incomeMode: 'salary',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -310,7 +309,7 @@ describe('Dependent Coverage UI Behavior', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
-    incomeYear: DEFAULT_INCOME_YEAR,
+    incomeYear: 2026,
     incomeMode: 'salary',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -520,7 +519,7 @@ describe('Age Range Selection', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
-    incomeYear: DEFAULT_INCOME_YEAR,
+    incomeYear: 2026,
     incomeMode: 'salary',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -571,7 +570,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
 
   const defaultInputs: TakeHomeFormState = {
     annualIncome: 0,
-    incomeYear: DEFAULT_INCOME_YEAR,
+    incomeYear: 2026,
     incomeMode: 'advanced',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -613,7 +612,7 @@ describe('Commuting Allowance Integration', () => {
 
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
-    incomeYear: DEFAULT_INCOME_YEAR,
+    incomeYear: 2026,
     incomeMode: 'advanced',
     incomeStreams: [
       { id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }
@@ -690,7 +689,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
   const TestWrapper = () => {
     const [inputs, setInputs] = useState<TakeHomeFormState>({
       annualIncome: 10000000,
-      incomeYear: DEFAULT_INCOME_YEAR,
+      incomeYear: 2026,
       incomeMode: 'advanced',
       incomeStreams: [
         { id: '1', type: 'salary', amount: 6000000, frequency: 'annual' },
