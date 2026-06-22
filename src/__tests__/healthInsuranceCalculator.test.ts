@@ -12,20 +12,26 @@ import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
 const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
 
-// Most cases here assert FY2025 rates. These thin wrappers default the income year to FY2025
-// (a fake clock used to pin it) so rate lookups don't depend on the run date, while still
-// honoring an explicit year where a case passes one (e.g. the FY2026 time-series tests). The
-// wrappers keep the originals' signatures, so call sites stay unchanged.
+// The underlying functions now require an income year. Most cases here assert FY2025 rates, so
+// these thin wrappers default the year to FY2025 (a fake clock used to pin it) so rate lookups
+// don't depend on the run date, while still honoring an explicit year where a case passes one
+// (e.g. the FY2026 time-series tests). Call sites stay unchanged.
 const FY2025 = 2025;
-const calculateHealthInsurancePremium: typeof calculateHealthInsurancePremiumForYear =
-  (income, ltc, provider, region, customRates, bonuses, year) =>
-    calculateHealthInsurancePremiumForYear(income, ltc, provider, region, customRates, bonuses, year ?? FY2025);
-const calculateHealthInsuranceBreakdown: typeof calculateHealthInsuranceBreakdownForYear =
-  (income, ltc, provider, region, customRates, bonuses, year) =>
-    calculateHealthInsuranceBreakdownForYear(income, ltc, provider, region, customRates, bonuses, year ?? FY2025);
-const calculateEmployeesHealthInsuranceBonusBreakdown: typeof calculateEmployeesHealthInsuranceBonusBreakdownForYear =
-  (bonuses, providerOrRates, regionOrLTC, ltc, year) =>
-    calculateEmployeesHealthInsuranceBonusBreakdownForYear(bonuses, providerOrRates, regionOrLTC, ltc, year ?? FY2025);
+type PremiumArgs = Parameters<typeof calculateHealthInsurancePremiumForYear>;
+const calculateHealthInsurancePremium = (
+  income: PremiumArgs[0], ltc: PremiumArgs[1], provider: PremiumArgs[2],
+  region?: PremiumArgs[3], customRates?: PremiumArgs[4], bonuses?: PremiumArgs[5], year: number = FY2025,
+): number => calculateHealthInsurancePremiumForYear(income, ltc, provider, region, customRates, bonuses, year);
+type BreakdownArgs = Parameters<typeof calculateHealthInsuranceBreakdownForYear>;
+const calculateHealthInsuranceBreakdown = (
+  income: BreakdownArgs[0], ltc: BreakdownArgs[1], provider: BreakdownArgs[2],
+  region?: BreakdownArgs[3], customRates?: BreakdownArgs[4], bonuses?: BreakdownArgs[5], year: number = FY2025,
+) => calculateHealthInsuranceBreakdownForYear(income, ltc, provider, region, customRates, bonuses, year);
+type BonusArgs = Parameters<typeof calculateEmployeesHealthInsuranceBonusBreakdownForYear>;
+const calculateEmployeesHealthInsuranceBonusBreakdown = (
+  bonuses: BonusArgs[0], providerOrRates: BonusArgs[1], regionOrLTC: BonusArgs[2],
+  ltc?: BonusArgs[3], year: number = FY2025,
+) => calculateEmployeesHealthInsuranceBonusBreakdownForYear(bonuses, providerOrRates, regionOrLTC, ltc, year);
 
 describe('calculateHealthInsurancePremium for employees', () => {
   describe('Kyokai Kenpo (Tokyo)', () => {

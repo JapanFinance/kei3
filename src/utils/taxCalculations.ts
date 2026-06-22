@@ -72,7 +72,7 @@ const calculateIncomeAdjustmentDeduction = (
  */
 export const calculateNetEmploymentIncome = (
     grossEmploymentIncome: number,
-    year: number = new Date().getFullYear(),
+    year: number,
     dependents: Dependent[] = []
 ): number => calculateNetEmploymentIncomeForPeriod(
     grossEmploymentIncome,
@@ -94,7 +94,7 @@ export interface EmploymentInsuranceBreakdown {
 const calculateEmploymentInsuranceBreakdown = (
     salaryIncome: number,
     bonuses: BonusIncomeStream[],
-    year: number = new Date().getFullYear()
+    year: number
 ): EmploymentInsuranceBreakdown => {
     // If no employment income, no employment insurance is required
     if (salaryIncome <= 0 && !bonuses.some(b => b.amount > 0)) {
@@ -142,7 +142,7 @@ const calculateEmploymentInsuranceBreakdown = (
 export const calculateEmploymentInsurance = (
     salaryIncome: number,
     bonuses: BonusIncomeStream[] = [],
-    year?: number
+    year: number
 ): number => {
     return calculateEmploymentInsuranceBreakdown(salaryIncome, bonuses, year).total;
 }
@@ -154,7 +154,7 @@ export const calculateEmploymentInsurance = (
  * @param netIncome Taxpayer's net income (合計所得金額) in yen
  * @param year Income year (calendar year the income was earned); defaults to current year
  */
-export const calculateNationalIncomeTaxBasicDeduction = (netIncome: number, year: number = new Date().getFullYear()): number => {
+export const calculateNationalIncomeTaxBasicDeduction = (netIncome: number, year: number): number => {
     for (const { maxIncomeInclusive, deduction } of getNationalBasicDeductionTiers(year)) {
         if (netIncome <= maxIncomeInclusive) return deduction;
     }
@@ -317,7 +317,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
  */
 export const calculateTotalNetIncome = (
     incomeStreams: IncomeStream[],
-    year: number = new Date().getFullYear(),
+    year: number,
     dependents: Dependent[] = []
 ): number => {
     const {

@@ -27,8 +27,8 @@ export interface CapStatus {
  */
 export function detectCaps(
   results: TakeHomeResults,
-  healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[],
-  year: number = new Date().getFullYear()
+  healthInsuranceBonusBreakdown: EmployeesHealthInsuranceBonusBreakdownItem[] | undefined = undefined,
+  year: number
 ): CapStatus {
   // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
   // instead of total annual income which might include business/misc income or bonuses.
@@ -82,7 +82,7 @@ function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number
  * @param monthlyRemuneration - The monthly remuneration, as needed for EHI/EPI calculations
  * @returns An object containing the cap status and details
  */
-function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: number, year: number = new Date().getFullYear()): {
+function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: number, year: number): {
   capped: boolean;
   details?: {
     medicalCapped?: boolean;

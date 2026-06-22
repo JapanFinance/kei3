@@ -2,11 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { detectCaps } from '../utils/capDetection';
+import { detectCaps as detectCapsForYear } from '../utils/capDetection';
 import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 import type { TakeHomeResults, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../utils/healthInsuranceCalculator';
+
+// detectCaps now requires an income year. A thin wrapper defaults it to 2026 (the suite's prior
+// behavior under a 2026 clock) while honoring an explicit year, so call sites stay unchanged.
+const TEST_INCOME_YEAR = 2026;
+const detectCaps = (
+  results: Parameters<typeof detectCapsForYear>[0],
+  healthInsuranceBonusBreakdown?: Parameters<typeof detectCapsForYear>[1], year: number = TEST_INCOME_YEAR,
+) => detectCapsForYear(results, healthInsuranceBonusBreakdown, year);
 
 // Mock TakeHomeResults with necessary fields
 const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults => ({

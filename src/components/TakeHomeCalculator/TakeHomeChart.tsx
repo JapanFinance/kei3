@@ -308,7 +308,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   const taxResults = calculateTaxes(taxInputs);
 
                   // Use the calculated results for cap detection
-                  const capStatus = detectCaps(taxResults);
+                  const capStatus = detectCaps(taxResults, undefined, incomeYear);
 
                   if (capStatus.healthInsuranceCapped || capStatus.pensionCapped) {
                     const cappedItems: string[] = [];

@@ -1,10 +1,28 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { calculateEmploymentInsurance } from '../utils/taxCalculations';
-import { calculateHealthInsuranceBreakdown } from '../utils/healthInsuranceCalculator';
-import { calculatePensionBreakdown } from '../utils/pensionCalculator';
+import { calculateEmploymentInsurance as calculateEmploymentInsuranceForYear } from '../utils/taxCalculations';
+import { calculateHealthInsuranceBreakdown as calculateHealthInsuranceBreakdownForYear } from '../utils/healthInsuranceCalculator';
+import { calculatePensionBreakdown as calculatePensionBreakdownForYear } from '../utils/pensionCalculator';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
+
+// These calculators now require an income year. Thin wrappers default it to 2026 (the suite's
+// prior behavior under a 2026 clock) while honoring an explicit year, so call sites stay unchanged.
+const TEST_INCOME_YEAR = 2026;
+const calculateEmploymentInsurance = (
+  salaryIncome: Parameters<typeof calculateEmploymentInsuranceForYear>[0],
+  bonuses?: Parameters<typeof calculateEmploymentInsuranceForYear>[1], year: number = TEST_INCOME_YEAR,
+) => calculateEmploymentInsuranceForYear(salaryIncome, bonuses, year);
+type HIBreakdownArgs = Parameters<typeof calculateHealthInsuranceBreakdownForYear>;
+const calculateHealthInsuranceBreakdown = (
+  income: HIBreakdownArgs[0], ltc: HIBreakdownArgs[1], provider: HIBreakdownArgs[2], region?: HIBreakdownArgs[3],
+  customRates?: HIBreakdownArgs[4], bonuses?: HIBreakdownArgs[5], year: number = TEST_INCOME_YEAR,
+) => calculateHealthInsuranceBreakdownForYear(income, ltc, provider, region, customRates, bonuses, year);
+type PenBreakdownArgs = Parameters<typeof calculatePensionBreakdownForYear>;
+const calculatePensionBreakdown = (
+  isEmployeesPension?: PenBreakdownArgs[0], monthlyIncome?: PenBreakdownArgs[1], isHalfAmount?: PenBreakdownArgs[2],
+  bonuses?: PenBreakdownArgs[3], year: number = TEST_INCOME_YEAR,
+) => calculatePensionBreakdownForYear(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year);
 
 describe('Zero Amount Bonus Handling', () => {
     const zeroAmountBonus = { amount: 0, type: 'bonus' as const, month: 6, id: '1' };

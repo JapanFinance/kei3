@@ -599,7 +599,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     const modal = screen.getByTestId('dependents-modal');
     const netIncomePassed = Number(modal.getAttribute('data-net-income'));
 
-    const expectedNetSalary = calculateNetEmploymentIncome(5_000_000);
+    const expectedNetSalary = calculateNetEmploymentIncome(5_000_000, 2026);
     const expectedTotalNet = expectedNetSalary + 5_000_000;
 
     expect(netIncomePassed).toBe(expectedTotalNet);

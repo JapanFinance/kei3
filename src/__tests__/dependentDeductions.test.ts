@@ -3,12 +3,23 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  calculateDependentDeductions,
-  calculateDependentTotalNetIncome,
+  calculateDependentDeductions as calculateDependentDeductionsForYear,
+  calculateDependentTotalNetIncome as calculateDependentTotalNetIncomeForYear,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions'
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome'
 import { DEDUCTION_TYPES, type Dependent } from '../types/dependents'
+
+// These calculators now require an income year. Thin wrappers default it to 2026 (the suite's
+// prior behavior under a 2026 clock) while honoring an explicit year, so call sites stay unchanged.
+const TEST_INCOME_YEAR = 2026;
+type DepDeductionsArgs = Parameters<typeof calculateDependentDeductionsForYear>;
+const calculateDependentDeductions = (
+  dependents: DepDeductionsArgs[0], taxpayerNetIncome?: DepDeductionsArgs[1], year: number = TEST_INCOME_YEAR,
+) => calculateDependentDeductionsForYear(dependents, taxpayerNetIncome, year);
+const calculateDependentTotalNetIncome = (
+  income: Parameters<typeof calculateDependentTotalNetIncomeForYear>[0], year: number = TEST_INCOME_YEAR,
+) => calculateDependentTotalNetIncomeForYear(income, year);
 
 // --- Helper functions to test internal logic via public API ---
 

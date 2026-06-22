@@ -2,7 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { calculatePensionPremium, calculatePensionBreakdown, calculatePensionBonusBreakdown } from '../utils/pensionCalculator'
+import { calculatePensionPremium as calculatePensionPremiumForYear, calculatePensionBreakdown as calculatePensionBreakdownForYear, calculatePensionBonusBreakdown } from '../utils/pensionCalculator'
+
+// calculatePensionPremium/Breakdown now require an income year. Thin wrappers default it to 2026
+// (the suite's prior behavior under a 2026 clock) while honoring an explicit year, so call sites
+// stay unchanged.
+const TEST_INCOME_YEAR = 2026;
+type PenPremiumArgs = Parameters<typeof calculatePensionPremiumForYear>;
+const calculatePensionPremium = (
+  isEmployeesPension?: PenPremiumArgs[0], monthlyIncome?: PenPremiumArgs[1], isHalfAmount?: PenPremiumArgs[2],
+  bonuses?: PenPremiumArgs[3], year: number = TEST_INCOME_YEAR,
+) => calculatePensionPremiumForYear(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year);
+type PenBreakdownArgs = Parameters<typeof calculatePensionBreakdownForYear>;
+const calculatePensionBreakdown = (
+  isEmployeesPension?: PenBreakdownArgs[0], monthlyIncome?: PenBreakdownArgs[1], isHalfAmount?: PenBreakdownArgs[2],
+  bonuses?: PenBreakdownArgs[3], year: number = TEST_INCOME_YEAR,
+) => calculatePensionBreakdownForYear(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year);
 
 describe('calculatePensionPremium', () => {
   it('calculates employees pension correctly for employment income below cap', () => {

@@ -2,8 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from "vitest"
-import { calculateResidenceTax, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from "../utils/residenceTax"
-import { calculateDependentDeductions } from "../utils/dependentDeductions"
+import { calculateResidenceTax as calculateResidenceTaxForYear, calculateResidenceTaxBasicDeduction, NON_TAXABLE_RESIDENCE_TAX_DETAIL } from "../utils/residenceTax"
+import { calculateDependentDeductions as calculateDependentDeductionsForYear } from "../utils/dependentDeductions"
+
+// These calculators now require an income year. Thin wrappers default it to 2026 (the suite's
+// prior behavior under a 2026 clock) while honoring an explicit year, so call sites stay unchanged.
+const TEST_INCOME_YEAR = 2026;
+type ResTaxArgs = Parameters<typeof calculateResidenceTaxForYear>;
+const calculateResidenceTax = (
+  netIncome: ResTaxArgs[0], nonBasicDeductions: ResTaxArgs[1], dependentDeductions: ResTaxArgs[2],
+  taxCredit: ResTaxArgs[3] = 0, year: number = TEST_INCOME_YEAR,
+) => calculateResidenceTaxForYear(netIncome, nonBasicDeductions, dependentDeductions, taxCredit, year);
+type DepDeductionsArgs = Parameters<typeof calculateDependentDeductionsForYear>;
+const calculateDependentDeductions = (
+  dependents: DepDeductionsArgs[0], taxpayerNetIncome?: DepDeductionsArgs[1], year: number = TEST_INCOME_YEAR,
+) => calculateDependentDeductionsForYear(dependents, taxpayerNetIncome, year);
 import type { DependentDeductionResults, Dependent } from "../types/dependents"
 
 /**

@@ -821,7 +821,7 @@ describe('calculateTotalNetIncome', () => {
   it('calculates total net income correctly for business only', () => {
     // Business 5M, Deduction 650k -> Taxable Business Income = 4.35M
     const incomeStreams = [{ type: 'business' as const, amount: 5_000_000, blueFilerDeduction: 650_000, id: 'test' }];
-    expect(calculateTotalNetIncome(incomeStreams)).toBe(4_350_000);
+    expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(4_350_000);
   });
 
   it('calculates total net income correctly for mixed income', () => {

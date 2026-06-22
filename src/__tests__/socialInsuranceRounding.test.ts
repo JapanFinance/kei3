@@ -40,7 +40,9 @@ describe('Social Insurance Rounding', () => {
             const result = calculateEmployeesHealthInsuranceBonusBreakdown(
                 bonuses,
                 regionalRates,
-                false
+                false,
+                undefined,
+                2026
             );
 
             expect(result[0]?.premium).toBe(1);
@@ -61,7 +63,9 @@ describe('Social Insurance Rounding', () => {
             const result = calculateEmployeesHealthInsuranceBonusBreakdown(
                 bonuses,
                 regionalRates,
-                true
+                true,
+                undefined,
+                2026
             );
 
             expect(result[0]?.premium).toBe(2);

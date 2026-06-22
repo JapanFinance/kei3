@@ -63,20 +63,23 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
-        inputs.isSubjectToLongTermCarePremium
+        inputs.isSubjectToLongTermCarePremium,
+        undefined,
+        inputs.incomeYear
       );
     } else {
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         provider,
         region,
-        inputs.isSubjectToLongTermCarePremium
+        inputs.isSubjectToLongTermCarePremium,
+        inputs.incomeYear
       );
     }
   }
 
   // Detect if any caps are applied
-  const capStatus = detectCaps(results, healthInsuranceBreakdown);
+  const capStatus = detectCaps(results, healthInsuranceBreakdown, inputs.incomeYear);
 
   if (results.socialInsuranceOverride !== undefined) {
     return (

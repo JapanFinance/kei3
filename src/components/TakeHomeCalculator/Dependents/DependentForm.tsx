@@ -48,6 +48,8 @@ interface DependentFormProps {
   dependent: OtherDependent | null;
   onSave: (dependent: OtherDependent) => void;
   onCancel: () => void;
+  /** Income year for the net-income and deduction preview calculations. */
+  incomeYear: number;
 }
 
 /**
@@ -57,6 +59,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   dependent,
   onSave,
   onCancel,
+  incomeYear,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -168,7 +171,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="caption" color="text.secondary">Net (所得)</Typography>
                 <Typography variant="body2">
-                  {formatJPY(calculateNetEmploymentIncome(income.grossEmploymentIncome))}
+                  {formatJPY(calculateNetEmploymentIncome(income.grossEmploymentIncome, incomeYear))}
                 </Typography>
               </Box>
             </Box>
@@ -207,7 +210,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   Total (合計所得金額)
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                  {formatJPY(calculateDependentTotalNetIncome(income))}
+                  {formatJPY(calculateDependentTotalNetIncome(income, incomeYear))}
                 </Typography>
               </Box>
             </Box>
@@ -243,7 +246,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2">
-                      {formatJPY(calculateNetEmploymentIncome(income.grossEmploymentIncome))}
+                      {formatJPY(calculateNetEmploymentIncome(income.grossEmploymentIncome, incomeYear))}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -276,7 +279,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   <TableCell align="right"></TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                      {formatJPY(calculateDependentTotalNetIncome(income))}
+                      {formatJPY(calculateDependentTotalNetIncome(income, incomeYear))}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -374,7 +377,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 };
                 
                 // Calculate all deductions for this dependent
-                const results = calculateDependentDeductions([tempDependent]);
+                const results = calculateDependentDeductions([tempDependent], undefined, incomeYear);
                 const rows: React.ReactNode[] = [];
                 
                 // Dependent Deduction

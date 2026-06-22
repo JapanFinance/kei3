@@ -141,7 +141,7 @@ export const generateChartData = (
     }
 
     const result = calculateTaxes(inputsForCalc);
-    const caps = detectCaps(result);
+    const caps = detectCaps(result, undefined, currentInputs.incomeYear);
     return { result, caps, breakdown };
   });
 
