@@ -11,12 +11,12 @@ const TEST_INCOME_YEAR = 2026;
 type ResTaxArgs = Parameters<typeof calculateResidenceTaxForYear>;
 const calculateResidenceTax = (
   netIncome: ResTaxArgs[0], nonBasicDeductions: ResTaxArgs[1], dependentDeductions: ResTaxArgs[2],
-  taxCredit: ResTaxArgs[3] = 0, year: number = TEST_INCOME_YEAR,
-) => calculateResidenceTaxForYear(netIncome, nonBasicDeductions, dependentDeductions, taxCredit, year);
+  taxCredit: ResTaxArgs[4] = 0, year: number = TEST_INCOME_YEAR,
+) => calculateResidenceTaxForYear(netIncome, nonBasicDeductions, dependentDeductions, year, taxCredit);
 type DepDeductionsArgs = Parameters<typeof calculateDependentDeductionsForYear>;
 const calculateDependentDeductions = (
-  dependents: DepDeductionsArgs[0], taxpayerNetIncome?: DepDeductionsArgs[1], year: number = TEST_INCOME_YEAR,
-) => calculateDependentDeductionsForYear(dependents, taxpayerNetIncome, year);
+  dependents: DepDeductionsArgs[0], taxpayerNetIncome?: DepDeductionsArgs[2], year: number = TEST_INCOME_YEAR,
+) => calculateDependentDeductionsForYear(dependents, year, taxpayerNetIncome);
 import type { DependentDeductionResults, Dependent } from "../types/dependents"
 
 /**

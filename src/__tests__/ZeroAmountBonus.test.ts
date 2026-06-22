@@ -11,8 +11,8 @@ import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 const TEST_INCOME_YEAR = 2026;
 const calculateEmploymentInsurance = (
   salaryIncome: Parameters<typeof calculateEmploymentInsuranceForYear>[0],
-  bonuses?: Parameters<typeof calculateEmploymentInsuranceForYear>[1], year: number = TEST_INCOME_YEAR,
-) => calculateEmploymentInsuranceForYear(salaryIncome, bonuses, year);
+  bonuses?: Parameters<typeof calculateEmploymentInsuranceForYear>[2], year: number = TEST_INCOME_YEAR,
+) => calculateEmploymentInsuranceForYear(salaryIncome, year, bonuses);
 type HIBreakdownArgs = Parameters<typeof calculateHealthInsuranceBreakdownForYear>;
 const calculateHealthInsuranceBreakdown = (
   income: HIBreakdownArgs[0], ltc: HIBreakdownArgs[1], provider: HIBreakdownArgs[2], region?: HIBreakdownArgs[4],

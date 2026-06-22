@@ -141,8 +141,8 @@ const calculateEmploymentInsuranceBreakdown = (
 // Only exported for testing
 export const calculateEmploymentInsurance = (
     salaryIncome: number,
-    bonuses: BonusIncomeStream[] = [],
-    year: number
+    year: number,
+    bonuses: BonusIncomeStream[] = []
 ): number => {
     return calculateEmploymentInsuranceBreakdown(salaryIncome, bonuses, year).total;
 }
@@ -455,7 +455,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
-    const dependentDeductions = calculateDependentDeductions(inputs.dependents, netIncome, incomeYear);
+    const dependentDeductions = calculateDependentDeductions(inputs.dependents, incomeYear, netIncome);
 
     const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome, incomeYear);
 
@@ -475,7 +475,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // then spilled over to residence tax up to the cap.
     // Calling residence tax with appliedToResidenceTax = 0 first gives us the
     // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
-    const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
+    const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, incomeYear);
 
     const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
         ? applyHomeLoanTaxCredit(
@@ -494,7 +494,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const nationalIncomeTax = Math.floor((baseIncomeTaxAfterCredit + reconstructionSurtax) / 100) * 100;
 
     const residenceTax = homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0
-        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, homeLoanTaxCreditResult.appliedToResidenceTax, incomeYear)
+        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, incomeYear, homeLoanTaxCreditResult.appliedToResidenceTax)
         : preCreditResidenceTax;
 
     // Calculate totals

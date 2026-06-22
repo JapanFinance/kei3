@@ -556,7 +556,7 @@ function calculateSpouseDeduction(dependent: Dependent, taxpayerNetIncome: numbe
 
 /**
  * Calculate all dependent-related deductions
- * 
+ *
  * @param dependents - user input array of dependents
  * @param taxpayerNetIncome - Taxpayer's total net income (合計所得金額)
  * @returns Detailed breakdown of all deductions
@@ -565,8 +565,8 @@ function calculateSpouseDeduction(dependent: Dependent, taxpayerNetIncome: numbe
  */
 export function calculateDependentDeductions(
   dependents: Dependent[],
-  taxpayerNetIncome: number = 0,
-  year: number
+  year: number,
+  taxpayerNetIncome: number = 0
 ): DependentDeductionResults {
   const results: DependentDeductionResults = {
     nationalTax: {

@@ -107,15 +107,15 @@ export function generatePremiumTableFromRates(
  * Generate a premium table for display purposes
  *
  * @param providerId Provider key
- * @param region Region key
  * @param year Calendar year for rate lookup
  * @param month 0-indexed month for rate lookup
+ * @param region Region key
  */
 export function generateHealthInsurancePremiumTable(
   providerId: string,
-  region: string = 'DEFAULT',
   year: number,
-  month: number
+  month: number,
+  region: string = 'DEFAULT'
 ): Array<{
   minIncomeInclusive: number;
   maxIncomeExclusive: number;

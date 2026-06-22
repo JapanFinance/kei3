@@ -186,7 +186,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
     } else {
       // Month is immaterial here — cap detection reads the (year-invariant) SMR bracket structure,
       // not the premium values — so April (fiscal-year start) stands in for the income year.
-      premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, results.region, year, 3);
+      premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, year, 3, results.region);
     }
 
     if (!premiumTable || premiumTable.length === 0) {

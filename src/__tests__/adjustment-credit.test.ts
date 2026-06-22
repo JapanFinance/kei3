@@ -34,9 +34,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     it('taxpayer income ≤ 900万円 → 5万円 statutory difference', () => {
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([spouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([spouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 50,000 (spouse) = 100,000
       expect(result.personalDeductionDifference).toBe(100_000)
@@ -53,9 +53,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     it('taxpayer income 900-950万円 → 4万円 statutory difference', () => {
       const taxpayerIncome = 9_200_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([spouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([spouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 40,000 (spouse) = 90,000
       expect(result.personalDeductionDifference).toBe(90_000)
@@ -64,9 +64,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     it('taxpayer income 950-1000万円 → 2万円 statutory difference', () => {
       const taxpayerIncome = 9_700_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([spouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([spouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 20,000 (spouse) = 70,000
       expect(result.personalDeductionDifference).toBe(70_000)
@@ -75,9 +75,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     it('taxpayer income > 1000万円 → 0 statutory difference (no spouse deduction)', () => {
       const taxpayerIncome = 11_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([spouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([spouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 0 (no spouse deduction) = 50,000
       expect(result.personalDeductionDifference).toBe(50_000)
@@ -100,9 +100,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     it('taxpayer income ≤ 900万円 → 10万円 statutory difference', () => {
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([elderlySpouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([elderlySpouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 100,000 (elderly spouse) = 150,000
       expect(result.personalDeductionDifference).toBe(150_000)
@@ -111,9 +111,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     it('taxpayer income 900-950万円 → 6万円 statutory difference', () => {
       const taxpayerIncome = 9_200_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([elderlySpouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([elderlySpouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 60,000 (elderly spouse) = 110,000
       expect(result.personalDeductionDifference).toBe(110_000)
@@ -122,9 +122,9 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     it('taxpayer income 950-1000万円 → 3万円 statutory difference', () => {
       const taxpayerIncome = 9_700_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([elderlySpouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([elderlySpouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 30,000 (elderly spouse) = 80,000
       expect(result.personalDeductionDifference).toBe(80_000)
@@ -149,9 +149,9 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
     it('statutory difference is 0 (mutually exclusive income ranges)', () => {
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([spouse], undefined, 2026)
+      const dependents = calculateDependentDeductions([spouse], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 0 (spouse special) = 50,000
       // Spouse special deduction has NO statutory difference per Article 314-6(7)
@@ -185,9 +185,9 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
 
         const taxpayerIncome = 8_000_000
         const socialInsurance = 1_000_000
-        const dependents = calculateDependentDeductions([spouse], undefined, 2026)
+        const dependents = calculateDependentDeductions([spouse], 2026)
         
-        const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+        const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
         
         // All spouse special deduction cases have 0 statutory difference
         expect(result.personalDeductionDifference).toBe(50_000)
@@ -213,9 +213,9 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 50,000 (general dependent) = 100,000
       expect(result.personalDeductionDifference).toBe(100_000)
@@ -236,9 +236,9 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 50,000 (general dependent) = 100,000
       expect(result.personalDeductionDifference).toBe(100_000)
@@ -261,9 +261,9 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 180,000 (special dependent) = 230,000
       expect(result.personalDeductionDifference).toBe(230_000)
@@ -286,9 +286,9 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 100,000 (elderly dependent) = 150,000
       expect(result.personalDeductionDifference).toBe(150_000)
@@ -309,9 +309,9 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 130,000 (elderly cohabiting) = 180,000
       expect(result.personalDeductionDifference).toBe(180_000)
@@ -332,9 +332,9 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 130,000 (elderly cohabiting) = 180,000
       expect(result.personalDeductionDifference).toBe(180_000)
@@ -359,9 +359,9 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 50,000 (general dependent) + 10,000 (regular disability) = 110,000
       expect(result.personalDeductionDifference).toBe(110_000)
@@ -384,9 +384,9 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 50,000 (general dependent) + 100,000 (special disability) = 200,000
       expect(result.personalDeductionDifference).toBe(200_000)
@@ -407,9 +407,9 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
 
       const taxpayerIncome = 8_000_000
       const socialInsurance = 1_000_000
-      const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+      const dependents = calculateDependentDeductions([dependent], 2026)
       
-      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+      const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
       
       // Personal deduction difference = 50,000 (basic) + 50,000 (general dependent) + 220,000 (special cohabiting disability) = 320,000
       expect(result.personalDeductionDifference).toBe(320_000)
@@ -457,9 +457,9 @@ describe('Adjustment Credit - Combined Scenarios', () => {
 
     const taxpayerIncome = 8_000_000
     const socialInsurance = 1_000_000
-    const dependents = calculateDependentDeductions([spouse, child1, child2], undefined, 2026)
+    const dependents = calculateDependentDeductions([spouse, child1, child2], 2026)
     
-    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
     
     // Personal deduction difference breakdown:
     // - Basic: 50,000
@@ -498,9 +498,9 @@ describe('Adjustment Credit - Combined Scenarios', () => {
 
     const taxpayerIncome = 8_000_000
     const socialInsurance = 1_000_000
-    const dependents = calculateDependentDeductions([spouse, parent], undefined, 2026)
+    const dependents = calculateDependentDeductions([spouse, parent], 2026)
     
-    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
     
     // Personal deduction difference breakdown:
     // - Basic: 50,000
@@ -539,9 +539,9 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     // Test with taxpayer income in 950-1000万円 bracket
     const taxpayerIncome = 9_700_000
     const socialInsurance = 1_000_000
-    const dependents = calculateDependentDeductions([spouse, child], undefined, 2026)
+    const dependents = calculateDependentDeductions([spouse, child], 2026)
     
-    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
     
     // Personal deduction difference breakdown:
     // - Basic: 50,000
@@ -581,9 +581,9 @@ describe('Adjustment Credit - Combined Scenarios', () => {
 
     const taxpayerIncome = 8_000_000
     const socialInsurance = 1_000_000
-    const dependentResults = calculateDependentDeductions(dependents, undefined, 2026)
+    const dependentResults = calculateDependentDeductions(dependents, 2026)
     
-    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependentResults, 0, 2026)
+    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependentResults, 2026)
     
     // Personal deduction difference breakdown:
     // - Basic: 50,000
@@ -633,12 +633,12 @@ describe('Specific Relative Special Deduction (特定親族特別控除)', () =>
 
     const taxpayerIncome = 8_000_000
     const socialInsurance = 1_000_000
-    const dependents = calculateDependentDeductions([dependent], undefined, 2026)
+    const dependents = calculateDependentDeductions([dependent], 2026)
 
     expect(dependents.breakdown).toHaveLength(1)
     expect(dependents.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL)
     
-    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 0, 2026)
+    const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026)
     
     // Personal deduction difference breakdown:
     // - Basic: 50,000

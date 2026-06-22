@@ -378,12 +378,12 @@ describe('calculateEmploymentInsurance', () => {
     // 1,200,000 / 12 = 100,000 per month
     // 100,000 * 0.55% = 550 yen per month
     // 550 * 12 = 6,600 yen annually
-    expect(calculateEmploymentInsurance(1_200_000, [], 2025)).toBe(6_600)
+    expect(calculateEmploymentInsurance(1_200_000, 2025)).toBe(6_600)
 
     // 2,400,000 / 12 = 200,000 per month
     // 200,000 * 0.55% = 1,100 yen per month
     // 1,100 * 12 = 13,200 yen annually
-    expect(calculateEmploymentInsurance(2_400_000, [], 2025)).toBe(13_200)
+    expect(calculateEmploymentInsurance(2_400_000, 2025)).toBe(13_200)
   })
 
   // Test cases with non-even monthly amounts to verify rounding
@@ -392,39 +392,39 @@ describe('calculateEmploymentInsurance', () => {
     // 83,333.33 * 0.55% ≈ 458.33 per month
     // Rounded to 458 yen per month (decimal .33 < .50 → round down)
     // 458 * 12 = 5,496 yen annually
-    expect(calculateEmploymentInsurance(1_000_000, [], 2025)).toBe(5_496)
+    expect(calculateEmploymentInsurance(1_000_000, 2025)).toBe(5_496)
 
     // 1,100,000 / 12 ≈ 91,666.67 per month
     // 91,666.67 * 0.55% ≈ 504.17 per month
     // Rounded to 504 yen per month (decimal .17 < .50 → round down)
     // 504 * 12 = 6,048 yen annually
-    expect(calculateEmploymentInsurance(1_100_000, [], 2025)).toBe(6_048)
+    expect(calculateEmploymentInsurance(1_100_000, 2025)).toBe(6_048)
 
     // 1,111,111 / 12 ≈ 92,592.58 per month
     // 92,592.58 * 0.55% ≈ 509.26 per month
     // Rounded to 509 yen per month (decimal .26 < .50 → round down)
     // 509 * 12 = 6,108 yen annually
-    expect(calculateEmploymentInsurance(1_111_111, [], 2025)).toBe(6_108)
+    expect(calculateEmploymentInsurance(1_111_111, 2025)).toBe(6_108)
 
     // 1,200,001 / 12 = 100,000.083 per month
     // 100,000.083 * 0.55% ≈ 550.00046 per month
     // Rounded to 550 yen per month (decimal .00046 < .50 → round down)
     // 550 * 12 = 6,600 yen annually
-    expect(calculateEmploymentInsurance(1_200_001, [], 2025)).toBe(6_600)
+    expect(calculateEmploymentInsurance(1_200_001, 2025)).toBe(6_600)
 
     // 1,999,999 / 12 ≈ 166,666.58 per month
     // 166,666.58 * 0.55% ≈ 916.67 per month
     // Rounded to 917 yen per month (decimal .67 > .50 → round up)
     // 917 * 12 = 11,004 yen annually
-    expect(calculateEmploymentInsurance(1_999_999, [], 2025)).toBe(11_004)
+    expect(calculateEmploymentInsurance(1_999_999, 2025)).toBe(11_004)
   })
 
   it('returns 0 for zero income', () => {
-    expect(calculateEmploymentInsurance(0, [], 2025)).toBe(0)
+    expect(calculateEmploymentInsurance(0, 2025)).toBe(0)
   })
 
   it('returns 0 for negative income', () => {
-    expect(calculateEmploymentInsurance(-1_000_000, [], 2025)).toBe(0)
+    expect(calculateEmploymentInsurance(-1_000_000, 2025)).toBe(0)
   })
 
   // Test with very small amounts to ensure rounding works correctly
@@ -433,13 +433,13 @@ describe('calculateEmploymentInsurance', () => {
     // 833.33 * 0.55% ≈ 4.58 per month
     // Rounded to 5 yen per month (decimal .58 > .50 → round up)
     // 5 * 12 = 60 yen annually
-    expect(calculateEmploymentInsurance(10_000, [], 2025)).toBe(60)
+    expect(calculateEmploymentInsurance(10_000, 2025)).toBe(60)
 
     // 9,090 / 12 = 757.5 per month
     // 757.5 * 0.55% ≈ 4.17 per month
     // Rounded to 4 yen per month (decimal .17 < .50 → round down)
     // 4 * 12 = 48 yen annually
-    expect(calculateEmploymentInsurance(9_090, [], 2025)).toBe(48)
+    expect(calculateEmploymentInsurance(9_090, 2025)).toBe(48)
   })
 
   it('applies split rates when the rate changes mid-year (2026: 0.55% Jan-Mar, 0.50% Apr-Dec)', () => {
@@ -447,31 +447,31 @@ describe('calculateEmploymentInsurance', () => {
     // Jan-Mar: 100,000 * 0.55% = 550 × 3 = 1,650
     // Apr-Dec: 100,000 * 0.50% = 500 × 9 = 4,500
     // Total: 6,150
-    expect(calculateEmploymentInsurance(1_200_000, [], 2026)).toBe(6_150)
+    expect(calculateEmploymentInsurance(1_200_000, 2026)).toBe(6_150)
 
     // 5,000,000 / 12 ≈ 416,666.67 per month
     // Jan-Mar: 416,666.67 * 0.55% = 2,291.67 → 2,292 × 3 = 6,876
     // Apr-Dec: 416,666.67 * 0.50% = 2,083.33 → 2,083 × 9 = 18,747
     // Total: 25,623
-    expect(calculateEmploymentInsurance(5_000_000, [], 2026)).toBe(25_623)
+    expect(calculateEmploymentInsurance(5_000_000, 2026)).toBe(25_623)
   })
 
   it('uses uniform rate for years within a single fiscal year period', () => {
     // Year 2025: all 12 months use 0.55% (FY2025: Apr 2025 – Mar 2026)
-    expect(calculateEmploymentInsurance(1_200_000, [], 2025)).toBe(6_600)
+    expect(calculateEmploymentInsurance(1_200_000, 2025)).toBe(6_600)
 
     // Year 2027: all 12 months use 0.50% (FY2026 rate applies to Jan-Mar, FY2026 also Apr-Dec)
-    expect(calculateEmploymentInsurance(1_200_000, [], 2027)).toBe(6_000)
+    expect(calculateEmploymentInsurance(1_200_000, 2027)).toBe(6_000)
   })
 
   it('applies the correct rate for bonuses based on their month (2026)', () => {
     // Bonus in February (month 1) → 0.55% rate
     // 500,000 * 0.55% = 2,750
-    expect(calculateEmploymentInsurance(0, [{ id: 'b1', type: 'bonus', amount: 500_000, month: 1 }], 2026)).toBe(2_750)
+    expect(calculateEmploymentInsurance(0, 2026, [{ id: 'b1', type: 'bonus', amount: 500_000, month: 1 }])).toBe(2_750)
 
     // Bonus in June (month 5) → 0.50% rate
     // 500,000 * 0.50% = 2,500
-    expect(calculateEmploymentInsurance(0, [{ id: 'b2', type: 'bonus', amount: 500_000, month: 5 }], 2026)).toBe(2_500)
+    expect(calculateEmploymentInsurance(0, 2026, [{ id: 'b2', type: 'bonus', amount: 500_000, month: 5 }])).toBe(2_500)
   })
 })
 

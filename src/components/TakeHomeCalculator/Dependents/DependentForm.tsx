@@ -377,7 +377,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 };
                 
                 // Calculate all deductions for this dependent
-                const results = calculateDependentDeductions([tempDependent], undefined, incomeYear);
+                const results = calculateDependentDeductions([tempDependent], incomeYear);
                 const rows: React.ReactNode[] = [];
                 
                 // Dependent Deduction

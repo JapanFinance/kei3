@@ -358,7 +358,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           );
                         }
 
-                        const deductionResults = calculateDependentDeductions(allDependents, taxpayerNetIncome, incomeYear);
+                        const deductionResults = calculateDependentDeductions(allDependents, incomeYear, taxpayerNetIncome);
 
                         // Group deductions by type and amount
                         interface DeductionGroup {

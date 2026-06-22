@@ -15,8 +15,8 @@ import { DEDUCTION_TYPES, type Dependent } from '../types/dependents'
 const TEST_INCOME_YEAR = 2026;
 type DepDeductionsArgs = Parameters<typeof calculateDependentDeductionsForYear>;
 const calculateDependentDeductions = (
-  dependents: DepDeductionsArgs[0], taxpayerNetIncome?: DepDeductionsArgs[1], year: number = TEST_INCOME_YEAR,
-) => calculateDependentDeductionsForYear(dependents, taxpayerNetIncome, year);
+  dependents: DepDeductionsArgs[0], taxpayerNetIncome?: DepDeductionsArgs[2], year: number = TEST_INCOME_YEAR,
+) => calculateDependentDeductionsForYear(dependents, year, taxpayerNetIncome);
 const calculateDependentTotalNetIncome = (
   income: Parameters<typeof calculateDependentTotalNetIncomeForYear>[0], year: number = TEST_INCOME_YEAR,
 ) => calculateDependentTotalNetIncomeForYear(income, year);
