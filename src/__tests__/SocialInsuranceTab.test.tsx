@@ -23,12 +23,6 @@ vi.mock('../components/ui/Tooltips', async () => {
     };
 });
 
-// Mock content
-vi.mock('../utils/formatters', () => ({
-    formatJPY: (val: number) => `¥${val.toLocaleString()}`,
-    formatPercent: (val: number) => `${(val * 100).toFixed(3)}%`,
-}));
-
 // Mock scrollTo for JSDOM
 beforeAll(() => {
     Element.prototype.scrollTo = vi.fn();

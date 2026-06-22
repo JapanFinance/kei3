@@ -8,7 +8,7 @@ import type { TakeHomeInputs } from '../../../types/tax';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
-import { formatJPY, formatPercent } from '../../../utils/formatters';
+import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 
 interface HealthInsuranceBonusTooltipProps {
@@ -53,13 +53,6 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
     return rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
   };
 
-  // Helper to format month index to name
-  const getMonthName = (monthIndex: number) => {
-    const date = new Date();
-    date.setMonth(monthIndex);
-    return date.toLocaleString('default', { month: 'short' });
-  };
-
   return (
     <>
       <Typography variant="body2" sx={{ mb: 1 }}>
@@ -91,7 +84,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
             <tbody>
               {breakdown.map((item, index) => (
                 <tr key={index}>
-                  <td>{getMonthName(item.month)}</td>
+                  <td>{formatMonthShort(item.month)}</td>
                   <td>{formatJPY(item.bonusAmount)}</td>
                   <td>
                     {formatJPY(item.standardBonusAmount)}
