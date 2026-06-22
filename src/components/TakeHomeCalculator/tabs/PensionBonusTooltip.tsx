@@ -5,7 +5,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { EMPLOYEES_PENSION_RATE, type PensionBonusBreakdownItem } from '../../../utils/pensionCalculator';
-import { formatJPY, formatPercent } from '../../../utils/formatters';
+import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 
 interface PensionBonusTooltipProps {
   breakdown?: PensionBonusBreakdownItem[];
@@ -14,13 +14,6 @@ interface PensionBonusTooltipProps {
 const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) => {
   // Employee share is half
   const employeeRate = EMPLOYEES_PENSION_RATE / 2;
-
-  // Helper to format month index to name
-  const getMonthName = (monthIndex: number) => {
-    const date = new Date();
-    date.setMonth(monthIndex);
-    return date.toLocaleString('default', { month: 'short' });
-  };
 
   return (
     <>
@@ -65,7 +58,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
             <tbody>
               {breakdown.map((item, index) => (
                 <tr key={index}>
-                  <td>{getMonthName(item.month)}</td>
+                  <td>{formatMonthShort(item.month)}</td>
                   <td>{formatJPY(item.totalBonusAmount)}</td>
                   <td>
                     {formatJPY(item.standardBonusAmount)}
