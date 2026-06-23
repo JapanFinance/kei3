@@ -6,11 +6,8 @@ import Typography from '@mui/material/Typography';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { getEmploymentInsuranceRate } from '../../../data/employmentInsurance';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
-import { formatJPY, formatPercent } from '../../../utils/formatters';
+import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { BonusIncomeStream } from '../../../types/tax';
-
-const formatMonthShort = (month: number): string =>
-    new Date(2000, month).toLocaleString('en', { month: 'short' });
 
 const cellStyle = { padding: '2px 8px 2px 0' } as const;
 const rightCellStyle = { ...cellStyle, textAlign: 'right' as const };
