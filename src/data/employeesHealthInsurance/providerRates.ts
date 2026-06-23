@@ -39,18 +39,6 @@ export function getRegionalRatesForMonth(
 }
 
 /**
- * Get regional rates for a specific provider and region using the current date.
- * Convenience wrapper around getRegionalRatesForMonth.
- */
-export function getRegionalRates(
-  providerId: string,
-  region: string = 'DEFAULT'
-): RegionalRates | undefined {
-  const now = new Date();
-  return getRegionalRatesForMonth(providerId, region, now.getFullYear(), now.getMonth());
-}
-
-/**
  * Calculate monthly premium for an employee based on SMR and regional rates
  */
 export function calculateMonthlyEmployeePremium(
@@ -119,15 +107,15 @@ export function generatePremiumTableFromRates(
  * Generate a premium table for display purposes
  *
  * @param providerId Provider key
+ * @param year Calendar year for rate lookup
+ * @param month 0-indexed month for rate lookup
  * @param region Region key
- * @param year Optional calendar year for rate lookup (defaults to current year)
- * @param month Optional 0-indexed month for rate lookup (defaults to current month)
  */
 export function generateHealthInsurancePremiumTable(
   providerId: string,
-  region: string = 'DEFAULT',
-  year?: number,
-  month?: number
+  year: number,
+  month: number,
+  region: string = 'DEFAULT'
 ): Array<{
   minIncomeInclusive: number;
   maxIncomeExclusive: number;
@@ -136,12 +124,7 @@ export function generateHealthInsurancePremiumTable(
   fullPremiumNoLTC: number;
   fullPremiumWithLTC: number;
 }> | undefined {
-  let regionalRates: RegionalRates | undefined;
-  if (year !== undefined && month !== undefined) {
-    regionalRates = getRegionalRatesForMonth(providerId, region, year, month);
-  } else {
-    regionalRates = getRegionalRates(providerId, region);
-  }
+  const regionalRates = getRegionalRatesForMonth(providerId, region, year, month);
   if (!regionalRates) return undefined;
 
   return generatePremiumTableFromRates(regionalRates);

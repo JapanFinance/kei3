@@ -8,6 +8,7 @@ import ThemeToggle from './components/ThemeToggle'
 import ChangelogButton from './components/ChangelogButton'
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm'
 import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types/tax'
+import { DEFAULT_INCOME_YEAR } from './types/tax'
 import { calculateTaxes } from './utils/taxCalculations'
 import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, DEFAULT_PROVIDER, DEPENDENT_COVERAGE_ID, isDependentCoverageEligible } from './types/healthInsurance'
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData'
@@ -37,6 +38,7 @@ function App({ mode, toggleColorMode }: AppProps) {
   // Default values for the form
   const defaultInputs: TakeHomeFormState = {
     annualIncome: 5_000_000, // 5 million yen
+    incomeYear: DEFAULT_INCOME_YEAR, // single source of truth; pinned, not new Date().getFullYear()
     incomeMode: 'salary',
     incomeStreams: [{
       id: 'default-salary',
@@ -64,6 +66,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     const calculateAndSetResults = () => {
       const calculationInputs: TakeHomeInputs = {
         incomeStreams: inputs.incomeStreams,
+        incomeYear: inputs.incomeYear,
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
         region: inputs.region,
         healthInsuranceProvider: inputs.healthInsuranceProvider,
@@ -87,6 +90,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     return () => clearTimeout(handler);
   }, [
     inputs.incomeStreams,
+    inputs.incomeYear,
     inputs.isSubjectToLongTermCarePremium,
     inputs.region,
     inputs.healthInsuranceProvider,
@@ -255,6 +259,7 @@ function App({ mode, toggleColorMode }: AppProps) {
       }>
         <TakeHomeChart
           currentIncome={inputs.annualIncome}
+          incomeYear={inputs.incomeYear}
           isEmploymentIncome={inputs.incomeStreams.some(s => s.type === 'salary' || s.type === 'bonus')}
           isSubjectToLongTermCarePremium={inputs.isSubjectToLongTermCarePremium}
           healthInsuranceProvider={inputs.healthInsuranceProvider}

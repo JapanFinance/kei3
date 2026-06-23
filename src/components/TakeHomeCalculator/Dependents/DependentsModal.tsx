@@ -42,6 +42,8 @@ interface DependentsModalProps {
   dependents: Dependent[];
   onDependentsChange: (dependents: Dependent[]) => void;
   taxpayerNetIncome: number;
+  /** Income year used for the dependent-deduction eligibility/threshold lookup. */
+  incomeYear: number;
 }
 
 /**
@@ -54,6 +56,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   dependents,
   onDependentsChange,
   taxpayerNetIncome,
+  incomeYear,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -107,7 +110,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   const getDependentSummary = (dependent: OtherDependent): string => {
     const relationship = RELATIONSHIPS.find(r => r.value === dependent.relationship)?.label || 'Unknown';
     const ageLabel = DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label || 'Unknown';
-    const totalNetIncome = calculateDependentTotalNetIncome(dependent.income);
+    const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, incomeYear);
     const incomeLabel = totalNetIncome === 0 ? 'No income' : `Net income: ¥${totalNetIncome.toLocaleString()}`;
     return `${relationship}, Age: ${ageLabel}, ${incomeLabel}`;
   };
@@ -218,6 +221,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             dependent={editingDependent}
             onSave={editingDependent ? handleUpdateDependent : handleAddDependent}
             onCancel={handleCancelForm}
+            incomeYear={incomeYear}
           />
         ) : (
           <Box>
@@ -226,6 +230,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             <SpouseSection
               spouse={spouse || null}
               onChange={handleSpouseChange}
+              incomeYear={incomeYear}
             />
 
             <Divider sx={{ my: 3 }} />
@@ -353,7 +358,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           );
                         }
 
-                        const deductionResults = calculateDependentDeductions(allDependents, taxpayerNetIncome);
+                        const deductionResults = calculateDependentDeductions(allDependents, incomeYear, taxpayerNetIncome);
 
                         // Group deductions by type and amount
                         interface DeductionGroup {

@@ -81,7 +81,7 @@ export function calculatePensionBreakdown(
   monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
   bonuses: BonusIncomeStream[] = [],
-  year: number = new Date().getFullYear()
+  year: number
 ): PensionBreakdown {
   if (!isEmployeesPension) {
     return { total: getNationalPensionAnnualTotal(year), bonusPortion: 0 };
@@ -183,7 +183,7 @@ export function calculatePensionPremium(
   monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
   bonuses: BonusIncomeStream[] = [],
-  year: number = new Date().getFullYear()
+  year: number
 ): number {
   return calculatePensionBreakdown(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year).total;
 }

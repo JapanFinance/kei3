@@ -2,16 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { render } from '@testing-library/react';
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { NHIPortionTooltip, type NHIPortionType } from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
 import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import { formatJPY } from '../utils/formatters';
 import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
-
-// Pin to June 2026 so rate lookups resolve to FY2026 (current) and FY2025 (previous).
-beforeAll(() => { vi.useFakeTimers({ now: new Date(2026, 5, 1) }); });
-afterAll(() => { vi.useRealTimers(); });
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -19,7 +15,7 @@ afterAll(() => { vi.useRealTimers(); });
  */
 function buildNHIScenario(annualIncome: number, region: string, includeLTC: boolean) {
     const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-        annualIncome, includeLTC, region, 2026
+        annualIncome, includeLTC, 2026, region
     );
 
     const results: TakeHomeResults = {
@@ -54,6 +50,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
         dcPlanContributions: 0,
         manualSocialInsuranceEntry: false,
         manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
     };
 
     return { results, inputs, breakdown };

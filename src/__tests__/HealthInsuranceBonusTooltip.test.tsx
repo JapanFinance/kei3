@@ -65,6 +65,7 @@ describe('HealthInsuranceBonusTooltip', () => {
         dcPlanContributions: 0,
         manualSocialInsuranceEntry: false,
         manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
     };
 
     test('displays generic employer note for standard provider', () => {

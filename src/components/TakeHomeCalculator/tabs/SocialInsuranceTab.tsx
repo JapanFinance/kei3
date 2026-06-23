@@ -63,20 +63,22 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
-        inputs.isSubjectToLongTermCarePremium
+        inputs.isSubjectToLongTermCarePremium,
+        inputs.incomeYear
       );
     } else {
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         provider,
         region,
+        inputs.incomeYear,
         inputs.isSubjectToLongTermCarePremium
       );
     }
   }
 
   // Detect if any caps are applied
-  const capStatus = detectCaps(results, healthInsuranceBreakdown);
+  const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -186,7 +188,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     grossEmploymentIncome={grossEmploymentIncome}
                     netEmploymentIncome={results.netEmploymentIncome}
                     incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
-                    year={inputs.incomeYear ?? new Date().getFullYear()}
+                    year={inputs.incomeYear}
                   />
                 </span>
               }
@@ -497,7 +499,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           labelSuffix={isNationalHealthInsurance ? (
             <DetailedTooltip
               title="Pension Contribution">
-              <NationalPensionTooltip year={inputs.incomeYear ?? new Date().getFullYear()} />
+              <NationalPensionTooltip year={inputs.incomeYear} />
             </DetailedTooltip>
           ) : undefined}
           value={formatJPY(results.pensionPayments)}
@@ -537,14 +539,14 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             label="Salary Premium"
             value={formatJPY((results.employmentInsurance ?? 0) - (results.employmentInsuranceOnBonus ?? 0))}
             type="indented"
-            labelSuffix={<SalaryBreakdownTooltip monthlyIncome={rawMonthlyRemuneration} />}
+            labelSuffix={<SalaryBreakdownTooltip monthlyIncome={rawMonthlyRemuneration} year={inputs.incomeYear} />}
           />
           {results.employmentInsuranceOnBonus !== undefined && results.employmentInsuranceOnBonus > 0 && (
             <ResultRow
               label="Bonus Premium"
               value={formatJPY(results.employmentInsuranceOnBonus)}
               type="indented"
-              labelSuffix={<BonusBreakdownTooltip bonuses={bonuses} />}
+              labelSuffix={<BonusBreakdownTooltip bonuses={bonuses} year={inputs.incomeYear} />}
             />
           )}
           <ResultRow

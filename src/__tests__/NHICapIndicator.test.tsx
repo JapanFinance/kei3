@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
@@ -11,17 +11,13 @@ import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails, FurusatoNoze
 // Mock scrollTo (used by SMRTableTooltip)
 Element.prototype.scrollTo = vi.fn();
 
-// Pin to June 2026 for deterministic NHI rate lookups
-beforeAll(() => { vi.useFakeTimers({ now: new Date(2026, 5, 1) }); });
-afterAll(() => { vi.useRealTimers(); });
-
 /**
  * Build realistic TakeHomeResults and TakeHomeInputs using the real NHI calculator,
  * so cap detection operates on the same data the UI would display.
  */
 function buildNHIScenario(annualIncome: number, region: string, includeLTC: boolean) {
     const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-        annualIncome, includeLTC, region, 2026
+        annualIncome, includeLTC, 2026, region
     );
 
     const results: TakeHomeResults = {
@@ -56,6 +52,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
         dcPlanContributions: 0,
         manualSocialInsuranceEntry: false,
         manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
     };
 
     return { results, inputs, breakdown };

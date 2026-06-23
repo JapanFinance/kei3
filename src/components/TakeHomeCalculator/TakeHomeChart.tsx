@@ -101,6 +101,7 @@ ChartJS.register(
 
 interface TakeHomeChartProps {
   currentIncome: number;
+  incomeYear: number;
   isEmploymentIncome: boolean;
   isSubjectToLongTermCarePremium: boolean;
   healthInsuranceProvider: HealthInsuranceProviderId;
@@ -181,6 +182,7 @@ const getPercentileBand = (income: number): { label: string; color: string } => 
 
 const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   currentIncome,
+  incomeYear,
   isEmploymentIncome,
   isSubjectToLongTermCarePremium,
   healthInsuranceProvider,
@@ -251,6 +253,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const chartData = useMemo<ChartData<'bar' | 'line'>>(
     () => generateChartData(chartRange, {
       isEmploymentIncome,
+      incomeYear,
       isSubjectToLongTermCarePremium,
       healthInsuranceProvider,
       region,
@@ -261,7 +264,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       manualSocialInsuranceAmount,
       incomeStreams
     }),
-    [chartRange, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount, incomeStreams]
+    [chartRange, isEmploymentIncome, incomeYear, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount, incomeStreams]
   );
 
   // Get chart options using the utility function
@@ -288,6 +291,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   // Calculate full tax results for this income level to get cap status
                   const taxInputs = {
                     annualIncome: income,
+                    incomeYear,
                     isEmploymentIncome,
                     isSubjectToLongTermCarePremium,
                     healthInsuranceProvider,
@@ -304,7 +308,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   const taxResults = calculateTaxes(taxInputs);
 
                   // Use the calculated results for cap detection
-                  const capStatus = detectCaps(taxResults);
+                  const capStatus = detectCaps(taxResults, incomeYear);
 
                   if (capStatus.healthInsuranceCapped || capStatus.pensionCapped) {
                     const cappedItems: string[] = [];
@@ -322,7 +326,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         },
       };
     },
-    [chartRange, currentIncome, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount]
+    [chartRange, currentIncome, incomeYear, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount]
   );
 
   // Use media query to determine if we should show minor marks

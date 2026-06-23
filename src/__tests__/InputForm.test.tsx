@@ -15,6 +15,7 @@ describe('TakeHomeInputForm Tests', () => {
 
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
+    incomeYear: 2026,
     incomeMode: 'salary',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -308,6 +309,7 @@ describe('Dependent Coverage UI Behavior', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
+    incomeYear: 2026,
     incomeMode: 'salary',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -517,6 +519,7 @@ describe('Age Range Selection', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
+    incomeYear: 2026,
     incomeMode: 'salary',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -567,6 +570,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
 
   const defaultInputs: TakeHomeFormState = {
     annualIncome: 0,
+    incomeYear: 2026,
     incomeMode: 'advanced',
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
@@ -595,7 +599,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     const modal = screen.getByTestId('dependents-modal');
     const netIncomePassed = Number(modal.getAttribute('data-net-income'));
 
-    const expectedNetSalary = calculateNetEmploymentIncome(5_000_000);
+    const expectedNetSalary = calculateNetEmploymentIncome(5_000_000, 2026);
     const expectedTotalNet = expectedNetSalary + 5_000_000;
 
     expect(netIncomePassed).toBe(expectedTotalNet);
@@ -608,6 +612,7 @@ describe('Commuting Allowance Integration', () => {
 
   const baseInputs: TakeHomeFormState = {
     annualIncome: 5000000,
+    incomeYear: 2026,
     incomeMode: 'advanced',
     incomeStreams: [
       { id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }
@@ -684,6 +689,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
   const TestWrapper = () => {
     const [inputs, setInputs] = useState<TakeHomeFormState>({
       annualIncome: 10000000,
+      incomeYear: 2026,
       incomeMode: 'advanced',
       incomeStreams: [
         { id: '1', type: 'salary', amount: 6000000, frequency: 'annual' },

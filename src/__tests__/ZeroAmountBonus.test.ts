@@ -6,6 +6,8 @@ import { calculateHealthInsuranceBreakdown } from '../utils/healthInsuranceCalcu
 import { calculatePensionBreakdown } from '../utils/pensionCalculator';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 
+const TEST_INCOME_YEAR = 2026;
+
 describe('Zero Amount Bonus Handling', () => {
     const zeroAmountBonus = { amount: 0, type: 'bonus' as const, month: 6, id: '1' };
     const validBonus = { amount: 500000, type: 'bonus' as const, month: 6, id: '2' };
@@ -13,16 +15,16 @@ describe('Zero Amount Bonus Handling', () => {
     describe('calculateEmploymentInsurance', () => {
         it('should handle zero amount bonus correctly', () => {
             // Should be 0 if salary is 0 and bonus is 0
-            const result = calculateEmploymentInsurance(0, [zeroAmountBonus]);
+            const result = calculateEmploymentInsurance(0, TEST_INCOME_YEAR, [zeroAmountBonus]);
             expect(result).toBe(0);
         });
 
         it('should handle mixed zero and non-zero bonuses', () => {
             // Salary 0, one valid bonus
-            const resultWithValid = calculateEmploymentInsurance(0, [validBonus]);
+            const resultWithValid = calculateEmploymentInsurance(0, TEST_INCOME_YEAR, [validBonus]);
 
             // Salary 0, one valid bonus and one zero bonus
-            const resultWithMixed = calculateEmploymentInsurance(0, [validBonus, zeroAmountBonus]);
+            const resultWithMixed = calculateEmploymentInsurance(0, TEST_INCOME_YEAR, [validBonus, zeroAmountBonus]);
 
             expect(resultWithMixed).toBe(resultWithValid);
         });
@@ -31,10 +33,10 @@ describe('Zero Amount Bonus Handling', () => {
     describe('calculateHealthInsuranceBreakdown', () => {
         it('should handle zero amount bonus correctly', () => {
             // Calculate with no bonuses first
-            const baseResult = calculateHealthInsuranceBreakdown(3000000, false, DEFAULT_PROVIDER, 'Tokyo', undefined, []);
+            const baseResult = calculateHealthInsuranceBreakdown(3000000, false, DEFAULT_PROVIDER, TEST_INCOME_YEAR, 'Tokyo', undefined, []);
 
             // Calculate with zero bonus
-            const resultWithZeroBonus = calculateHealthInsuranceBreakdown(3000000, false, DEFAULT_PROVIDER, 'Tokyo', undefined, [zeroAmountBonus]);
+            const resultWithZeroBonus = calculateHealthInsuranceBreakdown(3000000, false, DEFAULT_PROVIDER, TEST_INCOME_YEAR, 'Tokyo', undefined, [zeroAmountBonus]);
 
             expect(resultWithZeroBonus.bonusPortion).toBe(0);
             expect(resultWithZeroBonus.total).toBe(baseResult.total);
@@ -44,10 +46,10 @@ describe('Zero Amount Bonus Handling', () => {
     describe('calculatePensionBreakdown', () => {
         it('should handle zero amount bonus correctly', () => {
             // Calculate with no bonuses first
-            const baseResult = calculatePensionBreakdown(true, 250000, true, []);
+            const baseResult = calculatePensionBreakdown(true, 250000, true, [], TEST_INCOME_YEAR);
 
             // Calculate with zero bonus
-            const resultWithZeroBonus = calculatePensionBreakdown(true, 250000, true, [zeroAmountBonus]);
+            const resultWithZeroBonus = calculatePensionBreakdown(true, 250000, true, [zeroAmountBonus], TEST_INCOME_YEAR);
 
             expect(resultWithZeroBonus.bonusPortion).toBe(0);
             expect(resultWithZeroBonus.total).toBe(baseResult.total);

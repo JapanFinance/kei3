@@ -103,9 +103,27 @@ export interface HomeLoanTaxCreditResult {
   warnings: ReadonlyArray<string>;
 }
 
+/**
+ * The most recent income (tax) year the calculator has data and rules for, and the
+ * default written into form state.
+ *
+ * Pinned deliberately rather than derived from `new Date().getFullYear()`: Japanese
+ * tax-year changes are frequently not finalized until ~April of that year, and the
+ * data tables (e.g. NATIONAL_BASIC_DEDUCTION_TIER_PERIODS) are newest-first lookups
+ * that silently reuse the latest authored period for any later year. Rolling over
+ * automatically on Jan 1 would therefore present a not-yet-implemented year using the
+ * prior year's rules. Bump this when the data tables gain a newer effective year.
+ */
+export const DEFAULT_INCOME_YEAR = 2026;
+
 /** Interface for the UI Form State */
 export interface TakeHomeFormState {
   annualIncome: number;
+  /**
+   * Calendar year the income is taxed in. Single source of truth for the income year,
+   * defaulted to {@link DEFAULT_INCOME_YEAR} in App. A future year-picker UI writes here.
+   */
+  incomeYear: number;
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
   isSubjectToLongTermCarePremium: boolean;
@@ -131,7 +149,12 @@ export interface TakeHomeInputs {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  incomeYear?: number;
+  /**
+   * Calendar year the income is taxed in. Required: every caller threads it through from
+   * {@link TakeHomeFormState.incomeYear} (defaulted to {@link DEFAULT_INCOME_YEAR}), so the
+   * calculation never has to fall back to a guessed year.
+   */
+  incomeYear: number;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 

@@ -40,9 +40,11 @@ import Divider from '@mui/material/Divider';
 interface SpouseSectionProps {
   spouse: Spouse | null;
   onChange: (spouse: Spouse | null) => void;
+  /** Income year for the net-income preview calculations. */
+  incomeYear: number;
 }
 
-export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) {
+export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSectionProps) {
   const [hasSpouse, setHasSpouse] = useState(spouse !== null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -129,7 +131,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="caption" color="text.secondary">Net (所得)</Typography>
                     <Typography variant="body2">
-                      {formatJPY(calculateNetEmploymentIncome(spouse.income.grossEmploymentIncome))}
+                      {formatJPY(calculateNetEmploymentIncome(spouse.income.grossEmploymentIncome, incomeYear))}
                     </Typography>
                   </Box>
                 </Box>
@@ -170,7 +172,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                       Total (合計所得金額)
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                      {formatJPY(calculateDependentTotalNetIncome(spouse.income))}
+                      {formatJPY(calculateDependentTotalNetIncome(spouse.income, incomeYear))}
                     </Typography>
                   </Box>
                 </Box>
@@ -208,7 +210,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatJPY(calculateNetEmploymentIncome(spouse.income.grossEmploymentIncome))}
+                          {formatJPY(calculateNetEmploymentIncome(spouse.income.grossEmploymentIncome, incomeYear))}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -243,7 +245,7 @@ export default function SpouseSection({ spouse, onChange }: SpouseSectionProps) 
                       <TableCell align="right"></TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                          {formatJPY(calculateDependentTotalNetIncome(spouse.income))}
+                          {formatJPY(calculateDependentTotalNetIncome(spouse.income, incomeYear))}
                         </Typography>
                       </TableCell>
                     </TableRow>

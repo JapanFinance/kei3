@@ -78,8 +78,8 @@ export const calculateResidenceTax = (
     netIncome: number,
     nonBasicDeductions: number,
     dependentDeductions: DependentDeductionResults,
-    taxCredit: number = 0,
-    year: number = new Date().getFullYear()
+    year: number,
+    taxCredit: number = 0
 ): ResidenceTaxDetails => {
     const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions, year);
     const { perCapitaLimit, incomeBasedLimit } = getResidenceTaxExemptionLimits(qualifiedDependentsCount);

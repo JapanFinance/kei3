@@ -17,11 +17,11 @@ const totalStyle = { ...rightCellStyle, borderTop: '1px solid var(--divider)', f
 
 interface SalaryTooltipProps {
     monthlyIncome: number;
+    /** Income year whose fiscal-year rates to display. */
+    year: number;
 }
 
-const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ monthlyIncome }) => {
-    const year = new Date().getFullYear();
-
+const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ monthlyIncome, year }) => {
     const months = Array.from({ length: 12 }, (_, month) => {
         const rate = getEmploymentInsuranceRate(year, month);
         const premium = roundSocialInsurancePremium(monthlyIncome * rate);
@@ -65,11 +65,11 @@ const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ monthlyIncome })
 
 interface BonusTooltipProps {
     bonuses: BonusIncomeStream[];
+    /** Income year whose fiscal-year rates to display. */
+    year: number;
 }
 
-const BonusBreakdownTooltip: React.FC<BonusTooltipProps> = ({ bonuses }) => {
-    const year = new Date().getFullYear();
-
+const BonusBreakdownTooltip: React.FC<BonusTooltipProps> = ({ bonuses, year }) => {
     const rows = bonuses.map((bonus) => {
         const rate = getEmploymentInsuranceRate(year, bonus.month);
         const premium = roundSocialInsurancePremium(bonus.amount * rate);

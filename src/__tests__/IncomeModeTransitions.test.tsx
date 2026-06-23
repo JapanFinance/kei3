@@ -23,6 +23,7 @@ vi.mock('../components/TakeHomeCalculator/Income/IncomeDetailsModal', () => ({
 const TestWrapper = ({ initialState }: { initialState?: Partial<TakeHomeFormState> }) => {
     const [inputs, setInputs] = useState<TakeHomeFormState>({
         annualIncome: 5000000,
+        incomeYear: 2026,
         incomeMode: 'salary',
         incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
         isSubjectToLongTermCarePremium: false,

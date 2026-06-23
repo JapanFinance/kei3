@@ -42,7 +42,8 @@ interface AdditionalDeductionsModalProps {
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
-  currentYear: number;
+  /** Income year being modeled; upper bound for the home-loan move-in-year dropdown. */
+  incomeYear: number;
 }
 
 const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> = ({ children, tooltip }) => (
@@ -69,22 +70,22 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   homeLoanTaxCredit,
   onHomeLoanTaxCreditChange,
   homeLoanTaxCreditResult,
-  currentYear,
+  incomeYear,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const effectiveHomeLoan: HomeLoanTaxCreditInput = homeLoanTaxCredit ?? {
-    moveInYear: currentYear,
+    moveInYear: incomeYear,
     creditAmount: 0,
   };
 
   const moveInYearOptions = React.useMemo(() => {
-    const floor = earliestEligibleMoveInYear(currentYear);
+    const floor = earliestEligibleMoveInYear(incomeYear);
     const years: number[] = [];
-    for (let y = currentYear; y >= floor; y--) years.push(y);
+    for (let y = incomeYear; y >= floor; y--) years.push(y);
     return years;
-  }, [currentYear]);
+  }, [incomeYear]);
 
   const updateHomeLoan = (patch: Partial<HomeLoanTaxCreditInput>) => {
     onHomeLoanTaxCreditChange({ ...effectiveHomeLoan, ...patch });

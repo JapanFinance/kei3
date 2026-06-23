@@ -20,7 +20,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
   const includeLTC = inputs.isSubjectToLongTermCarePremium;
-  const year = new Date().getFullYear();
+  const year = inputs.incomeYear;
 
   let providerLabel = '';
   let sourceUrl: string | undefined;
@@ -29,7 +29,8 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
     providerLabel = "Custom Provider";
   } else {
     const providerDef = PROVIDER_DEFINITIONS[provider];
-    const regionalRates = getRegionalRatesForMonth(provider, region, new Date().getFullYear(), new Date().getMonth());
+    // April (month 3) → the income year's fiscal-year rates; this lookup only needs the source URL.
+    const regionalRates = getRegionalRatesForMonth(provider, region, year, 3);
     if (regionalRates) {
       sourceUrl = regionalRates.source;
     }

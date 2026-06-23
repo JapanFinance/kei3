@@ -72,7 +72,7 @@ const calculateIncomeAdjustmentDeduction = (
  */
 export const calculateNetEmploymentIncome = (
     grossEmploymentIncome: number,
-    year: number = new Date().getFullYear(),
+    year: number,
     dependents: Dependent[] = []
 ): number => calculateNetEmploymentIncomeForPeriod(
     grossEmploymentIncome,
@@ -94,7 +94,7 @@ export interface EmploymentInsuranceBreakdown {
 const calculateEmploymentInsuranceBreakdown = (
     salaryIncome: number,
     bonuses: BonusIncomeStream[],
-    year: number = new Date().getFullYear()
+    year: number
 ): EmploymentInsuranceBreakdown => {
     // If no employment income, no employment insurance is required
     if (salaryIncome <= 0 && !bonuses.some(b => b.amount > 0)) {
@@ -141,8 +141,8 @@ const calculateEmploymentInsuranceBreakdown = (
 // Only exported for testing
 export const calculateEmploymentInsurance = (
     salaryIncome: number,
-    bonuses: BonusIncomeStream[] = [],
-    year?: number
+    year: number,
+    bonuses: BonusIncomeStream[] = []
 ): number => {
     return calculateEmploymentInsuranceBreakdown(salaryIncome, bonuses, year).total;
 }
@@ -154,7 +154,7 @@ export const calculateEmploymentInsurance = (
  * @param netIncome Taxpayer's net income (合計所得金額) in yen
  * @param year Income year (calendar year the income was earned); defaults to current year
  */
-export const calculateNationalIncomeTaxBasicDeduction = (netIncome: number, year: number = new Date().getFullYear()): number => {
+export const calculateNationalIncomeTaxBasicDeduction = (netIncome: number, year: number): number => {
     for (const { maxIncomeInclusive, deduction } of getNationalBasicDeductionTiers(year)) {
         if (netIncome <= maxIncomeInclusive) return deduction;
     }
@@ -317,7 +317,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
  */
 export const calculateTotalNetIncome = (
     incomeStreams: IncomeStream[],
-    year: number = new Date().getFullYear(),
+    year: number,
     dependents: Dependent[] = []
 ): number => {
     const {
@@ -361,7 +361,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const taxableCommutingAllowance = Math.max(0, commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP);
 
     const grossEmploymentIncome = salaryIncome + taxableCommutingAllowance + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
-    const incomeYear = inputs.incomeYear ?? new Date().getFullYear();
+    const incomeYear = inputs.incomeYear;
 
     const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, incomeYear, inputs.dependents);
     const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(grossEmploymentIncome, inputs.dependents, incomeYear);
@@ -391,6 +391,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
                 netIncome,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.healthInsuranceProvider,
+                incomeYear,
                 inputs.region
             );
             healthInsurance = hiResult.total;
@@ -400,6 +401,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
                 netIncome,
                 inputs.isSubjectToLongTermCarePremium,
+                incomeYear,
                 inputs.region as string
             );
         } else { // Employee Health Insurance
@@ -409,6 +411,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
                 salaryIncome + commutingAllowance,
                 inputs.isSubjectToLongTermCarePremium,
                 inputs.healthInsuranceProvider,
+                incomeYear,
                 inputs.region,
                 inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates ? {
                     healthRate: inputs.customEHIRates.healthInsuranceRate,
@@ -442,7 +445,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
 
         // Employment Insurance also includes full commuting allowance
-        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome + commutingAllowance, bonusIncome);
+        const eiResult = calculateEmploymentInsuranceBreakdown(salaryIncome + commutingAllowance, bonusIncome, incomeYear);
         employmentInsurance = eiResult.total;
         employmentInsuranceOnBonus = eiResult.bonusPortion;
 
@@ -452,7 +455,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
     const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
-    const dependentDeductions = calculateDependentDeductions(inputs.dependents, netIncome, incomeYear);
+    const dependentDeductions = calculateDependentDeductions(inputs.dependents, incomeYear, netIncome);
 
     const nationalIncomeTaxBasicDeduction = calculateNationalIncomeTaxBasicDeduction(netIncome, incomeYear);
 
@@ -472,7 +475,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // then spilled over to residence tax up to the cap.
     // Calling residence tax with appliedToResidenceTax = 0 first gives us the
     // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
-    const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, 0, incomeYear);
+    const preCreditResidenceTax = calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, incomeYear);
 
     const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
         ? applyHomeLoanTaxCredit(
@@ -491,7 +494,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const nationalIncomeTax = Math.floor((baseIncomeTaxAfterCredit + reconstructionSurtax) / 100) * 100;
 
     const residenceTax = homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0
-        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, homeLoanTaxCreditResult.appliedToResidenceTax, incomeYear)
+        ? calculateResidenceTax(netIncome, socialInsuranceDeduction + idecoDeduction, dependentDeductions, incomeYear, homeLoanTaxCreditResult.appliedToResidenceTax)
         : preCreditResidenceTax;
 
     // Calculate totals

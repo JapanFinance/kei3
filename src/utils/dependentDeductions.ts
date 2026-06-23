@@ -48,7 +48,7 @@ const SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME = 1_230_000;
  * @param income  The dependent's income breakdown
  * @param year    Income year for the employment income deduction lookup; defaults to current year
  */
-export function calculateDependentTotalNetIncome(income: DependentIncome, year: number = new Date().getFullYear()): number {
+export function calculateDependentTotalNetIncome(income: DependentIncome, year: number): number {
   const { grossEmploymentIncome, otherNetIncome } = income;
 
   // Calculate net employment income using employment income deduction formula
@@ -556,7 +556,7 @@ function calculateSpouseDeduction(dependent: Dependent, taxpayerNetIncome: numbe
 
 /**
  * Calculate all dependent-related deductions
- * 
+ *
  * @param dependents - user input array of dependents
  * @param taxpayerNetIncome - Taxpayer's total net income (合計所得金額)
  * @returns Detailed breakdown of all deductions
@@ -565,8 +565,8 @@ function calculateSpouseDeduction(dependent: Dependent, taxpayerNetIncome: numbe
  */
 export function calculateDependentDeductions(
   dependents: Dependent[],
-  taxpayerNetIncome: number = 0,
-  year: number = new Date().getFullYear()
+  year: number,
+  taxpayerNetIncome: number = 0
 ): DependentDeductionResults {
   const results: DependentDeductionResults = {
     nationalTax: {
