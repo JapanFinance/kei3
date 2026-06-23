@@ -3,54 +3,45 @@
 
 import { describe, expect, it } from 'vitest'
 import {
-  calculateDependentDeductions as calculateDependentDeductionsForYear,
-  calculateDependentTotalNetIncome as calculateDependentTotalNetIncomeForYear,
+  calculateDependentDeductions,
+  calculateDependentTotalNetIncome,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions'
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome'
 import { DEDUCTION_TYPES, type Dependent } from '../types/dependents'
 
-// These calculators now require an income year. Thin wrappers default it to 2026 (the suite's
-// prior behavior under a 2026 clock) while honoring an explicit year, so call sites stay unchanged.
 const TEST_INCOME_YEAR = 2026;
-type DepDeductionsArgs = Parameters<typeof calculateDependentDeductionsForYear>;
-const calculateDependentDeductions = (
-  dependents: DepDeductionsArgs[0], taxpayerNetIncome?: DepDeductionsArgs[2], year: number = TEST_INCOME_YEAR,
-) => calculateDependentDeductionsForYear(dependents, year, taxpayerNetIncome);
-const calculateDependentTotalNetIncome = (
-  income: Parameters<typeof calculateDependentTotalNetIncomeForYear>[0], year: number = TEST_INCOME_YEAR,
-) => calculateDependentTotalNetIncomeForYear(income, year);
 
 // --- Helper functions to test internal logic via public API ---
 
 function isEligibleForDependentDeduction(dependent: Dependent, year?: number): boolean {
-  const result = calculateDependentDeductions([dependent], 5000000, year);
+  const result = calculateDependentDeductions([dependent], year ?? TEST_INCOME_YEAR, 5000000);
   return result.nationalTax.dependentDeduction > 0;
 }
 
 function isEligibleForSpouseDeduction(dependent: Dependent, year?: number): boolean {
-  const result = calculateDependentDeductions([dependent], 5000000, year);
+  const result = calculateDependentDeductions([dependent], year ?? TEST_INCOME_YEAR, 5000000);
   return result.nationalTax.spouseDeduction > 0;
 }
 
 function isEligibleForSpouseSpecialDeduction(dependent: Dependent, year?: number): boolean {
-  const result = calculateDependentDeductions([dependent], 5000000, year);
+  const result = calculateDependentDeductions([dependent], year ?? TEST_INCOME_YEAR, 5000000);
   return result.nationalTax.spouseSpecialDeduction > 0;
 }
 
 function isEligibleForSpecificRelativeSpecialDeduction(dependent: Dependent, year?: number): boolean {
-  const result = calculateDependentDeductions([dependent], 5000000, year);
+  const result = calculateDependentDeductions([dependent], year ?? TEST_INCOME_YEAR, 5000000);
   return result.nationalTax.specificRelativeDeduction > 0;
 }
 
 function isSpecialDependent(dependent: Dependent): boolean {
-  const result = calculateDependentDeductions([dependent], 5000000);
+  const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, 5000000);
   // Special dependent deduction amount is 630,000
   return result.nationalTax.dependentDeduction === 630000;
 }
 
 function isElderlyDependent(dependent: Dependent): boolean {
-  const result = calculateDependentDeductions([dependent], 5000000);
+  const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, 5000000);
   // Elderly dependent deduction amount is 480,000 or 580,000 (cohabiting parent)
   return result.nationalTax.dependentDeduction === 480000 || result.nationalTax.dependentDeduction === 580000;
 }
@@ -67,7 +58,7 @@ function getSpouseSpecialDeduction(spouseNetIncome: number, taxpayerNetIncome: n
       otherNetIncome: spouseNetIncome,
     },
   };
-  const result = calculateDependentDeductions([spouse], taxpayerNetIncome, year);
+  const result = calculateDependentDeductions([spouse], year ?? TEST_INCOME_YEAR, taxpayerNetIncome);
   return {
     national: result.nationalTax.spouseSpecialDeduction,
     residence: result.residenceTax.spouseSpecialDeduction
@@ -86,7 +77,7 @@ function getSpecificRelativeDeduction(dependentNetIncome: number, year?: number)
       otherNetIncome: dependentNetIncome,
     },
   };
-  const result = calculateDependentDeductions([dependent], 5000000, year);
+  const result = calculateDependentDeductions([dependent], year ?? TEST_INCOME_YEAR, 5000000);
   return {
     national: result.nationalTax.specificRelativeDeduction,
     residence: result.residenceTax.specificRelativeDeduction
@@ -109,7 +100,7 @@ function getSpouseDeduction(isElderly: boolean, taxpayerNetIncome: number) {
     },
   };
   
-  const results = calculateDependentDeductions([dependent], taxpayerNetIncome);
+  const results = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, taxpayerNetIncome);
   return {
     national: results.nationalTax.spouseDeduction,
     residence: results.residenceTax.spouseDeduction
@@ -849,7 +840,7 @@ describe('Total Net Income Calculation with Other Income', () => {
       grossEmploymentIncome: 1_000_000, // Net = 260,000
       otherNetIncome: 200_000,
     }
-    expect(calculateDependentTotalNetIncome(income)).toBe(460_000)
+    expect(calculateDependentTotalNetIncome(income, TEST_INCOME_YEAR)).toBe(460_000)
   })
 
   it('threshold applies to total net income (employment + other)', () => {
@@ -1275,25 +1266,25 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     }
 
     it('full deduction when taxpayer income ≤ 9,000,000', () => {
-      const result = calculateDependentDeductions([spouse], 8_000_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 8_000_000)
       expect(result.nationalTax.spouseDeduction).toBe(380_000)
       expect(result.residenceTax.spouseDeduction).toBe(330_000)
     })
 
     it('reduced deduction when taxpayer income 9,000,001 - 9,500,000', () => {
-      const result = calculateDependentDeductions([spouse], 9_200_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 9_200_000)
       expect(result.nationalTax.spouseDeduction).toBe(260_000)
       expect(result.residenceTax.spouseDeduction).toBe(220_000)
     })
 
     it('further reduced when taxpayer income 9,500,001 - 10,000,000', () => {
-      const result = calculateDependentDeductions([spouse], 9_700_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 9_700_000)
       expect(result.nationalTax.spouseDeduction).toBe(130_000)
       expect(result.residenceTax.spouseDeduction).toBe(110_000)
     })
 
     it('no deduction when taxpayer income > 10,000,000', () => {
-      const result = calculateDependentDeductions([spouse], 11_000_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 11_000_000)
       expect(result.nationalTax.spouseDeduction).toBe(0)
       expect(result.residenceTax.spouseDeduction).toBe(0)
     })
@@ -1313,25 +1304,25 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     }
 
     it('full deduction when taxpayer income ≤ 9,000,000', () => {
-      const result = calculateDependentDeductions([spouse], 8_000_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 8_000_000)
       expect(result.nationalTax.spouseSpecialDeduction).toBe(360_000)
       expect(result.residenceTax.spouseSpecialDeduction).toBe(330_000)
     })
 
     it('reduced deduction when taxpayer income 9,000,001 - 9,500,000', () => {
-      const result = calculateDependentDeductions([spouse], 9_200_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 9_200_000)
       expect(result.nationalTax.spouseSpecialDeduction).toBe(240_000)
       expect(result.residenceTax.spouseSpecialDeduction).toBe(220_000)
     })
 
     it('further reduced when taxpayer income 9,500,001 - 10,000,000', () => {
-      const result = calculateDependentDeductions([spouse], 9_700_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 9_700_000)
       expect(result.nationalTax.spouseSpecialDeduction).toBe(120_000)
       expect(result.residenceTax.spouseSpecialDeduction).toBe(110_000)
     })
 
     it('no deduction when taxpayer income > 10,000,000', () => {
-      const result = calculateDependentDeductions([spouse], 11_000_000)
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 11_000_000)
       expect(result.nationalTax.spouseSpecialDeduction).toBe(0)
       expect(result.residenceTax.spouseSpecialDeduction).toBe(0)
     })
@@ -1351,25 +1342,25 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     }
 
     it('full elderly spouse deduction when taxpayer income ≤ 9,000,000', () => {
-      const result = calculateDependentDeductions([elderlySpouse], 8_000_000)
+      const result = calculateDependentDeductions([elderlySpouse], TEST_INCOME_YEAR, 8_000_000)
       expect(result.nationalTax.spouseDeduction).toBe(480_000)
       expect(result.residenceTax.spouseDeduction).toBe(380_000)
     })
 
     it('reduced elderly spouse deduction when taxpayer income 9,000,001 - 9,500,000', () => {
-      const result = calculateDependentDeductions([elderlySpouse], 9_200_000)
+      const result = calculateDependentDeductions([elderlySpouse], TEST_INCOME_YEAR, 9_200_000)
       expect(result.nationalTax.spouseDeduction).toBe(320_000)
       expect(result.residenceTax.spouseDeduction).toBe(260_000)
     })
 
     it('further reduced when taxpayer income 9,500,001 - 10,000,000', () => {
-      const result = calculateDependentDeductions([elderlySpouse], 9_700_000)
+      const result = calculateDependentDeductions([elderlySpouse], TEST_INCOME_YEAR, 9_700_000)
       expect(result.nationalTax.spouseDeduction).toBe(160_000)
       expect(result.residenceTax.spouseDeduction).toBe(130_000)
     })
 
     it('no deduction when taxpayer income > 10,000,000', () => {
-      const result = calculateDependentDeductions([elderlySpouse], 11_000_000)
+      const result = calculateDependentDeductions([elderlySpouse], TEST_INCOME_YEAR, 11_000_000)
       expect(result.nationalTax.spouseDeduction).toBe(0)
       expect(result.residenceTax.spouseDeduction).toBe(0)
     })
@@ -1389,9 +1380,9 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     }
 
     it('dependent deduction remains constant regardless of taxpayer income', () => {
-      const result1 = calculateDependentDeductions([child], 5_000_000)
-      const result2 = calculateDependentDeductions([child], 9_500_000)
-      const result3 = calculateDependentDeductions([child], 11_000_000)
+      const result1 = calculateDependentDeductions([child], TEST_INCOME_YEAR, 5_000_000)
+      const result2 = calculateDependentDeductions([child], TEST_INCOME_YEAR, 9_500_000)
+      const result3 = calculateDependentDeductions([child], TEST_INCOME_YEAR, 11_000_000)
       
       expect(result1.nationalTax.dependentDeduction).toBe(630_000)
       expect(result2.nationalTax.dependentDeduction).toBe(630_000)
@@ -1414,7 +1405,7 @@ describe('Dependent Deductions - Under 16', () => {
       },
     }
 
-    const result = calculateDependentDeductions([dependent], 5000000)
+    const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, 5000000)
     
     // Should have 0 deduction
     expect(result.nationalTax.dependentDeduction).toBe(0)
@@ -1438,7 +1429,7 @@ describe('Dependent Deductions - Under 16', () => {
       },
     }
 
-    const result = calculateDependentDeductions([dependent], 5000000)
+    const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, 5000000)
     
     // Should have disability deduction
     expect(result.nationalTax.disabilityDeduction).toBeGreaterThan(0)
