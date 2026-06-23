@@ -44,6 +44,15 @@ export function earliestEligibleMoveInYear(taxYear: number): number {
 }
 
 /**
+ * Whether the 特定取得 / non-特定取得 distinction changes the residence-tax spillover cap for the
+ * given move-in year — true only for cohorts that carry a separate non-特定取得 cap (the 2014–2021
+ * band). The UI uses this to show the 特定取得 checkbox only for move-in years where it matters.
+ */
+export function homeLoanCreditDistinguishesTokuteiShutoku(moveInYear: number): boolean {
+    return getHomeLoanTaxCreditCohort(moveInYear)?.spilloverNonTokuteiShutoku !== undefined;
+}
+
+/**
  * Computes how the user's home loan tax credit applies, split between the base
  * income tax and the residence-tax spillover.
  *
@@ -92,9 +101,17 @@ export function applyHomeLoanTaxCredit(
     const appliedToIncomeTax = Math.min(availableCredit, Math.max(0, baseIncomeTax));
     const spilloverEligible = availableCredit - appliedToIncomeTax;
 
+    // Pick the spillover cap variant. The 2014–2021 band carries a lower non-特定取得 cap
+    // (5%/¥97,500) alongside its 特定取得 cap (7%/¥136,500); we use it only when the input is
+    // explicitly non-特定取得 AND the band distinguishes them. Omitting the flag means 特定取得
+    // (matching the original behavior); other bands have no non-特定取得 variant, so the flag is moot.
+    const spillover = input.isTokuteiShutoku === false && cohort.spilloverNonTokuteiShutoku
+        ? cohort.spilloverNonTokuteiShutoku
+        : cohort.spillover;
+
     // Remainder spills over to residence tax, capped at min(定額限度 flatCap, 定率限度 課税総所得金額等 × rate).
-    const incomeRateCap = Math.floor(Math.max(0, taxableTotalIncome) * cohort.spillover.taxableIncomeRate);
-    const residenceTaxCap = Math.min(cohort.spillover.flatCap, incomeRateCap);
+    const incomeRateCap = Math.floor(Math.max(0, taxableTotalIncome) * spillover.taxableIncomeRate);
+    const residenceTaxCap = Math.min(spillover.flatCap, incomeRateCap);
     const appliedToResidenceTax = Math.min(spilloverEligible, residenceTaxCap);
     const unusedCredit = availableCredit - appliedToIncomeTax - appliedToResidenceTax;
 
@@ -112,7 +129,7 @@ export function applyHomeLoanTaxCredit(
         unusedCredit,
         residenceTaxSpilloverCap: {
             applied: residenceTaxCap,
-            flatCap: cohort.spillover.flatCap,
+            flatCap: spillover.flatCap,
             incomeRateCap,
         },
         warnings,
