@@ -1471,3 +1471,82 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     expect(calculateTotalNetIncome(incomeStreams, 2026)).toBe(20_050_000);
   });
 });
+
+describe('grossEmploymentIncome (canonical gross for the Net Employment Income tooltip)', () => {
+  const baseInputs = {
+    isSubjectToLongTermCarePremium: false,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  };
+
+  it('sums salary, taxable commuting allowance, bonus, and stock compensation', () => {
+    const result = calculateTaxes({
+      ...baseInputs,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 6_000_000, frequency: 'annual' as const },
+        // 200k/mo commuting = 2.4M/yr; non-taxable cap is 1.8M/yr → 600k taxable
+        {
+          id: 'c1',
+          type: 'commutingAllowance' as const,
+          amount: 200_000,
+          frequency: 'monthly' as const,
+        },
+        { id: 'b1', type: 'bonus' as const, amount: 1_000_000, month: 5 },
+        {
+          id: 'rsu1',
+          type: 'stockCompensation' as const,
+          amount: 4_000_000,
+          issuerDomicile: 'foreign' as const,
+        },
+      ],
+    });
+
+    // 6,000,000 + (2,400,000 − 1,800,000) + 1,000,000 + 4,000,000 = 11,600,000
+    expect(result.grossEmploymentIncome).toBe(11_600_000);
+
+    // The tooltip derives 給与所得控除 as gross − net − adjustment. With the canonical gross this is
+    // the real (capped) deduction and is never negative.
+    const employmentIncomeDeduction =
+      result.grossEmploymentIncome -
+      (result.netEmploymentIncome ?? 0) -
+      (result.incomeAdjustmentDeduction ?? 0);
+    expect(employmentIncomeDeduction).toBe(1_950_000);
+    expect(employmentIncomeDeduction).toBeGreaterThanOrEqual(0);
+  });
+
+  it('includes stock compensation so the RSU + NHI scenario has no negative deduction', () => {
+    // Pre-fix, the Social Insurance tab omitted stock compensation from its gross, so the derived
+    // deduction (gross − net) went negative for large RSUs (6M gross < 8.05M net).
+    const result = calculateTaxes({
+      ...baseInputs,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 6_000_000, frequency: 'annual' as const },
+        {
+          id: 'rsu1',
+          type: 'stockCompensation' as const,
+          amount: 4_000_000,
+          issuerDomicile: 'foreign' as const,
+        },
+      ],
+    });
+
+    expect(result.grossEmploymentIncome).toBe(10_000_000); // 6M salary + 4M RSU (NOT 6M)
+    expect(result.netEmploymentIncome).toBe(8_050_000); // 10M − 1.95M cap
+    expect(result.grossEmploymentIncome - (result.netEmploymentIncome ?? 0)).toBe(1_950_000);
+  });
+
+  it('is 0 when there is no employment income', () => {
+    const result = calculateTaxes({
+      ...baseInputs,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      incomeStreams: [{ id: 'm1', type: 'miscellaneous' as const, amount: 3_000_000 }],
+    });
+    expect(result.grossEmploymentIncome).toBe(0);
+  });
+});

@@ -143,20 +143,14 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     .filter(s => s.type === 'bonus')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  // Calculate separated gross income
-  const grossEmploymentIncome = inputs.incomeStreams
-    .filter(s => s.type === 'salary' || s.type === 'bonus')
-    .reduce(
-      (sum, s) =>
-        sum + (s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount),
-      0,
-    );
-
   const businessAndMiscIncome = inputs.incomeStreams
     .filter(s => s.type === 'business' || s.type === 'miscellaneous')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  const hasEmploymentIncome = grossEmploymentIncome > 0;
+  // Use the canonical gross from the calculation (salary + taxable commuting allowance +
+  // bonus + stock compensation), not a tab-local recomputation that omits stock/commuting,
+  // so the Net Employment Income tooltip reconciles instead of showing a negative deduction.
+  const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 
   const monthlyCommutingAllowance = inputs.incomeStreams
@@ -208,7 +202,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 <span>
                   Net Employment Income
                   <NetEmploymentIncomeTooltip
-                    grossEmploymentIncome={grossEmploymentIncome}
+                    grossEmploymentIncome={results.grossEmploymentIncome}
                     netEmploymentIncome={results.netEmploymentIncome}
                     incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
                     year={inputs.incomeYear}

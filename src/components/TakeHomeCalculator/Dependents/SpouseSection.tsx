@@ -293,7 +293,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
 
           {/* Age Category and Living Together on same row */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl sx={{ flex: 1 }} size="small">
+            <FormControl sx={{ flex: 1 }}>
               <InputLabel>Age</InputLabel>
               <Select
                 value={spouse.ageCategory}
@@ -326,7 +326,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
           </Box>
 
           {/* Disability Status */}
-          <FormControl fullWidth size="small">
+          <FormControl fullWidth>
             <InputLabel>Disability Status</InputLabel>
             <Select
               value={spouse.disability}

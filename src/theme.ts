@@ -60,6 +60,15 @@ export const getTheme = (mode: 'light' | 'dark') => {
           },
         },
       },
+      // Default all input fields to the compact "small" size for visual
+      // consistency. MuiFormControl cascades its size to the Select/Input it
+      // wraps, so every FormControl-wrapped Select inherits this automatically
+      // (no MuiSelect default needed). MuiTextField covers standalone text
+      // fields (e.g. SpinnerNumberField), and MuiAutocomplete keeps the
+      // Autocomplete's internal layout aligned with its small input.
+      MuiTextField: { defaultProps: { size: 'small' } },
+      MuiFormControl: { defaultProps: { size: 'small' } },
+      MuiAutocomplete: { defaultProps: { size: 'small' } },
     },
   });
 };

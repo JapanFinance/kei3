@@ -220,20 +220,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const incomeYear = inputs.incomeYear;
   const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
 
-  // Calculate separated gross income
-  const grossEmploymentIncome = inputs.incomeStreams
-    .filter(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation')
-    .reduce(
-      (sum, s) =>
-        sum + (s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount),
-      0,
-    );
-
   const businessAndMiscIncome = inputs.incomeStreams
     .filter(s => s.type === 'business' || s.type === 'miscellaneous')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  const hasEmploymentIncome = grossEmploymentIncome > 0;
+  // Use the canonical gross from the calculation (salary + taxable commuting allowance +
+  // bonus + stock compensation), not a tab-local recomputation, so the tooltip reconciles.
+  const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 
   // Residence income-based portion (所得割). When a home loan credit spills over to
@@ -275,7 +268,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <span>
                 Net Employment Income
                 <NetEmploymentIncomeTooltip
-                  grossEmploymentIncome={grossEmploymentIncome}
+                  grossEmploymentIncome={results.grossEmploymentIncome}
                   netEmploymentIncome={results.netEmploymentIncome}
                   incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
                   year={incomeYear}
