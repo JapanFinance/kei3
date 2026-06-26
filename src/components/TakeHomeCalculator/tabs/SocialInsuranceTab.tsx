@@ -147,9 +147,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     .filter(s => s.type === 'business' || s.type === 'miscellaneous')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  // Use the canonical gross from the calculation (salary + taxable commuting allowance +
-  // bonus + stock compensation), not a tab-local recomputation that omits stock/commuting,
-  // so the Net Employment Income tooltip reconciles instead of showing a negative deduction.
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 

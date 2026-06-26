@@ -224,8 +224,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
     .filter(s => s.type === 'business' || s.type === 'miscellaneous')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  // Use the canonical gross from the calculation (salary + taxable commuting allowance +
-  // bonus + stock compensation), not a tab-local recomputation, so the tooltip reconciles.
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
 
