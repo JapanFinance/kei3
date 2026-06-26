@@ -33,16 +33,16 @@ export default function SiteHeader({ title, mode, toggleColorMode, actions }: Si
         borderColor: 'divider',
       }}
     >
-      <Toolbar variant="dense" sx={{ gap: 1 }}>
+      <Toolbar variant="dense" sx={{ gap: 1, py: 0.5 }}>
         <Typography
           variant="h6"
           component="h1"
-          noWrap
           sx={{
             flexGrow: 1,
             minWidth: 0,
             fontSize: { xs: '1.05rem', sm: '1.25rem' },
             fontWeight: 600,
+            lineHeight: 1.2,
           }}
         >
           {title}
