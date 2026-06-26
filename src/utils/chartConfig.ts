@@ -2,12 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { TakeHomeInputs, ChartRange, IncomeStream } from '../types/tax';
-import { formatJPY, formatYenCompact } from './formatters'
-import { calculateTaxes } from './taxCalculations'
-import { detectCaps } from './capDetection'
-import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, CoreScaleOptions, Plugin } from 'chart.js'
-import { MEDIAN_INCOME_VALUE } from '../data/income'
-
+import { formatJPY, formatYenCompact } from './formatters';
+import { calculateTaxes } from './taxCalculations';
+import { detectCaps } from './capDetection';
+import type {
+  ChartData,
+  ChartOptions,
+  Chart,
+  TooltipItem,
+  Scale,
+  CoreScaleOptions,
+  Plugin,
+} from 'chart.js';
+import { MEDIAN_INCOME_VALUE } from '../data/income';
 
 // Create custom plugin for vertical lines
 export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
@@ -29,8 +36,12 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
     }
 
     // Draw Your Income line if it exists and is within the chart range
-    if (typeof pluginData.currentIncomePosition === 'number' && pluginData.currentIncomePosition >= 0 && pluginData.currentIncomePosition <= 1) {
-      const yourIncomeX = left + (width * pluginData.currentIncomePosition);
+    if (
+      typeof pluginData.currentIncomePosition === 'number' &&
+      pluginData.currentIncomePosition >= 0 &&
+      pluginData.currentIncomePosition <= 1
+    ) {
+      const yourIncomeX = left + width * pluginData.currentIncomePosition;
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(yourIncomeX, top);
@@ -43,8 +54,12 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
     }
 
     // Draw Median Income line if it exists and is within the chart range
-    if (typeof pluginData.medianIncomePosition === 'number' && pluginData.medianIncomePosition >= 0 && pluginData.medianIncomePosition <= 1) {
-      const medianIncomeX = left + (width * pluginData.medianIncomePosition);
+    if (
+      typeof pluginData.medianIncomePosition === 'number' &&
+      pluginData.medianIncomePosition >= 0 &&
+      pluginData.medianIncomePosition <= 1
+    ) {
+      const medianIncomeX = left + width * pluginData.medianIncomePosition;
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(medianIncomeX, top);
@@ -55,7 +70,7 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
 
       ctx.restore();
     }
-  }
+  },
 };
 
 export interface ChartCalculationContext extends TakeHomeInputs {
@@ -64,29 +79,27 @@ export interface ChartCalculationContext extends TakeHomeInputs {
 
 export const generateChartData = (
   chartRange: ChartRange,
-  currentInputs: ChartCalculationContext
+  currentInputs: ChartCalculationContext,
 ): ChartData<'bar' | 'line'> => {
-
   // Create income points based on the current range
-  const step = 1000000 // 1 million yen
-  const numPoints = Math.floor((chartRange.max - chartRange.min) / step) + 1
-  const incomePoints = Array.from(
-    { length: numPoints },
-    (_, i) => chartRange.min + (i * step)
-  )
+  const step = 1000000; // 1 million yen
+  const numPoints = Math.floor((chartRange.max - chartRange.min) / step) + 1;
+  const incomePoints = Array.from({ length: numPoints }, (_, i) => chartRange.min + i * step);
 
   // If manual social insurance is entered, we cannot accurately calculate the breakdown for other income levels.
   // We return a dummy dataset to ensure the chart renders (axes, background bands, vertical lines) but without misleading bars.
   if (currentInputs.manualSocialInsuranceEntry) {
     return {
-      datasets: [{
-        label: 'Data Unavailable',
-        data: incomePoints.map(x => ({ x, y: 0 })),
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        yAxisID: 'y',
-        type: 'bar' as const,
-      }]
+      datasets: [
+        {
+          label: 'Data Unavailable',
+          data: incomePoints.map(x => ({ x, y: 0 })),
+          backgroundColor: 'transparent',
+          borderColor: 'transparent',
+          yAxisID: 'y',
+          type: 'bar' as const,
+        },
+      ],
     };
   }
 
@@ -95,7 +108,7 @@ export const generateChartData = (
     // Scale each income stream to match the 'income' for this chart point
     let calcStreams: IncomeStream[];
     const baseTotal = currentInputs.incomeStreams.reduce((sum, s) => {
-      if (s.type === 'salary' && s.frequency === 'monthly') return sum + (s.amount * 12);
+      if (s.type === 'salary' && s.frequency === 'monthly') return sum + s.amount * 12;
       return sum + s.amount;
     }, 0);
 
@@ -103,16 +116,18 @@ export const generateChartData = (
       const ratio = income / baseTotal;
       calcStreams = currentInputs.incomeStreams.map(s => ({
         ...s,
-        amount: s.amount * ratio
+        amount: s.amount * ratio,
       }));
     } else {
       // Fallback if base is 0
-      calcStreams = [{
-        id: 'chart-salary-fallback',
-        type: 'salary',
-        amount: income,
-        frequency: 'annual'
-      }];
+      calcStreams = [
+        {
+          id: 'chart-salary-fallback',
+          type: 'salary',
+          amount: income,
+          frequency: 'annual',
+        },
+      ];
     }
 
     // Prepare inputs
@@ -126,7 +141,7 @@ export const generateChartData = (
     if (calcStreams.length > 0) {
       const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0 };
       calcStreams.forEach(s => {
-        const val = (s.type === 'salary' && s.frequency === 'monthly') ? s.amount * 12 : s.amount;
+        const val = s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
         if (s.type === 'salary') groups.salary += val;
         else if (s.type === 'bonus') groups.bonus += val;
         else if (s.type === 'business') groups.business += val;
@@ -137,7 +152,8 @@ export const generateChartData = (
       if (groups.salary > 0) breakdown.push({ label: 'Salary', amount: groups.salary });
       if (groups.bonus > 0) breakdown.push({ label: 'Bonus', amount: groups.bonus });
       if (groups.business > 0) breakdown.push({ label: 'Business', amount: groups.business });
-      if (groups.miscellaneous > 0) breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
+      if (groups.miscellaneous > 0)
+        breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
     }
 
     const result = calculateTaxes(inputsForCalc);
@@ -148,38 +164,60 @@ export const generateChartData = (
   const socialInsuranceDatasets = [
     {
       label: 'Health Insurance',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.healthInsurance, breakdown })),
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+        x: incomePoints[i]!,
+        y: result.healthInsurance,
+        breakdown,
+      })),
       borderColor: 'var(--text-primary)',
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
-      borderWidth: resultsAndCaps.map(({ caps }) => caps.healthInsuranceCapped ? 2 : 0),
+      borderWidth: resultsAndCaps.map(({ caps }) => (caps.healthInsuranceCapped ? 2 : 0)),
       yAxisID: 'y',
       type: 'bar' as const,
       stack: 'stack0',
     },
     {
       label: 'Pension',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.pensionPayments, breakdown })),
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+        x: incomePoints[i]!,
+        y: result.pensionPayments,
+        breakdown,
+      })),
       borderColor: 'var(--text-primary)',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
-      borderWidth: resultsAndCaps.map(({ caps }) => caps.pensionCapped || caps.pensionFixed ? 2 : 0),
+      borderWidth: resultsAndCaps.map(({ caps }) =>
+        caps.pensionCapped || caps.pensionFixed ? 2 : 0,
+      ),
       yAxisID: 'y',
       type: 'bar' as const,
       stack: 'stack0',
     },
-    ...(currentInputs.isEmploymentIncome ? [{
-      label: 'Employment Insurance',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.employmentInsurance ?? 0, breakdown })),
-      backgroundColor: 'rgba(255, 20, 147, 0.7)',
-      yAxisID: 'y',
-      type: 'bar' as const,
-      stack: 'stack0',
-    }] : [])
+    ...(currentInputs.isEmploymentIncome
+      ? [
+          {
+            label: 'Employment Insurance',
+            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+              x: incomePoints[i]!,
+              y: result.employmentInsurance ?? 0,
+              breakdown,
+            })),
+            backgroundColor: 'rgba(255, 20, 147, 0.7)',
+            yAxisID: 'y',
+            type: 'bar' as const,
+            stack: 'stack0',
+          },
+        ]
+      : []),
   ];
 
   const datasets = [
     {
       label: 'Take-Home Pay',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.takeHomeIncome, breakdown })),
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+        x: incomePoints[i]!,
+        y: result.takeHomeIncome,
+        breakdown,
+      })),
       backgroundColor: 'rgba(34, 139, 34, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -187,7 +225,11 @@ export const generateChartData = (
     },
     {
       label: 'Income Tax',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.nationalIncomeTax, breakdown })),
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+        x: incomePoints[i]!,
+        y: result.nationalIncomeTax,
+        breakdown,
+      })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -195,7 +237,11 @@ export const generateChartData = (
     },
     {
       label: 'Residence Tax',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({ x: incomePoints[i]!, y: result.residenceTax.totalResidenceTax, breakdown })),
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+        x: incomePoints[i]!,
+        y: result.residenceTax.totalResidenceTax,
+        breakdown,
+      })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',
       yAxisID: 'y',
       type: 'bar' as const,
@@ -206,31 +252,37 @@ export const generateChartData = (
       label: 'Take-Home %',
       data: resultsAndCaps.map(({ result }, i) => ({
         x: incomePoints[i]!,
-        y: (result.takeHomeIncome / incomePoints[i]!) * 100
+        y: (result.takeHomeIncome / incomePoints[i]!) * 100,
       })),
       borderColor: 'rgb(105, 105, 105)',
       backgroundColor: 'rgba(105, 105, 105, 0.7)',
       yAxisID: 'y1',
       borderDash: [5, 5],
       type: 'line' as const,
-    }
+    },
   ];
 
   return {
     labels: incomePoints.map(income => formatJPY(income)),
-    datasets
-  }
-}
+    datasets,
+  };
+};
 
 export const getChartOptions = (
   chartRange: ChartRange,
   currentIncome: number,
-  useCompactLabelFormat: boolean = false
+  useCompactLabelFormat: boolean = false,
 ): ChartOptions<'bar' | 'line'> => {
-  const maxIncome = chartRange.max
-  const minIncome = chartRange.min
-  const currentIncomePosition = Math.max(0, Math.min(1, (currentIncome - minIncome) / (maxIncome - minIncome)))
-  const medianIncomePosition = Math.max(0, Math.min(1, (MEDIAN_INCOME_VALUE - minIncome) / (maxIncome - minIncome)))
+  const maxIncome = chartRange.max;
+  const minIncome = chartRange.min;
+  const currentIncomePosition = Math.max(
+    0,
+    Math.min(1, (currentIncome - minIncome) / (maxIncome - minIncome)),
+  );
+  const medianIncomePosition = Math.max(
+    0,
+    Math.min(1, (MEDIAN_INCOME_VALUE - minIncome) / (maxIncome - minIncome)),
+  );
 
   return {
     responsive: true,
@@ -266,50 +318,54 @@ export const getChartOptions = (
             if (context.parsed.y != null) {
               const income = context.parsed.x;
               const fractionDigits = context.dataset.label === 'Employment Insurance' ? 2 : 1;
-              const percentage = income != null && income > 0 ? ((context.parsed.y / income) * 100).toFixed(fractionDigits) : '0.0';
+              const percentage =
+                income != null && income > 0
+                  ? ((context.parsed.y / income) * 100).toFixed(fractionDigits)
+                  : '0.0';
               label += `${formatJPY(context.parsed.y)} (${percentage}%)`;
             }
             return label;
           },
           footer: function (tooltipItems: TooltipItem<'bar' | 'line'>[]) {
             const item = tooltipItems[0];
-            const raw = item?.raw as { breakdown?: { label: string; amount: number }[] } | undefined;
+            const raw = item?.raw as
+              | { breakdown?: { label: string; amount: number }[] }
+              | undefined;
 
             if (raw?.breakdown && raw.breakdown.length > 0) {
-              return '\nIncome Breakdown:\n' + raw.breakdown.map(b =>
-                `• ${b.label}: ${formatYenCompact(b.amount)}`
-              ).join('\n');
+              return (
+                '\nIncome Breakdown:\n' +
+                raw.breakdown.map(b => `• ${b.label}: ${formatYenCompact(b.amount)}`).join('\n')
+              );
             }
             return '';
-          }
-        }
+          },
+        },
       },
       customPlugin: {
         data: {
           currentIncomePosition,
           medianIncomePosition,
           currentIncome,
-        }
-      }
+        },
+      },
     },
     scales: {
       x: {
         type: 'linear',
         grid: {
-          offset: false
+          offset: false,
         },
         ticks: {
           align: 'center',
           callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
             const value = Number(tickValue);
-            return useCompactLabelFormat
-              ? formatYenCompact(value)
-              : formatJPY(value);
-          }
+            return useCompactLabelFormat ? formatYenCompact(value) : formatJPY(value);
+          },
         },
         min: chartRange.min,
         max: chartRange.max,
-        offset: false
+        offset: false,
       },
       y: {
         type: 'linear' as const,
@@ -318,11 +374,9 @@ export const getChartOptions = (
         ticks: {
           callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
             const value = Number(tickValue);
-            return useCompactLabelFormat
-              ? formatYenCompact(value)
-              : formatJPY(value);
-          }
-        }
+            return useCompactLabelFormat ? formatYenCompact(value) : formatJPY(value);
+          },
+        },
       },
       y1: {
         type: 'linear' as const,
@@ -335,17 +389,17 @@ export const getChartOptions = (
           callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
             const value = Number(tickValue);
             return value.toFixed(0) + '%';
-          }
-        }
-      }
+          },
+        },
+      },
     },
     elements: {
       point: {
         radius: 3,
       },
       bar: {
-        borderWidth: 0
-      }
-    }
-  }
-}
+        borderWidth: 0,
+      },
+    },
+  };
+};

@@ -14,7 +14,13 @@ import ListItem from '@mui/material/ListItem';
 import Divider from '@mui/material/Divider';
 import Link from '@mui/material/Link';
 import CloseIcon from '@mui/icons-material/Close';
-import { parseChangelog, setLastViewedDate, formatChangelogDate, type ChangelogEntry, type ParsedChangelog } from '../utils/changelogUtils';
+import {
+  parseChangelog,
+  setLastViewedDate,
+  formatChangelogDate,
+  type ChangelogEntry,
+  type ParsedChangelog,
+} from '../utils/changelogUtils';
 import changelogContent from '../../CHANGELOG.md?raw';
 
 interface ChangelogModalProps {
@@ -23,31 +29,40 @@ interface ChangelogModalProps {
 }
 
 const SectionIcon = ({ type }: { type: string }) => {
-  const getColor = (sectionType: string): 'success' | 'info' | 'warning' | 'secondary' | 'error' | 'default' => {
+  const getColor = (
+    sectionType: string,
+  ): 'success' | 'info' | 'warning' | 'secondary' | 'error' | 'default' => {
     switch (sectionType.toLowerCase()) {
-      case 'new': return 'success';
-      case 'updated': return 'info';
-      case 'fixed': return 'warning';
-      case 'deprecated': return 'secondary';
-      case 'removed': return 'error';
-      case 'security': return 'error';
-      default: return 'default';
+      case 'new':
+        return 'success';
+      case 'updated':
+        return 'info';
+      case 'fixed':
+        return 'warning';
+      case 'deprecated':
+        return 'secondary';
+      case 'removed':
+        return 'error';
+      case 'security':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
   return (
-    <Chip 
-      label={type} 
-      size="small" 
+    <Chip
+      label={type}
+      size="small"
       color={getColor(type)}
       variant="outlined"
-      sx={{ 
+      sx={{
         textTransform: 'capitalize',
         fontSize: { xs: '0.7rem', sm: '0.75rem' },
         height: { xs: '22px', sm: '24px' },
         '& .MuiChip-label': {
-          px: { xs: 1, sm: 1.5 }
-        }
+          px: { xs: 1, sm: 1.5 },
+        },
       }}
     />
   );
@@ -68,7 +83,7 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
       if (match.index > lastIndex) {
         parts.push(text.slice(lastIndex, match.index));
       }
-      
+
       // Add the link
       parts.push(
         <Link
@@ -79,17 +94,17 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
           sx={{ color: 'primary.main', textDecoration: 'underline' }}
         >
           {match[1]}
-        </Link>
+        </Link>,
       );
-      
+
       lastIndex = match.index + match[0].length;
     }
-    
+
     // Add any remaining text
     if (lastIndex < text.length) {
       parts.push(text.slice(lastIndex));
     }
-    
+
     return parts.length > 0 ? parts : [text];
   };
 
@@ -99,20 +114,23 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
         {items.map((item, index) => (
           <ListItem key={index} sx={{ py: { xs: 0.25, sm: 0.5 }, px: 0, alignItems: 'flex-start' }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
-              <Typography 
-                component="span" 
-                sx={{ 
-                  mr: 1, 
+              <Typography
+                component="span"
+                sx={{
+                  mr: 1,
                   color: 'text.secondary',
                   fontSize: { xs: '0.875rem', sm: '0.875rem' },
-                  lineHeight: 1.5
+                  lineHeight: 1.5,
                 }}
               >
                 •
               </Typography>
               <Box sx={{ flexGrow: 1 }}>
                 {index === 0 && (
-                  <Box component="span" sx={{ mr: 1, display: 'inline-block', verticalAlign: 'middle', mb: '2px' }}>
+                  <Box
+                    component="span"
+                    sx={{ mr: 1, display: 'inline-block', verticalAlign: 'middle', mb: '2px' }}
+                  >
                     <SectionIcon type={type} />
                   </Box>
                 )}
@@ -120,9 +138,9 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
                   component="span"
                   variant="body2"
                   color="text.secondary"
-                  sx={{ 
+                  sx={{
                     fontSize: { xs: '0.875rem', sm: '0.875rem' },
-                    lineHeight: 1.5
+                    lineHeight: 1.5,
                   }}
                 >
                   {parseMarkdownLinks(item)}
@@ -140,33 +158,25 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
   return (
     <Box sx={{ mb: { xs: 1, sm: 1.5 } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1, sm: 2 }, gap: 2 }}>
-        <Typography 
-          variant="h6" 
+        <Typography
+          variant="h6"
           component="h3"
-          sx={{ 
+          sx={{
             fontSize: { xs: '1.1rem', sm: '1.25rem' },
-            fontWeight: { xs: 600, sm: 600 }
+            fontWeight: { xs: 600, sm: 600 },
           }}
         >
           {formatChangelogDate(entry.date)}
         </Typography>
       </Box>
-      
-      {entry.sections.new && (
-        <ChangelogSection type="New" items={entry.sections.new} />
-      )}
-      {entry.sections.updated && (
-        <ChangelogSection type="Updated" items={entry.sections.updated} />
-      )}
-      {entry.sections.fixed && (
-        <ChangelogSection type="Fixed" items={entry.sections.fixed} />
-      )}
+
+      {entry.sections.new && <ChangelogSection type="New" items={entry.sections.new} />}
+      {entry.sections.updated && <ChangelogSection type="Updated" items={entry.sections.updated} />}
+      {entry.sections.fixed && <ChangelogSection type="Fixed" items={entry.sections.fixed} />}
       {entry.sections.deprecated && (
         <ChangelogSection type="Deprecated" items={entry.sections.deprecated} />
       )}
-      {entry.sections.removed && (
-        <ChangelogSection type="Removed" items={entry.sections.removed} />
-      )}
+      {entry.sections.removed && <ChangelogSection type="Removed" items={entry.sections.removed} />}
       {entry.sections.security && (
         <ChangelogSection type="Security" items={entry.sections.security} />
       )}
@@ -176,13 +186,16 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
 
 export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
   // Parse changelog once using lazy initialization - it's static content
-  const [{ changelog, error }] = useState<{ changelog: ParsedChangelog | null; error: string | null }>(() => {
+  const [{ changelog, error }] = useState<{
+    changelog: ParsedChangelog | null;
+    error: string | null;
+  }>(() => {
     try {
       return { changelog: parseChangelog(changelogContent), error: null };
     } catch (err) {
-      return { 
-        changelog: null, 
-        error: err instanceof Error ? err.message : 'Failed to parse changelog' 
+      return {
+        changelog: null,
+        error: err instanceof Error ? err.message : 'Failed to parse changelog',
       };
     }
   });
@@ -211,53 +224,49 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
             minHeight: { xs: '70vh', sm: '60vh' },
             maxHeight: { xs: '95vh', sm: '90vh' },
             m: { xs: 1, sm: 2 },
-            maxWidth: { xs: 'calc(100vw - 16px)', sm: 'md' }
-          }
-        }
+            maxWidth: { xs: 'calc(100vw - 16px)', sm: 'md' },
+          },
+        },
       }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        pb: { xs: 1, sm: 2 },
-        pt: { xs: 2, sm: 3 },
-        px: { xs: 2, sm: 3 }
-      }}>
-        <Typography 
-          variant="h5" 
-          component="div"
-          sx={{ fontSize: { xs: '1.3rem', sm: '1.5rem' } }}
-        >
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          pb: { xs: 1, sm: 2 },
+          pt: { xs: 2, sm: 3 },
+          px: { xs: 2, sm: 3 },
+        }}
+      >
+        <Typography variant="h5" component="div" sx={{ fontSize: { xs: '1.3rem', sm: '1.5rem' } }}>
           What's New
         </Typography>
         <IconButton
           aria-label="close"
           onClick={handleClose}
-          sx={{ 
+          sx={{
             color: 'text.secondary',
-            p: { xs: 1, sm: 1 }
+            p: { xs: 1, sm: 1 },
           }}
         >
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      
-      <DialogContent 
+
+      <DialogContent
         dividers
-        sx={{ 
+        sx={{
           px: { xs: 2, sm: 3 },
-          py: { xs: 1.5, sm: 2 }
+          py: { xs: 1.5, sm: 2 },
         }}
       >
         {error && (
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography color="error">
-              {error}
-            </Typography>
+            <Typography color="error">{error}</Typography>
           </Box>
         )}
-        
+
         {changelog && !error && (
           <Box>
             {changelog.entries.map((entry, index) => (
@@ -268,7 +277,7 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
                 )}
               </Box>
             ))}
-            
+
             {changelog.entries.length === 0 && (
               <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
                 No changelog entries found.

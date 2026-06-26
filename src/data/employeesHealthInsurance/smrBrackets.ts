@@ -4,7 +4,7 @@
 /**
  * Standard Monthly Remuneration (SMR) brackets used by all Japanese employee health insurance providers
  * Based on the standardized grade system (等級) established by the Ministry of Health, Labour and Welfare
- * 
+ *
  * These brackets are consistent across all employee health insurance providers (Kyokai Kenpo, corporate health insurance associations, etc.)
  * Only the premium rates differ between providers, not the income brackets themselves.
  */
@@ -83,7 +83,8 @@ export function findSMRBracket(monthlyIncome: number): StandardMonthlyRemunerati
   if (monthlyIncome < 0) {
     throw new Error('Monthly income must be non-negative');
   }
-  return EHI_SMR_BRACKETS.find(bracket =>
-    monthlyIncome >= bracket.minIncomeInclusive && monthlyIncome < bracket.maxIncomeExclusive
+  return EHI_SMR_BRACKETS.find(
+    bracket =>
+      monthlyIncome >= bracket.minIncomeInclusive && monthlyIncome < bracket.maxIncomeExclusive,
   )!; // Invariant: brackets cover all incomes >= 0
 }

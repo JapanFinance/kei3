@@ -29,12 +29,24 @@ import PersonIcon from '@mui/icons-material/Person';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { Dependent, DependentDeductionBreakdown, OtherDependent, Spouse } from '../../../types/dependents';
-import { RELATIONSHIPS, DEPENDENT_AGE_CATEGORIES, DEDUCTION_TYPES } from '../../../types/dependents';
+import type {
+  Dependent,
+  DependentDeductionBreakdown,
+  OtherDependent,
+  Spouse,
+} from '../../../types/dependents';
+import {
+  RELATIONSHIPS,
+  DEPENDENT_AGE_CATEGORIES,
+  DEDUCTION_TYPES,
+} from '../../../types/dependents';
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
 import { formatJPY } from '../../../utils/formatters';
-import { calculateDependentDeductions, calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
+import {
+  calculateDependentDeductions,
+  calculateDependentTotalNetIncome,
+} from '../../../utils/dependentDeductions';
 
 interface DependentsModalProps {
   open: boolean;
@@ -82,9 +94,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   };
 
   const handleUpdateDependent = (updatedDependent: OtherDependent) => {
-    onDependentsChange(
-      dependents.map(d => d.id === updatedDependent.id ? updatedDependent : d)
-    );
+    onDependentsChange(dependents.map(d => (d.id === updatedDependent.id ? updatedDependent : d)));
     setEditingDependent(null);
   };
 
@@ -108,10 +118,13 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   };
 
   const getDependentSummary = (dependent: OtherDependent): string => {
-    const relationship = RELATIONSHIPS.find(r => r.value === dependent.relationship)?.label || 'Unknown';
-    const ageLabel = DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label || 'Unknown';
+    const relationship =
+      RELATIONSHIPS.find(r => r.value === dependent.relationship)?.label || 'Unknown';
+    const ageLabel =
+      DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label || 'Unknown';
     const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, incomeYear);
-    const incomeLabel = totalNetIncome === 0 ? 'No income' : `Net income: ¥${totalNetIncome.toLocaleString()}`;
+    const incomeLabel =
+      totalNetIncome === 0 ? 'No income' : `Net income: ¥${totalNetIncome.toLocaleString()}`;
     return `${relationship}, Age: ${ageLabel}, ${incomeLabel}`;
   };
 
@@ -125,27 +138,13 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
         disabilityLabel += ' (Cohabiting)';
       }
 
-      chips.push(
-        <Chip
-          key="disability"
-          label={disabilityLabel}
-          size="small"
-          color="secondary"
-        />
-      );
+      chips.push(<Chip key="disability" label={disabilityLabel} size="small" color="secondary" />);
     }
 
     // Only show separate cohabiting chip if not special disability
     // (to avoid redundancy since special disability chip already shows it)
     if (dependent.isCohabiting && dependent.disability !== 'special') {
-      chips.push(
-        <Chip
-          key="cohabiting"
-          label="Cohabiting"
-          size="small"
-          variant="outlined"
-        />
-      );
+      chips.push(<Chip key="cohabiting" label="Cohabiting" size="small" variant="outlined" />);
     }
 
     return chips;
@@ -170,52 +169,51 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               minHeight: isMobile ? '100vh' : '500px',
               maxHeight: isMobile ? '100vh' : '90vh',
             },
-          }
-        }
+          },
+        },
       }}
       sx={{
         // Ensure modal respects safe areas on iOS
         '& .MuiDialog-container': {
           paddingTop: isMobile ? 'env(safe-area-inset-top)' : 0,
           paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : 0,
-        }
+        },
       }}
     >
-      <DialogTitle sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        pb: 1,
-        // Add safe area padding for iOS notch
-        pt: isMobile ? 'max(16px, env(safe-area-inset-top))' : 2,
-        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
-        position: isMobile ? 'sticky' : 'relative',
-        top: 0,
-        zIndex: 1,
-        backgroundColor: 'background.paper',
-      }}>
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          pb: 1,
+          // Add safe area padding for iOS notch
+          pt: isMobile ? 'max(16px, env(safe-area-inset-top))' : 2,
+          px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+          position: isMobile ? 'sticky' : 'relative',
+          top: 0,
+          zIndex: 1,
+          backgroundColor: 'background.paper',
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonIcon />
           <Typography variant="h6" component="span">
             Manage Dependents
           </Typography>
         </Box>
-        <IconButton
-          edge="end"
-          onClick={onClose}
-          aria-label="close"
-          size="small"
-        >
+        <IconButton edge="end" onClick={onClose} aria-label="close" size="small">
           <CloseIcon />
         </IconButton>
       </DialogTitle>
 
       <Divider />
 
-      <DialogContent sx={{
-        p: { xs: 2, sm: 3 },
-        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
-      }}>
+      <DialogContent
+        sx={{
+          p: { xs: 2, sm: 3 },
+          px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+        }}
+      >
         {showingForm ? (
           <DependentForm
             dependent={editingDependent}
@@ -225,7 +223,6 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           />
         ) : (
           <Box>
-
             {/* Spouse Section */}
             <SpouseSection
               spouse={spouse || null}
@@ -250,9 +247,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 }}
               >
                 <PersonIcon sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
-                <Typography variant="body2">
-                  No other dependents added yet
-                </Typography>
+                <Typography variant="body2">No other dependents added yet</Typography>
               </Box>
             ) : (
               <List sx={{ width: '100%' }}>
@@ -292,7 +287,14 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                     >
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: 0.5,
+                            }}
+                          >
                             <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
                               Dependent {index + 1}
                             </Typography>
@@ -302,8 +304,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         secondary={getDependentSummary(dependent)}
                         slotProps={{
                           secondary: {
-                            sx: { mt: 0.5 }
-                          }
+                            sx: { mt: 0.5 },
+                          },
                         }}
                       />
                     </ListItem>
@@ -332,7 +334,10 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 <Typography variant="h6" gutterBottom>
                   Total Deductions Summary
                 </Typography>
-                <Paper variant="outlined" sx={{ border: { xs: 'none', sm: '1px solid' }, borderColor: { sm: 'divider' } }}>
+                <Paper
+                  variant="outlined"
+                  sx={{ border: { xs: 'none', sm: '1px solid' }, borderColor: { sm: 'divider' } }}
+                >
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -344,7 +349,10 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                     </TableHead>
                     <TableBody>
                       {(() => {
-                        const allDependents: Dependent[] = [...(spouse ? [spouse] : []), ...otherDependents];
+                        const allDependents: Dependent[] = [
+                          ...(spouse ? [spouse] : []),
+                          ...otherDependents,
+                        ];
 
                         if (allDependents.length === 0) {
                           return (
@@ -358,7 +366,11 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           );
                         }
 
-                        const deductionResults = calculateDependentDeductions(allDependents, incomeYear, taxpayerNetIncome);
+                        const deductionResults = calculateDependentDeductions(
+                          allDependents,
+                          incomeYear,
+                          taxpayerNetIncome,
+                        );
 
                         // Group deductions by type and amount
                         interface DeductionGroup {
@@ -371,31 +383,36 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         const deductionMap = new Map<string, DeductionGroup>();
 
                         // Process each breakdown
-                        deductionResults.breakdown.forEach((breakdown: DependentDeductionBreakdown) => {
-                          // Skip if not eligible
-                          if (!breakdown.deductionType || breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE) {
-                            return;
-                          }
+                        deductionResults.breakdown.forEach(
+                          (breakdown: DependentDeductionBreakdown) => {
+                            // Skip if not eligible
+                            if (
+                              !breakdown.deductionType ||
+                              breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE
+                            ) {
+                              return;
+                            }
 
-                          const key = `${breakdown.deductionType}-${breakdown.nationalTaxAmount}-${breakdown.residenceTaxAmount}`;
-                          const existing = deductionMap.get(key);
+                            const key = `${breakdown.deductionType}-${breakdown.nationalTaxAmount}-${breakdown.residenceTaxAmount}`;
+                            const existing = deductionMap.get(key);
 
-                          if (existing) {
-                            existing.count++;
-                          } else {
-                            deductionMap.set(key, {
-                              type: breakdown.deductionType,
-                              natAmount: breakdown.nationalTaxAmount,
-                              resAmount: breakdown.residenceTaxAmount,
-                              count: 1,
-                            });
-                          }
-                        });
+                            if (existing) {
+                              existing.count++;
+                            } else {
+                              deductionMap.set(key, {
+                                type: breakdown.deductionType,
+                                natAmount: breakdown.nationalTaxAmount,
+                                resAmount: breakdown.residenceTaxAmount,
+                                count: 1,
+                              });
+                            }
+                          },
+                        );
 
                         // Convert to array and sort
                         const deductionGroups = Array.from(deductionMap.values()).sort((a, b) => {
                           // Sort by total amount descending
-                          return (b.natAmount + b.resAmount) - (a.natAmount + a.resAmount);
+                          return b.natAmount + b.resAmount - (a.natAmount + a.resAmount);
                         });
 
                         const rows: React.ReactNode[] = [];
@@ -414,7 +431,11 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                               <TableCell align="right">
                                 {formatJPY(group.natAmount)}
                                 {group.count > 1 && (
-                                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block' }}
+                                  >
                                     = {formatJPY(group.natAmount * group.count)}
                                   </Typography>
                                 )}
@@ -422,22 +443,35 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                               <TableCell align="right">
                                 {formatJPY(group.resAmount)}
                                 {group.count > 1 && (
-                                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block' }}
+                                  >
                                     = {formatJPY(group.resAmount * group.count)}
                                   </Typography>
                                 )}
                               </TableCell>
-                            </TableRow>
+                            </TableRow>,
                           );
                         });
 
                         // Add total row
                         rows.push(
-                          <TableRow key="total" sx={{ backgroundColor: 'action.hover', fontWeight: 'bold' }}>
-                            <TableCell colSpan={2}><strong>Total</strong></TableCell>
-                            <TableCell align="right"><strong>{formatJPY(totalNat)}</strong></TableCell>
-                            <TableCell align="right"><strong>{formatJPY(totalRes)}</strong></TableCell>
-                          </TableRow>
+                          <TableRow
+                            key="total"
+                            sx={{ backgroundColor: 'action.hover', fontWeight: 'bold' }}
+                          >
+                            <TableCell colSpan={2}>
+                              <strong>Total</strong>
+                            </TableCell>
+                            <TableCell align="right">
+                              <strong>{formatJPY(totalNat)}</strong>
+                            </TableCell>
+                            <TableCell align="right">
+                              <strong>{formatJPY(totalRes)}</strong>
+                            </TableCell>
+                          </TableRow>,
                         );
 
                         return rows;
@@ -453,19 +487,22 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
       <Divider />
 
-      <DialogActions sx={{
-        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
-        py: 2,
-        pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
-        position: isMobile ? 'sticky' : 'relative',
-        bottom: 0,
-        zIndex: 1,
-        backgroundColor: 'background.paper',
-      }}>
+      <DialogActions
+        sx={{
+          px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+          py: 2,
+          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+          position: isMobile ? 'sticky' : 'relative',
+          bottom: 0,
+          zIndex: 1,
+          backgroundColor: 'background.paper',
+        }}
+      >
         {!showingForm && (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto', ml: 1 }}>
-              {spouse ? '1 spouse, ' : ''}{otherDependents.length} other dependent{otherDependents.length !== 1 ? 's' : ''}
+              {spouse ? '1 spouse, ' : ''}
+              {otherDependents.length} other dependent{otherDependents.length !== 1 ? 's' : ''}
             </Typography>
             <Button onClick={onClose} variant="contained">
               Close

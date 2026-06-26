@@ -13,7 +13,11 @@ export const DEFAULT_PROVIDER = 'KyokaiKenpo';
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
 
 // Exhaustive union type of all valid health insurance provider IDs
-export type HealthInsuranceProviderId = keyof typeof PROVIDER_DEFINITIONS | typeof NATIONAL_HEALTH_INSURANCE_ID | typeof DEPENDENT_COVERAGE_ID | typeof CUSTOM_PROVIDER_ID;
+export type HealthInsuranceProviderId =
+  | keyof typeof PROVIDER_DEFINITIONS
+  | typeof NATIONAL_HEALTH_INSURANCE_ID
+  | typeof DEPENDENT_COVERAGE_ID
+  | typeof CUSTOM_PROVIDER_ID;
 
 /**
  * Checks if dependent coverage is eligible based on annual income.
@@ -31,7 +35,7 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
   if (providerId === NATIONAL_HEALTH_INSURANCE_ID) {
     return 'National Health Insurance';
   }
-  
+
   if (providerId === DEPENDENT_COVERAGE_ID) {
     return 'None (dependent of insured employee)';
   }
@@ -39,12 +43,12 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
   if (providerId === CUSTOM_PROVIDER_ID) {
     return 'Custom Employee Health Insurance Provider';
   }
-  
+
   const providerDef = PROVIDER_DEFINITIONS[providerId as keyof typeof PROVIDER_DEFINITIONS];
   if (!providerDef) {
     throw new Error(`Unknown provider ID: ${providerId}`);
   }
-  
+
   return providerDef.providerName;
 }
 
@@ -64,26 +68,26 @@ export interface NationalHealthInsuranceRegionParams {
   // Source information
   source?: string; // URL or reference to the official source for these parameters
   // Income-based portion (所得割) rates
-  medicalRate: number;        // 医療分保険料率 (e.g., 7.71%)
-  supportRate: number;        // 後期高齢者支援金等分保険料率 (e.g., 2.69%)
+  medicalRate: number; // 医療分保険料率 (e.g., 7.71%)
+  supportRate: number; // 後期高齢者支援金等分保険料率 (e.g., 2.69%)
   ltcRateForEligible?: number; // 介護納付金分保険料率 (for those 40-64, e.g., 2.25%)
   // Per-capita portion (均等割) annual amounts
-  medicalPerCapita: number;   // 医療分均等割額 (e.g., 47,300 JPY)
-  supportPerCapita: number;   // 後期高齢者支援金等分均等割額 (e.g., 16,800 JPY)
+  medicalPerCapita: number; // 医療分均等割額 (e.g., 47,300 JPY)
+  supportPerCapita: number; // 後期高齢者支援金等分均等割額 (e.g., 16,800 JPY)
   ltcPerCapitaForEligible?: number; // 介護納付金分均等割額 (e.g., 16,600 JPY)
   // Household flat rate portion (平等割) annual amounts - defaults to 0 if not specified
-  medicalHouseholdFlat?: number;   // 医療分平等割額 (e.g., 33,574 JPY) - per household
-  supportHouseholdFlat?: number;   // 後期高齢者支援金等分平等割額 (e.g., 10,761 JPY) - per household
+  medicalHouseholdFlat?: number; // 医療分平等割額 (e.g., 33,574 JPY) - per household
+  supportHouseholdFlat?: number; // 後期高齢者支援金等分平等割額 (e.g., 10,761 JPY) - per household
   ltcHouseholdFlatForEligible?: number; // 介護納付金分平等割額 (e.g., 0 JPY) - per household
   // Annual caps for the income-based portion
-  medicalCap: number;         // 医療分賦課限度額 (e.g., 660,000 JPY)
-  supportCap: number;         // 後期高齢者支援金等分賦課限度額 (e.g., 260,000 JPY)
-  ltcCapForEligible?: number;    // 介護納付金分賦課限度額 (e.g., 170,000 JPY)
+  medicalCap: number; // 医療分賦課限度額 (e.g., 660,000 JPY)
+  supportCap: number; // 後期高齢者支援金等分賦課限度額 (e.g., 260,000 JPY)
+  ltcCapForEligible?: number; // 介護納付金分賦課限度額 (e.g., 170,000 JPY)
   // Child/childcare support levy (子ども・子育て支援納付金分) — introduced FY2026
-  childSupportRate?: number;          // 子ども・子育て支援納付金分所得割率 (e.g., 0.27%)
-  childSupportPerCapita?: number;     // 子ども・子育て支援納付金分均等割額 (e.g., 73 JPY)
+  childSupportRate?: number; // 子ども・子育て支援納付金分所得割率 (e.g., 0.27%)
+  childSupportPerCapita?: number; // 子ども・子育て支援納付金分均等割額 (e.g., 73 JPY)
   childSupportHouseholdFlat?: number; // 子ども・子育て支援納付金分平等割額
-  childSupportCap?: number;           // 子ども・子育て支援納付金分賦課限度額 (e.g., 30,000 JPY)
+  childSupportCap?: number; // 子ども・子育て支援納付金分賦課限度額 (e.g., 30,000 JPY)
   // Standard deduction used for calculating NHI taxable income (e.g., 430,000 JPY, often same as residence tax basic deduction)
   nhiStandardDeduction: number;
 }

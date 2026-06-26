@@ -24,10 +24,15 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const totalSocialInsurance = results.socialInsuranceOverride ?? (results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0));
+  const totalSocialInsurance =
+    results.socialInsuranceOverride ??
+    results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
-  const takeHomePercentage = results.annualIncome > 0 ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%` : '100%';
+  const takeHomePercentage =
+    results.annualIncome > 0
+      ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%`
+      : '100%';
 
   return (
     <Box>
@@ -35,16 +40,25 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       <Divider sx={{ my: { xs: 1, sm: 1.5 } }} />
 
       {/* Social Insurance Section */}
-      <Box sx={{ bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03), borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
+      <Box
+        sx={{
+          bgcolor: theme => alpha(theme.palette.primary.main, 0.03),
+          borderRadius: 2,
+          px: 1,
+          py: 1,
+          mb: { xs: 0.5, sm: 1 },
+        }}
+      >
         <Typography
           variant="subtitle2"
           sx={{
-            mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 },
+            mt: { xs: 0.5, sm: 1 },
+            mb: { xs: 0.5, sm: 1 },
             color: 'primary.main',
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
-            fontSize: isMobile ? '1rem' : '1.1rem'
+            fontSize: isMobile ? '1rem' : '1.1rem',
           }}
         >
           <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20 }} />
@@ -54,9 +68,9 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
           <ResultRow
             label="Total Social Insurance (Manual)"
             value={
-              !isMobile ?
-                `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)` :
-                formatJPY(totalSocialInsurance)
+              !isMobile
+                ? `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)`
+                : formatJPY(totalSocialInsurance)
             }
             type="subtotal"
           />
@@ -65,18 +79,18 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             <ResultRow
               label="Health Insurance"
               value={
-                !isMobile ?
-                  `${formatJPY(results.healthInsurance)} (${((results.healthInsurance / results.annualIncome) * 100).toFixed(1)}%)` :
-                  formatJPY(results.healthInsurance)
+                !isMobile
+                  ? `${formatJPY(results.healthInsurance)} (${((results.healthInsurance / results.annualIncome) * 100).toFixed(1)}%)`
+                  : formatJPY(results.healthInsurance)
               }
               type="indented"
             />
             <ResultRow
               label="Pension Payments"
               value={
-                !isMobile ?
-                  `${formatJPY(results.pensionPayments)} (${((results.pensionPayments / results.annualIncome) * 100).toFixed(1)}%)` :
-                  formatJPY(results.pensionPayments)
+                !isMobile
+                  ? `${formatJPY(results.pensionPayments)} (${((results.pensionPayments / results.annualIncome) * 100).toFixed(1)}%)`
+                  : formatJPY(results.pensionPayments)
               }
               type="indented"
             />
@@ -84,9 +98,9 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
               <ResultRow
                 label="Employment Insurance"
                 value={
-                  !isMobile ?
-                    `${formatJPY(results.employmentInsurance ?? 0)} (${(((results.employmentInsurance ?? 0) / results.annualIncome) * 100).toFixed(2)}%)` :
-                    formatJPY(results.employmentInsurance ?? 0)
+                  !isMobile
+                    ? `${formatJPY(results.employmentInsurance ?? 0)} (${(((results.employmentInsurance ?? 0) / results.annualIncome) * 100).toFixed(2)}%)`
+                    : formatJPY(results.employmentInsurance ?? 0)
                 }
                 type="indented"
               />
@@ -94,9 +108,9 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             <ResultRow
               label="Total Social Insurance"
               value={
-                !isMobile ?
-                  `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)` :
-                  formatJPY(totalSocialInsurance)
+                !isMobile
+                  ? `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)`
+                  : formatJPY(totalSocialInsurance)
               }
               type="subtotal"
             />
@@ -105,16 +119,25 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       </Box>
 
       {/* Taxes Section */}
-      <Box sx={{ bgcolor: (theme) => alpha(theme.palette.warning.main, 0.03), borderRadius: 2, px: 1, py: 1, mb: { xs: 0.5, sm: 1 } }}>
+      <Box
+        sx={{
+          bgcolor: theme => alpha(theme.palette.warning.main, 0.03),
+          borderRadius: 2,
+          px: 1,
+          py: 1,
+          mb: { xs: 0.5, sm: 1 },
+        }}
+      >
         <Typography
           variant="subtitle2"
           sx={{
-            mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 },
+            mt: { xs: 0.5, sm: 1 },
+            mb: { xs: 0.5, sm: 1 },
             color: 'warning.main',
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
-            fontSize: isMobile ? '1rem' : '1.1rem'
+            fontSize: isMobile ? '1rem' : '1.1rem',
           }}
         >
           <AccountBalanceIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20, color: 'warning.main' }} />
@@ -123,27 +146,27 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         <ResultRow
           label="Income Tax"
           value={
-            !isMobile ?
-              `${formatJPY(results.nationalIncomeTax)} (${((results.nationalIncomeTax / results.annualIncome) * 100).toFixed(1)}%)` :
-              formatJPY(results.nationalIncomeTax)
+            !isMobile
+              ? `${formatJPY(results.nationalIncomeTax)} (${((results.nationalIncomeTax / results.annualIncome) * 100).toFixed(1)}%)`
+              : formatJPY(results.nationalIncomeTax)
           }
           type="indented"
         />
         <ResultRow
           label="Residence Tax"
           value={
-            !isMobile ?
-              `${formatJPY(results.residenceTax.totalResidenceTax)} (${((results.residenceTax.totalResidenceTax / results.annualIncome) * 100).toFixed(1)}%)` :
-              formatJPY(results.residenceTax.totalResidenceTax)
+            !isMobile
+              ? `${formatJPY(results.residenceTax.totalResidenceTax)} (${((results.residenceTax.totalResidenceTax / results.annualIncome) * 100).toFixed(1)}%)`
+              : formatJPY(results.residenceTax.totalResidenceTax)
           }
           type="indented"
         />
         <ResultRow
           label="Total Taxes"
           value={
-            !isMobile ?
-              `${formatJPY(totalTaxes)} (${((totalTaxes / results.annualIncome) * 100).toFixed(1)}%)` :
-              formatJPY(totalTaxes)
+            !isMobile
+              ? `${formatJPY(totalTaxes)} (${((totalTaxes / results.annualIncome) * 100).toFixed(1)}%)`
+              : formatJPY(totalTaxes)
           }
           type="subtotal"
         />
@@ -154,9 +177,9 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         <ResultRow
           label="Total Deductions"
           value={
-            !isMobile ?
-              `${formatJPY(-totalDeductions)} (${((totalDeductions / results.annualIncome) * 100).toFixed(1)}%)` :
-              formatJPY(-totalDeductions)
+            !isMobile
+              ? `${formatJPY(-totalDeductions)} (${((totalDeductions / results.annualIncome) * 100).toFixed(1)}%)`
+              : formatJPY(-totalDeductions)
           }
           type="total"
         />
@@ -188,19 +211,31 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
 
       {/* Furusato Nozei Summary */}
       {results.furusatoNozei !== undefined && results.furusatoNozei.limit > 0 && (
-        <Box sx={{ bgcolor: (theme) => alpha(theme.palette.secondary.main, 0.07), borderRadius: 2, px: 1, py: 1, mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 } }}>
+        <Box
+          sx={{
+            bgcolor: theme => alpha(theme.palette.secondary.main, 0.07),
+            borderRadius: 2,
+            px: 1,
+            py: 1,
+            mt: { xs: 0.5, sm: 1 },
+            mb: { xs: 0.5, sm: 1 },
+          }}
+        >
           <Typography
             variant="subtitle2"
             sx={{
-              mt: { xs: 0.5, sm: 1 }, mb: { xs: 0.5, sm: 1 },
+              mt: { xs: 0.5, sm: 1 },
+              mb: { xs: 0.5, sm: 1 },
               color: 'secondary.main',
               fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
-              fontSize: isMobile ? '1rem' : '1.1rem'
+              fontSize: isMobile ? '1rem' : '1.1rem',
             }}
           >
-            <VolunteerActivismIcon sx={{ mr: 1, fontSize: isMobile ? 18 : 20, color: 'secondary.main' }} />
+            <VolunteerActivismIcon
+              sx={{ mr: 1, fontSize: isMobile ? 18 : 20, color: 'secondary.main' }}
+            />
             Furusato Nozei
           </Typography>
           <ResultRow
@@ -216,7 +251,8 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
                   >
                     <Box>
                       <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        Your out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)}) is higher than the expected ≈2,000 yen.
+                        Your out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)})
+                        is higher than the expected ≈2,000 yen.
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
                         See the Furusato Nozei tab for details.
@@ -231,7 +267,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
                 component="span"
                 sx={{
                   color: results.furusatoNozei.outOfPocketCost > 2200 ? 'error.main' : 'inherit',
-                  fontWeight: results.furusatoNozei.outOfPocketCost > 2200 ? 700 : 500
+                  fontWeight: results.furusatoNozei.outOfPocketCost > 2200 ? 700 : 500,
                 }}
               >
                 {formatJPY(results.furusatoNozei.limit)}

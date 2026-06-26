@@ -41,21 +41,32 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   onCancel,
   disabledTypes = [],
 }) => {
-
   const [type, setType] = useState<IncomeStreamType>(initialData?.type || 'salary');
   const [amount, setAmount] = useState<number>(initialData?.amount || 0);
-  const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(((initialData?.type === 'salary' || initialData?.type === 'commutingAllowance') && initialData.frequency) || 'annual');
-  const [month, setMonth] = useState<number>((initialData?.type === 'bonus' && initialData.month) || 0); // 0 = Jan
-  const [blueFilerDeduction, setBlueFilerDeduction] = useState<number>((initialData?.type === 'business' && initialData.blueFilerDeduction) || 0);
-  const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>((initialData?.type === 'stockCompensation' && initialData.issuerDomicile) || 'foreign');
+  const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(
+    ((initialData?.type === 'salary' || initialData?.type === 'commutingAllowance') &&
+      initialData.frequency) ||
+      'annual',
+  );
+  const [month, setMonth] = useState<number>(
+    (initialData?.type === 'bonus' && initialData.month) || 0,
+  ); // 0 = Jan
+  const [blueFilerDeduction, setBlueFilerDeduction] = useState<number>(
+    (initialData?.type === 'business' && initialData.blueFilerDeduction) || 0,
+  );
+  const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>(
+    (initialData?.type === 'stockCompensation' && initialData.issuerDomicile) || 'foreign',
+  );
   const [error, setError] = useState<string | null>(null);
 
   const validate = (): boolean => {
     if (type === 'commutingAllowance') {
-      const monthlyAmount = amount * getFrequencyAnnualMultiplier(frequency) / 12;
+      const monthlyAmount = (amount * getFrequencyAnnualMultiplier(frequency)) / 12;
 
       if (monthlyAmount > 150000) {
-        setError('Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of your salary.');
+        setError(
+          'Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of your salary.',
+        );
         return false;
       }
     }
@@ -125,7 +136,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             labelId="income-type-label"
             value={type}
             label="Income/Benefit Type"
-            onChange={(e) => {
+            onChange={e => {
               const newType = e.target.value as IncomeStreamType;
               setType(newType);
               if (newType === 'commutingAllowance') {
@@ -135,12 +146,30 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               }
             }}
           >
-            <MenuItem value="salary" disabled={disabledTypes.includes('salary')}>Salary</MenuItem>
-            <MenuItem value="bonus" disabled={disabledTypes.includes('bonus')}>Bonus</MenuItem>
-            <MenuItem value="commutingAllowance" disabled={disabledTypes.includes('commutingAllowance')}>Commuting Allowance</MenuItem>
-            <MenuItem value="stockCompensation" disabled={disabledTypes.includes('stockCompensation')}>Stock-Based Compensation</MenuItem>
-            <MenuItem value="business" disabled={disabledTypes.includes('business')}>Business</MenuItem>
-            <MenuItem value="miscellaneous" disabled={disabledTypes.includes('miscellaneous')}>Miscellaneous</MenuItem>
+            <MenuItem value="salary" disabled={disabledTypes.includes('salary')}>
+              Salary
+            </MenuItem>
+            <MenuItem value="bonus" disabled={disabledTypes.includes('bonus')}>
+              Bonus
+            </MenuItem>
+            <MenuItem
+              value="commutingAllowance"
+              disabled={disabledTypes.includes('commutingAllowance')}
+            >
+              Commuting Allowance
+            </MenuItem>
+            <MenuItem
+              value="stockCompensation"
+              disabled={disabledTypes.includes('stockCompensation')}
+            >
+              Stock-Based Compensation
+            </MenuItem>
+            <MenuItem value="business" disabled={disabledTypes.includes('business')}>
+              Business
+            </MenuItem>
+            <MenuItem value="miscellaneous" disabled={disabledTypes.includes('miscellaneous')}>
+              Miscellaneous
+            </MenuItem>
           </Select>
         </FormControl>
 
@@ -151,7 +180,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               labelId="salary-frequency-label"
               value={frequency}
               label="Frequency"
-              onChange={(e) => setFrequency(e.target.value as 'monthly' | 'annual')}
+              onChange={e => setFrequency(e.target.value as 'monthly' | 'annual')}
             >
               <MenuItem value="monthly">Monthly</MenuItem>
               <MenuItem value="annual">Annual</MenuItem>
@@ -166,7 +195,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               labelId="commuting-allowance-frequency-label"
               value={frequency}
               label="Frequency"
-              onChange={(e) => setFrequency(e.target.value as 'monthly' | '3-months' | '6-months' | 'annual')}
+              onChange={e =>
+                setFrequency(e.target.value as 'monthly' | '3-months' | '6-months' | 'annual')
+              }
             >
               <MenuItem value="monthly">1 Month</MenuItem>
               <MenuItem value="3-months">3 Months</MenuItem>
@@ -182,7 +213,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <Select
               value={month}
               label="Month Paid"
-              onChange={(e) => setMonth(Number(e.target.value))}
+              onChange={e => setMonth(Number(e.target.value))}
             >
               {Array.from({ length: 12 }, (_, i) => (
                 <MenuItem key={i} value={i}>
@@ -198,60 +229,65 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <FormLabel
               id="stock-issuer-label"
               sx={{
-                  mb: 0.5,
+                mb: 0.5,
+                fontWeight: 500,
+                color: 'text.primary',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+              }}
+            >
+              <span>Stock Issuer</span>
+              <DetailedTooltip
+                title="Stock Issuer"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="issuance info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Foreign-issued stock compensation</strong> means grants from a
+                  non-Japanese company, such as the foreign parent company of a Japanese subsidiary.
+                  It is not subject to social insurance premiums (社会保険料).
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Domestic-issued stock compensation</strong> is not currently supported. It
+                  is subject to social insurance premiums.
+                </Typography>
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={issuerDomicile}
+              exclusive
+              onChange={(_, newValue) => {
+                if (newValue) {
+                  setIssuerDomicile(newValue);
+                }
+              }}
+              aria-labelledby="stock-issuer-label"
+              aria-label="stock compensation issuance"
+              size="small"
+              sx={{
+                '& .MuiToggleButton-root': {
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.85rem',
+                  textTransform: 'none',
                   fontWeight: 500,
-                  color: 'text.primary',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                }}
-              >
-                <span>Stock Issuer</span>
-                <DetailedTooltip
-                  title="Stock Issuer"
-                  icon={SIMPLE_TOOLTIP_ICON}
-                  iconAriaLabel="issuance info"
-                >
-                  <Typography sx={{ display: "block", mb: 1 }}>
-                    <strong>Foreign-issued stock compensation</strong> means grants from a non-Japanese company, such as the foreign parent company of a Japanese subsidiary. It is not subject to social insurance premiums (社会保険料).
-                  </Typography>
-                  <Typography sx={{ display: "block" }}>
-                    <strong>Domestic-issued stock compensation</strong> is not currently supported. It is subject to social insurance premiums.
-                  </Typography>
-                </DetailedTooltip>
-              </FormLabel>
-              <ToggleButtonGroup
-                value={issuerDomicile}
-                exclusive
-                onChange={(_, newValue) => {
-                  if (newValue) {
-                    setIssuerDomicile(newValue);
-                  }
-                }}
-                aria-labelledby="stock-issuer-label"
-                aria-label="stock compensation issuance"
-                size="small"
-                sx={{
-                  '& .MuiToggleButton-root': {
-                    px: 2,
-                    py: 0.5,
-                    fontSize: '0.85rem',
-                    textTransform: 'none',
-                    fontWeight: 500,
+                },
+                '& .MuiToggleButton-root.Mui-selected': {
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                  '&:hover': {
+                    bgcolor: 'primary.dark',
                   },
-                  '& .MuiToggleButton-root.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      bgcolor: 'primary.dark',
-                    }
-                  }
-                }}
-              >
-                <ToggleButton value="domestic" disabled>Domestic</ToggleButton>
-                <ToggleButton value="foreign">Foreign</ToggleButton>
-              </ToggleButtonGroup>
-            </FormControl>
+                },
+              }}
+            >
+              <ToggleButton value="domestic" disabled>
+                Domestic
+              </ToggleButton>
+              <ToggleButton value="foreign">Foreign</ToggleButton>
+            </ToggleButtonGroup>
+          </FormControl>
         )}
 
         <Box>
@@ -262,14 +298,17 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 labelId="blue-filer-label"
                 value={blueFilerDeduction}
                 label="Blue-Filer Special Deduction"
-                onChange={(e) => setBlueFilerDeduction(Number(e.target.value))}
+                onChange={e => setBlueFilerDeduction(Number(e.target.value))}
               >
                 <MenuItem value={0}>None</MenuItem>
                 <MenuItem value={100000}>¥100,000</MenuItem>
                 <MenuItem value={550000}>¥550,000</MenuItem>
                 <MenuItem value={650000}>¥650,000</MenuItem>
               </Select>
-              <FormHelperText component="div" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <FormHelperText
+                component="div"
+                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+              >
                 <span>
                   See{' '}
                   <a
@@ -279,14 +318,15 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     style={{ color: 'inherit', textDecoration: 'underline' }}
                   >
                     No.2072 青色申告特別控除 (NTA)
-                  </a>.
+                  </a>
+                  .
                 </span>
                 <DetailedTooltip
                   title="Blue-Filer Requirements"
                   icon={<InfoOutlinedIcon fontSize="small" />}
                   iconAriaLabel="requirements"
                 >
-                  <Typography variant="caption" sx={{ display: "block", mb: 1, lineHeight: 1.2 }}>
+                  <Typography variant="caption" sx={{ display: 'block', mb: 1, lineHeight: 1.2 }}>
                     Requires prior tax office approval (see{' '}
                     <a
                       href="https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/09.htm"
@@ -295,7 +335,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                       style={{ color: 'inherit', textDecoration: 'underline' }}
                     >
                       Blue-Form Approval Application
-                    </a>).
+                    </a>
+                    ).
                   </Typography>
 
                   <Box
@@ -310,54 +351,86 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                         fontWeight: 600,
                         borderBottom: '1px solid',
                         borderColor: 'divider',
-                        verticalAlign: 'middle'
+                        verticalAlign: 'middle',
                       },
                       '& td': {
                         textAlign: 'center',
                         p: 0.5,
                         borderBottom: '1px solid',
                         borderColor: 'divider',
-                        verticalAlign: 'middle'
+                        verticalAlign: 'middle',
                       },
                       '& td:first-of-type': {
                         textAlign: 'left',
                         fontWeight: 500,
-                        color: 'text.secondary'
-                      }
+                        color: 'text.secondary',
+                      },
                     }}
                   >
                     <thead>
                       <tr>
-                        <Box component="th" sx={{ width: '30%', textAlign: 'left' }}>Requirement</Box>
-                        <Box component="th" sx={{ color: 'primary.main' }}>¥650k</Box>
-                        <Box component="th" sx={{ color: 'text.primary' }}>¥550k</Box>
-                        <Box component="th" sx={{ color: 'text.secondary' }}>¥100k</Box>
+                        <Box component="th" sx={{ width: '30%', textAlign: 'left' }}>
+                          Requirement
+                        </Box>
+                        <Box component="th" sx={{ color: 'primary.main' }}>
+                          ¥650k
+                        </Box>
+                        <Box component="th" sx={{ color: 'text.primary' }}>
+                          ¥550k
+                        </Box>
+                        <Box component="th" sx={{ color: 'text.secondary' }}>
+                          ¥100k
+                        </Box>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
                         <td>Bookkeeping</td>
-                        <Box component="td" sx={{ color: 'success.main' }}>Double Entry</Box>
-                        <Box component="td" sx={{ color: 'success.main' }}>Double Entry</Box>
-                        <Box component="td" sx={{ color: 'text.secondary' }}>Simple</Box>
+                        <Box component="td" sx={{ color: 'success.main' }}>
+                          Double Entry
+                        </Box>
+                        <Box component="td" sx={{ color: 'success.main' }}>
+                          Double Entry
+                        </Box>
+                        <Box component="td" sx={{ color: 'text.secondary' }}>
+                          Simple
+                        </Box>
                       </tr>
                       <tr>
                         <td>Balance Sheet, Profit & Loss Statement</td>
-                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
-                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
-                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                          ○
+                        </Box>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                          ○
+                        </Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>
+                          —
+                        </Box>
                       </tr>
                       <tr>
                         <td>On-time Filing</td>
-                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
-                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
-                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                          ○
+                        </Box>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                          ○
+                        </Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>
+                          —
+                        </Box>
                       </tr>
                       <tr>
                         <td>e-Tax or Electronic Books</td>
-                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>○</Box>
-                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
-                        <Box component="td" sx={{ color: 'text.disabled' }}>—</Box>
+                        <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                          ○
+                        </Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>
+                          —
+                        </Box>
+                        <Box component="td" sx={{ color: 'text.disabled' }}>
+                          —
+                        </Box>
                       </tr>
                     </tbody>
                   </Box>
@@ -366,11 +439,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             </FormControl>
           )}
 
-
           <SpinnerNumberField
             label={getAmountLabel()}
             value={amount}
-            onChange={(val) => setAmount(val)}
+            onChange={val => setAmount(val)}
             sx={{ width: '100%' }}
             helperText={error || getAmountHelperText()}
             error={!!error}
@@ -383,51 +455,87 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           {type === 'commutingAllowance' && amount > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 0.5 }}>
               <Typography variant="body2" color="text.secondary">
-                Monthly: {formatJPY(
-                  frequency === 'monthly' ? amount :
-                    frequency === '3-months' ? amount / 3 :
-                      frequency === '6-months' ? amount / 6 :
-                        amount / 12
+                Monthly:{' '}
+                {formatJPY(
+                  frequency === 'monthly'
+                    ? amount
+                    : frequency === '3-months'
+                      ? amount / 3
+                      : frequency === '6-months'
+                        ? amount / 6
+                        : amount / 12,
                 )}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Annual: {formatJPY(
-                  frequency === 'monthly' ? amount * 12 :
-                    frequency === '3-months' ? amount * 4 :
-                      frequency === '6-months' ? amount * 2 :
-                        amount
+                Annual:{' '}
+                {formatJPY(
+                  frequency === 'monthly'
+                    ? amount * 12
+                    : frequency === '3-months'
+                      ? amount * 4
+                      : frequency === '6-months'
+                        ? amount * 2
+                        : amount,
                 )}
               </Typography>
             </Box>
           )}
 
           {type === 'stockCompensation' && (
-            <Box sx={{ p: 1.5, backgroundColor: 'background.default', borderRadius: 1, mt: 2, border: '1px solid', borderColor: 'divider' }}>
+            <Box
+              sx={{
+                p: 1.5,
+                backgroundColor: 'background.default',
+                borderRadius: 1,
+                mt: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 How to Calculate Your Stock-Based Compensation Income
               </Typography>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                See the notes below for more specific information. In general, calculate the JPY amount of financial benefit realized.
+                See the notes below for more specific information. In general, calculate the JPY
+                amount of financial benefit realized.
               </Typography>
 
-              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
+              >
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Exchange Rate</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Exchange Rate
+                  </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
-                    Use the TTM (Telegraphic Transfer Middle) exchange rate on the day of the taxable event for converting foreign currency denominated share value to JPY.
-                    If that date's exchange rate is not available, use the closest available prior date's TTM rate.
+                    Use the TTM (Telegraphic Transfer Middle) exchange rate on the day of the
+                    taxable event for converting foreign currency denominated share value to JPY. If
+                    that date's exchange rate is not available, use the closest available prior
+                    date's TTM rate.
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 1, display: 'block' }}
+                  >
                     Example conversion: $15,000 × 150 JPY/USD = ¥2,250,000.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
+              >
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>RS / RSU / PS / PSU </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    RS / RSU / PS / PSU{' '}
+                  </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -439,43 +547,104 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
+              >
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Stock Options</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Stock Options
+                  </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     Use (share price at exercise − strike price) × exercised shares.
                   </Typography>
                   <Typography variant="body2">
-                    Only <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1543.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-qualified stock options</a> income should be entered here. <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1540.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Qualified stock options</a> are not currently supported.
+                    Only{' '}
+                    <a
+                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1543.htm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'inherit', textDecoration: 'underline' }}
+                    >
+                      non-qualified stock options
+                    </a>{' '}
+                    income should be entered here.{' '}
+                    <a
+                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1540.htm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'inherit', textDecoration: 'underline' }}
+                    >
+                      Qualified stock options
+                    </a>{' '}
+                    are not currently supported.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
+              >
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>ESPP (Employee Stock Purchase Plan)</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    ESPP (Employee Stock Purchase Plan)
+                  </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
-                    Use the discount amount when shares are purchased. For example, if you purchased shares with a fair market value of $10,000 at a 15% discount (i.e. for $8,500), the taxable amount is $1,500.
+                    Use the discount amount when shares are purchased. For example, if you purchased
+                    shares with a fair market value of $10,000 at a 15% discount (i.e. for $8,500),
+                    the taxable amount is $1,500.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion disableGutters elevation={0} sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}>
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
+              >
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>Foreign-Source Income & Non-Permanent Tax Residents</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    Foreign-Source Income & Non-Permanent Tax Residents
+                  </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
-                    If you worked outside Japan for a period of time between grant and vest/exercise, the proportion of the income realized equal to the proportion of time worked outside Japan would be foreign-source income.
-                    If you are a <a href="https://wiki.japanfinance.org/tax/income/#non-permanent-tax-residents" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>non-permanent tax resident</a> when that income is realized, the foreign-source income will not be taxable in Japan unless <a href="https://wiki.japanfinance.org/tax/income/#income-that-is-neither-japan-source-nor-foreign-source" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>remittances to Japan</a> were made in the same year that make some or all of it taxable.
-                    Taxpayers who are not non-permanent tax residents would have to use foreign tax credits to alleviate Japanese taxation on the foreign-source income that will be taxable in the foreign country.
+                    If you worked outside Japan for a period of time between grant and
+                    vest/exercise, the proportion of the income realized equal to the proportion of
+                    time worked outside Japan would be foreign-source income. If you are a{' '}
+                    <a
+                      href="https://wiki.japanfinance.org/tax/income/#non-permanent-tax-residents"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'inherit', textDecoration: 'underline' }}
+                    >
+                      non-permanent tax resident
+                    </a>{' '}
+                    when that income is realized, the foreign-source income will not be taxable in
+                    Japan unless{' '}
+                    <a
+                      href="https://wiki.japanfinance.org/tax/income/#income-that-is-neither-japan-source-nor-foreign-source"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'inherit', textDecoration: 'underline' }}
+                    >
+                      remittances to Japan
+                    </a>{' '}
+                    were made in the same year that make some or all of it taxable. Taxpayers who
+                    are not non-permanent tax residents would have to use foreign tax credits to
+                    alleviate Japanese taxation on the foreign-source income that will be taxable in
+                    the foreign country.
                   </Typography>
                   <Typography variant="body2" sx={{ mt: 1.5 }}>
-                    Only input the amount of stock-based compensation income that is taxable in Japan.
+                    Only input the amount of stock-based compensation income that is taxable in
+                    Japan.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
@@ -483,7 +652,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
         </Box>
 
-        <Stack direction="row" spacing={2} sx={{ justifyContent: "flex-end" }}>
+        <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
           <Button onClick={onCancel}>Cancel</Button>
           <Button variant="contained" onClick={handleSave}>
             {initialData ? 'Update' : 'Add'}

@@ -6,23 +6,34 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
-import { DEFAULT_PROVIDER_REGION, NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID, type NationalHealthInsuranceRegionParams } from '../../../types/healthInsurance';
+import {
+  DEFAULT_PROVIDER_REGION,
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  type NationalHealthInsuranceRegionParams,
+} from '../../../types/healthInsurance';
 import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
 import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
-import { EHI_SMR_BRACKETS, type StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import {
+  EHI_SMR_BRACKETS,
+  type StandardMonthlyRemunerationBracket,
+} from '../../../data/employeesHealthInsurance/smrBrackets';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
 
-const PORTION_CONFIG: Record<NHIPortionType, {
-  label: string;
-  rateKey: keyof NationalHealthInsuranceRegionParams;
-  perCapitaKey: keyof NationalHealthInsuranceRegionParams;
-  householdFlatKey: keyof NationalHealthInsuranceRegionParams;
-  capKey: keyof NationalHealthInsuranceRegionParams;
-}> = {
+const PORTION_CONFIG: Record<
+  NHIPortionType,
+  {
+    label: string;
+    rateKey: keyof NationalHealthInsuranceRegionParams;
+    perCapitaKey: keyof NationalHealthInsuranceRegionParams;
+    householdFlatKey: keyof NationalHealthInsuranceRegionParams;
+    capKey: keyof NationalHealthInsuranceRegionParams;
+  }
+> = {
   medical: {
     label: 'Medical Portion',
     rateKey: 'medicalRate',
@@ -56,8 +67,15 @@ const PORTION_CONFIG: Record<NHIPortionType, {
 function calculatePortionForFY(
   nhiTaxableIncome: number,
   params: NationalHealthInsuranceRegionParams,
-  portion: NHIPortionType
-): { incomeBasedAmount: number; perCapita: number; householdFlat: number; uncapped: number; cap: number; final: number } {
+  portion: NHIPortionType,
+): {
+  incomeBasedAmount: number;
+  perCapita: number;
+  householdFlat: number;
+  uncapped: number;
+  cap: number;
+  final: number;
+} {
   const config = PORTION_CONFIG[portion];
   const rate = params[config.rateKey] as number | undefined;
   const perCapita = (params[config.perCapitaKey] as number | undefined) ?? 0;
@@ -70,7 +88,14 @@ function calculatePortionForFY(
 
   const incomeBasedAmount = nhiTaxableIncome * rate;
   const uncapped = incomeBasedAmount + perCapita + householdFlat;
-  return { incomeBasedAmount, perCapita, householdFlat, uncapped, cap, final: Math.min(uncapped, cap) };
+  return {
+    incomeBasedAmount,
+    perCapita,
+    householdFlat,
+    uncapped,
+    cap,
+    final: Math.min(uncapped, cap),
+  };
 }
 
 interface NHIPortionTooltipProps {
@@ -87,13 +112,15 @@ const PortionBreakdown: React.FC<{
 }> = ({ label, rate, nhiTaxableIncome, calc }) => (
   <Box sx={{ mb: 0.5 }}>
     {label && (
-      <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.3 }}>
+      <Typography
+        variant="body2"
+        sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.3 }}
+      >
         {label}
       </Typography>
     )}
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-      Income-based (所得割):{' '}
-      <strong>{formatPercent(rate)}</strong>
+      Income-based (所得割): <strong>{formatPercent(rate)}</strong>
       {' × '}
       {formatJPY(nhiTaxableIncome)}
       {' = '}
@@ -110,20 +137,31 @@ const PortionBreakdown: React.FC<{
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
       Subtotal: {formatJPY(calc.uncapped)} (cap: {formatJPY(calc.cap)})
     </Typography>
-    <Typography variant="body2" sx={{
-      fontSize: '0.85rem',
-      fontWeight: 600,
-      color: calc.uncapped > calc.cap ? 'warning.main' : 'success.main',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 0.5
-    }}>
+    <Typography
+      variant="body2"
+      sx={{
+        fontSize: '0.85rem',
+        fontWeight: 600,
+        color: calc.uncapped > calc.cap ? 'warning.main' : 'success.main',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.5,
+      }}
+    >
       = <strong>{formatJPY(calc.final)}</strong>
       {calc.uncapped > calc.cap && (
-        <Box component="span" sx={{
-          px: 0.5, py: 0.2, borderRadius: 0.5,
-          bgcolor: 'warning.light', fontSize: '0.75rem', fontWeight: 600, color: 'warning.contrastText'
-        }}>
+        <Box
+          component="span"
+          sx={{
+            px: 0.5,
+            py: 0.2,
+            borderRadius: 0.5,
+            bgcolor: 'warning.light',
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            color: 'warning.contrastText',
+          }}
+        >
           🔒 CAPPED
         </Box>
       )}
@@ -131,11 +169,15 @@ const PortionBreakdown: React.FC<{
   </Box>
 );
 
-export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, results, inputs }) => {
+export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
+  portion,
+  results,
+  inputs,
+}) => {
   const region = inputs.region;
   const year = inputs.incomeYear;
-  const prevFYData = getNHIParamsForMonth(region, year, 0);  // Jan → previous FY
-  const currFYData = getNHIParamsForMonth(region, year, 3);  // Apr → current FY
+  const prevFYData = getNHIParamsForMonth(region, year, 0); // Jan → previous FY
+  const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
 
   if (!currFYData) {
     return (
@@ -159,18 +201,21 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
   }
 
   // Determine if rates are blended across fiscal years for this portion
-  const prevRate = prevFYData ? prevFYData[config.rateKey] as number | undefined : undefined;
-  const ratesBlended = prevFYData && prevFYData !== currFYData && (
+  const prevRate = prevFYData ? (prevFYData[config.rateKey] as number | undefined) : undefined;
+  const ratesBlended =
+    prevFYData &&
+    prevFYData !== currFYData &&
     // Portion is newly introduced (exists in current FY but not previous)
-    (!prevRate && currRate) ||
-    // Both FYs have the portion but parameters differ
-    (prevRate && (
-      prevRate !== currRate ||
-      (prevFYData[config.perCapitaKey] as number | undefined) !== (currFYData[config.perCapitaKey] as number | undefined) ||
-      (prevFYData[config.capKey] as number | undefined) !== (currFYData[config.capKey] as number | undefined) ||
-      (prevFYData[config.householdFlatKey] as number | undefined) !== (currFYData[config.householdFlatKey] as number | undefined)
-    ))
-  );
+    ((!prevRate && currRate) ||
+      // Both FYs have the portion but parameters differ
+      (prevRate &&
+        (prevRate !== currRate ||
+          (prevFYData[config.perCapitaKey] as number | undefined) !==
+            (currFYData[config.perCapitaKey] as number | undefined) ||
+          (prevFYData[config.capKey] as number | undefined) !==
+            (currFYData[config.capKey] as number | undefined) ||
+          (prevFYData[config.householdFlatKey] as number | undefined) !==
+            (currFYData[config.householdFlatKey] as number | undefined))));
 
   // For blended calculation, we need NHI taxable income from each FY's deduction
   // (in practice, the deduction is usually the same, but use each FY's value for correctness)
@@ -190,7 +235,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
 
   if (ratesBlended) {
     const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData!, portion);
-    const blendedAmount = Math.round(prevCalc.final * 3 / 10 + currCalc.final * 7 / 10);
+    const blendedAmount = Math.round((prevCalc.final * 3) / 10 + (currCalc.final * 7) / 10);
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
 
@@ -198,7 +243,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
       const expected = resultValueByPortion[portion];
       if (expected !== undefined && Math.abs(blendedAmount - expected) > 1) {
         throw new Error(
-          `NHIPortionTooltip: ${config.label} blended total (${blendedAmount}) does not match calculator result (${expected}). The tooltip and calculator blending logic may have diverged.`
+          `NHIPortionTooltip: ${config.label} blended total (${blendedAmount}) does not match calculator result (${expected}). The tooltip and calculator blending logic may have diverged.`,
         );
       }
     }
@@ -219,10 +264,16 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
             />
           ) : (
             <Box>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.3 }}>
+              <Typography
+                variant="body2"
+                sx={{ fontSize: '0.8rem', fontWeight: 600, color: 'text.secondary', mb: 0.3 }}
+              >
                 {prevFYLabel} (Jan-Mar, 3⁄10 of annual):
               </Typography>
-              <Typography variant="body2" sx={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'text.secondary' }}>
+              <Typography
+                variant="body2"
+                sx={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'text.secondary' }}
+              >
                 Not applicable — this portion was introduced in {currFYLabel}
               </Typography>
             </Box>
@@ -240,8 +291,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
 
         <Box sx={{ p: 1, bgcolor: 'primary.50', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-            Total:{' '}
-            {formatJPY(prevCalc.final)} × 3⁄10
+            Total: {formatJPY(prevCalc.final)} × 3⁄10
             {' + '}
             {formatJPY(currCalc.final)} × 7⁄10
             {' = '}
@@ -252,7 +302,12 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
         {currFYData.source && (
           <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
             Calculation parameters from{' '}
-            <a href={currFYData.source} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+            <a
+              href={currFYData.source}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit' }}
+            >
               {currFYData.regionName} NHI Rates
             </a>
           </Typography>
@@ -267,7 +322,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
     const tooltipTotal = Math.round(currCalc.final);
     if (expected !== undefined && Math.abs(tooltipTotal - expected) > 1) {
       throw new Error(
-        `NHIPortionTooltip: ${config.label} total (${tooltipTotal}) does not match calculator result (${expected}). The tooltip and calculator logic may have diverged.`
+        `NHIPortionTooltip: ${config.label} total (${tooltipTotal}) does not match calculator result (${expected}). The tooltip and calculator logic may have diverged.`,
       );
     }
   }
@@ -288,7 +343,12 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({ portion, r
       {currFYData.source && (
         <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
           Calculation parameters from{' '}
-          <a href={currFYData.source} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+          <a
+            href={currFYData.source}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'inherit' }}
+          >
             {currFYData.regionName} NHI Rates
           </a>
         </Typography>
@@ -302,15 +362,18 @@ interface HealthInsurancePremiumTooltipProps {
   standardMonthlyRemuneration: number;
 }
 
-const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps> = ({ inputs, standardMonthlyRemuneration }) => {
+const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps> = ({
+  inputs,
+  standardMonthlyRemuneration,
+}) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
 
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
     // National Health Insurance - overview tooltip on the heading
     const year = inputs.incomeYear;
-    const prevFYData = getNHIParamsForMonth(region, year, 0);  // Jan → previous FY
-    const currFYData = getNHIParamsForMonth(region, year, 3);  // Apr → current FY
+    const prevFYData = getNHIParamsForMonth(region, year, 0); // Jan → previous FY
+    const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
     const regionData = currFYData;
     if (!regionData) {
       return (
@@ -322,21 +385,23 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
             Premium calculation parameters for {region} are not available in the current data.
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 1 }}>
-            National Health Insurance premiums vary by municipality. Please check with your local city/ward office for specific rates.
+            National Health Insurance premiums vary by municipality. Please check with your local
+            city/ward office for specific rates.
           </Typography>
         </Box>
       );
     }
 
-    const ratesBlended = prevFYData && prevFYData !== currFYData && (
-      prevFYData.medicalRate !== regionData.medicalRate ||
-      prevFYData.supportRate !== regionData.supportRate ||
-      prevFYData.medicalCap !== regionData.medicalCap ||
-      prevFYData.supportCap !== regionData.supportCap ||
-      prevFYData.ltcRateForEligible !== regionData.ltcRateForEligible ||
-      prevFYData.childSupportRate !== regionData.childSupportRate ||
-      prevFYData.childSupportCap !== regionData.childSupportCap
-    );
+    const ratesBlended =
+      prevFYData &&
+      prevFYData !== currFYData &&
+      (prevFYData.medicalRate !== regionData.medicalRate ||
+        prevFYData.supportRate !== regionData.supportRate ||
+        prevFYData.medicalCap !== regionData.medicalCap ||
+        prevFYData.supportCap !== regionData.supportCap ||
+        prevFYData.ltcRateForEligible !== regionData.ltcRateForEligible ||
+        prevFYData.childSupportRate !== regionData.childSupportRate ||
+        prevFYData.childSupportCap !== regionData.childSupportCap);
 
     return (
       <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
@@ -344,17 +409,20 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           National Health Insurance - {regionData.regionName}
         </Typography>
         <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
-          NHI premiums are calculated using income-based rates plus per-capita amounts, with annual caps applied to each portion.
-          NHI premiums are based on last year's reported income.
-          These calculations assume your income is the same as the previous year.
+          NHI premiums are calculated using income-based rates plus per-capita amounts, with annual
+          caps applied to each portion. NHI premiums are based on last year's reported income. These
+          calculations assume your income is the same as the previous year.
         </Typography>
 
         {ratesBlended && (
-          <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem', fontStyle: 'italic', color: 'info.main' }}>
-            NHI rates change in April.
-            Since premiums are paid in 10 installments (Jun-Mar), the calendar year straddles two fiscal years: 3/10 from Jan-Mar (previous FY) + 7/10 from Jun-Dec (current FY).
-            The premium paid in a calendar year is a combination of both fiscal years.
-            See the tooltip on each portion for details.
+          <Typography
+            variant="body2"
+            sx={{ mb: 1, fontSize: '0.85rem', fontStyle: 'italic', color: 'info.main' }}
+          >
+            NHI rates change in April. Since premiums are paid in 10 installments (Jun-Mar), the
+            calendar year straddles two fiscal years: 3/10 from Jan-Mar (previous FY) + 7/10 from
+            Jun-Dec (current FY). The premium paid in a calendar year is a combination of both
+            fiscal years. See the tooltip on each portion for details.
           </Typography>
         )}
 
@@ -383,7 +451,9 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     let providerLabel;
 
     if (standardMonthlyRemuneration === undefined) {
-      throw new Error('standardMonthlyRemuneration is required for the Employee Health Insurance tooltip');
+      throw new Error(
+        'standardMonthlyRemuneration is required for the Employee Health Insurance tooltip',
+      );
     }
 
     const year = inputs.incomeYear;
@@ -392,7 +462,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
       employeeLtcRate = (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
       // For custom provider, we don't know the employer rate, so we leave it undefined.
-      providerLabel = "Custom Provider";
+      providerLabel = 'Custom Provider';
     } else {
       // Use a representative month of the income year (April = fiscal-year start) for the headline rate.
       const regionalRates = getRegionalRatesForMonth(provider, region, year, 3);
@@ -418,7 +488,9 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       for (let m = 0; m < 12; m++) {
         const monthRates = getRegionalRatesForMonth(provider, region, year, m);
         if (monthRates) {
-          const r = monthRates.employeeHealthInsuranceRate + (includeLTC ? monthRates.employeeLongTermCareRate : 0);
+          const r =
+            monthRates.employeeHealthInsuranceRate +
+            (includeLTC ? monthRates.employeeLongTermCareRate : 0);
           const p = roundSocialInsurancePremium(standardMonthlyRemuneration * r);
           monthlyRates.push({ rate: r, premium: p });
           if (m > 0 && r !== monthlyRates[0]!.rate) ratesVary = true;
@@ -428,7 +500,8 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
     // Prepare table data for the lookup table
     // Highlight the row corresponding to the current SMR
-    const currentRow = EHI_SMR_BRACKETS.find(bracket => bracket.smrAmount === standardMonthlyRemuneration) || null;
+    const currentRow =
+      EHI_SMR_BRACKETS.find(bracket => bracket.smrAmount === standardMonthlyRemuneration) || null;
 
     const getIncomeRange = (row: StandardMonthlyRemunerationBracket) => {
       return `${formatJPY(row.minIncomeInclusive)} - ${row.maxIncomeExclusive === Infinity ? '∞' : formatJPY(row.maxIncomeExclusive)}`;
@@ -438,16 +511,16 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       {
         header: 'Grade',
         render: (row: StandardMonthlyRemunerationBracket) => row.grade,
-        align: 'left' as const
+        align: 'left' as const,
       },
       {
         header: 'Monthly Remuneration',
         render: getIncomeRange,
-        align: 'left' as const
+        align: 'left' as const,
       },
       {
         header: 'SMR',
-        getValue: (row: StandardMonthlyRemunerationBracket) => row.smrAmount
+        getValue: (row: StandardMonthlyRemunerationBracket) => row.smrAmount,
       },
     ];
 
@@ -461,11 +534,30 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           Health Insurance Calculation - {providerLabel}
         </Typography>
 
-        <Box sx={{ mb: 0.5, p: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+        <Box
+          sx={{
+            mb: 0.5,
+            p: 0,
+            bgcolor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            overflow: 'hidden',
+          }}
+        >
           {/* Supporting Details */}
-          <Box sx={{ p: 1.5, bgcolor: 'var(--action-hover)', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box
+            sx={{
+              p: 1.5,
+              bgcolor: 'var(--action-hover)',
+              borderBottom: '1px solid',
+              borderColor: 'divider',
+            }}
+          >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" color="text.secondary">Monthly Remuneration</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Monthly Remuneration
+              </Typography>
               <Typography variant="caption" sx={{ fontWeight: 500 }}>
                 {formatJPY(
                   inputs.incomeStreams
@@ -475,7 +567,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                       if (s.frequency === '3-months') return sum + s.amount / 3;
                       if (s.frequency === '6-months') return sum + s.amount / 6;
                       return sum + s.amount / 12;
-                    }, 0)
+                    }, 0),
                 )}
               </Typography>
             </Box>
@@ -483,59 +575,140 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
               <Typography variant="caption" color="text.secondary">
                 Standard Monthly Remuneration
               </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 500 }}>{formatJPY(standardMonthlyRemuneration)}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                {formatJPY(standardMonthlyRemuneration)}
+              </Typography>
             </Box>
           </Box>
 
           {/* Main Calculation Highlight */}
-          <Box sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box
+            sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}
+          >
             {ratesVary && monthlyRates.length === 12 ? (
               <>
-                <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="primary.main"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                >
                   Salary Premium ({year})
                 </Typography>
                 {(() => {
                   // Group consecutive months with the same rate
-                  const groups: { startMonth: number; endMonth: number; rate: number; premium: number }[] = [];
+                  const groups: {
+                    startMonth: number;
+                    endMonth: number;
+                    rate: number;
+                    premium: number;
+                  }[] = [];
                   for (let i = 0; i < monthlyRates.length; i++) {
                     const mr = monthlyRates[i]!;
                     const lastGroup = groups[groups.length - 1];
                     if (lastGroup && lastGroup.rate === mr.rate) {
                       lastGroup.endMonth = i;
                     } else {
-                      groups.push({ startMonth: i, endMonth: i, rate: mr.rate, premium: mr.premium });
+                      groups.push({
+                        startMonth: i,
+                        endMonth: i,
+                        rate: mr.rate,
+                        premium: mr.premium,
+                      });
                     }
                   }
-                  const formatMonth = (m: number) => new Date(2000, m).toLocaleString('en', { month: 'short' });
+                  const formatMonth = (m: number) =>
+                    new Date(2000, m).toLocaleString('en', { month: 'short' });
                   const annualTotal = monthlyRates.reduce((sum, mr) => sum + mr.premium, 0);
                   return (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <table
+                      style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}
+                    >
                       <thead>
                         <tr>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'left' }}>Months</th>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'right' }}>Rate</th>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'right' }}>Monthly</th>
-                          <th style={{ padding: '2px 8px 2px 0', borderBottom: '1px solid var(--divider)', fontWeight: 'normal', textAlign: 'right' }}>Subtotal</th>
+                          <th
+                            style={{
+                              padding: '2px 8px 2px 0',
+                              borderBottom: '1px solid var(--divider)',
+                              fontWeight: 'normal',
+                              textAlign: 'left',
+                            }}
+                          >
+                            Months
+                          </th>
+                          <th
+                            style={{
+                              padding: '2px 8px 2px 0',
+                              borderBottom: '1px solid var(--divider)',
+                              fontWeight: 'normal',
+                              textAlign: 'right',
+                            }}
+                          >
+                            Rate
+                          </th>
+                          <th
+                            style={{
+                              padding: '2px 8px 2px 0',
+                              borderBottom: '1px solid var(--divider)',
+                              fontWeight: 'normal',
+                              textAlign: 'right',
+                            }}
+                          >
+                            Monthly
+                          </th>
+                          <th
+                            style={{
+                              padding: '2px 8px 2px 0',
+                              borderBottom: '1px solid var(--divider)',
+                              fontWeight: 'normal',
+                              textAlign: 'right',
+                            }}
+                          >
+                            Subtotal
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {groups.map((g, idx) => {
                           const count = g.endMonth - g.startMonth + 1;
-                          const monthLabel = g.startMonth === g.endMonth
-                            ? formatMonth(g.startMonth)
-                            : `${formatMonth(g.startMonth)}\u2013${formatMonth(g.endMonth)}`;
+                          const monthLabel =
+                            g.startMonth === g.endMonth
+                              ? formatMonth(g.startMonth)
+                              : `${formatMonth(g.startMonth)}\u2013${formatMonth(g.endMonth)}`;
                           return (
                             <tr key={idx}>
                               <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>
-                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatPercent(g.rate)}</td>
-                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(g.premium)}</td>
-                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>{formatJPY(g.premium * count)}</td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
+                                {formatPercent(g.rate)}
+                              </td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
+                                {formatJPY(g.premium)}
+                              </td>
+                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
+                                {formatJPY(g.premium * count)}
+                              </td>
                             </tr>
                           );
                         })}
                         <tr>
-                          <td colSpan={3} style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>Annual Total</td>
-                          <td style={{ padding: '2px 8px 2px 0', textAlign: 'right', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>
+                          <td
+                            colSpan={3}
+                            style={{
+                              padding: '2px 8px 2px 0',
+                              textAlign: 'right',
+                              borderTop: '1px solid var(--divider)',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Annual Total
+                          </td>
+                          <td
+                            style={{
+                              padding: '2px 8px 2px 0',
+                              textAlign: 'right',
+                              borderTop: '1px solid var(--divider)',
+                              fontWeight: 600,
+                            }}
+                          >
                             {formatJPY(annualTotal)}
                           </td>
                         </tr>
@@ -544,23 +717,36 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   );
                 })()}
               </>
-            ) : ( // If rates don't vary, show the simple calculation
+            ) : (
+              // If rates don't vary, show the simple calculation
               <>
-                <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="primary.main"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                >
                   Monthly Insurance Premium
                 </Typography>
-                <Typography sx={{
-                  textAlign: 'center',
-                  width: '100%',
-                  my: 0.5,
-                  fontSize: '1.1rem',
-                  fontWeight: 500,
-                }}>
+                <Typography
+                  sx={{
+                    textAlign: 'center',
+                    width: '100%',
+                    my: 0.5,
+                    fontSize: '1.1rem',
+                    fontWeight: 500,
+                  }}
+                >
                   {formatJPY(standardMonthlyRemuneration)}
-                  <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>×</Box>
+                  <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
+                    ×
+                  </Box>
                   {formatPercent(finalRate)}
-                  <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>=</Box>
-                  <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatJPY(totalPremium)}</Box>
+                  <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
+                    =
+                  </Box>
+                  <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    {formatJPY(totalPremium)}
+                  </Box>
                 </Typography>
               </>
             )}
@@ -569,11 +755,16 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
         {includeLTC && (
           <Typography variant="caption" color="text.secondary" sx={{ mt: -0.5 }}>
-            Rate breakdown: Health {formatPercent(employeeRate)} + LTC {formatPercent(employeeLtcRate)}
+            Rate breakdown: Health {formatPercent(employeeRate)} + LTC{' '}
+            {formatPercent(employeeLtcRate)}
           </Typography>
         )}
 
-        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block' }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontStyle: 'italic', display: 'block' }}
+        >
           The employer also contributes separately.
         </Typography>
 
@@ -586,9 +777,11 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           tableContainerDataAttr="data-smr-table-container"
           currentRowId="current-smr-row"
           getCurrentRowSummary={getCurrentRowSummary}
-          {...(sourceUrl ? {
-            officialSourceLink: { url: sourceUrl, text: `${providerLabel} Rates` }
-          } : {})}
+          {...(sourceUrl
+            ? {
+                officialSourceLink: { url: sourceUrl, text: `${providerLabel} Rates` },
+              }
+            : {})}
         />
       </Box>
     );

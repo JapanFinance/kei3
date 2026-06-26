@@ -60,8 +60,9 @@ export function findPensionBracket(monthlyIncome: number): StandardMonthlyRemune
   if (monthlyIncome < 0) {
     throw new Error('Monthly income must be non-negative');
   }
-  return EMPLOYEES_PENSION_BRACKETS.find(bracket =>
-    monthlyIncome >= bracket.minIncomeInclusive && monthlyIncome < bracket.maxIncomeExclusive
+  return EMPLOYEES_PENSION_BRACKETS.find(
+    bracket =>
+      monthlyIncome >= bracket.minIncomeInclusive && monthlyIncome < bracket.maxIncomeExclusive,
   )!; // Invariant: there is always a matching bracket for non-negative income
 }
 
@@ -81,7 +82,7 @@ export function calculatePensionBreakdown(
   monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
   bonuses: BonusIncomeStream[] = [],
-  year: number
+  year: number,
 ): PensionBreakdown {
   if (!isEmployeesPension) {
     return { total: getNationalPensionAnnualTotal(year), bonusPortion: 0 };
@@ -128,7 +129,7 @@ export interface PensionBonusBreakdownItem {
  */
 export function calculatePensionBonusBreakdown(
   bonuses: BonusIncomeStream[],
-  isHalfAmount: boolean = true
+  isHalfAmount: boolean = true,
 ): PensionBonusBreakdownItem[] {
   if (bonuses.length === 0) {
     return [];
@@ -183,7 +184,8 @@ export function calculatePensionPremium(
   monthlyIncome: number = 0,
   isHalfAmount: boolean = true,
   bonuses: BonusIncomeStream[] = [],
-  year: number
+  year: number,
 ): number {
-  return calculatePensionBreakdown(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year).total;
+  return calculatePensionBreakdown(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year)
+    .total;
 }

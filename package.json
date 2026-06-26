@@ -9,6 +9,8 @@
     "build:analyze": "tsc -b && vite build --mode analyze",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "preview": "vite preview",
     "test": "vitest",
     "deploy": "wrangler deploy"
@@ -38,6 +40,7 @@
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
+    "prettier": "3.8.4",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.62.0",

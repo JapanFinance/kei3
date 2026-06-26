@@ -13,7 +13,7 @@ import {
   Tooltip,
   Legend,
   BarController,
-  LineController
+  LineController,
 } from 'chart.js';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import Box from '@mui/material/Box';
@@ -22,9 +22,17 @@ import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import type { ChartRange, CustomEmployeesHealthInsuranceRates, IncomeStream } from '../../types/tax';
+import type {
+  ChartRange,
+  CustomEmployeesHealthInsuranceRates,
+  IncomeStream,
+} from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
-import { generateChartData, getChartOptions, currentAndMedianIncomeChartPlugin } from '../../utils/chartConfig';
+import {
+  generateChartData,
+  getChartOptions,
+  currentAndMedianIncomeChartPlugin,
+} from '../../utils/chartConfig';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type { Dependent } from '../../types/dependents';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
@@ -35,11 +43,31 @@ import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 
 // Percentile bands configuration
 const QUINTILE_BANDS = [
-  { min: 0, max: QUINTILE_DATA[20], label: '0-20th percentile', color: 'rgba(255, 99, 132, 0.1)' },      // Light red
-  { min: QUINTILE_DATA[20], max: QUINTILE_DATA[40], label: '20-40th percentile', color: 'rgba(255, 159, 64, 0.1)' },   // Light orange
-  { min: QUINTILE_DATA[40], max: QUINTILE_DATA[60], label: '40-60th percentile', color: 'rgba(153, 102, 255, 0.1)' },  // Light purple
-  { min: QUINTILE_DATA[60], max: QUINTILE_DATA[80], label: '60-80th percentile', color: 'rgba(46, 125, 50, 0.1)' },    // Light green
-  { min: QUINTILE_DATA[80], max: Infinity, label: '80-100th percentile', color: 'rgba(54, 162, 235, 0.1)' },           // Light blue
+  { min: 0, max: QUINTILE_DATA[20], label: '0-20th percentile', color: 'rgba(255, 99, 132, 0.1)' }, // Light red
+  {
+    min: QUINTILE_DATA[20],
+    max: QUINTILE_DATA[40],
+    label: '20-40th percentile',
+    color: 'rgba(255, 159, 64, 0.1)',
+  }, // Light orange
+  {
+    min: QUINTILE_DATA[40],
+    max: QUINTILE_DATA[60],
+    label: '40-60th percentile',
+    color: 'rgba(153, 102, 255, 0.1)',
+  }, // Light purple
+  {
+    min: QUINTILE_DATA[60],
+    max: QUINTILE_DATA[80],
+    label: '60-80th percentile',
+    color: 'rgba(46, 125, 50, 0.1)',
+  }, // Light green
+  {
+    min: QUINTILE_DATA[80],
+    max: Infinity,
+    label: '80-100th percentile',
+    color: 'rgba(54, 162, 235, 0.1)',
+  }, // Light blue
 ];
 
 // Chart.js plugin for percentile background bands
@@ -81,7 +109,7 @@ const percentileBandsPlugin = {
     });
 
     ctx.restore();
-  }
+  },
 };
 
 // Register only the Chart.js components we need
@@ -96,7 +124,7 @@ ChartJS.register(
   BarController,
   LineController,
   currentAndMedianIncomeChartPlugin,
-  percentileBandsPlugin
+  percentileBandsPlugin,
 );
 
 interface TakeHomeChartProps {
@@ -160,7 +188,8 @@ const calculateEstimatedIncomePercentile = (income: number): number => {
         // Calculate position within the range
         const rangeSpan = range.max_exclusive - range.min_inclusive;
         const positionInRange = income - range.min_inclusive;
-        const percentWithinRange = rangeSpan > 0 ? (positionInRange / rangeSpan) * range.percent : 0;
+        const percentWithinRange =
+          rangeSpan > 0 ? (positionInRange / rangeSpan) * range.percent : 0;
 
         return cumulativePercent + percentWithinRange;
       } else {
@@ -176,7 +205,9 @@ const calculateEstimatedIncomePercentile = (income: number): number => {
 
 // Utility function to get percentile band for income
 const getPercentileBand = (income: number): { label: string; color: string } => {
-  const band = QUINTILE_BANDS.find(b => income >= b.min && income < b.max) || QUINTILE_BANDS[QUINTILE_BANDS.length - 1]!;
+  const band =
+    QUINTILE_BANDS.find(b => income >= b.min && income < b.max) ||
+    QUINTILE_BANDS[QUINTILE_BANDS.length - 1]!;
   return { label: band.label, color: band.color };
 };
 
@@ -193,7 +224,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   className = '',
   manualSocialInsuranceEntry,
   manualSocialInsuranceAmount = 0,
-  incomeStreams = []
+  incomeStreams = [],
 }) => {
   const theme = useTheme();
 
@@ -251,7 +282,22 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   // Generate chart data using the utility function
   const chartData = useMemo<ChartData<'bar' | 'line'>>(
-    () => generateChartData(chartRange, {
+    () =>
+      generateChartData(chartRange, {
+        isEmploymentIncome,
+        incomeYear,
+        isSubjectToLongTermCarePremium,
+        healthInsuranceProvider,
+        region,
+        dcPlanContributions,
+        dependents,
+        customEHIRates,
+        manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
+        manualSocialInsuranceAmount,
+        incomeStreams,
+      }),
+    [
+      chartRange,
       isEmploymentIncome,
       incomeYear,
       isSubjectToLongTermCarePremium,
@@ -260,74 +306,84 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       dcPlanContributions,
       dependents,
       customEHIRates,
-      manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
+      manualSocialInsuranceEntry,
       manualSocialInsuranceAmount,
-      incomeStreams
-    }),
-    [chartRange, isEmploymentIncome, incomeYear, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount, incomeStreams]
+      incomeStreams,
+    ],
   );
 
   // Get chart options using the utility function
-  const chartOptions = useMemo<ChartOptions<'bar' | 'line'>>(
-    () => {
-      const baseOptions = getChartOptions(chartRange, currentIncome, useCompactLabelFormat);
+  const chartOptions = useMemo<ChartOptions<'bar' | 'line'>>(() => {
+    const baseOptions = getChartOptions(chartRange, currentIncome, useCompactLabelFormat);
 
-      // Enhance tooltips to include percentile and cap information
-      return {
-        ...baseOptions,
-        plugins: {
-          ...baseOptions.plugins,
-          tooltip: {
-            ...baseOptions.plugins?.tooltip,
-            callbacks: {
-              ...baseOptions.plugins?.tooltip?.callbacks,
-              afterTitle: (tooltipItems: TooltipItem<'bar' | 'line'>[]) => {
-                if (tooltipItems.length > 0 && tooltipItems[0]?.parsed?.x != null) {
-                  const income = tooltipItems[0].parsed.x;
-                  const estimatedPercentile = calculateEstimatedIncomePercentile(income);
-                  const band = getPercentileBand(income);
-                  let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
+    // Enhance tooltips to include percentile and cap information
+    return {
+      ...baseOptions,
+      plugins: {
+        ...baseOptions.plugins,
+        tooltip: {
+          ...baseOptions.plugins?.tooltip,
+          callbacks: {
+            ...baseOptions.plugins?.tooltip?.callbacks,
+            afterTitle: (tooltipItems: TooltipItem<'bar' | 'line'>[]) => {
+              if (tooltipItems.length > 0 && tooltipItems[0]?.parsed?.x != null) {
+                const income = tooltipItems[0].parsed.x;
+                const estimatedPercentile = calculateEstimatedIncomePercentile(income);
+                const band = getPercentileBand(income);
+                let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
 
-                  // Calculate full tax results for this income level to get cap status
-                  const taxInputs = {
-                    annualIncome: income,
-                    incomeYear,
-                    isEmploymentIncome,
-                    isSubjectToLongTermCarePremium,
-                    healthInsuranceProvider,
-                    region,
-                    dcPlanContributions,
-                    dependents,
-                    customEHIRates,
-                    manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
-                    manualSocialInsuranceAmount,
-                    incomeMode: 'salary' as const,
-                    incomeStreams: []
-                  };
+                // Calculate full tax results for this income level to get cap status
+                const taxInputs = {
+                  annualIncome: income,
+                  incomeYear,
+                  isEmploymentIncome,
+                  isSubjectToLongTermCarePremium,
+                  healthInsuranceProvider,
+                  region,
+                  dcPlanContributions,
+                  dependents,
+                  customEHIRates,
+                  manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
+                  manualSocialInsuranceAmount,
+                  incomeMode: 'salary' as const,
+                  incomeStreams: [],
+                };
 
-                  const taxResults = calculateTaxes(taxInputs);
+                const taxResults = calculateTaxes(taxInputs);
 
-                  // Use the calculated results for cap detection
-                  const capStatus = detectCaps(taxResults, incomeYear);
+                // Use the calculated results for cap detection
+                const capStatus = detectCaps(taxResults, incomeYear);
 
-                  if (capStatus.healthInsuranceCapped || capStatus.pensionCapped) {
-                    const cappedItems: string[] = [];
-                    if (capStatus.pensionCapped) cappedItems.push('Pension');
-                    if (capStatus.healthInsuranceCapped) cappedItems.push('Health Insurance');
-                    info += `\n🔒 Max reached: ${cappedItems.join(', ')}`;
-                  }
-
-                  return info;
+                if (capStatus.healthInsuranceCapped || capStatus.pensionCapped) {
+                  const cappedItems: string[] = [];
+                  if (capStatus.pensionCapped) cappedItems.push('Pension');
+                  if (capStatus.healthInsuranceCapped) cappedItems.push('Health Insurance');
+                  info += `\n🔒 Max reached: ${cappedItems.join(', ')}`;
                 }
-                return '';
-              },
+
+                return info;
+              }
+              return '';
             },
           },
         },
-      };
-    },
-    [chartRange, currentIncome, incomeYear, useCompactLabelFormat, isEmploymentIncome, isSubjectToLongTermCarePremium, healthInsuranceProvider, region, dcPlanContributions, dependents, customEHIRates, manualSocialInsuranceEntry, manualSocialInsuranceAmount]
-  );
+      },
+    };
+  }, [
+    chartRange,
+    currentIncome,
+    incomeYear,
+    useCompactLabelFormat,
+    isEmploymentIncome,
+    isSubjectToLongTermCarePremium,
+    healthInsuranceProvider,
+    region,
+    dcPlanContributions,
+    dependents,
+    customEHIRates,
+    manualSocialInsuranceEntry,
+    manualSocialInsuranceAmount,
+  ]);
 
   // Use media query to determine if we should show minor marks
   const showMinorMarks = useMediaQuery(theme.breakpoints.up('md'));
@@ -343,8 +399,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   }, [showMinorMarks]);
 
   // Determine if legend items should be visible
-  const yourIncomeIsVisibleInChart = currentIncome > 0 && currentIncome >= chartRange.min && currentIncome <= chartRange.max;
-  const medianIncomeIsVisibleInChart = MEDIAN_INCOME_VALUE >= chartRange.min && MEDIAN_INCOME_VALUE <= chartRange.max;
+  const yourIncomeIsVisibleInChart =
+    currentIncome > 0 && currentIncome >= chartRange.min && currentIncome <= chartRange.max;
+  const medianIncomeIsVisibleInChart =
+    MEDIAN_INCOME_VALUE >= chartRange.min && MEDIAN_INCOME_VALUE <= chartRange.max;
 
   return (
     <Paper
@@ -401,11 +459,21 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               zIndex: 10,
             }}
           >
-            <Typography variant="subtitle2" color="warning.main" sx={{ fontWeight: 600, fontSize: '0.9rem' }}>
+            <Typography
+              variant="subtitle2"
+              color="warning.main"
+              sx={{ fontWeight: 600, fontSize: '0.9rem' }}
+            >
               Comparative Data Unavailable
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}>
-              Data for other income levels cannot be calculated<br />when using manual social insurance entry.
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}
+            >
+              Data for other income levels cannot be calculated
+              <br />
+              when using manual social insurance entry.
             </Typography>
           </Paper>
         )}
@@ -436,8 +504,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             <Box
               className="legend-marker"
               sx={{
-                width: 2,           // vertical line: narrow width
-                height: 24,         // vertical line: tall height
+                width: 2, // vertical line: narrow width
+                height: 24, // vertical line: tall height
                 borderRadius: 1,
                 backgroundColor: YOUR_INCOME_COLOR,
                 display: 'inline-block',
@@ -468,8 +536,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           <Box
             className="legend-marker"
             sx={{
-              width: 2,           // vertical line: narrow width
-              height: 24,         // vertical line: tall height
+              width: 2, // vertical line: narrow width
+              height: 24, // vertical line: tall height
               borderRadius: 1,
               backgroundColor: MEDIAN_INCOME_COLOR,
               display: 'inline-block',
@@ -505,7 +573,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 color: 'primary.main',
               }}
             >
-              Your income is higher than ~{calculateEstimatedIncomePercentile(currentIncome).toFixed(1)}% of households in Japan.
+              Your income is higher than ~
+              {calculateEstimatedIncomePercentile(currentIncome).toFixed(1)}% of households in
+              Japan.
             </Typography>
           </Box>
         )}
@@ -536,7 +606,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           >
             <Box>
               <Typography variant="body2" sx={{ mb: 1.5 }}>
-                The colored background bands represent household income distribution quintiles based on official Japanese government data:
+                The colored background bands represent household income distribution quintiles based
+                on official Japanese government data:
               </Typography>
 
               {/* Quintile Data Table */}
@@ -570,85 +641,76 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               >
                 <Box component="thead" sx={{ bgcolor: 'action.hover' }}>
                   <Box component="tr">
-                    <Box component="th">
-                      Percentile
-                    </Box>
-                    <Box component="th">
-                      Income Range
-                    </Box>
+                    <Box component="th">Percentile</Box>
+                    <Box component="th">Income Range</Box>
                   </Box>
                 </Box>
                 <Box component="tbody">
                   <Box component="tr">
-                    <Box component="td">
-                      0-20th
-                    </Box>
-                    <Box component="td">
-                      ¥0 - {formatJPY(QUINTILE_DATA[20])}
-                    </Box>
+                    <Box component="td">0-20th</Box>
+                    <Box component="td">¥0 - {formatJPY(QUINTILE_DATA[20])}</Box>
                   </Box>
                   <Box component="tr">
-                    <Box component="td">
-                      20-40th
-                    </Box>
+                    <Box component="td">20-40th</Box>
                     <Box component="td">
                       {formatJPY(QUINTILE_DATA[20])} - {formatJPY(QUINTILE_DATA[40])}
                     </Box>
                   </Box>
                   <Box component="tr">
-                    <Box component="td">
-                      40-60th
-                    </Box>
+                    <Box component="td">40-60th</Box>
                     <Box component="td">
                       {formatJPY(QUINTILE_DATA[40])} - {formatJPY(QUINTILE_DATA[60])}
                     </Box>
                   </Box>
                   <Box component="tr">
-                    <Box component="td">
-                      60-80th
-                    </Box>
+                    <Box component="td">60-80th</Box>
                     <Box component="td">
                       {formatJPY(QUINTILE_DATA[60])} - {formatJPY(QUINTILE_DATA[80])}
                     </Box>
                   </Box>
                   <Box component="tr">
-                    <Box component="td">
-                      80-100th
-                    </Box>
-                    <Box component="td">
-                      {formatJPY(QUINTILE_DATA[80])} and above
-                    </Box>
+                    <Box component="td">80-100th</Box>
+                    <Box component="td">{formatJPY(QUINTILE_DATA[80])} and above</Box>
                   </Box>
                 </Box>
               </Box>
-              <Typography variant="body2" sx={{ mt: 1.5, mb: 1.5, fontSize: '0.9rem', fontStyle: 'italic' }}>
-                Data source: <a
+              <Typography
+                variant="body2"
+                sx={{ mt: 1.5, mb: 1.5, fontSize: '0.9rem', fontStyle: 'italic' }}
+              >
+                Data source:{' '}
+                <a
                   href="https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa24/index.html"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ color: 'inherit', textDecoration: 'underline' }}
                 >
-                  Ministry of Health, Labour and Welfare's 2024 Comprehensive Survey of Living Conditions
+                  Ministry of Health, Labour and Welfare's 2024 Comprehensive Survey of Living
+                  Conditions
                 </a>
               </Typography>
 
               {/* Explanation of quintiles and percentiles */}
-              <Box sx={{
-                mt: 1.5,
-                p: 1.5,
-                bgcolor: 'action.hover',
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'divider'
-              }}>
+              <Box
+                sx={{
+                  mt: 1.5,
+                  p: 1.5,
+                  bgcolor: 'action.hover',
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
                 <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}>
                   What are percentiles and quintiles?
                 </Typography>
                 <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
-                  <strong>Percentiles:</strong> If you're in the 70th percentile, your income is higher than 70% of all households.
+                  <strong>Percentiles:</strong> If you're in the 70th percentile, your income is
+                  higher than 70% of all households.
                 </Typography>
                 <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
-                  <strong>Quintiles:</strong> The population divided into 5 equal groups (20% each), from lowest to highest income.
+                  <strong>Quintiles:</strong> The population divided into 5 equal groups (20% each),
+                  from lowest to highest income.
                 </Typography>
               </Box>
             </Box>
@@ -669,12 +731,14 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           boxShadow: 'none',
         }}
       >
-        <Box sx={{
-          position: 'relative',
-          zIndex: 1,
-          width: '100%',
-          pb: 3,
-        }}>
+        <Box
+          sx={{
+            position: 'relative',
+            zIndex: 1,
+            width: '100%',
+            pb: 3,
+          }}
+        >
           <Typography
             id="range-slider"
             variant="subtitle2"
@@ -702,7 +766,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               max={100000000}
               step={STEP_SIZE}
               marks={visibleMarks}
-              valueLabelFormat={(value) => `¥${formatJPY(value)}`}
+              valueLabelFormat={value => `¥${formatJPY(value)}`}
               aria-labelledby="range-slider"
               className="range-slider"
               sx={{

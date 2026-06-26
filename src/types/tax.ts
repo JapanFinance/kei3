@@ -1,12 +1,18 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { HealthInsuranceProviderId } from "./healthInsurance";
-import type { Dependent, DependentDeductionResults } from "./dependents";
+import type { HealthInsuranceProviderId } from './healthInsurance';
+import type { Dependent, DependentDeductionResults } from './dependents';
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
 
-export type IncomeStreamType = 'salary' | 'bonus' | 'business' | 'miscellaneous' | 'commutingAllowance' | 'stockCompensation';
+export type IncomeStreamType =
+  | 'salary'
+  | 'bonus'
+  | 'business'
+  | 'miscellaneous'
+  | 'commutingAllowance'
+  | 'stockCompensation';
 
 export interface BaseIncomeStream {
   id: string;
@@ -43,7 +49,13 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
   issuerDomicile: 'foreign' | 'domestic';
 }
 
-export type IncomeStream = SalaryIncomeStream | BonusIncomeStream | BusinessIncomeStream | MiscellaneousIncomeStream | CommutingAllowanceIncomeStream | StockCompensationIncomeStream;
+export type IncomeStream =
+  | SalaryIncomeStream
+  | BonusIncomeStream
+  | BusinessIncomeStream
+  | MiscellaneousIncomeStream
+  | CommutingAllowanceIncomeStream
+  | StockCompensationIncomeStream;
 
 /**
  * User input for the home loan tax credit (住宅ローン控除).
@@ -237,13 +249,13 @@ export interface ResidenceTaxDetails {
     cityAdjustmentCredit: number;
     cityIncomeTax: number;
     cityPerCapitaTax: number;
-  }
+  };
   prefecture: {
     prefecturalTaxableIncome: number;
     prefecturalAdjustmentCredit: number;
     prefecturalIncomeTax: number;
     prefecturalPerCapitaTax: number;
-  }
+  };
   perCapitaTax: number;
   forestEnvironmentTax: number; // 森林環境税
   totalResidenceTax: number;

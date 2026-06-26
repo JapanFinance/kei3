@@ -31,7 +31,7 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
   React.useEffect(() => {
     if (!containerRef.current) return;
 
-    const resizeObserver = new ResizeObserver((entries) => {
+    const resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
         setContainerWidth(entry.contentRect.width);
       }
@@ -73,7 +73,15 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
         mx: 'auto',
       }}
     >
-      <Typography variant="h6" component="h2" sx={{ fontSize: { xs: '1.08rem', sm: '1.3rem' }, mb: { xs: 0.7, sm: 1.2 }, fontWeight: 700 }}>
+      <Typography
+        variant="h6"
+        component="h2"
+        sx={{
+          fontSize: { xs: '1.08rem', sm: '1.3rem' },
+          mb: { xs: 0.7, sm: 1.2 },
+          fontWeight: 700,
+        }}
+      >
         Take-Home Pay Breakdown
       </Typography>
 
@@ -89,7 +97,7 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
               fontSize: useShortLabels ? '0.8rem' : '0.9rem',
               minHeight: isMobile ? 36 : 48,
               padding: isMobile ? '6px 8px' : '12px 16px',
-            }
+            },
           }}
         >
           {tabLabels.map((label, index) => (

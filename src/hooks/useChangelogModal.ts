@@ -58,6 +58,6 @@ export function useChangelogModal(): UseChangelogModalReturn {
   return {
     isOpen,
     openModal,
-    closeModal
+    closeModal,
   };
 }

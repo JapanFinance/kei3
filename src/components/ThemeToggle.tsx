@@ -24,8 +24,8 @@ const ThemeToggle = ({ toggleColorMode, mode }: ThemeToggleProps) => {
       sx={{
         ml: 1,
         '&:hover': {
-          backgroundColor: theme.palette.action.hover
-        }
+          backgroundColor: theme.palette.action.hover,
+        },
       }}
       aria-label={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}
     >

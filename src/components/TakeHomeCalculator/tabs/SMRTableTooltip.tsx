@@ -64,12 +64,12 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
         const rowHeight = rowRect.height;
 
         // Center the row in the container
-        const targetScrollTop = relativeRowTop - (containerHeight / 2) + (rowHeight / 2);
+        const targetScrollTop = relativeRowTop - containerHeight / 2 + rowHeight / 2;
 
         // Smooth scroll within the container only
         tableContainer.scrollTo({
           top: targetScrollTop,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       }, 100);
     }
@@ -96,7 +96,10 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
       <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
         {description}
         <br />
-        <Typography component="span" sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'text.secondary' }}>
+        <Typography
+          component="span"
+          sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'text.secondary' }}
+        >
           💡 Scroll through the table to view all brackets
         </Typography>
       </Typography>
@@ -128,11 +131,11 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
           },
         }}
         // Prevent wheel events from bubbling to parent when scrolling inside
-        onWheel={(e) => {
+        onWheel={e => {
           e.stopPropagation();
         }}
         // Also prevent touch scroll events from bubbling
-        onTouchMove={(e) => {
+        onTouchMove={e => {
           e.stopPropagation();
         }}
       >
@@ -160,7 +163,7 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
             },
             '& td:first-of-type': {
               textAlign: 'left',
-            }
+            },
           }}
         >
           <Box component="thead">
@@ -197,7 +200,7 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
                     },
                     '& td': {
                       borderColor: isCurrentRow ? 'primary.main' : 'divider',
-                    }
+                    },
                   }}
                 >
                   {columns.map((column, colIndex) => (
@@ -222,14 +225,25 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
 
       {hint && (
         <>
-          <Typography component="span" sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'text.secondary' }}>
+          <Typography
+            component="span"
+            sx={{ fontSize: '0.8rem', fontStyle: 'italic', color: 'text.secondary' }}
+          >
             {hint}
           </Typography>
         </>
       )}
 
       {currentRow && (
-        <Box sx={{ mt: 1, p: 1, bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 1 }}>
+        <Box
+          sx={{
+            mt: 1,
+            p: 1,
+            bgcolor: 'primary.main',
+            color: 'primary.contrastText',
+            borderRadius: 1,
+          }}
+        >
           <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600 }}>
             {getCurrentRowSummary(currentRow)}
           </Typography>
@@ -239,7 +253,8 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
       {officialSourceLink && (
         <Box sx={{ mt: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
           <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            <strong>Official Source:</strong> <a
+            <strong>Official Source:</strong>{' '}
+            <a
               href={officialSourceLink.url}
               target="_blank"
               rel="noopener noreferrer"

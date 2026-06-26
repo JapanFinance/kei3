@@ -4,7 +4,10 @@
 import type { TakeHomeResults } from '../types/tax';
 import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
-import { generateHealthInsurancePremiumTable, generatePremiumTableFromRates } from '../data/employeesHealthInsurance/providerRates';
+import {
+  generateHealthInsurancePremiumTable,
+  generatePremiumTableFromRates,
+} from '../data/employeesHealthInsurance/providerRates';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
 
@@ -13,12 +16,14 @@ export interface CapStatus {
   pensionCapped: boolean;
   pensionFixed?: boolean;
   healthInsuranceBonusCapped?: boolean;
-  healthInsuranceCapDetails?: {
-    medicalCapped?: boolean;
-    supportCapped?: boolean;
-    ltcCapped?: boolean;
-    childSupportCapped?: boolean;
-  } | undefined;
+  healthInsuranceCapDetails?:
+    | {
+        medicalCapped?: boolean;
+        supportCapped?: boolean;
+        ltcCapped?: boolean;
+        childSupportCapped?: boolean;
+      }
+    | undefined;
 }
 
 /**
@@ -28,7 +33,7 @@ export interface CapStatus {
 export function detectCaps(
   results: TakeHomeResults,
   year: number,
-  healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[]
+  healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[],
 ): CapStatus {
   // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
   // instead of total annual income which might include business/misc income or bonuses.
@@ -73,7 +78,10 @@ function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number
   if (!lastBracket) {
     return false;
   }
-  return monthlyRemuneration >= lastBracket.minIncomeInclusive && lastBracket.maxIncomeExclusive === Infinity;
+  return (
+    monthlyRemuneration >= lastBracket.minIncomeInclusive &&
+    lastBracket.maxIncomeExclusive === Infinity
+  );
 }
 
 /**
@@ -82,7 +90,11 @@ function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number
  * @param monthlyRemuneration - The monthly remuneration, as needed for EHI/EPI calculations
  * @returns An object containing the cap status and details
  */
-function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: number, year: number): {
+function checkHealthInsuranceCap(
+  results: TakeHomeResults,
+  monthlyRemuneration: number,
+  year: number,
+): {
   capped: boolean;
   details?: {
     medicalCapped?: boolean;
@@ -106,8 +118,8 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
     // A portion is truly "capped" (won't increase with more income) only when
     // it's at the cap in *both* fiscal years. If only one FY is capped, the
     // other FY's portion could still grow.
-    const prevFYParams = getNHIParamsForMonth(results.region, year, 0);  // Jan → previous FY
-    const currFYParams = getNHIParamsForMonth(results.region, year, 3);  // Apr → current FY
+    const prevFYParams = getNHIParamsForMonth(results.region, year, 0); // Jan → previous FY
+    const currFYParams = getNHIParamsForMonth(results.region, year, 3); // Apr → current FY
     if (!currFYParams) {
       return { capped: false };
     }
@@ -118,7 +130,7 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
     const isCappedInBothFYs = (
       portionAmount: number,
       prevCap: number | undefined,
-      currCap: number
+      currCap: number,
     ): boolean => {
       if (!prevFYParams || prevFYParams === currFYParams) {
         // No blending — single FY, just compare against current cap
@@ -126,31 +138,40 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
       }
       // Blended: compute what the blended amount would be if both FYs are at their caps
       const prevCapValue = prevCap ?? 0; // undefined means portion didn't exist → 0
-      const blendedCap = Math.round(prevCapValue * 3 / 10 + currCap * 7 / 10);
+      const blendedCap = Math.round((prevCapValue * 3) / 10 + (currCap * 7) / 10);
       return portionAmount >= blendedCap;
     };
 
     const medicalCapped = isCappedInBothFYs(
-      results.nhiMedicalPortion, prevFYParams?.medicalCap, currFYParams.medicalCap
+      results.nhiMedicalPortion,
+      prevFYParams?.medicalCap,
+      currFYParams.medicalCap,
     );
     const supportCapped = isCappedInBothFYs(
-      results.nhiElderlySupportPortion, prevFYParams?.supportCap, currFYParams.supportCap
+      results.nhiElderlySupportPortion,
+      prevFYParams?.supportCap,
+      currFYParams.supportCap,
     );
 
     let ltcCapped = false;
-    if (results.nhiLongTermCarePortion !== undefined &&
+    if (
+      results.nhiLongTermCarePortion !== undefined &&
       results.isSubjectToLongTermCarePremium &&
-      currFYParams.ltcCapForEligible) {
+      currFYParams.ltcCapForEligible
+    ) {
       ltcCapped = isCappedInBothFYs(
-        results.nhiLongTermCarePortion, prevFYParams?.ltcCapForEligible, currFYParams.ltcCapForEligible
+        results.nhiLongTermCarePortion,
+        prevFYParams?.ltcCapForEligible,
+        currFYParams.ltcCapForEligible,
       );
     }
 
     let childSupportCapped = false;
-    if (results.nhiChildSupportPortion !== undefined &&
-      currFYParams.childSupportCap) {
+    if (results.nhiChildSupportPortion !== undefined && currFYParams.childSupportCap) {
       childSupportCapped = isCappedInBothFYs(
-        results.nhiChildSupportPortion, prevFYParams?.childSupportCap, currFYParams.childSupportCap
+        results.nhiChildSupportPortion,
+        prevFYParams?.childSupportCap,
+        currFYParams.childSupportCap,
       );
     }
 
@@ -180,13 +201,18 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
         employeeHealthInsuranceRate: results.customEHIRates.healthInsuranceRate / 100,
         employeeLongTermCareRate: results.customEHIRates.longTermCareRate / 100,
         employerHealthInsuranceRate: 0,
-        employerLongTermCareRate: 0
+        employerLongTermCareRate: 0,
       };
       premiumTable = generatePremiumTableFromRates(customRates);
     } else {
       // Month is immaterial here — cap detection reads the (year-invariant) SMR bracket structure,
       // not the premium values — so April (fiscal-year start) stands in for the income year.
-      premiumTable = generateHealthInsurancePremiumTable(results.healthInsuranceProvider, year, 3, results.region);
+      premiumTable = generateHealthInsurancePremiumTable(
+        results.healthInsuranceProvider,
+        year,
+        3,
+        results.region,
+      );
     }
 
     if (!premiumTable || premiumTable.length === 0) {
@@ -197,7 +223,9 @@ function checkHealthInsuranceCap(results: TakeHomeResults, monthlyRemuneration: 
     if (!lastBracket) {
       return { capped: false };
     }
-    const capped = monthlyRemuneration >= lastBracket.minIncomeInclusive && lastBracket.maxIncomeExclusive === Infinity;
+    const capped =
+      monthlyRemuneration >= lastBracket.minIncomeInclusive &&
+      lastBracket.maxIncomeExclusive === Infinity;
 
     return { capped };
   }

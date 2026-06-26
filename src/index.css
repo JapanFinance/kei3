@@ -34,7 +34,7 @@ body {
     color: #ffffff;
     background-color: var(--color-gray-900);
   }
-  
+
   body {
     background-color: var(--color-gray-900);
     color: #ffffff;
@@ -50,7 +50,9 @@ body {
 }
 
 .paper:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Card Styles */
@@ -64,7 +66,9 @@ body {
 }
 
 .card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Stat Box Styles */
@@ -77,7 +81,9 @@ body {
 }
 
 .stat-box:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Chart Card Container */
@@ -93,7 +99,9 @@ body {
 }
 
 .chart-card:hover {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Chart Container */
@@ -177,7 +185,7 @@ body {
 }
 
 .range-slider .MuiSlider-valueLabel:before {
-  content: "";
+  content: '';
   width: 8px;
   height: 8px;
   background-color: var(--mui-palette-primary-main);
@@ -189,7 +197,7 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
-  .range-slider .MuiSlider-mark[data-index^="m"] {
+  .range-slider .MuiSlider-mark[data-index^='m'] {
     display: none;
   }
 }
@@ -394,7 +402,7 @@ body {
 }
 
 .income-slider .MuiSlider-valueLabel:before {
-  content: "";
+  content: '';
   width: 8px;
   height: 8px;
   background-color: var(--mui-palette-primary-main);
@@ -406,7 +414,7 @@ body {
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
-  .income-slider .MuiSlider-mark[data-index^="m"] {
+  .income-slider .MuiSlider-mark[data-index^='m'] {
     display: none;
   }
 }

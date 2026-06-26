@@ -36,13 +36,13 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
       if (currentEntry) {
         entries.push(currentEntry);
       }
-      
+
       const date = dateMatch[1];
-      
+
       if (date) {
         currentEntry = {
           date,
-          sections: {}
+          sections: {},
         };
         currentSection = null;
       }
@@ -77,7 +77,7 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
 
   return {
     entries,
-    ...(latestDate ? { latestDate } : {})
+    ...(latestDate ? { latestDate } : {}),
   };
 }
 
@@ -93,10 +93,10 @@ export function getLatestReleaseDate(changelog: ParsedChangelog): string | undef
  */
 export function hasNewUpdates(changelog: ParsedChangelog, lastViewedDate?: string): boolean {
   if (!lastViewedDate) return true;
-  
+
   const latestDate = getLatestReleaseDate(changelog);
   if (!latestDate) return false;
-  
+
   return latestDate !== lastViewedDate;
 }
 
@@ -109,7 +109,7 @@ export function formatChangelogDate(isoDate: string): string {
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
   } catch {
     return isoDate; // Fallback to ISO format if parsing fails
@@ -120,7 +120,7 @@ export function formatChangelogDate(isoDate: string): string {
  * Local storage keys for changelog functionality
  */
 export const CHANGELOG_STORAGE_KEYS = {
-  LAST_VIEWED_DATE: 'changelog-last-viewed-date'
+  LAST_VIEWED_DATE: 'changelog-last-viewed-date',
 } as const;
 
 /**

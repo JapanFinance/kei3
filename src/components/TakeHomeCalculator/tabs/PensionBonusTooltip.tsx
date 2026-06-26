@@ -4,7 +4,10 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { EMPLOYEES_PENSION_RATE, type PensionBonusBreakdownItem } from '../../../utils/pensionCalculator';
+import {
+  EMPLOYEES_PENSION_RATE,
+  type PensionBonusBreakdownItem,
+} from '../../../utils/pensionCalculator';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 
 interface PensionBonusTooltipProps {
@@ -18,7 +21,8 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
   return (
     <>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        The premium is calculated as follows, where the Standard Bonus Amount is the gross bonus rounded down to the nearest 1,000 yen.
+        The premium is calculated as follows, where the Standard Bonus Amount is the gross bonus
+        rounded down to the nearest 1,000 yen.
       </Typography>
 
       <Box sx={{ bgcolor: 'background.default', p: 1.5, borderRadius: 1, mb: 1 }}>
@@ -27,7 +31,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
         </Typography>
       </Box>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
         The employer also pays an equal amount.
       </Typography>
 
@@ -44,7 +48,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
               borderCollapse: 'collapse',
               '& th': { textAlign: 'left', borderBottom: 1, borderColor: 'divider', p: 0.5 },
               '& td': { p: 0.5, borderBottom: 1, borderColor: 'divider' },
-              '& td:not(:first-of-type), & th:not(:first-of-type)': { textAlign: 'right' }
+              '& td:not(:first-of-type), & th:not(:first-of-type)': { textAlign: 'right' },
             }}
           >
             <thead>
@@ -63,7 +67,13 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
                   <td>
                     {formatJPY(item.standardBonusAmount)}
                     {item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000 && (
-                      <Box component="span" sx={{ color: 'warning.main', ml: 0.5 }} title="Capped at 1,500,000 JPY">*</Box>
+                      <Box
+                        component="span"
+                        sx={{ color: 'warning.main', ml: 0.5 }}
+                        title="Capped at 1,500,000 JPY"
+                      >
+                        *
+                      </Box>
                     )}
                   </td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
@@ -87,25 +97,36 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
       )}
 
       {/* Cap Note */}
-      {breakdown?.some(item => item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000) && (
+      {breakdown?.some(
+        item => item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000,
+      ) && (
         <Box sx={{ mb: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
-            <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>*</Box>
+            <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>
+              *
+            </Box>
             Indicates the standard bonus amount is capped.
           </Typography>
         </Box>
       )}
 
       <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.contrastText' }}>
-        <Typography variant="caption" sx={{ fontWeight: "bold" }}>
+        <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
           Standard Bonus Amount Monthly Limit:
         </Typography>
-        <Typography variant="caption" sx={{ display: "block" }}>
-          The standard bonus amount is capped at 1.5 million yen per month (adding all bonuses paid in the same month).
+        <Typography variant="caption" sx={{ display: 'block' }}>
+          The standard bonus amount is capped at 1.5 million yen per month (adding all bonuses paid
+          in the same month).
         </Typography>
       </Box>
-      <Typography variant="caption" sx={{ display: "block", mt: 0.5 }}>
-        Reference: <a href="https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20150515-01.html" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>
+      <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
+        Reference:{' '}
+        <a
+          href="https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20150515-01.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'inherit' }}
+        >
           厚生年金保険の保険料 (Japan Pension Service)
         </a>
       </Typography>

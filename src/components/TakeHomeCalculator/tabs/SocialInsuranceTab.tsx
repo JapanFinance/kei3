@@ -19,15 +19,15 @@ import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import NationalPensionTooltip from './NationalPensionTooltip';
-import { calculatePensionBonusBreakdown, findPensionBracket } from '../../../utils/pensionCalculator';
+import {
+  calculatePensionBonusBreakdown,
+  findPensionBracket,
+} from '../../../utils/pensionCalculator';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
 import type { BonusIncomeStream } from '../../../types/tax';
 import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
-import {
-  NATIONAL_HEALTH_INSURANCE_ID,
-  CUSTOM_PROVIDER_ID
-} from '../../../types/healthInsurance';
+import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
 interface SocialInsuranceTabProps {
@@ -39,16 +39,19 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const totalSocialInsurance = results.socialInsuranceOverride !== undefined
-    ? results.socialInsuranceOverride
-    : results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+  const totalSocialInsurance =
+    results.socialInsuranceOverride !== undefined
+      ? results.socialInsuranceOverride
+      : results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
 
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
   // We need to determine the rates here to pass to the breakdown calculator
-  const bonuses = inputs.incomeStreams.filter((s): s is BonusIncomeStream => s.type === 'bonus' && s.amount > 0);
+  const bonuses = inputs.incomeStreams.filter(
+    (s): s is BonusIncomeStream => s.type === 'bonus' && s.amount > 0,
+  );
   let healthInsuranceBreakdown = undefined;
 
   if (bonuses.length > 0 && !isNationalHealthInsurance) {
@@ -58,13 +61,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     if (provider === CUSTOM_PROVIDER_ID) {
       const rates = {
         employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
-        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100
+        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100,
       };
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
         inputs.isSubjectToLongTermCarePremium,
-        inputs.incomeYear
+        inputs.incomeYear,
       );
     } else {
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
@@ -72,7 +75,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         provider,
         region,
         inputs.incomeYear,
-        inputs.isSubjectToLongTermCarePremium
+        inputs.isSubjectToLongTermCarePremium,
       );
     }
   }
@@ -91,7 +94,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
-            fontSize: isMobile ? '1.1rem' : '1.25rem'
+            fontSize: isMobile ? '1.1rem' : '1.25rem',
           }}
         >
           <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 20 : 24 }} />
@@ -100,7 +103,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
         <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
 
-        <Box sx={{ my: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px dashed', borderColor: 'text.secondary' }}>
+        <Box
+          sx={{
+            my: 2,
+            p: 2,
+            bgcolor: 'background.paper',
+            borderRadius: 1,
+            border: '1px dashed',
+            borderColor: 'text.secondary',
+          }}
+        >
           <Typography variant="body2" color="text.secondary" align="center">
             Using manually entered social insurance amount.
             <br />
@@ -108,17 +120,24 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           </Typography>
         </Box>
 
-        <ResultRow label="Total Social Insurance" value={formatJPY(totalSocialInsurance)} type="total" />
+        <ResultRow
+          label="Total Social Insurance"
+          value={formatJPY(totalSocialInsurance)}
+          type="total"
+        />
       </Box>
     );
   }
 
   // Calculate specifically for display purposes
-  const salaryIncome = inputs.incomeStreams.length > 0
-    ? inputs.incomeStreams
-      .filter(s => s.type === 'salary')
-      .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0)
-    : (results.hasEmploymentIncome ? results.annualIncome : 0);
+  const salaryIncome =
+    inputs.incomeStreams.length > 0
+      ? inputs.incomeStreams
+          .filter(s => s.type === 'salary')
+          .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0)
+      : results.hasEmploymentIncome
+        ? results.annualIncome
+        : 0;
 
   const bonusIncome = inputs.incomeStreams
     .filter(s => s.type === 'bonus')
@@ -127,7 +146,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Calculate separated gross income
   const grossEmploymentIncome = inputs.incomeStreams
     .filter(s => s.type === 'salary' || s.type === 'bonus')
-    .reduce((sum, s) => sum + (s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0);
+    .reduce(
+      (sum, s) =>
+        sum + (s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount),
+      0,
+    );
 
   const businessAndMiscIncome = inputs.incomeStreams
     .filter(s => s.type === 'business' || s.type === 'miscellaneous')
@@ -169,7 +192,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           fontWeight: 600,
           display: 'flex',
           alignItems: 'center',
-          fontSize: isMobile ? '1.1rem' : '1.25rem'
+          fontSize: isMobile ? '1.1rem' : '1.25rem',
         }}
       >
         <InsuranceIcon sx={{ mr: 1, fontSize: isMobile ? 20 : 24 }} />
@@ -202,27 +225,43 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 <span>
                   Net Business / Misc Income
                   {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
-                    <DetailedTooltip
-                      title="Business & Miscellaneous Income"
-                    >
+                    <DetailedTooltip title="Business & Miscellaneous Income">
                       <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                           Calculation Breakdown
                         </Typography>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <table
+                          style={{
+                            width: '100%',
+                            borderCollapse: 'collapse',
+                            fontSize: '0.9rem',
+                            marginBottom: '8px',
+                          }}
+                        >
                           <tbody>
                             <tr>
                               <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
-                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>{formatJPY(businessAndMiscIncome)}</td>
+                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                                {formatJPY(businessAndMiscIncome)}
+                              </td>
                             </tr>
                             <tr>
                               <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
-                              <Box component="td" sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}>-{formatJPY(results.blueFilerDeduction)}</Box>
+                              <Box
+                                component="td"
+                                sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
+                              >
+                                -{formatJPY(results.blueFilerDeduction)}
+                              </Box>
                             </tr>
                             <tr style={{ borderTop: '1px solid #ddd' }}>
-                              <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Business/Misc Income:</td>
+                              <td style={{ padding: '4px 0', fontWeight: 600 }}>
+                                Net Business/Misc Income:
+                              </td>
                               <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                                {formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+                                {formatJPY(
+                                  results.totalNetIncome - (results.netEmploymentIncome ?? 0),
+                                )}
                               </td>
                             </tr>
                           </tbody>
@@ -232,13 +271,24 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                             Blue-Filer Special Deduction
                           </Typography>
                           <Typography variant="body2" sx={{ mb: 1 }}>
-                            A special deduction for business operators with permission to file a Blue Return. This amount is deducted from business income after expenses before calculating taxable income.
+                            A special deduction for business operators with permission to file a
+                            Blue Return. This amount is deducted from business income after expenses
+                            before calculating taxable income.
                           </Typography>
                           <Box sx={{ mt: 1 }}>
                             Official Sources:
                             <ul>
                               <li>
-                                <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                                <a
+                                  href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    color: 'var(--primary-main)',
+                                    textDecoration: 'underline',
+                                    fontSize: '0.95em',
+                                  }}
+                                >
                                   青色申告特別控除 - NTA
                                 </a>
                               </li>
@@ -256,12 +306,23 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           )}
           {/* Total Net Income Row */}
           {hasEmploymentIncome && hasBusinessOrMiscIncome && (
-            <ResultRow label="Total Net Income" value={formatJPY(results.totalNetIncome)} type="subtotal" sx={{ mt: 0.5, mb: 0.5 }} />
+            <ResultRow
+              label="Total Net Income"
+              value={formatJPY(results.totalNetIncome)}
+              type="subtotal"
+              sx={{ mt: 0.5, mb: 0.5 }}
+            />
           )}
-          <ResultRow label="Basic Deduction" value={formatJPY(-results.residenceTaxBasicDeduction!)} type="default" />
+          <ResultRow
+            label="Basic Deduction"
+            value={formatJPY(-results.residenceTaxBasicDeduction!)}
+            type="default"
+          />
           <ResultRow
             label="NHI Calculation Base"
-            value={formatJPY(Math.max(0, results.totalNetIncome - results.residenceTaxBasicDeduction!))}
+            value={formatJPY(
+              Math.max(0, results.totalNetIncome - results.residenceTaxBasicDeduction!),
+            )}
             type="subtotal"
           />
         </>
@@ -272,14 +333,19 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <ResultRow
             label="Monthly Remuneration"
             labelSuffix={
-              <DetailedTooltip
-                title="Monthly Remuneration"
-              >
+              <DetailedTooltip title="Monthly Remuneration">
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                     Breakdown
                   </Typography>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', marginBottom: '8px' }}>
+                  <table
+                    style={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      fontSize: '0.9rem',
+                      marginBottom: '8px',
+                    }}
+                  >
                     <tbody>
                       <tr>
                         <td style={{ padding: '2px 0' }}>Base Monthly Salary:</td>
@@ -297,12 +363,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                       )}
                       <tr style={{ borderTop: '1px solid #ddd' }}>
                         <td style={{ padding: '4px 0', fontWeight: 600 }}>Total:</td>
-                        <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>{formatJPY(rawMonthlyRemuneration)}</td>
+                        <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                          {formatJPY(rawMonthlyRemuneration)}
+                        </td>
                       </tr>
                     </tbody>
                   </table>
                   <Typography variant="body2" color="text.secondary">
-                    Monthly remuneration includes base salary and various allowances (e.g. commuting allowance, housing allowance).
+                    Monthly remuneration includes base salary and various allowances (e.g. commuting
+                    allowance, housing allowance).
                   </Typography>
                 </Box>
               </DetailedTooltip>
@@ -320,13 +389,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isNationalHealthInsurance ? "National Health Insurance" : "Employees' Health Insurance"}
+            {isNationalHealthInsurance
+              ? 'National Health Insurance'
+              : "Employees' Health Insurance"}
             {isNationalHealthInsurance && (
-              <DetailedTooltip
-                title="Health Insurance Premium"
-                icon={SIMPLE_TOOLTIP_ICON}
-              >
-                <HealthInsurancePremiumTooltip inputs={inputs} standardMonthlyRemuneration={healthSMR} />
+              <DetailedTooltip title="Health Insurance Premium" icon={SIMPLE_TOOLTIP_ICON}>
+                <HealthInsurancePremiumTooltip
+                  inputs={inputs}
+                  standardMonthlyRemuneration={healthSMR}
+                />
               </DetailedTooltip>
             )}
           </Typography>
@@ -341,7 +412,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />
                   </DetailedTooltip>
                   {capStatus.healthInsuranceCapDetails?.medicalCapped && (
-                    <CapIndicator capStatus={capStatus} iconOnly contributionType="medical portion" />
+                    <CapIndicator
+                      capStatus={capStatus}
+                      iconOnly
+                      contributionType="medical portion"
+                    />
                   )}
                 </Box>
               }
@@ -356,7 +431,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     <NHIPortionTooltip portion="elderlySupport" results={results} inputs={inputs} />
                   </DetailedTooltip>
                   {capStatus.healthInsuranceCapDetails?.supportCapped && (
-                    <CapIndicator capStatus={capStatus} iconOnly contributionType="elderly support portion" />
+                    <CapIndicator
+                      capStatus={capStatus}
+                      iconOnly
+                      contributionType="elderly support portion"
+                    />
                   )}
                 </Box>
               }
@@ -372,7 +451,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                       <NHIPortionTooltip portion="longTermCare" results={results} inputs={inputs} />
                     </DetailedTooltip>
                     {capStatus.healthInsuranceCapDetails?.ltcCapped && (
-                      <CapIndicator capStatus={capStatus} iconOnly contributionType="long-term care portion" />
+                      <CapIndicator
+                        capStatus={capStatus}
+                        iconOnly
+                        contributionType="long-term care portion"
+                      />
                     )}
                   </Box>
                 }
@@ -389,7 +472,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                       <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />
                     </DetailedTooltip>
                     {capStatus.healthInsuranceCapDetails?.childSupportCapped && (
-                      <CapIndicator capStatus={capStatus} iconOnly contributionType="child support portion" />
+                      <CapIndicator
+                        capStatus={capStatus}
+                        iconOnly
+                        contributionType="child support portion"
+                      />
                     )}
                   </Box>
                 }
@@ -403,19 +490,25 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               type="subtotal"
             />
           </>
-        ) : ( // Employee Health Insurance
+        ) : (
+          // Employee Health Insurance
           <>
             <ResultRow
               label="Salary Premium"
               labelSuffix={
                 <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                  <DetailedTooltip
-                    title="Health Insurance Premium"
-                  >
-                    <HealthInsurancePremiumTooltip inputs={inputs} standardMonthlyRemuneration={healthSMR} />
+                  <DetailedTooltip title="Health Insurance Premium">
+                    <HealthInsurancePremiumTooltip
+                      inputs={inputs}
+                      standardMonthlyRemuneration={healthSMR}
+                    />
                   </DetailedTooltip>
                   {capStatus.healthInsuranceCapped && (
-                    <CapIndicator capStatus={capStatus} contributionType="health insurance" iconOnly={isMobile} />
+                    <CapIndicator
+                      capStatus={capStatus}
+                      contributionType="health insurance"
+                      iconOnly={isMobile}
+                    />
                   )}
                 </Box>
               }
@@ -427,13 +520,18 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 label="Bonus Premium"
                 labelSuffix={
                   <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                    <DetailedTooltip
-                      title="Bonus Health Insurance Premium"
-                    >
-                      <HealthInsuranceBonusTooltip inputs={inputs} breakdown={healthInsuranceBreakdown} />
+                    <DetailedTooltip title="Bonus Health Insurance Premium">
+                      <HealthInsuranceBonusTooltip
+                        inputs={inputs}
+                        breakdown={healthInsuranceBreakdown}
+                      />
                     </DetailedTooltip>
                     {capStatus.healthInsuranceBonusCapped && (
-                      <CapIndicator capStatus={capStatus} contributionType="health insurance bonus" iconOnly={isMobile} />
+                      <CapIndicator
+                        capStatus={capStatus}
+                        contributionType="health insurance bonus"
+                        iconOnly={isMobile}
+                      />
                     )}
                   </Box>
                 }
@@ -454,7 +552,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isNationalHealthInsurance ? "National Pension" : "Employees' Pension"}
+            {isNationalHealthInsurance ? 'National Pension' : "Employees' Pension"}
           </Typography>
         </Box>
         {!isNationalHealthInsurance && (
@@ -462,17 +560,21 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             label="Monthly Contribution"
             labelSuffix={
               <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                <DetailedTooltip
-                  title="Pension Contribution"
-                >
+                <DetailedTooltip title="Pension Contribution">
                   <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
                 </DetailedTooltip>
                 {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                  <CapIndicator capStatus={capStatus} contributionType="pension" iconOnly={isMobile} />
+                  <CapIndicator
+                    capStatus={capStatus}
+                    contributionType="pension"
+                    iconOnly={isMobile}
+                  />
                 )}
               </Box>
             }
-            value={formatJPY(Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12))}
+            value={formatJPY(
+              Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
+            )}
             type="indented"
           />
         )}
@@ -480,14 +582,8 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <ResultRow
             label="Bonus Contribution"
             labelSuffix={
-              <DetailedTooltip
-                title="Bonus Pension Contribution"
-              >
-                <PensionBonusTooltip
-                  breakdown={calculatePensionBonusBreakdown(
-                    bonuses
-                  )}
-                />
+              <DetailedTooltip title="Bonus Pension Contribution">
+                <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
               </DetailedTooltip>
             }
             value={formatJPY(results.pensionOnBonus)}
@@ -496,12 +592,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         )}
         <ResultRow
           label="Annual Contribution"
-          labelSuffix={isNationalHealthInsurance ? (
-            <DetailedTooltip
-              title="Pension Contribution">
-              <NationalPensionTooltip year={inputs.incomeYear} />
-            </DetailedTooltip>
-          ) : undefined}
+          labelSuffix={
+            isNationalHealthInsurance ? (
+              <DetailedTooltip title="Pension Contribution">
+                <NationalPensionTooltip year={inputs.incomeYear} />
+              </DetailedTooltip>
+            ) : undefined
+          }
           value={formatJPY(results.pensionPayments)}
           type="subtotal"
         />
@@ -512,22 +609,29 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
             Employment Insurance
-            <DetailedTooltip
-              title="Employment Insurance"
-              icon={SIMPLE_TOOLTIP_ICON}
-            >
+            <DetailedTooltip title="Employment Insurance" icon={SIMPLE_TOOLTIP_ICON}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                 雇用保険
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                Insurance for unemployment and work-related benefits.
-                This amount includes only the employment insurance premium paid by the employee. The rate is applied to your gross salary. The employer also contributes to employment insurance separately.
+                Insurance for unemployment and work-related benefits. This amount includes only the
+                employment insurance premium paid by the employee. The rate is applied to your gross
+                salary. The employer also contributes to employment insurance separately.
               </Typography>
               <Box sx={{ mt: 1 }}>
                 Official Source:
                 <ul>
                   <li>
-                    <a href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-main)', textDecoration: 'underline', fontSize: '0.95em' }}>
+                    <a
+                      href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        color: 'var(--primary-main)',
+                        textDecoration: 'underline',
+                        fontSize: '0.95em',
+                      }}
+                    >
                       Employment Insurance Premium Rate (MHLW)
                     </a>
                   </li>
@@ -537,18 +641,26 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           </Typography>
           <ResultRow
             label="Salary Premium"
-            value={formatJPY((results.employmentInsurance ?? 0) - (results.employmentInsuranceOnBonus ?? 0))}
+            value={formatJPY(
+              (results.employmentInsurance ?? 0) - (results.employmentInsuranceOnBonus ?? 0),
+            )}
             type="indented"
-            labelSuffix={<SalaryBreakdownTooltip monthlyIncome={rawMonthlyRemuneration} year={inputs.incomeYear} />}
+            labelSuffix={
+              <SalaryBreakdownTooltip
+                monthlyIncome={rawMonthlyRemuneration}
+                year={inputs.incomeYear}
+              />
+            }
           />
-          {results.employmentInsuranceOnBonus !== undefined && results.employmentInsuranceOnBonus > 0 && (
-            <ResultRow
-              label="Bonus Premium"
-              value={formatJPY(results.employmentInsuranceOnBonus)}
-              type="indented"
-              labelSuffix={<BonusBreakdownTooltip bonuses={bonuses} year={inputs.incomeYear} />}
-            />
-          )}
+          {results.employmentInsuranceOnBonus !== undefined &&
+            results.employmentInsuranceOnBonus > 0 && (
+              <ResultRow
+                label="Bonus Premium"
+                value={formatJPY(results.employmentInsuranceOnBonus)}
+                type="indented"
+                labelSuffix={<BonusBreakdownTooltip bonuses={bonuses} year={inputs.incomeYear} />}
+              />
+            )}
           <ResultRow
             label="Annual Premium"
             value={formatJPY(results.employmentInsurance ?? 0)}

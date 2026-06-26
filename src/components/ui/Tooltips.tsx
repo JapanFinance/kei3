@@ -23,15 +23,15 @@ const DEFAULT_ICON_BUTTON_SX = {
   p: 0.25,
   ml: 0.3,
   color: 'text.secondary',
-  verticalAlign: 'middle'
+  verticalAlign: 'middle',
 } as const;
 
 interface BaseTooltipProps {
   children: React.ReactNode;
-  title?: string;             // Optional: if provided, shows as dialog header on mobile
-  icon: React.ReactNode;      // Required: the icon to display
-  iconSx?: object;            // Optional: icon/button styling
-  iconAriaLabel?: string;     // Optional: aria-label for icon button (default: 'More information')
+  title?: string; // Optional: if provided, shows as dialog header on mobile
+  icon: React.ReactNode; // Required: the icon to display
+  iconSx?: object; // Optional: icon/button styling
+  iconAriaLabel?: string; // Optional: aria-label for icon button (default: 'More information')
 }
 
 /**
@@ -42,7 +42,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
   title,
   icon,
   iconSx,
-  iconAriaLabel
+  iconAriaLabel,
 }) => {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
@@ -71,7 +71,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
           size="small"
           sx={{
             ...DEFAULT_ICON_BUTTON_SX,
-            ...(iconSx || {})
+            ...(iconSx || {}),
           }}
           aria-label={iconAriaLabel || 'More information'}
         >
@@ -89,9 +89,9 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
                 m: 2,
                 width: '100%',
                 maxWidth: 'calc(100% - 32px)',
-                borderRadius: 2
-              }
-            }
+                borderRadius: 2,
+              },
+            },
           }}
         >
           {title && <DialogTitle sx={{ pb: 0 }}>{title}</DialogTitle>}
@@ -125,18 +125,18 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
               color: 'background.paper',
               '&:before': {
                 border: '1px solid',
-                borderColor: 'divider'
-              }
-            }
-          }
-        }
+                borderColor: 'divider',
+              },
+            },
+          },
+        },
       }}
     >
       <IconButton
         size="small"
         sx={{
           ...DEFAULT_ICON_BUTTON_SX,
-          ...(iconSx || {})
+          ...(iconSx || {}),
         }}
         aria-label={iconAriaLabel || 'More information'}
       >
@@ -151,10 +151,10 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
 // ============================================================================
 
 interface SimpleTooltipProps {
-  children: string;           // Required: brief explanation
-  icon?: React.ReactNode;     // Optional: custom icon (default: HelpOutlineIcon)
-  iconSx?: object;            // Optional: icon/button styling
-  iconAriaLabel?: string;     // Optional: aria-label for icon button
+  children: string; // Required: brief explanation
+  icon?: React.ReactNode; // Optional: custom icon (default: HelpOutlineIcon)
+  iconSx?: object; // Optional: icon/button styling
+  iconAriaLabel?: string; // Optional: aria-label for icon button
 }
 
 /**
@@ -174,7 +174,7 @@ export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
   children,
   icon,
   iconSx,
-  iconAriaLabel
+  iconAriaLabel,
 }) => {
   return (
     <BaseTooltip
@@ -188,11 +188,11 @@ export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
 };
 
 interface DetailedTooltipProps {
-  title: string;              // Required: dialog header / tooltip title
-  children: React.ReactNode;  // Required: rich content (tables, links, etc.)
-  icon?: React.ReactNode;     // Optional: custom icon (default: CalculateIcon)
-  iconSx?: object;            // Optional: icon/button styling
-  iconAriaLabel?: string;     // Optional: aria-label for icon button
+  title: string; // Required: dialog header / tooltip title
+  children: React.ReactNode; // Required: rich content (tables, links, etc.)
+  icon?: React.ReactNode; // Optional: custom icon (default: CalculateIcon)
+  iconSx?: object; // Optional: icon/button styling
+  iconAriaLabel?: string; // Optional: aria-label for icon button
 }
 
 /**
@@ -218,7 +218,7 @@ export const DetailedTooltip: React.FC<DetailedTooltipProps> = ({
   children,
   icon,
   iconSx,
-  iconAriaLabel
+  iconAriaLabel,
 }) => {
   return (
     <BaseTooltip
