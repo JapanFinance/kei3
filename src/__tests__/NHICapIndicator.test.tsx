@@ -41,6 +41,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
         nhiLongTermCarePortion: breakdown.longTermCarePortion,
         nhiChildSupportPortion: breakdown.childSupportPortion,
         salaryIncome: 0,
+        grossEmploymentIncome: 0,
     };
 
     const inputs: TakeHomeInputs = {

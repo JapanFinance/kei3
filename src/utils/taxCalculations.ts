@@ -227,6 +227,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
     isSubjectToLongTermCarePremium: false,
+    grossEmploymentIncome: 0,
     incomeAdjustmentDeduction: 0,
     totalNetIncome: 0,
 };
@@ -529,6 +530,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         pensionOnBonus,
         employmentInsuranceOnBonus,
         netEmploymentIncome: hasEmploymentIncome ? netEmploymentIncome : undefined,
+        grossEmploymentIncome,
         incomeAdjustmentDeduction,
         totalNetIncome: netIncome,
         nationalIncomeTaxBasicDeduction,
