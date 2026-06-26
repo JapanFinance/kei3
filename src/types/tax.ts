@@ -181,6 +181,14 @@ export interface TakeHomeResults {
   // Added detailed properties
   netEmploymentIncome?: number | undefined;
   /**
+   * Canonical gross employment income (給与等の収入金額): the exact figure the employment income
+   * deduction (給与所得控除) and {@link netEmploymentIncome}/{@link incomeAdjustmentDeduction} are
+   * derived from — salary + taxable commuting allowance + bonus + stock compensation. The UI must
+   * display THIS value rather than recomputing a per-tab subset, which can understate gross and make
+   * the derived deduction (gross − net − adjustment) wrong or even negative. 0 when no employment income.
+   */
+  grossEmploymentIncome: number;
+  /**
    * 所得金額調整控除（子ども・特別障害者等を有する者等）applied to net employment income (給与所得).
    * Subtracted after the 給与所得控除, so it lowers 合計所得金額 and the taxable income for both
    * income tax and residence tax. 0 when the taxpayer is not eligible. {@link netEmploymentIncome}

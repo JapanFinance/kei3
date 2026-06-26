@@ -75,6 +75,7 @@ describe('SocialInsuranceTab', () => {
         },
         residenceTaxBasicDeduction: 430000,
         salaryIncome: 6000000,
+        grossEmploymentIncome: 6000000,
     };
 
     it('displays Monthly Remuneration label', () => {
