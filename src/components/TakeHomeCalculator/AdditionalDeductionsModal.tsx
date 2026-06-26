@@ -204,7 +204,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
 
                 <TextField
                   select
-                  size="small"
                   id="homeLoanMoveInYear"
                   label="Move-in Year"
                   value={effectiveHomeLoan.moveInYear}
