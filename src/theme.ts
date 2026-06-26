@@ -4,8 +4,12 @@
 import { createTheme } from '@mui/material/styles';
 
 declare module '@mui/material/styles' {
-  interface PaletteColor { 50?: string; }
-  interface SimplePaletteColorOptions { 50?: string; }
+  interface PaletteColor {
+    50?: string;
+  }
+  interface SimplePaletteColorOptions {
+    50?: string;
+  }
 }
 
 export const getTheme = (mode: 'light' | 'dark') => {
@@ -16,10 +20,19 @@ export const getTheme = (mode: 'light' | 'dark') => {
   root.style.setProperty('--background-default', isDark ? '#121212' : '#f5f5f5');
   root.style.setProperty('--background-paper', isDark ? '#1e1e1e' : '#ffffff');
   root.style.setProperty('--text-primary', isDark ? '#ffffff' : 'rgba(0, 0, 0, 0.87)');
-  root.style.setProperty('--text-secondary', isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)');
+  root.style.setProperty(
+    '--text-secondary',
+    isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+  );
   root.style.setProperty('--divider', isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)');
-  root.style.setProperty('--action-hover', isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)');
-  root.style.setProperty('--action-selected', isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)');
+  root.style.setProperty(
+    '--action-hover',
+    isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+  );
+  root.style.setProperty(
+    '--action-selected',
+    isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)',
+  );
   root.style.setProperty('--primary-main', '#1976d2');
   root.style.setProperty('--border-strong', isDark ? 'rgba(255, 255, 255, 0.23)' : '#aaa');
 

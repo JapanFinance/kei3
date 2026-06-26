@@ -13,7 +13,7 @@
 export interface DependentIncome {
   /** Gross employment income (給与収入) - we'll calculate the net using employment income deduction */
   grossEmploymentIncome: number;
-  
+
   /** Other net income (その他の所得) - business income, pension, capital gains, etc. */
   otherNetIncome: number;
 }
@@ -23,7 +23,7 @@ export interface DependentIncome {
  * - none: No disability
  * - regular: Regular disability (一般の障害者)
  * - special: Special disability (特別障害者)
- * 
+ *
  * Note: Special disability with cohabitation (同居特別障害者) is determined by
  * combining disability='special' with isCohabiting=true
  */
@@ -65,19 +65,19 @@ export interface DeductionAmount {
 export interface Spouse {
   /** Unique identifier */
   id: string;
-  
+
   /** Relationship - always 'spouse' */
   relationship: 'spouse';
-  
+
   /** Age category of the spouse */
   ageCategory: SpouseAgeCategory;
-  
+
   /** Income details for calculating total net income */
   income: DependentIncome;
-  
+
   /** Disability status and level */
   disability: DisabilityLevel;
-  
+
   /** Whether the spouse lives with the taxpayer */
   isCohabiting: boolean;
 }
@@ -88,19 +88,19 @@ export interface Spouse {
 export interface OtherDependent {
   /** Unique identifier */
   id: string;
-  
+
   /** Relationship to the taxpayer (not spouse) */
   relationship: Exclude<DependentRelationship, 'spouse'>;
-  
+
   /** Age category of the dependent */
   ageCategory: DependentAgeCategory;
-  
+
   /** Income details for calculating total net income */
   income: DependentIncome;
-  
+
   /** Disability status and level */
   disability: DisabilityLevel;
-  
+
   /** Whether the dependent lives with the taxpayer */
   isCohabiting: boolean;
 }
@@ -235,7 +235,7 @@ export const DEDUCTION_TYPES = {
   NOT_ELIGIBLE: 'Not Eligible',
 } as const;
 
-export type DeductionType = typeof DEDUCTION_TYPES[keyof typeof DEDUCTION_TYPES];
+export type DeductionType = (typeof DEDUCTION_TYPES)[keyof typeof DEDUCTION_TYPES];
 
 /**
  * Represents the breakdown of deductions for a single dependent
@@ -260,7 +260,7 @@ export interface DependentDeductionResults {
     disabilityDeduction: number; // 障害者控除
     total: number;
   };
-  
+
   // Residence tax deductions
   residenceTax: {
     dependentDeduction: number;
@@ -270,9 +270,7 @@ export interface DependentDeductionResults {
     disabilityDeduction: number;
     total: number;
   };
-  
+
   // Breakdown by dependent
   breakdown: DependentDeductionBreakdown[];
 }
-
-

@@ -16,7 +16,10 @@ interface HealthInsuranceBonusTooltipProps {
   breakdown?: EmployeesHealthInsuranceBonusBreakdownItem[] | undefined;
 }
 
-const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = ({ inputs, breakdown }) => {
+const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = ({
+  inputs,
+  breakdown,
+}) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
   const includeLTC = inputs.isSubjectToLongTermCarePremium;
@@ -26,7 +29,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   let sourceUrl: string | undefined;
 
   if (provider === CUSTOM_PROVIDER_ID) {
-    providerLabel = "Custom Provider";
+    providerLabel = 'Custom Provider';
   } else {
     const providerDef = PROVIDER_DEFINITIONS[provider];
     // April (month 3) → the income year's fiscal-year rates; this lookup only needs the source URL.
@@ -57,7 +60,8 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   return (
     <>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        The premium is calculated on the Standard Bonus Amount, which is the gross bonus rounded down to the nearest 1,000 yen. The employer also contributes separately.
+        The premium is calculated on the Standard Bonus Amount, which is the gross bonus rounded
+        down to the nearest 1,000 yen. The employer also contributes separately.
       </Typography>
 
       {breakdown && breakdown.length > 0 && (
@@ -70,7 +74,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
               borderCollapse: 'collapse',
               '& th': { textAlign: 'left', borderBottom: 1, borderColor: 'divider', p: 0.5 },
               '& td': { p: 0.5, borderBottom: 1, borderColor: 'divider' },
-              '& td:not(:first-of-type), & th:not(:first-of-type)': { textAlign: 'right' }
+              '& td:not(:first-of-type), & th:not(:first-of-type)': { textAlign: 'right' },
             }}
           >
             <thead>
@@ -89,8 +93,14 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                   <td>{formatJPY(item.bonusAmount)}</td>
                   <td>
                     {formatJPY(item.standardBonusAmount)}
-                    {item.standardBonusAmount < (Math.floor(item.bonusAmount / 1000) * 1000) && (
-                      <Box component="span" sx={{ color: 'warning.main', ml: 0.5 }} title={`Capped: Cumulative Standard Bonus (${formatJPY(item.cumulativeStandardBonus)}) reached annual limit`}>*</Box>
+                    {item.standardBonusAmount < Math.floor(item.bonusAmount / 1000) * 1000 && (
+                      <Box
+                        component="span"
+                        sx={{ color: 'warning.main', ml: 0.5 }}
+                        title={`Capped: Cumulative Standard Bonus (${formatJPY(item.cumulativeStandardBonus)}) reached annual limit`}
+                      >
+                        *
+                      </Box>
                     )}
                   </td>
                   <td>{formatPercent(getRateForMonth(item.month))}</td>
@@ -118,21 +128,26 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
       )}
 
       {/* Cap Note */}
-      {breakdown?.some(item => item.standardBonusAmount < (Math.floor(item.bonusAmount / 1000) * 1000)) && (
+      {breakdown?.some(
+        item => item.standardBonusAmount < Math.floor(item.bonusAmount / 1000) * 1000,
+      ) && (
         <Box sx={{ mb: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
-            <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>*</Box>
+            <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>
+              *
+            </Box>
             Indicates the cumulative standard bonus amount has reached the annual cap.
           </Typography>
         </Box>
       )}
 
       <Box sx={{ mt: 1, p: 1, bgcolor: 'info.light', borderRadius: 1, color: 'info.contrastText' }}>
-        <Typography variant="caption" sx={{ fontWeight: "bold" }}>
+        <Typography variant="caption" sx={{ fontWeight: 'bold' }}>
           Standard Bonus Amount Annual Limit:
         </Typography>
-        <Typography variant="caption" sx={{ display: "block" }}>
-          The cumulative standard bonus amount is capped at 5.73 million yen per year (April 1 to March 31).
+        <Typography variant="caption" sx={{ display: 'block' }}>
+          The cumulative standard bonus amount is capped at 5.73 million yen per year (April 1 to
+          March 31).
         </Typography>
       </Box>
 

@@ -6,7 +6,11 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
-import { EMPLOYEES_PENSION_BRACKETS, EMPLOYEES_PENSION_RATE, type StandardMonthlyRemunerationBracket } from '../../../utils/pensionCalculator';
+import {
+  EMPLOYEES_PENSION_BRACKETS,
+  EMPLOYEES_PENSION_RATE,
+  type StandardMonthlyRemunerationBracket,
+} from '../../../utils/pensionCalculator';
 import SMRTableTooltip from './SMRTableTooltip';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
@@ -16,16 +20,21 @@ interface PensionPremiumTooltipProps {
   standardMonthlyRemuneration: number;
 }
 
-const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, standardMonthlyRemuneration }) => {
-
+const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
+  inputs,
+  standardMonthlyRemuneration,
+}) => {
   if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
-    throw new Error("Wrong tooltip used for National Health Insurance");
+    throw new Error('Wrong tooltip used for National Health Insurance');
   }
 
   // Find the current row for the user's income
-  const currentRow = EMPLOYEES_PENSION_BRACKETS.find(bracket =>
-    standardMonthlyRemuneration >= bracket.minIncomeInclusive && standardMonthlyRemuneration < bracket.maxIncomeExclusive
-  ) || null; // Force null if undefined
+  const currentRow =
+    EMPLOYEES_PENSION_BRACKETS.find(
+      bracket =>
+        standardMonthlyRemuneration >= bracket.minIncomeInclusive &&
+        standardMonthlyRemuneration < bracket.maxIncomeExclusive,
+    ) || null; // Force null if undefined
 
   const getIncomeRange = (row: StandardMonthlyRemunerationBracket) => {
     return `${formatJPY(row.minIncomeInclusive)} - ${row.maxIncomeExclusive === Infinity ? '∞' : formatJPY(row.maxIncomeExclusive)}`;
@@ -35,16 +44,16 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
     {
       header: 'Grade',
       render: (row: StandardMonthlyRemunerationBracket) => row.grade,
-      align: 'left' as const
+      align: 'left' as const,
     },
     {
       header: 'Monthly Remuneration',
       render: getIncomeRange,
-      align: 'left' as const
+      align: 'left' as const,
     },
     {
       header: 'Pension SMR',
-      getValue: (row: StandardMonthlyRemunerationBracket) => row.smrAmount
+      getValue: (row: StandardMonthlyRemunerationBracket) => row.smrAmount,
     },
   ];
 
@@ -68,11 +77,30 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
         Employees Pension Insurance Calculation
       </Typography>
 
-      <Box sx={{ mb: 0.5, p: 0, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+      <Box
+        sx={{
+          mb: 0.5,
+          p: 0,
+          bgcolor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 1,
+          overflow: 'hidden',
+        }}
+      >
         {/* Supporting Details */}
-        <Box sx={{ p: 1.5, bgcolor: 'var(--action-hover)', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Box
+          sx={{
+            p: 1.5,
+            bgcolor: 'var(--action-hover)',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary">Monthly Remuneration</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Monthly Remuneration
+            </Typography>
             <Typography variant="caption" sx={{ fontWeight: 500 }}>
               {formatJPY(
                 inputs.incomeStreams
@@ -82,7 +110,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
                     if (s.frequency === '3-months') return sum + s.amount / 3;
                     if (s.frequency === '6-months') return sum + s.amount / 6;
                     return sum + s.amount / 12;
-                  }, 0)
+                  }, 0),
               )}
             </Typography>
           </Box>
@@ -90,33 +118,49 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
             <Typography variant="caption" color="text.secondary">
               Standard Monthly Remuneration
             </Typography>
-            <Typography variant="caption" sx={{ fontWeight: 500 }}>{formatJPY(standardMonthlyRemuneration)}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 500 }}>
+              {formatJPY(standardMonthlyRemuneration)}
+            </Typography>
           </Box>
         </Box>
 
         {/* Main Calculation Highlight */}
-        <Box sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box
+          sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}
+        >
           <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
             Monthly Pension Contribution
           </Typography>
 
-          <Typography sx={{
-            textAlign: 'center',
-            width: '100%',
-            my: 0.5,
-            fontSize: '1.1rem',
-            fontWeight: 500,
-          }}>
+          <Typography
+            sx={{
+              textAlign: 'center',
+              width: '100%',
+              my: 0.5,
+              fontSize: '1.1rem',
+              fontWeight: 500,
+            }}
+          >
             {formatJPY(standardMonthlyRemuneration)}
-            <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>×</Box>
+            <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
+              ×
+            </Box>
             {formatPercent(employeeRate)}
-            <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>=</Box>
-            <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{formatJPY(totalPremium)}</Box>
+            <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
+              =
+            </Box>
+            <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              {formatJPY(totalPremium)}
+            </Box>
           </Typography>
         </Box>
       </Box>
 
-      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', display: 'block', mb: 1 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ fontStyle: 'italic', display: 'block', mb: 1 }}
+      >
         The employer also pays {formatPercent(employeeRate)}.
       </Typography>
 
@@ -130,11 +174,11 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({ inputs, s
         currentRowId="current-pension-row"
         getCurrentRowSummary={getCurrentRowSummary}
         officialSourceLink={{
-          url: "https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/20200825.html",
-          text: "厚生年金保険料額表 (Japan Pension Service)"
+          url: 'https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/20200825.html',
+          text: '厚生年金保険料額表 (Japan Pension Service)',
         }}
       />
-    </Box >
+    </Box>
   );
 };
 

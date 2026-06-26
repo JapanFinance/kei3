@@ -13,7 +13,8 @@ const labelTooltips: Record<string, string> = {
   'Pension Payments': 'Employees/National pension system contributions.',
   'Employment Insurance': 'Insurance for unemployment and work-related benefits.',
   'Income Tax': 'Income tax paid to the national government.',
-  'Residence Tax': 'Local income tax paid to your local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If your income fluctuates from year to year, consider the effect on your residence tax billed in arrears.',
+  'Residence Tax':
+    'Local income tax paid to your local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If your income fluctuates from year to year, consider the effect on your residence tax billed in arrears.',
   'Total Deductions': 'Sum of all taxes and social insurance payments.',
 };
 
@@ -24,7 +25,15 @@ const iconMap: Record<string, React.ReactNode> = {
 interface ResultRowProps {
   label: string | React.ReactNode;
   value: string | React.ReactNode;
-  type?: 'default' | 'indented' | 'subtotal' | 'total' | 'final' | 'header' | 'detail' | 'detail-subtotal';
+  type?:
+    | 'default'
+    | 'indented'
+    | 'subtotal'
+    | 'total'
+    | 'final'
+    | 'header'
+    | 'detail'
+    | 'detail-subtotal';
   valuePrefix?: string;
   sx?: SxProps<Theme>;
   labelSuffix?: React.ReactNode; // Additional content to show after the label and tooltip
@@ -36,7 +45,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
   type = 'default',
   valuePrefix,
   sx: rowSxOverride,
-  labelSuffix
+  labelSuffix,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -54,12 +63,25 @@ export const ResultRow: React.FC<ResultRowProps> = ({
 
   switch (type) {
     case 'header':
-      labelSpecificSx = { fontWeight: 500, fontSize: isMobile ? '0.98rem' : '1rem', color: 'text.primary' };
-      valueSpecificSx = { fontWeight: 500, fontSize: isMobile ? '0.98rem' : '1rem', color: 'text.primary' };
+      labelSpecificSx = {
+        fontWeight: 500,
+        fontSize: isMobile ? '0.98rem' : '1rem',
+        color: 'text.primary',
+      };
+      valueSpecificSx = {
+        fontWeight: 500,
+        fontSize: isMobile ? '0.98rem' : '1rem',
+        color: 'text.primary',
+      };
       boxSx.py = isMobile ? 0.3 : 1.1; // slightly reduced
       break;
     case 'indented':
-      labelSpecificSx = { fontSize: '0.95rem', color: 'text.secondary', display: 'flex', alignItems: 'center' };
+      labelSpecificSx = {
+        fontSize: '0.95rem',
+        color: 'text.secondary',
+        display: 'flex',
+        alignItems: 'center',
+      };
       valueSpecificSx = { fontSize: '0.95rem', color: 'text.primary' };
       boxSx.pl = theme.spacing(2.5); // Indentation for sub-items
       boxSx.py = isMobile ? 0.18 : 0.6;
@@ -73,8 +95,16 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       boxSx.borderTop = `1px solid ${theme.palette.divider}`; // Solid line for emphasis
       break;
     case 'total':
-      labelSpecificSx = { fontSize: isMobile ? '1.05rem' : '1.1rem', fontWeight: 600, color: 'text.primary' };
-      valueSpecificSx = { fontSize: isMobile ? '1.05rem' : '1.1rem', fontWeight: 700, color: 'error.main' };
+      labelSpecificSx = {
+        fontSize: isMobile ? '1.05rem' : '1.1rem',
+        fontWeight: 600,
+        color: 'text.primary',
+      };
+      valueSpecificSx = {
+        fontSize: isMobile ? '1.05rem' : '1.1rem',
+        fontWeight: 700,
+        color: 'error.main',
+      };
       boxSx.py = isMobile ? 0.4 : 1;
       boxSx.mt = isMobile ? 0.3 : 0.5;
       boxSx.borderTop = `2px solid ${theme.palette.divider}`; // Line above total deductions
@@ -163,11 +193,10 @@ export const ResultRow: React.FC<ResultRowProps> = ({
 
   return (
     <Box sx={boxSx}>
-      <Box sx={{ ...leftColumnLayoutSx, ...labelSpecificSx }}>
-        {labelContent}
-      </Box>
+      <Box sx={{ ...leftColumnLayoutSx, ...labelSpecificSx }}>{labelContent}</Box>
       <Box sx={{ ...rightColumnLayoutSx, ...valueSpecificSx }}>
-        {valuePrefix}{value}
+        {valuePrefix}
+        {value}
       </Box>
     </Box>
   );

@@ -11,7 +11,8 @@ import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../utils/health
 const TEST_INCOME_YEAR = 2026;
 
 // Mock TakeHomeResults with necessary fields
-const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults => ({
+const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults =>
+  ({
     annualIncome: 0,
     hasEmploymentIncome: true,
     nationalIncomeTax: 0,
@@ -27,196 +28,209 @@ const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults
     totalNetIncome: 0,
     salaryIncome: 0,
     ...overrides,
-} as TakeHomeResults);
+  }) as TakeHomeResults;
 
 // Tokyo-Chiyoda FY2026 caps: medical 670,000, support 260,000, LTC 170,000, child support 30,000
 
 describe('detectCaps', () => {
-    it('should explicitly fail or return false positive currently when high business income is present', () => {
-        // Scenario: Low salary (should NOT be capped), High Business Income (makes total high)
-        // Salary: 3,600,000 (300k/month) -> Not capped (Cap is ~1.39M/month for Health, ~650k for Pension)
-        // Business: 100,000,000 -> Total 103.6M
+  it('should explicitly fail or return false positive currently when high business income is present', () => {
+    // Scenario: Low salary (should NOT be capped), High Business Income (makes total high)
+    // Salary: 3,600,000 (300k/month) -> Not capped (Cap is ~1.39M/month for Health, ~650k for Pension)
+    // Business: 100,000,000 -> Total 103.6M
 
-        const results = createMockResults({
-            annualIncome: 103600000, // 103.6M
-            salaryIncome: 3600000, // 3.6M
-            healthInsuranceProvider: DEFAULT_PROVIDER,
-        });
-
-        const caps = detectCaps(results, TEST_INCOME_YEAR);
-
-        expect(caps.healthInsuranceCapped).toBe(false);
-        expect(caps.pensionCapped).toBe(false);
+    const results = createMockResults({
+      annualIncome: 103600000, // 103.6M
+      salaryIncome: 3600000, // 3.6M
+      healthInsuranceProvider: DEFAULT_PROVIDER,
     });
 
-    it('should correctly detect caps when salary is high', () => {
-        // Scenario: High salary (should be capped)
-        // Salary: 24,000,000 (2M/month) -> Capped
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
 
-        const results = createMockResults({
-            annualIncome: 24000000,
-            salaryIncome: 24000000,
-            healthInsuranceProvider: DEFAULT_PROVIDER,
-        });
+    expect(caps.healthInsuranceCapped).toBe(false);
+    expect(caps.pensionCapped).toBe(false);
+  });
 
-        const caps = detectCaps(results, TEST_INCOME_YEAR);
+  it('should correctly detect caps when salary is high', () => {
+    // Scenario: High salary (should be capped)
+    // Salary: 24,000,000 (2M/month) -> Capped
 
-        expect(caps.healthInsuranceCapped).toBe(true);
-        expect(caps.pensionCapped).toBe(true);
+    const results = createMockResults({
+      annualIncome: 24000000,
+      salaryIncome: 24000000,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
     });
 
-    it('should correctly handle NHI caps (uncapped case)', () => {
-        const results = createMockResults({
-            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-            region: 'Tokyo-Chiyoda',
-            nhiMedicalPortion: 500000,
-            nhiElderlySupportPortion: 200000,
-            nhiChildSupportPortion: 10000,
-            isSubjectToLongTermCarePremium: false,
-        });
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
 
-        const caps = detectCaps(results, TEST_INCOME_YEAR);
+    expect(caps.healthInsuranceCapped).toBe(true);
+    expect(caps.pensionCapped).toBe(true);
+  });
 
-        expect(caps.healthInsuranceCapped).toBe(false);
-        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
-        expect(caps.pensionCapped).toBe(false);
+  it('should correctly handle NHI caps (uncapped case)', () => {
+    const results = createMockResults({
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo-Chiyoda',
+      nhiMedicalPortion: 500000,
+      nhiElderlySupportPortion: 200000,
+      nhiChildSupportPortion: 10000,
+      isSubjectToLongTermCarePremium: false,
     });
 
-    it('should NOT trigger pension cap when only bonus is high (salary is normal)', () => {
-        // Scenario: 
-        // Salary: 3,600,000 (300k/month) -> Normal, Not Capped
-        // Bonus: 10,000,000 (10M) -> High
-        // Resulting Annual Income: 13.6M
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
 
-        const results = createMockResults({
-            annualIncome: 13600000,
-            salaryIncome: 3600000,
-            healthInsuranceProvider: DEFAULT_PROVIDER,
-        });
+    expect(caps.healthInsuranceCapped).toBe(false);
+    expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
+    expect(caps.pensionCapped).toBe(false);
+  });
 
-        const caps = detectCaps(results, TEST_INCOME_YEAR);
+  it('should NOT trigger pension cap when only bonus is high (salary is normal)', () => {
+    // Scenario:
+    // Salary: 3,600,000 (300k/month) -> Normal, Not Capped
+    // Bonus: 10,000,000 (10M) -> High
+    // Resulting Annual Income: 13.6M
 
-        expect(caps.pensionCapped).toBe(false);
-        expect(caps.healthInsuranceCapped).toBe(false);
+    const results = createMockResults({
+      annualIncome: 13600000,
+      salaryIncome: 3600000,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
     });
 
-    it('should correctly detect health insurance bonus cap', () => {
-        const results = createMockResults({
-            healthInsuranceProvider: DEFAULT_PROVIDER,
-        });
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
 
-        // Mock a breakdown where the bonus is capped
-        // Bonus amount 6,000,000 -> Rounded 6,000,000 -> Standard 5,730,000 (Cap)
-        const breakdown: EmployeesHealthInsuranceBonusBreakdownItem[] = [{
-            month: 6,
-            bonusAmount: 6000000,
-            standardBonusAmount: 5730000, // Capped
-            cumulativeStandardBonus: 5730000,
-            premium: 10000,
-            includesLongTermCare: false
-        }];
+    expect(caps.pensionCapped).toBe(false);
+    expect(caps.healthInsuranceCapped).toBe(false);
+  });
 
-        const caps = detectCaps(results, TEST_INCOME_YEAR, breakdown);
-
-        expect(caps.healthInsuranceBonusCapped).toBe(true);
+  it('should correctly detect health insurance bonus cap', () => {
+    const results = createMockResults({
+      healthInsuranceProvider: DEFAULT_PROVIDER,
     });
 
-    it('should NOT detect health insurance bonus cap when under limit', () => {
-        const results = createMockResults({
-            healthInsuranceProvider: DEFAULT_PROVIDER,
-        });
+    // Mock a breakdown where the bonus is capped
+    // Bonus amount 6,000,000 -> Rounded 6,000,000 -> Standard 5,730,000 (Cap)
+    const breakdown: EmployeesHealthInsuranceBonusBreakdownItem[] = [
+      {
+        month: 6,
+        bonusAmount: 6000000,
+        standardBonusAmount: 5730000, // Capped
+        cumulativeStandardBonus: 5730000,
+        premium: 10000,
+        includesLongTermCare: false,
+      },
+    ];
 
-        // Bonus amount 1,000,000 -> Standard 1,000,000 (Not capped)
-        const breakdown: EmployeesHealthInsuranceBonusBreakdownItem[] = [{
-            month: 6,
-            bonusAmount: 1000000,
-            standardBonusAmount: 1000000,
-            cumulativeStandardBonus: 1000000,
-            premium: 1000,
-            includesLongTermCare: false
-        }];
+    const caps = detectCaps(results, TEST_INCOME_YEAR, breakdown);
 
-        const caps = detectCaps(results, TEST_INCOME_YEAR, breakdown);
+    expect(caps.healthInsuranceBonusCapped).toBe(true);
+  });
 
-        expect(caps.healthInsuranceBonusCapped).toBe(false);
+  it('should NOT detect health insurance bonus cap when under limit', () => {
+    const results = createMockResults({
+      healthInsuranceProvider: DEFAULT_PROVIDER,
     });
+
+    // Bonus amount 1,000,000 -> Standard 1,000,000 (Not capped)
+    const breakdown: EmployeesHealthInsuranceBonusBreakdownItem[] = [
+      {
+        month: 6,
+        bonusAmount: 1000000,
+        standardBonusAmount: 1000000,
+        cumulativeStandardBonus: 1000000,
+        premium: 1000,
+        includesLongTermCare: false,
+      },
+    ];
+
+    const caps = detectCaps(results, TEST_INCOME_YEAR, breakdown);
+
+    expect(caps.healthInsuranceBonusCapped).toBe(false);
+  });
 });
 
 describe('NHI cap detection with real calculator output', () => {
-    // Integration tests: feed real income into the calculator, then verify detectCaps
-    // correctly identifies capped portions. This catches drift between calculator and
-    // cap detection that unit tests with hardcoded values would miss.
+  // Integration tests: feed real income into the calculator, then verify detectCaps
+  // correctly identifies capped portions. This catches drift between calculator and
+  // cap detection that unit tests with hardcoded values would miss.
 
-    it('detects all NHI portion caps at very high income (Chiyoda, no LTC)', () => {
-        const region = 'Tokyo-Chiyoda';
-        const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            50_000_000, false, 2026, region
-        );
+  it('detects all NHI portion caps at very high income (Chiyoda, no LTC)', () => {
+    const region = 'Tokyo-Chiyoda';
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      50_000_000,
+      false,
+      2026,
+      region,
+    );
 
-        const results = createMockResults({
-            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-            region,
-            nhiMedicalPortion: breakdown.medicalPortion,
-            nhiElderlySupportPortion: breakdown.elderlySupportPortion,
-            nhiLongTermCarePortion: breakdown.longTermCarePortion,
-            nhiChildSupportPortion: breakdown.childSupportPortion,
-            isSubjectToLongTermCarePremium: false,
-        });
-
-        const caps = detectCaps(results, TEST_INCOME_YEAR);
-
-        expect(caps.healthInsuranceCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(true);
+    const results = createMockResults({
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region,
+      nhiMedicalPortion: breakdown.medicalPortion,
+      nhiElderlySupportPortion: breakdown.elderlySupportPortion,
+      nhiLongTermCarePortion: breakdown.longTermCarePortion,
+      nhiChildSupportPortion: breakdown.childSupportPortion,
+      isSubjectToLongTermCarePremium: false,
     });
 
-    it('detects all NHI portion caps at very high income (Chiyoda, with LTC)', () => {
-        const region = 'Tokyo-Chiyoda';
-        const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            50_000_000, true, 2026, region
-        );
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
 
-        const results = createMockResults({
-            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-            region,
-            nhiMedicalPortion: breakdown.medicalPortion,
-            nhiElderlySupportPortion: breakdown.elderlySupportPortion,
-            nhiLongTermCarePortion: breakdown.longTermCarePortion,
-            nhiChildSupportPortion: breakdown.childSupportPortion,
-            isSubjectToLongTermCarePremium: true,
-        });
+    expect(caps.healthInsuranceCapped).toBe(true);
+    expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
+    expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(true);
+    expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(true);
+  });
 
-        const caps = detectCaps(results, TEST_INCOME_YEAR);
+  it('detects all NHI portion caps at very high income (Chiyoda, with LTC)', () => {
+    const region = 'Tokyo-Chiyoda';
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      50_000_000,
+      true,
+      2026,
+      region,
+    );
 
-        expect(caps.healthInsuranceCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.ltcCapped).toBe(true);
-        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(true);
+    const results = createMockResults({
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region,
+      nhiMedicalPortion: breakdown.medicalPortion,
+      nhiElderlySupportPortion: breakdown.elderlySupportPortion,
+      nhiLongTermCarePortion: breakdown.longTermCarePortion,
+      nhiChildSupportPortion: breakdown.childSupportPortion,
+      isSubjectToLongTermCarePremium: true,
     });
 
-    it('does not flag caps at moderate income (Chiyoda)', () => {
-        const region = 'Tokyo-Chiyoda';
-        const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-            5_000_000, false, 2026, region
-        );
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
 
-        const results = createMockResults({
-            healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
-            region,
-            nhiMedicalPortion: breakdown.medicalPortion,
-            nhiElderlySupportPortion: breakdown.elderlySupportPortion,
-            nhiLongTermCarePortion: breakdown.longTermCarePortion,
-            nhiChildSupportPortion: breakdown.childSupportPortion,
-            isSubjectToLongTermCarePremium: false,
-        });
+    expect(caps.healthInsuranceCapped).toBe(true);
+    expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(true);
+    expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(true);
+    expect(caps.healthInsuranceCapDetails?.ltcCapped).toBe(true);
+    expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(true);
+  });
 
-        const caps = detectCaps(results, TEST_INCOME_YEAR);
+  it('does not flag caps at moderate income (Chiyoda)', () => {
+    const region = 'Tokyo-Chiyoda';
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      5_000_000,
+      false,
+      2026,
+      region,
+    );
 
-        expect(caps.healthInsuranceCapped).toBe(false);
-        expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(false);
-        expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(false);
-        expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
+    const results = createMockResults({
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region,
+      nhiMedicalPortion: breakdown.medicalPortion,
+      nhiElderlySupportPortion: breakdown.elderlySupportPortion,
+      nhiLongTermCarePortion: breakdown.longTermCarePortion,
+      nhiChildSupportPortion: breakdown.childSupportPortion,
+      isSubjectToLongTermCarePremium: false,
     });
+
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
+
+    expect(caps.healthInsuranceCapped).toBe(false);
+    expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(false);
+    expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(false);
+    expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
+  });
 });

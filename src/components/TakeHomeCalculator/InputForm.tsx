@@ -34,7 +34,13 @@ import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
-import type { TakeHomeFormState, IncomeMode, IncomeStream, HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
+import type {
+  TakeHomeFormState,
+  IncomeMode,
+  IncomeStream,
+  HomeLoanTaxCreditInput,
+  HomeLoanTaxCreditResult,
+} from '../../types/tax';
 import {
   getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
@@ -49,7 +55,11 @@ import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/provid
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
-  onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => void;
+  onInputChange: (
+    e:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | { target: { name: string; value: unknown; type?: string; checked?: boolean } },
+  ) => void;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
 }
@@ -57,22 +67,26 @@ interface TaxInputFormProps {
 // National Health Insurance provider (used in both employment and non-employment scenarios)
 const nhiProvider = {
   id: NATIONAL_HEALTH_INSURANCE_ID,
-  displayName: getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID)
+  displayName: getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID),
 };
 
 // Dependent coverage provider (only for employment income under threshold)
 const dependentProvider = {
   id: DEPENDENT_COVERAGE_ID,
-  displayName: getProviderDisplayName(DEPENDENT_COVERAGE_ID)
+  displayName: getProviderDisplayName(DEPENDENT_COVERAGE_ID),
 };
 
 // Custom provider
 const customProvider = {
   id: CUSTOM_PROVIDER_ID,
-  displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID)
+  displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID),
 };
 
-export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInputChange, homeLoanTaxCreditResult }) => {
+export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
+  inputs,
+  onInputChange,
+  homeLoanTaxCreditResult,
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -97,7 +111,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'dependents',
         value: newDependents,
-      }
+      },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
@@ -106,7 +120,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'homeLoanTaxCredit',
         value: newInput,
-      }
+      },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
@@ -115,7 +129,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'dcPlanContributions',
         value,
-      }
+      },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
@@ -136,31 +150,31 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'incomeStreams',
         value: newStreams,
-      }
+      },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
 
     onInputChange({
       target: {
         name: 'annualIncome',
         value: totalIncome,
-      }
+      },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
-
   };
 
-  const hasEmploymentIncome = inputs.incomeMode === 'salary' ||
-    (inputs.incomeMode === 'advanced' && inputs.incomeStreams.some(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation'));
+  const hasEmploymentIncome =
+    inputs.incomeMode === 'salary' ||
+    (inputs.incomeMode === 'advanced' &&
+      inputs.incomeStreams.some(
+        s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation',
+      ));
 
-  const handleIncomeModeChange = (
-    _: React.MouseEvent<HTMLElement>,
-    newMode: IncomeMode | null,
-  ) => {
+  const handleIncomeModeChange = (_: React.MouseEvent<HTMLElement>, newMode: IncomeMode | null) => {
     if (newMode !== null) {
       onInputChange({
         target: {
           name: 'incomeMode',
           value: newMode,
-        }
+        },
       } as unknown as React.ChangeEvent<HTMLInputElement>);
 
       // If we are LEAVING advanced mode, save the current streams
@@ -169,7 +183,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           target: {
             name: 'savedIncomeStreams',
             value: inputs.incomeStreams,
-          }
+          },
         } as unknown as React.ChangeEvent<HTMLInputElement>);
       }
 
@@ -178,25 +192,29 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         onInputChange({
           target: {
             name: 'incomeStreams',
-            value: [{
-              id: 'simple-salary',
-              type: 'salary',
-              amount: inputs.annualIncome,
-              frequency: 'annual'
-            }],
-          }
+            value: [
+              {
+                id: 'simple-salary',
+                type: 'salary',
+                amount: inputs.annualIncome,
+                frequency: 'annual',
+              },
+            ],
+          },
         } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else if (newMode === 'miscellaneous') {
         // Sync streams to strictly match the simple mode
         onInputChange({
           target: {
             name: 'incomeStreams',
-            value: [{
-              id: 'simple-miscellaneous',
-              type: 'miscellaneous',
-              amount: inputs.annualIncome,
-            }],
-          }
+            value: [
+              {
+                id: 'simple-miscellaneous',
+                type: 'miscellaneous',
+                amount: inputs.annualIncome,
+              },
+            ],
+          },
         } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else if (newMode === 'advanced') {
         // Try to restore saved streams if they match the current total
@@ -225,26 +243,39 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             target: {
               name: 'incomeStreams',
               value: streamsToUse,
-            }
+            },
           } as unknown as React.ChangeEvent<HTMLInputElement>);
         } else {
           // Mismatch or empty: Reset to single stream matching Total
           const initialStream: IncomeStream = hasEmploymentIncome
-            ? { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'salary', frequency: 'annual', amount: inputs.annualIncome }
-            : { id: Date.now().toString(36) + Math.random().toString(36).substring(2), type: 'miscellaneous', amount: inputs.annualIncome };
+            ? {
+                id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+                type: 'salary',
+                frequency: 'annual',
+                amount: inputs.annualIncome,
+              }
+            : {
+                id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+                type: 'miscellaneous',
+                amount: inputs.annualIncome,
+              };
 
           onInputChange({
             target: {
               name: 'incomeStreams',
               value: [initialStream],
-            }
+            },
           } as unknown as React.ChangeEvent<HTMLInputElement>);
         }
       }
     }
   };
 
-  const handleCustomRateChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }>) => {
+  const handleCustomRateChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }
+    >,
+  ) => {
     const { name, value } = e.target as { name: string; value: unknown };
     const numValue = typeof value === 'number' ? value : parseFloat(value as string) || 0;
 
@@ -252,18 +283,22 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
     const newRates = {
       ...currentRates,
-      [name === 'customHealthInsuranceRate' ? 'healthInsuranceRate' : 'longTermCareRate']: numValue
+      [name === 'customHealthInsuranceRate' ? 'healthInsuranceRate' : 'longTermCareRate']: numValue,
     };
 
     onInputChange({
       target: {
         name: 'customEHIRates',
-        value: newRates
-      }
+        value: newRates,
+      },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
-  const handleAnnualIncomeChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: unknown; type?: string; checked?: boolean } }) => {
+  const handleAnnualIncomeChange = (
+    e:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | { target: { name: string; value: unknown; type?: string; checked?: boolean } },
+  ) => {
     onInputChange(e);
 
     // If in simple mode, also update the income streams to match new income
@@ -271,24 +306,28 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       onInputChange({
         target: {
           name: 'incomeStreams',
-          value: [{
-            id: 'simple-salary',
-            type: 'salary',
-            amount: Number(e.target.value),
-            frequency: 'annual'
-          }],
-        }
+          value: [
+            {
+              id: 'simple-salary',
+              type: 'salary',
+              amount: Number(e.target.value),
+              frequency: 'annual',
+            },
+          ],
+        },
       } as unknown as React.ChangeEvent<HTMLInputElement>);
     } else if (inputs.incomeMode === 'miscellaneous') {
       onInputChange({
         target: {
           name: 'incomeStreams',
-          value: [{
-            id: 'simple-miscellaneous',
-            type: 'miscellaneous',
-            amount: Number(e.target.value),
-          }],
-        }
+          value: [
+            {
+              id: 'simple-miscellaneous',
+              type: 'miscellaneous',
+              amount: Number(e.target.value),
+            },
+          ],
+        },
       } as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
@@ -299,15 +338,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       target: {
         name: 'annualIncome',
         value: newValue,
-        type: 'range'
+        type: 'range',
       },
       currentTarget: {
         name: 'annualIncome',
         value: newValue,
-        type: 'range'
+        type: 'range',
       },
-      preventDefault: () => { },
-      stopPropagation: () => { },
+      preventDefault: () => {},
+      stopPropagation: () => {},
       nativeEvent: new Event('change'),
       bubbles: true,
       cancelable: true,
@@ -318,7 +357,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       type: 'change',
       isDefaultPrevented: () => false,
       isPropagationStopped: () => false,
-      persist: () => { }
+      persist: () => {},
     } as unknown as React.ChangeEvent<HTMLInputElement>;
 
     handleAnnualIncomeChange(event);
@@ -329,10 +368,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     if (hasEmploymentIncome) {
       // Employment income can use either employee health insurance or NHI
       // (e.g., small employers, part-time workers, low income thresholds)
-      const employeeProviders = Object.entries(PROVIDER_DEFINITIONS).map(([id, { providerName }]) => ({
-        id,
-        displayName: providerName
-      }));
+      const employeeProviders = Object.entries(PROVIDER_DEFINITIONS).map(
+        ([id, { providerName }]) => ({
+          id,
+          displayName: providerName,
+        }),
+      );
 
       // Include dependent coverage option only if income is below threshold
       if (isDependentEligible) {
@@ -354,7 +395,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   React.useEffect(() => {
     // If we have available providers but the current one isn't in the list
     if (availableProviders.length > 0) {
-      const isCurrentProviderAvailable = availableProviders.some(p => p.id === inputs.healthInsuranceProvider);
+      const isCurrentProviderAvailable = availableProviders.some(
+        p => p.id === inputs.healthInsuranceProvider,
+      );
 
       if (!isCurrentProviderAvailable) {
         // Default to NHI if available, otherwise the first one
@@ -366,7 +409,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             target: {
               name: 'healthInsuranceProvider',
               value: fallbackProvider.id,
-            }
+            },
           } as unknown as React.ChangeEvent<HTMLInputElement>);
         }
       }
@@ -394,7 +437,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         // Convert region keys to region options for consistency
         return Object.keys(providerDefinition.regions).map(regionKey => ({
           id: regionKey,
-          displayName: regionKey // For employee health insurance, use the key as display name for now
+          displayName: regionKey, // For employee health insurance, use the key as display name for now
         }));
       }
     }
@@ -404,7 +447,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
 
   // True if the only derived region is the DEFAULT_PROVIDER_REGION
   const isEffectivelySingleDefaultRegion =
-    derivedProviderRegions.length === 1 && derivedProviderRegions[0]?.id === DEFAULT_PROVIDER_REGION;
+    derivedProviderRegions.length === 1 &&
+    derivedProviderRegions[0]?.id === DEFAULT_PROVIDER_REGION;
 
   // Region dropdown is disabled if:
   // 1. No health insurance providers are available at all.
@@ -413,7 +457,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
   const isRegionDropdownEffectivelyDisabled =
     availableProviders.length === 0 ||
     derivedProviderRegions.length === 0 || // Covers case where provider has no regions in data
-    derivedProviderRegions.length === 1;   // Covers case where provider has only one region (e.g., only Tokyo, or only DEFAULT)
+    derivedProviderRegions.length === 1; // Covers case where provider has only one region (e.g., only Tokyo, or only DEFAULT)
 
   // Menu items to display in the region dropdown.
   const regionMenuItemsToDisplay = React.useMemo(() => {
@@ -429,8 +473,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     const event = {
       target: {
         ...e.target,
-        type: 'select'
-      }
+        type: 'select',
+      },
     } as React.ChangeEvent<HTMLInputElement>;
     onInputChange(event);
   };
@@ -444,15 +488,21 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
     '& .MuiInputBase-input': {
       fontSize: { xs: '0.97rem', sm: '1rem' },
       py: { xs: 0.3, sm: 0.5 },
-    }
+    },
   };
 
   // We only need the total net income for the dependents modal. Pass dependents so the
   // 所得金額調整控除 is reflected, keeping the modal's eligibility hints consistent with the results.
-  const taxpayerNetIncome = React.useMemo(() => calculateTotalNetIncome(inputs.incomeStreams, inputs.incomeYear, inputs.dependents), [inputs.incomeStreams, inputs.incomeYear, inputs.dependents]);
+  const taxpayerNetIncome = React.useMemo(
+    () => calculateTotalNetIncome(inputs.incomeStreams, inputs.incomeYear, inputs.dependents),
+    [inputs.incomeStreams, inputs.incomeYear, inputs.dependents],
+  );
 
   return (
-    <Box className="form-container" sx={{ p: { xs: 1.2, sm: 2 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 2 }}>
+    <Box
+      className="form-container"
+      sx={{ p: { xs: 1.2, sm: 2 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 2 }}
+    >
       <Typography
         variant="h5"
         component="h2"
@@ -474,7 +524,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 fontWeight: 500,
                 color: 'text.primary',
                 textAlign: 'center',
-                mb: 1
+                mb: 1,
               }}
             >
               Income
@@ -491,7 +541,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 fullWidth
               >
                 <ToggleButton value="salary">Salary</ToggleButton>
-                <ToggleButton value="miscellaneous">{isMobile ? 'Misc' : 'Miscellaneous'}</ToggleButton>
+                <ToggleButton value="miscellaneous">
+                  {isMobile ? 'Misc' : 'Miscellaneous'}
+                </ToggleButton>
                 <ToggleButton value="advanced">Advanced</ToggleButton>
               </ToggleButtonGroup>
             </Box>
@@ -500,9 +552,16 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             {inputs.incomeMode === 'advanced' ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      px: 1,
+                    }}
+                  >
                     <Typography variant="body1">Total Annual Income</Typography>
-                    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                       {formatJPY(inputs.annualIncome)}
                     </Typography>
                   </Box>
@@ -519,9 +578,22 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     }, 0);
 
                     return totalNontaxableBenefits > 0 ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 1 }}>
-                        <Typography variant="body2" color="text.secondary">Total Nontaxable Benefits</Typography>
-                        <Typography variant="subtitle1" color="text.secondary" sx={{ fontWeight: "medium" }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          px: 1,
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          Total Nontaxable Benefits
+                        </Typography>
+                        <Typography
+                          variant="subtitle1"
+                          color="text.secondary"
+                          sx={{ fontWeight: 'medium' }}
+                        >
                           {formatJPY(totalNontaxableBenefits)}
                         </Typography>
                       </Box>
@@ -553,28 +625,32 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 </Badge>
               </Box>
             ) : (
-              <Box sx={{
-                flex: '1 1 0',
-                width: '100%',
-                minWidth: 180, // Prevents shrinking too much
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                '& .MuiInputBase-root': {
-                  fontSize: { xs: '0.97rem', sm: '1.05rem' },
-                  py: { xs: 0.2, sm: 0.4 },
-                },
-                '& .MuiInputBase-input': {
-                  fontSize: { xs: '0.95rem', sm: '1rem' },
-                  py: { xs: 0.2, sm: 0.4 },
-                }
-              }}>
+              <Box
+                sx={{
+                  flex: '1 1 0',
+                  width: '100%',
+                  minWidth: 180, // Prevents shrinking too much
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  '& .MuiInputBase-root': {
+                    fontSize: { xs: '0.97rem', sm: '1.05rem' },
+                    py: { xs: 0.2, sm: 0.4 },
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: { xs: '0.95rem', sm: '1rem' },
+                    py: { xs: 0.2, sm: 0.4 },
+                  },
+                }}
+              >
                 <SpinnerNumberField
                   id="annualIncome"
                   name="annualIncome"
                   value={inputs.annualIncome}
                   onInputChange={handleAnnualIncomeChange}
-                  label={inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Annual Income'}
+                  label={
+                    inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Annual Income'
+                  }
                   step={10_000}
                   shiftStep={100_000}
                   helperText={
@@ -616,16 +692,18 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         </Card>
 
         {/* Age + Dependents Row */}
-        <Box sx={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: { xs: 2, sm: 3 },
-          mb: { xs: 0.2, sm: 0.5 },
-          width: '100%',
-          flexWrap: 'wrap',
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: { xs: 2, sm: 3 },
+            mb: { xs: 0.2, sm: 0.5 },
+            width: '100%',
+            flexWrap: 'wrap',
+          }}
+        >
           {/* Age Switch */}
           <Box
             sx={{
@@ -650,7 +728,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               }}
             >
               Age Range
-              <SimpleTooltip>People aged 40-64 are required to pay long-term care insurance premiums as part of their health insurance.</SimpleTooltip>
+              <SimpleTooltip>
+                People aged 40-64 are required to pay long-term care insurance premiums as part of
+                their health insurance.
+              </SimpleTooltip>
             </Typography>
             <ToggleButtonGroup
               value={inputs.isSubjectToLongTermCarePremium}
@@ -661,8 +742,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     target: {
                       name: 'isSubjectToLongTermCarePremium',
                       checked: newValue,
-                      type: 'checkbox'
-                    }
+                      type: 'checkbox',
+                    },
                   } as React.ChangeEvent<HTMLInputElement>);
                 }
               }}
@@ -680,17 +761,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     color: 'primary.contrastText',
                     '&:hover': {
                       bgcolor: 'primary.dark',
-                    }
-                  }
-                }
+                    },
+                  },
+                },
               }}
             >
-              <ToggleButton value={false}>
-                &lt;40 or 65+
-              </ToggleButton>
-              <ToggleButton value={true}>
-                40-64
-              </ToggleButton>
+              <ToggleButton value={false}>&lt;40 or 65+</ToggleButton>
+              <ToggleButton value={true}>40-64</ToggleButton>
             </ToggleButtonGroup>
           </Box>
           {/* Dependents Button */}
@@ -717,7 +794,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               }}
             >
               Dependents
-              <SimpleTooltip>Add spouse and dependents to calculate applicable tax deductions.</SimpleTooltip>
+              <SimpleTooltip>
+                Add spouse and dependents to calculate applicable tax deductions.
+              </SimpleTooltip>
             </Typography>
             <Badge
               badgeContent={inputs.dependents.length}
@@ -726,7 +805,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 '& .MuiBadge-badge': {
                   right: -3,
                   top: 3,
-                }
+                },
               }}
             >
               <Button
@@ -764,7 +843,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
                     Enter Social Insurance Manually
                   </Typography>
-                  <SimpleTooltip>Manually enter the total social insurance amount paid in the year (e.g. Health Insurance + Pension + Employment Insurance). This option should be used only if you have a situation where the automatic calculation does not reflect your actual payments. Employees generally can find this amount on their annual withholding statement (源泉徴収票) as the item labelled 社会保険料等の金額.</SimpleTooltip>
+                  <SimpleTooltip>
+                    Manually enter the total social insurance amount paid in the year (e.g. Health
+                    Insurance + Pension + Employment Insurance). This option should be used only if
+                    you have a situation where the automatic calculation does not reflect your
+                    actual payments. Employees generally can find this amount on their annual
+                    withholding statement (源泉徴収票) as the item labelled 社会保険料等の金額.
+                  </SimpleTooltip>
                 </Box>
               }
             />
@@ -799,7 +884,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   }}
                 >
                   Health Insurance Provider
-                  <SimpleTooltip>Your health insurance provider affects your premium calculations. Employment income workers are usually enrolled in employee health insurance, but some may be enrolled in National Health Insurance depending on factors such as employer size, work hours, and income thresholds.</SimpleTooltip>
+                  <SimpleTooltip>
+                    Your health insurance provider affects your premium calculations. Employment
+                    income workers are usually enrolled in employee health insurance, but some may
+                    be enrolled in National Health Insurance depending on factors such as employer
+                    size, work hours, and income thresholds.
+                  </SimpleTooltip>
                 </Typography>
                 <InputLabel
                   id="healthInsuranceProvider-label"
@@ -817,7 +907,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                   fullWidth
                   sx={sharedInputSx}
                 >
-                  {availableProviders.map((provider) => (
+                  {availableProviders.map(provider => (
                     <MenuItem
                       key={provider.id}
                       value={provider.id}
@@ -829,7 +919,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                 </Select>
                 {isHealthInsuranceProviderDropdownDisabled && (
                   <FormHelperText>
-                    {availableProviders.length > 0 ? `Only ${availableProviders[0]!.displayName} available for this configuration.` : 'No health insurance providers available.'}
+                    {availableProviders.length > 0
+                      ? `Only ${availableProviders[0]!.displayName} available for this configuration.`
+                      : 'No health insurance providers available.'}
                   </FormHelperText>
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
@@ -842,9 +934,22 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
               {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <FormControl fullWidth>
-                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                    <Typography
+                      gutterBottom
+                      sx={{
+                        fontSize: '0.97rem',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
                       Health Insurance
-                      <SimpleTooltip>Enter the employee's share of the health insurance premium rate (usually half of the total rate). Look for 健康保険料率 or 一般保険料率 on the provider's website. This should include the 調整保険料率 and the Childcare Support Contribution (子ども・子育て支援金率).</SimpleTooltip>
+                      <SimpleTooltip>
+                        Enter the employee's share of the health insurance premium rate (usually
+                        half of the total rate). Look for 健康保険料率 or 一般保険料率 on the
+                        provider's website. This should include the 調整保険料率 and the Childcare
+                        Support Contribution (子ども・子育て支援金率).
+                      </SimpleTooltip>
                     </Typography>
                     <SpinnerNumberField
                       id="customHealthInsuranceRate"
@@ -861,9 +966,21 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     />
                   </FormControl>
                   <FormControl fullWidth>
-                    <Typography gutterBottom sx={{ fontSize: '0.97rem', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                    <Typography
+                      gutterBottom
+                      sx={{
+                        fontSize: '0.97rem',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
                       Long-term Care
-                      <SimpleTooltip>Enter the employee's share of the Long-term Care premium rate (usually half of the total rate). This only applies if you are aged 40-64. Look for 介護保険料率 on the provider's website.</SimpleTooltip>
+                      <SimpleTooltip>
+                        Enter the employee's share of the Long-term Care premium rate (usually half
+                        of the total rate). This only applies if you are aged 40-64. Look for
+                        介護保険料率 on the provider's website.
+                      </SimpleTooltip>
                     </Typography>
                     <SpinnerNumberField
                       id="customLongTermCareRate"
@@ -887,26 +1004,29 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     options={regionMenuItemsToDisplay}
                     value={
                       regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
-                      regionMenuItemsToDisplay[0] ||
-                      { id: '', displayName: '' }
+                      regionMenuItemsToDisplay[0] || { id: '', displayName: '' }
                     }
                     onChange={(_, newValue) => {
                       handleSelectChange({
                         target: {
                           name: 'region',
-                          value: newValue?.id || ''
-                        }
+                          value: newValue?.id || '',
+                        },
                       });
                     }}
-                    getOptionLabel={(option) => option.displayName}
+                    getOptionLabel={option => option.displayName}
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     disabled={isRegionDropdownEffectivelyDisabled}
-                    renderInput={(params) => (
+                    renderInput={params => (
                       <TextField
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         {...(params as any)}
                         label="Local Region (Municipality/Prefecture)"
-                        helperText={isRegionDropdownEffectivelyDisabled ? 'This provider does not have different rates for different regions' : 'Premium rates depend on the region'}
+                        helperText={
+                          isRegionDropdownEffectivelyDisabled
+                            ? 'This provider does not have different rates for different regions'
+                            : 'Premium rates depend on the region'
+                        }
                       />
                     )}
                     noOptionsText="No matching regions"
@@ -923,7 +1043,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
         </Box>
 
         {/* Additional Deductions & Credits */}
-        <Box sx={{ mt: { xs: 1, sm: 1.5 }, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
+        <Box
+          sx={{
+            mt: { xs: 1, sm: 1.5 },
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+          }}
+        >
           <Typography
             sx={{
               mb: 0.5,
@@ -936,7 +1063,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
             }}
           >
             Additional Deductions &amp; Credits
-            <SimpleTooltip>Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax credit). These affect your income tax, residence tax, and furusato nozei limit.</SimpleTooltip>
+            <SimpleTooltip>
+              Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax
+              credit). These affect your income tax, residence tax, and furusato nozei limit.
+            </SimpleTooltip>
           </Typography>
           <Button
             variant="outlined"
@@ -948,12 +1078,20 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
           >
             {(() => {
               const parts: string[] = [];
-              if (inputs.dcPlanContributions > 0) parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
-              if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0) parts.push(`Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`);
+              if (inputs.dcPlanContributions > 0)
+                parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
+              if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0)
+                parts.push(
+                  `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
+                );
               // Via the UI the move-in dropdown only offers eligible years, so a credit entered
               // but zeroed (availableCredit 0) means income exceeded the cohort's eligibility limit.
-              const homeLoanNotApplied = !!(inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0
-                && homeLoanTaxCreditResult && homeLoanTaxCreditResult.availableCredit === 0);
+              const homeLoanNotApplied = !!(
+                inputs.homeLoanTaxCredit &&
+                inputs.homeLoanTaxCredit.creditAmount > 0 &&
+                homeLoanTaxCreditResult &&
+                homeLoanTaxCreditResult.availableCredit === 0
+              );
               return parts.length > 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <Typography component="span" sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
@@ -963,7 +1101,17 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
                     {parts.join(' · ')}
                   </Typography>
                   {homeLoanNotApplied && (
-                    <Typography component="span" sx={{ fontSize: '0.8rem', color: 'warning.main', display: 'flex', alignItems: 'center', gap: 0.25, mt: 0.25 }}>
+                    <Typography
+                      component="span"
+                      sx={{
+                        fontSize: '0.8rem',
+                        color: 'warning.main',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.25,
+                        mt: 0.25,
+                      }}
+                    >
                       <WarningIcon sx={{ fontSize: '0.95rem' }} />
                       Home loan tax credit not applied (income above the eligibility limit)
                     </Typography>
@@ -1005,4 +1153,4 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({ inputs, onInput
       />
     </Box>
   );
-}
+};

@@ -42,8 +42,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   shiftStep = 10000,
   sx,
   inputProps,
-  prefix = "¥",
-  suffix = "",
+  prefix = '¥',
+  suffix = '',
   min = 0,
   max,
   helperText,
@@ -64,8 +64,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
         target: {
           name,
           value: clampedValue,
-          type: 'number'
-        }
+          type: 'number',
+        },
       } as unknown as React.ChangeEvent<HTMLInputElement>;
       onInputChange(event);
     }
@@ -89,9 +89,10 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault();
       const currentStep = e.shiftKey ? shiftStep : step;
-      const newValue = e.key === 'ArrowUp'
-        ? roundFloatingPoint(value + currentStep)
-        : roundFloatingPoint(value - currentStep);
+      const newValue =
+        e.key === 'ArrowUp'
+          ? roundFloatingPoint(value + currentStep)
+          : roundFloatingPoint(value - currentStep);
       handleChange(newValue);
     }
   };
@@ -102,10 +103,10 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       {...(id && { id })}
       {...(name && { name })}
       value={value}
-      onValueChange={(values) => {
+      onValueChange={values => {
         handleChange(values.floatValue || 0);
       }}
-      isAllowed={(values) => {
+      isAllowed={values => {
         const { floatValue } = values;
         if (floatValue === undefined) return true;
         if (typeof min === 'number' && floatValue < min) return false;
@@ -122,25 +123,17 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       {...(error && { error })}
       slotProps={{
         htmlInput: {
-          inputMode: "numeric",
+          inputMode: 'numeric',
           ...inputProps,
         },
         input: {
           endAdornment: !isMobile ? (
             <InputAdornment position="end">
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <IconButton
-                  size="small"
-                  onClick={handleIncrement}
-                  sx={{ p: 0.25, height: 16 }}
-                >
+                <IconButton size="small" onClick={handleIncrement} sx={{ p: 0.25, height: 16 }}>
                   <KeyboardArrowUpIcon fontSize="small" />
                 </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={handleDecrement}
-                  sx={{ p: 0.25, height: 16 }}
-                >
+                <IconButton size="small" onClick={handleDecrement} sx={{ p: 0.25, height: 16 }}>
                   <KeyboardArrowDownIcon fontSize="small" />
                 </IconButton>
               </Box>

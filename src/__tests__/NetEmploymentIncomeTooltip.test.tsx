@@ -9,7 +9,9 @@ import { formatJPY } from '../utils/formatters';
 
 // Render the DetailedTooltip body inline so the breakdown is queryable without hovering.
 vi.mock('../components/ui/Tooltips', () => ({
-  DetailedTooltip: ({ children }: { title?: string; children?: ReactNode }) => <div>{children}</div>,
+  DetailedTooltip: ({ children }: { title?: string; children?: ReactNode }) => (
+    <div>{children}</div>
+  ),
   SimpleTooltip: () => <div data-testid="info-tooltip" />,
 }));
 
@@ -21,12 +23,12 @@ describe('NetEmploymentIncomeTooltip', () => {
         grossEmploymentIncome={10_000_000}
         netEmploymentIncome={8_050_000}
         year={2026}
-      />
+      />,
     );
 
-    expect(screen.getByText(formatJPY(10_000_000))).toBeInTheDocument();       // Gross
-    expect(screen.getByText(`-${formatJPY(1_950_000)}`)).toBeInTheDocument();  // 給与所得控除 = gross − net − adjustment
-    expect(screen.getByText(formatJPY(8_050_000))).toBeInTheDocument();        // Net
+    expect(screen.getByText(formatJPY(10_000_000))).toBeInTheDocument(); // Gross
+    expect(screen.getByText(`-${formatJPY(1_950_000)}`)).toBeInTheDocument(); // 給与所得控除 = gross − net − adjustment
+    expect(screen.getByText(formatJPY(8_050_000))).toBeInTheDocument(); // Net
     expect(screen.queryByText('Income Adjustment Deduction:')).not.toBeInTheDocument();
   });
 
@@ -38,12 +40,12 @@ describe('NetEmploymentIncomeTooltip', () => {
         netEmploymentIncome={7_900_000}
         incomeAdjustmentDeduction={150_000}
         year={2026}
-      />
+      />,
     );
 
-    expect(screen.getByText(`-${formatJPY(1_950_000)}`)).toBeInTheDocument();  // 給与所得控除
+    expect(screen.getByText(`-${formatJPY(1_950_000)}`)).toBeInTheDocument(); // 給与所得控除
     expect(screen.getByText('Income Adjustment Deduction:')).toBeInTheDocument();
-    expect(screen.getByText(`-${formatJPY(150_000)}`)).toBeInTheDocument();    // 所得金額調整控除
-    expect(screen.getByText(formatJPY(7_900_000))).toBeInTheDocument();        // Net
+    expect(screen.getByText(`-${formatJPY(150_000)}`)).toBeInTheDocument(); // 所得金額調整控除
+    expect(screen.getByText(formatJPY(7_900_000))).toBeInTheDocument(); // Net
   });
 });

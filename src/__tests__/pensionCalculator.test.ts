@@ -1,43 +1,51 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { describe, it, expect } from 'vitest'
-import { calculatePensionPremium, calculatePensionBreakdown, calculatePensionBonusBreakdown } from '../utils/pensionCalculator'
+import { describe, it, expect } from 'vitest';
+import {
+  calculatePensionPremium,
+  calculatePensionBreakdown,
+  calculatePensionBonusBreakdown,
+} from '../utils/pensionCalculator';
 
 const TEST_INCOME_YEAR = 2026;
 
 describe('calculatePensionPremium', () => {
   it('calculates employees pension correctly for employment income below cap', () => {
-    expect(calculatePensionPremium(true, 5_000_000 / 12, true, [], TEST_INCOME_YEAR)).toBe(450_180)
-  })
+    expect(calculatePensionPremium(true, 5_000_000 / 12, true, [], TEST_INCOME_YEAR)).toBe(450_180);
+  });
 
   it('respects maximum cap for high employment income', () => {
-    expect(calculatePensionPremium(true, 10_000_000 / 12, true, [], TEST_INCOME_YEAR)).toBe(713_700) // Capped at 59,475 * 12
-  })
+    expect(calculatePensionPremium(true, 10_000_000 / 12, true, [], TEST_INCOME_YEAR)).toBe(
+      713_700,
+    ); // Capped at 59,475 * 12
+  });
 
   it('calculates fixed national pension for non-employment income (2026)', () => {
     // 3 months FY2025 (17,510) + 9 months FY2026 (17,920) = 52,530 + 161,280 = 213,810
-    expect(calculatePensionPremium(false, 5_000_000 / 12, true, [], 2026)).toBe(213_810)
-    expect(calculatePensionPremium(false, 10_000_000 / 12, true, [], 2026)).toBe(213_810) // Same fixed amount regardless of income
-  })
+    expect(calculatePensionPremium(false, 5_000_000 / 12, true, [], 2026)).toBe(213_810);
+    expect(calculatePensionPremium(false, 10_000_000 / 12, true, [], 2026)).toBe(213_810); // Same fixed amount regardless of income
+  });
 
   it('calculates fixed national pension for non-employment income (2025)', () => {
     // 3 months FY2024 (16,980) + 9 months FY2025 (17,510) = 50,940 + 157,590 = 208,530
-    expect(calculatePensionPremium(false, 5_000_000 / 12, true, [], 2025)).toBe(208_530)
-    expect(calculatePensionPremium(false, 10_000_000 / 12, true, [], 2025)).toBe(208_530)
-  })
+    expect(calculatePensionPremium(false, 5_000_000 / 12, true, [], 2025)).toBe(208_530);
+    expect(calculatePensionPremium(false, 10_000_000 / 12, true, [], 2025)).toBe(208_530);
+  });
 
   it('handles zero income correctly', () => {
-    expect(calculatePensionPremium(true, 0, true, [], TEST_INCOME_YEAR)).toBe(96_624)
-    expect(calculatePensionPremium(false, 0, true, [], 2026)).toBe(213_810) // Fixed amount (2026)
-    expect(calculatePensionPremium(false, 0, true, [], 2025)).toBe(208_530) // Fixed amount (2025)
-  })
+    expect(calculatePensionPremium(true, 0, true, [], TEST_INCOME_YEAR)).toBe(96_624);
+    expect(calculatePensionPremium(false, 0, true, [], 2026)).toBe(213_810); // Fixed amount (2026)
+    expect(calculatePensionPremium(false, 0, true, [], 2025)).toBe(208_530); // Fixed amount (2025)
+  });
 
   it('handles negative income correctly', () => {
-    expect(() => calculatePensionPremium(true, -1_000_000, true, [], TEST_INCOME_YEAR)).toThrow('Monthly income must be a positive number')
-    expect(calculatePensionPremium(false, -1_000_000, true, [], 2026)).toBe(213_810) // Still pays fixed amount
-  })
-})
+    expect(() => calculatePensionPremium(true, -1_000_000, true, [], TEST_INCOME_YEAR)).toThrow(
+      'Monthly income must be a positive number',
+    );
+    expect(calculatePensionPremium(false, -1_000_000, true, [], 2026)).toBe(213_810); // Still pays fixed amount
+  });
+});
 
 describe('calculatePensionBreakdown with bonuses', () => {
   // Rate: 18.3% -> half amount 9.15% (0.0915)
@@ -65,7 +73,7 @@ describe('calculatePensionBreakdown with bonuses', () => {
     // Premium: 1,500,000 * 0.0915 = 137,250
     const bonuses = [
       { amount: 1_000_000, id: '1', type: 'bonus' as const, month: 6 },
-      { amount: 1_000_000, id: '2', type: 'bonus' as const, month: 6 }
+      { amount: 1_000_000, id: '2', type: 'bonus' as const, month: 6 },
     ];
     const result = calculatePensionBreakdown(true, 300_000, true, bonuses, TEST_INCOME_YEAR);
     expect(result.bonusPortion).toBe(137_250);
@@ -77,7 +85,7 @@ describe('calculatePensionBreakdown with bonuses', () => {
     // Total: 183,000
     const bonuses = [
       { amount: 1_000_000, id: '1', type: 'bonus' as const, month: 6 },
-      { amount: 1_000_000, id: '2', type: 'bonus' as const, month: 12 }
+      { amount: 1_000_000, id: '2', type: 'bonus' as const, month: 12 },
     ];
     const result = calculatePensionBreakdown(true, 300_000, true, bonuses, TEST_INCOME_YEAR);
     expect(result.bonusPortion).toBe(183_000);
@@ -89,7 +97,7 @@ describe('calculatePensionBreakdown with bonuses', () => {
     // Total: 228,750
     const bonuses = [
       { amount: 2_000_000, id: '1', type: 'bonus' as const, month: 6 },
-      { amount: 1_000_000, id: '2', type: 'bonus' as const, month: 12 }
+      { amount: 1_000_000, id: '2', type: 'bonus' as const, month: 12 },
     ];
     const result = calculatePensionBreakdown(true, 300_000, true, bonuses, TEST_INCOME_YEAR);
     expect(result.bonusPortion).toBe(228_750);
@@ -102,7 +110,7 @@ describe('calculatePensionBreakdown with bonuses', () => {
     const result = calculatePensionBreakdown(true, 300_000, true, bonuses, TEST_INCOME_YEAR);
     expect(result.bonusPortion).toBe(9_150);
   });
-})
+});
 
 describe('calculatePensionBonusBreakdown', () => {
   it('returns empty array for no bonuses', () => {
@@ -118,7 +126,7 @@ describe('calculatePensionBonusBreakdown', () => {
       month: 6,
       totalBonusAmount: 1_000_000,
       standardBonusAmount: 1_000_000,
-      premium: 91_500
+      premium: 91_500,
     });
   });
 
@@ -131,14 +139,14 @@ describe('calculatePensionBonusBreakdown', () => {
       month: 6,
       totalBonusAmount: 2_000_000,
       standardBonusAmount: 1_500_000,
-      premium: 137_250
+      premium: 137_250,
     });
   });
 
   it('aggregates multiple bonuses in same month', () => {
     const bonuses = [
       { amount: 800_000, id: '1', type: 'bonus' as const, month: 6 },
-      { amount: 300_000, id: '2', type: 'bonus' as const, month: 6 }
+      { amount: 300_000, id: '2', type: 'bonus' as const, month: 6 },
     ];
     const breakdown = calculatePensionBonusBreakdown(bonuses, true);
 
@@ -147,14 +155,14 @@ describe('calculatePensionBonusBreakdown', () => {
       month: 6,
       totalBonusAmount: 1_100_000,
       standardBonusAmount: 1_100_000,
-      premium: 100_650 // 1,100,000 * 0.0915
+      premium: 100_650, // 1,100,000 * 0.0915
     });
   });
 
   it('sorts breakdown by month', () => {
     const bonuses = [
       { amount: 500_000, id: '1', type: 'bonus' as const, month: 12 },
-      { amount: 500_000, id: '2', type: 'bonus' as const, month: 6 }
+      { amount: 500_000, id: '2', type: 'bonus' as const, month: 6 },
     ];
     const breakdown = calculatePensionBonusBreakdown(bonuses, true);
 
@@ -172,7 +180,7 @@ describe('calculatePensionBonusBreakdown', () => {
     // Premium: 301,000 * 0.0915 = 27,541.5 -> 27,541 (halfTrunc)
     const bonuses = [
       { amount: 200_500, id: '1', type: 'bonus' as const, month: 6 },
-      { amount: 100_600, id: '2', type: 'bonus' as const, month: 6 }
+      { amount: 100_600, id: '2', type: 'bonus' as const, month: 6 },
     ];
     const breakdown = calculatePensionBonusBreakdown(bonuses, true);
 
@@ -181,4 +189,4 @@ describe('calculatePensionBonusBreakdown', () => {
     expect(breakdown[0]!.standardBonusAmount).toBe(301_000);
     expect(breakdown[0]!.premium).toBe(27_541);
   });
-})
+});

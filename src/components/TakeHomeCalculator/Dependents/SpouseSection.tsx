@@ -13,15 +13,8 @@ import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
-import type {
-  DisabilityLevel,
-  Spouse,
-  SpouseAgeCategory,
-} from '../../../types/dependents';
-import {
-  DISABILITY_LEVELS,
-  SPOUSE_AGE_CATEGORIES,
-} from '../../../types/dependents';
+import type { DisabilityLevel, Spouse, SpouseAgeCategory } from '../../../types/dependents';
+import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
 import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
 import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
@@ -79,15 +72,10 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h6">
-          Spouse
-        </Typography>
+        <Typography variant="h6">Spouse</Typography>
         <FormControlLabel
           control={
-            <Switch
-              checked={hasSpouse}
-              onChange={(e) => handleToggleSpouse(e.target.checked)}
-            />
+            <Switch checked={hasSpouse} onChange={e => handleToggleSpouse(e.target.checked)} />
           }
           label="Do you have a spouse?"
         />
@@ -99,19 +87,31 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
           <Box>
             <Typography variant="subtitle2" gutterBottom>
               Income Information{' '}
-              <SimpleTooltip>Enter income amounts to calculate total net income (合計所得金額) and determine deduction eligibility.</SimpleTooltip>
+              <SimpleTooltip>
+                Enter income amounts to calculate total net income (合計所得金額) and determine
+                deduction eligibility.
+              </SimpleTooltip>
             </Typography>
-            
+
             {isMobile ? (
               /* Mobile: Stacked Layout */
               <Paper variant="outlined" sx={{ mt: 1, p: 2 }}>
                 {/* Employment Income */}
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" gutterBottom sx={{ fontWeight: "medium" }}>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
                     Employment Income (給与)
                   </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="caption" color="text.secondary">Gross (収入)</Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Gross (収入)
+                    </Typography>
                     <SpinnerNumberField
                       value={spouse.income.grossEmploymentIncome}
                       onChange={(value: number) =>
@@ -128,23 +128,36 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       inputProps={{ style: { textAlign: 'right' } }}
                     />
                   </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="caption" color="text.secondary">Net (所得)</Typography>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Net (所得)
+                    </Typography>
                     <Typography variant="body2">
-                      {formatJPY(calculateNetEmploymentIncome(spouse.income.grossEmploymentIncome, incomeYear))}
+                      {formatJPY(
+                        calculateNetEmploymentIncome(
+                          spouse.income.grossEmploymentIncome,
+                          incomeYear,
+                        ),
+                      )}
                     </Typography>
                   </Box>
                 </Box>
-                
+
                 <Divider sx={{ my: 2 }} />
-                
+
                 {/* Other Income */}
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" gutterBottom sx={{ fontWeight: "medium" }}>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
                     Other Income (その他)
                   </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="caption" color="text.secondary">Net (所得)</Typography>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Net (所得)
+                    </Typography>
                     <SpinnerNumberField
                       value={spouse.income.otherNetIncome}
                       onChange={(value: number) =>
@@ -162,16 +175,18 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                     />
                   </Box>
                 </Box>
-                
+
                 <Divider sx={{ my: 2 }} />
-                
+
                 {/* Total */}
                 <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                       Total (合計所得金額)
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                       {formatJPY(calculateDependentTotalNetIncome(spouse.income, incomeYear))}
                     </Typography>
                   </Box>
@@ -191,7 +206,13 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   <TableBody>
                     {/* Employment Income Row */}
                     <TableRow>
-                      <TableCell>Employment<br/><Typography variant="caption" color="text.secondary">給与</Typography></TableCell>
+                      <TableCell>
+                        Employment
+                        <br />
+                        <Typography variant="caption" color="text.secondary">
+                          給与
+                        </Typography>
+                      </TableCell>
                       <TableCell align="right">
                         <SpinnerNumberField
                           value={spouse.income.grossEmploymentIncome}
@@ -210,16 +231,29 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2">
-                          {formatJPY(calculateNetEmploymentIncome(spouse.income.grossEmploymentIncome, incomeYear))}
+                          {formatJPY(
+                            calculateNetEmploymentIncome(
+                              spouse.income.grossEmploymentIncome,
+                              incomeYear,
+                            ),
+                          )}
                         </Typography>
                       </TableCell>
                     </TableRow>
-                    
+
                     {/* Other Income Row */}
                     <TableRow>
-                      <TableCell>Other<br/><Typography variant="caption" color="text.secondary">その他</Typography></TableCell>
+                      <TableCell>
+                        Other
+                        <br />
+                        <Typography variant="caption" color="text.secondary">
+                          その他
+                        </Typography>
+                      </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" color="text.secondary">—</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          —
+                        </Typography>
                       </TableCell>
                       <TableCell align="right">
                         <SpinnerNumberField
@@ -238,13 +272,15 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                         />
                       </TableCell>
                     </TableRow>
-                    
+
                     {/* Total Row */}
                     <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                      <TableCell><strong>Total (合計所得金額)</strong></TableCell>
+                      <TableCell>
+                        <strong>Total (合計所得金額)</strong>
+                      </TableCell>
                       <TableCell align="right"></TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                           {formatJPY(calculateDependentTotalNetIncome(spouse.income, incomeYear))}
                         </Typography>
                       </TableCell>
@@ -262,13 +298,13 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
               <Select
                 value={spouse.ageCategory}
                 label="Age"
-                onChange={(e) =>
+                onChange={e =>
                   handleSpouseChange({
                     ageCategory: e.target.value as SpouseAgeCategory,
                   })
                 }
               >
-                {SPOUSE_AGE_CATEGORIES.map((cat) => (
+                {SPOUSE_AGE_CATEGORIES.map(cat => (
                   <MenuItem key={cat.value} value={cat.value}>
                     {cat.label}
                   </MenuItem>
@@ -276,14 +312,12 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
               </Select>
               <FormHelperText>On December 31</FormHelperText>
             </FormControl>
-            
+
             <FormControlLabel
               control={
                 <Switch
                   checked={spouse.isCohabiting}
-                  onChange={(e) =>
-                    handleSpouseChange({ isCohabiting: e.target.checked })
-                  }
+                  onChange={e => handleSpouseChange({ isCohabiting: e.target.checked })}
                 />
               }
               label="Living together"
@@ -297,13 +331,13 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
             <Select
               value={spouse.disability}
               label="Disability Status"
-              onChange={(e) =>
+              onChange={e =>
                 handleSpouseChange({
                   disability: e.target.value as DisabilityLevel,
                 })
               }
             >
-              {DISABILITY_LEVELS.map((level) => (
+              {DISABILITY_LEVELS.map(level => (
                 <MenuItem key={level.value} value={level.value}>
                   {level.label}
                 </MenuItem>

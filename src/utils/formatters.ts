@@ -6,29 +6,35 @@ import type { CommutingAllowanceIncomeStream } from '../types/tax';
 export const formatJPY = (amount: number) => {
   return new Intl.NumberFormat('en-JP', {
     style: 'currency',
-    currency: 'JPY'
-  }).format(amount)
-}
+    currency: 'JPY',
+  }).format(amount);
+};
 
 export const formatYenCompact = (amount: number, locale: string = 'en-US') => {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'JPY',
     notation: 'compact',
-    compactDisplay: 'short'
-  }).format(amount)
-}
+    compactDisplay: 'short',
+  }).format(amount);
+};
 
 /**
  * Returns the multiplier to convert a per-period commuting allowance amount to an annual total.
  * e.g. a monthly payment × 12 = annual; a 3-month payment × 4 = annual.
  */
-export const getFrequencyAnnualMultiplier = (frequency: 'monthly' | '3-months' | '6-months' | 'annual'): number => {
+export const getFrequencyAnnualMultiplier = (
+  frequency: 'monthly' | '3-months' | '6-months' | 'annual',
+): number => {
   switch (frequency) {
-    case 'monthly':  return 12;
-    case '3-months': return 4;
-    case '6-months': return 2;
-    case 'annual':   return 1;
+    case 'monthly':
+      return 12;
+    case '3-months':
+      return 4;
+    case '6-months':
+      return 2;
+    case 'annual':
+      return 1;
   }
 };
 
@@ -47,7 +53,7 @@ export const formatPercent = (rate: number, decimals: number = 3) => {
   return new Intl.NumberFormat('en-JP', {
     style: 'percent',
     minimumFractionDigits: 1,
-    maximumFractionDigits: decimals
+    maximumFractionDigits: decimals,
   }).format(rate);
 };
 

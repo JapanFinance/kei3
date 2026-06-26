@@ -9,11 +9,11 @@ import Button from '@mui/material/Button';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
-import { 
-  getLastViewedDate, 
-  hasNewUpdates, 
-  parseChangelog, 
-  type ParsedChangelog 
+import {
+  getLastViewedDate,
+  hasNewUpdates,
+  parseChangelog,
+  type ParsedChangelog,
 } from '../utils/changelogUtils';
 import changelogContent from '../../CHANGELOG.md?raw';
 
@@ -49,11 +49,11 @@ export default function ChangelogButton({ onClick }: ChangelogButtonProps) {
           color="inherit"
           size="small"
           aria-label="View changelog"
-          sx={{ 
+          sx={{
             color: 'text.secondary',
             '&:hover': {
-              color: 'text.primary'
-            }
+              color: 'text.primary',
+            },
           }}
         >
           <Badge color="error" variant="dot" invisible={!hasNewFeatures}>
@@ -80,8 +80,8 @@ export default function ChangelogButton({ onClick }: ChangelogButtonProps) {
         textTransform: 'none',
         '&:hover': {
           color: 'text.primary',
-          backgroundColor: 'action.hover'
-        }
+          backgroundColor: 'action.hover',
+        },
       }}
     >
       What's New

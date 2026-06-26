@@ -44,7 +44,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
 
   const handleSaveStream = (stream: IncomeStream) => {
     if (editingStream) {
-      onStreamsChange(streams.map((s) => (s.id === stream.id ? stream : s)));
+      onStreamsChange(streams.map(s => (s.id === stream.id ? stream : s)));
       setEditingStream(null);
     } else {
       onStreamsChange([...streams, stream]);
@@ -53,7 +53,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   const handleDeleteStream = (id: string) => {
-    onStreamsChange(streams.filter((s) => s.id !== id));
+    onStreamsChange(streams.filter(s => s.id !== id));
   };
 
   const totalIncome = streams.reduce((sum, s) => {
@@ -84,7 +84,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     }
   };
 
-  const getStreamColor = (type: string): 'primary' | 'secondary' | 'success' | 'warning' | 'default' => {
+  const getStreamColor = (
+    type: string,
+  ): 'primary' | 'secondary' | 'success' | 'warning' | 'default' => {
     switch (type) {
       case 'salary':
       case 'bonus':
@@ -107,7 +109,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     let commutingAllowance = 0;
 
     streams.forEach(s => {
-      const annualAmount = (s.type === 'salary' && s.frequency === 'monthly') ? s.amount * 12 : s.amount;
+      const annualAmount =
+        s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
 
       if (s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation') {
         employmentIncome += annualAmount;
@@ -124,7 +127,13 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   const groupStreams = () => {
-    const employment = streams.filter(s => s.type === 'salary' || s.type === 'bonus' || s.type === 'commutingAllowance' || s.type === 'stockCompensation');
+    const employment = streams.filter(
+      s =>
+        s.type === 'salary' ||
+        s.type === 'bonus' ||
+        s.type === 'commutingAllowance' ||
+        s.type === 'stockCompensation',
+    );
     const business = streams.filter(s => s.type === 'business');
     const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
 
@@ -138,7 +147,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     title: string,
     groupStreams: IncomeStream[],
     subtotal: number,
-    chipColor: 'primary' | 'success' | 'warning'
+    chipColor: 'primary' | 'success' | 'warning',
   ) => {
     if (groupStreams.length === 0) return null;
 
@@ -148,29 +157,33 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           {title}
         </Typography>
         <Stack spacing={1}>
-          {groupStreams.map((stream) => (
+          {groupStreams.map(stream => (
             <Card key={stream.id} variant="outlined">
-              <CardContent sx={{
-                paddingX: 2,
-                paddingY: { xs: 1, sm: 2 },
-                '&:last-child': { pb: { xs: 1, sm: 2 } },
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
+              <CardContent
+                sx={{
+                  paddingX: 2,
+                  paddingY: { xs: 1, sm: 2 },
+                  '&:last-child': { pb: { xs: 1, sm: 2 } },
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
                       label={
-                        stream.type === 'commutingAllowance' ? 'COMMUTING' :
-                        stream.type === 'stockCompensation' ? 'STOCK' :
-                        stream.type.toUpperCase()
+                        stream.type === 'commutingAllowance'
+                          ? 'COMMUTING'
+                          : stream.type === 'stockCompensation'
+                            ? 'STOCK'
+                            : stream.type.toUpperCase()
                       }
                       size="small"
                       color={getStreamColor(stream.type)}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
-                    <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       {formatJPY(stream.amount)}
                     </Typography>
                     {getStreamDescription(stream) && (
@@ -180,26 +193,52 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                     )}
                   </Box>
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
-                    <Typography variant="caption" color="text.secondary" align="right" sx={{ display: "block" }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      align="right"
+                      sx={{ display: 'block' }}
+                    >
                       (Annual: {formatJPY(stream.amount * 12)})
                     </Typography>
                   )}
                   {stream.type === 'business' && !!stream.blueFilerDeduction && (
-                    <Typography variant="caption" color="text.secondary" align="right" sx={{ display: "block" }}>
-                      (Blue-filer Deduction: -{formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      align="right"
+                      sx={{ display: 'block' }}
+                    >
+                      (Blue-filer Deduction: -
+                      {formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
                     </Typography>
                   )}
                   {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
-                    <Typography variant="caption" color="text.secondary" align="right" sx={{ display: "block" }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      align="right"
+                      sx={{ display: 'block' }}
+                    >
                       (Annual: {formatJPY(getCommutingAllowanceAnnualAmount(stream))})
                     </Typography>
                   )}
                 </Box>
                 <Box>
-                  <IconButton onClick={() => setEditingStream(stream)} color="primary" size="small" aria-label="edit income">
+                  <IconButton
+                    onClick={() => setEditingStream(stream)}
+                    color="primary"
+                    size="small"
+                    aria-label="edit income"
+                  >
                     <EditIcon />
                   </IconButton>
-                  <IconButton onClick={() => handleDeleteStream(stream.id)} color="error" size="small" aria-label="delete income">
+                  <IconButton
+                    onClick={() => handleDeleteStream(stream.id)}
+                    color="error"
+                    size="small"
+                    aria-label="delete income"
+                  >
                     <DeleteIcon />
                   </IconButton>
                 </Box>
@@ -239,7 +278,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             onCancel={() => setIsAddingNew(false)}
             disabledTypes={[
               ...(streams.some(s => s.type === 'business') ? ['business'] : []),
-              ...(streams.some(s => s.type === 'commutingAllowance') ? ['commutingAllowance'] : [])
+              ...(streams.some(s => s.type === 'commutingAllowance') ? ['commutingAllowance'] : []),
             ]}
           />
         ) : editingStream ? (
@@ -258,24 +297,24 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             )}
 
             {renderStreamGroup(
-              "Employment Income (給与所得)",
+              'Employment Income (給与所得)',
               groupedStreams.employment,
               subtotals.employmentIncome,
-              "primary"
+              'primary',
             )}
 
             {renderStreamGroup(
-              "Business Income (事業所得)",
+              'Business Income (事業所得)',
               groupedStreams.business,
               subtotals.businessIncome,
-              "success"
+              'success',
             )}
 
             {renderStreamGroup(
-              "Miscellaneous Income (雑所得)",
+              'Miscellaneous Income (雑所得)',
               groupedStreams.miscellaneous,
               subtotals.miscellaneousIncome,
-              "warning"
+              'warning',
             )}
 
             <Button
@@ -288,7 +327,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 borderColor: 'divider',
                 py: 1.5,
                 color: 'text.secondary',
-                mt: 2
+                mt: 2,
               }}
             >
               Add Income/Benefit
@@ -296,15 +335,17 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           </Stack>
         )}
       </DialogContent>
-      <DialogActions sx={{
-        px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
-        py: 2,
-        pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
-        position: isMobile ? 'sticky' : 'relative',
-        bottom: 0,
-        zIndex: 1,
-        backgroundColor: 'background.paper',
-      }}>
+      <DialogActions
+        sx={{
+          px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+          py: 2,
+          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+          position: isMobile ? 'sticky' : 'relative',
+          bottom: 0,
+          zIndex: 1,
+          backgroundColor: 'background.paper',
+        }}
+      >
         {!(isAddingNew || editingStream) && (
           <Button onClick={onClose} variant="contained">
             Close

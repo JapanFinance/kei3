@@ -23,14 +23,17 @@ export function getRegionalRatesForMonth(
   providerId: string,
   region: string,
   year: number,
-  month: number
+  month: number,
 ): RegionalRates | undefined {
   const periods = PROVIDER_DEFINITIONS[providerId]?.regions[region];
   if (!periods || periods.length === 0) return undefined;
 
   for (const period of periods) {
     const { effectiveFrom } = period;
-    if (year > effectiveFrom.year || (year === effectiveFrom.year && month >= effectiveFrom.month)) {
+    if (
+      year > effectiveFrom.year ||
+      (year === effectiveFrom.year && month >= effectiveFrom.month)
+    ) {
       return period.rates;
     }
   }
@@ -44,9 +47,11 @@ export function getRegionalRatesForMonth(
 export function calculateMonthlyEmployeePremium(
   smrAmount: number,
   regionalRates: RegionalRates,
-  includeLongTermCare: boolean
+  includeLongTermCare: boolean,
 ): number {
-  const rate = regionalRates.employeeHealthInsuranceRate + (includeLongTermCare ? regionalRates.employeeLongTermCareRate : 0);
+  const rate =
+    regionalRates.employeeHealthInsuranceRate +
+    (includeLongTermCare ? regionalRates.employeeLongTermCareRate : 0);
   return roundSocialInsurancePremium(smrAmount * rate);
 }
 
@@ -61,19 +66,17 @@ export function getAvailableRegions(providerId: string): string[] {
 /**
  * Get all available providers
  */
-export function getAvailableProviders(): Array<{ providerId: string, providerName: string }> {
+export function getAvailableProviders(): Array<{ providerId: string; providerName: string }> {
   return Object.entries(PROVIDER_DEFINITIONS).map(([providerId, provider]) => ({
     providerId,
-    providerName: provider.providerName
+    providerName: provider.providerName,
   }));
 }
 
 /**
  * Generate a premium table from a specific set of rates
  */
-export function generatePremiumTableFromRates(
-  regionalRates: RegionalRates
-): Array<{
+export function generatePremiumTableFromRates(regionalRates: RegionalRates): Array<{
   minIncomeInclusive: number;
   maxIncomeExclusive: number;
   employeePremiumNoLTC: number;
@@ -81,16 +84,30 @@ export function generatePremiumTableFromRates(
   fullPremiumNoLTC: number;
   fullPremiumWithLTC: number;
 }> {
-  return EHI_SMR_BRACKETS.map((bracket) => {
-    const employeePremiumNoLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, false);
-    const employeePremiumWithLTC = calculateMonthlyEmployeePremium(bracket.smrAmount, regionalRates, true);
+  return EHI_SMR_BRACKETS.map(bracket => {
+    const employeePremiumNoLTC = calculateMonthlyEmployeePremium(
+      bracket.smrAmount,
+      regionalRates,
+      false,
+    );
+    const employeePremiumWithLTC = calculateMonthlyEmployeePremium(
+      bracket.smrAmount,
+      regionalRates,
+      true,
+    );
 
     // Calculate full premiums (employee + employer)
-    const employerHealthRate = regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
-    const employerLTCRate = regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
+    const employerHealthRate =
+      regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
+    const employerLTCRate =
+      regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
 
-    const fullHealthPremium = Math.round(bracket.smrAmount * (regionalRates.employeeHealthInsuranceRate + employerHealthRate));
-    const fullLTCPremium = Math.round(bracket.smrAmount * (regionalRates.employeeLongTermCareRate + employerLTCRate));
+    const fullHealthPremium = Math.round(
+      bracket.smrAmount * (regionalRates.employeeHealthInsuranceRate + employerHealthRate),
+    );
+    const fullLTCPremium = Math.round(
+      bracket.smrAmount * (regionalRates.employeeLongTermCareRate + employerLTCRate),
+    );
 
     return {
       minIncomeInclusive: bracket.minIncomeInclusive,
@@ -98,7 +115,7 @@ export function generatePremiumTableFromRates(
       employeePremiumNoLTC,
       employeePremiumWithLTC,
       fullPremiumNoLTC: fullHealthPremium,
-      fullPremiumWithLTC: fullHealthPremium + fullLTCPremium
+      fullPremiumWithLTC: fullHealthPremium + fullLTCPremium,
     };
   });
 }
@@ -115,15 +132,17 @@ export function generateHealthInsurancePremiumTable(
   providerId: string,
   year: number,
   month: number,
-  region: string = 'DEFAULT'
-): Array<{
-  minIncomeInclusive: number;
-  maxIncomeExclusive: number;
-  employeePremiumNoLTC: number;
-  employeePremiumWithLTC: number;
-  fullPremiumNoLTC: number;
-  fullPremiumWithLTC: number;
-}> | undefined {
+  region: string = 'DEFAULT',
+):
+  | Array<{
+      minIncomeInclusive: number;
+      maxIncomeExclusive: number;
+      employeePremiumNoLTC: number;
+      employeePremiumWithLTC: number;
+      fullPremiumNoLTC: number;
+      fullPremiumWithLTC: number;
+    }>
+  | undefined {
   const regionalRates = getRegionalRatesForMonth(providerId, region, year, month);
   if (!regionalRates) return undefined;
 
