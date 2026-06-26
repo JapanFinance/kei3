@@ -17,14 +17,15 @@ interface SiteHeaderProps {
 }
 
 /**
- * Slim, sticky top bar for the app. Replaces the previous large in-page
- * heading with a compact bar that leaves more room for the calculator,
- * especially on mobile.
+ * Slim top bar for the app. Replaces the previous large in-page heading
+ * with a compact bar that leaves more room for the calculator, especially
+ * on mobile. Static (scrolls away with the page): its controls are "on
+ * load" affordances, not needed while scrolling.
  */
 export default function SiteHeader({ title, mode, toggleColorMode, actions }: SiteHeaderProps) {
   return (
     <AppBar
-      position="sticky"
+      position="static"
       elevation={0}
       sx={{
         bgcolor: 'background.paper',
