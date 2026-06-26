@@ -114,7 +114,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       </Typography>
 
       {/* Relationship */}
-      <FormControl fullWidth size="small">
+      <FormControl fullWidth>
         <InputLabel id="relationship-label">Relationship</InputLabel>
         <Select
           labelId="relationship-label"
@@ -291,7 +291,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
       {/* Age and Living Together on same row */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-        <FormControl sx={{ flex: 1 }} size="small">
+        <FormControl sx={{ flex: 1 }}>
           <InputLabel id="age-label">Age</InputLabel>
           <Select
             labelId="age-label"
@@ -326,7 +326,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       </Box>
 
       {/* Disability Status */}
-      <FormControl fullWidth size="small">
+      <FormControl fullWidth>
         <InputLabel>Disability Status</InputLabel>
         <Select
           value={disability}
