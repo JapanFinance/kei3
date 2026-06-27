@@ -91,6 +91,10 @@ function App({ mode, toggleColorMode }: AppProps) {
         manualSocialInsuranceAmount: inputs.manualSocialInsuranceAmount,
         customEHIRates: inputs.customEHIRates,
         homeLoanTaxCredit: inputs.homeLoanTaxCredit,
+        lifeInsurance: inputs.lifeInsurance,
+        earthquakeInsurance: inputs.earthquakeInsurance,
+        medicalExpenses: inputs.medicalExpenses,
+        otherIncomeDeductions: inputs.otherIncomeDeductions,
       };
 
       const takeHomePayResults = calculateTaxes(calculationInputs);
@@ -115,6 +119,10 @@ function App({ mode, toggleColorMode }: AppProps) {
     inputs.manualSocialInsuranceAmount,
     inputs.customEHIRates,
     inputs.homeLoanTaxCredit,
+    inputs.lifeInsurance,
+    inputs.earthquakeInsurance,
+    inputs.medicalExpenses,
+    inputs.otherIncomeDeductions,
   ]);
 
   // Handle input changes
@@ -234,6 +242,7 @@ function App({ mode, toggleColorMode }: AppProps) {
             inputs={inputs}
             onInputChange={handleInputChange}
             homeLoanTaxCreditResult={results?.homeLoanTaxCredit}
+            additionalDeductions={results?.additionalDeductions}
           />
           {results && (
             <Suspense

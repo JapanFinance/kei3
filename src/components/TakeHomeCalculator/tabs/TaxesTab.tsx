@@ -15,7 +15,11 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import type {
+  TakeHomeResults,
+  TakeHomeInputs,
+  AdditionalDeductionsResult,
+} from '../../../types/tax';
 import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
@@ -200,6 +204,103 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
           </>
         )}
       </Box>
+    </Box>
+  );
+};
+
+const ADDITIONAL_DEDUCTION_SOURCES: Record<string, { label: string; url: string }> = {
+  lifeInsurance: {
+    label: '生命保険料控除 (NTA)',
+    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm',
+  },
+  earthquakeInsurance: {
+    label: '地震保険料控除 (NTA)',
+    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1145.htm',
+  },
+  medical: {
+    label: '医療費控除 (NTA)',
+    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm',
+  },
+};
+
+interface AdditionalDeductionsTooltipProps {
+  deductions: AdditionalDeductionsResult;
+  taxType: 'national' | 'residence';
+}
+
+const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = ({
+  deductions,
+  taxType,
+}) => {
+  const isNational = taxType === 'national';
+  const getAmount = (item: AdditionalDeductionsResult['items'][number]) =>
+    isNational ? item.national : item.residence;
+  const rows = deductions.items.filter(item => getAmount(item) > 0);
+  const total = isNational ? deductions.national : deductions.residence;
+  const sourcedRows = rows.filter(item => ADDITIONAL_DEDUCTION_SOURCES[item.key]);
+
+  return (
+    <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 460 } }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+        Additional Deductions Breakdown
+      </Typography>
+      <TableContainer component={Box} sx={{ mb: 2 }}>
+        <Table
+          size="small"
+          sx={{ '& .MuiTableCell-root': { padding: '2px 6px', fontSize: '0.95em' } }}
+        >
+          <TableHead>
+            <TableRow>
+              <TableCell>Deduction</TableCell>
+              <TableCell align="right">Amount</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {rows.map(item => (
+              <TableRow key={item.key}>
+                <TableCell>
+                  <div style={{ fontWeight: 500 }}>{item.label}</div>
+                </TableCell>
+                <TableCell align="right">{formatJPY(getAmount(item))}</TableCell>
+              </TableRow>
+            ))}
+            <TableRow sx={{ backgroundColor: 'action.hover' }}>
+              <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                {formatJPY(total)}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <Typography variant="body2" sx={{ fontSize: '0.85em', color: 'text.secondary', mb: 1 }}>
+        {isNational
+          ? 'These reduce your taxable income for national income tax.'
+          : 'These reduce your taxable income for residence tax. The life and earthquake insurance amounts are smaller than the income-tax amounts.'}
+      </Typography>
+      {sourcedRows.length > 0 && (
+        <Box sx={{ mt: 1 }}>
+          Official Sources (NTA):
+          <ul>
+            {sourcedRows.map(item => (
+              <li key={item.key}>
+                <a
+                  href={ADDITIONAL_DEDUCTION_SOURCES[item.key]!.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: 'var(--primary-main)',
+                    textDecoration: 'underline',
+                    fontSize: '0.95em',
+                  }}
+                >
+                  {ADDITIONAL_DEDUCTION_SOURCES[item.key]!.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Box>
+      )}
     </Box>
   );
 };
@@ -554,6 +655,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </span>
             }
             value={formatJPY(-results.dependentDeductions.nationalTax.total)}
+            type="detail"
+          />
+        )}
+
+        {results.additionalDeductions && results.additionalDeductions.national > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Other Deductions
+                <DetailedTooltip title="Other Income Deductions (National Tax)">
+                  <AdditionalDeductionsTooltip
+                    deductions={results.additionalDeductions}
+                    taxType="national"
+                  />
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-results.additionalDeductions.national)}
             type="detail"
           />
         )}
@@ -996,6 +1115,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </span>
             }
             value={formatJPY(-results.dependentDeductions.residenceTax.total)}
+            type="detail"
+          />
+        )}
+
+        {results.additionalDeductions && results.additionalDeductions.residence > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Other Deductions
+                <DetailedTooltip title="Other Income Deductions (Residence Tax)">
+                  <AdditionalDeductionsTooltip
+                    deductions={results.additionalDeductions}
+                    taxType="residence"
+                  />
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(-results.additionalDeductions.residence)}
             type="detail"
           />
         )}

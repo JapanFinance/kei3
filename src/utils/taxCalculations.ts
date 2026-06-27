@@ -39,6 +39,7 @@ import {
   calculateIncomeAdjustmentDeductionAmount,
 } from '../data/netEmploymentIncome';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
+import { calculateAdditionalDeductions } from './additionalDeductions';
 
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.
@@ -529,6 +530,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
   const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
+  // Additional income deductions (生命保険料控除, 地震保険料控除, 医療費控除, その他) entered in the
+  // modal. The national and residence amounts differ for the insurance deductions; none of these
+  // are 人的控除, so none affect the residence-tax 調整控除. The medical floor needs 合計所得金額,
+  // so pass netIncome.
+  const additionalDeductions = calculateAdditionalDeductions(inputs, netIncome);
+
   const dependentDeductions = calculateDependentDeductions(
     inputs.dependents,
     incomeYear,
@@ -547,6 +554,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     netIncome -
     socialInsuranceDeduction -
     idecoDeduction -
+    additionalDeductions.national -
     nationalIncomeTaxBasicDeduction -
     dependentDeductions.nationalTax.total;
   const taxableIncomeForNationalIncomeTax = Math.max(
@@ -566,6 +574,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         netIncome -
           socialInsuranceDeduction -
           idecoDeduction -
+          additionalDeductions.residence -
           residenceTaxBasicDeduction -
           dependentDeductions.residenceTax.total,
       ) / 1000,
@@ -578,7 +587,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
   const preCreditResidenceTax = calculateResidenceTax(
     netIncome,
-    socialInsuranceDeduction + idecoDeduction,
+    socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
     dependentDeductions,
     incomeYear,
   );
@@ -607,7 +616,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0
       ? calculateResidenceTax(
           netIncome,
-          socialInsuranceDeduction + idecoDeduction,
+          socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
           dependentDeductions,
           incomeYear,
           homeLoanTaxCreditResult.appliedToResidenceTax,
@@ -658,6 +667,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     taxableIncomeForResidenceTax,
     furusatoNozei: furusatoNozeiLimit,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
+    ...(additionalDeductions.items.length > 0 && { additionalDeductions }),
     // Residence income-based portion (所得割) BEFORE the home loan spillover, so the
     // Taxes tab can show the spillover as its own line and have the rows sum.
     ...(homeLoanTaxCreditResult &&

@@ -28,7 +28,14 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
+import type {
+  HomeLoanTaxCreditInput,
+  HomeLoanTaxCreditResult,
+  LifeInsuranceInput,
+  EarthquakeInsuranceInput,
+  MedicalExpensesInput,
+  AdditionalDeductionsResult,
+} from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip, DetailedTooltip } from '../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
@@ -36,6 +43,7 @@ import {
   earliestEligibleMoveInYear,
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../../utils/homeLoanTaxCredit';
+import { formatJPY } from '../../utils/formatters';
 
 interface AdditionalDeductionsModalProps {
   open: boolean;
@@ -45,6 +53,16 @@ interface AdditionalDeductionsModalProps {
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  lifeInsurance?: LifeInsuranceInput | undefined;
+  onLifeInsuranceChange: (input: LifeInsuranceInput | undefined) => void;
+  earthquakeInsurance?: EarthquakeInsuranceInput | undefined;
+  onEarthquakeInsuranceChange: (input: EarthquakeInsuranceInput | undefined) => void;
+  medicalExpenses?: MedicalExpensesInput | undefined;
+  onMedicalExpensesChange: (input: MedicalExpensesInput | undefined) => void;
+  otherIncomeDeductions?: number | undefined;
+  onOtherIncomeDeductionsChange: (value: number) => void;
+  /** Computed additional deductions, used for the live per-card readouts. */
+  additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Income year being modeled; upper bound for the home-loan move-in-year dropdown. */
   incomeYear: number;
 }
@@ -76,6 +94,15 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   homeLoanTaxCredit,
   onHomeLoanTaxCreditChange,
   homeLoanTaxCreditResult,
+  lifeInsurance,
+  onLifeInsuranceChange,
+  earthquakeInsurance,
+  onEarthquakeInsuranceChange,
+  medicalExpenses,
+  onMedicalExpensesChange,
+  otherIncomeDeductions,
+  onOtherIncomeDeductionsChange,
+  additionalDeductions,
   incomeYear,
 }) => {
   const theme = useTheme();
@@ -96,6 +123,41 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const updateHomeLoan = (patch: Partial<HomeLoanTaxCreditInput>) => {
     onHomeLoanTaxCreditChange({ ...effectiveHomeLoan, ...patch });
   };
+
+  const lifeInput: LifeInsuranceInput = lifeInsurance ?? {
+    generalNew: 0,
+    medicalCareNew: 0,
+    pensionNew: 0,
+  };
+  const updateLife = (patch: Partial<LifeInsuranceInput>) => {
+    onLifeInsuranceChange({ ...lifeInput, ...patch });
+  };
+  const [showOldLife, setShowOldLife] = React.useState(
+    !!(lifeInsurance?.generalOld || lifeInsurance?.pensionOld),
+  );
+  const toggleOldLife = (checked: boolean) => {
+    setShowOldLife(checked);
+    if (!checked) updateLife({ generalOld: 0, pensionOld: 0 });
+  };
+
+  const earthquakeInput: EarthquakeInsuranceInput = earthquakeInsurance ?? { earthquake: 0 };
+  const updateEarthquake = (patch: Partial<EarthquakeInsuranceInput>) => {
+    onEarthquakeInsuranceChange({ ...earthquakeInput, ...patch });
+  };
+  const [showOldQuake, setShowOldQuake] = React.useState(!!earthquakeInsurance?.longTermOld);
+  const toggleOldQuake = (checked: boolean) => {
+    setShowOldQuake(checked);
+    if (!checked) updateEarthquake({ longTermOld: 0 });
+  };
+
+  const medicalInput: MedicalExpensesInput = medicalExpenses ?? { paid: 0, reimbursed: 0 };
+  const updateMedical = (patch: Partial<MedicalExpensesInput>) => {
+    onMedicalExpensesChange({ ...medicalInput, ...patch });
+  };
+
+  const lifeItem = additionalDeductions?.items.find(i => i.key === 'lifeInsurance');
+  const earthquakeItem = additionalDeductions?.items.find(i => i.key === 'earthquakeInsurance');
+  const medicalItem = additionalDeductions?.items.find(i => i.key === 'medical');
 
   return (
     <Dialog
@@ -189,6 +251,457 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   step={1_000}
                   shiftStep={10_000}
                   helperText="Not including employer contributions."
+                />
+              </FormControl>
+            </CardContent>
+          </Card>
+
+          {/* Life Insurance (生命保険料控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Life Insurance (生命保険料控除)
+                <SimpleTooltip>
+                  A deduction for life, medical-care, and pension insurance premiums. Enter the
+                  annual premiums; the calculator works out the income-tax and residence-tax
+                  deductions, which differ.
+                </SimpleTooltip>
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1.5 }}
+              >
+                New contracts (新契約) — policies from 2012 onward.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                  <SpinnerNumberField
+                    id="lifeGeneralNew"
+                    name="lifeGeneralNew"
+                    value={lifeInput.generalNew}
+                    onInputChange={e =>
+                      updateLife({ generalNew: Number((e.target as HTMLInputElement).value) || 0 })
+                    }
+                    label="General (一般)"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                  <SpinnerNumberField
+                    id="lifeMedicalCareNew"
+                    name="lifeMedicalCareNew"
+                    value={lifeInput.medicalCareNew}
+                    onInputChange={e =>
+                      updateLife({
+                        medicalCareNew: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    label="Medical care (介護医療)"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                  <SpinnerNumberField
+                    id="lifePensionNew"
+                    name="lifePensionNew"
+                    value={lifeInput.pensionNew}
+                    onInputChange={e =>
+                      updateLife({ pensionNew: Number((e.target as HTMLInputElement).value) || 0 })
+                    }
+                    label="Pension (個人年金)"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+              </Box>
+
+              <FormControlLabel
+                sx={{ mt: 1, ml: 0 }}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={showOldLife}
+                    onChange={e => toggleOldLife(e.target.checked)}
+                    sx={{ py: 0, mr: 0.5 }}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    I also have pre-2012 policies (旧契約)
+                  </Typography>
+                }
+              />
+              {showOldLife && (
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+                  <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                    <SpinnerNumberField
+                      id="lifeGeneralOld"
+                      name="lifeGeneralOld"
+                      value={lifeInput.generalOld ?? 0}
+                      onInputChange={e =>
+                        updateLife({
+                          generalOld: Number((e.target as HTMLInputElement).value) || 0,
+                        })
+                      }
+                      label="General, old (旧一般)"
+                      step={1_000}
+                      shiftStep={10_000}
+                      min={0}
+                    />
+                  </FormControl>
+                  <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                    <SpinnerNumberField
+                      id="lifePensionOld"
+                      name="lifePensionOld"
+                      value={lifeInput.pensionOld ?? 0}
+                      onInputChange={e =>
+                        updateLife({
+                          pensionOld: Number((e.target as HTMLInputElement).value) || 0,
+                        })
+                      }
+                      label="Pension, old (旧個人年金)"
+                      step={1_000}
+                      shiftStep={10_000}
+                      min={0}
+                    />
+                  </FormControl>
+                </Box>
+              )}
+
+              {lifeItem && (
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
+                >
+                  Deduction:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {formatJPY(lifeItem.national)}
+                  </Box>{' '}
+                  income tax,{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {formatJPY(lifeItem.residence)}
+                  </Box>{' '}
+                  residence tax
+                </Typography>
+              )}
+
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    How is this calculated?
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}
+                  >
+                    Each category's deduction comes from its premium on a sliding scale, capped per
+                    category (new: ¥40,000 income tax / ¥28,000 residence; old: ¥50,000 / ¥35,000)
+                    and overall at ¥120,000 income tax / ¥70,000 residence. When a category has both
+                    new and old policies, the most favourable method is used.
+                  </Typography>
+                  <Box>
+                    <a
+                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+                    >
+                      NTA: 生命保険料控除
+                    </a>
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          {/* Earthquake Insurance (地震保険料控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Earthquake Insurance (地震保険料控除)
+                <SimpleTooltip>
+                  A deduction for earthquake insurance premiums (and qualifying pre-2007 long-term
+                  casualty premiums). The income-tax and residence-tax amounts differ.
+                </SimpleTooltip>
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                  <SpinnerNumberField
+                    id="earthquakePremium"
+                    name="earthquakePremium"
+                    value={earthquakeInput.earthquake}
+                    onInputChange={e =>
+                      updateEarthquake({
+                        earthquake: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    label="Earthquake premium (地震保険料)"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+              </Box>
+
+              <FormControlLabel
+                sx={{ mt: 1, ml: 0 }}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={showOldQuake}
+                    onChange={e => toggleOldQuake(e.target.checked)}
+                    sx={{ py: 0, mr: 0.5 }}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    I have 旧長期損害保険 (pre-2007 long-term)
+                  </Typography>
+                }
+              />
+              {showOldQuake && (
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+                  <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                    <SpinnerNumberField
+                      id="earthquakeLongTermOld"
+                      name="earthquakeLongTermOld"
+                      value={earthquakeInput.longTermOld ?? 0}
+                      onInputChange={e =>
+                        updateEarthquake({
+                          longTermOld: Number((e.target as HTMLInputElement).value) || 0,
+                        })
+                      }
+                      label="旧長期損害保険料"
+                      step={1_000}
+                      shiftStep={10_000}
+                      min={0}
+                    />
+                  </FormControl>
+                </Box>
+              )}
+
+              {earthquakeItem && (
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
+                >
+                  Deduction:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {formatJPY(earthquakeItem.national)}
+                  </Box>{' '}
+                  income tax,{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {formatJPY(earthquakeItem.residence)}
+                  </Box>{' '}
+                  residence tax
+                </Typography>
+              )}
+
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    How is this calculated?
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}
+                  >
+                    The earthquake premium is deductible in full up to ¥50,000 for income tax, and
+                    at half up to ¥25,000 for residence tax. A 旧長期損害保険料 portion can be
+                    added, with the combined deduction capped at ¥50,000 / ¥25,000.
+                  </Typography>
+                  <Box>
+                    <a
+                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1145.htm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+                    >
+                      NTA: 地震保険料控除
+                    </a>
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          {/* Medical Expenses (医療費控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Medical Expenses (医療費控除)
+                <SimpleTooltip>
+                  Enter what you paid in medical expenses and any reimbursements. The calculator
+                  subtracts the income-based floor for you, so enter the raw amounts — not a
+                  deduction figure.
+                </SimpleTooltip>
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                  <SpinnerNumberField
+                    id="medicalPaid"
+                    name="medicalPaid"
+                    value={medicalInput.paid}
+                    onInputChange={e =>
+                      updateMedical({ paid: Number((e.target as HTMLInputElement).value) || 0 })
+                    }
+                    label="Total paid"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                  <SpinnerNumberField
+                    id="medicalReimbursed"
+                    name="medicalReimbursed"
+                    value={medicalInput.reimbursed}
+                    onInputChange={e =>
+                      updateMedical({
+                        reimbursed: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    label="Insurance reimbursements"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+              </Box>
+
+              {medicalItem ? (
+                <Typography
+                  variant="body2"
+                  sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
+                >
+                  Deduction:{' '}
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                    {formatJPY(medicalItem.national)}
+                  </Box>{' '}
+                  (same for income tax and residence tax)
+                </Typography>
+              ) : (
+                medicalInput.paid > 0 && (
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
+                  >
+                    Below the deduction floor (the lower of ¥100,000 and 5% of income), so no
+                    deduction this year.
+                  </Typography>
+                )
+              )}
+
+              <Accordion
+                disableGutters
+                elevation={0}
+                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    How is this calculated?
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}
+                  >
+                    The deduction is your medical expenses minus any reimbursements, minus the lower
+                    of ¥100,000 and 5% of your total income, capped at ¥2,000,000.
+                  </Typography>
+                  <Box>
+                    <a
+                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+                    >
+                      NTA: 医療費控除
+                    </a>
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          {/* Other Income Deductions (その他の所得控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Other Income Deductions (その他の所得控除)
+                <SimpleTooltip>
+                  For income deductions not listed above that reduce income tax and residence tax by
+                  the same amount, such as 雑損控除. Enter the deduction amount, not the amount you
+                  paid.
+                </SimpleTooltip>
+              </Typography>
+              <FormControl fullWidth>
+                <SpinnerNumberField
+                  id="otherIncomeDeductions"
+                  name="otherIncomeDeductions"
+                  value={otherIncomeDeductions ?? 0}
+                  onInputChange={e =>
+                    onOtherIncomeDeductionsChange(Number((e.target as HTMLInputElement).value) || 0)
+                  }
+                  label="Deduction amount"
+                  step={1_000}
+                  shiftStep={10_000}
+                  min={0}
+                  helperText="Don't include anything already entered above or under Dependents. Personal deductions (障害者・寡婦・ひとり親・勤労学生) aren't supported yet."
                 />
               </FormControl>
             </CardContent>
