@@ -1118,6 +1118,117 @@ describe('Commuting Allowance', () => {
   });
 });
 
+describe('Additional income deductions (life, earthquake, medical, other)', () => {
+  const baseSalaryInputs = {
+    incomeStreams: [
+      { type: 'salary' as const, amount: 8_000_000, frequency: 'annual' as const, id: 's1' },
+    ],
+    isSubjectToLongTermCarePremium: false,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  };
+
+  it('subtracts insurance and other deductions from both taxable incomes without touching 調整控除', () => {
+    const base = calculateTaxes(baseSalaryInputs);
+    const withDeductions = calculateTaxes({
+      ...baseSalaryInputs,
+      lifeInsurance: { generalNew: 100_000, medicalCareNew: 0, pensionNew: 100_000 },
+      earthquakeInsurance: { earthquake: 50_000 },
+      otherIncomeDeductions: 20_000,
+    });
+
+    // life 80k/56k + earthquake 50k/25k + other 20k = 150k national, 101k residence
+    expect(withDeductions.additionalDeductions).toBeDefined();
+    expect(withDeductions.additionalDeductions!.national).toBe(150_000);
+    expect(withDeductions.additionalDeductions!.residence).toBe(101_000);
+    expect(withDeductions.additionalDeductions!.items.map(i => i.key)).toEqual([
+      'lifeInsurance',
+      'earthquakeInsurance',
+      'other',
+    ]);
+
+    // Both taxable incomes drop by exactly the per-tax total (the amounts are multiples of 1,000).
+    expect(
+      base.taxableIncomeForNationalIncomeTax! - withDeductions.taxableIncomeForNationalIncomeTax!,
+    ).toBe(150_000);
+    expect(base.taxableIncomeForResidenceTax! - withDeductions.taxableIncomeForResidenceTax!).toBe(
+      101_000,
+    );
+
+    // These are 物的控除, so the residence 調整控除 (personal deduction difference) is unchanged.
+    expect(withDeductions.residenceTax.personalDeductionDifference).toBe(
+      base.residenceTax.personalDeductionDifference,
+    );
+
+    expect(withDeductions.nationalIncomeTax).toBeLessThan(base.nationalIncomeTax);
+    expect(withDeductions.residenceTax.totalResidenceTax).toBeLessThan(
+      base.residenceTax.totalResidenceTax,
+    );
+  });
+
+  it('applies the medical expense income floor and reduces both taxes equally', () => {
+    const base = calculateTaxes(baseSalaryInputs);
+    const withMedical = calculateTaxes({
+      ...baseSalaryInputs,
+      medicalExpenses: { paid: 350_000, reimbursed: 100_000 },
+    });
+
+    // netIncome 6,100,000 → floor min(¥100k, 5% × 6.1M = ¥305k) = ¥100k → 250k − 100k = ¥150k.
+    expect(withMedical.additionalDeductions!.national).toBe(150_000);
+    expect(withMedical.additionalDeductions!.residence).toBe(150_000);
+    expect(withMedical.additionalDeductions!.items).toHaveLength(1);
+    expect(withMedical.additionalDeductions!.items[0]!.key).toBe('medical');
+
+    expect(
+      base.taxableIncomeForNationalIncomeTax! - withMedical.taxableIncomeForNationalIncomeTax!,
+    ).toBe(150_000);
+    expect(base.taxableIncomeForResidenceTax! - withMedical.taxableIncomeForResidenceTax!).toBe(
+      150_000,
+    );
+  });
+
+  it('lowers the furusato nozei limit when residence tax falls', () => {
+    const base = calculateTaxes(baseSalaryInputs);
+    const withDeductions = calculateTaxes({
+      ...baseSalaryInputs,
+      lifeInsurance: { generalNew: 100_000, medicalCareNew: 80_000, pensionNew: 100_000 },
+      earthquakeInsurance: { earthquake: 50_000 },
+    });
+    expect(withDeductions.furusatoNozei.limit).toBeLessThan(base.furusatoNozei.limit);
+  });
+
+  it('subtracts deductions before the home loan credit, shifting it toward the residence spillover', () => {
+    // A credit larger than the income tax pins appliedToIncomeTax to the income-tax base. Adding
+    // 物的控除 lowers that base, so appliedToIncomeTax must strictly fall and the residence spillover
+    // must not decrease — which can only happen if the deductions are applied before the credit.
+    const creditOnly = calculateTaxes({
+      ...baseSalaryInputs,
+      homeLoanTaxCredit: { creditAmount: 800_000, moveInYear: 2024 },
+    });
+    const withDeductions = calculateTaxes({
+      ...baseSalaryInputs,
+      homeLoanTaxCredit: { creditAmount: 800_000, moveInYear: 2024 },
+      lifeInsurance: { generalNew: 100_000, medicalCareNew: 80_000, pensionNew: 100_000 },
+      earthquakeInsurance: { earthquake: 50_000 },
+      medicalExpenses: { paid: 600_000, reimbursed: 0 },
+      otherIncomeDeductions: 100_000,
+    });
+
+    expect(creditOnly.homeLoanTaxCredit).toBeDefined();
+    expect(withDeductions.homeLoanTaxCredit!.appliedToIncomeTax).toBeLessThan(
+      creditOnly.homeLoanTaxCredit!.appliedToIncomeTax,
+    );
+    expect(withDeductions.homeLoanTaxCredit!.appliedToResidenceTax).toBeGreaterThanOrEqual(
+      creditOnly.homeLoanTaxCredit!.appliedToResidenceTax,
+    );
+  });
+});
+
 describe('RSU (Restricted Stock Unit) income', () => {
   it('calculates foreign RSU income only correctly', () => {
     // RSU foreign income of 2M should be subject to employment income deduction
