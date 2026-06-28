@@ -15,8 +15,10 @@
  *
  * These figures have been stable since the 新契約 regime began in 2012 (life) and the
  * earthquake deduction replaced 損害保険料控除 in 2007, so they are plain constants rather
- * than year-indexed tables. If a tax reform changes them, convert to year-banded tables
- * like `data/homeLoanTaxCredit.ts`.
+ * than year-indexed tables — with one year-bound exception: the 令和8・9年分 (2026–2027)
+ * child-rearing measure that raises the 一般 (new-contract) income-tax cap to ¥60,000 (see
+ * {@link isChildRearingLifeExpansionYear}). If other figures change, convert to year-banded
+ * tables like `data/homeLoanTaxCredit.ts`.
  */
 
 import type { DeductionAmount } from '../types/dependents';
@@ -78,6 +80,29 @@ const LIFE_OLD_RESIDENCE: ReadonlyArray<DeductionBand> = [
   { upTo: Infinity, amount: () => 35_000 },
 ];
 
+/**
+ * 令和8・9年分 (2026–2027) child-rearing measure: when the taxpayer has a 23歳未満の扶養親族, the
+ * 一般 (new-contract) income-tax deduction uses this scale (the standard ¥40,000 table scaled
+ * ×1.5) with a ¥60,000 cap. Income tax only — residence tax, the 介護医療/個人年金 categories, the
+ * old-contract cap, and the ¥120,000 overall cap are unchanged. 令和7年度改正 introduced it for
+ * 令和8年分; 令和8年度改正 extended it to 令和9年分.
+ * Sources: 税理士 https://www.yamada-partners.jp/reform/r7/k02-expansion-of-life-insurance-premium-deduction ;
+ *          NTA 令和8改正 https://www.nta.go.jp/publication/pamph/gensen/2026kaisei.pdf
+ */
+const LIFE_NEW_GENERAL_NATIONAL_CHILD_REARING: ReadonlyArray<DeductionBand> = [
+  { upTo: 30_000, amount: p => p },
+  { upTo: 60_000, amount: p => p / 2 + 15_000 },
+  { upTo: 120_000, amount: p => p / 4 + 30_000 },
+  { upTo: Infinity, amount: () => 60_000 },
+];
+const CHILD_REARING_LIFE_EXPANSION_YEARS: ReadonlySet<number> = new Set([2026, 2027]);
+
+/** Whether the income year is covered by the child-rearing 一般生命保険料控除 expansion (令和8・9年分).
+ * @see LIFE_NEW_GENERAL_NATIONAL_CHILD_REARING
+ */
+export const isChildRearingLifeExpansionYear = (year: number): boolean =>
+  CHILD_REARING_LIFE_EXPANSION_YEARS.has(year);
+
 /** Per-category and overall caps for one tax regime. */
 interface LifeRegime {
   newBands: ReadonlyArray<DeductionBand>;
@@ -106,6 +131,17 @@ const LIFE_RESIDENCE: LifeRegime = {
 };
 
 /**
+ * The national regime with the 令和8・9年分 child-rearing raise applied to the 一般 category: the
+ * new-contract scale and cap become ¥60,000 (income tax only). Used solely for the 一般 category
+ * when eligible — 介護医療, 個人年金, and the overall cap still come from {@link LIFE_NATIONAL}.
+ */
+const LIFE_GENERAL_NATIONAL_CHILD_REARING: LifeRegime = {
+  ...LIFE_NATIONAL,
+  newBands: LIFE_NEW_GENERAL_NATIONAL_CHILD_REARING,
+  newCategoryCap: 60_000,
+};
+
+/**
  * Deduction for one life-insurance category (一般 or 個人年金), which may hold both old and
  * new contracts. Computed cap-agnostically as the most favourable of: new-only (cap
  * newCategoryCap), old-only (cap oldCategoryCap), and new+old combined (cap newCategoryCap).
@@ -117,30 +153,57 @@ const LIFE_RESIDENCE: LifeRegime = {
  * so a hardcoded threshold would understate residence tax. Taking the max reproduces the
  * national rule exactly and stays correct for residence (練馬区: "有利な適用方法を選択").
  */
-const lifeCategoryDeduction = (newPremium: number, oldPremium: number, r: LifeRegime): number => {
-  const newDed = Math.min(applyBands(newPremium, r.newBands), r.newCategoryCap);
-  const oldDed = Math.min(applyBands(oldPremium, r.oldBands), r.oldCategoryCap);
-  const combined = Math.min(newDed + oldDed, r.newCategoryCap);
+const lifeCategoryDeduction = (
+  newPremium: number,
+  oldPremium: number,
+  regime: LifeRegime,
+): number => {
+  const newDed = Math.min(applyBands(newPremium, regime.newBands), regime.newCategoryCap);
+  const oldDed = Math.min(applyBands(oldPremium, regime.oldBands), regime.oldCategoryCap);
+  const combined = Math.min(newDed + oldDed, regime.newCategoryCap);
   return Math.max(newDed, oldDed, combined);
 };
 
-const lifeDeductionForRegime = (input: LifeInsuranceInput, r: LifeRegime): number => {
+const lifeDeductionForRegime = (
+  input: LifeInsuranceInput,
+  regime: LifeRegime,
+  generalRegime: LifeRegime = regime,
+): number => {
+  // The child-rearing raise applies to the 一般 category only, so it uses `generalRegime` (which
+  // differs from `regime` only when the raise is in effect); 介護医療, 個人年金, and the overall cap
+  // always use the base `regime`.
   const total =
-    lifeCategoryDeduction(input.generalNew, input.generalOld ?? 0, r) +
-    lifeCategoryDeduction(input.medicalCareNew, 0, r) + // 介護医療: new-contract only.
-    lifeCategoryDeduction(input.pensionNew, input.pensionOld ?? 0, r);
-  return Math.min(total, r.overallCap);
+    lifeCategoryDeduction(input.generalNew, input.generalOld ?? 0, generalRegime) +
+    lifeCategoryDeduction(input.medicalCareNew, 0, regime) + // 介護医療: new-contract only.
+    lifeCategoryDeduction(input.pensionNew, input.pensionOld ?? 0, regime);
+  return Math.min(total, regime.overallCap);
 };
 
 /**
  * Life insurance premium deduction (生命保険料控除) from annual premiums, split by tax.
  * Sums the three categories (一般 / 介護医療 / 個人年金) and applies the overall cap
  * (¥120,000 national / ¥70,000 residence).
+ *
+ * For an eligible child-rearing year (`year`) with a 23歳未満 dependent (`hasDependentUnder23`),
+ * the 一般 (new-contract) income-tax cap is raised to ¥60,000. Residence tax is never affected.
+ *
+ * @param year                 Income (tax) year being modeled.
+ * @param hasDependentUnder23  Whether the taxpayer has a 23歳未満の扶養親族.
  */
-export const calculateLifeInsuranceDeduction = (input: LifeInsuranceInput): DeductionAmount => ({
-  national: lifeDeductionForRegime(input, LIFE_NATIONAL),
-  residence: lifeDeductionForRegime(input, LIFE_RESIDENCE),
-});
+export const calculateLifeInsuranceDeduction = (
+  input: LifeInsuranceInput,
+  year: number,
+  hasDependentUnder23: boolean,
+): DeductionAmount => {
+  // The raise applies to the 一般 category of national income tax only, so it is passed as that
+  // category's regime; every other category uses the base national regime.
+  const generalRaised = hasDependentUnder23 && isChildRearingLifeExpansionYear(year);
+  const nationalGeneralRegime = generalRaised ? LIFE_GENERAL_NATIONAL_CHILD_REARING : LIFE_NATIONAL;
+  return {
+    national: lifeDeductionForRegime(input, LIFE_NATIONAL, nationalGeneralRegime),
+    residence: lifeDeductionForRegime(input, LIFE_RESIDENCE),
+  };
+};
 
 // 地震保険料控除 — the 旧長期損害保険料 sub-portion (the 地震保険料 portion is handled inline).
 const QUAKE_OLD_LONG_TERM_NATIONAL: ReadonlyArray<DeductionBand> = [
@@ -184,6 +247,7 @@ if (import.meta.env.DEV) {
   // Each band table must be ascending by `upTo` and terminate with an Infinity band.
   const tables: Record<string, ReadonlyArray<DeductionBand>> = {
     LIFE_NEW_NATIONAL,
+    LIFE_NEW_NATIONAL_CHILD_REARING: LIFE_NEW_GENERAL_NATIONAL_CHILD_REARING,
     LIFE_OLD_NATIONAL,
     LIFE_NEW_RESIDENCE,
     LIFE_OLD_RESIDENCE,

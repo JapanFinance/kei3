@@ -1224,6 +1224,35 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
       creditOnly.homeLoanTaxCredit!.appliedToResidenceTax,
     );
   });
+
+  it('raises the 一般 life-insurance income-tax cap to ¥60,000 for a 2026 household with a <23 dependent', () => {
+    const withChild = {
+      ...baseSalaryInputs,
+      dependents: [
+        {
+          id: 'c1',
+          relationship: 'child' as const,
+          ageCategory: '19to22' as const,
+          income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+          disability: 'none' as const,
+          isCohabiting: true,
+        },
+      ],
+      lifeInsurance: { generalNew: 120_000, medicalCareNew: 0, pensionNew: 0 },
+    };
+    const lifeNational = (inp: typeof withChild) =>
+      calculateTaxes(inp).additionalDeductions!.items.find(i => i.key === 'lifeInsurance')!
+        .national;
+
+    // With a <23 dependent in 2026 the 一般 (new) income-tax cap is ¥60,000; without it, ¥40,000.
+    expect(lifeNational(withChild)).toBe(60_000);
+    expect(lifeNational({ ...withChild, dependents: [] })).toBe(40_000);
+    // Residence tax is never affected by the measure.
+    expect(
+      calculateTaxes(withChild).additionalDeductions!.items.find(i => i.key === 'lifeInsurance')!
+        .residence,
+    ).toBe(28_000);
+  });
 });
 
 describe('RSU (Restricted Stock Unit) income', () => {

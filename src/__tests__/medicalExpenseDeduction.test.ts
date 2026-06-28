@@ -33,6 +33,8 @@ describe('calculateAdditionalDeductions', () => {
   it('aggregates per-tax totals and itemizes the breakdown', () => {
     const result = calculateAdditionalDeductions(
       {
+        incomeYear: 2026,
+        dependents: [],
         lifeInsurance: { generalNew: 100_000, medicalCareNew: 0, pensionNew: 100_000 },
         earthquakeInsurance: { earthquake: 50_000 },
         medicalExpenses: { paid: 350_000, reimbursed: 100_000 },
@@ -47,7 +49,7 @@ describe('calculateAdditionalDeductions', () => {
 
   it('keeps medical equal across both taxes', () => {
     const result = calculateAdditionalDeductions(
-      { medicalExpenses: { paid: 200_000, reimbursed: 0 } },
+      { incomeYear: 2026, dependents: [], medicalExpenses: { paid: 200_000, reimbursed: 0 } },
       10_000_000,
     );
     expect(result.items).toHaveLength(1);
@@ -56,14 +58,18 @@ describe('calculateAdditionalDeductions', () => {
 
   it('omits items that compute to zero', () => {
     const result = calculateAdditionalDeductions(
-      { lifeInsurance: { generalNew: 0, medicalCareNew: 0, pensionNew: 0 } },
+      {
+        incomeYear: 2026,
+        dependents: [],
+        lifeInsurance: { generalNew: 0, medicalCareNew: 0, pensionNew: 0 },
+      },
       5_000_000,
     );
     expect(result).toEqual({ national: 0, residence: 0, items: [] });
   });
 
   it('returns an empty result when no additional deductions are entered', () => {
-    expect(calculateAdditionalDeductions({}, 5_000_000)).toEqual({
+    expect(calculateAdditionalDeductions({ incomeYear: 2026, dependents: [] }, 5_000_000)).toEqual({
       national: 0,
       residence: 0,
       items: [],

@@ -19,10 +19,12 @@ import type {
   LifeInsuranceInput,
   MedicalExpensesInput,
 } from '../types/tax';
+import type { Dependent } from '../types/dependents';
 import {
   calculateEarthquakeInsuranceDeduction,
   calculateLifeInsuranceDeduction,
 } from '../data/insuranceDeductions';
+import { hasDependentRelativeUnder23 } from './dependentDeductions';
 
 /** Medical expense deduction floor: the lower of ¥100,000 and 5% of total income. */
 const MEDICAL_DEDUCTION_FLOOR_CAP = 100_000;
@@ -53,17 +55,23 @@ export const calculateMedicalExpenseDeduction = (
   return Math.min(Math.max(0, deduction), MEDICAL_DEDUCTION_MAX);
 };
 
-/** The subset of inputs the additional-deduction aggregation reads. */
+/**
+ * The subset of inputs the additional-deduction aggregation reads — a structural subset of
+ * TakeHomeInputs, so the full inputs object satisfies it. `incomeYear` and `dependents` drive the
+ * child-rearing 生命保険料控除 expansion (令和8・9年分); the rest are the figures entered in the modal.
+ */
 export interface AdditionalDeductionInputs {
+  incomeYear: number;
+  dependents: Dependent[];
   lifeInsurance?: LifeInsuranceInput | undefined;
   earthquakeInsurance?: EarthquakeInsuranceInput | undefined;
   medicalExpenses?: MedicalExpensesInput | undefined;
 }
 
 /**
- * Aggregates the additional income deductions into per-tax totals plus an itemized
- * breakdown. Only items contributing a positive amount appear in `items`. `netIncome`
- * (合計所得金額) is needed for the medical-expense income floor.
+ * Aggregates the additional income deductions into per-tax totals plus an itemized breakdown.
+ * Only items contributing a positive amount appear in `items`. `netIncome` (合計所得金額) is needed
+ * for the medical-expense income floor.
  */
 export const calculateAdditionalDeductions = (
   inputs: AdditionalDeductionInputs,
@@ -72,27 +80,36 @@ export const calculateAdditionalDeductions = (
   const items: AdditionalDeductionItem[] = [];
 
   if (inputs.lifeInsurance) {
-    const d = calculateLifeInsuranceDeduction(inputs.lifeInsurance);
-    if (d.national > 0 || d.residence > 0) {
-      items.push({ key: 'lifeInsurance', label: '生命保険料控除', ...d });
+    const deduction = calculateLifeInsuranceDeduction(
+      inputs.lifeInsurance,
+      inputs.incomeYear,
+      hasDependentRelativeUnder23(inputs.dependents, inputs.incomeYear),
+    );
+    if (deduction.national > 0 || deduction.residence > 0) {
+      items.push({ key: 'lifeInsurance', label: '生命保険料控除', ...deduction });
     }
   }
 
   if (inputs.earthquakeInsurance) {
-    const d = calculateEarthquakeInsuranceDeduction(inputs.earthquakeInsurance);
-    if (d.national > 0 || d.residence > 0) {
-      items.push({ key: 'earthquakeInsurance', label: '地震保険料控除', ...d });
+    const deduction = calculateEarthquakeInsuranceDeduction(inputs.earthquakeInsurance);
+    if (deduction.national > 0 || deduction.residence > 0) {
+      items.push({ key: 'earthquakeInsurance', label: '地震保険料控除', ...deduction });
     }
   }
 
   if (inputs.medicalExpenses) {
-    const m = calculateMedicalExpenseDeduction(
+    const deduction = calculateMedicalExpenseDeduction(
       inputs.medicalExpenses.paid,
       inputs.medicalExpenses.reimbursed,
       netIncome,
     );
-    if (m > 0) {
-      items.push({ key: 'medical', label: '医療費控除', national: m, residence: m });
+    if (deduction > 0) {
+      items.push({
+        key: 'medical',
+        label: '医療費控除',
+        national: deduction,
+        residence: deduction,
+      });
     }
   }
 

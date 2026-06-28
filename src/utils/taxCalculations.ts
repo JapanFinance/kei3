@@ -530,10 +530,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
   const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
-  // Additional income deductions (生命保険料控除, 地震保険料控除, 医療費控除, その他) entered in the
-  // modal. The national and residence amounts differ for the insurance deductions; none of these
-  // are 人的控除, so none affect the residence-tax 調整控除. The medical floor needs 合計所得金額,
-  // so pass netIncome.
+  // Additional income deductions (生命保険料控除, 地震保険料控除, 医療費控除) entered in the modal.
+  // The national and residence amounts differ for the insurance deductions; none of these are
+  // 人的控除, so none affect the residence-tax 調整控除. The medical floor needs 合計所得金額.
   const additionalDeductions = calculateAdditionalDeductions(inputs, netIncome);
 
   const dependentDeductions = calculateDependentDeductions(
