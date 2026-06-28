@@ -321,7 +321,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 <SimpleTooltip>
                   A deduction for life, medical-care, and pension insurance premiums. Enter the
                   annual premiums; the calculator works out the deductions for income tax and
-                  residence tax, which differ.
+                  residence tax, which may differ.
                 </SimpleTooltip>
               </Typography>
               <Typography
