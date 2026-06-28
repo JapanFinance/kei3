@@ -155,7 +155,7 @@ export interface MedicalExpensesInput {
 
 /** One line in the additional-deductions breakdown, with its per-tax amounts (yen). */
 export interface AdditionalDeductionItem {
-  key: 'lifeInsurance' | 'earthquakeInsurance' | 'medical' | 'other';
+  key: 'lifeInsurance' | 'earthquakeInsurance' | 'medical';
   /** Display label (Japanese deduction name), e.g. '生命保険料控除'. */
   label: string;
   /** Amount deductible against national income tax. */
@@ -215,7 +215,6 @@ export interface TakeHomeFormState {
   lifeInsurance?: LifeInsuranceInput | undefined;
   earthquakeInsurance?: EarthquakeInsuranceInput | undefined;
   medicalExpenses?: MedicalExpensesInput | undefined;
-  otherIncomeDeductions?: number | undefined;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -239,7 +238,6 @@ export interface TakeHomeInputs {
   lifeInsurance?: LifeInsuranceInput | undefined;
   earthquakeInsurance?: EarthquakeInsuranceInput | undefined;
   medicalExpenses?: MedicalExpensesInput | undefined;
-  otherIncomeDeductions?: number | undefined;
 }
 
 export interface CustomEmployeesHealthInsuranceRates {

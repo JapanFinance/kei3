@@ -5,7 +5,6 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateAdditionalDeductions,
   calculateMedicalExpenseDeduction,
-  calculateOtherIncomeDeduction,
 } from '../utils/additionalDeductions';
 
 describe('calculateMedicalExpenseDeduction', () => {
@@ -30,18 +29,6 @@ describe('calculateMedicalExpenseDeduction', () => {
   });
 });
 
-describe('calculateOtherIncomeDeduction', () => {
-  it('passes through a positive amount, flooring fractions', () => {
-    expect(calculateOtherIncomeDeduction(50_000)).toBe(50_000);
-    expect(calculateOtherIncomeDeduction(1_234.7)).toBe(1_234);
-  });
-
-  it('treats undefined and negative amounts as zero', () => {
-    expect(calculateOtherIncomeDeduction(undefined)).toBe(0);
-    expect(calculateOtherIncomeDeduction(-5_000)).toBe(0);
-  });
-});
-
 describe('calculateAdditionalDeductions', () => {
   it('aggregates per-tax totals and itemizes the breakdown', () => {
     const result = calculateAdditionalDeductions(
@@ -49,17 +36,16 @@ describe('calculateAdditionalDeductions', () => {
         lifeInsurance: { generalNew: 100_000, medicalCareNew: 0, pensionNew: 100_000 },
         earthquakeInsurance: { earthquake: 50_000 },
         medicalExpenses: { paid: 350_000, reimbursed: 100_000 },
-        otherIncomeDeductions: 30_000,
       },
       10_000_000,
     );
-    expect(result.items).toHaveLength(4);
-    // life 80k/56k + earthquake 50k/25k + medical 150k + other 30k
-    expect(result.national).toBe(310_000);
-    expect(result.residence).toBe(261_000);
+    expect(result.items).toHaveLength(3);
+    // life 80k/56k + earthquake 50k/25k + medical 150k
+    expect(result.national).toBe(280_000);
+    expect(result.residence).toBe(231_000);
   });
 
-  it('keeps medical and other equal across both taxes', () => {
+  it('keeps medical equal across both taxes', () => {
     const result = calculateAdditionalDeductions(
       { medicalExpenses: { paid: 200_000, reimbursed: 0 } },
       10_000_000,

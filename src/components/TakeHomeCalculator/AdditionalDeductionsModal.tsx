@@ -59,8 +59,6 @@ interface AdditionalDeductionsModalProps {
   onEarthquakeInsuranceChange: (input: EarthquakeInsuranceInput | undefined) => void;
   medicalExpenses?: MedicalExpensesInput | undefined;
   onMedicalExpensesChange: (input: MedicalExpensesInput | undefined) => void;
-  otherIncomeDeductions?: number | undefined;
-  onOtherIncomeDeductionsChange: (value: number) => void;
   /** Computed additional deductions, used for the live per-card readouts. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Income year being modeled; upper bound for the home-loan move-in-year dropdown. */
@@ -100,8 +98,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   onEarthquakeInsuranceChange,
   medicalExpenses,
   onMedicalExpensesChange,
-  otherIncomeDeductions,
-  onOtherIncomeDeductionsChange,
   additionalDeductions,
   incomeYear,
 }) => {
@@ -666,44 +662,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Box>
                 </AccordionDetails>
               </Accordion>
-            </CardContent>
-          </Card>
-
-          {/* Other Income Deductions (その他の所得控除) */}
-          <Card variant="outlined" sx={{ mt: 2 }}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography
-                sx={{
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  mb: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: 'text.primary',
-                }}
-              >
-                Other Income Deductions (その他の所得控除)
-                <SimpleTooltip>
-                  For income deductions not listed above that reduce income tax and residence tax by
-                  the same amount, such as 雑損控除. Enter the deduction amount, not the amount you
-                  paid.
-                </SimpleTooltip>
-              </Typography>
-              <FormControl fullWidth>
-                <SpinnerNumberField
-                  id="otherIncomeDeductions"
-                  name="otherIncomeDeductions"
-                  value={otherIncomeDeductions ?? 0}
-                  onInputChange={e =>
-                    onOtherIncomeDeductionsChange(Number((e.target as HTMLInputElement).value) || 0)
-                  }
-                  label="Deduction amount"
-                  step={1_000}
-                  shiftStep={10_000}
-                  min={0}
-                  helperText="Don't include anything already entered above or under Dependents. Personal deductions (障害者・寡婦・ひとり親・勤労学生) aren't supported yet."
-                />
-              </FormControl>
             </CardContent>
           </Card>
         </Box>

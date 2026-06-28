@@ -3,13 +3,13 @@
 
 /**
  * Aggregates the "additional" income deductions (所得控除) entered in the Additional
- * Deductions & Credits modal — life insurance, earthquake insurance, medical expenses, and
- * a free-form "other" amount — into a single {@link AdditionalDeductionsResult} with per-tax
- * totals and an itemized breakdown for display.
+ * Deductions & Credits modal — life insurance, earthquake insurance, and medical expenses —
+ * into a single {@link AdditionalDeductionsResult} with per-tax totals and an itemized
+ * breakdown for display.
  *
  * Split-amount deductions (life, earthquake) come from `data/insuranceDeductions.ts`.
- * Medical and "other" reduce income tax and residence tax by the same amount and so carry a
- * single figure. None of these are 人的控除, so none affect the residence-tax 調整控除.
+ * Medical reduces income tax and residence tax by the same amount and so carries a single
+ * figure. None of these are 人的控除, so none affect the residence-tax 調整控除.
  */
 
 import type {
@@ -53,16 +53,11 @@ export const calculateMedicalExpenseDeduction = (
   return Math.min(Math.max(0, deduction), MEDICAL_DEDUCTION_MAX);
 };
 
-/** Free-form "other" income deduction: the user supplies the deduction amount directly. */
-export const calculateOtherIncomeDeduction = (amount: number | undefined): number =>
-  Math.max(0, Math.floor(amount ?? 0));
-
 /** The subset of inputs the additional-deduction aggregation reads. */
 export interface AdditionalDeductionInputs {
   lifeInsurance?: LifeInsuranceInput | undefined;
   earthquakeInsurance?: EarthquakeInsuranceInput | undefined;
   medicalExpenses?: MedicalExpensesInput | undefined;
-  otherIncomeDeductions?: number | undefined;
 }
 
 /**
@@ -99,11 +94,6 @@ export const calculateAdditionalDeductions = (
     if (m > 0) {
       items.push({ key: 'medical', label: '医療費控除', national: m, residence: m });
     }
-  }
-
-  const other = calculateOtherIncomeDeduction(inputs.otherIncomeDeductions);
-  if (other > 0) {
-    items.push({ key: 'other', label: 'その他の所得控除', national: other, residence: other });
   }
 
   return {

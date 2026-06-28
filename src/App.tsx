@@ -94,7 +94,6 @@ function App({ mode, toggleColorMode }: AppProps) {
         lifeInsurance: inputs.lifeInsurance,
         earthquakeInsurance: inputs.earthquakeInsurance,
         medicalExpenses: inputs.medicalExpenses,
-        otherIncomeDeductions: inputs.otherIncomeDeductions,
       };
 
       const takeHomePayResults = calculateTaxes(calculationInputs);
@@ -122,7 +121,6 @@ function App({ mode, toggleColorMode }: AppProps) {
     inputs.lifeInsurance,
     inputs.earthquakeInsurance,
     inputs.medicalExpenses,
-    inputs.otherIncomeDeductions,
   ]);
 
   // Handle input changes

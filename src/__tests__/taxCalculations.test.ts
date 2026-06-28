@@ -1133,31 +1133,29 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
     incomeYear: 2026,
   };
 
-  it('subtracts insurance and other deductions from both taxable incomes without touching 調整控除', () => {
+  it('subtracts insurance deductions from both taxable incomes without touching 調整控除', () => {
     const base = calculateTaxes(baseSalaryInputs);
     const withDeductions = calculateTaxes({
       ...baseSalaryInputs,
       lifeInsurance: { generalNew: 100_000, medicalCareNew: 0, pensionNew: 100_000 },
       earthquakeInsurance: { earthquake: 50_000 },
-      otherIncomeDeductions: 20_000,
     });
 
-    // life 80k/56k + earthquake 50k/25k + other 20k = 150k national, 101k residence
+    // life 80k/56k + earthquake 50k/25k = 130k national, 81k residence
     expect(withDeductions.additionalDeductions).toBeDefined();
-    expect(withDeductions.additionalDeductions!.national).toBe(150_000);
-    expect(withDeductions.additionalDeductions!.residence).toBe(101_000);
+    expect(withDeductions.additionalDeductions!.national).toBe(130_000);
+    expect(withDeductions.additionalDeductions!.residence).toBe(81_000);
     expect(withDeductions.additionalDeductions!.items.map(i => i.key)).toEqual([
       'lifeInsurance',
       'earthquakeInsurance',
-      'other',
     ]);
 
     // Both taxable incomes drop by exactly the per-tax total (the amounts are multiples of 1,000).
     expect(
       base.taxableIncomeForNationalIncomeTax! - withDeductions.taxableIncomeForNationalIncomeTax!,
-    ).toBe(150_000);
+    ).toBe(130_000);
     expect(base.taxableIncomeForResidenceTax! - withDeductions.taxableIncomeForResidenceTax!).toBe(
-      101_000,
+      81_000,
     );
 
     // These are 物的控除, so the residence 調整控除 (personal deduction difference) is unchanged.
@@ -1216,7 +1214,6 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
       lifeInsurance: { generalNew: 100_000, medicalCareNew: 80_000, pensionNew: 100_000 },
       earthquakeInsurance: { earthquake: 50_000 },
       medicalExpenses: { paid: 600_000, reimbursed: 0 },
-      otherIncomeDeductions: 100_000,
     });
 
     expect(creditOnly.homeLoanTaxCredit).toBeDefined();

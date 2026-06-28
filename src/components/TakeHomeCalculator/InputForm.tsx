@@ -158,12 +158,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
-  const handleOtherIncomeDeductionsChange = (value: number) => {
-    onInputChange({
-      target: { name: 'otherIncomeDeductions', value },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
-  };
-
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
     // Calculate total annual income from streams
     const totalIncome = newStreams.reduce((sum, s) => {
@@ -1119,7 +1113,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 lifeInsurance: 'Life insurance',
                 earthquakeInsurance: 'Earthquake insurance',
                 medical: 'Medical',
-                other: 'Other deductions',
               };
               additionalDeductions?.items.forEach(item => {
                 parts.push(`${additionalLabels[item.key] ?? item.key} ${formatJPY(item.national)}`);
@@ -1195,8 +1188,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onEarthquakeInsuranceChange={handleEarthquakeInsuranceChange}
         medicalExpenses={inputs.medicalExpenses}
         onMedicalExpensesChange={handleMedicalExpensesChange}
-        otherIncomeDeductions={inputs.otherIncomeDeductions}
-        onOtherIncomeDeductionsChange={handleOtherIncomeDeductionsChange}
         additionalDeductions={additionalDeductions}
         incomeYear={inputs.incomeYear}
       />

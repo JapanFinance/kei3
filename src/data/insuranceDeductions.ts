@@ -5,7 +5,7 @@
  * Life insurance (生命保険料控除) and earthquake insurance (地震保険料控除) premium
  * deductions. Both produce a {@link DeductionAmount} because the income-tax and
  * residence-tax amounts differ — which is exactly why they get structured inputs
- * rather than being folded into a single "other deductions" lump.
+ * rather than being folded into a single combined figure.
  *
  * Sources:
  *   - 生命保険料控除 (national): NTA No.1140 https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm
