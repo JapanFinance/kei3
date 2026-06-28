@@ -44,6 +44,7 @@ import {
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../../utils/homeLoanTaxCredit';
 import { formatJPY } from '../../utils/formatters';
+import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
 
 interface AdditionalDeductionsModalProps {
   open: boolean;
@@ -83,6 +84,35 @@ const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> =
     {tooltip && <SimpleTooltip>{tooltip}</SimpleTooltip>}
   </Typography>
 );
+
+/**
+ * Info icon + popover shown next to a computed deduction readout, explaining how the amount was
+ * derived and linking the official source. These deductions are computed for the user, so the
+ * explanation lives next to the result (not in a "how to calculate" accordion like the home loan
+ * credit, whose accordion explains how to derive the figure the user must enter).
+ */
+const DeductionCalcTooltip: React.FC<{ infoKey: keyof typeof ADDITIONAL_DEDUCTION_INFO }> = ({
+  infoKey,
+}) => {
+  const info = ADDITIONAL_DEDUCTION_INFO[infoKey];
+  return (
+    <DetailedTooltip title={info.label} icon={SIMPLE_TOOLTIP_ICON}>
+      <Box>
+        <Typography variant="body2">{info.explanation}</Typography>
+        <Box sx={{ mt: 1 }}>
+          <a
+            href={info.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+          >
+            {info.sourceLabel}
+          </a>
+        </Box>
+      </Box>
+    </DetailedTooltip>
+  );
+};
 
 export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps> = ({
   open,
@@ -392,41 +422,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     {formatJPY(lifeItem.residence)}
                   </Box>{' '}
                   residence tax
+                  <DeductionCalcTooltip infoKey="lifeInsurance" />
                 </Typography>
               )}
-
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    How is this calculated?
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}
-                  >
-                    Each category's deduction comes from its premium on a sliding scale, capped per
-                    category (new: ¥40,000 income tax / ¥28,000 residence; old: ¥50,000 / ¥35,000)
-                    and overall at ¥120,000 income tax / ¥70,000 residence. When a category has both
-                    new and old policies, the most favourable method is used.
-                  </Typography>
-                  <Box>
-                    <a
-                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-                    >
-                      NTA: 生命保険料控除
-                    </a>
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
             </CardContent>
           </Card>
 
@@ -519,40 +517,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     {formatJPY(earthquakeItem.residence)}
                   </Box>{' '}
                   residence tax
+                  <DeductionCalcTooltip infoKey="earthquakeInsurance" />
                 </Typography>
               )}
-
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    How is this calculated?
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}
-                  >
-                    The earthquake premium is deductible in full up to ¥50,000 for income tax, and
-                    at half up to ¥25,000 for residence tax. A 旧長期損害保険料 portion can be
-                    added, with the combined deduction capped at ¥50,000 / ¥25,000.
-                  </Typography>
-                  <Box>
-                    <a
-                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1145.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-                    >
-                      NTA: 地震保険料控除
-                    </a>
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
             </CardContent>
           </Card>
 
@@ -571,13 +538,13 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               >
                 Medical Expenses (医療費控除)
                 <SimpleTooltip>
-                  Enter what you paid in medical expenses and any reimbursements. The calculator
-                  subtracts the income-based floor for you, so enter the raw amounts — not a
-                  deduction figure.
+                  Enter what you paid in medical expenses and any reimbursements (insurance payouts,
+                  高額療養費, government subsidies, etc.). The calculator subtracts the income-based
+                  floor for you, so enter the raw amounts — not a deduction figure.
                 </SimpleTooltip>
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
                   <SpinnerNumberField
                     id="medicalPaid"
                     name="medicalPaid"
@@ -591,7 +558,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     min={0}
                   />
                 </FormControl>
-                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
                   <SpinnerNumberField
                     id="medicalReimbursed"
                     name="medicalReimbursed"
@@ -601,7 +568,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                         reimbursed: Number((e.target as HTMLInputElement).value) || 0,
                       })
                     }
-                    label="Insurance reimbursements"
+                    label="Reimbursements"
                     step={1_000}
                     shiftStep={10_000}
                     min={0}
@@ -619,6 +586,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     {formatJPY(medicalItem.national)}
                   </Box>{' '}
                   (same for income tax and residence tax)
+                  <DeductionCalcTooltip infoKey="medical" />
                 </Typography>
               ) : (
                 medicalInput.paid > 0 && (
@@ -631,37 +599,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Typography>
                 )
               )}
-
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    How is this calculated?
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontSize: '0.85rem', color: 'text.secondary', mb: 1 }}
-                  >
-                    The deduction is your medical expenses minus any reimbursements, minus the lower
-                    of ¥100,000 and 5% of your total income, capped at ¥2,000,000.
-                  </Typography>
-                  <Box>
-                    <a
-                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-                    >
-                      NTA: 医療費控除
-                    </a>
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
             </CardContent>
           </Card>
         </Box>

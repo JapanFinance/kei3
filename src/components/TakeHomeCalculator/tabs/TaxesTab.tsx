@@ -22,6 +22,7 @@ import type {
 } from '../../../types/tax';
 import type { DependentDeductionResults } from '../../../types/dependents';
 import { formatJPY } from '../../../utils/formatters';
+import { ADDITIONAL_DEDUCTION_INFO } from '../additionalDeductionInfo';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
@@ -208,21 +209,6 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
   );
 };
 
-const ADDITIONAL_DEDUCTION_SOURCES: Record<string, { label: string; url: string }> = {
-  lifeInsurance: {
-    label: '生命保険料控除 (NTA)',
-    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm',
-  },
-  earthquakeInsurance: {
-    label: '地震保険料控除 (NTA)',
-    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1145.htm',
-  },
-  medical: {
-    label: '医療費控除 (NTA)',
-    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm',
-  },
-};
-
 interface AdditionalDeductionsTooltipProps {
   deductions: AdditionalDeductionsResult;
   taxType: 'national' | 'residence';
@@ -237,7 +223,6 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
     isNational ? item.national : item.residence;
   const rows = deductions.items.filter(item => getAmount(item) > 0);
   const total = isNational ? deductions.national : deductions.residence;
-  const sourcedRows = rows.filter(item => ADDITIONAL_DEDUCTION_SOURCES[item.key]);
 
   return (
     <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 460 } }}>
@@ -278,29 +263,27 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
           ? 'These reduce your taxable income for national income tax.'
           : 'These reduce your taxable income for residence tax. The life and earthquake insurance amounts are smaller than the income-tax amounts.'}
       </Typography>
-      {sourcedRows.length > 0 && (
-        <Box sx={{ mt: 1 }}>
-          Official Sources (NTA):
-          <ul>
-            {sourcedRows.map(item => (
-              <li key={item.key}>
-                <a
-                  href={ADDITIONAL_DEDUCTION_SOURCES[item.key]!.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: 'var(--primary-main)',
-                    textDecoration: 'underline',
-                    fontSize: '0.95em',
-                  }}
-                >
-                  {ADDITIONAL_DEDUCTION_SOURCES[item.key]!.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </Box>
-      )}
+      {rows.map(item => {
+        const info = ADDITIONAL_DEDUCTION_INFO[item.key];
+        if (!info) return null;
+        return (
+          <Typography
+            key={item.key}
+            variant="body2"
+            sx={{ fontSize: '0.85em', color: 'text.secondary', mt: 1 }}
+          >
+            <strong>{info.label}:</strong> {info.explanation}{' '}
+            <a
+              href={info.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+            >
+              {info.sourceLabel}
+            </a>
+          </Typography>
+        );
+      })}
     </Box>
   );
 };
