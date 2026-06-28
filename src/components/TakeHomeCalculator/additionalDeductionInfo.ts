@@ -29,7 +29,7 @@ export const ADDITIONAL_DEDUCTION_INFO: Record<
   lifeInsurance: {
     label: '生命保険料控除',
     explanation:
-      'Each category is computed from its premiums on a sliding scale, then capped (new contracts ¥40,000 income tax / ¥28,000 residence; old contracts ¥50,000 / ¥35,000), with an overall cap of ¥120,000 / ¥70,000. With both new and old policies in a category, the most favourable method is used. For 2026–2027, a household with a dependent under 23 gets the general (new) income-tax cap raised to ¥60,000.',
+      'Each category is computed from its premiums on a sliding scale, then capped (new contracts ¥40,000 income tax / ¥28,000 residence; old contracts ¥50,000 / ¥35,000), with an overall cap of ¥120,000 / ¥70,000. With both new and old policies in a category, the most favourable method is used. For 2026–2027, a household with a dependent under 23 gets the general (new) cap for income tax raised to ¥60,000.',
     sourceLabel: '生命保険料控除 (NTA No.1140)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm',
   },

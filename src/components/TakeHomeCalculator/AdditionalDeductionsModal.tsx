@@ -25,7 +25,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
 import WarningIcon from '@mui/icons-material/Warning';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type {
@@ -65,6 +65,19 @@ interface AdditionalDeductionsModalProps {
   /** Income year being modeled; upper bound for the home-loan move-in-year dropdown. */
   incomeYear: number;
 }
+
+/**
+ * Shared style for the live "Deduction: …" readouts under each card: a muted line whose bold
+ * figures are lifted to the primary colour so they stand out. Keeping the emphasis on the line
+ * (via `& strong`) lets the content stay plain `<strong>` markup, and scopes the recolour here rather than
+ * globally — where it would clobber intentionally-coloured text elsewhere.
+ */
+const readoutSx: SxProps<Theme> = {
+  mt: 1.5,
+  fontSize: '0.85rem',
+  color: 'text.secondary',
+  '& strong': { color: 'text.primary', fontWeight: 600 },
+};
 
 const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> = ({
   children,
@@ -134,6 +147,20 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // Insurance category fields: on mobile, shorten the label to English (using `shortEn` when the
+  // full English is too wide) and move the Japanese term to helper text so the inputs fit on one
+  // row; on desktop (already one row, with room) keep the full inline "English (日本語)".
+  const catField = (
+    en: string,
+    jp: string,
+    shortEn: string = en,
+  ): { label: string; helperText?: string } =>
+    isMobile ? { label: shortEn, helperText: jp } : { label: `${en} (${jp})` };
+
+  // The three-up life fields are narrow on mobile; trim the input's side padding so a 6-digit ¥
+  // value fits without clipping. (No-op on desktop, where the fields are wide.)
+  const denseValueSx = isMobile ? { '& .MuiInputBase-input': { px: 1 } } : undefined;
+
   const effectiveHomeLoan: HomeLoanTaxCreditInput = homeLoanTaxCredit ?? {
     moveInYear: incomeYear,
     creditAmount: 0,
@@ -169,11 +196,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const earthquakeInput: EarthquakeInsuranceInput = earthquakeInsurance ?? { earthquake: 0 };
   const updateEarthquake = (patch: Partial<EarthquakeInsuranceInput>) => {
     onEarthquakeInsuranceChange({ ...earthquakeInput, ...patch });
-  };
-  const [showOldQuake, setShowOldQuake] = React.useState(!!earthquakeInsurance?.longTermOld);
-  const toggleOldQuake = (checked: boolean) => {
-    setShowOldQuake(checked);
-    if (!checked) updateEarthquake({ longTermOld: 0 });
   };
 
   const medicalInput: MedicalExpensesInput = medicalExpenses ?? { paid: 0, reimbursed: 0 };
@@ -298,18 +320,18 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 Life Insurance (生命保険料控除)
                 <SimpleTooltip>
                   A deduction for life, medical-care, and pension insurance premiums. Enter the
-                  annual premiums; the calculator works out the income-tax and residence-tax
-                  deductions, which differ.
+                  annual premiums; the calculator works out the deductions for income tax and
+                  residence tax, which differ.
                 </SimpleTooltip>
               </Typography>
               <Typography
                 variant="body2"
                 sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1.5 }}
               >
-                New contracts (新契約) — policies from 2012 onward.
+                New contracts (新契約) — policies from 2012.
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                <FormControl sx={{ flex: '1 1 86px', minWidth: 86 }}>
                   <SpinnerNumberField
                     id="lifeGeneralNew"
                     name="lifeGeneralNew"
@@ -317,13 +339,14 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     onInputChange={e =>
                       updateLife({ generalNew: Number((e.target as HTMLInputElement).value) || 0 })
                     }
-                    label="General (一般)"
+                    {...catField('General', '一般')}
+                    {...(denseValueSx && { sx: denseValueSx })}
                     step={1_000}
                     shiftStep={10_000}
                     min={0}
                   />
                 </FormControl>
-                <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                <FormControl sx={{ flex: '1 1 86px', minWidth: 86 }}>
                   <SpinnerNumberField
                     id="lifeMedicalCareNew"
                     name="lifeMedicalCareNew"
@@ -333,13 +356,14 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                         medicalCareNew: Number((e.target as HTMLInputElement).value) || 0,
                       })
                     }
-                    label="Medical care (介護医療)"
+                    {...catField('Medical care', '介護医療', 'Medical')}
+                    {...(denseValueSx && { sx: denseValueSx })}
                     step={1_000}
                     shiftStep={10_000}
                     min={0}
                   />
                 </FormControl>
-                <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                <FormControl sx={{ flex: '1 1 86px', minWidth: 86 }}>
                   <SpinnerNumberField
                     id="lifePensionNew"
                     name="lifePensionNew"
@@ -347,7 +371,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     onInputChange={e =>
                       updateLife({ pensionNew: Number((e.target as HTMLInputElement).value) || 0 })
                     }
-                    label="Pension (個人年金)"
+                    {...catField('Pension', '個人年金')}
+                    {...(denseValueSx && { sx: denseValueSx })}
                     step={1_000}
                     shiftStep={10_000}
                     min={0}
@@ -373,7 +398,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               />
               {showOldLife && (
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
-                  <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                  <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
                     <SpinnerNumberField
                       id="lifeGeneralOld"
                       name="lifeGeneralOld"
@@ -383,13 +408,13 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                           generalOld: Number((e.target as HTMLInputElement).value) || 0,
                         })
                       }
-                      label="General, old (旧一般)"
+                      {...catField('General, old', '旧一般')}
                       step={1_000}
                       shiftStep={10_000}
                       min={0}
                     />
                   </FormControl>
-                  <FormControl sx={{ flex: '1 1 150px', minWidth: 130 }}>
+                  <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
                     <SpinnerNumberField
                       id="lifePensionOld"
                       name="lifePensionOld"
@@ -399,7 +424,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                           pensionOld: Number((e.target as HTMLInputElement).value) || 0,
                         })
                       }
-                      label="Pension, old (旧個人年金)"
+                      {...catField('Pension, old', '旧個人年金')}
                       step={1_000}
                       shiftStep={10_000}
                       min={0}
@@ -409,19 +434,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               )}
 
               {lifeItem && (
-                <Typography
-                  variant="body2"
-                  sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
-                >
-                  Deduction:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {formatJPY(lifeItem.national)}
-                  </Box>{' '}
-                  income tax,{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {formatJPY(lifeItem.residence)}
-                  </Box>{' '}
-                  residence tax
+                <Typography variant="body2" sx={readoutSx}>
+                  Deduction: <strong>{formatJPY(lifeItem.national)}</strong> income tax,{' '}
+                  <strong>{formatJPY(lifeItem.residence)}</strong> residence tax
                   <DeductionCalcTooltip infoKey="lifeInsurance" />
                 </Typography>
               )}
@@ -444,11 +459,11 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 Earthquake Insurance (地震保険料控除)
                 <SimpleTooltip>
                   A deduction for earthquake insurance premiums (and qualifying pre-2007 long-term
-                  casualty premiums). The income-tax and residence-tax amounts differ.
+                  casualty premiums). The deduction differs for income tax and residence tax.
                 </SimpleTooltip>
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
                   <SpinnerNumberField
                     id="earthquakePremium"
                     name="earthquakePremium"
@@ -458,7 +473,23 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                         earthquake: Number((e.target as HTMLInputElement).value) || 0,
                       })
                     }
-                    label="Earthquake premium (地震保険料)"
+                    {...catField('Earthquake premium', '地震保険料', 'Earthquake')}
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
+                  <SpinnerNumberField
+                    id="earthquakeLongTermOld"
+                    name="earthquakeLongTermOld"
+                    value={earthquakeInput.longTermOld ?? 0}
+                    onInputChange={e =>
+                      updateEarthquake({
+                        longTermOld: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    {...catField('Long-term, old', '旧長期損害保険料', 'Long-term')}
                     step={1_000}
                     shiftStep={10_000}
                     min={0}
@@ -466,57 +497,10 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 </FormControl>
               </Box>
 
-              <FormControlLabel
-                sx={{ mt: 1, ml: 0 }}
-                control={
-                  <Checkbox
-                    size="small"
-                    checked={showOldQuake}
-                    onChange={e => toggleOldQuake(e.target.checked)}
-                    sx={{ py: 0, mr: 0.5 }}
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                    I have 旧長期損害保険 (pre-2007 long-term)
-                  </Typography>
-                }
-              />
-              {showOldQuake && (
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
-                  <FormControl sx={{ flex: '1 1 160px', minWidth: 140 }}>
-                    <SpinnerNumberField
-                      id="earthquakeLongTermOld"
-                      name="earthquakeLongTermOld"
-                      value={earthquakeInput.longTermOld ?? 0}
-                      onInputChange={e =>
-                        updateEarthquake({
-                          longTermOld: Number((e.target as HTMLInputElement).value) || 0,
-                        })
-                      }
-                      label="旧長期損害保険料"
-                      step={1_000}
-                      shiftStep={10_000}
-                      min={0}
-                    />
-                  </FormControl>
-                </Box>
-              )}
-
               {earthquakeItem && (
-                <Typography
-                  variant="body2"
-                  sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
-                >
-                  Deduction:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {formatJPY(earthquakeItem.national)}
-                  </Box>{' '}
-                  income tax,{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {formatJPY(earthquakeItem.residence)}
-                  </Box>{' '}
-                  residence tax
+                <Typography variant="body2" sx={readoutSx}>
+                  Deduction: <strong>{formatJPY(earthquakeItem.national)}</strong> income tax,{' '}
+                  <strong>{formatJPY(earthquakeItem.residence)}</strong> residence tax
                   <DeductionCalcTooltip infoKey="earthquakeInsurance" />
                 </Typography>
               )}
@@ -579,25 +563,15 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               </Box>
 
               {medicalItem ? (
-                <Typography
-                  variant="body2"
-                  sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
-                >
-                  Deduction:{' '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                    {formatJPY(medicalItem.national)}
-                  </Box>{' '}
-                  (same for income tax and residence tax)
+                <Typography variant="body2" sx={readoutSx}>
+                  Deduction: <strong>{formatJPY(medicalItem.national)}</strong>
                   <DeductionCalcTooltip infoKey="medical" />
                 </Typography>
               ) : (
                 medicalInput.paid > 0 && (
-                  <Typography
-                    variant="body2"
-                    sx={{ mt: 1.5, fontSize: '0.85rem', color: 'text.secondary' }}
-                  >
-                    Below the deduction floor (the lower of ¥100,000 and 5% of income), so no
-                    deduction this year.
+                  <Typography variant="body2" sx={readoutSx}>
+                    The calculated amount is less than the deduction floor (the lower of ¥100,000
+                    and 5% of income).
                   </Typography>
                 )
               )}
@@ -690,7 +664,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                             build, or a pre-owned home bought from a consumption tax-collecting
                             business. Uncheck it if no consumption tax was charged, such as a
                             pre-owned home bought from a private individual. For 2014–2021 move-ins
-                            this changes the residence-tax spillover cap (特定取得 → 7% / ¥136,500;
+                            this changes the residence tax spillover cap (特定取得 → 7% / ¥136,500;
                             non-特定取得 → 5% / ¥97,500).
                           </Typography>
                           <Box sx={{ mt: 1 }}>

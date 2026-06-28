@@ -261,7 +261,7 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
       <Typography variant="body2" sx={{ fontSize: '0.85em', color: 'text.secondary', mb: 1 }}>
         {isNational
           ? 'These reduce your taxable income for national income tax.'
-          : 'These reduce your taxable income for residence tax. The life and earthquake insurance amounts are smaller than the income-tax amounts.'}
+          : 'These reduce your taxable income for residence tax. The life and earthquake insurance deductions are smaller for residence tax than for income tax.'}
       </Typography>
       {rows.map(item => {
         const info = ADDITIONAL_DEDUCTION_INFO[item.key];
@@ -1511,7 +1511,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       When your available credit amount exceeds your income tax, the remainder
                       spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500
                       for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of your{' '}
-                      <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
+                      <strong>income tax</strong> taxable total income (所得税の課税総所得金額等).
                     </Typography>
                     {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
