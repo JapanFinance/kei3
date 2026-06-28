@@ -540,7 +540,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 <SimpleTooltip>
                   Enter what you paid in medical expenses and any reimbursements (insurance payouts,
                   高額療養費, government subsidies, etc.). The calculator subtracts the income-based
-                  floor for you, so enter the raw amounts — not a deduction figure.
+                  floor for you, so enter the raw amounts — not a deduction figure. This is the
+                  standard 医療費控除 only; the セルフメディケーション税制 (医療費控除の特例)
+                  alternative isn&apos;t supported yet.
                 </SimpleTooltip>
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
