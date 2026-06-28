@@ -7,7 +7,7 @@ import SiteHeader from './components/SiteHeader';
 import ChangelogButton from './components/ChangelogButton';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types/tax';
-import { DEFAULT_INCOME_YEAR } from './types/tax';
+import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
 import { calculateTaxes } from './utils/taxCalculations';
 import {
   DEFAULT_PROVIDER_REGION,
@@ -68,6 +68,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
     manualSocialInsuranceAmount: 0,
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   };
 
   // State for form inputs

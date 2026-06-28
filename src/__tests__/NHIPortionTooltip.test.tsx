@@ -16,6 +16,7 @@ import type {
   ResidenceTaxDetails,
   FurusatoNozeiDetails,
 } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -55,9 +56,11 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     nhiChildSupportPortion: breakdown.childSupportPortion,
     salaryIncome: 0,
     grossEmploymentIncome: 0,
+    additionalDeductions: { national: 0, residence: 0, items: [] },
   };
 
   const inputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ id: '1', type: 'business', amount: annualIncome }],
     isSubjectToLongTermCarePremium: includeLTC,
     region,

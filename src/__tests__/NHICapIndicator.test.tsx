@@ -12,6 +12,7 @@ import type {
   ResidenceTaxDetails,
   FurusatoNozeiDetails,
 } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 // Mock scrollTo (used by SMRTableTooltip)
 Element.prototype.scrollTo = vi.fn();
@@ -54,9 +55,11 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     nhiChildSupportPortion: breakdown.childSupportPortion,
     salaryIncome: 0,
     grossEmploymentIncome: 0,
+    additionalDeductions: { national: 0, residence: 0, items: [] },
   };
 
   const inputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ id: '1', type: 'business', amount: annualIncome }],
     isSubjectToLongTermCarePremium: includeLTC,
     region,

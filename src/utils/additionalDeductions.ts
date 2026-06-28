@@ -63,9 +63,9 @@ export const calculateMedicalExpenseDeduction = (
 export interface AdditionalDeductionInputs {
   incomeYear: number;
   dependents: Dependent[];
-  lifeInsurance?: LifeInsuranceInput | undefined;
-  earthquakeInsurance?: EarthquakeInsuranceInput | undefined;
-  medicalExpenses?: MedicalExpensesInput | undefined;
+  lifeInsurance: LifeInsuranceInput;
+  earthquakeInsurance: EarthquakeInsuranceInput;
+  medicalExpenses: MedicalExpensesInput;
 }
 
 /**
@@ -79,38 +79,32 @@ export const calculateAdditionalDeductions = (
 ): AdditionalDeductionsResult => {
   const items: AdditionalDeductionItem[] = [];
 
-  if (inputs.lifeInsurance) {
-    const deduction = calculateLifeInsuranceDeduction(
-      inputs.lifeInsurance,
-      inputs.incomeYear,
-      hasDependentRelativeUnder23(inputs.dependents, inputs.incomeYear),
-    );
-    if (deduction.national > 0 || deduction.residence > 0) {
-      items.push({ key: 'lifeInsurance', label: '生命保険料控除', ...deduction });
-    }
+  const lifeDeduction = calculateLifeInsuranceDeduction(
+    inputs.lifeInsurance,
+    inputs.incomeYear,
+    hasDependentRelativeUnder23(inputs.dependents, inputs.incomeYear),
+  );
+  if (lifeDeduction.national > 0 || lifeDeduction.residence > 0) {
+    items.push({ key: 'lifeInsurance', label: '生命保険料控除', ...lifeDeduction });
   }
 
-  if (inputs.earthquakeInsurance) {
-    const deduction = calculateEarthquakeInsuranceDeduction(inputs.earthquakeInsurance);
-    if (deduction.national > 0 || deduction.residence > 0) {
-      items.push({ key: 'earthquakeInsurance', label: '地震保険料控除', ...deduction });
-    }
+  const earthquakeDeduction = calculateEarthquakeInsuranceDeduction(inputs.earthquakeInsurance);
+  if (earthquakeDeduction.national > 0 || earthquakeDeduction.residence > 0) {
+    items.push({ key: 'earthquakeInsurance', label: '地震保険料控除', ...earthquakeDeduction });
   }
 
-  if (inputs.medicalExpenses) {
-    const deduction = calculateMedicalExpenseDeduction(
-      inputs.medicalExpenses.paid,
-      inputs.medicalExpenses.reimbursed,
-      netIncome,
-    );
-    if (deduction > 0) {
-      items.push({
-        key: 'medical',
-        label: '医療費控除',
-        national: deduction,
-        residence: deduction,
-      });
-    }
+  const medicalDeduction = calculateMedicalExpenseDeduction(
+    inputs.medicalExpenses.paid,
+    inputs.medicalExpenses.reimbursed,
+    netIncome,
+  );
+  if (medicalDeduction > 0) {
+    items.push({
+      key: 'medical',
+      label: '医療費控除',
+      national: medicalDeduction,
+      residence: medicalDeduction,
+    });
   }
 
   return {

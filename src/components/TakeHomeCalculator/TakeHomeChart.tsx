@@ -27,6 +27,7 @@ import type {
   CustomEmployeesHealthInsuranceRates,
   IncomeStream,
 } from '../../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import {
   generateChartData,
@@ -284,6 +285,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const chartData = useMemo<ChartData<'bar' | 'line'>>(
     () =>
       generateChartData(chartRange, {
+        // The by-income projection does not yet apply the modal's additional deductions
+        // (生命保険料/地震保険料/医療費) or the home loan credit; hold them at zero for now (follow-up).
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         isEmploymentIncome,
         incomeYear,
         isSubjectToLongTermCarePremium,
@@ -334,6 +338,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
                 // Calculate full tax results for this income level to get cap status
                 const taxInputs = {
+                  // See note in chartData: additional deductions / home loan credit not reflected here yet.
+                  ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
                   annualIncome: income,
                   incomeYear,
                   isEmploymentIncome,

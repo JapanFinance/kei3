@@ -251,6 +251,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   grossEmploymentIncome: 0,
   incomeAdjustmentDeduction: 0,
   totalNetIncome: 0,
+  additionalDeductions: { national: 0, residence: 0, items: [] },
 };
 
 /**
@@ -666,7 +667,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     taxableIncomeForResidenceTax,
     furusatoNozei: furusatoNozeiLimit,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
-    ...(additionalDeductions.items.length > 0 && { additionalDeductions }),
+    additionalDeductions,
     // Residence income-based portion (所得割) BEFORE the home loan spillover, so the
     // Taxes tab can show the spillover as its own line and have the rows sum.
     ...(homeLoanTaxCreditResult &&

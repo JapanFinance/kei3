@@ -54,12 +54,12 @@ interface AdditionalDeductionsModalProps {
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
-  lifeInsurance?: LifeInsuranceInput | undefined;
-  onLifeInsuranceChange: (input: LifeInsuranceInput | undefined) => void;
-  earthquakeInsurance?: EarthquakeInsuranceInput | undefined;
-  onEarthquakeInsuranceChange: (input: EarthquakeInsuranceInput | undefined) => void;
-  medicalExpenses?: MedicalExpensesInput | undefined;
-  onMedicalExpensesChange: (input: MedicalExpensesInput | undefined) => void;
+  lifeInsurance: LifeInsuranceInput;
+  onLifeInsuranceChange: (input: LifeInsuranceInput) => void;
+  earthquakeInsurance: EarthquakeInsuranceInput;
+  onEarthquakeInsuranceChange: (input: EarthquakeInsuranceInput) => void;
+  medicalExpenses: MedicalExpensesInput;
+  onMedicalExpensesChange: (input: MedicalExpensesInput) => void;
   /** Computed additional deductions, used for the live per-card readouts. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Income year being modeled; upper bound for the home-loan move-in-year dropdown. */
@@ -177,28 +177,24 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
     onHomeLoanTaxCreditChange({ ...effectiveHomeLoan, ...patch });
   };
 
-  const lifeInput: LifeInsuranceInput = lifeInsurance ?? {
-    generalNew: 0,
-    medicalCareNew: 0,
-    pensionNew: 0,
-  };
+  const lifeInput = lifeInsurance;
   const updateLife = (patch: Partial<LifeInsuranceInput>) => {
     onLifeInsuranceChange({ ...lifeInput, ...patch });
   };
   const [showOldLife, setShowOldLife] = React.useState(
-    !!(lifeInsurance?.generalOld || lifeInsurance?.pensionOld),
+    !!(lifeInsurance.generalOld || lifeInsurance.pensionOld),
   );
   const toggleOldLife = (checked: boolean) => {
     setShowOldLife(checked);
     if (!checked) updateLife({ generalOld: 0, pensionOld: 0 });
   };
 
-  const earthquakeInput: EarthquakeInsuranceInput = earthquakeInsurance ?? { earthquake: 0 };
+  const earthquakeInput = earthquakeInsurance;
   const updateEarthquake = (patch: Partial<EarthquakeInsuranceInput>) => {
     onEarthquakeInsuranceChange({ ...earthquakeInput, ...patch });
   };
 
-  const medicalInput: MedicalExpensesInput = medicalExpenses ?? { paid: 0, reimbursed: 0 };
+  const medicalInput = medicalExpenses;
   const updateMedical = (patch: Partial<MedicalExpensesInput>) => {
     onMedicalExpensesChange({ ...medicalInput, ...patch });
   };

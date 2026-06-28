@@ -140,19 +140,19 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
-  const handleLifeInsuranceChange = (newInput: LifeInsuranceInput | undefined) => {
+  const handleLifeInsuranceChange = (newInput: LifeInsuranceInput) => {
     onInputChange({
       target: { name: 'lifeInsurance', value: newInput },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
-  const handleEarthquakeInsuranceChange = (newInput: EarthquakeInsuranceInput | undefined) => {
+  const handleEarthquakeInsuranceChange = (newInput: EarthquakeInsuranceInput) => {
     onInputChange({
       target: { name: 'earthquakeInsurance', value: newInput },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
-  const handleMedicalExpensesChange = (newInput: MedicalExpensesInput | undefined) => {
+  const handleMedicalExpensesChange = (newInput: MedicalExpensesInput) => {
     onInputChange({
       target: { name: 'medicalExpenses', value: newInput },
     } as unknown as React.ChangeEvent<HTMLInputElement>);

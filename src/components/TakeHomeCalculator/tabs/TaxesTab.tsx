@@ -642,7 +642,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
-        {results.additionalDeductions && results.additionalDeductions.national > 0 && (
+        {results.additionalDeductions.national > 0 && (
           <ResultRow
             label={
               <span>
@@ -1102,7 +1102,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
-        {results.additionalDeductions && results.additionalDeductions.residence > 0 && (
+        {results.additionalDeductions.residence > 0 && (
           <ResultRow
             label={
               <span>

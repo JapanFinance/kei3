@@ -6,6 +6,7 @@ import {
   calculateAdditionalDeductions,
   calculateMedicalExpenseDeduction,
 } from '../utils/additionalDeductions';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 describe('calculateMedicalExpenseDeduction', () => {
   it('subtracts the ¥100,000 floor when income is high', () => {
@@ -36,7 +37,7 @@ describe('calculateAdditionalDeductions', () => {
         incomeYear: 2026,
         dependents: [],
         lifeInsurance: { generalNew: 100_000, medicalCareNew: 0, pensionNew: 100_000 },
-        earthquakeInsurance: { earthquake: 50_000 },
+        earthquakeInsurance: { earthquake: 50_000, longTermOld: 0 },
         medicalExpenses: { paid: 350_000, reimbursed: 100_000 },
       },
       10_000_000,
@@ -49,7 +50,12 @@ describe('calculateAdditionalDeductions', () => {
 
   it('keeps medical equal across both taxes', () => {
     const result = calculateAdditionalDeductions(
-      { incomeYear: 2026, dependents: [], medicalExpenses: { paid: 200_000, reimbursed: 0 } },
+      {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeYear: 2026,
+        dependents: [],
+        medicalExpenses: { paid: 200_000, reimbursed: 0 },
+      },
       10_000_000,
     );
     expect(result.items).toHaveLength(1);
@@ -59,6 +65,7 @@ describe('calculateAdditionalDeductions', () => {
   it('omits items that compute to zero', () => {
     const result = calculateAdditionalDeductions(
       {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeYear: 2026,
         dependents: [],
         lifeInsurance: { generalNew: 0, medicalCareNew: 0, pensionNew: 0 },
@@ -69,7 +76,12 @@ describe('calculateAdditionalDeductions', () => {
   });
 
   it('returns an empty result when no additional deductions are entered', () => {
-    expect(calculateAdditionalDeductions({ incomeYear: 2026, dependents: [] }, 5_000_000)).toEqual({
+    expect(
+      calculateAdditionalDeductions(
+        { ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS, incomeYear: 2026, dependents: [] },
+        5_000_000,
+      ),
+    ).toEqual({
       national: 0,
       residence: 0,
       items: [],
