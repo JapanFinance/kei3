@@ -77,6 +77,43 @@ export interface ChartCalculationContext extends TakeHomeInputs {
   isEmploymentIncome: boolean;
 }
 
+/**
+ * Scale a set of income streams so their annualized total matches `targetIncome`,
+ * preserving the original composition (salary/bonus/business mix). When the base
+ * streams sum to 0 (or none are provided), fall back to a single annual salary
+ * stream at `targetIncome` so downstream calculations still see income.
+ *
+ * Shared by the chart's per-income bars and the tooltip's cap-detection probe so
+ * the "🔒 Max reached" badge matches the bars exactly.
+ */
+export const scaleIncomeStreamsToIncome = (
+  streams: IncomeStream[],
+  targetIncome: number,
+): IncomeStream[] => {
+  const baseTotal = streams.reduce((sum, s) => {
+    if (s.type === 'salary' && s.frequency === 'monthly') return sum + s.amount * 12;
+    return sum + s.amount;
+  }, 0);
+
+  if (baseTotal > 0) {
+    const ratio = targetIncome / baseTotal;
+    return streams.map(s => ({
+      ...s,
+      amount: s.amount * ratio,
+    }));
+  }
+
+  // Fallback if base is 0
+  return [
+    {
+      id: 'chart-salary-fallback',
+      type: 'salary',
+      amount: targetIncome,
+      frequency: 'annual',
+    },
+  ];
+};
+
 export const generateChartData = (
   chartRange: ChartRange,
   currentInputs: ChartCalculationContext,
@@ -106,29 +143,7 @@ export const generateChartData = (
   // Precompute results and cap status for each income point
   const resultsAndCaps = incomePoints.map(income => {
     // Scale each income stream to match the 'income' for this chart point
-    let calcStreams: IncomeStream[];
-    const baseTotal = currentInputs.incomeStreams.reduce((sum, s) => {
-      if (s.type === 'salary' && s.frequency === 'monthly') return sum + s.amount * 12;
-      return sum + s.amount;
-    }, 0);
-
-    if (baseTotal > 0) {
-      const ratio = income / baseTotal;
-      calcStreams = currentInputs.incomeStreams.map(s => ({
-        ...s,
-        amount: s.amount * ratio,
-      }));
-    } else {
-      // Fallback if base is 0
-      calcStreams = [
-        {
-          id: 'chart-salary-fallback',
-          type: 'salary',
-          amount: income,
-          frequency: 'annual',
-        },
-      ];
-    }
+    const calcStreams = scaleIncomeStreamsToIncome(currentInputs.incomeStreams, income);
 
     // Prepare inputs
     const inputsForCalc: TakeHomeInputs = {
