@@ -109,7 +109,7 @@ const DeductionCalcTooltip: React.FC<{ infoKey: keyof typeof ADDITIONAL_DEDUCTIO
 }) => {
   const info = ADDITIONAL_DEDUCTION_INFO[infoKey];
   return (
-    <DetailedTooltip title={info.label} icon={SIMPLE_TOOLTIP_ICON}>
+    <DetailedTooltip title={info.name} icon={SIMPLE_TOOLTIP_ICON}>
       <Box>
         <Typography variant="body2">{info.explanation}</Typography>
         <Box sx={{ mt: 1 }}>

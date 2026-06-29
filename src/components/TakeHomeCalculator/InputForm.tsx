@@ -31,6 +31,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
+import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
@@ -1109,13 +1110,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
-              const additionalLabels: Record<string, string> = {
-                lifeInsurance: 'Life insurance',
-                earthquakeInsurance: 'Earthquake insurance',
-                medical: 'Medical',
-              };
               additionalDeductions?.items.forEach(item => {
-                parts.push(`${additionalLabels[item.key] ?? item.key} ${formatJPY(item.national)}`);
+                const name = ADDITIONAL_DEDUCTION_INFO[item.key]?.name ?? item.key;
+                parts.push(`${name} ${formatJPY(item.national)}`);
               });
               // Via the UI the move-in dropdown only offers eligible years, so a credit entered
               // but zeroed (availableCredit 0) means income exceeded the cohort's eligibility limit.
