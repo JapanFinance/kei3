@@ -9,6 +9,7 @@ import {
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
 import type { TakeHomeInputs } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 // Mock the provider data (time-series structure: regions map to arrays of rate periods)
 vi.mock('../data/employeesHealthInsurance/providerRateData', () => ({
@@ -67,6 +68,7 @@ vi.mock('../data/employeesHealthInsurance/providerRates', () => ({
 
 describe('HealthInsuranceBonusTooltip', () => {
   const mockInputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     region: DEFAULT_PROVIDER_REGION,

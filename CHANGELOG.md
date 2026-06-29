@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-06-29
+
+### New
+
+- Added support for more income deductions in the "Additional Deductions & Credits" section: life insurance ([生命保険料控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm)), earthquake insurance ([地震保険料控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1145.htm)), and medical expenses ([医療費控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm)). Enter the premiums or medical expenses and the deduction amount is calculated and applied to income tax, residence tax, and furusato nozei limit. The Taxes tab shows the combined total with a per-item breakdown in the "Other Deductions" tooltip. For 2026–2027, households with a dependent under 23 get the general life-insurance (new contract) income tax deduction cap raised from ¥40,000 to ¥60,000.
+
 ## 2026-06-21
 
 ### Fixed
@@ -12,7 +18,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### New
 
-- Added support for the home loan tax credit (住宅ローン控除). Enter the annual credit amount you've calculated (控除可能額) and the year you moved in, and the calculator applies it to your tax owed, up to the applicable cap. Find it in the new "Additional Deductions & Credits" section.
+- Added support for the home loan tax credit (住宅ローン控除). Enter the annual credit amount you've calculated (控除可能額) and the year you moved in, and the calculator applies it to tax owed, up to the applicable cap. Find it in the new "Additional Deductions & Credits" section.
 
 ### Updated
 

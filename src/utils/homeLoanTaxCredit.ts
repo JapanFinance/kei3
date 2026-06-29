@@ -122,7 +122,7 @@ export function applyHomeLoanTaxCredit(
   if (unusedCredit > 0) {
     warnings.push(
       `¥${unusedCredit.toLocaleString()} of the credit could not be applied: it exceeds your income tax ` +
-        `plus the ¥${residenceTaxCap.toLocaleString()} residence-tax spillover cap for this year.`,
+        `plus the ¥${residenceTaxCap.toLocaleString()} spillover cap for residence tax this year.`,
     );
   }
 

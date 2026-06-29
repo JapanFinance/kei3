@@ -23,6 +23,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
+import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
 
 interface TaxesTabProps {
@@ -558,6 +559,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {results.additionalDeductions.national > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Other Deductions
+                <AdditionalDeductionsTooltip
+                  deductions={results.additionalDeductions}
+                  taxType="national"
+                />
+              </span>
+            }
+            value={formatJPY(-results.additionalDeductions.national)}
+            type="detail"
+          />
+        )}
+
         {results.taxableIncomeForNationalIncomeTax !== undefined && (
           <ResultRow
             label={
@@ -1000,6 +1017,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {results.additionalDeductions.residence > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Other Deductions
+                <AdditionalDeductionsTooltip
+                  deductions={results.additionalDeductions}
+                  taxType="residence"
+                />
+              </span>
+            }
+            value={formatJPY(-results.additionalDeductions.residence)}
+            type="detail"
+          />
+        )}
+
         {results.taxableIncomeForResidenceTax !== undefined && (
           <ResultRow
             label={
@@ -1391,7 +1424,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       When your available credit amount exceeds your income tax, the remainder
                       spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500
                       for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of your{' '}
-                      <strong>income-tax</strong> taxable total income (所得税の課税総所得金額等).
+                      <strong>income tax</strong> taxable total income (所得税の課税総所得金額等).
                     </Typography>
                     {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
                       <Typography variant="body2" sx={{ mb: 1 }}>

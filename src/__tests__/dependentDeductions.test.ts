@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
+  hasDependentRelativeUnder23,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
@@ -1708,5 +1709,48 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
       });
       expect(hasIncomeAdjustmentDeductionDependent([richSpouse], 2026)).toBe(false);
     });
+  });
+});
+
+describe('hasDependentRelativeUnder23', () => {
+  const child = (
+    ageCategory: 'under16' | '16to18' | '19to22' | '23to69' | '70plus',
+    otherNetIncome = 0,
+  ): Dependent =>
+    ({
+      id: 'd',
+      relationship: 'child',
+      ageCategory,
+      income: { grossEmploymentIncome: 0, otherNetIncome },
+      disability: 'none',
+      isCohabiting: true,
+    }) as Dependent;
+
+  const spouseUnder70: Dependent = {
+    id: 's',
+    relationship: 'spouse',
+    ageCategory: 'under70',
+    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    disability: 'none',
+    isCohabiting: true,
+  } as Dependent;
+
+  it('is true for a non-spouse dependent under 23 within the threshold (incl. under 16)', () => {
+    expect(hasDependentRelativeUnder23([child('under16')], 2026)).toBe(true);
+    expect(hasDependentRelativeUnder23([child('19to22')], 2026)).toBe(true);
+  });
+
+  it('is false for dependents aged 23 or older', () => {
+    expect(hasDependentRelativeUnder23([child('23to69')], 2026)).toBe(false);
+    expect(hasDependentRelativeUnder23([child('70plus')], 2026)).toBe(false);
+  });
+
+  it('excludes a spouse and any dependent over the 扶養親族 income threshold', () => {
+    expect(hasDependentRelativeUnder23([spouseUnder70], 2026)).toBe(false);
+    expect(hasDependentRelativeUnder23([child('19to22', 700_000)], 2026)).toBe(false);
+  });
+
+  it('is false with no dependents', () => {
+    expect(hasDependentRelativeUnder23([], 2026)).toBe(false);
   });
 });

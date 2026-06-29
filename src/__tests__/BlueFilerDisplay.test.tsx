@@ -12,6 +12,7 @@ import type {
   ResidenceTaxDetails,
   FurusatoNozeiDetails,
 } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 // Mock dependencies
 vi.mock('../components/ui/Tooltips', () => ({
@@ -52,9 +53,11 @@ const mockResults: TakeHomeResults = {
   nhiLongTermCarePortion: 0,
   salaryIncome: 0,
   grossEmploymentIncome: 0,
+  additionalDeductions: { national: 0, residence: 0, items: [] },
 };
 
 const mockInputs: TakeHomeInputs = {
+  ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   incomeStreams: [
     {
       id: 'mock-advanced-business',

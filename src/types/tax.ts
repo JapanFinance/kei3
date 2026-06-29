@@ -116,6 +116,90 @@ export interface HomeLoanTaxCreditResult {
 }
 
 /**
+ * User input for the life insurance premium deduction (生命保険料控除). All values are
+ * annual premiums paid, in yen. New-contract (新契約) categories are 2012-01-01-onward
+ * policies; old-contract (旧契約) categories are pre-2012 policies. 介護医療 has no
+ * old-contract equivalent.
+ */
+export interface LifeInsuranceInput {
+  /** 一般生命保険料 — new contract (新契約). */
+  generalNew: number;
+  /** 介護医療保険料 — new contract only. */
+  medicalCareNew: number;
+  /** 個人年金保険料 — new contract (新契約). */
+  pensionNew: number;
+  /** 一般生命保険料 — old contract (旧契約, pre-2012). */
+  generalOld?: number;
+  /** 個人年金保険料 — old contract (旧契約, pre-2012). */
+  pensionOld?: number;
+}
+
+/**
+ * User input for the earthquake insurance premium deduction (地震保険料控除). Values are
+ * annual premiums in yen.
+ */
+export interface EarthquakeInsuranceInput {
+  /** 地震保険料 paid in the year. */
+  earthquake: number;
+  /** 旧長期損害保険料 — qualifying pre-2007 long-term casualty contracts (0 if none). */
+  longTermOld: number;
+}
+
+/** User input for the medical expense deduction (医療費控除). Amounts in yen. */
+export interface MedicalExpensesInput {
+  /** Total medical expenses paid (支払った医療費の合計). */
+  paid: number;
+  /** Amounts reimbursed by insurance, etc. (保険金などで補填される金額). */
+  reimbursed: number;
+}
+
+/**
+ * Zero-value defaults for the additional-deduction inputs. The modal always shows these fields
+ * (defaulting to 0), so "nothing entered" is all-zeros rather than absent — which is why these
+ * inputs are required, not optional. Use these to seed form state, and spread
+ * {@link EMPTY_ADDITIONAL_DEDUCTION_INPUTS} in tests to satisfy the required fields in one line.
+ */
+export const EMPTY_LIFE_INSURANCE: LifeInsuranceInput = {
+  generalNew: 0,
+  medicalCareNew: 0,
+  pensionNew: 0,
+};
+export const EMPTY_EARTHQUAKE_INSURANCE: EarthquakeInsuranceInput = {
+  earthquake: 0,
+  longTermOld: 0,
+};
+export const EMPTY_MEDICAL_EXPENSES: MedicalExpensesInput = { paid: 0, reimbursed: 0 };
+export const EMPTY_ADDITIONAL_DEDUCTION_INPUTS = {
+  lifeInsurance: EMPTY_LIFE_INSURANCE,
+  earthquakeInsurance: EMPTY_EARTHQUAKE_INSURANCE,
+  medicalExpenses: EMPTY_MEDICAL_EXPENSES,
+};
+
+/** One line in the additional-deductions breakdown, with its per-tax amounts (yen). */
+export interface AdditionalDeductionItem {
+  key: 'lifeInsurance' | 'earthquakeInsurance' | 'medical';
+  /** Amount deductible against national income tax. */
+  national: number;
+  /** Amount deductible against residence tax. */
+  residence: number;
+}
+
+/**
+ * Aggregated additional income deductions (所得控除) entered in the modal, beyond the
+ * basic, dependent, social-insurance, and iDeCo deductions handled elsewhere. Shaped like
+ * {@link DependentDeductionResults}: per-tax totals plus an itemized breakdown for display.
+ * Because every member is a 物的控除, none of these affect the residence-tax 調整控除.
+ */
+export interface AdditionalDeductionsResult {
+  /** Total deductible against national income tax (yen). */
+  national: number;
+  /** Total deductible against residence tax (yen). */
+  residence: number;
+  /** Per-item breakdown; only items contributing a positive amount are included. */
+  items: AdditionalDeductionItem[];
+}
+
+/**
  * The most recent income (tax) year the calculator has data and rules for, and the
  * default written into form state.
  *
@@ -148,6 +232,9 @@ export interface TakeHomeFormState {
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   savedIncomeStreams?: IncomeStream[];
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  lifeInsurance: LifeInsuranceInput;
+  earthquakeInsurance: EarthquakeInsuranceInput;
+  medicalExpenses: MedicalExpensesInput;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -168,6 +255,9 @@ export interface TakeHomeInputs {
    */
   incomeYear: number;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  lifeInsurance: LifeInsuranceInput;
+  earthquakeInsurance: EarthquakeInsuranceInput;
+  medicalExpenses: MedicalExpensesInput;
 }
 
 export interface CustomEmployeesHealthInsuranceRates {
@@ -217,6 +307,7 @@ export interface TakeHomeResults {
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
   homeLoanTaxCredit?: HomeLoanTaxCreditResult;
+  additionalDeductions: AdditionalDeductionsResult;
   /**
    * Residence tax income-based portion (所得割) BEFORE the home loan credit spillover, for
    * display. Not simply (post-credit 所得割 + appliedToResidenceTax): the city and prefectural

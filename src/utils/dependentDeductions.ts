@@ -99,6 +99,22 @@ export function hasIncomeAdjustmentDeductionDependent(
 }
 
 /**
+ * Whether the taxpayer has a 年齢23歳未満の扶養親族: a non-spouse dependent under 23 whose
+ * 合計所得金額 is within the 扶養親族 threshold (includes children under 16). This is condition ロ
+ * of {@link hasIncomeAdjustmentDeductionDependent} on its own — it is the sole eligibility test
+ * for the child-rearing 生命保険料控除 expansion (令和8・9年分).
+ */
+export function hasDependentRelativeUnder23(dependents: Dependent[], year: number): boolean {
+  const eligibilityMax = getDependentEligibilityMax(year);
+  return dependents.some(dependent => {
+    if (dependent.relationship === 'spouse') return false; // a spouse is never a 扶養親族
+    if (calculateDependentTotalNetIncome(dependent.income, year) > eligibilityMax) return false;
+    const age = (dependent as OtherDependent).ageCategory;
+    return age === 'under16' || age === '16to18' || age === '19to22';
+  });
+}
+
+/**
  * Check if dependent is eligible for Dependent Deduction (扶養控除).
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
  */

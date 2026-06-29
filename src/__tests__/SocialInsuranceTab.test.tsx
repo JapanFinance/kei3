@@ -4,6 +4,7 @@
 import { render, screen } from '@testing-library/react';
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 // Mock DetailedTooltip to render children directly for easier testing
@@ -32,6 +33,7 @@ beforeAll(() => {
 
 describe('SocialInsuranceTab', () => {
   const mockInputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [
       { id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }, // 6M annual
       { id: '2', type: 'commutingAllowance', amount: 20000, frequency: 'monthly' }, // 240k annual
@@ -90,6 +92,7 @@ describe('SocialInsuranceTab', () => {
     residenceTaxBasicDeduction: 430000,
     salaryIncome: 6000000,
     grossEmploymentIncome: 6000000,
+    additionalDeductions: { national: 0, residence: 0, items: [] },
   };
 
   it('displays Monthly Remuneration label', () => {

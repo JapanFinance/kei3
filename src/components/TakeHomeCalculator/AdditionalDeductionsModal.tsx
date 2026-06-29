@@ -25,10 +25,17 @@ import CloseIcon from '@mui/icons-material/Close';
 import TuneIcon from '@mui/icons-material/Tune';
 import WarningIcon from '@mui/icons-material/Warning';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../../types/tax';
+import type {
+  HomeLoanTaxCreditInput,
+  HomeLoanTaxCreditResult,
+  LifeInsuranceInput,
+  EarthquakeInsuranceInput,
+  MedicalExpensesInput,
+  AdditionalDeductionsResult,
+} from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip, DetailedTooltip } from '../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
@@ -36,6 +43,8 @@ import {
   earliestEligibleMoveInYear,
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../../utils/homeLoanTaxCredit';
+import { formatJPY } from '../../utils/formatters';
+import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
 
 interface AdditionalDeductionsModalProps {
   open: boolean;
@@ -45,9 +54,30 @@ interface AdditionalDeductionsModalProps {
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  lifeInsurance: LifeInsuranceInput;
+  onLifeInsuranceChange: (input: LifeInsuranceInput) => void;
+  earthquakeInsurance: EarthquakeInsuranceInput;
+  onEarthquakeInsuranceChange: (input: EarthquakeInsuranceInput) => void;
+  medicalExpenses: MedicalExpensesInput;
+  onMedicalExpensesChange: (input: MedicalExpensesInput) => void;
+  /** Computed additional deductions, used for the live per-card readouts. */
+  additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Income year being modeled; upper bound for the home-loan move-in-year dropdown. */
   incomeYear: number;
 }
+
+/**
+ * Shared style for the live "Deduction: …" readouts under each card: a muted line whose bold
+ * figures are lifted to the primary colour so they stand out. Keeping the emphasis on the line
+ * (via `& strong`) lets the content stay plain `<strong>` markup, and scopes the recolour here rather than
+ * globally — where it would clobber intentionally-coloured text elsewhere.
+ */
+const readoutSx: SxProps<Theme> = {
+  mt: 1.5,
+  fontSize: '0.85rem',
+  color: 'text.secondary',
+  '& strong': { color: 'text.primary', fontWeight: 600 },
+};
 
 const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> = ({
   children,
@@ -68,6 +98,35 @@ const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> =
   </Typography>
 );
 
+/**
+ * Info icon + popover shown next to a computed deduction readout, explaining how the amount was
+ * derived and linking the official source. These deductions are computed for the user, so the
+ * explanation lives next to the result (not in a "how to calculate" accordion like the home loan
+ * credit, whose accordion explains how to derive the figure the user must enter).
+ */
+const DeductionCalcTooltip: React.FC<{ infoKey: keyof typeof ADDITIONAL_DEDUCTION_INFO }> = ({
+  infoKey,
+}) => {
+  const info = ADDITIONAL_DEDUCTION_INFO[infoKey];
+  return (
+    <DetailedTooltip title={info.name} icon={SIMPLE_TOOLTIP_ICON}>
+      <Box>
+        <Typography variant="body2">{info.explanation}</Typography>
+        <Box sx={{ mt: 1 }}>
+          <a
+            href={info.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+          >
+            {info.sourceLabel}
+          </a>
+        </Box>
+      </Box>
+    </DetailedTooltip>
+  );
+};
+
 export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps> = ({
   open,
   onClose,
@@ -76,10 +135,31 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   homeLoanTaxCredit,
   onHomeLoanTaxCreditChange,
   homeLoanTaxCreditResult,
+  lifeInsurance,
+  onLifeInsuranceChange,
+  earthquakeInsurance,
+  onEarthquakeInsuranceChange,
+  medicalExpenses,
+  onMedicalExpensesChange,
+  additionalDeductions,
   incomeYear,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // Insurance category fields: on mobile, shorten the label to English (using `shortEn` when the
+  // full English is too wide) and move the Japanese term to helper text so the inputs fit on one
+  // row; on desktop (already one row, with room) keep the full inline "English (日本語)".
+  const catField = (
+    en: string,
+    jp: string,
+    shortEn: string = en,
+  ): { label: string; helperText?: string } =>
+    isMobile ? { label: shortEn, helperText: jp } : { label: `${en} (${jp})` };
+
+  // The three-up life fields are narrow on mobile; trim the input's side padding so a 6-digit ¥
+  // value fits without clipping. (No-op on desktop, where the fields are wide.)
+  const denseValueSx = isMobile ? { '& .MuiInputBase-input': { px: 1 } } : undefined;
 
   const effectiveHomeLoan: HomeLoanTaxCreditInput = homeLoanTaxCredit ?? {
     moveInYear: incomeYear,
@@ -96,6 +176,32 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const updateHomeLoan = (patch: Partial<HomeLoanTaxCreditInput>) => {
     onHomeLoanTaxCreditChange({ ...effectiveHomeLoan, ...patch });
   };
+
+  const lifeInput = lifeInsurance;
+  const updateLife = (patch: Partial<LifeInsuranceInput>) => {
+    onLifeInsuranceChange({ ...lifeInput, ...patch });
+  };
+  const [showOldLife, setShowOldLife] = React.useState(
+    !!(lifeInsurance.generalOld || lifeInsurance.pensionOld),
+  );
+  const toggleOldLife = (checked: boolean) => {
+    setShowOldLife(checked);
+    if (!checked) updateLife({ generalOld: 0, pensionOld: 0 });
+  };
+
+  const earthquakeInput = earthquakeInsurance;
+  const updateEarthquake = (patch: Partial<EarthquakeInsuranceInput>) => {
+    onEarthquakeInsuranceChange({ ...earthquakeInput, ...patch });
+  };
+
+  const medicalInput = medicalExpenses;
+  const updateMedical = (patch: Partial<MedicalExpensesInput>) => {
+    onMedicalExpensesChange({ ...medicalInput, ...patch });
+  };
+
+  const lifeItem = additionalDeductions?.items.find(i => i.key === 'lifeInsurance');
+  const earthquakeItem = additionalDeductions?.items.find(i => i.key === 'earthquakeInsurance');
+  const medicalItem = additionalDeductions?.items.find(i => i.key === 'medical');
 
   return (
     <Dialog
@@ -193,6 +299,280 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               </FormControl>
             </CardContent>
           </Card>
+
+          {/* Life Insurance (生命保険料控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Life Insurance (生命保険料控除)
+                <SimpleTooltip>
+                  A deduction for life, medical-care, and pension insurance premiums. Enter the
+                  annual premiums; the calculator works out the deductions for income tax and
+                  residence tax, which may differ.
+                </SimpleTooltip>
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1.5 }}
+              >
+                New contracts (新契約) — policies from 2012.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <FormControl sx={{ flex: '1 1 86px', minWidth: 86 }}>
+                  <SpinnerNumberField
+                    id="lifeGeneralNew"
+                    name="lifeGeneralNew"
+                    value={lifeInput.generalNew}
+                    onInputChange={e =>
+                      updateLife({ generalNew: Number((e.target as HTMLInputElement).value) || 0 })
+                    }
+                    {...catField('General', '一般')}
+                    {...(denseValueSx && { sx: denseValueSx })}
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 86px', minWidth: 86 }}>
+                  <SpinnerNumberField
+                    id="lifeMedicalCareNew"
+                    name="lifeMedicalCareNew"
+                    value={lifeInput.medicalCareNew}
+                    onInputChange={e =>
+                      updateLife({
+                        medicalCareNew: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    {...catField('Medical care', '介護医療', 'Medical')}
+                    {...(denseValueSx && { sx: denseValueSx })}
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 86px', minWidth: 86 }}>
+                  <SpinnerNumberField
+                    id="lifePensionNew"
+                    name="lifePensionNew"
+                    value={lifeInput.pensionNew}
+                    onInputChange={e =>
+                      updateLife({ pensionNew: Number((e.target as HTMLInputElement).value) || 0 })
+                    }
+                    {...catField('Pension', '個人年金')}
+                    {...(denseValueSx && { sx: denseValueSx })}
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+              </Box>
+
+              <FormControlLabel
+                sx={{ mt: 1, ml: 0 }}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={showOldLife}
+                    onChange={e => toggleOldLife(e.target.checked)}
+                    sx={{ py: 0, mr: 0.5 }}
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    Input pre-2012 policies (旧契約)
+                  </Typography>
+                }
+              />
+              {showOldLife && (
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 1 }}>
+                  <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
+                    <SpinnerNumberField
+                      id="lifeGeneralOld"
+                      name="lifeGeneralOld"
+                      value={lifeInput.generalOld ?? 0}
+                      onInputChange={e =>
+                        updateLife({
+                          generalOld: Number((e.target as HTMLInputElement).value) || 0,
+                        })
+                      }
+                      {...catField('General, old', '旧一般')}
+                      step={1_000}
+                      shiftStep={10_000}
+                      min={0}
+                    />
+                  </FormControl>
+                  <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
+                    <SpinnerNumberField
+                      id="lifePensionOld"
+                      name="lifePensionOld"
+                      value={lifeInput.pensionOld ?? 0}
+                      onInputChange={e =>
+                        updateLife({
+                          pensionOld: Number((e.target as HTMLInputElement).value) || 0,
+                        })
+                      }
+                      {...catField('Pension, old', '旧個人年金')}
+                      step={1_000}
+                      shiftStep={10_000}
+                      min={0}
+                    />
+                  </FormControl>
+                </Box>
+              )}
+
+              {lifeItem && (
+                <Typography variant="body2" sx={readoutSx}>
+                  Deduction: <strong>{formatJPY(lifeItem.national)}</strong> income tax,{' '}
+                  <strong>{formatJPY(lifeItem.residence)}</strong> residence tax
+                  <DeductionCalcTooltip infoKey="lifeInsurance" />
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Earthquake Insurance (地震保険料控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Earthquake Insurance (地震保険料控除)
+                <SimpleTooltip>
+                  A deduction for earthquake insurance premiums (and qualifying pre-2007 long-term
+                  casualty premiums). The deduction differs for income tax and residence tax.
+                </SimpleTooltip>
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
+                  <SpinnerNumberField
+                    id="earthquakePremium"
+                    name="earthquakePremium"
+                    value={earthquakeInput.earthquake}
+                    onInputChange={e =>
+                      updateEarthquake({
+                        earthquake: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    {...catField('Earthquake premium', '地震保険料', 'Earthquake')}
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
+                  <SpinnerNumberField
+                    id="earthquakeLongTermOld"
+                    name="earthquakeLongTermOld"
+                    value={earthquakeInput.longTermOld}
+                    onInputChange={e =>
+                      updateEarthquake({
+                        longTermOld: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    {...catField('Long-term, old', '旧長期損害保険料', 'Long-term')}
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+              </Box>
+
+              {earthquakeItem && (
+                <Typography variant="body2" sx={readoutSx}>
+                  Deduction: <strong>{formatJPY(earthquakeItem.national)}</strong> income tax,{' '}
+                  <strong>{formatJPY(earthquakeItem.residence)}</strong> residence tax
+                  <DeductionCalcTooltip infoKey="earthquakeInsurance" />
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Medical Expenses (医療費控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'text.primary',
+                }}
+              >
+                Medical Expenses (医療費控除)
+                <SimpleTooltip>
+                  Enter what you paid in medical expenses and any reimbursements (insurance payouts,
+                  高額療養費, government subsidies, etc.). The calculator subtracts the income-based
+                  floor for you, so enter the raw amounts — not a deduction figure. This is the
+                  standard 医療費控除 only; the セルフメディケーション税制 (医療費控除の特例)
+                  alternative isn&apos;t supported yet.
+                </SimpleTooltip>
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
+                  <SpinnerNumberField
+                    id="medicalPaid"
+                    name="medicalPaid"
+                    value={medicalInput.paid}
+                    onInputChange={e =>
+                      updateMedical({ paid: Number((e.target as HTMLInputElement).value) || 0 })
+                    }
+                    label="Total paid"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+                <FormControl sx={{ flex: '1 1 130px', minWidth: 120 }}>
+                  <SpinnerNumberField
+                    id="medicalReimbursed"
+                    name="medicalReimbursed"
+                    value={medicalInput.reimbursed}
+                    onInputChange={e =>
+                      updateMedical({
+                        reimbursed: Number((e.target as HTMLInputElement).value) || 0,
+                      })
+                    }
+                    label="Reimbursements"
+                    step={1_000}
+                    shiftStep={10_000}
+                    min={0}
+                  />
+                </FormControl>
+              </Box>
+
+              {medicalItem ? (
+                <Typography variant="body2" sx={readoutSx}>
+                  Deduction: <strong>{formatJPY(medicalItem.national)}</strong>
+                  <DeductionCalcTooltip infoKey="medical" />
+                </Typography>
+              ) : (
+                medicalInput.paid > 0 && (
+                  <Typography variant="body2" sx={readoutSx}>
+                    The calculated amount is less than the deduction floor (the lower of ¥100,000
+                    and 5% of income).
+                  </Typography>
+                )
+              )}
+            </CardContent>
+          </Card>
         </Box>
 
         {/* Tax Credits (税額控除) */}
@@ -280,7 +660,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                             build, or a pre-owned home bought from a consumption tax-collecting
                             business. Uncheck it if no consumption tax was charged, such as a
                             pre-owned home bought from a private individual. For 2014–2021 move-ins
-                            this changes the residence-tax spillover cap (特定取得 → 7% / ¥136,500;
+                            this changes the residence tax spillover cap (特定取得 → 7% / ¥136,500;
                             non-特定取得 → 5% / ¥97,500).
                           </Typography>
                           <Box sx={{ mt: 1 }}>

@@ -16,6 +16,7 @@ import {
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
 import type { Dependent } from '../types/dependents';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 describe('calculateNetEmploymentIncome', () => {
   describe('2026 tiers (R8)', () => {
@@ -146,6 +147,7 @@ describe('calculateTaxes', () => {
   // Test cases for different income brackets
   it('calculates taxes correctly for income below 1,950,000 yen', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 1_500_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -171,6 +173,7 @@ describe('calculateTaxes', () => {
 
   it('calculates taxes correctly for income between 1,950,000 and 3,300,000 yen', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 2_500_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -196,6 +199,7 @@ describe('calculateTaxes', () => {
 
   it('calculates taxes correctly for income between 3,300,000 and 6,950,000 yen', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -222,6 +226,7 @@ describe('calculateTaxes', () => {
   // Test cases for high income brackets
   it('calculates taxes correctly for income above 40,000,000 yen', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 50_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -248,6 +253,7 @@ describe('calculateTaxes', () => {
   // Test edge cases
   it('handles zero income correctly', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 0, frequency: 'annual' as const, id: 'test' },
       ],
@@ -271,6 +277,7 @@ describe('calculateTaxes', () => {
 
   it('handles negative income correctly', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: -1_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -294,6 +301,7 @@ describe('calculateTaxes', () => {
 
   it('calculates taxes correctly for non-employment income', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ type: 'miscellaneous' as const, amount: 5_000_000, id: 'test' }],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
@@ -317,6 +325,7 @@ describe('calculateTaxes', () => {
     // Test case for employees who work for small employers or are part-time/low income
     // and are therefore enrolled in National Health Insurance instead of employee insurance
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -354,6 +363,7 @@ describe('calculateTaxes', () => {
   it('calculates taxes correctly with DC plan contributions', () => {
     // Test without DC plan contributions
     const inputsWithoutDcPlan = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -400,6 +410,7 @@ describe('calculateTaxes', () => {
 
   it('calculates taxes correctly with Blue-Filer deduction for business income', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         {
           id: '1',
@@ -720,6 +731,7 @@ describe('calculateNationalIncomeTax', () => {
 describe('calculateTaxes with Dependent Coverage', () => {
   it('calculates taxes correctly with dependent coverage below threshold', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 1_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -751,6 +763,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('calculates taxes correctly with dependent coverage at threshold', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 1_299_999, frequency: 'annual' as const, id: 'test' },
       ],
@@ -776,6 +789,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('calculates taxes correctly with dependent coverage and long-term care premium eligibility', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 1_200_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -797,6 +811,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('calculates taxes correctly with Custom Provider', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -823,6 +838,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('uses manual social insurance amount when enabled', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
@@ -850,6 +866,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('caps Blue-Filer deduction at the amount of business income', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
@@ -881,6 +898,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
 
   it('calculates NHI base correctly with Employment AND Miscellaneous income', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { id: '1', type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const },
         { id: '2', type: 'miscellaneous' as const, amount: 1_000_000 },
@@ -960,6 +978,7 @@ describe('calculateTotalNetIncome', () => {
 describe('Commuting Allowance', () => {
   it('is non-taxable up to 150,000 JPY/month but subject to social insurance', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
         {
@@ -1027,6 +1046,7 @@ describe('Commuting Allowance', () => {
 
   it('excess over 150,000 JPY/month is taxable', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
         {
@@ -1089,6 +1109,7 @@ describe('Commuting Allowance', () => {
     // 6-month pass costs 120,000 (20,000/month equivalent).
     // Should be fully non-taxable.
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
         {
@@ -1118,10 +1139,147 @@ describe('Commuting Allowance', () => {
   });
 });
 
+describe('Additional income deductions (life, earthquake, medical, other)', () => {
+  const baseSalaryInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary' as const, amount: 8_000_000, frequency: 'annual' as const, id: 's1' },
+    ],
+    isSubjectToLongTermCarePremium: false,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  };
+
+  it('subtracts insurance deductions from both taxable incomes without touching 調整控除', () => {
+    const base = calculateTaxes(baseSalaryInputs);
+    const withDeductions = calculateTaxes({
+      ...baseSalaryInputs,
+      lifeInsurance: { generalNew: 100_000, medicalCareNew: 0, pensionNew: 100_000 },
+      earthquakeInsurance: { earthquake: 50_000, longTermOld: 0 },
+    });
+
+    // life 80k/56k + earthquake 50k/25k = 130k national, 81k residence
+    expect(withDeductions.additionalDeductions.national).toBe(130_000);
+    expect(withDeductions.additionalDeductions.residence).toBe(81_000);
+    expect(withDeductions.additionalDeductions.items.map(i => i.key)).toEqual([
+      'lifeInsurance',
+      'earthquakeInsurance',
+    ]);
+
+    // Both taxable incomes drop by exactly the per-tax total (the amounts are multiples of 1,000).
+    expect(
+      base.taxableIncomeForNationalIncomeTax! - withDeductions.taxableIncomeForNationalIncomeTax!,
+    ).toBe(130_000);
+    expect(base.taxableIncomeForResidenceTax! - withDeductions.taxableIncomeForResidenceTax!).toBe(
+      81_000,
+    );
+
+    // These are 物的控除, so the residence 調整控除 (personal deduction difference) is unchanged.
+    expect(withDeductions.residenceTax.personalDeductionDifference).toBe(
+      base.residenceTax.personalDeductionDifference,
+    );
+
+    expect(withDeductions.nationalIncomeTax).toBeLessThan(base.nationalIncomeTax);
+    expect(withDeductions.residenceTax.totalResidenceTax).toBeLessThan(
+      base.residenceTax.totalResidenceTax,
+    );
+  });
+
+  it('applies the medical expense income floor and reduces both taxes equally', () => {
+    const base = calculateTaxes(baseSalaryInputs);
+    const withMedical = calculateTaxes({
+      ...baseSalaryInputs,
+      medicalExpenses: { paid: 350_000, reimbursed: 100_000 },
+    });
+
+    // netIncome 6,100,000 → floor min(¥100k, 5% × 6.1M = ¥305k) = ¥100k → 250k − 100k = ¥150k.
+    expect(withMedical.additionalDeductions.national).toBe(150_000);
+    expect(withMedical.additionalDeductions.residence).toBe(150_000);
+    expect(withMedical.additionalDeductions.items).toHaveLength(1);
+    expect(withMedical.additionalDeductions.items[0]!.key).toBe('medical');
+
+    expect(
+      base.taxableIncomeForNationalIncomeTax! - withMedical.taxableIncomeForNationalIncomeTax!,
+    ).toBe(150_000);
+    expect(base.taxableIncomeForResidenceTax! - withMedical.taxableIncomeForResidenceTax!).toBe(
+      150_000,
+    );
+  });
+
+  it('lowers the furusato nozei limit when residence tax falls', () => {
+    const base = calculateTaxes(baseSalaryInputs);
+    const withDeductions = calculateTaxes({
+      ...baseSalaryInputs,
+      lifeInsurance: { generalNew: 100_000, medicalCareNew: 80_000, pensionNew: 100_000 },
+      earthquakeInsurance: { earthquake: 50_000, longTermOld: 0 },
+    });
+    expect(withDeductions.furusatoNozei.limit).toBeLessThan(base.furusatoNozei.limit);
+  });
+
+  it('subtracts deductions before the home loan credit, shifting it toward the residence spillover', () => {
+    // A credit larger than the income tax pins appliedToIncomeTax to the income-tax base. Adding
+    // 物的控除 lowers that base, so appliedToIncomeTax must strictly fall and the residence spillover
+    // must not decrease — which can only happen if the deductions are applied before the credit.
+    const creditOnly = calculateTaxes({
+      ...baseSalaryInputs,
+      homeLoanTaxCredit: { creditAmount: 800_000, moveInYear: 2024 },
+    });
+    const withDeductions = calculateTaxes({
+      ...baseSalaryInputs,
+      homeLoanTaxCredit: { creditAmount: 800_000, moveInYear: 2024 },
+      lifeInsurance: { generalNew: 100_000, medicalCareNew: 80_000, pensionNew: 100_000 },
+      earthquakeInsurance: { earthquake: 50_000, longTermOld: 0 },
+      medicalExpenses: { paid: 600_000, reimbursed: 0 },
+    });
+
+    expect(creditOnly.homeLoanTaxCredit).toBeDefined();
+    expect(withDeductions.homeLoanTaxCredit!.appliedToIncomeTax).toBeLessThan(
+      creditOnly.homeLoanTaxCredit!.appliedToIncomeTax,
+    );
+    expect(withDeductions.homeLoanTaxCredit!.appliedToResidenceTax).toBeGreaterThanOrEqual(
+      creditOnly.homeLoanTaxCredit!.appliedToResidenceTax,
+    );
+  });
+
+  it('raises the 一般 life-insurance income-tax cap to ¥60,000 for a 2026 household with a <23 dependent', () => {
+    const withChild = {
+      ...baseSalaryInputs,
+      dependents: [
+        {
+          id: 'c1',
+          relationship: 'child' as const,
+          ageCategory: '19to22' as const,
+          income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+          disability: 'none' as const,
+          isCohabiting: true,
+        },
+      ],
+      lifeInsurance: { generalNew: 120_000, medicalCareNew: 0, pensionNew: 0 },
+    };
+    const lifeNational = (inp: typeof withChild) =>
+      calculateTaxes(inp).additionalDeductions.items.find(i => i.key === 'lifeInsurance')!.national;
+
+    // With a <23 dependent in 2026 the 一般 (new) income-tax cap is ¥60,000; without it, ¥40,000.
+    expect(lifeNational(withChild)).toBe(60_000);
+    expect(lifeNational({ ...withChild, dependents: [] })).toBe(40_000);
+    // Residence tax is never affected by the measure.
+    expect(
+      calculateTaxes(withChild).additionalDeductions.items.find(i => i.key === 'lifeInsurance')!
+        .residence,
+    ).toBe(28_000);
+  });
+});
+
 describe('RSU (Restricted Stock Unit) income', () => {
   it('calculates foreign RSU income only correctly', () => {
     // RSU foreign income of 2M should be subject to employment income deduction
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         {
           id: 'rsu1',
@@ -1168,6 +1326,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
     // Salary 3M + RSU 2M should both go through employment income deduction
     // But RSU should NOT be in social insurance base
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { id: 's1', type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const },
         {
@@ -1222,6 +1381,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
     // All three should go through employment income deduction
     // But only salary/bonus in social insurance base
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { id: 's1', type: 'salary' as const, amount: 2_000_000, frequency: 'annual' as const },
         { id: 'b1', type: 'bonus' as const, amount: 1_000_000, month: 5 },
@@ -1264,6 +1424,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
   it('RSU foreign income with NHI includes RSU in net income base', () => {
     // With NHI, RSU should be included in the net income that forms the NHI base
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         {
           id: 'rsu1',
@@ -1328,6 +1489,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
 
   it('supports multiple stock compensation streams and sums them in tax calculations', () => {
     const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { id: 's1', type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const },
         {
@@ -1408,6 +1570,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
   };
 
   const baseInputs = (dependents: Dependent[]) => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [
       { id: 's1', type: 'salary' as const, amount: 22_000_000, frequency: 'annual' as const },
     ],
@@ -1474,6 +1637,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
 
 describe('grossEmploymentIncome (canonical gross for the Net Employment Income tooltip)', () => {
   const baseInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     isSubjectToLongTermCarePremium: false,
     region: 'Tokyo',
     dependents: [],

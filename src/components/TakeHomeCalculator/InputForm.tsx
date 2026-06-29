@@ -31,6 +31,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
+import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
 import { formatJPY } from '../../utils/formatters';
 
@@ -40,6 +41,10 @@ import type {
   IncomeStream,
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
+  LifeInsuranceInput,
+  EarthquakeInsuranceInput,
+  MedicalExpensesInput,
+  AdditionalDeductionsResult,
 } from '../../types/tax';
 import {
   getProviderDisplayName,
@@ -62,6 +67,8 @@ interface TaxInputFormProps {
   ) => void;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
+  additionalDeductions?: AdditionalDeductionsResult | undefined;
 }
 
 // National Health Insurance provider (used in both employment and non-employment scenarios)
@@ -86,6 +93,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
   onInputChange,
   homeLoanTaxCreditResult,
+  additionalDeductions,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -130,6 +138,24 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         name: 'dcPlanContributions',
         value,
       },
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleLifeInsuranceChange = (newInput: LifeInsuranceInput) => {
+    onInputChange({
+      target: { name: 'lifeInsurance', value: newInput },
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleEarthquakeInsuranceChange = (newInput: EarthquakeInsuranceInput) => {
+    onInputChange({
+      target: { name: 'earthquakeInsurance', value: newInput },
+    } as unknown as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  const handleMedicalExpensesChange = (newInput: MedicalExpensesInput) => {
+    onInputChange({
+      target: { name: 'medicalExpenses', value: newInput },
     } as unknown as React.ChangeEvent<HTMLInputElement>);
   };
 
@@ -1084,6 +1110,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
+              additionalDeductions?.items.forEach(item => {
+                const name = ADDITIONAL_DEDUCTION_INFO[item.key]?.name ?? item.key;
+                parts.push(`${name} ${formatJPY(item.national)}`);
+              });
               // Via the UI the move-in dropdown only offers eligible years, so a credit entered
               // but zeroed (availableCredit 0) means income exceeded the cohort's eligibility limit.
               const homeLoanNotApplied = !!(
@@ -1149,6 +1179,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         homeLoanTaxCredit={inputs.homeLoanTaxCredit}
         onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
         homeLoanTaxCreditResult={homeLoanTaxCreditResult}
+        lifeInsurance={inputs.lifeInsurance}
+        onLifeInsuranceChange={handleLifeInsuranceChange}
+        earthquakeInsurance={inputs.earthquakeInsurance}
+        onEarthquakeInsuranceChange={handleEarthquakeInsuranceChange}
+        medicalExpenses={inputs.medicalExpenses}
+        onMedicalExpensesChange={handleMedicalExpensesChange}
+        additionalDeductions={additionalDeductions}
         incomeYear={inputs.incomeYear}
       />
     </Box>

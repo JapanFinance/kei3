@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { calculateTaxes } from '../utils/taxCalculations';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the default salary', () => {
@@ -54,6 +55,7 @@ describe('calculateFurusatoNozeiLimit', () => {
 
   it('furusato nozei limit is reduced by DC plan contributions', () => {
     const fn = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
       isSubjectToLongTermCarePremium: false,
       region: 'Tokyo',
@@ -74,6 +76,7 @@ describe('calculateFurusatoNozeiLimit', () => {
 
   describe('home loan tax credit (住宅ローン控除) interactions', () => {
     const baseInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { id: 'test', type: 'salary' as const, amount: 7_000_000, frequency: 'annual' as const },
       ],
@@ -169,6 +172,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       // At ¥3.5M the residence-tax taxable income is well above the income-tax taxable
       // income (the income-tax basic deduction is larger), so the two cap bases diverge.
       const inputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeStreams: [
           { id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const },
         ],
@@ -216,6 +220,7 @@ describe('calculateFurusatoNozeiLimit', () => {
     // ----------------------------------------------------------------------
     it('computes the home loan credit independently of any furusato donation (interaction deferred)', () => {
       const inputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeStreams: [
           { id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const },
         ],
@@ -261,6 +266,7 @@ describe('calculateFurusatoNozeiLimit', () => {
 
     it('exposes the pre-home-loan income-based residence portion so the breakdown reconciles', () => {
       const inputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeStreams: [
           { id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const },
         ],
@@ -416,6 +422,7 @@ describe('calculateFurusatoNozeiLimit', () => {
     // Standard calculation for 5M income has limit of 60,000
     // If we increase social insurance deduction manually, taxable income decreases, so limit should decrease
     const fnWithHighSocialInsurance = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
       isSubjectToLongTermCarePremium: false,
       region: 'Tokyo',
@@ -431,6 +438,7 @@ describe('calculateFurusatoNozeiLimit', () => {
 
     // If we decrease social insurance deduction manually, taxable income increases, so limit should increase
     const fnWithLowSocialInsurance = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
       isSubjectToLongTermCarePremium: false,
       region: 'Tokyo',
@@ -448,6 +456,7 @@ describe('calculateFurusatoNozeiLimit', () => {
 
 function calculateFNForIncome(income: number): FurusatoNozeiDetails {
   return calculateTaxes({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ id: 'test', type: 'salary', amount: income, frequency: 'annual' }],
     isSubjectToLongTermCarePremium: false,
     region: 'Tokyo',

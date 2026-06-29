@@ -6,6 +6,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import type { TakeHomeFormState } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 import {
   getProviderDisplayName,
@@ -20,6 +21,7 @@ describe('TakeHomeInputForm Tests', () => {
   const mockOnInputChange = vi.fn();
 
   const baseInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'salary',
@@ -286,6 +288,7 @@ describe('TakeHomeInputForm Tests', () => {
 describe('Dependent Coverage UI Behavior', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'salary',
@@ -485,6 +488,7 @@ describe('Dependent Coverage UI Behavior', () => {
 describe('Age Range Selection', () => {
   const mockOnInputChange = vi.fn();
   const baseInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'salary',
@@ -535,6 +539,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
   }));
 
   const defaultInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 0,
     incomeYear: 2026,
     incomeMode: 'advanced',
@@ -577,6 +582,7 @@ describe('Commuting Allowance Integration', () => {
   const mockOnInputChange = vi.fn();
 
   const baseInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'advanced',
@@ -647,6 +653,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
   // Wrapper component to manage state like the real application
   const TestWrapper = () => {
     const [inputs, setInputs] = useState<TakeHomeFormState>({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       annualIncome: 10000000,
       incomeYear: 2026,
       incomeMode: 'advanced',
