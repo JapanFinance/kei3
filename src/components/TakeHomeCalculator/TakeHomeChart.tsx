@@ -35,6 +35,7 @@ import { formatJPY } from '../../utils/formatters';
 import {
   generateChartData,
   getChartOptions,
+  scaleIncomeStreamsToIncome,
   currentAndMedianIncomeChartPlugin,
 } from '../../utils/chartConfig';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
@@ -352,9 +353,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 const band = getPercentileBand(income);
                 let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
 
-                // Calculate full tax results for this income level to get cap status
+                // Calculate full tax results for this income level to get cap status.
+                // Scale the user's actual streams to the hovered income the same way
+                // generateChartData does, so the cap badge matches the bars exactly.
                 const taxInputs = {
-                  annualIncome: income,
                   incomeYear,
                   isEmploymentIncome,
                   isSubjectToLongTermCarePremium,
@@ -365,8 +367,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   customEHIRates,
                   manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
                   manualSocialInsuranceAmount,
-                  incomeMode: 'salary' as const,
-                  incomeStreams: [],
+                  incomeStreams: scaleIncomeStreamsToIncome(incomeStreams, income),
                   lifeInsurance,
                   earthquakeInsurance,
                   medicalExpenses,
@@ -411,6 +412,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     earthquakeInsurance,
     medicalExpenses,
     homeLoanTaxCredit,
+    incomeStreams,
   ]);
 
   // Use media query to determine if we should show minor marks
