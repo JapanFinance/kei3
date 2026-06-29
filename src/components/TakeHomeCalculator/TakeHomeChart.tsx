@@ -26,8 +26,11 @@ import type {
   ChartRange,
   CustomEmployeesHealthInsuranceRates,
   IncomeStream,
+  LifeInsuranceInput,
+  EarthquakeInsuranceInput,
+  MedicalExpensesInput,
+  HomeLoanTaxCreditInput,
 } from '../../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import {
   generateChartData,
@@ -142,6 +145,10 @@ interface TakeHomeChartProps {
   manualSocialInsuranceEntry?: boolean;
   manualSocialInsuranceAmount?: number;
   incomeStreams?: IncomeStream[];
+  lifeInsurance: LifeInsuranceInput;
+  earthquakeInsurance: EarthquakeInsuranceInput;
+  medicalExpenses: MedicalExpensesInput;
+  homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 
 // Define a type for the mark objects
@@ -226,6 +233,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   manualSocialInsuranceEntry,
   manualSocialInsuranceAmount = 0,
   incomeStreams = [],
+  lifeInsurance,
+  earthquakeInsurance,
+  medicalExpenses,
+  homeLoanTaxCredit,
 }) => {
   const theme = useTheme();
 
@@ -285,9 +296,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const chartData = useMemo<ChartData<'bar' | 'line'>>(
     () =>
       generateChartData(chartRange, {
-        // The by-income projection does not yet apply the modal's additional deductions
-        // (生命保険料/地震保険料/医療費) or the home loan credit; hold them at zero for now (follow-up).
-        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         isEmploymentIncome,
         incomeYear,
         isSubjectToLongTermCarePremium,
@@ -299,6 +307,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
         manualSocialInsuranceAmount,
         incomeStreams,
+        lifeInsurance,
+        earthquakeInsurance,
+        medicalExpenses,
+        homeLoanTaxCredit,
       }),
     [
       chartRange,
@@ -313,6 +325,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       manualSocialInsuranceEntry,
       manualSocialInsuranceAmount,
       incomeStreams,
+      lifeInsurance,
+      earthquakeInsurance,
+      medicalExpenses,
+      homeLoanTaxCredit,
     ],
   );
 
@@ -338,8 +354,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
                 // Calculate full tax results for this income level to get cap status
                 const taxInputs = {
-                  // See note in chartData: additional deductions / home loan credit not reflected here yet.
-                  ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
                   annualIncome: income,
                   incomeYear,
                   isEmploymentIncome,
@@ -353,6 +367,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   manualSocialInsuranceAmount,
                   incomeMode: 'salary' as const,
                   incomeStreams: [],
+                  lifeInsurance,
+                  earthquakeInsurance,
+                  medicalExpenses,
+                  homeLoanTaxCredit,
                 };
 
                 const taxResults = calculateTaxes(taxInputs);
@@ -389,6 +407,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     customEHIRates,
     manualSocialInsuranceEntry,
     manualSocialInsuranceAmount,
+    lifeInsurance,
+    earthquakeInsurance,
+    medicalExpenses,
+    homeLoanTaxCredit,
   ]);
 
   // Use media query to determine if we should show minor marks

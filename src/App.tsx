@@ -293,6 +293,10 @@ function App({ mode, toggleColorMode }: AppProps) {
             manualSocialInsuranceEntry={inputs.manualSocialInsuranceEntry}
             manualSocialInsuranceAmount={inputs.manualSocialInsuranceAmount}
             incomeStreams={inputs.incomeStreams}
+            lifeInsurance={inputs.lifeInsurance}
+            earthquakeInsurance={inputs.earthquakeInsurance}
+            medicalExpenses={inputs.medicalExpenses}
+            homeLoanTaxCredit={inputs.homeLoanTaxCredit}
           />
         </Suspense>
 
