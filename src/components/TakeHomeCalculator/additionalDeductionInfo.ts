@@ -13,10 +13,9 @@ import type { AdditionalDeductionItem } from '../../types/tax';
  * work out the figure the user must enter.
  */
 export interface AdditionalDeductionInfo {
-  /** English deduction name; the primary label shown in tooltips (we don't assume readers know Japanese). */
+  /** English deduction name; shown as the primary label in tooltips (we don't assume readers know
+   * Japanese). The Japanese term is still available via {@link sourceLabel}. */
   name: string;
-  /** Japanese deduction name; kept for the source reference and official-doc cross-referencing. */
-  label: string;
   /** How the displayed amount is computed — explains why it may differ from the raw figures. */
   explanation: string;
   /** Official source link text. */
@@ -31,7 +30,6 @@ export const ADDITIONAL_DEDUCTION_INFO: Record<
 > = {
   lifeInsurance: {
     name: 'Life insurance',
-    label: '生命保険料控除',
     explanation:
       'Each category is computed from its premiums on a sliding scale, then capped (new contracts ¥40,000 income tax / ¥28,000 residence; old contracts ¥50,000 / ¥35,000), with an overall cap of ¥120,000 / ¥70,000. With both new and old policies in a category, the most favourable method is used. For 2026–2027, a household with a dependent under 23 gets the general (new) cap for income tax raised to ¥60,000.',
     sourceLabel: '生命保険料控除 (NTA No.1140)',
@@ -39,7 +37,6 @@ export const ADDITIONAL_DEDUCTION_INFO: Record<
   },
   earthquakeInsurance: {
     name: 'Earthquake insurance',
-    label: '地震保険料控除',
     explanation:
       'The earthquake premium is deductible in full up to ¥50,000 for income tax, and at half up to ¥25,000 for residence tax. A 旧長期損害保険料 portion can be added, with the combined deduction capped at ¥50,000 / ¥25,000.',
     sourceLabel: '地震保険料控除 (NTA No.1145)',
@@ -47,7 +44,6 @@ export const ADDITIONAL_DEDUCTION_INFO: Record<
   },
   medical: {
     name: 'Medical expenses',
-    label: '医療費控除',
     explanation:
       'The deduction is your medical expenses minus any reimbursements, minus the lower of ¥100,000 and 5% of your total net income, capped at ¥2,000,000.',
     sourceLabel: '医療費控除 (NTA No.1120)',

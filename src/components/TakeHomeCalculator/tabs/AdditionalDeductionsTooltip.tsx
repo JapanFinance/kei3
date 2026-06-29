@@ -58,11 +58,7 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
             <TableBody>
               {rows.map(item => (
                 <TableRow key={item.key}>
-                  <TableCell>
-                    <div style={{ fontWeight: 500 }}>
-                      {ADDITIONAL_DEDUCTION_INFO[item.key]?.name ?? item.label}
-                    </div>
-                  </TableCell>
+                  <TableCell>{ADDITIONAL_DEDUCTION_INFO[item.key]?.name ?? item.label}</TableCell>
                   <TableCell align="right">{formatJPY(getAmount(item))}</TableCell>
                 </TableRow>
               ))}

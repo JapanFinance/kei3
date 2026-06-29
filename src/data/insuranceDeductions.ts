@@ -35,44 +35,49 @@ interface DeductionBand {
 }
 
 /**
- * Rounds a raw deduction up to the next whole yen (1円未満切上げ). Premiums are usually
- * round figures, so this only bites on the ½/¼ formulas with odd premiums. The small
- * epsilon keeps an exactly-integer result (e.g. 30000.0000001 from float error) from
- * rounding spuriously up to 30001.
+ * Rounds a raw deduction up to the next whole yen (1円未満切上げ). The band formulas divide only by
+ * 2 and 4, so their results are exactly representable (integer or .25/.5/.75) — no float-error
+ * guard is needed and plain Math.ceil suffices.
  */
-const roundUpYen = (amount: number): number => {
-  const rounded = Math.ceil(amount - 1e-9);
-  // Math.ceil(-1e-9) yields -0; normalize so deduction outputs never carry a negative zero.
-  return rounded === 0 ? 0 : rounded;
-};
-
 const applyBands = (premium: number, bands: ReadonlyArray<DeductionBand>): number => {
   const p = Math.max(0, premium);
   for (const band of bands) {
-    if (p <= band.upTo) return roundUpYen(band.amount(p));
+    if (p <= band.upTo) return Math.ceil(band.amount(p));
   }
   return 0; // Unreachable: the last band is always upTo: Infinity.
 };
 
 // 生命保険料控除 — per-category bands, new (新契約) and old (旧契約) regimes.
+/**
+ * @see 生命保険料控除 (national): NTA No.1140 https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm
+ */
 const LIFE_NEW_NATIONAL: ReadonlyArray<DeductionBand> = [
   { upTo: 20_000, amount: p => p },
   { upTo: 40_000, amount: p => p / 2 + 10_000 },
   { upTo: 80_000, amount: p => p / 4 + 20_000 },
   { upTo: Infinity, amount: () => 40_000 },
 ];
+/**
+ * @see 生命保険料控除 (national): NTA No.1140 https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm
+ */
 const LIFE_OLD_NATIONAL: ReadonlyArray<DeductionBand> = [
   { upTo: 25_000, amount: p => p },
   { upTo: 50_000, amount: p => p / 2 + 12_500 },
   { upTo: 100_000, amount: p => p / 4 + 25_000 },
   { upTo: Infinity, amount: () => 50_000 },
 ];
+/**
+ * @see 生命保険料控除 (residence): 練馬区 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/seimeihokenryokojo.html
+ */
 const LIFE_NEW_RESIDENCE: ReadonlyArray<DeductionBand> = [
   { upTo: 12_000, amount: p => p },
   { upTo: 32_000, amount: p => p / 2 + 6_000 },
   { upTo: 56_000, amount: p => p / 4 + 14_000 },
   { upTo: Infinity, amount: () => 28_000 },
 ];
+/**
+ * @see 生命保険料控除 (residence): 練馬区 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/seimeihokenryokojo.html
+ */
 const LIFE_OLD_RESIDENCE: ReadonlyArray<DeductionBand> = [
   { upTo: 15_000, amount: p => p },
   { upTo: 40_000, amount: p => p / 2 + 7_500 },
@@ -103,30 +108,30 @@ const CHILD_REARING_LIFE_EXPANSION_YEARS: ReadonlySet<number> = new Set([2026, 2
 export const isChildRearingLifeExpansionYear = (year: number): boolean =>
   CHILD_REARING_LIFE_EXPANSION_YEARS.has(year);
 
-/** Per-category and overall caps for one tax regime. */
+/**
+ * Caps for one tax regime. The per-category new-only and old-only amounts are capped by their own
+ * band tables (the flat last row IS the statutory per-category maximum — NTA No.1140), so only the
+ * statute's cross-cutting caps are stored here.
+ */
 interface LifeRegime {
   newBands: ReadonlyArray<DeductionBand>;
   oldBands: ReadonlyArray<DeductionBand>;
-  /** Cap on the new-only and the new+old combined methods. */
-  newCategoryCap: number;
-  /** Cap on the old-only method. */
-  oldCategoryCap: number;
-  /** Cap on the sum of all categories. */
+  /** Statutory cap on a category's new + old combined deduction. */
+  combinedCap: number;
+  /** Cap on the sum of all categories (¥120,000 national, ¥70,000 residence). */
   overallCap: number;
 }
 
 const LIFE_NATIONAL: LifeRegime = {
   newBands: LIFE_NEW_NATIONAL,
   oldBands: LIFE_OLD_NATIONAL,
-  newCategoryCap: 40_000,
-  oldCategoryCap: 50_000,
+  combinedCap: 40_000,
   overallCap: 120_000,
 };
 const LIFE_RESIDENCE: LifeRegime = {
   newBands: LIFE_NEW_RESIDENCE,
   oldBands: LIFE_OLD_RESIDENCE,
-  newCategoryCap: 28_000,
-  oldCategoryCap: 35_000,
+  combinedCap: 28_000,
   overallCap: 70_000,
 };
 
@@ -138,13 +143,14 @@ const LIFE_RESIDENCE: LifeRegime = {
 const LIFE_GENERAL_NATIONAL_CHILD_REARING: LifeRegime = {
   ...LIFE_NATIONAL,
   newBands: LIFE_NEW_GENERAL_NATIONAL_CHILD_REARING,
-  newCategoryCap: 60_000,
+  combinedCap: 60_000,
 };
 
 /**
  * Deduction for one life-insurance category (一般 or 個人年金), which may hold both old and
- * new contracts. Computed cap-agnostically as the most favourable of: new-only (cap
- * newCategoryCap), old-only (cap oldCategoryCap), and new+old combined (cap newCategoryCap).
+ * new contracts. The new-only and old-only amounts are each capped by their own band table (the
+ * flat last row), so the only explicit cap here is the statutory new+old combined limit. Computed
+ * cap-agnostically as the most favourable of: new-only, old-only, and new+old combined.
  *
  * This deliberately does NOT hardcode the NTA's "old premium > ¥60,000" rule from
  * https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm: that ¥60,000 is the
@@ -158,9 +164,9 @@ const lifeCategoryDeduction = (
   oldPremium: number,
   regime: LifeRegime,
 ): number => {
-  const newDed = Math.min(applyBands(newPremium, regime.newBands), regime.newCategoryCap);
-  const oldDed = Math.min(applyBands(oldPremium, regime.oldBands), regime.oldCategoryCap);
-  const combined = Math.min(newDed + oldDed, regime.newCategoryCap);
+  const newDed = applyBands(newPremium, regime.newBands);
+  const oldDed = applyBands(oldPremium, regime.oldBands);
+  const combined = Math.min(newDed + oldDed, regime.combinedCap);
   return Math.max(newDed, oldDed, combined);
 };
 
@@ -211,6 +217,9 @@ const QUAKE_OLD_LONG_TERM_NATIONAL: ReadonlyArray<DeductionBand> = [
   { upTo: 20_000, amount: p => p / 2 + 5_000 },
   { upTo: Infinity, amount: () => 15_000 },
 ];
+/**
+ * @see 地震保険料控除 (residence): 練馬区 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jishinhokenryoukojo.html
+ */
 const QUAKE_OLD_LONG_TERM_RESIDENCE: ReadonlyArray<DeductionBand> = [
   { upTo: 5_000, amount: p => p },
   { upTo: 15_000, amount: p => p / 2 + 2_500 },
@@ -236,7 +245,7 @@ export const calculateEarthquakeInsuranceDeduction = (
   const oldNational = applyBands(longTermOld, QUAKE_OLD_LONG_TERM_NATIONAL);
   const national = Math.min(quakeNational + oldNational, QUAKE_OVERALL_CAP_NATIONAL);
 
-  const quakeResidence = Math.min(roundUpYen(earthquake / 2), QUAKE_OVERALL_CAP_RESIDENCE);
+  const quakeResidence = Math.min(Math.ceil(earthquake / 2), QUAKE_OVERALL_CAP_RESIDENCE);
   const oldResidence = applyBands(longTermOld, QUAKE_OLD_LONG_TERM_RESIDENCE);
   const residence = Math.min(quakeResidence + oldResidence, QUAKE_OVERALL_CAP_RESIDENCE);
 

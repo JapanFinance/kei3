@@ -1164,10 +1164,9 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
     });
 
     // life 80k/56k + earthquake 50k/25k = 130k national, 81k residence
-    expect(withDeductions.additionalDeductions).toBeDefined();
-    expect(withDeductions.additionalDeductions!.national).toBe(130_000);
-    expect(withDeductions.additionalDeductions!.residence).toBe(81_000);
-    expect(withDeductions.additionalDeductions!.items.map(i => i.key)).toEqual([
+    expect(withDeductions.additionalDeductions.national).toBe(130_000);
+    expect(withDeductions.additionalDeductions.residence).toBe(81_000);
+    expect(withDeductions.additionalDeductions.items.map(i => i.key)).toEqual([
       'lifeInsurance',
       'earthquakeInsurance',
     ]);
@@ -1199,10 +1198,10 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
     });
 
     // netIncome 6,100,000 → floor min(¥100k, 5% × 6.1M = ¥305k) = ¥100k → 250k − 100k = ¥150k.
-    expect(withMedical.additionalDeductions!.national).toBe(150_000);
-    expect(withMedical.additionalDeductions!.residence).toBe(150_000);
-    expect(withMedical.additionalDeductions!.items).toHaveLength(1);
-    expect(withMedical.additionalDeductions!.items[0]!.key).toBe('medical');
+    expect(withMedical.additionalDeductions.national).toBe(150_000);
+    expect(withMedical.additionalDeductions.residence).toBe(150_000);
+    expect(withMedical.additionalDeductions.items).toHaveLength(1);
+    expect(withMedical.additionalDeductions.items[0]!.key).toBe('medical');
 
     expect(
       base.taxableIncomeForNationalIncomeTax! - withMedical.taxableIncomeForNationalIncomeTax!,
@@ -1263,15 +1262,14 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
       lifeInsurance: { generalNew: 120_000, medicalCareNew: 0, pensionNew: 0 },
     };
     const lifeNational = (inp: typeof withChild) =>
-      calculateTaxes(inp).additionalDeductions!.items.find(i => i.key === 'lifeInsurance')!
-        .national;
+      calculateTaxes(inp).additionalDeductions.items.find(i => i.key === 'lifeInsurance')!.national;
 
     // With a <23 dependent in 2026 the 一般 (new) income-tax cap is ¥60,000; without it, ¥40,000.
     expect(lifeNational(withChild)).toBe(60_000);
     expect(lifeNational({ ...withChild, dependents: [] })).toBe(40_000);
     // Residence tax is never affected by the measure.
     expect(
-      calculateTaxes(withChild).additionalDeductions!.items.find(i => i.key === 'lifeInsurance')!
+      calculateTaxes(withChild).additionalDeductions.items.find(i => i.key === 'lifeInsurance')!
         .residence,
     ).toBe(28_000);
   });

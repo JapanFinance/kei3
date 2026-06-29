@@ -26,7 +26,7 @@ import {
 } from '../data/insuranceDeductions';
 import { hasDependentRelativeUnder23 } from './dependentDeductions';
 
-/** Medical expense deduction floor: the lower of ¥100,000 and 5% of total income. */
+/** Medical expense deduction floor: the lower of ¥100,000 and 5% of total net income. */
 const MEDICAL_DEDUCTION_FLOOR_CAP = 100_000;
 const MEDICAL_DEDUCTION_INCOME_RATE = 0.05;
 /** Statutory maximum medical expense deduction. */
@@ -37,8 +37,10 @@ const MEDICAL_DEDUCTION_MAX = 2_000_000;
  *
  *   deduction = clamp((paid − reimbursed) − min(¥100,000, netIncome × 5%), 0, ¥2,000,000)
  *
- * `netIncome` is the taxpayer's 合計所得金額, used here in place of 総所得金額等 — they
- * coincide for the income types this calculator models. Source: NTA No.1120
+ * The statutory floor base is 総所得金額等; `netIncome` is the taxpayer's 合計所得金額, used here as
+ * a stand-in. The two differ only by carried-forward losses (純損失・雑損失等の繰越控除): 総所得金額等
+ * is after applying them, 合計所得金額 is before. This calculator models no loss carryforwards, so the
+ * two coincide and the substitution is exact. Source: NTA No.1120
  * https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm
  */
 export const calculateMedicalExpenseDeduction = (

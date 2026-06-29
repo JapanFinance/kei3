@@ -388,7 +388,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 }
                 label={
                   <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                    I also have pre-2012 policies (旧契約)
+                    Input pre-2012 policies (旧契約)
                   </Typography>
                 }
               />

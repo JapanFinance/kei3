@@ -17,6 +17,10 @@ describe('calculateMedicalExpenseDeduction', () => {
     expect(calculateMedicalExpenseDeduction(300_000, 0, 1_000_000)).toBe(250_000);
   });
 
+  it('uses 5% of income as the floor when that is lower than ¥100,000 even when expenses are under ¥100,000', () => {
+    expect(calculateMedicalExpenseDeduction(70_000, 0, 1_000_000)).toBe(20_000);
+  });
+
   it('returns zero when net expenses are below the floor', () => {
     expect(calculateMedicalExpenseDeduction(80_000, 0, 10_000_000)).toBe(0);
   });
@@ -68,7 +72,7 @@ describe('calculateAdditionalDeductions', () => {
         ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeYear: 2026,
         dependents: [],
-        lifeInsurance: { generalNew: 0, medicalCareNew: 0, pensionNew: 0 },
+        medicalExpenses: { paid: 80_000, reimbursed: 0 },
       },
       5_000_000,
     );

@@ -133,11 +133,11 @@ describe('calculateLifeInsuranceDeduction — child-rearing expansion (令和8�
   });
 
   it('still applies the ¥120,000 / ¥70,000 overall caps when eligible', () => {
-    const d = deduct(
+    const deduction = deduct(
       life({ generalNew: 120_000, medicalCareNew: 80_000, pensionNew: 80_000 }),
       2026,
       true,
     );
-    expect(d).toEqual({ national: 120_000, residence: 70_000 });
+    expect(deduction).toEqual({ national: 120_000, residence: 70_000 });
   });
 });
