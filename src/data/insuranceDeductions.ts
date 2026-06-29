@@ -239,7 +239,7 @@ export const calculateEarthquakeInsuranceDeduction = (
   input: EarthquakeInsuranceInput,
 ): DeductionAmount => {
   const earthquake = Math.max(0, input.earthquake);
-  const longTermOld = Math.max(0, input.longTermOld ?? 0);
+  const longTermOld = Math.max(0, input.longTermOld);
 
   const quakeNational = Math.min(earthquake, QUAKE_OVERALL_CAP_NATIONAL);
   const oldNational = applyBands(longTermOld, QUAKE_OLD_LONG_TERM_NATIONAL);

@@ -178,8 +178,6 @@ export const EMPTY_ADDITIONAL_DEDUCTION_INPUTS = {
 /** One line in the additional-deductions breakdown, with its per-tax amounts (yen). */
 export interface AdditionalDeductionItem {
   key: 'lifeInsurance' | 'earthquakeInsurance' | 'medical';
-  /** Display label (Japanese deduction name), e.g. '生命保険料控除'. */
-  label: string;
   /** Amount deductible against national income tax. */
   national: number;
   /** Amount deductible against residence tax. */

@@ -479,7 +479,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   <SpinnerNumberField
                     id="earthquakeLongTermOld"
                     name="earthquakeLongTermOld"
-                    value={earthquakeInput.longTermOld ?? 0}
+                    value={earthquakeInput.longTermOld}
                     onInputChange={e =>
                       updateEarthquake({
                         longTermOld: Number((e.target as HTMLInputElement).value) || 0,
