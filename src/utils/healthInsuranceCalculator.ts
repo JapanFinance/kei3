@@ -176,8 +176,7 @@ export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
 export function calculateEmployeesHealthInsuranceBonusBreakdown(
   bonuses: BonusIncomeStream[],
   providerOrRates:
-    | string
-    | { employeeHealthInsuranceRate: number; employeeLongTermCareRate: number },
+    string | { employeeHealthInsuranceRate: number; employeeLongTermCareRate: number },
   regionOrLTC: string | boolean,
   year: number,
   isSubjectToLongTermCarePremium?: boolean,
