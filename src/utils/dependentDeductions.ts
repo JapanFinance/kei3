@@ -634,8 +634,7 @@ function calculateSpouseDeduction(
 
   const getAmount = (
     taxTypeTable:
-      | typeof SPOUSE_DEDUCTION_PHASE_OUT.NATIONAL
-      | typeof SPOUSE_DEDUCTION_PHASE_OUT.RESIDENCE,
+      typeof SPOUSE_DEDUCTION_PHASE_OUT.NATIONAL | typeof SPOUSE_DEDUCTION_PHASE_OUT.RESIDENCE,
   ) => {
     const ageTable = isElderly ? taxTypeTable.ELDERLY : taxTypeTable.REGULAR;
 
