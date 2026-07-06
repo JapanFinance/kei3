@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useReducer, useState, useEffect, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box';
 import SiteHeader from './components/SiteHeader';
 import ChangelogButton from './components/ChangelogButton';
@@ -9,15 +9,8 @@ import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types/tax';
 import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
 import { calculateTaxes } from './utils/taxCalculations';
-import {
-  DEFAULT_PROVIDER_REGION,
-  NATIONAL_HEALTH_INSURANCE_ID,
-  DEFAULT_PROVIDER,
-  DEPENDENT_COVERAGE_ID,
-  isDependentCoverageEligible,
-} from './types/healthInsurance';
-import { NATIONAL_HEALTH_INSURANCE_REGIONS } from './data/nationalHealthInsurance/nhiParamsData';
-import { PROVIDER_DEFINITIONS } from './data/employeesHealthInsurance/providerRateData';
+import { DEFAULT_PROVIDER } from './types/healthInsurance';
+import { takeHomeFormReducer } from './state/takeHomeFormReducer';
 import { useChangelogModal } from './hooks/useChangelogModal';
 
 // Lazy load components that aren't immediately needed
@@ -30,14 +23,6 @@ const ChangelogModal = lazy(() => import('./components/ChangelogModal'));
 interface AppProps {
   mode: 'light' | 'dark';
   toggleColorMode: () => void;
-}
-
-function selectDefaultRegion(regions: readonly string[]): string {
-  return regions.includes('Tokyo')
-    ? 'Tokyo'
-    : regions.length > 0
-      ? regions[0]!
-      : DEFAULT_PROVIDER_REGION;
 }
 
 function App({ mode, toggleColorMode }: AppProps) {
@@ -72,7 +57,7 @@ function App({ mode, toggleColorMode }: AppProps) {
   };
 
   // State for form inputs
-  const [inputs, setInputs] = useState<TakeHomeFormState>(defaultInputs);
+  const [inputs, dispatch] = useReducer(takeHomeFormReducer, defaultInputs);
 
   // State for calculation results
   const [results, setResults] = useState<TakeHomeResults | null>(null);
@@ -124,7 +109,9 @@ function App({ mode, toggleColorMode }: AppProps) {
     inputs.medicalExpenses,
   ]);
 
-  // Handle input changes
+  // Thin adapter over dispatch: translates the legacy (fake) event shape used by
+  // InputForm into typed reducer actions. TODO(migration): delete once InputForm
+  // dispatches directly and no consumer relies on this event shape anymore.
   const handleInputChange = (
     e:
       | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -136,69 +123,35 @@ function App({ mode, toggleColorMode }: AppProps) {
     const isCheckbox = type === 'checkbox';
     const isNumber = type === 'number' || type === 'range';
 
-    setInputs(prev => {
-      let processedInputValue: string | number | boolean;
+    let processedInputValue: string | number | boolean;
+    if (isCheckbox) {
+      processedInputValue = target.checked;
+    } else if (isNumber) {
+      processedInputValue = parseFloat(value as string) || 0;
+    } else {
+      // For select and other text-based inputs, as well as complex objects
+      processedInputValue = value;
+    }
 
-      if (isCheckbox) {
-        processedInputValue = target.checked;
-      } else if (isNumber) {
-        processedInputValue = parseFloat(value as string) || 0;
-      } else {
-        // For select and other text-based inputs, as well as complex objects
-        processedInputValue = value;
-      }
-
-      const newInputs = {
-        ...prev,
-        [name]: processedInputValue,
-      };
-
-      // Cascading updates for health insurance provider and region
-      if (name === 'incomeMode') {
-        const newMode = processedInputValue as string;
-        if (newMode === 'salary') {
-          newInputs.healthInsuranceProvider = 'KyokaiKenpo';
-          const providerDefinition = PROVIDER_DEFINITIONS['KyokaiKenpo'];
-          const providerRegions = providerDefinition ? Object.keys(providerDefinition.regions) : [];
-          newInputs.region = selectDefaultRegion(providerRegions);
-        } else if (newMode === 'miscellaneous') {
-          newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-          newInputs.region = selectDefaultRegion(NATIONAL_HEALTH_INSURANCE_REGIONS);
-        }
-      } else if (name === 'healthInsuranceProvider') {
-        newInputs.healthInsuranceProvider = processedInputValue as string;
-        if (processedInputValue === NATIONAL_HEALTH_INSURANCE_ID) {
-          newInputs.region = selectDefaultRegion(NATIONAL_HEALTH_INSURANCE_REGIONS);
-        } else if (processedInputValue === DEPENDENT_COVERAGE_ID) {
-          // Dependent coverage doesn't need a region
-          newInputs.region = DEFAULT_PROVIDER_REGION;
-        } else {
-          // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
-          const providerDefinition = PROVIDER_DEFINITIONS[processedInputValue as string];
-          if (providerDefinition) {
-            const providerRegions = Object.keys(providerDefinition.regions);
-            newInputs.region = selectDefaultRegion(providerRegions);
-          } else {
-            newInputs.region = DEFAULT_PROVIDER_REGION;
-            console.warn(
-              `Data for ID ${processedInputValue} not found in Employees Health Insurance Provider data.Defaulting region.`,
-            );
-          }
-        }
-      } else if (name === 'annualIncome') {
-        // If income changes and user has dependent coverage selected, check eligibility
-        const newIncome = processedInputValue as number;
-        if (
-          prev.healthInsuranceProvider === DEPENDENT_COVERAGE_ID &&
-          !isDependentCoverageEligible(newIncome)
-        ) {
-          // Income exceeded threshold, automatically switch to NHI
-          newInputs.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-          newInputs.region = selectDefaultRegion(NATIONAL_HEALTH_INSURANCE_REGIONS);
-        }
-      }
-      return newInputs;
-    });
+    if (name === 'incomeMode') {
+      dispatch({
+        type: 'incomeModeChanged',
+        mode: processedInputValue as TakeHomeFormState['incomeMode'],
+      });
+    } else if (name === 'healthInsuranceProvider') {
+      dispatch({
+        type: 'providerChanged',
+        provider: processedInputValue as TakeHomeFormState['healthInsuranceProvider'],
+      });
+    } else if (name === 'annualIncome') {
+      dispatch({ type: 'annualIncomeChanged', value: processedInputValue as number });
+    } else {
+      dispatch({
+        type: 'setField',
+        field: name as keyof TakeHomeFormState,
+        value: processedInputValue as never,
+      });
+    }
   };
 
   return (
