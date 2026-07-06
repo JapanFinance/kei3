@@ -109,51 +109,6 @@ function App({ mode, toggleColorMode }: AppProps) {
     inputs.medicalExpenses,
   ]);
 
-  // Thin adapter over dispatch: translates the legacy (fake) event shape used by
-  // InputForm into typed reducer actions. TODO(migration): delete once InputForm
-  // dispatches directly and no consumer relies on this event shape anymore.
-  const handleInputChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { name: string; value: unknown; type?: string; checked?: boolean } },
-  ) => {
-    const target = e.target as HTMLInputElement;
-    const { name, value, type } = target;
-
-    const isCheckbox = type === 'checkbox';
-    const isNumber = type === 'number' || type === 'range';
-
-    let processedInputValue: string | number | boolean;
-    if (isCheckbox) {
-      processedInputValue = target.checked;
-    } else if (isNumber) {
-      processedInputValue = parseFloat(value as string) || 0;
-    } else {
-      // For select and other text-based inputs, as well as complex objects
-      processedInputValue = value;
-    }
-
-    if (name === 'incomeMode') {
-      dispatch({
-        type: 'incomeModeChanged',
-        mode: processedInputValue as TakeHomeFormState['incomeMode'],
-      });
-    } else if (name === 'healthInsuranceProvider') {
-      dispatch({
-        type: 'providerChanged',
-        provider: processedInputValue as TakeHomeFormState['healthInsuranceProvider'],
-      });
-    } else if (name === 'annualIncome') {
-      dispatch({ type: 'annualIncomeChanged', value: processedInputValue as number });
-    } else {
-      dispatch({
-        type: 'setField',
-        field: name as keyof TakeHomeFormState,
-        value: processedInputValue as never,
-      });
-    }
-  };
-
   return (
     <Box
       sx={{
@@ -192,7 +147,7 @@ function App({ mode, toggleColorMode }: AppProps) {
         >
           <TakeHomeInputForm
             inputs={inputs}
-            onInputChange={handleInputChange}
+            dispatch={dispatch}
             homeLoanTaxCreditResult={results?.homeLoanTaxCredit}
             additionalDeductions={results?.additionalDeductions}
           />

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import React, { useState } from 'react';
+import type { Dispatch } from 'react';
 import TextField from '@mui/material/TextField';
 import FormControl from '@mui/material/FormControl';
 import Select from '@mui/material/Select';
@@ -57,14 +58,11 @@ import {
 } from '../../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
+import type { FormAction } from '../../state/takeHomeFormReducer';
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
-  onInputChange: (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { name: string; value: unknown; type?: string; checked?: boolean } },
-  ) => void;
+  dispatch: Dispatch<FormAction>;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
   /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
@@ -91,7 +89,7 @@ const customProvider = {
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
-  onInputChange,
+  dispatch,
   homeLoanTaxCreditResult,
   additionalDeductions,
 }) => {
@@ -115,48 +113,27 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   };
 
   const handleDependentsChange = (newDependents: typeof inputs.dependents) => {
-    onInputChange({
-      target: {
-        name: 'dependents',
-        value: newDependents,
-      },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({ type: 'setField', field: 'dependents', value: newDependents });
   };
 
   const handleHomeLoanTaxCreditChange = (newInput: HomeLoanTaxCreditInput | undefined) => {
-    onInputChange({
-      target: {
-        name: 'homeLoanTaxCredit',
-        value: newInput,
-      },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({ type: 'setField', field: 'homeLoanTaxCredit', value: newInput });
   };
 
   const handleDcPlanContributionsChange = (value: number) => {
-    onInputChange({
-      target: {
-        name: 'dcPlanContributions',
-        value,
-      },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({ type: 'setField', field: 'dcPlanContributions', value });
   };
 
   const handleLifeInsuranceChange = (newInput: LifeInsuranceInput) => {
-    onInputChange({
-      target: { name: 'lifeInsurance', value: newInput },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({ type: 'setField', field: 'lifeInsurance', value: newInput });
   };
 
   const handleEarthquakeInsuranceChange = (newInput: EarthquakeInsuranceInput) => {
-    onInputChange({
-      target: { name: 'earthquakeInsurance', value: newInput },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({ type: 'setField', field: 'earthquakeInsurance', value: newInput });
   };
 
   const handleMedicalExpensesChange = (newInput: MedicalExpensesInput) => {
-    onInputChange({
-      target: { name: 'medicalExpenses', value: newInput },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({ type: 'setField', field: 'medicalExpenses', value: newInput });
   };
 
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
@@ -172,19 +149,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       return sum + s.amount;
     }, 0);
 
-    onInputChange({
-      target: {
-        name: 'incomeStreams',
-        value: newStreams,
-      },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
-
-    onInputChange({
-      target: {
-        name: 'annualIncome',
-        value: totalIncome,
-      },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({ type: 'setField', field: 'incomeStreams', value: newStreams });
+    dispatch({ type: 'annualIncomeChanged', value: totalIncome });
   };
 
   const hasEmploymentIncome =
@@ -195,198 +161,133 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       ));
 
   const handleIncomeModeChange = (_: React.MouseEvent<HTMLElement>, newMode: IncomeMode | null) => {
-    if (newMode !== null) {
-      onInputChange({
-        target: {
-          name: 'incomeMode',
-          value: newMode,
-        },
-      } as unknown as React.ChangeEvent<HTMLInputElement>);
+    if (newMode === null) return;
 
-      // If we are LEAVING advanced mode, save the current streams
-      if (inputs.incomeMode === 'advanced') {
-        onInputChange({
-          target: {
-            name: 'savedIncomeStreams',
-            value: inputs.incomeStreams,
+    dispatch({ type: 'incomeModeChanged', mode: newMode });
+
+    // If we are LEAVING advanced mode, save the current streams
+    if (inputs.incomeMode === 'advanced') {
+      dispatch({ type: 'setField', field: 'savedIncomeStreams', value: inputs.incomeStreams });
+    }
+
+    if (newMode === 'salary') {
+      // Sync streams to strictly match the simple mode
+      dispatch({
+        type: 'setField',
+        field: 'incomeStreams',
+        value: [
+          {
+            id: 'simple-salary',
+            type: 'salary',
+            amount: inputs.annualIncome,
+            frequency: 'annual',
           },
-        } as unknown as React.ChangeEvent<HTMLInputElement>);
+        ],
+      });
+    } else if (newMode === 'miscellaneous') {
+      // Sync streams to strictly match the simple mode
+      dispatch({
+        type: 'setField',
+        field: 'incomeStreams',
+        value: [
+          {
+            id: 'simple-miscellaneous',
+            type: 'miscellaneous',
+            amount: inputs.annualIncome,
+          },
+        ],
+      });
+    } else if (newMode === 'advanced') {
+      // Try to restore saved streams if they match the current total
+
+      let streamsToUse = inputs.incomeStreams;
+      // If we have saved streams, try to use them
+      if (inputs.savedIncomeStreams && inputs.savedIncomeStreams.length > 0) {
+        streamsToUse = inputs.savedIncomeStreams;
       }
 
-      if (newMode === 'salary') {
-        // Sync streams to strictly match the simple mode
-        onInputChange({
-          target: {
-            name: 'incomeStreams',
-            value: [
-              {
-                id: 'simple-salary',
-                type: 'salary',
-                amount: inputs.annualIncome,
-                frequency: 'annual',
-              },
-            ],
-          },
-        } as unknown as React.ChangeEvent<HTMLInputElement>);
-      } else if (newMode === 'miscellaneous') {
-        // Sync streams to strictly match the simple mode
-        onInputChange({
-          target: {
-            name: 'incomeStreams',
-            value: [
-              {
-                id: 'simple-miscellaneous',
-                type: 'miscellaneous',
-                amount: inputs.annualIncome,
-              },
-            ],
-          },
-        } as unknown as React.ChangeEvent<HTMLInputElement>);
-      } else if (newMode === 'advanced') {
-        // Try to restore saved streams if they match the current total
-
-        let streamsToUse = inputs.incomeStreams;
-        // If we have saved streams, try to use them
-        if (inputs.savedIncomeStreams && inputs.savedIncomeStreams.length > 0) {
-          streamsToUse = inputs.savedIncomeStreams;
+      // Calculate total of candidate streams
+      const streamTotal = streamsToUse.reduce((sum, s) => {
+        // Commuting allowance is not included in annual income
+        if (s.type === 'commutingAllowance') {
+          return sum;
         }
-
-        // Calculate total of candidate streams
-        const streamTotal = streamsToUse.reduce((sum, s) => {
-          // Commuting allowance is not included in annual income
-          if (s.type === 'commutingAllowance') {
-            return sum;
-          }
-          if (s.type === 'salary' && s.frequency === 'monthly') {
-            return sum + s.amount * 12;
-          }
-          return sum + s.amount;
-        }, 0);
-
-        // If the saved streams match the current annual income, use them!
-        if (streamTotal === inputs.annualIncome) {
-          onInputChange({
-            target: {
-              name: 'incomeStreams',
-              value: streamsToUse,
-            },
-          } as unknown as React.ChangeEvent<HTMLInputElement>);
-        } else {
-          // Mismatch or empty: Reset to single stream matching Total
-          const initialStream: IncomeStream = hasEmploymentIncome
-            ? {
-                id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-                type: 'salary',
-                frequency: 'annual',
-                amount: inputs.annualIncome,
-              }
-            : {
-                id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-                type: 'miscellaneous',
-                amount: inputs.annualIncome,
-              };
-
-          onInputChange({
-            target: {
-              name: 'incomeStreams',
-              value: [initialStream],
-            },
-          } as unknown as React.ChangeEvent<HTMLInputElement>);
+        if (s.type === 'salary' && s.frequency === 'monthly') {
+          return sum + s.amount * 12;
         }
+        return sum + s.amount;
+      }, 0);
+
+      // If the saved streams match the current annual income, use them!
+      if (streamTotal === inputs.annualIncome) {
+        dispatch({ type: 'setField', field: 'incomeStreams', value: streamsToUse });
+      } else {
+        // Mismatch or empty: Reset to single stream matching Total
+        const initialStream: IncomeStream = hasEmploymentIncome
+          ? {
+              id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+              type: 'salary',
+              frequency: 'annual',
+              amount: inputs.annualIncome,
+            }
+          : {
+              id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+              type: 'miscellaneous',
+              amount: inputs.annualIncome,
+            };
+
+        dispatch({ type: 'setField', field: 'incomeStreams', value: [initialStream] });
       }
     }
   };
 
-  const handleCustomRateChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | { name?: string; value: unknown }
-    >,
+  const updateCustomEHIRate = (
+    field: 'healthInsuranceRate' | 'longTermCareRate',
+    rateValue: number,
   ) => {
-    const { name, value } = e.target as { name: string; value: unknown };
-    const numValue = typeof value === 'number' ? value : parseFloat(value as string) || 0;
-
     const currentRates = inputs.customEHIRates || { healthInsuranceRate: 0, longTermCareRate: 0 };
-
-    const newRates = {
-      ...currentRates,
-      [name === 'customHealthInsuranceRate' ? 'healthInsuranceRate' : 'longTermCareRate']: numValue,
-    };
-
-    onInputChange({
-      target: {
-        name: 'customEHIRates',
-        value: newRates,
-      },
-    } as unknown as React.ChangeEvent<HTMLInputElement>);
+    dispatch({
+      type: 'setField',
+      field: 'customEHIRates',
+      value: { ...currentRates, [field]: rateValue },
+    });
   };
 
-  const handleAnnualIncomeChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | { target: { name: string; value: unknown; type?: string; checked?: boolean } },
-  ) => {
-    onInputChange(e);
+  const handleAnnualIncomeChange = (newIncome: number) => {
+    dispatch({ type: 'annualIncomeChanged', value: newIncome });
 
     // If in simple mode, also update the income streams to match new income
     if (inputs.incomeMode === 'salary') {
-      onInputChange({
-        target: {
-          name: 'incomeStreams',
-          value: [
-            {
-              id: 'simple-salary',
-              type: 'salary',
-              amount: Number(e.target.value),
-              frequency: 'annual',
-            },
-          ],
-        },
-      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      dispatch({
+        type: 'setField',
+        field: 'incomeStreams',
+        value: [
+          {
+            id: 'simple-salary',
+            type: 'salary',
+            amount: newIncome,
+            frequency: 'annual',
+          },
+        ],
+      });
     } else if (inputs.incomeMode === 'miscellaneous') {
-      onInputChange({
-        target: {
-          name: 'incomeStreams',
-          value: [
-            {
-              id: 'simple-miscellaneous',
-              type: 'miscellaneous',
-              amount: Number(e.target.value),
-            },
-          ],
-        },
-      } as unknown as React.ChangeEvent<HTMLInputElement>);
+      dispatch({
+        type: 'setField',
+        field: 'incomeStreams',
+        value: [
+          {
+            id: 'simple-miscellaneous',
+            type: 'miscellaneous',
+            amount: newIncome,
+          },
+        ],
+      });
     }
   };
 
   const handleSliderChange = (_: Event, value: number | number[]) => {
-    const newValue = Array.isArray(value) ? value[0] : value;
-    const event = {
-      target: {
-        name: 'annualIncome',
-        value: newValue,
-        type: 'range',
-      },
-      currentTarget: {
-        name: 'annualIncome',
-        value: newValue,
-        type: 'range',
-      },
-      preventDefault: () => {},
-      stopPropagation: () => {},
-      nativeEvent: new Event('change'),
-      bubbles: true,
-      cancelable: true,
-      defaultPrevented: false,
-      eventPhase: 0,
-      isTrusted: false,
-      timeStamp: Date.now(),
-      type: 'change',
-      isDefaultPrevented: () => false,
-      isPropagationStopped: () => false,
-      persist: () => {},
-    } as unknown as React.ChangeEvent<HTMLInputElement>;
-
-    handleAnnualIncomeChange(event);
+    const newValue = Array.isArray(value) ? (value[0] ?? 0) : value;
+    handleAnnualIncomeChange(newValue);
   };
 
   // Determine available health insurance providers based on income type and eligibility
@@ -431,16 +332,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         const fallbackProvider = nhiOption || availableProviders[0];
 
         if (fallbackProvider) {
-          onInputChange({
-            target: {
-              name: 'healthInsuranceProvider',
-              value: fallbackProvider.id,
-            },
-          } as unknown as React.ChangeEvent<HTMLInputElement>);
+          dispatch({ type: 'providerChanged', provider: fallbackProvider.id });
         }
       }
     }
-  }, [availableProviders, inputs.healthInsuranceProvider, onInputChange]);
+  }, [availableProviders, inputs.healthInsuranceProvider, dispatch]);
 
   const isHealthInsuranceProviderDropdownDisabled = availableProviders.length <= 1;
 
@@ -492,18 +388,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     }
     return derivedProviderRegions; // This is an array of region options
   }, [derivedProviderRegions, isEffectivelySingleDefaultRegion]);
-
-  const handleSelectChange = (e: { target: { name: string; value: unknown } }) => {
-    // The parent component's onInputChange handler is responsible for
-    // managing cascading state updates (e.g., setting a default region).
-    const event = {
-      target: {
-        ...e.target,
-        type: 'select',
-      },
-    } as React.ChangeEvent<HTMLInputElement>;
-    onInputChange(event);
-  };
 
   const sharedInputSx = {
     '& .MuiInputBase-root': {
@@ -673,7 +557,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   id="annualIncome"
                   name="annualIncome"
                   value={inputs.annualIncome}
-                  onInputChange={handleAnnualIncomeChange}
+                  onChange={handleAnnualIncomeChange}
                   label={
                     inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Annual Income'
                   }
@@ -764,13 +648,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               exclusive
               onChange={(_, newValue) => {
                 if (newValue !== null) {
-                  onInputChange({
-                    target: {
-                      name: 'isSubjectToLongTermCarePremium',
-                      checked: newValue,
-                      type: 'checkbox',
-                    },
-                  } as React.ChangeEvent<HTMLInputElement>);
+                  dispatch({
+                    type: 'setField',
+                    field: 'isSubjectToLongTermCarePremium',
+                    value: newValue,
+                  });
                 }
               }}
               aria-label="age range"
@@ -858,7 +740,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               control={
                 <Switch
                   checked={inputs.manualSocialInsuranceEntry}
-                  onChange={onInputChange}
+                  onChange={e =>
+                    dispatch({
+                      type: 'setField',
+                      field: 'manualSocialInsuranceEntry',
+                      value: e.target.checked,
+                    })
+                  }
                   name="manualSocialInsuranceEntry"
                   color="primary"
                   size="small"
@@ -887,7 +775,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 id="manualSocialInsuranceAmount"
                 name="manualSocialInsuranceAmount"
                 value={inputs.manualSocialInsuranceAmount}
-                onInputChange={onInputChange}
+                onChange={value =>
+                  dispatch({ type: 'setField', field: 'manualSocialInsuranceAmount', value })
+                }
                 label="Total Social Insurance Amount"
                 step={1000}
                 shiftStep={10000}
@@ -928,7 +818,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   name="healthInsuranceProvider"
                   labelId="healthInsuranceProvider-label"
                   value={inputs.healthInsuranceProvider}
-                  onChange={handleSelectChange}
+                  onChange={e => dispatch({ type: 'providerChanged', provider: e.target.value })}
                   disabled={isHealthInsuranceProviderDropdownDisabled}
                   fullWidth
                   sx={sharedInputSx}
@@ -981,7 +871,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       id="customHealthInsuranceRate"
                       name="customHealthInsuranceRate"
                       value={inputs.customEHIRates?.healthInsuranceRate ?? 0}
-                      onInputChange={handleCustomRateChange}
+                      onChange={value => updateCustomEHIRate('healthInsuranceRate', value)}
                       label="Rate (%)"
                       step={0.1}
                       shiftStep={1.0}
@@ -1012,7 +902,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       id="customLongTermCareRate"
                       name="customLongTermCareRate"
                       value={inputs.customEHIRates?.longTermCareRate ?? 0}
-                      onInputChange={handleCustomRateChange}
+                      onChange={value => updateCustomEHIRate('longTermCareRate', value)}
                       label="Rate (%)"
                       step={0.1}
                       shiftStep={1.0}
@@ -1033,11 +923,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       regionMenuItemsToDisplay[0] || { id: '', displayName: '' }
                     }
                     onChange={(_, newValue) => {
-                      handleSelectChange({
-                        target: {
-                          name: 'region',
-                          value: newValue?.id || '',
-                        },
+                      dispatch({
+                        type: 'setField',
+                        field: 'region',
+                        value: newValue?.id || '',
                       });
                     }}
                     getOptionLabel={option => option.displayName}
