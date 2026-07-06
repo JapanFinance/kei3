@@ -288,9 +288,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   id="dcPlanContributions"
                   name="dcPlanContributions"
                   value={dcPlanContributions}
-                  onInputChange={e =>
-                    onDcPlanContributionsChange(Number((e.target as HTMLInputElement).value) || 0)
-                  }
+                  onChange={onDcPlanContributionsChange}
                   label="Annual Contributions"
                   step={1_000}
                   shiftStep={10_000}
@@ -332,9 +330,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="lifeGeneralNew"
                     name="lifeGeneralNew"
                     value={lifeInput.generalNew}
-                    onInputChange={e =>
-                      updateLife({ generalNew: Number((e.target as HTMLInputElement).value) || 0 })
-                    }
+                    onChange={value => updateLife({ generalNew: value })}
                     {...catField('General', '一般')}
                     {...(denseValueSx && { sx: denseValueSx })}
                     step={1_000}
@@ -347,11 +343,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="lifeMedicalCareNew"
                     name="lifeMedicalCareNew"
                     value={lifeInput.medicalCareNew}
-                    onInputChange={e =>
-                      updateLife({
-                        medicalCareNew: Number((e.target as HTMLInputElement).value) || 0,
-                      })
-                    }
+                    onChange={value => updateLife({ medicalCareNew: value })}
                     {...catField('Medical care', '介護医療', 'Medical')}
                     {...(denseValueSx && { sx: denseValueSx })}
                     step={1_000}
@@ -364,9 +356,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="lifePensionNew"
                     name="lifePensionNew"
                     value={lifeInput.pensionNew}
-                    onInputChange={e =>
-                      updateLife({ pensionNew: Number((e.target as HTMLInputElement).value) || 0 })
-                    }
+                    onChange={value => updateLife({ pensionNew: value })}
                     {...catField('Pension', '個人年金')}
                     {...(denseValueSx && { sx: denseValueSx })}
                     step={1_000}
@@ -399,11 +389,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                       id="lifeGeneralOld"
                       name="lifeGeneralOld"
                       value={lifeInput.generalOld ?? 0}
-                      onInputChange={e =>
-                        updateLife({
-                          generalOld: Number((e.target as HTMLInputElement).value) || 0,
-                        })
-                      }
+                      onChange={value => updateLife({ generalOld: value })}
                       {...catField('General, old', '旧一般')}
                       step={1_000}
                       shiftStep={10_000}
@@ -415,11 +401,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                       id="lifePensionOld"
                       name="lifePensionOld"
                       value={lifeInput.pensionOld ?? 0}
-                      onInputChange={e =>
-                        updateLife({
-                          pensionOld: Number((e.target as HTMLInputElement).value) || 0,
-                        })
-                      }
+                      onChange={value => updateLife({ pensionOld: value })}
                       {...catField('Pension, old', '旧個人年金')}
                       step={1_000}
                       shiftStep={10_000}
@@ -464,11 +446,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="earthquakePremium"
                     name="earthquakePremium"
                     value={earthquakeInput.earthquake}
-                    onInputChange={e =>
-                      updateEarthquake({
-                        earthquake: Number((e.target as HTMLInputElement).value) || 0,
-                      })
-                    }
+                    onChange={value => updateEarthquake({ earthquake: value })}
                     {...catField('Earthquake premium', '地震保険料', 'Earthquake')}
                     step={1_000}
                     shiftStep={10_000}
@@ -480,11 +458,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="earthquakeLongTermOld"
                     name="earthquakeLongTermOld"
                     value={earthquakeInput.longTermOld}
-                    onInputChange={e =>
-                      updateEarthquake({
-                        longTermOld: Number((e.target as HTMLInputElement).value) || 0,
-                      })
-                    }
+                    onChange={value => updateEarthquake({ longTermOld: value })}
                     {...catField('Long-term, old', '旧長期損害保険料', 'Long-term')}
                     step={1_000}
                     shiftStep={10_000}
@@ -531,9 +505,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="medicalPaid"
                     name="medicalPaid"
                     value={medicalInput.paid}
-                    onInputChange={e =>
-                      updateMedical({ paid: Number((e.target as HTMLInputElement).value) || 0 })
-                    }
+                    onChange={value => updateMedical({ paid: value })}
                     label="Total paid"
                     step={1_000}
                     shiftStep={10_000}
@@ -545,11 +517,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="medicalReimbursed"
                     name="medicalReimbursed"
                     value={medicalInput.reimbursed}
-                    onInputChange={e =>
-                      updateMedical({
-                        reimbursed: Number((e.target as HTMLInputElement).value) || 0,
-                      })
-                    }
+                    onChange={value => updateMedical({ reimbursed: value })}
                     label="Reimbursements"
                     step={1_000}
                     shiftStep={10_000}
@@ -606,11 +574,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     id="homeLoanCreditAmount"
                     name="creditAmount"
                     value={effectiveHomeLoan.creditAmount}
-                    onInputChange={e =>
-                      updateHomeLoan({
-                        creditAmount: Number((e.target as HTMLInputElement).value) || 0,
-                      })
-                    }
+                    onChange={value => updateHomeLoan({ creditAmount: value })}
                     label="Available credit amount (控除可能額)"
                     step={1_000}
                     shiftStep={10_000}
