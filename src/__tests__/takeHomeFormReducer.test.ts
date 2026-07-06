@@ -84,7 +84,10 @@ describe('takeHomeFormReducer', () => {
     });
 
     it('leaves health insurance provider and region untouched when switching to advanced mode', () => {
-      const result = takeHomeFormReducer(baseState, { type: 'incomeModeChanged', mode: 'advanced' });
+      const result = takeHomeFormReducer(baseState, {
+        type: 'incomeModeChanged',
+        mode: 'advanced',
+      });
 
       expect(result.incomeMode).toBe('advanced');
       expect(result.healthInsuranceProvider).toBe(baseState.healthInsuranceProvider);

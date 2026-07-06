@@ -85,10 +85,7 @@ interface AnnualIncomeChangedAction {
 }
 
 export type FormAction =
-  | SetFieldAction
-  | IncomeModeChangedAction
-  | ProviderChangedAction
-  | AnnualIncomeChangedAction;
+  SetFieldAction | IncomeModeChangedAction | ProviderChangedAction | AnnualIncomeChangedAction;
 
 export function takeHomeFormReducer(
   state: TakeHomeFormState,
