@@ -17,8 +17,7 @@ interface SpinnerNumberFieldProps {
   name?: string;
   label?: string;
   value: number;
-  onChange?: (value: number) => void;
-  onInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (value: number) => void;
   step?: number;
   shiftStep?: number;
   sx?: object;
@@ -37,7 +36,6 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   label,
   value,
   onChange,
-  onInputChange,
   step = 1000,
   shiftStep = 10000,
   sx,
@@ -57,18 +55,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
     if (typeof min === 'number') clampedValue = Math.max(min, clampedValue);
     if (typeof max === 'number') clampedValue = Math.min(max, clampedValue);
 
-    if (onChange) {
-      onChange(clampedValue);
-    } else if (onInputChange && name) {
-      const event = {
-        target: {
-          name,
-          value: clampedValue,
-          type: 'number',
-        },
-      } as unknown as React.ChangeEvent<HTMLInputElement>;
-      onInputChange(event);
-    }
+    onChange(clampedValue);
   };
 
   // Helper to avoid floating point errors (e.g. 0.1 + 0.2 = 0.30000000000000004)
