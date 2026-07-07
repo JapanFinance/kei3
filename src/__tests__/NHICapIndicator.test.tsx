@@ -119,12 +119,10 @@ describe('NHI cap indicators in SocialInsuranceTab', () => {
       'Child Support Portion',
     ];
     for (const label of nhiPortionLabels) {
-      const el = screen.queryByText(label);
-      if (el) {
-        const row = el.closest('[class*="MuiBox-root"]')!.parentElement!;
-        const capIcon = row.querySelector('[data-testid="VerticalAlignTopIcon"]');
-        expect(capIcon).toBeNull();
-      }
+      const el = screen.getByText(label);
+      const row = el.closest('[class*="MuiBox-root"]')!.parentElement!;
+      const capIcon = row.querySelector('[data-testid="VerticalAlignTopIcon"]');
+      expect(capIcon).toBeNull();
     }
   });
 });

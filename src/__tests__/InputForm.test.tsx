@@ -18,6 +18,14 @@ import {
 import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
 import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
 
+vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
+  DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
+    <div data-testid="dependents-modal" data-net-income={taxpayerNetIncome}>
+      Mocked Modal
+    </div>
+  ),
+}));
+
 describe('TakeHomeInputForm Tests', () => {
   const mockDispatch = vi.fn();
 
@@ -518,15 +526,6 @@ describe('Age Range Selection', () => {
 });
 
 describe('TakeHomeInputForm Dependents Modal', () => {
-  // Mock DependentsModal to inspect props
-  vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
-    DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
-      <div data-testid="dependents-modal" data-net-income={taxpayerNetIncome}>
-        Mocked Modal
-      </div>
-    ),
-  }));
-
   const defaultInputs: TakeHomeFormState = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 0,
