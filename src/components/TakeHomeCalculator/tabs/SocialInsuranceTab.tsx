@@ -10,6 +10,7 @@ import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import SourceLinks from '../../ui/SourceLinks';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
@@ -266,25 +267,14 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                             Blue Return. This amount is deducted from business income after expenses
                             before calculating taxable income.
                           </Typography>
-                          <Box sx={{ mt: 1 }}>
-                            Official Sources:
-                            <ul>
-                              <li>
-                                <a
-                                  href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    color: 'var(--primary-main)',
-                                    textDecoration: 'underline',
-                                    fontSize: '0.95em',
-                                  }}
-                                >
-                                  青色申告特別控除 - NTA
-                                </a>
-                              </li>
-                            </ul>
-                          </Box>
+                          <SourceLinks
+                            sources={[
+                              {
+                                href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm',
+                                label: '青色申告特別控除 - NTA',
+                              },
+                            ]}
+                          />
                         </Box>
                       </Box>
                     </DetailedTooltip>
@@ -608,25 +598,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 employment insurance premium paid by the employee. The rate is applied to your gross
                 salary. The employer also contributes to employment insurance separately.
               </Typography>
-              <Box sx={{ mt: 1 }}>
-                Official Source:
-                <ul>
-                  <li>
-                    <a
-                      href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        color: 'var(--primary-main)',
-                        textDecoration: 'underline',
-                        fontSize: '0.95em',
-                      }}
-                    >
-                      Employment Insurance Premium Rate (MHLW)
-                    </a>
-                  </li>
-                </ul>
-              </Box>
+              <SourceLinks
+                heading="Official Source:"
+                sources={[
+                  {
+                    href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html',
+                    label: 'Employment Insurance Premium Rate (MHLW)',
+                  },
+                ]}
+              />
             </DetailedTooltip>
           </Typography>
           <ResultRow

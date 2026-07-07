@@ -5,6 +5,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { formatJPY } from '../../../utils/formatters';
+import SourceLinks from '../../ui/SourceLinks';
 import type { StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
 interface SMRTableColumn {
@@ -251,19 +252,11 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
       )}
 
       {officialSourceLink && (
-        <Box sx={{ mt: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
-          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-            <strong>Official Source:</strong>{' '}
-            <a
-              href={officialSourceLink.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-            >
-              {officialSourceLink.text}
-            </a>
-          </Typography>
-        </Box>
+        <SourceLinks
+          heading="Official Source:"
+          sx={{ mt: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}
+          sources={[{ href: officialSourceLink.url, label: officialSourceLink.text }]}
+        />
       )}
     </Box>
   );
