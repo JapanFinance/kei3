@@ -16,7 +16,7 @@ import {
   DEFAULT_PROVIDER,
 } from '../types/healthInsurance';
 import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
-import { takeHomeFormReducer, type FormAction } from '../state/takeHomeFormReducer';
+import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
 
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
@@ -565,27 +565,35 @@ describe('TakeHomeInputForm Dependents Modal', () => {
 });
 
 describe('Commuting Allowance Integration', () => {
-  const mockDispatch = vi.fn();
+  // Real reducer so the displayed total income is derived exactly as it is in the app;
+  // the point of this test is that the commuting allowance is excluded from that total.
+  const TestWrapper = () => {
+    const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      annualIncome: 5000000,
+      incomeYear: 2026,
+      incomeMode: 'advanced',
+      incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dcPlanContributions: 0,
+      dependents: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    });
 
-  const baseInputs: TakeHomeFormState = {
-    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-    annualIncome: 5000000,
-    incomeYear: 2026,
-    incomeMode: 'advanced',
-    incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
-    isSubjectToLongTermCarePremium: false,
-    healthInsuranceProvider: 'KyokaiKenpo',
-    region: 'Tokyo',
-    dcPlanContributions: 0,
-    dependents: [],
-    manualSocialInsuranceEntry: false,
-    manualSocialInsuranceAmount: 0,
+    return <TakeHomeInputForm inputs={inputs} dispatch={dispatch} />;
   };
 
   it('should exclude commuting allowance from total annual income when added via UI', async () => {
     const user = userEvent.setup();
+    render(<TestWrapper />);
 
-    render(<TakeHomeInputForm inputs={baseInputs} dispatch={mockDispatch} />);
+    // The lone salary stream totals ¥5,000,000. Re-queried after each render since the
+    // row is rebuilt when the streams change.
+    const totalIncomeRow = () => screen.getByText('Total Annual Income').parentElement!;
+    expect(within(totalIncomeRow()).getByText('¥5,000,000')).toBeInTheDocument();
 
     // 1. Open Income Details Modal
     await user.click(screen.getByRole('button', { name: /edit income/i }));
@@ -603,27 +611,14 @@ describe('Commuting Allowance Integration', () => {
     const amountInput = screen.getByRole('textbox', { name: /allowance amount/i });
     await user.type(amountInput, '20000');
 
-    // 5. Save
+    // 5. Save the stream and close the modal
     await user.click(screen.getByRole('button', { name: /add/i }));
+    await user.click(screen.getByRole('button', { name: /close/i }));
 
-    // Verify calls
-    // We expect a single incomeStreamsChanged action carrying the updated streams
-    expect(mockDispatch).toHaveBeenCalledWith({
-      type: 'incomeStreamsChanged',
-      streams: expect.arrayContaining([
-        expect.objectContaining({
-          type: 'commutingAllowance',
-          amount: 20000,
-        }),
-      ]),
-    });
-
-    // The reducer excludes the commuting allowance from the recomputed total,
-    // so annualIncome SHOULD stay at 5,000,000
-    const streamsAction = mockDispatch.mock.calls
-      .map(([action]) => action as FormAction)
-      .find(action => action.type === 'incomeStreamsChanged');
-    expect(takeHomeFormReducer(baseInputs, streamsAction!).annualIncome).toBe(5000000);
+    // The allowance was added — a nontaxable-benefits row now appears ...
+    expect(screen.getByText('Total Nontaxable Benefits')).toBeInTheDocument();
+    // ... but it is excluded from the total annual income, which stays ¥5,000,000.
+    expect(within(totalIncomeRow()).getByText('¥5,000,000')).toBeInTheDocument();
   }, 10_000);
 });
 
