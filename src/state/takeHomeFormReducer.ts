@@ -6,6 +6,8 @@ import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
+  CUSTOM_PROVIDER_ID,
+  getProviderDisplayName,
   isDependentCoverageEligible,
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
@@ -77,6 +79,57 @@ export function hasEmploymentIncome(
         s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation',
       ))
   );
+}
+
+/** A selectable health insurance provider: its id and the label shown in the dropdown. */
+export interface HealthInsuranceProviderOption {
+  id: HealthInsuranceProviderId;
+  displayName: string;
+}
+
+const nhiProviderOption: HealthInsuranceProviderOption = {
+  id: NATIONAL_HEALTH_INSURANCE_ID,
+  displayName: getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID),
+};
+
+const dependentProviderOption: HealthInsuranceProviderOption = {
+  id: DEPENDENT_COVERAGE_ID,
+  displayName: getProviderDisplayName(DEPENDENT_COVERAGE_ID),
+};
+
+const customProviderOption: HealthInsuranceProviderOption = {
+  id: CUSTOM_PROVIDER_ID,
+  displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID),
+};
+
+const employeeProviderOptions: HealthInsuranceProviderOption[] = (
+  Object.keys(PROVIDER_DEFINITIONS) as (keyof typeof PROVIDER_DEFINITIONS)[]
+).map(id => ({ id, displayName: getProviderDisplayName(id) }));
+
+/**
+ * The health insurance providers selectable for a given form state, in dropdown order.
+ * Employment income can use an employee provider, National Health Insurance, or a custom
+ * provider; dependent coverage ("None") is offered only while income is under the
+ * eligibility threshold; non-employment income is limited to NHI (plus dependent coverage
+ * when eligible). Pure and colocated with the reducer so the same list drives both the
+ * dropdown (via a `useMemo` in InputForm) and the reducer's provider-validity cascade
+ * ({@link applyProviderValidity}), rather than the two drifting apart.
+ */
+export function availableProvidersFor(
+  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'annualIncome'>,
+): HealthInsuranceProviderOption[] {
+  const dependentEligible = isDependentCoverageEligible(state.annualIncome);
+  if (hasEmploymentIncome(state)) {
+    return dependentEligible
+      ? [
+          ...employeeProviderOptions,
+          dependentProviderOption,
+          nhiProviderOption,
+          customProviderOption,
+        ]
+      : [...employeeProviderOptions, nhiProviderOption, customProviderOption];
+  }
+  return dependentEligible ? [dependentProviderOption, nhiProviderOption] : [nhiProviderOption];
 }
 
 /** The simple (non-advanced) income modes, each of which mirrors `annualIncome` in one stream. */
@@ -197,6 +250,45 @@ function applyAnnualIncome(state: TakeHomeFormState, value: number): TakeHomeFor
   return newState;
 }
 
+/**
+ * Enforces the invariant that `healthInsuranceProvider` is one of the providers
+ * {@link availableProvidersFor} offers for the current state. When it isn't — e.g. the last
+ * employment stream was removed while an employee or custom provider was selected — falls
+ * back to National Health Insurance if available, otherwise the first offered provider, and
+ * resets the region to that provider's default. This is the reducer-side counterpart to the
+ * dropdown's own `providerChanged` onChange, keeping the employment-type half of the
+ * invariant in sync synchronously rather than a render later (previously an effect in
+ * InputForm). `availableProvidersFor` always includes NHI, so a fallback always exists; the
+ * empty-list guard is there only to satisfy the type of `available[0]`.
+ */
+function applyProviderValidity(state: TakeHomeFormState): TakeHomeFormState {
+  const available = availableProvidersFor(state);
+  if (available.some(option => option.id === state.healthInsuranceProvider)) {
+    return state;
+  }
+  const fallback =
+    available.find(option => option.id === NATIONAL_HEALTH_INSURANCE_ID) ?? available[0];
+  if (!fallback) {
+    return state;
+  }
+  return {
+    ...state,
+    healthInsuranceProvider: fallback.id,
+    region: defaultRegionForProvider(fallback.id),
+  };
+}
+
+/**
+ * Normalizes a freshly-constructed form state (App's hardcoded defaults, or any state
+ * restored from elsewhere) so it satisfies the provider-validity invariant before the first
+ * render, then hands it to the reducer which maintains that invariant from there. Passed as
+ * the `init` argument to `useReducer`. Centralizing mount-time normalization here gives any
+ * future invariant a single entry point instead of a re-introduced mount effect.
+ */
+export function normalizeInitialFormState(state: TakeHomeFormState): TakeHomeFormState {
+  return applyProviderValidity(state);
+}
+
 function reduceIncomeModeChanged(
   state: TakeHomeFormState,
   action: IncomeModeChangedAction,
@@ -223,7 +315,9 @@ function reduceIncomeModeChanged(
         : state.incomeStreams;
   }
 
-  return newState;
+  // Salary/miscellaneous force a valid provider above; but entering advanced mode carries
+  // the provider over, and restored/kept streams may lack employment income — reconcile it.
+  return applyProviderValidity(newState);
 }
 
 function reduceAnnualIncomeChanged(
@@ -239,6 +333,11 @@ function reduceAnnualIncomeChanged(
   const newState = applyAnnualIncome(state, action.value);
   // In the simple modes the single income stream mirrors the annual income
   newState.incomeStreams = simpleModeStreams(state.incomeMode, action.value);
+  // No applyProviderValidity here: an income change never removes employment income in a
+  // simple mode (salary stays employment; miscellaneous stays non-employment), so the only
+  // way it can strand a provider is dependent coverage crossing the threshold, which
+  // applyAnnualIncome already handles. Advanced-mode income changes flow through
+  // incomeStreamsChanged, which does run the cascade.
   return newState;
 }
 
@@ -248,7 +347,9 @@ function reduceIncomeStreamsChanged(
 ): TakeHomeFormState {
   const newState = applyAnnualIncome(state, totalAnnualIncomeFromStreams(action.streams));
   newState.incomeStreams = action.streams;
-  return newState;
+  // Removing the last employment stream can strand an employee/custom provider that is no
+  // longer offered; correct it here so the returned state is already valid.
+  return applyProviderValidity(newState);
 }
 
 export function takeHomeFormReducer(
