@@ -10,7 +10,7 @@ import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types
 import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
 import { calculateTaxes } from './utils/taxCalculations';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
-import { takeHomeFormReducer } from './state/takeHomeFormReducer';
+import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
 import { useChangelogModal } from './hooks/useChangelogModal';
 
 // Lazy load components that aren't immediately needed
@@ -58,7 +58,11 @@ function App({ mode, toggleColorMode }: AppProps) {
   };
 
   // State for form inputs
-  const [inputs, dispatch] = useReducer(takeHomeFormReducer, defaultInputs);
+  const [inputs, dispatch] = useReducer(
+    takeHomeFormReducer,
+    defaultInputs,
+    normalizeInitialFormState,
+  );
 
   // State for calculation results
   const [results, setResults] = useState<TakeHomeResults | null>(null);

@@ -8,11 +8,16 @@ import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
+  CUSTOM_PROVIDER_ID,
   DEPENDENT_INCOME_THRESHOLD,
 } from '../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
-import { takeHomeFormReducer, totalAnnualIncomeFromStreams } from '../state/takeHomeFormReducer';
+import {
+  takeHomeFormReducer,
+  totalAnnualIncomeFromStreams,
+  availableProvidersFor,
+} from '../state/takeHomeFormReducer';
 
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -251,6 +256,31 @@ describe('takeHomeFormReducer', () => {
 
       expect(result.incomeStreams).toEqual(baseState.incomeStreams);
     });
+
+    it('switches an employee provider to NHI when entering advanced mode restores non-employment streams', () => {
+      const savedStreams: TakeHomeFormState['incomeStreams'] = [
+        { id: 'b1', type: 'business', amount: 5_000_000 },
+      ];
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'salary',
+        healthInsuranceProvider: 'KyokaiKenpo',
+        region: 'Tokyo',
+        annualIncome: 5_000_000,
+        incomeStreams: [
+          { id: 'simple-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+        ],
+        savedIncomeStreams: savedStreams,
+      };
+
+      const result = takeHomeFormReducer(state, { type: 'incomeModeChanged', mode: 'advanced' });
+
+      // The saved business stream (total 5M, matching annualIncome) is restored, so there is
+      // no longer employment income and KyokaiKenpo is no longer offered — cascade to NHI.
+      expect(result.incomeStreams).toEqual(savedStreams);
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
   });
 
   describe('providerChanged', () => {
@@ -449,6 +479,126 @@ describe('takeHomeFormReducer', () => {
       expect(result.annualIncome).toBe(DEPENDENT_INCOME_THRESHOLD - 1);
       expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);
       expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
+    });
+
+    it('switches an employee provider to NHI and resets the region when the last employment stream is removed', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: 'KyokaiKenpo',
+        region: 'Tokyo',
+        annualIncome: 10_000_000,
+        incomeStreams: [
+          { id: 's1', type: 'salary', amount: 6_000_000, frequency: 'annual' },
+          { id: 'b1', type: 'business', amount: 4_000_000 },
+        ],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [{ id: 'b1', type: 'business', amount: 4_000_000 }],
+      });
+
+      // Only business income remains, so employee providers are no longer offered.
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('switches a custom provider to NHI and resets the region when the last employment stream is removed', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: CUSTOM_PROVIDER_ID,
+        region: DEFAULT_PROVIDER_REGION,
+        annualIncome: 10_000_000,
+        customEHIRates: { healthInsuranceRate: 5, longTermCareRate: 1 },
+        incomeStreams: [
+          { id: 's1', type: 'salary', amount: 6_000_000, frequency: 'annual' },
+          { id: 'b1', type: 'business', amount: 4_000_000 },
+        ],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [{ id: 'b1', type: 'business', amount: 4_000_000 }],
+      });
+
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      // The region was the custom-provider sentinel; it is reset to a real NHI region.
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('preserves the selected employee provider when an employment stream still remains', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: 'KyokaiKenpo',
+        region: 'Tokyo',
+        annualIncome: 10_000_000,
+        incomeStreams: [
+          { id: 's1', type: 'salary', amount: 6_000_000, frequency: 'annual' },
+          { id: 'b1', type: 'business', amount: 4_000_000 },
+        ],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [
+          { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+          { id: 'b1', type: 'business', amount: 4_000_000 },
+        ],
+      });
+
+      // Salary income remains, so KyokaiKenpo is still offered and is left untouched.
+      expect(result.healthInsuranceProvider).toBe('KyokaiKenpo');
+      expect(result.region).toBe('Tokyo');
+    });
+  });
+
+  describe('availableProvidersFor', () => {
+    it('offers employee providers, NHI, and custom (but not dependent coverage) for employment income over the threshold', () => {
+      const ids = availableProvidersFor(baseState).map(option => option.id);
+
+      expect(ids).toEqual([
+        ...Object.keys(PROVIDER_DEFINITIONS),
+        NATIONAL_HEALTH_INSURANCE_ID,
+        CUSTOM_PROVIDER_ID,
+      ]);
+      expect(ids).not.toContain(DEPENDENT_COVERAGE_ID);
+    });
+
+    it('adds dependent coverage for employment income under the threshold', () => {
+      const ids = availableProvidersFor({
+        ...baseState,
+        annualIncome: DEPENDENT_INCOME_THRESHOLD - 1,
+      }).map(option => option.id);
+
+      expect(ids).toEqual([
+        ...Object.keys(PROVIDER_DEFINITIONS),
+        DEPENDENT_COVERAGE_ID,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        CUSTOM_PROVIDER_ID,
+      ]);
+    });
+
+    it('limits non-employment income to NHI, adding dependent coverage only under the threshold', () => {
+      const overThreshold = availableProvidersFor({
+        ...baseState,
+        incomeMode: 'miscellaneous',
+        incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 5_000_000 }],
+      });
+      expect(overThreshold.map(option => option.id)).toEqual([NATIONAL_HEALTH_INSURANCE_ID]);
+
+      const underThreshold = availableProvidersFor({
+        ...baseState,
+        incomeMode: 'miscellaneous',
+        annualIncome: 1_000_000,
+        incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 1_000_000 }],
+      });
+      expect(underThreshold.map(option => option.id)).toEqual([
+        DEPENDENT_COVERAGE_ID,
+        NATIONAL_HEALTH_INSURANCE_ID,
+      ]);
     });
   });
 

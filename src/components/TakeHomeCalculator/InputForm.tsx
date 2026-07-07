@@ -48,7 +48,6 @@ import type {
   AdditionalDeductionsResult,
 } from '../../types/tax';
 import {
-  getProviderDisplayName,
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
@@ -58,10 +57,7 @@ import {
 } from '../../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
-import {
-  hasEmploymentIncome as deriveHasEmploymentIncome,
-  type FormAction,
-} from '../../state/takeHomeFormReducer';
+import { availableProvidersFor, type FormAction } from '../../state/takeHomeFormReducer';
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
@@ -71,24 +67,6 @@ interface TaxInputFormProps {
   /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
 }
-
-// National Health Insurance provider (used in both employment and non-employment scenarios)
-const nhiProvider = {
-  id: NATIONAL_HEALTH_INSURANCE_ID,
-  displayName: getProviderDisplayName(NATIONAL_HEALTH_INSURANCE_ID),
-};
-
-// Dependent coverage provider (only for employment income under threshold)
-const dependentProvider = {
-  id: DEPENDENT_COVERAGE_ID,
-  displayName: getProviderDisplayName(DEPENDENT_COVERAGE_ID),
-};
-
-// Custom provider
-const customProvider = {
-  id: CUSTOM_PROVIDER_ID,
-  displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID),
-};
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
@@ -143,8 +121,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     dispatch({ type: 'incomeStreamsChanged', streams: newStreams });
   };
 
-  const hasEmploymentIncome = deriveHasEmploymentIncome(inputs);
-
   const handleIncomeModeChange = (_: React.MouseEvent<HTMLElement>, newMode: IncomeMode | null) => {
     if (newMode === null) return;
 
@@ -171,53 +147,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     handleAnnualIncomeChange(value);
   };
 
-  // Determine available health insurance providers based on income type and eligibility
-  const availableProviders = React.useMemo(() => {
-    if (hasEmploymentIncome) {
-      // Employment income can use either employee health insurance or NHI
-      // (e.g., small employers, part-time workers, low income thresholds)
-      const employeeProviders = Object.entries(PROVIDER_DEFINITIONS).map(
-        ([id, { providerName }]) => ({
-          id,
-          displayName: providerName,
-        }),
-      );
-
-      // Include dependent coverage option only if income is below threshold
-      if (isDependentEligible) {
-        return [...employeeProviders, dependentProvider, nhiProvider, customProvider];
-      } else {
-        return [...employeeProviders, nhiProvider, customProvider];
-      }
-    } else {
-      // Non-employment income: NHI or dependent coverage (if eligible)
-      if (isDependentEligible) {
-        return [dependentProvider, nhiProvider];
-      } else {
-        return [nhiProvider];
-      }
-    }
-  }, [hasEmploymentIncome, isDependentEligible]);
-
-  // Effect to validate and correct the selected provider if it's no longer available
-  React.useEffect(() => {
-    // If we have available providers but the current one isn't in the list
-    if (availableProviders.length > 0) {
-      const isCurrentProviderAvailable = availableProviders.some(
-        p => p.id === inputs.healthInsuranceProvider,
-      );
-
-      if (!isCurrentProviderAvailable) {
-        // Default to NHI if available, otherwise the first one
-        const nhiOption = availableProviders.find(p => p.id === NATIONAL_HEALTH_INSURANCE_ID);
-        const fallbackProvider = nhiOption || availableProviders[0];
-
-        if (fallbackProvider) {
-          dispatch({ type: 'providerChanged', provider: fallbackProvider.id });
-        }
-      }
-    }
-  }, [availableProviders, inputs.healthInsuranceProvider, dispatch]);
+  // Available health insurance providers for the current income type and eligibility. The
+  // reducer keeps `healthInsuranceProvider` within this list (see availableProvidersFor and
+  // its provider-validity cascade), so no correcting effect is needed here.
+  const availableProviders = React.useMemo(() => availableProvidersFor(inputs), [inputs]);
 
   const isHealthInsuranceProviderDropdownDisabled = availableProviders.length <= 1;
 
