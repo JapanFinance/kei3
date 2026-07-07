@@ -340,8 +340,7 @@ function reduceIncomeModeChanged(
     }
     default: {
       // Exhaustiveness: a new IncomeMode must add its own routing branch here rather than
-      // silently inheriting the advanced-mode behavior (the real first-fail point a bare
-      // if/else would hide).
+      // silently inheriting the advanced-mode behavior.
       const unhandledMode: never = action.mode;
       throw new Error(`Unhandled income mode: ${JSON.stringify(unhandledMode)}`);
     }
