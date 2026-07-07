@@ -849,6 +849,46 @@ describe('Elderly Dependent Classification', () => {
   });
 });
 
+describe('同居老親等 (cohabiting elderly direct ascendant) deduction', () => {
+  // The higher 同居老親等 amounts (58万/45万) and the ELDERLY_COHABITING_DEPENDENT breakdown type
+  // apply ONLY to a cohabiting elderly 直系尊属 — modeled here as relationship 'parent'
+  // ("Parent or Grandparent"). A cohabiting elderly 'other' ("Other Relative") is not a 直系尊属
+  // and gets the plain 老人扶養親族 amounts (48万/38万) under the ELDERLY_DEPENDENT type.
+  // @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
+  const makeElderly = (relationship: 'parent' | 'other', isCohabiting: boolean): Dependent => ({
+    id: '1',
+    relationship,
+    ageCategory: '70plus',
+    isCohabiting,
+    disability: 'none',
+    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+  });
+
+  it('cohabiting elderly parent gets the 同居老親等 amounts and type', () => {
+    const result = calculateDependentDeductions([makeElderly('parent', true)], TEST_INCOME_YEAR);
+    expect(result.nationalTax.dependentDeduction).toBe(580_000);
+    expect(result.residenceTax.dependentDeduction).toBe(450_000);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT);
+  });
+
+  it('cohabiting elderly "other" relative gets the plain elderly amounts and type', () => {
+    const result = calculateDependentDeductions([makeElderly('other', true)], TEST_INCOME_YEAR);
+    expect(result.nationalTax.dependentDeduction).toBe(480_000);
+    expect(result.residenceTax.dependentDeduction).toBe(380_000);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.ELDERLY_DEPENDENT);
+  });
+
+  it('non-cohabiting elderly parent gets the plain elderly amounts and type', () => {
+    const result = calculateDependentDeductions([makeElderly('parent', false)], TEST_INCOME_YEAR);
+    expect(result.nationalTax.dependentDeduction).toBe(480_000);
+    expect(result.residenceTax.dependentDeduction).toBe(380_000);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.ELDERLY_DEPENDENT);
+  });
+});
+
 describe('Total Net Income Calculation with Other Income', () => {
   it('combines employment income and other net income correctly', () => {
     const income = {

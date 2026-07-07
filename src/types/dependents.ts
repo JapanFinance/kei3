@@ -222,8 +222,10 @@ export const DEDUCTION_TYPES = {
   GENERAL_DEPENDENT: 'General Dependent',
   /** 特定扶養親族 (19-22歳) - Standard deduction for eligible dependents */
   SPECIAL_DEPENDENT: 'Special Dependent',
-  /** 老人扶養控除 */
+  /** 老人扶養控除 (70+) that is not 同居老親等 */
   ELDERLY_DEPENDENT: 'Elderly Dependent',
+  /** 同居老親等 - cohabiting elderly (70+) 直系尊属 (parent/grandparent), the higher elderly deduction */
+  ELDERLY_COHABITING_DEPENDENT: 'Elderly Dependent (Cohabiting)',
   /** 特定親族特別控除 - Phased deduction for 19-22 year olds with income above general dependent threshold */
   SPECIFIC_RELATIVE_SPECIAL: 'Specific Relative Special',
   /** 障害者控除（一般の障害者） */

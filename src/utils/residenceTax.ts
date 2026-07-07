@@ -298,13 +298,16 @@ function calculateStatutoryPersonalDeductionDifference(
         totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_SPECIAL;
         break;
 
+      case DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT:
+        // 同居老親等 (cohabiting elderly 直系尊属, 70+). Whether a dependent qualifies is decided
+        // once, where the deduction amount is chosen (isCohabitingElderlyDependent); we switch on
+        // the resulting breakdown type alone and never re-derive it from relationship/isCohabiting.
+        totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY_COHABITING;
+        break;
+
       case DEDUCTION_TYPES.ELDERLY_DEPENDENT:
-        // Elderly dependent (70+)
-        if (dep.isCohabiting && (dep.relationship === 'parent' || dep.relationship === 'other')) {
-          totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY_COHABITING;
-        } else {
-          totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY;
-        }
+        // 老人扶養親族 (70+) that is not 同居老親等 (incl. a cohabiting elderly 'other' relative).
+        totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY;
         break;
 
       case DEDUCTION_TYPES.GENERAL_DEPENDENT:
