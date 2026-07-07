@@ -56,9 +56,7 @@ function App({ mode, toggleColorMode }: AppProps) {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   };
 
-  // State for form inputs. normalizeInitialFormState reconciles the provider-validity
-  // invariant on mount so a hand-written default can't start out of sync (the reducer keeps
-  // it in sync thereafter); with the valid defaults above it is currently a no-op.
+  // State for form inputs
   const [inputs, dispatch] = useReducer(
     takeHomeFormReducer,
     defaultInputs,
