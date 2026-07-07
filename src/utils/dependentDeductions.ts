@@ -164,6 +164,28 @@ function isElderlyDependent(dependent: Dependent, year: number): boolean {
 }
 
 /**
+ * Check if dependent is a 同居老親等: a cohabiting elderly (70+) 直系尊属 (parent or grandparent).
+ * Only a 直系尊属 qualifies for the higher 同居老親等 deduction (¥580,000 national / ¥450,000
+ * residence) and its larger statutory personal-deduction difference (¥130,000); a cohabiting
+ * elderly 'other' ("Other Relative") is not a 直系尊属 and receives the plain elderly amounts.
+ *
+ * This predicate is the single source of the 同居老親等 determination. It is consumed both here
+ * (to choose the deduction amount) and, via the ELDERLY_COHABITING_DEPENDENT breakdown type, by the
+ * residence-tax adjustment-credit code (地方税法314条の6) — so the two sides can never diverge, as
+ * they previously did when the determination was duplicated.
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
+ */
+function isCohabitingElderlyDependent(dependent: Dependent, year: number): boolean {
+  return (
+    isElderlyDependent(dependent, year) &&
+    dependent.isCohabiting &&
+    dependent.relationship === 'parent'
+  );
+}
+
+/**
  * Check if dependent is eligible for Spouse Deduction (配偶者控除).
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
  */
@@ -597,8 +619,8 @@ function calculateDependentDeduction(dependent: Dependent, year: number): Deduct
 
     // Check for elderly dependent (age 70+)
     if (isElderlyDependent(dependent, year)) {
-      // Additional deduction if cohabiting parent or grandparent
-      if (dependent.isCohabiting && dependent.relationship === 'parent') {
+      // Higher 同居老親等 deduction only for a cohabiting elderly 直系尊属 (parent/grandparent).
+      if (isCohabitingElderlyDependent(dependent, year)) {
         return deductions.ELDERLY_COHABITING;
       }
       return deductions.ELDERLY_DEPENDENT;
@@ -794,9 +816,11 @@ export function calculateDependentDeductions(
         residenceTaxAmount: dependentDeduction.residence,
         deductionType: isSpecialDependent(dependent, year)
           ? DEDUCTION_TYPES.SPECIAL_DEPENDENT
-          : isElderlyDependent(dependent, year)
-            ? DEDUCTION_TYPES.ELDERLY_DEPENDENT
-            : DEDUCTION_TYPES.GENERAL_DEPENDENT,
+          : isCohabitingElderlyDependent(dependent, year)
+            ? DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT
+            : isElderlyDependent(dependent, year)
+              ? DEDUCTION_TYPES.ELDERLY_DEPENDENT
+              : DEDUCTION_TYPES.GENERAL_DEPENDENT,
       });
     } else {
       // Not eligible for any deduction (except disability which was already handled)

@@ -319,7 +319,11 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       expect(result.personalDeductionDifference).toBe(180_000);
     });
 
-    it('calculates correctly for cohabiting elderly grandparent - 13万円 statutory difference', () => {
+    it('calculates correctly for cohabiting elderly "other" relative - 10万円 statutory difference', () => {
+      // 'other' ("Other Relative") is NOT a 直系尊属, so cohabiting does NOT upgrade it to 同居老親等.
+      // It gets the plain 老人扶養親族 difference (10万), matching the plain elderly deduction it
+      // actually receives — the statutory difference must track the deduction granted, not be
+      // re-derived from relationship/isCohabiting (which had overstated this case by 3万).
       const dependent: Dependent = {
         id: '1',
         relationship: 'other',
@@ -336,10 +340,80 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       const socialInsurance = 1_000_000;
       const dependents = calculateDependentDeductions([dependent], 2026);
 
+      // Sanity check: the deduction actually granted is the plain elderly amount (48万/38万).
+      expect(dependents.breakdown).toHaveLength(1);
+      expect(dependents.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.ELDERLY_DEPENDENT);
+      expect(dependents.nationalTax.dependentDeduction).toBe(480_000);
+      expect(dependents.residenceTax.dependentDeduction).toBe(380_000);
+
       const result = calculateResidenceTax(taxpayerIncome, socialInsurance, dependents, 2026);
 
-      // Personal deduction difference = 50,000 (basic) + 130,000 (elderly cohabiting) = 180,000
-      expect(result.personalDeductionDifference).toBe(180_000);
+      // Personal deduction difference = 50,000 (basic) + 100,000 (plain elderly) = 150,000
+      expect(result.personalDeductionDifference).toBe(150_000);
+    });
+  });
+
+  describe('同居老親等 vs plain elderly: parent and "other" diverge', () => {
+    const makeElderly = (relationship: 'parent' | 'other'): Dependent => ({
+      id: '1',
+      relationship,
+      ageCategory: '70plus',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    });
+
+    // Chosen so residence taxable income stays ≤ ¥2M in both cases, keeping the adjustment credit
+    // in the "5% of the full statutory difference" branch (not the >¥2M floored-at-¥50,000 branch),
+    // so the 3万 statutory-difference gap shows up cleanly as a ¥1,500 adjustment-credit gap.
+    const taxpayerIncome = 3_000_000;
+    const socialInsurance = 400_000;
+
+    it('cohabiting elderly parent is 同居老親等; cohabiting elderly "other" is not', () => {
+      const parent = calculateDependentDeductions([makeElderly('parent')], 2025);
+      const other = calculateDependentDeductions([makeElderly('other')], 2025);
+
+      // The breakdown type reflects the 同居老親等 determination made where the amount is chosen.
+      expect(parent.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT);
+      expect(other.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.ELDERLY_DEPENDENT);
+
+      // 同居老親等 gets the higher deduction (58万/45万) vs plain elderly (48万/38万).
+      expect(parent.residenceTax.dependentDeduction).toBe(450_000);
+      expect(other.residenceTax.dependentDeduction).toBe(380_000);
+    });
+
+    it('the statutory difference, adjustment credit, and residence tax all differ by the 3万 gap', () => {
+      const parentResult = calculateResidenceTax(
+        taxpayerIncome,
+        socialInsurance,
+        calculateDependentDeductions([makeElderly('parent')], 2025),
+        2025,
+      );
+      const otherResult = calculateResidenceTax(
+        taxpayerIncome,
+        socialInsurance,
+        calculateDependentDeductions([makeElderly('other')], 2025),
+        2025,
+      );
+
+      // Statutory personal deduction difference: 5万 basic + 13万 (parent) vs + 10万 (other).
+      expect(parentResult.personalDeductionDifference).toBe(180_000);
+      expect(otherResult.personalDeductionDifference).toBe(150_000);
+
+      // With taxable income ≤ 2M here, the adjustment credit is 5% of the difference, so the 3万
+      // gap in the statutory difference is a ¥1,500 gap in the adjustment credit — the exact
+      // amount the bug had wrongly granted the 'other' case.
+      const parentCredit =
+        parentResult.city.cityAdjustmentCredit +
+        parentResult.prefecture.prefecturalAdjustmentCredit;
+      const otherCredit =
+        otherResult.city.cityAdjustmentCredit + otherResult.prefecture.prefecturalAdjustmentCredit;
+      expect(parentCredit - otherCredit).toBe(1_500);
+
+      // A larger adjustment credit reduces residence tax, so the 'other' case owes ¥1,500 more
+      // income-based residence tax than the (correctly higher-credited) parent case. The higher
+      // 同居老親等 residence-tax deduction (45万 vs 38万) also lowers the parent's taxable income.
+      expect(otherResult.totalResidenceTax).toBeGreaterThan(parentResult.totalResidenceTax);
     });
   });
 });
