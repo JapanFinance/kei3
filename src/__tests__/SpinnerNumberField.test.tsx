@@ -124,35 +124,6 @@ describe('SpinnerNumberField', () => {
     expect(input.getAttribute('value')).toBe('¥1,500,000');
   });
 
-  it('works with onInputChange event handler pattern', () => {
-    const mockOnInputChange = vi.fn();
-
-    render(
-      <SpinnerNumberField
-        value={100000}
-        onInputChange={mockOnInputChange}
-        name="testField"
-        label="Test Amount"
-      />,
-    );
-
-    const input = screen.getByLabelText(/Test Amount/i);
-
-    // Test arrow key with event handler pattern
-    fireEvent.keyDown(input, { key: 'ArrowUp' });
-
-    // Should call onInputChange with a synthetic event
-    expect(mockOnInputChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: expect.objectContaining({
-          name: 'testField',
-          value: 101000,
-          type: 'number',
-        }),
-      }),
-    );
-  });
-
   it('has inputMode="numeric" for mobile keyboard support', () => {
     const mockOnChange = vi.fn();
 

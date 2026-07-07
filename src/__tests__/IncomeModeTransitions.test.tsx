@@ -5,10 +5,11 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { useState } from 'react';
+import { useReducer } from 'react';
 import type { TakeHomeFormState, IncomeStream } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_REGION } from '../types/healthInsurance';
+import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
 import { vi } from 'vitest';
 
 // Mock child components to keep the test focused on InputForm logic
@@ -22,7 +23,7 @@ vi.mock('../components/TakeHomeCalculator/Income/IncomeDetailsModal', () => ({
 
 // Test wrapper that mimics App.tsx state management
 const TestWrapper = ({ initialState }: { initialState?: Partial<TakeHomeFormState> }) => {
-  const [inputs, setInputs] = useState<TakeHomeFormState>({
+  const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 5000000,
     incomeYear: 2026,
@@ -38,19 +39,9 @@ const TestWrapper = ({ initialState }: { initialState?: Partial<TakeHomeFormStat
     ...initialState,
   });
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement> | { target: { name: string; value: unknown } },
-  ) => {
-    const { name, value } = e.target;
-    setInputs(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
   return (
     <ThemeProvider theme={createTheme()}>
-      <TakeHomeInputForm inputs={inputs} onInputChange={handleInputChange} />
+      <TakeHomeInputForm inputs={inputs} dispatch={dispatch} />
       <div data-testid="debug-state">{JSON.stringify(inputs)}</div>
     </ThemeProvider>
   );
