@@ -814,7 +814,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
               additionalDeductions?.items.forEach(item => {
-                const name = ADDITIONAL_DEDUCTION_INFO[item.key]?.name ?? item.key;
+                const name = ADDITIONAL_DEDUCTION_INFO[item.key].name;
                 parts.push(`${name} ${formatJPY(item.national)}`);
               });
               // Via the UI the move-in dropdown only offers eligible years, so a credit entered

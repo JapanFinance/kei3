@@ -283,35 +283,47 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   let processedBusinessIncome = false;
 
   for (const income of incomeStreams) {
-    if (income.type === 'salary') {
-      if (income.frequency === 'monthly') {
-        salaryIncome += income.amount * 12;
-      } else {
-        salaryIncome += income.amount;
+    switch (income.type) {
+      case 'salary':
+        if (income.frequency === 'monthly') {
+          salaryIncome += income.amount * 12;
+        } else {
+          salaryIncome += income.amount;
+        }
+        break;
+      case 'commutingAllowance':
+        commutingAllowance += getCommutingAllowanceAnnualAmount(income);
+        break;
+      case 'bonus':
+        bonusIncome.push(income);
+        break;
+      case 'stockCompensation':
+        stockCompensationIncome += income.amount;
+        break;
+      case 'business': {
+        if (processedBusinessIncome) {
+          throw new Error('Only one business income stream is allowed.');
+        }
+        if (income.amount < 0) {
+          throw new Error('Business income losses are not currently supported.');
+        }
+        const maxDeduction = income.blueFilerDeduction || 0;
+        netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
+        // Net business income is reduced by the deduction, up to the amount of income
+        const effectiveDeduction = Math.min(income.amount, maxDeduction);
+        netBusinessAndMiscIncome += income.amount - effectiveDeduction;
+        blueFilerDeduction = effectiveDeduction;
+        processedBusinessIncome = true;
+        break;
       }
-    } else if (income.type === 'commutingAllowance') {
-      commutingAllowance += getCommutingAllowanceAnnualAmount(income);
-    } else if (income.type === 'bonus') {
-      bonusIncome.push(income);
-    } else if (income.type === 'stockCompensation') {
-      stockCompensationIncome += income.amount;
-    } else if (income.type === 'business') {
-      if (processedBusinessIncome) {
-        throw new Error('Only one business income stream is allowed.');
+      case 'miscellaneous':
+        netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
+        netBusinessAndMiscIncome += income.amount;
+        break;
+      default: {
+        const unhandled: never = income;
+        throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
       }
-      if (income.amount < 0) {
-        throw new Error('Business income losses are not currently supported.');
-      }
-      const maxDeduction = income.blueFilerDeduction || 0;
-      netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
-      // Net business income is reduced by the deduction, up to the amount of income
-      const effectiveDeduction = Math.min(income.amount, maxDeduction);
-      netBusinessAndMiscIncome += income.amount - effectiveDeduction;
-      blueFilerDeduction = effectiveDeduction;
-      processedBusinessIncome = true;
-    } else if (income.type === 'miscellaneous') {
-      netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
-      netBusinessAndMiscIncome += income.amount;
     }
   }
 

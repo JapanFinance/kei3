@@ -112,14 +112,25 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       const annualAmount =
         s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
 
-      if (s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation') {
-        employmentIncome += annualAmount;
-      } else if (s.type === 'business') {
-        businessIncome += annualAmount;
-      } else if (s.type === 'miscellaneous') {
-        miscellaneousIncome += annualAmount;
-      } else if (s.type === 'commutingAllowance') {
-        commutingAllowance += getCommutingAllowanceAnnualAmount(s);
+      switch (s.type) {
+        case 'salary':
+        case 'bonus':
+        case 'stockCompensation':
+          employmentIncome += annualAmount;
+          break;
+        case 'business':
+          businessIncome += annualAmount;
+          break;
+        case 'miscellaneous':
+          miscellaneousIncome += annualAmount;
+          break;
+        case 'commutingAllowance':
+          commutingAllowance += getCommutingAllowanceAnnualAmount(s);
+          break;
+        default: {
+          const unhandled: never = s;
+          throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
+        }
       }
     });
 

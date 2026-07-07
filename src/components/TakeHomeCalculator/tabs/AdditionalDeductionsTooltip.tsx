@@ -78,7 +78,6 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
         </Typography>
         {rows.map(item => {
           const info = ADDITIONAL_DEDUCTION_INFO[item.key];
-          if (!info) return null;
           return (
             <Typography
               key={item.key}

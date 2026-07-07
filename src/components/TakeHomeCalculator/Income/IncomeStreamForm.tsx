@@ -44,9 +44,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [type, setType] = useState<IncomeStreamType>(initialData?.type || 'salary');
   const [amount, setAmount] = useState<number>(initialData?.amount || 0);
   const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(
-    ((initialData?.type === 'salary' || initialData?.type === 'commutingAllowance') &&
-      initialData.frequency) ||
-      'annual',
+    initialData?.type === 'salary' || initialData?.type === 'commutingAllowance'
+      ? initialData.frequency
+      : 'annual',
   );
   const [month, setMonth] = useState<number>(
     (initialData?.type === 'bonus' && initialData.month) || 0,
@@ -55,7 +55,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     (initialData?.type === 'business' && initialData.blueFilerDeduction) || 0,
   );
   const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>(
-    (initialData?.type === 'stockCompensation' && initialData.issuerDomicile) || 'foreign',
+    initialData?.type === 'stockCompensation' ? initialData.issuerDomicile : 'foreign',
   );
   const [error, setError] = useState<string | null>(null);
 

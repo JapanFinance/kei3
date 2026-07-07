@@ -50,7 +50,7 @@ export const Root = () => {
     if (savedMode) return savedMode;
 
     // Check system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }
 

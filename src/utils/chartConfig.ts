@@ -12,15 +12,14 @@ import { MEDIAN_INCOME_VALUE } from '../data/income';
 export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
   id: 'currentAndMedianIncomeChartPlugin',
   beforeDraw: (chart: Chart) => {
-    if (!chart.data.datasets || !chart.data.datasets.length) return;
+    if (!chart.data.datasets.length) return;
 
     const { ctx, chartArea } = chart;
-    if (!chartArea) return;
 
     const { left, right, top, bottom } = chartArea;
     const width = right - left;
 
-    const pluginData = chart.options?.plugins?.customPlugin?.data;
+    const pluginData = chart.options.plugins?.customPlugin?.data;
 
     if (!pluginData) {
       console.error('Custom plugin data not found in chart options');
@@ -311,7 +310,7 @@ export const getChartOptions = (
         },
         callbacks: {
           title: function (context: TooltipItem<'bar' | 'line'>[]) {
-            if (context.length > 0 && context[0]?.parsed?.x != null) {
+            if (context.length > 0 && context[0]?.parsed.x != null) {
               const income = context[0].parsed.x;
               return `Income: ${formatJPY(income)}`;
             }

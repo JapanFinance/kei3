@@ -386,10 +386,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         deductionResults.breakdown.forEach(
                           (breakdown: DependentDeductionBreakdown) => {
                             // Skip if not eligible
-                            if (
-                              !breakdown.deductionType ||
-                              breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE
-                            ) {
+                            if (breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE) {
                               return;
                             }
 
