@@ -320,19 +320,31 @@ function reduceIncomeModeChanged(
     newState.savedIncomeStreams = state.incomeStreams;
   }
 
-  if (action.mode === 'salary' || action.mode === 'miscellaneous') {
-    newState.healthInsuranceProvider =
-      action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
-    newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
-    newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
-  } else {
-    // Entering advanced mode: restore the saved advanced streams if they still total the
-    // current annual income; otherwise keep the current simple-mode stream.
-    const saved = state.savedIncomeStreams;
-    newState.incomeStreams =
-      saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
-        ? saved
-        : state.incomeStreams;
+  switch (action.mode) {
+    case 'salary':
+    case 'miscellaneous':
+      newState.healthInsuranceProvider =
+        action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
+      newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
+      newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
+      break;
+    case 'advanced': {
+      // Entering advanced mode: restore the saved advanced streams if they still total the
+      // current annual income; otherwise keep the current simple-mode stream.
+      const saved = state.savedIncomeStreams;
+      newState.incomeStreams =
+        saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
+          ? saved
+          : state.incomeStreams;
+      break;
+    }
+    default: {
+      // Exhaustiveness: a new IncomeMode must add its own routing branch here rather than
+      // silently inheriting the advanced-mode behavior (the real first-fail point a bare
+      // if/else would hide).
+      const unhandledMode: never = action.mode;
+      throw new Error(`Unhandled income mode: ${JSON.stringify(unhandledMode)}`);
+    }
   }
 
   // Salary/miscellaneous force a valid provider above; but entering advanced mode carries
