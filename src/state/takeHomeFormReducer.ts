@@ -218,7 +218,7 @@ function reduceIncomeModeChanged(
     // current annual income; otherwise keep the current simple-mode stream.
     const saved = state.savedIncomeStreams;
     newState.incomeStreams =
-      saved && saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
+      saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
         ? saved
         : state.incomeStreams;
   }

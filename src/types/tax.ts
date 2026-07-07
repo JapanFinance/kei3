@@ -225,7 +225,7 @@ export interface TakeHomeFormState {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  savedIncomeStreams?: IncomeStream[];
+  savedIncomeStreams: IncomeStream[];
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;

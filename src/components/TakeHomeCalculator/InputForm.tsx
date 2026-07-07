@@ -224,7 +224,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   // Derive regions for the currently selected health insurance provider
   const derivedProviderRegions = React.useMemo(() => {
     const provider = inputs.healthInsuranceProvider;
-    if (!provider) return [];
 
     // Dependent coverage doesn't have regions
     if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
@@ -324,7 +323,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             {/* Income Mode Toggle */}
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
               <ToggleButtonGroup
-                value={inputs.incomeMode || 'salary'}
+                value={inputs.incomeMode}
                 exclusive
                 onChange={handleIncomeModeChange}
                 aria-label="income mode"
@@ -800,6 +799,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     id="region"
                     options={regionMenuItemsToDisplay}
                     value={
+                      // Empty-option fallback for when the dropdown is disabled and
+                      // `regionMenuItemsToDisplay` is empty (single-default or region-less provider).
                       regionMenuItemsToDisplay.find(option => option.id === inputs.region) ||
                       regionMenuItemsToDisplay[0] || { id: '', displayName: '' }
                     }
@@ -807,7 +808,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       dispatch({
                         type: 'setField',
                         field: 'region',
-                        value: newValue?.id || '',
+                        value: newValue.id,
                       });
                     }}
                     getOptionLabel={option => option.displayName}

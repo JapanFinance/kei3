@@ -46,6 +46,7 @@ function App({ mode, toggleColorMode }: AppProps) {
         frequency: 'annual',
       },
     ],
+    savedIncomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
