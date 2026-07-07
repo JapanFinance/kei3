@@ -3,6 +3,7 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
+import vitest from '@vitest/eslint-plugin';
 import { defineConfig } from 'eslint/config';
 
 const fileHeaderRule = {
@@ -80,5 +81,9 @@ export default defineConfig(
         },
       ],
     },
+  },
+  {
+    extends: [vitest.configs.recommended],
+    files: ['src/__tests__/**/*.{ts,tsx}'],
   },
 );
