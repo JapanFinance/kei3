@@ -12,7 +12,10 @@ import {
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
-import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import {
+  PROVIDER_DEFINITIONS,
+  getProviderDefinition,
+} from '../data/employeesHealthInsurance/providerRateData';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
   return regions.includes('Tokyo')
@@ -37,7 +40,7 @@ function defaultRegionForProvider(provider: HealthInsuranceProviderId): string {
   }
 
   // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
-  const providerDefinition = PROVIDER_DEFINITIONS[provider];
+  const providerDefinition = getProviderDefinition(provider);
   if (providerDefinition) {
     return selectDefaultRegion(Object.keys(providerDefinition.regions));
   }
@@ -347,7 +350,7 @@ export function takeHomeFormReducer(
     case 'setField':
       // TS can't correlate `action.field`/`action.value` across the mapped union once
       // destructured this way, even though every call site is checked individually.
-      return { ...state, [action.field]: action.value } as TakeHomeFormState;
+      return { ...state, [action.field]: action.value };
 
     case 'incomeModeChanged':
       return reduceIncomeModeChanged(state, action);

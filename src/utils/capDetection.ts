@@ -188,10 +188,6 @@ function checkHealthInsuranceCap(
     };
   } else {
     // Employee Health Insurance - check if in highest bracket
-    if (!results.healthInsuranceProvider) {
-      return { capped: false };
-    }
-
     let premiumTable;
     if (results.healthInsuranceProvider === CUSTOM_PROVIDER_ID) {
       if (!results.customEHIRates) {

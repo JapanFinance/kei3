@@ -43,13 +43,23 @@ const fileHeaderRule = {
 };
 
 export default defineConfig(
-  { ignores: ['dist'] },
+  // `.claude` holds agent worktrees (full, sometimes-stale repo copies) that would
+  // otherwise be traversed and break type-aware linting with multiple root tsconfigs.
+  { ignores: ['dist', '.claude'] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      parserOptions: {
+        // Type-aware linting (strictTypeChecked). projectService resolves each file
+        // to its nearest tsconfig; the two root config files aren't in any project.
+        projectService: {
+          allowDefaultProject: ['test-setup.ts', 'vitest.config.ts'],
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: {
       'react-hooks': reactHooks,
@@ -80,10 +90,37 @@ export default defineConfig(
             'Unicode escapes like \\u6240 render literally in JSX text. Use the actual character (e.g. 所得控除), or move the text into a string literal/expression.',
         },
       ],
+      // strictTypeChecked adoption. Numbers and booleans interpolated into template
+      // strings are intentional throughout the UI copy, so allow them.
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        { allowNumber: true, allowBoolean: true },
+      ],
+      // Returning a void call from an arrow shorthand (e.g. `onChange={e => setX(e)}`) is
+      // idiomatic React and intentional here; keep the rule for the genuinely confusing
+      // non-shorthand cases (e.g. `return doVoidThing()` in a value position).
+      '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
+      // Non-null assertions (`x!`) are a deliberate, legitimate tool throughout this
+      // codebase; enforcing their removal would add runtime guards without improving
+      // correctness. Disabled by choice rather than tracked as debt.
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      // Remaining violations kept as `warn`: most are correct defensive guards against
+      // runtime states the (optimistic) library/DOM types don't capture, so removing
+      // them to satisfy the linter would delete real safety nets.
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
     },
   },
   {
     extends: [vitest.configs.recommended],
     files: ['src/__tests__/**/*.{ts,tsx}'],
+    rules: {
+      // Tests routinely handle `any` from JSON.parse, mock payloads, and matcher
+      // helpers like expect.objectContaining; the unsafe-* family is noise here.
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+    },
   },
 );

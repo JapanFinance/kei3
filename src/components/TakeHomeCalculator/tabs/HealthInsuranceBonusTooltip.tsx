@@ -6,7 +6,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
-import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
+import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
@@ -31,7 +31,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   if (provider === CUSTOM_PROVIDER_ID) {
     providerLabel = 'Custom Provider';
   } else {
-    const providerDef = PROVIDER_DEFINITIONS[provider];
+    const providerDef = getProviderDefinition(provider);
     // April (month 3) → the income year's fiscal-year rates; this lookup only needs the source URL.
     const regionalRates = getRegionalRatesForMonth(provider, region, year, 3);
     if (regionalRates) {

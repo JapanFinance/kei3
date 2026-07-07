@@ -32,25 +32,37 @@ export const CapIndicator: React.FC<CapIndicatorProps> = ({
   contributionType,
 }) => {
   // Determine if this specific contribution type is capped or fixed
-  let isIndicatorActive = false;
+  let isIndicatorActive: boolean;
   let isNationalPension = false;
   const isNationalHealthInsurance = !!capStatus.pensionFixed;
 
-  if (contributionType === 'pension') {
-    isNationalPension = !!capStatus.pensionFixed;
-    isIndicatorActive = capStatus.pensionCapped || isNationalPension;
-  } else if (contributionType === 'health insurance') {
-    isIndicatorActive = capStatus.healthInsuranceCapped || isNationalHealthInsurance;
-  } else if (contributionType === 'medical portion') {
-    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.medicalCapped;
-  } else if (contributionType === 'elderly support portion') {
-    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.supportCapped;
-  } else if (contributionType === 'long-term care portion') {
-    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.ltcCapped;
-  } else if (contributionType === 'child support portion') {
-    isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.childSupportCapped;
-  } else if (contributionType === 'health insurance bonus') {
-    isIndicatorActive = !!capStatus.healthInsuranceBonusCapped;
+  switch (contributionType) {
+    case 'pension':
+      isNationalPension = !!capStatus.pensionFixed;
+      isIndicatorActive = capStatus.pensionCapped || isNationalPension;
+      break;
+    case 'health insurance':
+      isIndicatorActive = capStatus.healthInsuranceCapped || isNationalHealthInsurance;
+      break;
+    case 'medical portion':
+      isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.medicalCapped;
+      break;
+    case 'elderly support portion':
+      isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.supportCapped;
+      break;
+    case 'long-term care portion':
+      isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.ltcCapped;
+      break;
+    case 'child support portion':
+      isIndicatorActive = !!capStatus.healthInsuranceCapDetails?.childSupportCapped;
+      break;
+    case 'health insurance bonus':
+      isIndicatorActive = !!capStatus.healthInsuranceBonusCapped;
+      break;
+    default: {
+      const unhandled: never = contributionType;
+      throw new Error(`Unhandled contribution type: ${JSON.stringify(unhandled)}`);
+    }
   }
 
   if (!isIndicatorActive) {

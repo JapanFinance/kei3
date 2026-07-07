@@ -301,7 +301,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               label="Total Net Income"
               value={formatJPY(results.totalNetIncome)}
               type="subtotal"
-              sx={{ mt: 0.5, mb: 0.5 }}
             />
           )}
           <ResultRow

@@ -73,13 +73,9 @@ export function calculateHealthInsuranceBreakdown(
   } else {
     const monthlyIncome = annualIncome / 12;
 
-    // Find the SMR bracket for this income
+    // Find the SMR bracket for this income (findSMRBracket always returns one: the
+    // brackets cover [0, ∞) and it throws on negative income).
     const smrBracket = findSMRBracket(monthlyIncome);
-    if (!smrBracket) {
-      throw new Error(
-        `Monthly income ${monthlyIncome.toLocaleString()} is outside the defined SMR ranges.`,
-      );
-    }
 
     if (provider === CUSTOM_PROVIDER_ID) {
       if (!customRates) {
@@ -185,12 +181,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
   const useTimeSeries = typeof providerOrRates === 'string';
   const providerId = useTimeSeries ? providerOrRates : undefined;
   const region = useTimeSeries ? (regionOrLTC as string) : undefined;
-  const staticRates = useTimeSeries
-    ? undefined
-    : (providerOrRates as {
-        employeeHealthInsuranceRate: number;
-        employeeLongTermCareRate: number;
-      });
+  const staticRates = useTimeSeries ? undefined : providerOrRates;
   const includeLTC = useTimeSeries ? isSubjectToLongTermCarePremium! : (regionOrLTC as boolean);
 
   // Sort bonuses by month to apply cumulative cap correctly

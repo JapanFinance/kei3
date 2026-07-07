@@ -5,30 +5,21 @@ import type { TakeHomeInputs, ChartRange, IncomeStream } from '../types/tax';
 import { formatJPY, formatYenCompact } from './formatters';
 import { calculateTaxes } from './taxCalculations';
 import { detectCaps } from './capDetection';
-import type {
-  ChartData,
-  ChartOptions,
-  Chart,
-  TooltipItem,
-  Scale,
-  CoreScaleOptions,
-  Plugin,
-} from 'chart.js';
+import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, Plugin } from 'chart.js';
 import { MEDIAN_INCOME_VALUE } from '../data/income';
 
 // Create custom plugin for vertical lines
 export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
   id: 'currentAndMedianIncomeChartPlugin',
   beforeDraw: (chart: Chart) => {
-    if (!chart.data.datasets || !chart.data.datasets.length) return;
+    if (!chart.data.datasets.length) return;
 
     const { ctx, chartArea } = chart;
-    if (!chartArea) return;
 
     const { left, right, top, bottom } = chartArea;
     const width = right - left;
 
-    const pluginData = chart.options?.plugins?.customPlugin?.data;
+    const pluginData = chart.options.plugins?.customPlugin?.data;
 
     if (!pluginData) {
       console.error('Custom plugin data not found in chart options');
@@ -319,7 +310,7 @@ export const getChartOptions = (
         },
         callbacks: {
           title: function (context: TooltipItem<'bar' | 'line'>[]) {
-            if (context.length > 0 && context[0]?.parsed?.x != null) {
+            if (context.length > 0 && context[0]?.parsed.x != null) {
               const income = context[0].parsed.x;
               return `Income: ${formatJPY(income)}`;
             }
@@ -372,7 +363,7 @@ export const getChartOptions = (
         },
         ticks: {
           align: 'center',
-          callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
+          callback: function (this: Scale, tickValue: number | string) {
             const value = Number(tickValue);
             return useCompactLabelFormat ? formatYenCompact(value) : formatJPY(value);
           },
@@ -386,7 +377,7 @@ export const getChartOptions = (
         display: true,
         position: 'left' as const,
         ticks: {
-          callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
+          callback: function (this: Scale, tickValue: number | string) {
             const value = Number(tickValue);
             return useCompactLabelFormat ? formatYenCompact(value) : formatJPY(value);
           },
@@ -400,7 +391,7 @@ export const getChartOptions = (
           drawOnChartArea: false,
         },
         ticks: {
-          callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
+          callback: function (this: Scale, tickValue: number | string) {
             const value = Number(tickValue);
             return value.toFixed(0) + '%';
           },

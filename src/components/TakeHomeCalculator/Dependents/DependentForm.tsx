@@ -80,7 +80,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   const handleSubmit = () => {
     const newDependent: OtherDependent = {
-      id: dependent?.id || `dep-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: dependent?.id || `dep-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       relationship,
       ageCategory,
       income,
@@ -118,9 +118,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           labelId="relationship-label"
           label="Relationship"
           value={relationship}
-          onChange={e =>
-            setRelationship(e.target.value as Exclude<DependentRelationship, 'spouse'>)
-          }
+          onChange={e => setRelationship(e.target.value)}
         >
           {RELATIONSHIPS.filter(rel => rel.value !== 'spouse').map(rel => (
             <MenuItem key={rel.value} value={rel.value}>
@@ -333,7 +331,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             labelId="age-label"
             label="Age"
             value={ageCategory}
-            onChange={e => setAgeCategory(e.target.value as DependentAgeCategory)}
+            onChange={e => setAgeCategory(e.target.value)}
           >
             {DEPENDENT_AGE_CATEGORIES.map(cat => (
               <MenuItem key={cat.value} value={cat.value}>
@@ -367,7 +365,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         <Select
           value={disability}
           label="Disability Status"
-          onChange={e => setDisability(e.target.value as DisabilityLevel)}
+          onChange={e => setDisability(e.target.value)}
         >
           {DISABILITY_LEVELS.map(level => (
             <MenuItem key={level.value} value={level.value}>

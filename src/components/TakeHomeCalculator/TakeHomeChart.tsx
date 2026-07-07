@@ -347,7 +347,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           callbacks: {
             ...baseOptions.plugins?.tooltip?.callbacks,
             afterTitle: (tooltipItems: TooltipItem<'bar' | 'line'>[]) => {
-              if (tooltipItems.length > 0 && tooltipItems[0]?.parsed?.x != null) {
+              if (tooltipItems.length > 0 && tooltipItems[0]?.parsed.x != null) {
                 const income = tooltipItems[0].parsed.x;
                 const estimatedPercentile = calculateEstimatedIncomePercentile(income);
                 const band = getPercentileBand(income);

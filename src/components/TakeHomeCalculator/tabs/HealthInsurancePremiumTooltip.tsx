@@ -14,7 +14,7 @@ import {
 } from '../../../types/healthInsurance';
 import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
-import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
+import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import {
   EHI_SMR_BRACKETS,
@@ -234,7 +234,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   };
 
   if (ratesBlended) {
-    const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData!, portion);
+    const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData, portion);
     const blendedAmount = Math.round((prevCalc.final * 3) / 10 + (currCalc.final * 7) / 10);
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
@@ -450,12 +450,6 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     let sourceUrl;
     let providerLabel;
 
-    if (standardMonthlyRemuneration === undefined) {
-      throw new Error(
-        'standardMonthlyRemuneration is required for the Employee Health Insurance tooltip',
-      );
-    }
-
     const year = inputs.incomeYear;
 
     if (provider === CUSTOM_PROVIDER_ID) {
@@ -466,7 +460,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     } else {
       // Use a representative month of the income year (April = fiscal-year start) for the headline rate.
       const regionalRates = getRegionalRatesForMonth(provider, region, year, 3);
-      const providerDef = PROVIDER_DEFINITIONS[provider];
+      const providerDef = getProviderDefinition(provider);
 
       if (regionalRates) {
         employeeRate = regionalRates.employeeHealthInsuranceRate;

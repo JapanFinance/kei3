@@ -109,7 +109,7 @@ export function hasDependentRelativeUnder23(dependents: Dependent[], year: numbe
   return dependents.some(dependent => {
     if (dependent.relationship === 'spouse') return false; // a spouse is never a 扶養親族
     if (calculateDependentTotalNetIncome(dependent.income, year) > eligibilityMax) return false;
-    const age = (dependent as OtherDependent).ageCategory;
+    const age = dependent.ageCategory;
     return age === 'under16' || age === '16to18' || age === '19to22';
   });
 }
@@ -127,7 +127,7 @@ function isEligibleForDependentDeduction(dependent: Dependent, year: number): bo
   // Dependents under 16 are not eligible for the dependent deduction (扶養控除)
   // They are eligible for disability deduction if applicable, but that is handled separately.
   // Note: Child Allowance (児童手当) replaces the tax deduction for this age group.
-  if ((dependent as OtherDependent).ageCategory === 'under16') {
+  if (dependent.ageCategory === 'under16') {
     return false;
   }
 
@@ -224,7 +224,7 @@ function isEligibleForSpecificRelativeSpecialDeduction(
   if (dependent.relationship === 'spouse') {
     return false;
   }
-  const otherDependent = dependent as OtherDependent;
+  const otherDependent = dependent;
   const ageCategory = otherDependent.ageCategory;
 
   // Only age 19-22 are eligible (19歳以上23歳未満)

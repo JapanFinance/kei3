@@ -95,7 +95,7 @@ describe('takeHomeFormReducer', () => {
 
       expect(result.incomeMode).toBe('salary');
       expect(result.healthInsuranceProvider).toBe('KyokaiKenpo');
-      const kyokaiRegions = Object.keys(PROVIDER_DEFINITIONS['KyokaiKenpo']!.regions);
+      const kyokaiRegions = Object.keys(PROVIDER_DEFINITIONS['KyokaiKenpo'].regions);
       expect(kyokaiRegions).toContain(result.region);
       expect(result.region).toBe('Tokyo');
     });
@@ -291,7 +291,7 @@ describe('takeHomeFormReducer', () => {
       });
 
       expect(result.healthInsuranceProvider).toBe('KantoItsKenpo');
-      const regions = Object.keys(PROVIDER_DEFINITIONS['KantoItsKenpo']!.regions);
+      const regions = Object.keys(PROVIDER_DEFINITIONS['KantoItsKenpo'].regions);
       expect(regions).toContain(result.region);
     });
 

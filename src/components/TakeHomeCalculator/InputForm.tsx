@@ -56,7 +56,7 @@ import {
   DEPENDENT_INCOME_THRESHOLD,
 } from '../../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
-import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
+import { getProviderDefinition } from '../../data/employeesHealthInsurance/providerRateData';
 import { availableProvidersFor, type FormAction } from '../../state/takeHomeFormReducer';
 
 interface TaxInputFormProps {
@@ -167,7 +167,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
     } else {
       // Employee health insurance provider
-      const providerDefinition = PROVIDER_DEFINITIONS[provider];
+      const providerDefinition = getProviderDefinition(provider);
       if (providerDefinition) {
         // Convert region keys to region options for consistency
         return Object.keys(providerDefinition.regions).map(regionKey => ({
@@ -459,7 +459,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             <ToggleButtonGroup
               value={inputs.isSubjectToLongTermCarePremium}
               exclusive
-              onChange={(_, newValue) => {
+              onChange={(_, newValue: boolean | null) => {
                 if (newValue !== null) {
                   dispatch({
                     type: 'setField',
@@ -749,8 +749,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     disabled={isRegionDropdownEffectivelyDisabled}
                     renderInput={params => (
                       <TextField
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        {...(params as any)}
+                        {...params}
                         label="Local Region (Municipality/Prefecture)"
                         helperText={
                           isRegionDropdownEffectivelyDisabled
@@ -815,7 +814,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
               additionalDeductions?.items.forEach(item => {
-                const name = ADDITIONAL_DEDUCTION_INFO[item.key]?.name ?? item.key;
+                const name = ADDITIONAL_DEDUCTION_INFO[item.key].name;
                 parts.push(`${name} ${formatJPY(item.national)}`);
               });
               // Via the UI the move-in dropdown only offers eligible years, so a credit entered

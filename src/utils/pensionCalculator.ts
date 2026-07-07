@@ -91,11 +91,9 @@ export function calculatePensionBreakdown(
     throw new Error('Monthly income must be a positive number');
   }
 
+  // findPensionBracket always returns one: the brackets cover [0, ∞) and it throws on
+  // negative income.
   const bracket = findPensionBracket(monthlyIncome);
-
-  if (!bracket) {
-    throw new Error('No matching income bracket found');
-  }
 
   const fullPremium = bracket.smrAmount * EMPLOYEES_PENSION_RATE;
   const monthlyAmount = roundSocialInsurancePremium(isHalfAmount ? fullPremium / 2 : fullPremium);

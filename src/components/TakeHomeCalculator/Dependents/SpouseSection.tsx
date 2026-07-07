@@ -13,7 +13,7 @@ import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
-import type { DisabilityLevel, Spouse, SpouseAgeCategory } from '../../../types/dependents';
+import type { Spouse } from '../../../types/dependents';
 import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
 import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
 import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
@@ -300,7 +300,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                 label="Age"
                 onChange={e =>
                   handleSpouseChange({
-                    ageCategory: e.target.value as SpouseAgeCategory,
+                    ageCategory: e.target.value,
                   })
                 }
               >
@@ -333,7 +333,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
               label="Disability Status"
               onChange={e =>
                 handleSpouseChange({
-                  disability: e.target.value as DisabilityLevel,
+                  disability: e.target.value,
                 })
               }
             >

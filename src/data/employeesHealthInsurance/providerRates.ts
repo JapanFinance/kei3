@@ -7,7 +7,11 @@
  */
 
 import { roundSocialInsurancePremium } from '../../utils/taxCalculations';
-import { PROVIDER_DEFINITIONS, type RegionalRates } from './providerRateData';
+import {
+  PROVIDER_DEFINITIONS,
+  getProviderDefinition,
+  type RegionalRates,
+} from './providerRateData';
 import { EHI_SMR_BRACKETS } from './smrBrackets';
 
 /**
@@ -25,7 +29,7 @@ export function getRegionalRatesForMonth(
   year: number,
   month: number,
 ): RegionalRates | undefined {
-  const periods = PROVIDER_DEFINITIONS[providerId]?.regions[region];
+  const periods = getProviderDefinition(providerId)?.regions[region];
   if (!periods || periods.length === 0) return undefined;
 
   for (const period of periods) {
@@ -59,7 +63,7 @@ export function calculateMonthlyEmployeePremium(
  * Get all available regions for a specific provider
  */
 export function getAvailableRegions(providerId: string): string[] {
-  const provider = PROVIDER_DEFINITIONS[providerId];
+  const provider = getProviderDefinition(providerId);
   return provider ? Object.keys(provider.regions) : [];
 }
 

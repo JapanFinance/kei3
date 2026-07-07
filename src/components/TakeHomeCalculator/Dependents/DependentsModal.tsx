@@ -76,8 +76,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   const [isAddingNew, setIsAddingNew] = useState(false);
 
   // Separate spouse from other dependents
-  const spouse = dependents.find(d => d.relationship === 'spouse') as Spouse | undefined;
-  const otherDependents = dependents.filter(d => d.relationship !== 'spouse') as OtherDependent[];
+  const spouse = dependents.find(d => d.relationship === 'spouse');
+  const otherDependents = dependents.filter(d => d.relationship !== 'spouse');
 
   const handleSpouseChange = (newSpouse: Spouse | null) => {
     const nonSpouseDependents = dependents.filter(d => d.relationship !== 'spouse');
@@ -386,10 +386,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         deductionResults.breakdown.forEach(
                           (breakdown: DependentDeductionBreakdown) => {
                             // Skip if not eligible
-                            if (
-                              !breakdown.deductionType ||
-                              breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE
-                            ) {
+                            if (breakdown.deductionType === DEDUCTION_TYPES.NOT_ELIGIBLE) {
                               return;
                             }
 
