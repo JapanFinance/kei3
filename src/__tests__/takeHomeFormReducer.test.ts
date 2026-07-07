@@ -145,13 +145,16 @@ describe('takeHomeFormReducer', () => {
     });
 
     it('saves the current streams when leaving advanced mode', () => {
+      // Total (7M) is deliberately distinct from baseState's 5M default so the saved and
+      // synced streams below are clearly attributable to this state, not a default.
       const advancedStreams: TakeHomeFormState['incomeStreams'] = [
-        { id: 's1', type: 'salary', amount: 4_000_000, frequency: 'annual' },
-        { id: 'b1', type: 'bonus', amount: 1_000_000, month: 5 },
+        { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+        { id: 'b1', type: 'bonus', amount: 2_000_000, month: 5 },
       ];
       const state: TakeHomeFormState = {
         ...baseState,
         incomeMode: 'advanced',
+        annualIncome: 7_000_000,
         incomeStreams: advancedStreams,
       };
 
@@ -162,7 +165,7 @@ describe('takeHomeFormReducer', () => {
 
       expect(result.savedIncomeStreams).toEqual(advancedStreams);
       expect(result.incomeStreams).toEqual([
-        { id: 'simple-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+        { id: 'simple-salary', type: 'salary', amount: 7_000_000, frequency: 'annual' },
       ]);
     });
 
@@ -194,7 +197,8 @@ describe('takeHomeFormReducer', () => {
         mode: 'advanced',
       });
 
-      // 400,000 × 12 + 200,000 = 5,000,000; the commuting allowance does not count
+      // Saved streams total ¥5,000,000 (400,000 × 12 + 200,000; commuting allowance
+      // excluded), which equals the annual income, so they are restored unchanged.
       expect(result.incomeStreams).toEqual(savedStreams);
     });
 
@@ -369,7 +373,7 @@ describe('takeHomeFormReducer', () => {
       ]);
     });
 
-    it('leaves the streams untouched in advanced mode', () => {
+    it('is ignored in advanced mode, where annualIncome is derived from the streams', () => {
       const advancedStreams: TakeHomeFormState['incomeStreams'] = [
         { id: 's1', type: 'salary', amount: 4_000_000, frequency: 'annual' },
         { id: 'b1', type: 'bonus', amount: 1_000_000, month: 5 },
@@ -377,12 +381,16 @@ describe('takeHomeFormReducer', () => {
       const state: TakeHomeFormState = {
         ...baseState,
         incomeMode: 'advanced',
+        annualIncome: 5_000_000,
         incomeStreams: advancedStreams,
       };
 
       const result = takeHomeFormReducer(state, { type: 'annualIncomeChanged', value: 6_000_000 });
 
-      expect(result.annualIncome).toBe(6_000_000);
+      // The action is a no-op: annualIncome stays stream-derived and the streams are untouched,
+      // so the two never desync.
+      expect(result).toBe(state);
+      expect(result.annualIncome).toBe(5_000_000);
       expect(result.incomeStreams).toEqual(advancedStreams);
     });
   });

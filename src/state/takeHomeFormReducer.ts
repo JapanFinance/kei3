@@ -212,12 +212,10 @@ function reduceIncomeModeChanged(
     newState.healthInsuranceProvider =
       action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
     newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
-    // Sync streams to strictly match the simple mode
     newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
   } else {
     // Entering advanced mode: restore the saved advanced streams if they still total the
-    // current annual income; otherwise keep the current simple-mode stream, which already
-    // mirrors the annual income (invariant maintained by simpleModeStreams).
+    // current annual income; otherwise keep the current simple-mode stream.
     const saved = state.savedIncomeStreams;
     newState.incomeStreams =
       saved && saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
@@ -232,11 +230,15 @@ function reduceAnnualIncomeChanged(
   state: TakeHomeFormState,
   action: AnnualIncomeChangedAction,
 ): TakeHomeFormState {
+  // In advanced mode annualIncome is derived from the streams (via incomeStreamsChanged),
+  // so a direct annualIncome change doesn't apply — ignore it rather than desync the two.
+  // (The UI never dispatches this in advanced mode; this only guards against misuse.)
+  if (state.incomeMode === 'advanced') {
+    return state;
+  }
   const newState = applyAnnualIncome(state, action.value);
   // In the simple modes the single income stream mirrors the annual income
-  if (state.incomeMode === 'salary' || state.incomeMode === 'miscellaneous') {
-    newState.incomeStreams = simpleModeStreams(state.incomeMode, action.value);
-  }
+  newState.incomeStreams = simpleModeStreams(state.incomeMode, action.value);
   return newState;
 }
 
