@@ -130,7 +130,12 @@ export function takeHomeFormReducer(
       return newState;
     }
 
-    default:
-      return state;
+    default: {
+      // Exhaustiveness check: if a new FormAction variant is added without a
+      // matching case above, `action` won't narrow to `never` here and this
+      // line fails to compile — turning a silent no-op into a build error.
+      const unhandledAction: never = action;
+      throw new Error(`Unhandled form action: ${JSON.stringify(unhandledAction)}`);
+    }
   }
 }
