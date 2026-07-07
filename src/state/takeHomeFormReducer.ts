@@ -47,21 +47,40 @@ function defaultRegionForProvider(provider: HealthInsuranceProviderId): string {
 }
 
 /**
- * Generic field setter. The mapped union over `keyof TakeHomeFormState` keeps `field`
- * and `value` correlated at every call site (e.g. you can't pass a `string` for
+ * Constrains `T` to actual keys of {@link TakeHomeFormState}. Used below so
+ * {@link CascadeManagedField} fails to compile — rather than silently going stale — if
+ * one of its field names is ever renamed or removed from `TakeHomeFormState`.
+ */
+type AssertFormFields<T extends keyof TakeHomeFormState> = T;
+
+/**
+ * Fields with their own semantic action (below) because changing them triggers cascade
+ * logic beyond a plain overwrite. Excluded from {@link SetFieldAction} so a caller can't
+ * bypass the cascade by dispatching a bare `setField` for one of these — e.g.
+ * `dispatch({ type: 'setField', field: 'healthInsuranceProvider', value: ... })` would
+ * update the provider but skip the region reset that `providerChanged` performs.
+ */
+type CascadeManagedField = AssertFormFields<
+  'annualIncome' | 'incomeMode' | 'healthInsuranceProvider'
+>;
+
+/**
+ * Generic field setter for every field *without* its own cascade (see
+ * {@link CascadeManagedField}). The mapped union over `keyof TakeHomeFormState` keeps
+ * `field` and `value` correlated at every call site (e.g. you can't pass a `string` for
  * `dependents`), which is the whole point of moving off the stringly-typed fake-event
  * pattern. The `-?` strips the optionality that homomorphic mapped types would
  * otherwise copy from optional fields (e.g. `customEHIRates?`) onto this mapped type's
- * own properties — left in place, indexing by `[keyof TakeHomeFormState]` would leak
- * `undefined` into the union and break the `switch (action.type)` narrowing below.
+ * own properties — left in place, indexing by `[...]` would leak `undefined` into the
+ * union and break the `switch (action.type)` narrowing below.
  */
 type SetFieldAction = {
-  [K in keyof TakeHomeFormState]-?: {
+  [K in Exclude<keyof TakeHomeFormState, CascadeManagedField>]-?: {
     type: 'setField';
     field: K;
     value: TakeHomeFormState[K];
   };
-}[keyof TakeHomeFormState];
+}[Exclude<keyof TakeHomeFormState, CascadeManagedField>];
 
 /** Income mode changed: resets health insurance provider/region for salary and miscellaneous modes. */
 interface IncomeModeChangedAction {

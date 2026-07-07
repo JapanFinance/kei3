@@ -52,6 +52,21 @@ describe('takeHomeFormReducer', () => {
       expect(result.region).toBe('Osaka');
       expect(result.healthInsuranceProvider).toBe(baseState.healthInsuranceProvider);
     });
+
+    it('is a type error to setField a cascade-managed field, forcing the semantic action instead', () => {
+      // This test is a compile-time check: the assertions below just confirm the calls were
+      // reached, since the point is that each @ts-expect-error above them is required to compile.
+      // @ts-expect-error 'incomeMode' has its own cascade (incomeModeChanged) and is
+      // excluded from SetFieldAction so this bypass can't compile.
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'incomeMode', value: 'salary' });
+      // @ts-expect-error 'healthInsuranceProvider' has its own cascade (providerChanged).
+      // prettier-ignore
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'healthInsuranceProvider', value: 'KyokaiKenpo' });
+      // @ts-expect-error 'annualIncome' has its own cascade (annualIncomeChanged).
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'annualIncome', value: 1 });
+
+      expect(true).toBe(true);
+    });
   });
 
   describe('incomeModeChanged', () => {
