@@ -44,7 +44,9 @@ const ReferenceTable: React.FC<ReferenceTableProps> = ({ headers, rows, sx }) =>
     <thead>
       <tr>
         {headers.map((header, i) => (
-          <th key={i}>{header}</th>
+          <th key={i} scope="col">
+            {header}
+          </th>
         ))}
       </tr>
     </thead>
