@@ -58,7 +58,10 @@ import {
 } from '../../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../../data/employeesHealthInsurance/providerRateData';
-import type { FormAction } from '../../state/takeHomeFormReducer';
+import {
+  hasEmploymentIncome as deriveHasEmploymentIncome,
+  type FormAction,
+} from '../../state/takeHomeFormReducer';
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
@@ -137,108 +140,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   };
 
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
-    // Calculate total annual income from streams
-    const totalIncome = newStreams.reduce((sum, s) => {
-      // Commuting allowance is not included in annual income
-      if (s.type === 'commutingAllowance') {
-        return sum;
-      }
-      if (s.type === 'salary' && s.frequency === 'monthly') {
-        return sum + s.amount * 12;
-      }
-      return sum + s.amount;
-    }, 0);
-
-    dispatch({ type: 'setField', field: 'incomeStreams', value: newStreams });
-    dispatch({ type: 'annualIncomeChanged', value: totalIncome });
+    dispatch({ type: 'incomeStreamsChanged', streams: newStreams });
   };
 
-  const hasEmploymentIncome =
-    inputs.incomeMode === 'salary' ||
-    (inputs.incomeMode === 'advanced' &&
-      inputs.incomeStreams.some(
-        s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation',
-      ));
+  const hasEmploymentIncome = deriveHasEmploymentIncome(inputs);
 
   const handleIncomeModeChange = (_: React.MouseEvent<HTMLElement>, newMode: IncomeMode | null) => {
     if (newMode === null) return;
 
     dispatch({ type: 'incomeModeChanged', mode: newMode });
-
-    // If we are LEAVING advanced mode, save the current streams
-    if (inputs.incomeMode === 'advanced') {
-      dispatch({ type: 'setField', field: 'savedIncomeStreams', value: inputs.incomeStreams });
-    }
-
-    if (newMode === 'salary') {
-      // Sync streams to strictly match the simple mode
-      dispatch({
-        type: 'setField',
-        field: 'incomeStreams',
-        value: [
-          {
-            id: 'simple-salary',
-            type: 'salary',
-            amount: inputs.annualIncome,
-            frequency: 'annual',
-          },
-        ],
-      });
-    } else if (newMode === 'miscellaneous') {
-      // Sync streams to strictly match the simple mode
-      dispatch({
-        type: 'setField',
-        field: 'incomeStreams',
-        value: [
-          {
-            id: 'simple-miscellaneous',
-            type: 'miscellaneous',
-            amount: inputs.annualIncome,
-          },
-        ],
-      });
-    } else if (newMode === 'advanced') {
-      // Try to restore saved streams if they match the current total
-
-      let streamsToUse = inputs.incomeStreams;
-      // If we have saved streams, try to use them
-      if (inputs.savedIncomeStreams && inputs.savedIncomeStreams.length > 0) {
-        streamsToUse = inputs.savedIncomeStreams;
-      }
-
-      // Calculate total of candidate streams
-      const streamTotal = streamsToUse.reduce((sum, s) => {
-        // Commuting allowance is not included in annual income
-        if (s.type === 'commutingAllowance') {
-          return sum;
-        }
-        if (s.type === 'salary' && s.frequency === 'monthly') {
-          return sum + s.amount * 12;
-        }
-        return sum + s.amount;
-      }, 0);
-
-      // If the saved streams match the current annual income, use them!
-      if (streamTotal === inputs.annualIncome) {
-        dispatch({ type: 'setField', field: 'incomeStreams', value: streamsToUse });
-      } else {
-        // Mismatch or empty: Reset to single stream matching Total
-        const initialStream: IncomeStream = hasEmploymentIncome
-          ? {
-              id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-              type: 'salary',
-              frequency: 'annual',
-              amount: inputs.annualIncome,
-            }
-          : {
-              id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-              type: 'miscellaneous',
-              amount: inputs.annualIncome,
-            };
-
-        dispatch({ type: 'setField', field: 'incomeStreams', value: [initialStream] });
-      }
-    }
   };
 
   const updateCustomEHIRate = (
@@ -255,34 +165,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   const handleAnnualIncomeChange = (newIncome: number) => {
     dispatch({ type: 'annualIncomeChanged', value: newIncome });
-
-    // If in simple mode, also update the income streams to match new income
-    if (inputs.incomeMode === 'salary') {
-      dispatch({
-        type: 'setField',
-        field: 'incomeStreams',
-        value: [
-          {
-            id: 'simple-salary',
-            type: 'salary',
-            amount: newIncome,
-            frequency: 'annual',
-          },
-        ],
-      });
-    } else if (inputs.incomeMode === 'miscellaneous') {
-      dispatch({
-        type: 'setField',
-        field: 'incomeStreams',
-        value: [
-          {
-            id: 'simple-miscellaneous',
-            type: 'miscellaneous',
-            amount: newIncome,
-          },
-        ],
-      });
-    }
   };
 
   const handleSliderChange = (_: Event, value: number) => {

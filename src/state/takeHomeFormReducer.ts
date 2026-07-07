@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TakeHomeFormState } from '../types/tax';
+import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -47,6 +47,60 @@ function defaultRegionForProvider(provider: HealthInsuranceProviderId): string {
 }
 
 /**
+ * Total annual income represented by a set of income streams: commuting allowance is
+ * not included, monthly salaries are annualized, everything else counts at face value.
+ */
+export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): number {
+  return streams.reduce((sum, s) => {
+    if (s.type === 'commutingAllowance') {
+      return sum;
+    }
+    if (s.type === 'salary' && s.frequency === 'monthly') {
+      return sum + s.amount * 12;
+    }
+    return sum + s.amount;
+  }, 0);
+}
+
+/**
+ * Whether the form state includes employment income — salary mode, or advanced mode
+ * with at least one employment-type stream. Determines eligibility for employee health
+ * insurance providers.
+ */
+export function hasEmploymentIncome(
+  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams'>,
+): boolean {
+  return (
+    state.incomeMode === 'salary' ||
+    (state.incomeMode === 'advanced' &&
+      state.incomeStreams.some(
+        s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation',
+      ))
+  );
+}
+
+/** The simple (non-advanced) income modes, each of which mirrors `annualIncome` in one stream. */
+type SimpleIncomeMode = Exclude<IncomeMode, 'advanced'>;
+
+/**
+ * The single income stream that mirrors `annualIncome` in a simple mode. The `never`
+ * default makes adding a mode to {@link IncomeMode} a compile error here (matching the
+ * exhaustiveness idiom in {@link takeHomeFormReducer}) rather than a silent fall-through.
+ */
+function simpleModeStreams(mode: SimpleIncomeMode, amount: number): IncomeStream[] {
+  switch (mode) {
+    case 'salary':
+      return [{ id: 'simple-salary', type: 'salary', amount, frequency: 'annual' }];
+    case 'miscellaneous':
+      return [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount }];
+    default: {
+      const unhandledMode: never = mode;
+      throw new Error(`Unhandled simple income mode: ${JSON.stringify(unhandledMode)}`);
+    }
+  }
+}
+
+/**
  * Constrains `T` to actual keys of {@link TakeHomeFormState}. Used below so
  * {@link CascadeManagedField} fails to compile — rather than silently going stale — if
  * one of its field names is ever renamed or removed from `TakeHomeFormState`.
@@ -54,14 +108,16 @@ function defaultRegionForProvider(provider: HealthInsuranceProviderId): string {
 type AssertFormFields<T extends keyof TakeHomeFormState> = T;
 
 /**
- * Fields with their own semantic action (below) because changing them triggers cascade
+ * Fields managed by a semantic action (below) because changing them triggers cascade
  * logic beyond a plain overwrite. Excluded from {@link SetFieldAction} so a caller can't
  * bypass the cascade by dispatching a bare `setField` for one of these — e.g.
  * `dispatch({ type: 'setField', field: 'healthInsuranceProvider', value: ... })` would
  * update the provider but skip the region reset that `providerChanged` performs.
+ * `incomeStreams` and `savedIncomeStreams` are kept in sync with `annualIncome` and
+ * `incomeMode` by their semantic actions, so a bare overwrite would break that invariant.
  */
 type CascadeManagedField = AssertFormFields<
-  'annualIncome' | 'incomeMode' | 'healthInsuranceProvider'
+  'annualIncome' | 'incomeMode' | 'healthInsuranceProvider' | 'incomeStreams' | 'savedIncomeStreams'
 >;
 
 /**
@@ -82,7 +138,12 @@ type SetFieldAction = {
   };
 }[Exclude<keyof TakeHomeFormState, CascadeManagedField>];
 
-/** Income mode changed: resets health insurance provider/region for salary and miscellaneous modes. */
+/**
+ * Income mode changed: resets health insurance provider/region for salary and
+ * miscellaneous modes, and syncs the income streams to the new mode — saving the
+ * advanced-mode streams when leaving advanced, and restoring or resetting them when
+ * entering it (see {@link reduceIncomeModeChanged}).
+ */
 interface IncomeModeChangedAction {
   type: 'incomeModeChanged';
   mode: TakeHomeFormState['incomeMode'];
@@ -96,15 +157,99 @@ interface ProviderChangedAction {
 
 /**
  * Annual income changed: if dependent coverage is currently selected and the new
- * income is no longer eligible, auto-switches to National Health Insurance.
+ * income is no longer eligible, auto-switches to National Health Insurance. In the
+ * simple (non-advanced) modes, also syncs the single income stream to the new amount.
  */
 interface AnnualIncomeChangedAction {
   type: 'annualIncomeChanged';
   value: TakeHomeFormState['annualIncome'];
 }
 
+/**
+ * Income streams changed (advanced mode): recomputes the total annual income from the
+ * streams and applies the same eligibility cascade as {@link AnnualIncomeChangedAction}.
+ */
+interface IncomeStreamsChangedAction {
+  type: 'incomeStreamsChanged';
+  streams: IncomeStream[];
+}
+
 export type FormAction =
-  SetFieldAction | IncomeModeChangedAction | ProviderChangedAction | AnnualIncomeChangedAction;
+  | SetFieldAction
+  | IncomeModeChangedAction
+  | ProviderChangedAction
+  | AnnualIncomeChangedAction
+  | IncomeStreamsChangedAction;
+
+/**
+ * Applies a new annual income, auto-switching from dependent coverage to National
+ * Health Insurance when the new income exceeds the eligibility threshold.
+ */
+function applyAnnualIncome(state: TakeHomeFormState, value: number): TakeHomeFormState {
+  const newState = { ...state, annualIncome: value };
+  if (
+    state.healthInsuranceProvider === DEPENDENT_COVERAGE_ID &&
+    !isDependentCoverageEligible(value)
+  ) {
+    newState.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
+    newState.region = defaultRegionForProvider(NATIONAL_HEALTH_INSURANCE_ID);
+  }
+  return newState;
+}
+
+function reduceIncomeModeChanged(
+  state: TakeHomeFormState,
+  action: IncomeModeChangedAction,
+): TakeHomeFormState {
+  const newState = { ...state, incomeMode: action.mode };
+
+  // Leaving advanced mode: save the streams so a round trip back can restore them
+  if (state.incomeMode === 'advanced') {
+    newState.savedIncomeStreams = state.incomeStreams;
+  }
+
+  if (action.mode === 'salary' || action.mode === 'miscellaneous') {
+    newState.healthInsuranceProvider =
+      action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
+    newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
+    newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
+  } else {
+    // Entering advanced mode: restore the saved advanced streams if they still total the
+    // current annual income; otherwise keep the current simple-mode stream.
+    const saved = state.savedIncomeStreams;
+    newState.incomeStreams =
+      saved && saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
+        ? saved
+        : state.incomeStreams;
+  }
+
+  return newState;
+}
+
+function reduceAnnualIncomeChanged(
+  state: TakeHomeFormState,
+  action: AnnualIncomeChangedAction,
+): TakeHomeFormState {
+  // In advanced mode annualIncome is derived from the streams (via incomeStreamsChanged),
+  // so a direct annualIncome change doesn't apply — ignore it rather than desync the two.
+  // (The UI never dispatches this in advanced mode; this only guards against misuse.)
+  if (state.incomeMode === 'advanced') {
+    return state;
+  }
+  const newState = applyAnnualIncome(state, action.value);
+  // In the simple modes the single income stream mirrors the annual income
+  newState.incomeStreams = simpleModeStreams(state.incomeMode, action.value);
+  return newState;
+}
+
+function reduceIncomeStreamsChanged(
+  state: TakeHomeFormState,
+  action: IncomeStreamsChangedAction,
+): TakeHomeFormState {
+  const newState = applyAnnualIncome(state, totalAnnualIncomeFromStreams(action.streams));
+  newState.incomeStreams = action.streams;
+  return newState;
+}
 
 export function takeHomeFormReducer(
   state: TakeHomeFormState,
@@ -116,17 +261,8 @@ export function takeHomeFormReducer(
       // destructured this way, even though every call site is checked individually.
       return { ...state, [action.field]: action.value } as TakeHomeFormState;
 
-    case 'incomeModeChanged': {
-      const newState = { ...state, incomeMode: action.mode };
-      if (action.mode === 'salary') {
-        newState.healthInsuranceProvider = 'KyokaiKenpo';
-        newState.region = defaultRegionForProvider('KyokaiKenpo');
-      } else if (action.mode === 'miscellaneous') {
-        newState.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-        newState.region = defaultRegionForProvider(NATIONAL_HEALTH_INSURANCE_ID);
-      }
-      return newState;
-    }
+    case 'incomeModeChanged':
+      return reduceIncomeModeChanged(state, action);
 
     case 'providerChanged':
       return {
@@ -135,19 +271,11 @@ export function takeHomeFormReducer(
         region: defaultRegionForProvider(action.provider),
       };
 
-    case 'annualIncomeChanged': {
-      const newState = { ...state, annualIncome: action.value };
-      // If income changes and the user has dependent coverage selected, check eligibility
-      if (
-        state.healthInsuranceProvider === DEPENDENT_COVERAGE_ID &&
-        !isDependentCoverageEligible(action.value)
-      ) {
-        // Income exceeded threshold, automatically switch to NHI
-        newState.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-        newState.region = defaultRegionForProvider(NATIONAL_HEALTH_INSURANCE_ID);
-      }
-      return newState;
-    }
+    case 'annualIncomeChanged':
+      return reduceAnnualIncomeChanged(state, action);
+
+    case 'incomeStreamsChanged':
+      return reduceIncomeStreamsChanged(state, action);
 
     default: {
       // Exhaustiveness check: if a new FormAction variant is added without a

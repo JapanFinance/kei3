@@ -12,7 +12,7 @@ import {
 } from '../types/healthInsurance';
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
-import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
+import { takeHomeFormReducer, totalAnnualIncomeFromStreams } from '../state/takeHomeFormReducer';
 
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -64,6 +64,10 @@ describe('takeHomeFormReducer', () => {
       takeHomeFormReducer(baseState, { type: 'setField', field: 'healthInsuranceProvider', value: 'KyokaiKenpo' });
       // @ts-expect-error 'annualIncome' has its own cascade (annualIncomeChanged).
       takeHomeFormReducer(baseState, { type: 'setField', field: 'annualIncome', value: 1 });
+      // @ts-expect-error 'incomeStreams' has its own cascade (incomeStreamsChanged).
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'incomeStreams', value: [] });
+      // @ts-expect-error 'savedIncomeStreams' is managed by incomeModeChanged.
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'savedIncomeStreams', value: [] });
 
       expect(true).toBe(true);
     });
@@ -78,7 +82,10 @@ describe('takeHomeFormReducer', () => {
         region: NATIONAL_HEALTH_INSURANCE_REGIONS[0]!,
       };
 
-      const result = takeHomeFormReducer(state, { type: 'incomeModeChanged', mode: 'salary' });
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeModeChanged',
+        mode: 'salary',
+      });
 
       expect(result.incomeMode).toBe('salary');
       expect(result.healthInsuranceProvider).toBe('KyokaiKenpo');
@@ -107,6 +114,141 @@ describe('takeHomeFormReducer', () => {
       expect(result.incomeMode).toBe('advanced');
       expect(result.healthInsuranceProvider).toBe(baseState.healthInsuranceProvider);
       expect(result.region).toBe(baseState.region);
+    });
+
+    it('syncs the streams to a single annual salary stream when switching to salary mode', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'miscellaneous',
+        incomeStreams: [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount: 5_000_000 }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeModeChanged',
+        mode: 'salary',
+      });
+
+      expect(result.incomeStreams).toEqual([
+        { id: 'simple-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+      ]);
+    });
+
+    it('syncs the streams to a single miscellaneous stream when switching to miscellaneous mode', () => {
+      const result = takeHomeFormReducer(baseState, {
+        type: 'incomeModeChanged',
+        mode: 'miscellaneous',
+      });
+
+      expect(result.incomeStreams).toEqual([
+        { id: 'simple-miscellaneous', type: 'miscellaneous', amount: 5_000_000 },
+      ]);
+    });
+
+    it('saves the current streams when leaving advanced mode', () => {
+      // Total (7M) is deliberately distinct from baseState's 5M default so the saved and
+      // synced streams below are clearly attributable to this state, not a default.
+      const advancedStreams: TakeHomeFormState['incomeStreams'] = [
+        { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+        { id: 'b1', type: 'bonus', amount: 2_000_000, month: 5 },
+      ];
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        annualIncome: 7_000_000,
+        incomeStreams: advancedStreams,
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeModeChanged',
+        mode: 'salary',
+      });
+
+      expect(result.savedIncomeStreams).toEqual(advancedStreams);
+      expect(result.incomeStreams).toEqual([
+        { id: 'simple-salary', type: 'salary', amount: 7_000_000, frequency: 'annual' },
+      ]);
+    });
+
+    it('restores the saved streams when entering advanced mode and their total still matches', () => {
+      const savedStreams: TakeHomeFormState['incomeStreams'] = [
+        { id: 's1', type: 'salary', amount: 4_000_000, frequency: 'annual' },
+        { id: 'b1', type: 'bonus', amount: 1_000_000, month: 5 },
+      ];
+      const state: TakeHomeFormState = { ...baseState, savedIncomeStreams: savedStreams };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeModeChanged',
+        mode: 'advanced',
+      });
+
+      expect(result.incomeStreams).toEqual(savedStreams);
+    });
+
+    it('matches saved-stream totals with monthly salaries annualized and commuting allowance excluded', () => {
+      const savedStreams: TakeHomeFormState['incomeStreams'] = [
+        { id: 's1', type: 'salary', amount: 400_000, frequency: 'monthly' },
+        { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+        { id: 'b1', type: 'bonus', amount: 200_000, month: 11 },
+      ];
+      const state: TakeHomeFormState = { ...baseState, savedIncomeStreams: savedStreams };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeModeChanged',
+        mode: 'advanced',
+      });
+
+      // Saved streams total ¥5,000,000 (400,000 × 12 + 200,000; commuting allowance
+      // excluded), which equals the annual income, so they are restored unchanged.
+      expect(result.incomeStreams).toEqual(savedStreams);
+    });
+
+    it('keeps the current salary stream when entering advanced mode from salary with a stale saved total', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        annualIncome: 6_000_000,
+        // Simple-mode invariant: the stream mirrors the annual income
+        incomeStreams: [
+          { id: 'simple-salary', type: 'salary', amount: 6_000_000, frequency: 'annual' },
+        ],
+        savedIncomeStreams: [{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeModeChanged',
+        mode: 'advanced',
+      });
+
+      expect(result.incomeStreams).toEqual([
+        { id: 'simple-salary', type: 'salary', frequency: 'annual', amount: 6_000_000 },
+      ]);
+    });
+
+    it('keeps the current miscellaneous stream when entering advanced mode from miscellaneous with a stale saved total', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'miscellaneous',
+        annualIncome: 6_000_000,
+        incomeStreams: [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount: 6_000_000 }],
+        savedIncomeStreams: [{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeModeChanged',
+        mode: 'advanced',
+      });
+
+      expect(result.incomeStreams).toEqual([
+        { id: 'simple-miscellaneous', type: 'miscellaneous', amount: 6_000_000 },
+      ]);
+    });
+
+    it('falls back to the current streams when entering advanced mode with nothing saved', () => {
+      const result = takeHomeFormReducer(baseState, {
+        type: 'incomeModeChanged',
+        mode: 'advanced',
+      });
+
+      expect(result.incomeStreams).toEqual(baseState.incomeStreams);
     });
   });
 
@@ -204,6 +346,126 @@ describe('takeHomeFormReducer', () => {
       expect(result.annualIncome).toBe(20_000_000);
       expect(result.healthInsuranceProvider).toBe(baseState.healthInsuranceProvider);
       expect(result.region).toBe(baseState.region);
+    });
+
+    it('syncs the single stream to the new amount in salary mode', () => {
+      const result = takeHomeFormReducer(baseState, {
+        type: 'annualIncomeChanged',
+        value: 6_000_000,
+      });
+
+      expect(result.incomeStreams).toEqual([
+        { id: 'simple-salary', type: 'salary', amount: 6_000_000, frequency: 'annual' },
+      ]);
+    });
+
+    it('syncs the single stream to the new amount in miscellaneous mode', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'miscellaneous',
+        incomeStreams: [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount: 5_000_000 }],
+      };
+
+      const result = takeHomeFormReducer(state, { type: 'annualIncomeChanged', value: 6_000_000 });
+
+      expect(result.incomeStreams).toEqual([
+        { id: 'simple-miscellaneous', type: 'miscellaneous', amount: 6_000_000 },
+      ]);
+    });
+
+    it('is ignored in advanced mode, where annualIncome is derived from the streams', () => {
+      const advancedStreams: TakeHomeFormState['incomeStreams'] = [
+        { id: 's1', type: 'salary', amount: 4_000_000, frequency: 'annual' },
+        { id: 'b1', type: 'bonus', amount: 1_000_000, month: 5 },
+      ];
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        annualIncome: 5_000_000,
+        incomeStreams: advancedStreams,
+      };
+
+      const result = takeHomeFormReducer(state, { type: 'annualIncomeChanged', value: 6_000_000 });
+
+      // The action is a no-op: annualIncome stays stream-derived and the streams are untouched,
+      // so the two never desync.
+      expect(result).toBe(state);
+      expect(result.annualIncome).toBe(5_000_000);
+      expect(result.incomeStreams).toEqual(advancedStreams);
+    });
+  });
+
+  describe('incomeStreamsChanged', () => {
+    it('sets the streams and recomputes the annual income (monthly salary annualized, commuting allowance excluded)', () => {
+      const streams: TakeHomeFormState['incomeStreams'] = [
+        { id: 's1', type: 'salary', amount: 300_000, frequency: 'monthly' },
+        { id: 'c1', type: 'commutingAllowance', amount: 15_000, frequency: 'monthly' },
+        { id: 'b1', type: 'bonus', amount: 1_200_000, month: 11 },
+      ];
+      const state: TakeHomeFormState = { ...baseState, incomeMode: 'advanced' };
+
+      const result = takeHomeFormReducer(state, { type: 'incomeStreamsChanged', streams });
+
+      expect(result.incomeStreams).toEqual(streams);
+      expect(result.annualIncome).toBe(300_000 * 12 + 1_200_000);
+    });
+
+    it('auto-switches from dependent coverage to NHI when the new stream total crosses the eligibility threshold', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+        annualIncome: 1_000_000,
+        incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 1_000_000 }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [{ id: 'm1', type: 'miscellaneous', amount: DEPENDENT_INCOME_THRESHOLD }],
+      });
+
+      expect(result.annualIncome).toBe(DEPENDENT_INCOME_THRESHOLD);
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('keeps dependent coverage when the new stream total stays under the threshold', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+        annualIncome: 1_000_000,
+        incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 1_000_000 }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [{ id: 'm1', type: 'miscellaneous', amount: DEPENDENT_INCOME_THRESHOLD - 1 }],
+      });
+
+      expect(result.annualIncome).toBe(DEPENDENT_INCOME_THRESHOLD - 1);
+      expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);
+      expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
+    });
+  });
+
+  describe('totalAnnualIncomeFromStreams', () => {
+    it('annualizes monthly salaries, excludes commuting allowance, and sums everything else', () => {
+      expect(
+        totalAnnualIncomeFromStreams([
+          { id: 's1', type: 'salary', amount: 300_000, frequency: 'monthly' },
+          { id: 's2', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+          { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+          { id: 'b1', type: 'bonus', amount: 500_000, month: 5 },
+          { id: 'm1', type: 'miscellaneous', amount: 200_000 },
+        ]),
+      ).toBe(300_000 * 12 + 1_000_000 + 500_000 + 200_000);
+    });
+
+    it('returns 0 for an empty stream list', () => {
+      expect(totalAnnualIncomeFromStreams([])).toBe(0);
     });
   });
 });
