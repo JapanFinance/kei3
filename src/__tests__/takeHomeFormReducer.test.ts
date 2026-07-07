@@ -198,10 +198,14 @@ describe('takeHomeFormReducer', () => {
       expect(result.incomeStreams).toEqual(savedStreams);
     });
 
-    it('resets to a single salary stream when entering advanced mode from salary with a stale saved total', () => {
+    it('keeps the current salary stream when entering advanced mode from salary with a stale saved total', () => {
       const state: TakeHomeFormState = {
         ...baseState,
         annualIncome: 6_000_000,
+        // Simple-mode invariant: the stream mirrors the annual income
+        incomeStreams: [
+          { id: 'simple-salary', type: 'salary', amount: 6_000_000, frequency: 'annual' },
+        ],
         savedIncomeStreams: [{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
       };
 
@@ -211,11 +215,11 @@ describe('takeHomeFormReducer', () => {
       });
 
       expect(result.incomeStreams).toEqual([
-        { id: 'advanced-initial', type: 'salary', frequency: 'annual', amount: 6_000_000 },
+        { id: 'simple-salary', type: 'salary', frequency: 'annual', amount: 6_000_000 },
       ]);
     });
 
-    it('resets to a single miscellaneous stream when entering advanced mode from miscellaneous with a stale saved total', () => {
+    it('keeps the current miscellaneous stream when entering advanced mode from miscellaneous with a stale saved total', () => {
       const state: TakeHomeFormState = {
         ...baseState,
         incomeMode: 'miscellaneous',
@@ -230,7 +234,7 @@ describe('takeHomeFormReducer', () => {
       });
 
       expect(result.incomeStreams).toEqual([
-        { id: 'advanced-initial', type: 'miscellaneous', amount: 6_000_000 },
+        { id: 'simple-miscellaneous', type: 'miscellaneous', amount: 6_000_000 },
       ]);
     });
 

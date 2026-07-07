@@ -215,29 +215,14 @@ function reduceIncomeModeChanged(
     // Sync streams to strictly match the simple mode
     newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
   } else {
-    // Entering advanced mode: restore the saved streams (falling back to the current
-    // ones) if their total still matches the annual income; on a mismatch the simple-
-    // mode amount is the source of truth, so reset to a single stream matching it.
-    // The reset stream replaces the whole array, so a constant id is unique by
-    // construction — same as the 'simple-*' ids that simpleModeStreams uses.
-    const candidate =
-      state.savedIncomeStreams && state.savedIncomeStreams.length > 0
-        ? state.savedIncomeStreams
+    // Entering advanced mode: restore the saved advanced streams if they still total the
+    // current annual income; otherwise keep the current simple-mode stream, which already
+    // mirrors the annual income (invariant maintained by simpleModeStreams).
+    const saved = state.savedIncomeStreams;
+    newState.incomeStreams =
+      saved && saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
+        ? saved
         : state.incomeStreams;
-    if (totalAnnualIncomeFromStreams(candidate) === state.annualIncome) {
-      newState.incomeStreams = candidate;
-    } else {
-      newState.incomeStreams = [
-        hasEmploymentIncome(state)
-          ? {
-              id: 'advanced-initial',
-              type: 'salary',
-              frequency: 'annual',
-              amount: state.annualIncome,
-            }
-          : { id: 'advanced-initial', type: 'miscellaneous', amount: state.annualIncome },
-      ];
-    }
   }
 
   return newState;
