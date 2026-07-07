@@ -16,7 +16,7 @@ import {
   DEFAULT_PROVIDER,
 } from '../types/healthInsurance';
 import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
-import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
+import { takeHomeFormReducer, type FormAction } from '../state/takeHomeFormReducer';
 
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
@@ -192,11 +192,10 @@ describe('TakeHomeInputForm Tests', () => {
       const miscToggle = screen.getByRole('button', { name: /misc/i });
       await user.click(miscToggle);
 
-      // Verify that the mode change was dispatched
-      expect(mockDispatch).toHaveBeenCalledWith({
-        type: 'incomeModeChanged',
-        mode: 'miscellaneous',
-      });
+      // Verify that the mode change was dispatched (with a caller-generated stream id)
+      expect(mockDispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'incomeModeChanged', mode: 'miscellaneous' }),
+      );
 
       // Update props to simulate the mode change taking effect
       rerender(
@@ -608,11 +607,10 @@ describe('Commuting Allowance Integration', () => {
     await user.click(screen.getByRole('button', { name: /add/i }));
 
     // Verify calls
-    // We expect the updated streams to have been dispatched
+    // We expect a single incomeStreamsChanged action carrying the updated streams
     expect(mockDispatch).toHaveBeenCalledWith({
-      type: 'setField',
-      field: 'incomeStreams',
-      value: expect.arrayContaining([
+      type: 'incomeStreamsChanged',
+      streams: expect.arrayContaining([
         expect.objectContaining({
           type: 'commutingAllowance',
           amount: 20000,
@@ -620,12 +618,12 @@ describe('Commuting Allowance Integration', () => {
       ]),
     });
 
-    // We expect annualIncome to have been dispatched too
-    // It SHOULD be 5,000,000 (unchanged)
-    expect(mockDispatch).toHaveBeenCalledWith({
-      type: 'annualIncomeChanged',
-      value: 5000000,
-    });
+    // The reducer excludes the commuting allowance from the recomputed total,
+    // so annualIncome SHOULD stay at 5,000,000
+    const streamsAction = mockDispatch.mock.calls
+      .map(([action]) => action as FormAction)
+      .find(action => action.type === 'incomeStreamsChanged');
+    expect(takeHomeFormReducer(baseInputs, streamsAction!).annualIncome).toBe(5000000);
   }, 10_000);
 });
 
