@@ -49,15 +49,15 @@ import type {
 } from '../../types/tax';
 import {
   DEFAULT_PROVIDER_REGION,
-  NATIONAL_HEALTH_INSURANCE_ID,
-  DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
   isDependentCoverageEligible,
   DEPENDENT_INCOME_THRESHOLD,
 } from '../../types/healthInsurance';
-import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../data/nationalHealthInsurance/nhiParamsData';
-import { getProviderDefinition } from '../../data/employeesHealthInsurance/providerRateData';
-import { availableProvidersFor, type FormAction } from '../../state/takeHomeFormReducer';
+import {
+  availableProvidersFor,
+  regionOptionsFor,
+  type FormAction,
+} from '../../state/takeHomeFormReducer';
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
@@ -154,31 +154,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   const isHealthInsuranceProviderDropdownDisabled = availableProviders.length <= 1;
 
-  // Derive regions for the currently selected health insurance provider
-  const derivedProviderRegions = React.useMemo(() => {
-    const provider = inputs.healthInsuranceProvider;
-
-    // Dependent coverage doesn't have regions
-    if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
-      return [];
-    }
-
-    if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
-      return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
-    } else {
-      // Employee health insurance provider
-      const providerDefinition = getProviderDefinition(provider);
-      if (providerDefinition) {
-        // Convert region keys to region options for consistency
-        return Object.keys(providerDefinition.regions).map(regionKey => ({
-          id: regionKey,
-          displayName: regionKey, // For employee health insurance, use the key as display name for now
-        }));
-      }
-    }
-
-    return [];
-  }, [inputs.healthInsuranceProvider]);
+  // Regions selectable for the currently selected provider. The reducer keeps `region` within
+  // this list (see regionOptionsFor and the regionChanged cascade), so the dropdown and the
+  // stored value share one definition of "valid region".
+  const derivedProviderRegions = React.useMemo(
+    () => regionOptionsFor(inputs.healthInsuranceProvider),
+    [inputs.healthInsuranceProvider],
+  );
 
   // True if the only derived region is the DEFAULT_PROVIDER_REGION
   const isEffectivelySingleDefaultRegion =
@@ -738,11 +720,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       regionMenuItemsToDisplay[0] || { id: '', displayName: '' }
                     }
                     onChange={(_, newValue) => {
-                      dispatch({
-                        type: 'setField',
-                        field: 'region',
-                        value: newValue.id,
-                      });
+                      dispatch({ type: 'regionChanged', region: newValue.id });
                     }}
                     getOptionLabel={option => option.displayName}
                     isOptionEqualToValue={(option, value) => option.id === value.id}

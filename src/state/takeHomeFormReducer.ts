@@ -11,11 +11,8 @@ import {
   isDependentCoverageEligible,
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
-import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
-import {
-  PROVIDER_DEFINITIONS,
-  getProviderDefinition,
-} from '../data/employeesHealthInsurance/providerRateData';
+import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../data/nationalHealthInsurance/nhiParamsData';
+import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
   return regions.includes('Tokyo')
@@ -25,30 +22,44 @@ export function selectDefaultRegion(regions: readonly string[]): string {
       : DEFAULT_PROVIDER_REGION;
 }
 
+/** A selectable region for a provider: its key and the label shown in the dropdown. */
+export interface RegionOption {
+  id: string;
+  displayName: string;
+}
+
 /**
- * Derives the region a provider should default to when it becomes the selected
- * health insurance provider (on an explicit provider change, or as a side effect of
- * an income mode change that forces a particular provider).
+ * The regions selectable for a given health insurance provider, in dropdown order. NHI
+ * regions carry official display names; employee providers use the region key as its own
+ * label. Dependent coverage and the custom provider are region-less by design (empty list),
+ * as is an unrecognized id. Pure and colocated with the reducer so the same list drives both
+ * the region dropdown (via a `useMemo` in InputForm) and the reducer's region defaulting
+ * ({@link defaultRegionForProvider}) and validation ({@link reduceRegionChanged}), rather
+ * than the two drifting apart.
+ */
+export function regionOptionsFor(provider: HealthInsuranceProviderId): RegionOption[] {
+  if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
+    return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
+  }
+  if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
+    return [];
+  }
+  // `provider` has narrowed to an employee-provider id (the region-less ids returned above),
+  // so it is a known key of PROVIDER_DEFINITIONS.
+  return Object.keys(PROVIDER_DEFINITIONS[provider].regions).map(regionKey => ({
+    id: regionKey,
+    displayName: regionKey,
+  }));
+}
+
+/**
+ * The region a provider defaults to when it becomes selected (on an explicit provider change,
+ * or as a side effect of an income-mode change that forces a provider): Tokyo if offered, else
+ * the first listed region. Region-less providers (dependent coverage, custom) have no options,
+ * so {@link selectDefaultRegion} returns the {@link DEFAULT_PROVIDER_REGION} sentinel.
  */
 function defaultRegionForProvider(provider: HealthInsuranceProviderId): string {
-  if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
-    return selectDefaultRegion(NATIONAL_HEALTH_INSURANCE_REGIONS);
-  }
-  if (provider === DEPENDENT_COVERAGE_ID) {
-    // Dependent coverage doesn't need a region
-    return DEFAULT_PROVIDER_REGION;
-  }
-
-  // For employee providers (Kyokai Kenpo, ITS Kenpo, etc.)
-  const providerDefinition = getProviderDefinition(provider);
-  if (providerDefinition) {
-    return selectDefaultRegion(Object.keys(providerDefinition.regions));
-  }
-
-  console.warn(
-    `Data for ID ${provider} not found in Employees Health Insurance Provider data. Defaulting region.`,
-  );
-  return DEFAULT_PROVIDER_REGION;
+  return selectDefaultRegion(regionOptionsFor(provider).map(option => option.id));
 }
 
 /**
@@ -168,12 +179,19 @@ type AssertFormFields<T extends keyof TakeHomeFormState> = T;
  * logic beyond a plain overwrite. Excluded from {@link SetFieldAction} so a caller can't
  * bypass the cascade by dispatching a bare `setField` for one of these — e.g.
  * `dispatch({ type: 'setField', field: 'healthInsuranceProvider', value: ... })` would
- * update the provider but skip the region reset that `providerChanged` performs.
- * `incomeStreams` and `savedIncomeStreams` are kept in sync with `annualIncome` and
- * `incomeMode` by their semantic actions, so a bare overwrite would break that invariant.
+ * update the provider but skip the region reset that `providerChanged` performs, and a bare
+ * `region` write would skip the validity check `regionChanged` performs against the current
+ * provider's options. `incomeStreams` and `savedIncomeStreams` are kept in sync with
+ * `annualIncome` and `incomeMode` by their semantic actions, so a bare overwrite would break
+ * that invariant.
  */
 type CascadeManagedField = AssertFormFields<
-  'annualIncome' | 'incomeMode' | 'healthInsuranceProvider' | 'incomeStreams' | 'savedIncomeStreams'
+  | 'annualIncome'
+  | 'incomeMode'
+  | 'healthInsuranceProvider'
+  | 'region'
+  | 'incomeStreams'
+  | 'savedIncomeStreams'
 >;
 
 /**
@@ -212,6 +230,16 @@ interface ProviderChangedAction {
 }
 
 /**
+ * Region changed: validates the chosen region against the current provider's options
+ * ({@link regionOptionsFor}) and clamps to the provider's default if it isn't one, so a
+ * region that doesn't belong to the selected provider can never be stored.
+ */
+interface RegionChangedAction {
+  type: 'regionChanged';
+  region: TakeHomeFormState['region'];
+}
+
+/**
  * Annual income changed: in the simple (non-advanced) modes, syncs the single income stream
  * to the new amount and re-checks the provider-validity invariant — which, for an income
  * change, means switching dependent coverage to National Health Insurance once the income
@@ -237,6 +265,7 @@ export type FormAction =
   | SetFieldAction
   | IncomeModeChangedAction
   | ProviderChangedAction
+  | RegionChangedAction
   | AnnualIncomeChangedAction
   | IncomeStreamsChangedAction;
 
@@ -291,19 +320,30 @@ function reduceIncomeModeChanged(
     newState.savedIncomeStreams = state.incomeStreams;
   }
 
-  if (action.mode === 'salary' || action.mode === 'miscellaneous') {
-    newState.healthInsuranceProvider =
-      action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
-    newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
-    newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
-  } else {
-    // Entering advanced mode: restore the saved advanced streams if they still total the
-    // current annual income; otherwise keep the current simple-mode stream.
-    const saved = state.savedIncomeStreams;
-    newState.incomeStreams =
-      saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
-        ? saved
-        : state.incomeStreams;
+  switch (action.mode) {
+    case 'salary':
+    case 'miscellaneous':
+      newState.healthInsuranceProvider =
+        action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
+      newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
+      newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
+      break;
+    case 'advanced': {
+      // Entering advanced mode: restore the saved advanced streams if they still total the
+      // current annual income; otherwise keep the current simple-mode stream.
+      const saved = state.savedIncomeStreams;
+      newState.incomeStreams =
+        saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
+          ? saved
+          : state.incomeStreams;
+      break;
+    }
+    default: {
+      // Exhaustiveness: a new IncomeMode must add its own routing branch here rather than
+      // silently inheriting the advanced-mode behavior.
+      const unhandledMode: never = action.mode;
+      throw new Error(`Unhandled income mode: ${JSON.stringify(unhandledMode)}`);
+    }
   }
 
   // Salary/miscellaneous force a valid provider above; but entering advanced mode carries
@@ -328,6 +368,19 @@ function reduceAnnualIncomeChanged(
   // this only ever fires for dependent coverage crossing the income threshold, but routing it
   // through applyProviderValidity keeps every path on one definition of "valid provider".
   return applyProviderValidity(newState);
+}
+
+function reduceRegionChanged(
+  state: TakeHomeFormState,
+  action: RegionChangedAction,
+): TakeHomeFormState {
+  const isValid = regionOptionsFor(state.healthInsuranceProvider).some(
+    option => option.id === action.region,
+  );
+  return {
+    ...state,
+    region: isValid ? action.region : defaultRegionForProvider(state.healthInsuranceProvider),
+  };
 }
 
 function reduceIncomeStreamsChanged(
@@ -361,6 +414,9 @@ export function takeHomeFormReducer(
         healthInsuranceProvider: action.provider,
         region: defaultRegionForProvider(action.provider),
       };
+
+    case 'regionChanged':
+      return reduceRegionChanged(state, action);
 
     case 'annualIncomeChanged':
       return reduceAnnualIncomeChanged(state, action);
