@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { IncomeStream, TakeHomeFormState } from '../types/tax';
+import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -79,11 +79,25 @@ export function hasEmploymentIncome(
   );
 }
 
-/** The single income stream that mirrors `annualIncome` in the simple (non-advanced) modes. */
-function simpleModeStreams(mode: 'salary' | 'miscellaneous', amount: number): IncomeStream[] {
-  return mode === 'salary'
-    ? [{ id: 'simple-salary', type: 'salary', amount, frequency: 'annual' }]
-    : [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount }];
+/** The simple (non-advanced) income modes, each of which mirrors `annualIncome` in one stream. */
+type SimpleIncomeMode = Exclude<IncomeMode, 'advanced'>;
+
+/**
+ * The single income stream that mirrors `annualIncome` in a simple mode. The `never`
+ * default makes adding a mode to {@link IncomeMode} a compile error here (matching the
+ * exhaustiveness idiom in {@link takeHomeFormReducer}) rather than a silent fall-through.
+ */
+function simpleModeStreams(mode: SimpleIncomeMode, amount: number): IncomeStream[] {
+  switch (mode) {
+    case 'salary':
+      return [{ id: 'simple-salary', type: 'salary', amount, frequency: 'annual' }];
+    case 'miscellaneous':
+      return [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount }];
+    default: {
+      const unhandledMode: never = mode;
+      throw new Error(`Unhandled simple income mode: ${JSON.stringify(unhandledMode)}`);
+    }
+  }
 }
 
 /**
