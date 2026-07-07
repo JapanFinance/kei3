@@ -14,9 +14,6 @@ import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsuran
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 import { takeHomeFormReducer, totalAnnualIncomeFromStreams } from '../state/takeHomeFormReducer';
 
-/** Stands in for the caller-generated id passed with every incomeModeChanged action. */
-const NEW_STREAM_ID = 'test-new-stream';
-
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   annualIncome: 5_000_000,
@@ -88,7 +85,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(state, {
         type: 'incomeModeChanged',
         mode: 'salary',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeMode).toBe('salary');
@@ -102,7 +98,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'incomeModeChanged',
         mode: 'miscellaneous',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeMode).toBe('miscellaneous');
@@ -114,7 +109,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'incomeModeChanged',
         mode: 'advanced',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeMode).toBe('advanced');
@@ -132,7 +126,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(state, {
         type: 'incomeModeChanged',
         mode: 'salary',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeStreams).toEqual([
@@ -144,7 +137,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'incomeModeChanged',
         mode: 'miscellaneous',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeStreams).toEqual([
@@ -166,7 +158,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(state, {
         type: 'incomeModeChanged',
         mode: 'salary',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.savedIncomeStreams).toEqual(advancedStreams);
@@ -185,7 +176,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(state, {
         type: 'incomeModeChanged',
         mode: 'advanced',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeStreams).toEqual(savedStreams);
@@ -202,14 +192,13 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(state, {
         type: 'incomeModeChanged',
         mode: 'advanced',
-        newStreamId: NEW_STREAM_ID,
       });
 
       // 400,000 × 12 + 200,000 = 5,000,000; the commuting allowance does not count
       expect(result.incomeStreams).toEqual(savedStreams);
     });
 
-    it('resets to a single salary stream with the provided id when entering advanced mode from salary with a stale saved total', () => {
+    it('resets to a single salary stream when entering advanced mode from salary with a stale saved total', () => {
       const state: TakeHomeFormState = {
         ...baseState,
         annualIncome: 6_000_000,
@@ -219,11 +208,10 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(state, {
         type: 'incomeModeChanged',
         mode: 'advanced',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeStreams).toEqual([
-        { id: NEW_STREAM_ID, type: 'salary', frequency: 'annual', amount: 6_000_000 },
+        { id: 'advanced-initial', type: 'salary', frequency: 'annual', amount: 6_000_000 },
       ]);
     });
 
@@ -239,11 +227,10 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(state, {
         type: 'incomeModeChanged',
         mode: 'advanced',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeStreams).toEqual([
-        { id: NEW_STREAM_ID, type: 'miscellaneous', amount: 6_000_000 },
+        { id: 'advanced-initial', type: 'miscellaneous', amount: 6_000_000 },
       ]);
     });
 
@@ -251,7 +238,6 @@ describe('takeHomeFormReducer', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'incomeModeChanged',
         mode: 'advanced',
-        newStreamId: NEW_STREAM_ID,
       });
 
       expect(result.incomeStreams).toEqual(baseState.incomeStreams);

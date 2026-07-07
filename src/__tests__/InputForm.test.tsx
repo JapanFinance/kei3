@@ -192,10 +192,11 @@ describe('TakeHomeInputForm Tests', () => {
       const miscToggle = screen.getByRole('button', { name: /misc/i });
       await user.click(miscToggle);
 
-      // Verify that the mode change was dispatched (with a caller-generated stream id)
-      expect(mockDispatch).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'incomeModeChanged', mode: 'miscellaneous' }),
-      );
+      // Verify that the mode change was dispatched
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: 'incomeModeChanged',
+        mode: 'miscellaneous',
+      });
 
       // Update props to simulate the mode change taking effect
       rerender(

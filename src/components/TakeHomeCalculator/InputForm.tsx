@@ -90,10 +90,6 @@ const customProvider = {
   displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID),
 };
 
-// Kept out of the reducer so it stays free of Date.now()/Math.random() nondeterminism;
-// the id travels in the incomeModeChanged payload for the entering-advanced stream reset.
-const generateStreamId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
-
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
   dispatch,
@@ -152,7 +148,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   const handleIncomeModeChange = (_: React.MouseEvent<HTMLElement>, newMode: IncomeMode | null) => {
     if (newMode === null) return;
 
-    dispatch({ type: 'incomeModeChanged', mode: newMode, newStreamId: generateStreamId() });
+    dispatch({ type: 'incomeModeChanged', mode: newMode });
   };
 
   const updateCustomEHIRate = (
