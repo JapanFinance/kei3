@@ -17,6 +17,7 @@ import {
   takeHomeFormReducer,
   totalAnnualIncomeFromStreams,
   availableProvidersFor,
+  regionOptionsFor,
 } from '../state/takeHomeFormReducer';
 
 const baseState: TakeHomeFormState = {
@@ -48,15 +49,16 @@ describe('takeHomeFormReducer', () => {
       expect(result).toEqual({ ...baseState, dcPlanContributions: 23_000 });
     });
 
-    it('does not cascade into other fields (e.g. changing region directly)', () => {
+    it('does not cascade into other fields (e.g. setting a plain field directly)', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'setField',
-        field: 'region',
-        value: 'Osaka',
+        field: 'manualSocialInsuranceAmount',
+        value: 50_000,
       });
 
-      expect(result.region).toBe('Osaka');
+      expect(result.manualSocialInsuranceAmount).toBe(50_000);
       expect(result.healthInsuranceProvider).toBe(baseState.healthInsuranceProvider);
+      expect(result.region).toBe(baseState.region);
     });
 
     it('is a type error to setField a cascade-managed field, forcing the semantic action instead', () => {
@@ -68,6 +70,8 @@ describe('takeHomeFormReducer', () => {
       // @ts-expect-error 'healthInsuranceProvider' has its own cascade (providerChanged).
       // prettier-ignore
       takeHomeFormReducer(baseState, { type: 'setField', field: 'healthInsuranceProvider', value: 'KyokaiKenpo' });
+      // @ts-expect-error 'region' has its own cascade (regionChanged), which validates against the provider.
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'region', value: 'Osaka' });
       // @ts-expect-error 'annualIncome' has its own cascade (annualIncomeChanged).
       takeHomeFormReducer(baseState, { type: 'setField', field: 'annualIncome', value: 1 });
       // @ts-expect-error 'incomeStreams' has its own cascade (incomeStreamsChanged).
@@ -315,19 +319,77 @@ describe('takeHomeFormReducer', () => {
       expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
     });
 
-    it('warns and defaults the region when the provider id is not found in provider data', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+    it('clears the region to the sentinel default for the region-less custom provider', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'providerChanged',
-        provider: 'CustomProvider',
+        provider: CUSTOM_PROVIDER_ID,
       });
 
-      expect(result.healthInsuranceProvider).toBe('CustomProvider');
+      expect(result.healthInsuranceProvider).toBe(CUSTOM_PROVIDER_ID);
       expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('CustomProvider'));
+    });
+  });
 
-      warnSpy.mockRestore();
+  describe('regionChanged', () => {
+    it('sets a region that belongs to the current provider', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      };
+      const target = NATIONAL_HEALTH_INSURANCE_REGIONS.find(r => r !== 'Tokyo')!;
+
+      const result = takeHomeFormReducer(state, { type: 'regionChanged', region: target });
+
+      expect(result.region).toBe(target);
+    });
+
+    it('clamps to the provider default when the region does not belong to the provider', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'regionChanged',
+        region: 'NotARealRegion',
+      });
+
+      // Not an NHI region → clamped back to the NHI default rather than stored as-is.
+      expect(result.region).not.toBe('NotARealRegion');
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('clamps to the sentinel default for a region-less provider (dependent coverage)', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+      };
+
+      const result = takeHomeFormReducer(state, { type: 'regionChanged', region: 'Tokyo' });
+
+      expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
+    });
+  });
+
+  describe('regionOptionsFor', () => {
+    it('returns the National Health Insurance region options', () => {
+      expect(regionOptionsFor(NATIONAL_HEALTH_INSURANCE_ID).map(o => o.id)).toEqual(
+        NATIONAL_HEALTH_INSURANCE_REGIONS,
+      );
+    });
+
+    it('returns an employee provider’s regions keyed by region name', () => {
+      expect(regionOptionsFor('KyokaiKenpo').map(o => o.id)).toEqual(
+        Object.keys(PROVIDER_DEFINITIONS['KyokaiKenpo'].regions),
+      );
+    });
+
+    it('returns no regions for the region-less providers (dependent coverage and custom)', () => {
+      expect(regionOptionsFor(DEPENDENT_COVERAGE_ID)).toEqual([]);
+      expect(regionOptionsFor(CUSTOM_PROVIDER_ID)).toEqual([]);
     });
   });
 
