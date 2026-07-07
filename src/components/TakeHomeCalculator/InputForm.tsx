@@ -285,9 +285,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     }
   };
 
-  const handleSliderChange = (_: Event, value: number | number[]) => {
-    const newValue = Array.isArray(value) ? (value[0] ?? 0) : value;
-    handleAnnualIncomeChange(newValue);
+  const handleSliderChange = (_: Event, value: number) => {
+    handleAnnualIncomeChange(value);
   };
 
   // Determine available health insurance providers based on income type and eligibility
