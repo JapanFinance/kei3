@@ -69,7 +69,7 @@ const SectionIcon = ({ type }: { type: string }) => {
 };
 
 const ChangelogSection = ({ type, items }: { type: string; items: string[] }) => {
-  if (!items || items.length === 0) return null;
+  if (items.length === 0) return null;
 
   // Simple markdown link parser for [text](url) format
   const parseMarkdownLinks = (text: string) => {

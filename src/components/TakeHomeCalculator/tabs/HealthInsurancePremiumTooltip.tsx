@@ -14,7 +14,7 @@ import {
 } from '../../../types/healthInsurance';
 import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
-import { PROVIDER_DEFINITIONS } from '../../../data/employeesHealthInsurance/providerRateData';
+import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import {
   EHI_SMR_BRACKETS,
@@ -466,7 +466,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     } else {
       // Use a representative month of the income year (April = fiscal-year start) for the headline rate.
       const regionalRates = getRegionalRatesForMonth(provider, region, year, 3);
-      const providerDef = PROVIDER_DEFINITIONS[provider];
+      const providerDef = getProviderDefinition(provider);
 
       if (regionalRates) {
         employeeRate = regionalRates.employeeHealthInsuranceRate;

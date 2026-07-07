@@ -210,7 +210,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       />
 
       {/* Furusato Nozei Summary */}
-      {results.furusatoNozei !== undefined && results.furusatoNozei.limit > 0 && (
+      {results.furusatoNozei.limit > 0 && (
         <Box
           sx={{
             bgcolor: theme => alpha(theme.palette.secondary.main, 0.07),

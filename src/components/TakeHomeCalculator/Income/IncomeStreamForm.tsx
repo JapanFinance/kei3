@@ -251,7 +251,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <ToggleButtonGroup
               value={issuerDomicile}
               exclusive
-              onChange={(_, newValue) => {
+              onChange={(_, newValue: 'domestic' | 'foreign' | null) => {
                 if (newValue) {
                   setIssuerDomicile(newValue);
                 }

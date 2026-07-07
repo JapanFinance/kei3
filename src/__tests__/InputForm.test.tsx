@@ -435,7 +435,7 @@ describe('Dependent Coverage UI Behavior', () => {
     });
 
     it('should hide custom rate fields when another provider is selected', () => {
-      const standardInputs = { ...baseInputs, healthInsuranceProvider: 'KyokaiKenpo' };
+      const standardInputs = { ...baseInputs, healthInsuranceProvider: DEFAULT_PROVIDER };
 
       render(<TakeHomeInputForm inputs={standardInputs} dispatch={mockDispatch} />);
 

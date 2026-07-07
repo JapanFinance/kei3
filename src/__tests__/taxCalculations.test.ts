@@ -14,6 +14,7 @@ import {
   DEFAULT_PROVIDER,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
+  DEPENDENT_COVERAGE_ID,
 } from '../types/healthInsurance';
 import type { Dependent } from '../types/dependents';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
@@ -736,7 +737,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
         { type: 'salary' as const, amount: 1_000_000, frequency: 'annual' as const, id: 'test' },
       ],
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: 'DependentCoverage',
+      healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
       region: 'Tokyo',
       dependents: [],
       dcPlanContributions: 0,
@@ -768,7 +769,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
         { type: 'salary' as const, amount: 1_299_999, frequency: 'annual' as const, id: 'test' },
       ],
       isSubjectToLongTermCarePremium: false,
-      healthInsuranceProvider: 'DependentCoverage',
+      healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
       region: 'Tokyo',
       dependents: [],
       dcPlanContributions: 0,
@@ -794,7 +795,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
         { type: 'salary' as const, amount: 1_200_000, frequency: 'annual' as const, id: 'test' },
       ],
       isSubjectToLongTermCarePremium: true, // Should not matter for dependent coverage
-      healthInsuranceProvider: 'DependentCoverage',
+      healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
       region: 'Tokyo',
       dependents: [],
       dcPlanContributions: 0,

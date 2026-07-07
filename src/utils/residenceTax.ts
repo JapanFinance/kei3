@@ -3,7 +3,7 @@
 
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
 import { calculateNationalIncomeTax } from './taxCalculations';
-import type { DependentDeductionResults } from '../types/dependents';
+import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
 import {
   calculateDependentTotalNetIncome,
@@ -194,7 +194,7 @@ function countQualifiedDependents(
   dependentDeductions: DependentDeductionResults,
   year: number,
 ): number {
-  const uniqueDependents = new Map();
+  const uniqueDependents = new Map<string, Dependent>();
   dependentDeductions.breakdown.forEach(b => {
     uniqueDependents.set(b.dependent.id, b.dependent);
   });

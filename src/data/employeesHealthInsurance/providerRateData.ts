@@ -61,7 +61,7 @@ export interface ProviderDefinition {
  *   into employeeHealthInsuranceRate starting from its effective paycheck month. It is calculated
  *   on the same SMR base with the same rounding, so combining it is exact.
  */
-export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
+export const PROVIDER_DEFINITIONS = {
   KantoItsKenpo: {
     providerName: 'Kanto ITS Kenpo',
     defaultSource: 'https://www.its-kenpo.or.jp/hoken/jimu/hokenryou/index.html',
@@ -1435,7 +1435,7 @@ export const PROVIDER_DEFINITIONS: Record<string, ProviderDefinition> = {
       ],
     },
   },
-};
+} satisfies Record<string, ProviderDefinition>;
 
 if (import.meta.env.DEV) {
   // Validate that each region's rate periods are sorted newest-first
@@ -1453,4 +1453,18 @@ if (import.meta.env.DEV) {
       }
     }
   }
+}
+
+/** All employee-health-insurance provider IDs (the keys of PROVIDER_DEFINITIONS). */
+export type EmployeeProviderId = keyof typeof PROVIDER_DEFINITIONS;
+
+/**
+ * Safe lookup of an employee-health-insurance provider definition. Returns undefined for
+ * IDs that aren't employee providers (e.g. National Health Insurance, dependent coverage,
+ * or custom), which callers are expected to handle.
+ */
+export function getProviderDefinition(id: string): ProviderDefinition | undefined {
+  return Object.hasOwn(PROVIDER_DEFINITIONS, id)
+    ? PROVIDER_DEFINITIONS[id as EmployeeProviderId]
+    : undefined;
 }

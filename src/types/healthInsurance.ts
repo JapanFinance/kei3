@@ -1,12 +1,15 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import {
+  PROVIDER_DEFINITIONS,
+  getProviderDefinition,
+} from '../data/employeesHealthInsurance/providerRateData';
 
-export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance';
-export const DEPENDENT_COVERAGE_ID = 'DependentCoverage';
-export const CUSTOM_PROVIDER_ID = 'CustomProvider';
-export const DEFAULT_PROVIDER = 'KyokaiKenpo';
+export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
+export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
+export const CUSTOM_PROVIDER_ID = 'CustomProvider' as const;
+export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 
 // Income threshold for dependent coverage eligibility (1.3 million yen)
 // Source: https://www.mhlw.go.jp/stf/taiou_001_00002.html
@@ -44,7 +47,7 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
     return 'Custom Employee Health Insurance Provider';
   }
 
-  const providerDef = PROVIDER_DEFINITIONS[providerId];
+  const providerDef = getProviderDefinition(providerId);
   if (!providerDef) {
     throw new Error(`Unknown provider ID: ${providerId}`);
   }

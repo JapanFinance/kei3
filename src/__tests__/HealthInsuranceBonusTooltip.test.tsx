@@ -8,10 +8,10 @@ import type { TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 // Mock the provider data (time-series structure: regions map to arrays of rate periods)
-vi.mock('../data/employeesHealthInsurance/providerRateData', () => ({
-  PROVIDER_DEFINITIONS: {
-    TestProvider: {
-      providerName: 'Test Provider',
+vi.mock('../data/employeesHealthInsurance/providerRateData', () => {
+  const PROVIDER_DEFINITIONS = {
+    KyokaiKenpo: {
+      providerName: 'Kyokai Kenpo',
       regions: {
         DEFAULT: [
           {
@@ -40,14 +40,19 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', () => ({
         ],
       },
     },
-  },
-}));
+  };
+  return {
+    PROVIDER_DEFINITIONS,
+    getProviderDefinition: (id: string) =>
+      PROVIDER_DEFINITIONS[id as keyof typeof PROVIDER_DEFINITIONS],
+  };
+});
 
 // Mock the rate lookup to use the mocked data
 vi.mock('../data/employeesHealthInsurance/providerRates', () => ({
   getRegionalRatesForMonth: (providerId: string) => {
     const providers: Record<string, Record<string, unknown>> = {
-      TestProvider: {
+      KyokaiKenpo: {
         employeeHealthInsuranceRate: 0.05,
         employerHealthInsuranceRate: 0.06,
         employeeLongTermCareRate: 0.01,
@@ -68,7 +73,7 @@ describe('HealthInsuranceBonusTooltip', () => {
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     region: DEFAULT_PROVIDER_REGION,
-    healthInsuranceProvider: 'TestProvider',
+    healthInsuranceProvider: 'KyokaiKenpo',
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,

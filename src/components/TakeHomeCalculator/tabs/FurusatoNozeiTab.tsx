@@ -26,7 +26,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // If no Furusato Nozei data, show a message
-  if (!results.furusatoNozei || results.furusatoNozei.limit <= 0) {
+  if (results.furusatoNozei.limit <= 0) {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
         <VolunteerActivismIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />

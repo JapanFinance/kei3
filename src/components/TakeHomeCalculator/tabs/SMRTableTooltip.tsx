@@ -75,7 +75,7 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
     }
   }, [currentRow, currentRowId, tableContainerDataAttr]);
 
-  if (!tableData || tableData.length === 0) {
+  if (tableData.length === 0) {
     return (
       <Box>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
