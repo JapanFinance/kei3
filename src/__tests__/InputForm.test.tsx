@@ -392,7 +392,7 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 
   describe('Custom Provider UI', () => {
-    it('should show custom rate fields when Custom Provider is selected', async () => {
+    it('should show custom rate fields when Custom Provider is selected', () => {
       const customInputs = { ...baseInputs, healthInsuranceProvider: CUSTOM_PROVIDER_ID };
 
       render(<TakeHomeInputForm inputs={customInputs} dispatch={mockDispatch} />);

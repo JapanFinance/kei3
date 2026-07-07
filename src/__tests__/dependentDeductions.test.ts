@@ -1756,15 +1756,14 @@ describe('hasDependentRelativeUnder23', () => {
   const child = (
     ageCategory: 'under16' | '16to18' | '19to22' | '23to69' | '70plus',
     otherNetIncome = 0,
-  ): Dependent =>
-    ({
-      id: 'd',
-      relationship: 'child',
-      ageCategory,
-      income: { grossEmploymentIncome: 0, otherNetIncome },
-      disability: 'none',
-      isCohabiting: true,
-    }) as Dependent;
+  ): Dependent => ({
+    id: 'd',
+    relationship: 'child',
+    ageCategory,
+    income: { grossEmploymentIncome: 0, otherNetIncome },
+    disability: 'none',
+    isCohabiting: true,
+  });
 
   const spouseUnder70: Dependent = {
     id: 's',
@@ -1773,7 +1772,7 @@ describe('hasDependentRelativeUnder23', () => {
     income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
     disability: 'none',
     isCohabiting: true,
-  } as Dependent;
+  };
 
   it('is true for a non-spouse dependent under 23 within the threshold (incl. under 16)', () => {
     expect(hasDependentRelativeUnder23([child('under16')], 2026)).toBe(true);

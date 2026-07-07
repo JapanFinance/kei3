@@ -43,13 +43,23 @@ const fileHeaderRule = {
 };
 
 export default defineConfig(
-  { ignores: ['dist'] },
+  // `.claude` holds agent worktrees (full, sometimes-stale repo copies) that would
+  // otherwise be traversed and break type-aware linting with multiple root tsconfigs.
+  { ignores: ['dist', '.claude'] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      parserOptions: {
+        // Type-aware linting (strictTypeChecked). projectService resolves each file
+        // to its nearest tsconfig; the two root config files aren't in any project.
+        projectService: {
+          allowDefaultProject: ['test-setup.ts', 'vitest.config.ts'],
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     plugins: {
       'react-hooks': reactHooks,
@@ -80,10 +90,36 @@ export default defineConfig(
             'Unicode escapes like \\u6240 render literally in JSX text. Use the actual character (e.g. 所得控除), or move the text into a string literal/expression.',
         },
       ],
+      // strictTypeChecked adoption. Numbers and booleans interpolated into template
+      // strings are intentional throughout the UI copy, so allow them.
+      '@typescript-eslint/restrict-template-expressions': [
+        'error',
+        { allowNumber: true, allowBoolean: true },
+      ],
+      // Returning a void call from an arrow shorthand (e.g. `onChange={e => setX(e)}`) is
+      // idiomatic React and intentional here; keep the rule for the genuinely confusing
+      // non-shorthand cases (e.g. `return doVoidThing()` in a value position).
+      '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
+      // --- Existing violations: downgraded to `warn` so they surface as a burn-down
+      // list without blocking CI. Categories with zero current violations (floating
+      // promises, misused promises, await-thenable, no-base-to-string, …) stay hard
+      // errors and will fail CI on new code. Promote these back to `error` as cleared.
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
+      '@typescript-eslint/no-redundant-type-constituents': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
     },
   },
   {
     extends: [vitest.configs.recommended],
     files: ['src/__tests__/**/*.{ts,tsx}'],
+    rules: {
+      // Non-null assertions are idiomatic in test setup/queries
+      // (e.g. `screen.getByText(...).parentElement!`); no need to flag them here.
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
   },
 );

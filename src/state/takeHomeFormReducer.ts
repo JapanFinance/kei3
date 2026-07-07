@@ -347,7 +347,7 @@ export function takeHomeFormReducer(
     case 'setField':
       // TS can't correlate `action.field`/`action.value` across the mapped union once
       // destructured this way, even though every call site is checked individually.
-      return { ...state, [action.field]: action.value } as TakeHomeFormState;
+      return { ...state, [action.field]: action.value };
 
     case 'incomeModeChanged':
       return reduceIncomeModeChanged(state, action);

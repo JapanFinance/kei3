@@ -137,7 +137,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             value={type}
             label="Income/Benefit Type"
             onChange={e => {
-              const newType = e.target.value as IncomeStreamType;
+              const newType = e.target.value;
               setType(newType);
               if (newType === 'commutingAllowance') {
                 setFrequency('monthly');
@@ -180,7 +180,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               labelId="salary-frequency-label"
               value={frequency}
               label="Frequency"
-              onChange={e => setFrequency(e.target.value as 'monthly' | 'annual')}
+              onChange={e => setFrequency(e.target.value)}
             >
               <MenuItem value="monthly">Monthly</MenuItem>
               <MenuItem value="annual">Annual</MenuItem>
@@ -195,9 +195,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               labelId="commuting-allowance-frequency-label"
               value={frequency}
               label="Frequency"
-              onChange={e =>
-                setFrequency(e.target.value as 'monthly' | '3-months' | '6-months' | 'annual')
-              }
+              onChange={e => setFrequency(e.target.value)}
             >
               <MenuItem value="monthly">1 Month</MenuItem>
               <MenuItem value="3-months">3 Months</MenuItem>
@@ -210,11 +208,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         {type === 'bonus' && (
           <FormControl fullWidth>
             <InputLabel>Month Paid</InputLabel>
-            <Select
-              value={month}
-              label="Month Paid"
-              onChange={e => setMonth(Number(e.target.value))}
-            >
+            <Select value={month} label="Month Paid" onChange={e => setMonth(e.target.value)}>
               {Array.from({ length: 12 }, (_, i) => (
                 <MenuItem key={i} value={i}>
                   {new Date(0, i).toLocaleString('default', { month: 'long' })}
@@ -298,7 +292,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 labelId="blue-filer-label"
                 value={blueFilerDeduction}
                 label="Blue-Filer Special Deduction"
-                onChange={e => setBlueFilerDeduction(Number(e.target.value))}
+                onChange={e => setBlueFilerDeduction(e.target.value)}
               >
                 <MenuItem value={0}>None</MenuItem>
                 <MenuItem value={100000}>¥100,000</MenuItem>

@@ -375,7 +375,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label="Total Net Income"
             value={formatJPY(results.totalNetIncome)}
             type="subtotal"
-            sx={{ mt: 0.5, mb: 0.5 }}
           />
         )}
 
@@ -437,7 +436,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           label="Subtotal Taxable Income"
           value={formatJPY(subtotalIncome)}
           type="subtotal"
-          sx={{ mt: 0.5 }}
         />
       </Box>
 
@@ -621,7 +619,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             }
             value={formatJPY(results.taxableIncomeForNationalIncomeTax)}
             type="detail-subtotal"
-            sx={{ mt: 0.5 }}
           />
         )}
 
@@ -1079,7 +1076,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             }
             value={formatJPY(results.taxableIncomeForResidenceTax)}
             type="detail-subtotal"
-            sx={{ mt: 0.5 }}
           />
         )}
 
@@ -1177,7 +1173,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               label="Municipal portion (6%)"
               value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.06))}
               type="detail"
-              sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
             />
             {results.residenceTax.city.cityAdjustmentCredit > 0 && (
               <ResultRow
@@ -1282,7 +1277,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 }
                 value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)}
                 type="detail"
-                sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
               />
             )}
 
@@ -1290,7 +1284,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               label="Prefectural portion (4%)"
               value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.04))}
               type="detail"
-              sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
             />
             {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
               <ResultRow
@@ -1395,7 +1388,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 }
                 value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)}
                 type="detail"
-                sx={{ fontSize: '0.85rem', color: 'text.secondary' }}
               />
             )}
           </Box>

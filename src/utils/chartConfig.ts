@@ -5,15 +5,7 @@ import type { TakeHomeInputs, ChartRange, IncomeStream } from '../types/tax';
 import { formatJPY, formatYenCompact } from './formatters';
 import { calculateTaxes } from './taxCalculations';
 import { detectCaps } from './capDetection';
-import type {
-  ChartData,
-  ChartOptions,
-  Chart,
-  TooltipItem,
-  Scale,
-  CoreScaleOptions,
-  Plugin,
-} from 'chart.js';
+import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, Plugin } from 'chart.js';
 import { MEDIAN_INCOME_VALUE } from '../data/income';
 
 // Create custom plugin for vertical lines
@@ -372,7 +364,7 @@ export const getChartOptions = (
         },
         ticks: {
           align: 'center',
-          callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
+          callback: function (this: Scale, tickValue: number | string) {
             const value = Number(tickValue);
             return useCompactLabelFormat ? formatYenCompact(value) : formatJPY(value);
           },
@@ -386,7 +378,7 @@ export const getChartOptions = (
         display: true,
         position: 'left' as const,
         ticks: {
-          callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
+          callback: function (this: Scale, tickValue: number | string) {
             const value = Number(tickValue);
             return useCompactLabelFormat ? formatYenCompact(value) : formatJPY(value);
           },
@@ -400,7 +392,7 @@ export const getChartOptions = (
           drawOnChartArea: false,
         },
         ticks: {
-          callback: function (this: Scale<CoreScaleOptions>, tickValue: number | string) {
+          callback: function (this: Scale, tickValue: number | string) {
             const value = Number(tickValue);
             return value.toFixed(0) + '%';
           },

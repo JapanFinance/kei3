@@ -458,7 +458,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         netIncome,
         inputs.isSubjectToLongTermCarePremium,
         incomeYear,
-        inputs.region as string,
+        inputs.region,
       );
     } else {
       // Employee Health Insurance

@@ -100,7 +100,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getAllByText('Monthly Remuneration').length).toBeGreaterThan(0);
   });
 
-  it('shows Monthly Remuneration breakdown in tooltip', async () => {
+  it('shows Monthly Remuneration breakdown in tooltip', () => {
     render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
 
     // Detailed Breakdown is rendered directly by mock
@@ -113,7 +113,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getAllByText('¥520,000').length).toBeGreaterThan(0);
   });
 
-  it('shows calculation and SMR table in Health Insurance tooltip', async () => {
+  it('shows calculation and SMR table in Health Insurance tooltip', () => {
     render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
 
     // With mock, content is rendered directly
@@ -125,7 +125,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getAllByText('¥30,475').length).toBeGreaterThan(0);
   });
 
-  it('shows calculation and SMR table in Pension tooltip', async () => {
+  it('shows calculation and SMR table in Pension tooltip', () => {
     render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
 
     // With mock, content is rendered directly
@@ -151,7 +151,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText('Employees Pension (厚生年金) SMR Table')).toBeInTheDocument();
   });
 
-  it('handles high income caps correctly (Health vs Pension SMR)', async () => {
+  it('handles high income caps correctly (Health vs Pension SMR)', () => {
     const highIncomeInputs = {
       ...mockInputs,
       incomeStreams: [
@@ -176,7 +176,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
   });
 
-  it('hides Monthly Commuting Allowance row when 0', async () => {
+  it('hides Monthly Commuting Allowance row when 0', () => {
     const noCommutingInputs = {
       ...mockInputs,
       incomeStreams: [{ id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }],

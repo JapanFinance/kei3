@@ -57,10 +57,10 @@ describe('calculateHealthInsurancePremium for employees', () => {
     it('handles negative income correctly', () => {
       expect(() =>
         calculateHealthInsurancePremium(-1_000_000, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
-      ).toThrowError('Income cannot be negative.');
+      ).toThrow('Income cannot be negative.');
       expect(() =>
         calculateHealthInsurancePremium(-1_000_000, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
-      ).toThrowError('Income cannot be negative.');
+      ).toThrow('Income cannot be negative.');
     });
   });
 
@@ -149,7 +149,7 @@ describe('calculateHealthInsurancePremium for employees', () => {
           FY2025,
           DEFAULT_PROVIDER_REGION,
         ),
-      ).toThrowError('Income cannot be negative.');
+      ).toThrow('Income cannot be negative.');
       expect(() =>
         calculateHealthInsurancePremium(
           -1_000_000,
@@ -158,7 +158,7 @@ describe('calculateHealthInsurancePremium for employees', () => {
           FY2025,
           DEFAULT_PROVIDER_REGION,
         ),
-      ).toThrowError('Income cannot be negative.');
+      ).toThrow('Income cannot be negative.');
     });
   });
 });
@@ -230,7 +230,7 @@ describe('calculateHealthInsurancePremium for non-employees', () => {
         FY2025,
         'Tokyo',
       ),
-    ).toThrowError('Income cannot be negative.');
+    ).toThrow('Income cannot be negative.');
     expect(() =>
       calculateHealthInsurancePremium(
         -1_000_000,
@@ -239,7 +239,7 @@ describe('calculateHealthInsurancePremium for non-employees', () => {
         FY2025,
         'Tokyo',
       ),
-    ).toThrowError('Income cannot be negative.');
+    ).toThrow('Income cannot be negative.');
   });
 });
 

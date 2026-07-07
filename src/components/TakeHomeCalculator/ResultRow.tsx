@@ -35,7 +35,6 @@ interface ResultRowProps {
     | 'detail'
     | 'detail-subtotal';
   valuePrefix?: string;
-  sx?: SxProps<Theme>;
   labelSuffix?: React.ReactNode; // Additional content to show after the label and tooltip
 }
 
@@ -44,7 +43,6 @@ export const ResultRow: React.FC<ResultRowProps> = ({
   value,
   type = 'default',
   valuePrefix,
-  sx: rowSxOverride,
   labelSuffix,
 }) => {
   const theme = useTheme();
@@ -164,11 +162,6 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       labelSpecificSx = { fontSize: '0.95rem', color: 'text.secondary' };
       valueSpecificSx = { fontSize: '0.95rem', fontWeight: 500, color: 'text.primary' };
       break;
-  }
-
-  // Merge rowSxOverride after specific type styles have been applied to boxSx
-  if (rowSxOverride) {
-    boxSx = { ...boxSx, ...rowSxOverride };
   }
 
   // Responsive: stack label/value vertically on mobile

@@ -274,7 +274,6 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
               </Box>
             }
             type="subtotal"
-            sx={{ mt: 1, borderRadius: 2 }}
           />
         </Box>
       )}

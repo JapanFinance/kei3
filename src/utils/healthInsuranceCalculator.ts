@@ -185,12 +185,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
   const useTimeSeries = typeof providerOrRates === 'string';
   const providerId = useTimeSeries ? providerOrRates : undefined;
   const region = useTimeSeries ? (regionOrLTC as string) : undefined;
-  const staticRates = useTimeSeries
-    ? undefined
-    : (providerOrRates as {
-        employeeHealthInsuranceRate: number;
-        employeeLongTermCareRate: number;
-      });
+  const staticRates = useTimeSeries ? undefined : providerOrRates;
   const includeLTC = useTimeSeries ? isSubjectToLongTermCarePremium! : (regionOrLTC as boolean);
 
   // Sort bonuses by month to apply cumulative cap correctly

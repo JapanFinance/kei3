@@ -749,8 +749,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     disabled={isRegionDropdownEffectivelyDisabled}
                     renderInput={params => (
                       <TextField
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        {...(params as any)}
+                        {...params}
                         label="Local Region (Municipality/Prefecture)"
                         helperText={
                           isRegionDropdownEffectivelyDisabled

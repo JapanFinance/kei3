@@ -44,7 +44,7 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
     return 'Custom Employee Health Insurance Provider';
   }
 
-  const providerDef = PROVIDER_DEFINITIONS[providerId as keyof typeof PROVIDER_DEFINITIONS];
+  const providerDef = PROVIDER_DEFINITIONS[providerId];
   if (!providerDef) {
     throw new Error(`Unknown provider ID: ${providerId}`);
   }

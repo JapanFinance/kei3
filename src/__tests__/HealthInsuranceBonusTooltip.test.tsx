@@ -3,11 +3,7 @@
 
 import { render, screen } from '@testing-library/react';
 import HealthInsuranceBonusTooltip from '../components/TakeHomeCalculator/tabs/HealthInsuranceBonusTooltip';
-import {
-  DEFAULT_PROVIDER_REGION,
-  CUSTOM_PROVIDER_ID,
-  type HealthInsuranceProviderId,
-} from '../types/healthInsurance';
+import { DEFAULT_PROVIDER_REGION, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
@@ -72,7 +68,7 @@ describe('HealthInsuranceBonusTooltip', () => {
     incomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     region: DEFAULT_PROVIDER_REGION,
-    healthInsuranceProvider: 'TestProvider' as unknown as HealthInsuranceProviderId,
+    healthInsuranceProvider: 'TestProvider',
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,

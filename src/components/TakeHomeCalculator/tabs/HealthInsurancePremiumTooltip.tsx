@@ -234,7 +234,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   };
 
   if (ratesBlended) {
-    const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData!, portion);
+    const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData, portion);
     const blendedAmount = Math.round((prevCalc.final * 3) / 10 + (currCalc.final * 7) / 10);
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
