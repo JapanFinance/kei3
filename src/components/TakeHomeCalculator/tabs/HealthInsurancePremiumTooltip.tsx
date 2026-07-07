@@ -450,12 +450,6 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     let sourceUrl;
     let providerLabel;
 
-    if (standardMonthlyRemuneration === undefined) {
-      throw new Error(
-        'standardMonthlyRemuneration is required for the Employee Health Insurance tooltip',
-      );
-    }
-
     const year = inputs.incomeYear;
 
     if (provider === CUSTOM_PROVIDER_ID) {
