@@ -209,9 +209,10 @@ interface ProviderChangedAction {
 }
 
 /**
- * Annual income changed: if dependent coverage is currently selected and the new
- * income is no longer eligible, auto-switches to National Health Insurance. In the
- * simple (non-advanced) modes, also syncs the single income stream to the new amount.
+ * Annual income changed: in the simple (non-advanced) modes, syncs the single income stream
+ * to the new amount and re-checks the provider-validity invariant — which, for an income
+ * change, means switching dependent coverage to National Health Insurance once the income
+ * exceeds the eligibility threshold.
  */
 interface AnnualIncomeChangedAction {
   type: 'annualIncomeChanged';
@@ -220,7 +221,9 @@ interface AnnualIncomeChangedAction {
 
 /**
  * Income streams changed (advanced mode): recomputes the total annual income from the
- * streams and applies the same eligibility cascade as {@link AnnualIncomeChangedAction}.
+ * streams, then reconciles the provider-validity invariant the same way
+ * {@link AnnualIncomeChangedAction} does — e.g. removing the last employment stream switches
+ * an employee provider to National Health Insurance.
  */
 interface IncomeStreamsChangedAction {
   type: 'incomeStreamsChanged';
@@ -235,31 +238,16 @@ export type FormAction =
   | IncomeStreamsChangedAction;
 
 /**
- * Applies a new annual income, auto-switching from dependent coverage to National
- * Health Insurance when the new income exceeds the eligibility threshold.
- */
-function applyAnnualIncome(state: TakeHomeFormState, value: number): TakeHomeFormState {
-  const newState = { ...state, annualIncome: value };
-  if (
-    state.healthInsuranceProvider === DEPENDENT_COVERAGE_ID &&
-    !isDependentCoverageEligible(value)
-  ) {
-    newState.healthInsuranceProvider = NATIONAL_HEALTH_INSURANCE_ID;
-    newState.region = defaultRegionForProvider(NATIONAL_HEALTH_INSURANCE_ID);
-  }
-  return newState;
-}
-
-/**
  * Enforces the invariant that `healthInsuranceProvider` is one of the providers
  * {@link availableProvidersFor} offers for the current state. When it isn't — e.g. the last
- * employment stream was removed while an employee or custom provider was selected — falls
- * back to National Health Insurance if available, otherwise the first offered provider, and
- * resets the region to that provider's default. This is the reducer-side counterpart to the
- * dropdown's own `providerChanged` onChange, keeping the employment-type half of the
- * invariant in sync synchronously rather than a render later (previously an effect in
- * InputForm). `availableProvidersFor` always includes NHI, so a fallback always exists; the
- * empty-list guard is there only to satisfy the type of `available[0]`.
+ * employment stream was removed while an employee/custom provider was selected, or dependent
+ * coverage is selected once income crosses the threshold — falls back to National Health
+ * Insurance if available, otherwise the first offered provider, and resets the region to that
+ * provider's default (as `providerChanged` does). Every income/stream/mode change routes
+ * through this one check against the same selector the dropdown renders, so the selected value
+ * and the offered options can't disagree; it replaces a correcting effect that used to run a
+ * render later in InputForm. `availableProvidersFor` always includes NHI, so a fallback always
+ * exists; the empty-list guard only satisfies the type of `available[0]`.
  */
 function applyProviderValidity(state: TakeHomeFormState): TakeHomeFormState {
   const available = availableProvidersFor(state);
@@ -280,8 +268,8 @@ function applyProviderValidity(state: TakeHomeFormState): TakeHomeFormState {
 
 /**
  * Normalizes a freshly-constructed form state (App's hardcoded defaults, or any state
- * restored from elsewhere) so it satisfies the provider-validity invariant before the first
- * render, then hands it to the reducer which maintains that invariant from there. Passed as
+ * restored from elsewhere) so it satisfies invariants before the first
+ * render, then hands it to the reducer which maintains those invariants from there. Passed as
  * the `init` argument to `useReducer`. Centralizing mount-time normalization here gives any
  * future invariant a single entry point instead of a re-introduced mount effect.
  */
@@ -330,25 +318,24 @@ function reduceAnnualIncomeChanged(
   if (state.incomeMode === 'advanced') {
     return state;
   }
-  const newState = applyAnnualIncome(state, action.value);
+  const newState = { ...state, annualIncome: action.value };
   // In the simple modes the single income stream mirrors the annual income
   newState.incomeStreams = simpleModeStreams(state.incomeMode, action.value);
-  // No applyProviderValidity here: an income change never removes employment income in a
-  // simple mode (salary stays employment; miscellaneous stays non-employment), so the only
-  // way it can strand a provider is dependent coverage crossing the threshold, which
-  // applyAnnualIncome already handles. Advanced-mode income changes flow through
-  // incomeStreamsChanged, which does run the cascade.
-  return newState;
+  // Reconcile the provider through the same selector the dropdown uses. In the simple modes
+  // this only ever fires for dependent coverage crossing the income threshold, but routing it
+  // through applyProviderValidity keeps every path on one definition of "valid provider".
+  return applyProviderValidity(newState);
 }
 
 function reduceIncomeStreamsChanged(
   state: TakeHomeFormState,
   action: IncomeStreamsChangedAction,
 ): TakeHomeFormState {
-  const newState = applyAnnualIncome(state, totalAnnualIncomeFromStreams(action.streams));
+  const newState = { ...state, annualIncome: totalAnnualIncomeFromStreams(action.streams) };
   newState.incomeStreams = action.streams;
-  // Removing the last employment stream can strand an employee/custom provider that is no
-  // longer offered; correct it here so the returned state is already valid.
+  // Removing the last employment stream (or dependent coverage crossing the income threshold)
+  // can strand a provider that is no longer offered; correct it here so the returned state is
+  // already valid.
   return applyProviderValidity(newState);
 }
 
