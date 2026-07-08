@@ -23,6 +23,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import SourceLinks from '../../ui/SourceLinks';
 import ReferenceTable from '../../ui/ReferenceTable';
+import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import { ResultRow } from '../ResultRow';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
@@ -380,6 +381,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               Basic Deduction
               <DetailedTooltip title="National Income Tax Basic Deduction">
                 <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
+                  <HighlightedRowValue label="Net income" value={results.totalNetIncome} />
                   <ReferenceTable
                     headers={['Net Income (¥)', 'Deduction Amount']}
                     highlightedRow={nationalBasicDeductionHighlight}
@@ -490,6 +492,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       before applying the special reconstruction surtax.
                     </Typography>
                     <Box sx={{ mt: 1 }}>
+                      <HighlightedRowValue
+                        label="Taxable income"
+                        value={results.taxableIncomeForNationalIncomeTax}
+                      />
                       <ReferenceTable
                         headers={['Taxable Income (¥)', 'Tax Rate', 'Deduction (¥)']}
                         highlightedRow={incomeTaxBracketHighlight}
@@ -667,6 +673,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               Basic Deduction
               <DetailedTooltip title="Residence Tax Basic Deduction">
                 <>
+                  <HighlightedRowValue label="Net income" value={results.totalNetIncome} />
                   <ReferenceTable
                     headers={['Net Income (¥)', 'Deduction Amount']}
                     highlightedRow={residenceBasicDeductionHighlight}

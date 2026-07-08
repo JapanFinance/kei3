@@ -129,7 +129,9 @@ describe('Blue-Filer Deduction Display', () => {
 
     // Should display "Total Net Income" for mixed income
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
-    expect(screen.getByText('¥3,900,000')).toBeInTheDocument();
+    // The value repeats in the basic-deduction tooltips' "Your net income" captions (mock renders
+    // tooltip content inline), so assert it appears rather than that it's unique.
+    expect(screen.getAllByText('¥3,900,000').length).toBeGreaterThanOrEqual(1);
   });
 
   it('Blue-Filer Deduction affects NHI Calculation Base in SocialInsuranceTab for NHI', () => {
