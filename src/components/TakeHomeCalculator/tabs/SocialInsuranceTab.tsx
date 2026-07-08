@@ -595,7 +595,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 Insurance for unemployment and work-related benefits. This amount includes only the
-                employment insurance premium paid by the employee. The rate is applied to your gross
+                employment insurance premium paid by the employee. The rate is applied to the gross
                 salary. The employer also contributes to employment insurance separately.
               </Typography>
               <SourceLinks

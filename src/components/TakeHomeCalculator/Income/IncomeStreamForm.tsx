@@ -65,7 +65,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
       if (monthlyAmount > 150000) {
         setError(
-          'Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of your salary.',
+          'Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of the salary.',
         );
         return false;
       }
@@ -111,7 +111,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const getAmountHelperText = () => {
     switch (type) {
       case 'business':
-        return 'Business income minus business expenses. If you operate multiple businesses, combine for all businesses.';
+        return 'Business income minus business expenses. For multiple businesses, combine the income across all businesses.';
       case 'miscellaneous':
         return 'Income minus necessary expenses';
       case 'salary':
@@ -487,7 +487,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               }}
             >
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                How to Calculate Your Stock-Based Compensation Income
+                How to Calculate Stock-Based Compensation Income
               </Typography>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
                 See the notes below for more specific information. In general, calculate the JPY
@@ -591,9 +591,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
-                    Use the discount amount when shares are purchased. For example, if you purchased
-                    shares with a fair market value of $10,000 at a 15% discount (i.e. for $8,500),
-                    the taxable amount is $1,500.
+                    Use the discount amount when shares are purchased. For example, for shares
+                    purchased with a fair market value of $10,000 at a 15% discount (i.e. for
+                    $8,500), the taxable amount is $1,500.
                   </Typography>
                 </AccordionDetails>
               </Accordion>
@@ -610,9 +610,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionSummary>
                 <AccordionDetails>
                   <Typography variant="body2">
-                    If you worked outside Japan for a period of time between grant and
+                    If work was performed outside Japan for a period of time between grant and
                     vest/exercise, the proportion of the income realized equal to the proportion of
-                    time worked outside Japan would be foreign-source income. If you are a{' '}
+                    time worked outside Japan would be foreign-source income. For a{' '}
                     <a
                       href="https://wiki.japanfinance.org/tax/income/#non-permanent-tax-residents"
                       target="_blank"
@@ -621,8 +621,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     >
                       non-permanent tax resident
                     </a>{' '}
-                    when that income is realized, the foreign-source income will not be taxable in
-                    Japan unless{' '}
+                    at the time that income is realized, the foreign-source income will not be
+                    taxable in Japan unless{' '}
                     <a
                       href="https://wiki.japanfinance.org/tax/income/#income-that-is-neither-japan-source-nor-foreign-source"
                       target="_blank"

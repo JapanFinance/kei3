@@ -386,7 +386,7 @@ describe('Dependent Coverage UI Behavior', () => {
     // Should show helper text mentioning the threshold
     expect(
       screen.getByText(
-        /If you are covered as a dependent under employee health insurance, select "None"./i,
+        /If covered as a dependent under employee health insurance, select "None"./i,
       ),
     ).toBeInTheDocument();
   });

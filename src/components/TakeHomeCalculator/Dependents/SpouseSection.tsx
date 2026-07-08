@@ -77,7 +77,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
           control={
             <Switch checked={hasSpouse} onChange={e => handleToggleSpouse(e.target.checked)} />
           }
-          label="Do you have a spouse?"
+          label="Include a spouse?"
         />
       </Box>
 
