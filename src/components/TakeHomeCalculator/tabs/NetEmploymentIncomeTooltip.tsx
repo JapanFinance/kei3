@@ -9,6 +9,7 @@ import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import SourceLinks from '../../ui/SourceLinks';
 import ReferenceTable from '../../ui/ReferenceTable';
+import { getEmploymentIncomeDeductionHighlightIndex } from './referenceTableHighlight';
 
 const fmtNum = (n: number) => n.toLocaleString('en');
 
@@ -70,6 +71,18 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
     return { range, deduction };
   });
 
+  // Highlight the row that applies to this taxpayer. The displayed rows are the flat-floor "Up to X"
+  // row (index 0) followed by tierRows, so the helper indexes match. Guard on a positive gross so an
+  // income-less result doesn't highlight a row.
+  const deductionTableHighlight =
+    grossEmploymentIncome > 0
+      ? getEmploymentIncomeDeductionHighlightIndex(
+          grossEmploymentIncome,
+          flatUpperBound,
+          period.standardTiers,
+        )
+      : undefined;
+
   return (
     <DetailedTooltip title="Employment Income Details">
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -121,6 +134,7 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
       </Typography>
       <ReferenceTable
         headers={['Gross Employment Income (¥)', 'Deduction Amount']}
+        highlightedRow={deductionTableHighlight}
         rows={[
           [`Up to ${fmtNum(flatUpperBound)}`, fmtNum(period.flatFloorDeduction)],
           ...tierRows.map(row => [row.range, row.deduction]),

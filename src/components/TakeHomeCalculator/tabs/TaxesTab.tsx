@@ -28,6 +28,12 @@ import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
 import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
+import {
+  getDedupedNationalBasicDeductionTiers,
+  getNationalBasicDeductionHighlightIndex,
+  getResidenceBasicDeductionHighlightIndex,
+  getNationalIncomeTaxBracketHighlightIndex,
+} from './referenceTableHighlight';
 
 interface TaxesTabProps {
   results: TakeHomeResults;
@@ -148,6 +154,23 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const incomeYear = inputs.incomeYear;
   const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
+
+  // Which reference-table row applies to this taxpayer (undefined → highlight nothing). Basic
+  // deductions key off 合計所得金額; the income-tax bracket off the (already 1,000-floored) taxable
+  // income. Guard on a positive value so a zero-income result doesn't highlight a misleading row.
+  const nationalBasicDeductionHighlight =
+    results.totalNetIncome > 0
+      ? getNationalBasicDeductionHighlightIndex(basicDeductionTiers, results.totalNetIncome)
+      : undefined;
+  const residenceBasicDeductionHighlight =
+    results.totalNetIncome > 0
+      ? getResidenceBasicDeductionHighlightIndex(results.totalNetIncome)
+      : undefined;
+  const incomeTaxBracketHighlight =
+    results.taxableIncomeForNationalIncomeTax !== undefined &&
+    results.taxableIncomeForNationalIncomeTax > 0
+      ? getNationalIncomeTaxBracketHighlightIndex(results.taxableIncomeForNationalIncomeTax)
+      : undefined;
 
   const businessAndMiscIncome = inputs.incomeStreams
     .filter(s => s.type === 'business' || s.type === 'miscellaneous')
@@ -357,17 +380,14 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
                   <ReferenceTable
                     headers={['Net Income (¥)', 'Deduction Amount']}
+                    highlightedRow={nationalBasicDeductionHighlight}
                     rows={[
-                      // Deduplicate consecutive tiers with the same deduction
-                      ...basicDeductionTiers
-                        .filter(
-                          (tier, i, arr) =>
-                            i === arr.length - 1 || tier.deduction !== arr[i + 1]!.deduction,
-                        )
-                        .map(tier => [
-                          `Up to ${tier.maxIncomeInclusive.toLocaleString('en')}`,
-                          tier.deduction.toLocaleString('en'),
-                        ]),
+                      // Deduplicate consecutive tiers with the same deduction (shared with the
+                      // highlight-index helper so the two views can't drift apart).
+                      ...getDedupedNationalBasicDeductionTiers(basicDeductionTiers).map(tier => [
+                        `Up to ${tier.maxIncomeInclusive.toLocaleString('en')}`,
+                        tier.deduction.toLocaleString('en'),
+                      ]),
                       [
                         `Over ${basicDeductionTiers[
                           basicDeductionTiers.length - 1
@@ -483,6 +503,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     <Box sx={{ mt: 1 }}>
                       <ReferenceTable
                         headers={['Taxable Income (¥)', 'Tax Rate', 'Deduction (¥)']}
+                        highlightedRow={incomeTaxBracketHighlight}
                         rows={[
                           ['Up to 1,949,000', '5%', '0'],
                           ['1,949,001 - 3,299,000', '10%', '97,500'],
@@ -667,6 +688,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <>
                   <ReferenceTable
                     headers={['Net Income (¥)', 'Deduction Amount']}
+                    highlightedRow={residenceBasicDeductionHighlight}
                     rows={[
                       ['Up to 24,000,000', '430,000'],
                       ['24,000,001 - 24,500,000', '290,000'],
