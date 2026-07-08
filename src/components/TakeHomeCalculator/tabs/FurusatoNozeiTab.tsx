@@ -11,6 +11,7 @@ import { formatJPY } from '../../../utils/formatters';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import SourceLink from '../../ui/SourceLink';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { ResultRow } from '../ResultRow';
 
@@ -18,7 +19,7 @@ interface FurusatoNozeiTabProps {
   results: TakeHomeResults;
 }
 
-/** Source: 調査結果（概要） https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac02 */
+/** Source: OFFICIAL_SOURCES.micFurusatoNozeiSurvey (cited in the footnote below). */
 const FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE = 0.252;
 
 const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
@@ -297,16 +298,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           sx={{ color: 'text.secondary', fontStyle: 'italic', mt: 1, display: 'block' }}
         >
           * Estimated at {FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE * 100}% of donation amount,
-          based on the{' '}
-          <a
-            href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/furusato/archive/#ac02"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit', textDecoration: 'underline' }}
-          >
-            average Furusato Nozei gift cost
-          </a>
-          .
+          based on the average gift cost reported in <SourceLink source="micFurusatoNozeiSurvey" />.
         </Typography>
       </Box>
 

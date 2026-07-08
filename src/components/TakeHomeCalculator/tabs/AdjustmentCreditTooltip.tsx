@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import SourceLink from '../../ui/SourceLink';
 
 interface AdjustmentCreditTooltipProps {
   /** Which half of the income-based residence tax this credit applies to. */
@@ -52,15 +53,8 @@ const AdjustmentCreditTooltip: React.FC<AdjustmentCreditTooltipProps> = ({
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 0.5 }}>
             The statutory personal deduction difference (defined in{' '}
-            <a
-              href="https://laws.e-gov.go.jp/law/325AC0000000226#Mp-At_314_6"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'inherit', textDecoration: 'underline' }}
-            >
-              Local Tax Act Article 314-6
-            </a>
-            ) accounts for differences between national and residence tax deduction amounts.
+            <SourceLink source="egovLocalTaxActArt314_6" />) accounts for differences between
+            national and residence tax deduction amounts.
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 1 }}>
             The adjustment credit is calculated:

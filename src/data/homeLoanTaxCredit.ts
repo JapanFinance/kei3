@@ -19,11 +19,18 @@
  * - When the spillover cap or income limit changes, add a new band at the top and
  *   tighten the `moveInYearTo` of the previous current band.
  *
- * Sources:
- *   - NTA (home loan credit guide, with links per situation): https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm
- *   - Residence-tax spillover (総務省): https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/090929.html
- *   - MLIT 住宅ローン減税: https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html
+ * Sources: {@link HOME_LOAN_TAX_CREDIT_SOURCE_IDS} (also shown to users by the home-loan-credit
+ * tooltips).
  */
+
+import type { OfficialSourceId } from './officialSources';
+
+/** The official sources behind the cohort bands in this module. */
+export const HOME_LOAN_TAX_CREDIT_SOURCE_IDS: OfficialSourceId[] = [
+  'ntaHomeLoanCreditGuide',
+  'micResidenceTaxHomeLoanCredit',
+  'mlitHomeLoanTaxReduction',
+];
 
 /**
  * A residence-tax spillover cap: the credit remainder (after income tax) is capped at

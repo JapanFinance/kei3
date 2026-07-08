@@ -9,6 +9,7 @@ import {
   type PensionBonusBreakdownItem,
 } from '../../../utils/pensionCalculator';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
+import SourceFooter from '../../ui/SourceFooter';
 
 interface PensionBonusTooltipProps {
   breakdown?: PensionBonusBreakdownItem[];
@@ -119,17 +120,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
           in the same month).
         </Typography>
       </Box>
-      <Typography variant="caption" sx={{ display: 'block', mt: 0.5 }}>
-        Reference:{' '}
-        <a
-          href="https://www.nenkin.go.jp/service/kounen/hokenryo/hoshu/20150515-01.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: 'inherit' }}
-        >
-          厚生年金保険の保険料 (Japan Pension Service)
-        </a>
-      </Typography>
+      <SourceFooter sources={['jpsEmployeesPensionPremium']} />
     </>
   );
 };

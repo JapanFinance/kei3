@@ -5,9 +5,15 @@
  * Employment insurance (雇用保険) premium rates for general businesses (一般の事業).
  * Employee portion only (労働者負担).
  *
- * Source: Ministry of Health, Labour and Welfare (MHLW)
- * https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html
+ * Sources: {@link EMPLOYMENT_INSURANCE_SOURCE_IDS} (also shown to users by the employment
+ * insurance tooltip); per-year rate-notice PDFs are in the comments below.
  */
+
+import type { OfficialSourceId } from './officialSources';
+
+/** The official sources behind the rates in this module. */
+export const EMPLOYMENT_INSURANCE_SOURCE_IDS: OfficialSourceId[] = ['mhlwEmploymentInsuranceRates'];
+
 export interface EmploymentInsuranceRatePeriod {
   /** The date from which this rate applies (inclusive). Month is 0-indexed (0=Jan, 3=Apr). */
   effectiveFrom: { year: number; month: number };

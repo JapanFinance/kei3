@@ -14,6 +14,8 @@ import {
 } from '../../../types/healthInsurance';
 import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import SMRTableTooltip from './SMRTableTooltip';
+import SourceFooter from '../../ui/SourceFooter';
+import type { OfficialSource } from '../../../data/officialSources';
 import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import {
@@ -23,6 +25,16 @@ import {
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
+
+/**
+ * Data-carried source for a municipality's NHI rate page. NHI page titles vary by municipality
+ * and are not in our data, so the title is an honest English description rather than a quoted
+ * official title.
+ */
+const nhiRateSource = (params: NationalHealthInsuranceRegionParams): OfficialSource[] =>
+  params.source !== undefined
+    ? [{ org: params.regionName, title: 'National Health Insurance rates', url: params.source }]
+    : [];
 
 const PORTION_CONFIG: Record<
   NHIPortionType,
@@ -299,19 +311,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
           </Typography>
         </Box>
 
-        {currFYData.source && (
-          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
-            Calculation parameters from{' '}
-            <a
-              href={currFYData.source}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'inherit' }}
-            >
-              {currFYData.regionName} NHI Rates
-            </a>
-          </Typography>
-        )}
+        <SourceFooter sources={nhiRateSource(currFYData)} />
       </Box>
     );
   }
@@ -340,19 +340,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
         calc={currCalc}
       />
 
-      {currFYData.source && (
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
-          Calculation parameters from{' '}
-          <a
-            href={currFYData.source}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit' }}
-          >
-            {currFYData.regionName} NHI Rates
-          </a>
-        </Typography>
-      )}
+      <SourceFooter sources={nhiRateSource(currFYData)} />
     </Box>
   );
 };
@@ -426,21 +414,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           </Typography>
         )}
 
-        {regionData.source && (
-          <Box sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-              <strong>Source:</strong>{' '}
-              <a
-                href={regionData.source}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'inherit', textDecoration: 'underline' }}
-              >
-                {regionData.regionName} NHI Rates
-              </a>
-            </Typography>
-          </Box>
-        )}
+        <SourceFooter sources={nhiRateSource(regionData)} />
       </Box>
     );
   } else {
@@ -771,12 +745,12 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           tableContainerDataAttr="data-smr-table-container"
           currentRowId="current-smr-row"
           getCurrentRowSummary={getCurrentRowSummary}
-          {...(sourceUrl
-            ? {
-                officialSourceLink: { url: sourceUrl, text: `${providerLabel} Rates` },
-              }
-            : {})}
         />
+        {sourceUrl !== undefined && providerLabel !== undefined && (
+          <SourceFooter
+            sources={[{ org: providerLabel, title: 'Premium rate table', url: sourceUrl }]}
+          />
+        )}
       </Box>
     );
   }

@@ -7,7 +7,6 @@ import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
-import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Switch from '@mui/material/Switch';
@@ -19,6 +18,7 @@ import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeduct
 import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../../ui/Tooltips';
+import SourceLink from '../../ui/SourceLink';
 import { formatJPY } from '../../../utils/formatters';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -344,14 +344,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
               ))}
             </Select>
             <FormHelperText>
-              See{' '}
-              <Link
-                href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                NTA disability deduction guide
-              </Link>
+              See <SourceLink source="nta1160" />
             </FormHelperText>
           </FormControl>
         </Box>

@@ -5,7 +5,6 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { formatJPY } from '../../../utils/formatters';
-import SourceLinks from '../../ui/SourceLinks';
 import type { StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
 interface SMRTableColumn {
@@ -25,10 +24,6 @@ interface SMRTableTooltipProps {
   tableContainerDataAttr: string;
   currentRowId: string;
   getCurrentRowSummary: (row: StandardMonthlyRemunerationBracket) => string;
-  officialSourceLink?: {
-    url: string;
-    text: string;
-  };
 }
 
 const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
@@ -41,7 +36,6 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
   tableContainerDataAttr,
   currentRowId,
   getCurrentRowSummary,
-  officialSourceLink,
 }) => {
   // Auto-scroll to the current row when component mounts or income changes
   React.useEffect(() => {
@@ -249,10 +243,6 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
             {getCurrentRowSummary(currentRow)}
           </Typography>
         </Box>
-      )}
-
-      {officialSourceLink && (
-        <SourceLinks sources={[{ href: officialSourceLink.url, label: officialSourceLink.text }]} />
       )}
     </Box>
   );

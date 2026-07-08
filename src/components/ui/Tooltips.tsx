@@ -14,6 +14,8 @@ import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { SIMPLE_TOOLTIP_ICON, DETAILED_TOOLTIP_ICON } from './constants';
+import SourceFooter from './SourceFooter';
+import type { OfficialSourceRef } from '../../data/officialSources';
 
 /**
  * Default styles for tooltip icon buttons.
@@ -32,6 +34,7 @@ interface BaseTooltipProps {
   icon: React.ReactNode; // Required: the icon to display
   iconSx?: object; // Optional: icon/button styling
   iconAriaLabel?: string; // Optional: aria-label for icon button (default: 'More information')
+  sources?: OfficialSourceRef[]; // Optional: official sources, rendered as a standardized footer
 }
 
 /**
@@ -43,6 +46,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
   icon,
   iconSx,
   iconAriaLabel,
+  sources,
 }) => {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
@@ -52,6 +56,8 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
+  const sourceFooter = sources && sources.length > 0 && <SourceFooter sources={sources} />;
+
   const tooltipContent = (
     <Box sx={{ maxWidth: 420, p: 1, fontSize: isMobile ? '0.85rem' : '1rem' }}>
       {title && (
@@ -60,6 +66,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
         </Typography>
       )}
       {children}
+      {sourceFooter}
     </Box>
   );
 
@@ -97,6 +104,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
           {title && <DialogTitle sx={{ pb: 0 }}>{title}</DialogTitle>}
           <DialogContent dividers sx={title ? {} : { p: 2, pb: 1 }}>
             {children}
+            {sourceFooter}
           </DialogContent>
           <DialogActions sx={{ p: 1, pr: 1.5, pb: 1.5 }}>
             <Button onClick={handleClose} variant="contained" color="primary">
@@ -155,6 +163,7 @@ interface SimpleTooltipProps {
   icon?: React.ReactNode; // Optional: custom icon (default: HelpOutlineIcon)
   iconSx?: object; // Optional: icon/button styling
   iconAriaLabel?: string; // Optional: aria-label for icon button
+  sources?: OfficialSourceRef[]; // Optional: official sources, rendered as a standardized footer
 }
 
 /**
@@ -175,12 +184,14 @@ export const SimpleTooltip: React.FC<SimpleTooltipProps> = ({
   icon,
   iconSx,
   iconAriaLabel,
+  sources,
 }) => {
   return (
     <BaseTooltip
       icon={icon || SIMPLE_TOOLTIP_ICON}
       {...(iconSx && { iconSx })}
       {...(iconAriaLabel && { iconAriaLabel })}
+      {...(sources && { sources })}
     >
       {children}
     </BaseTooltip>
@@ -193,6 +204,7 @@ interface DetailedTooltipProps {
   icon?: React.ReactNode; // Optional: custom icon (default: CalculateIcon)
   iconSx?: object; // Optional: icon/button styling
   iconAriaLabel?: string; // Optional: aria-label for icon button
+  sources?: OfficialSourceRef[]; // Optional: official sources, rendered as a standardized footer
 }
 
 /**
@@ -219,6 +231,7 @@ export const DetailedTooltip: React.FC<DetailedTooltipProps> = ({
   icon,
   iconSx,
   iconAriaLabel,
+  sources,
 }) => {
   return (
     <BaseTooltip
@@ -226,6 +239,7 @@ export const DetailedTooltip: React.FC<DetailedTooltipProps> = ({
       icon={icon || DETAILED_TOOLTIP_ICON}
       {...(iconSx && { iconSx })}
       {...(iconAriaLabel && { iconAriaLabel })}
+      {...(sources && { sources })}
     >
       {children}
     </BaseTooltip>

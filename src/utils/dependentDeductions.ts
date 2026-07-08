@@ -2,18 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Calculation utilities for dependent-related tax deductions in Japan
+ * Calculation utilities for dependent-related tax deductions in Japan.
  *
- * Income Tax References:
- * - 扶養控除 (Dependent Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
- * - 配偶者控除 (Spouse Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
- * - 配偶者特別控除 (Spouse Special Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
- * - 特定親族特別控除 (Specific Relative Special Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm
- * - 障害者控除 (Disability Deduction): https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm
- *
- * Residence Tax References:
- * - 住民税の人的控除 (Residence Tax Personal Deductions): https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html
- * - 令和8年度住民税から適用される税制改正: https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html
+ * References: {@link NATIONAL_DEPENDENT_DEDUCTION_SOURCE_IDS} and
+ * {@link RESIDENCE_DEPENDENT_DEDUCTION_SOURCE_IDS} below (resolved via the official-sources
+ * registry, and shown to users by the dependent-deduction tooltips).
  */
 
 import type {
@@ -28,8 +21,24 @@ import type {
 import { DEDUCTION_TYPES } from '../types/dependents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
+import type { OfficialSourceId } from '../data/officialSources';
 
 export { getDependentEligibilityMax };
+
+/** The official sources behind the national (income tax) dependent-deduction amounts here. */
+export const NATIONAL_DEPENDENT_DEDUCTION_SOURCE_IDS: OfficialSourceId[] = [
+  'nta1180',
+  'nta1177',
+  'nta1191',
+  'nta1195',
+  'nta1160',
+];
+
+/** The official sources behind the residence-tax dependent-deduction amounts here. */
+export const RESIDENCE_DEPENDENT_DEDUCTION_SOURCE_IDS: OfficialSourceId[] = [
+  'nerimaPersonalDeductions',
+  'nerimaResidenceTaxReform2026',
+];
 
 /** Maximum total net income (合計所得金額) for spouse special deduction eligibility (配偶者特別控除).
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm

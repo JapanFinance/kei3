@@ -24,6 +24,7 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { formatJPY, getFrequencyAnnualMultiplier } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import SourceLink from '../../ui/SourceLink';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 
 interface IncomeStreamFormProps {
@@ -304,16 +305,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
               >
                 <span>
-                  See{' '}
-                  <a
-                    href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit', textDecoration: 'underline' }}
-                  >
-                    No.2072 青色申告特別控除 (NTA)
-                  </a>
-                  .
+                  See <SourceLink source="nta2072" />.
                 </span>
                 <DetailedTooltip
                   title="Blue-Filer Requirements"
@@ -322,14 +314,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 >
                   <Typography variant="caption" sx={{ display: 'block', mb: 1, lineHeight: 1.2 }}>
                     Requires prior tax office approval (see{' '}
-                    <a
-                      href="https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/09.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'inherit', textDecoration: 'underline' }}
-                    >
-                      Blue-Form Approval Application
-                    </a>
+                    <SourceLink source="ntaBlueReturnApproval" />
                     ).
                   </Typography>
 
@@ -556,25 +541,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     Use (share price at exercise − strike price) × exercised shares.
                   </Typography>
                   <Typography variant="body2">
-                    Only{' '}
-                    <a
-                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1543.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'inherit', textDecoration: 'underline' }}
-                    >
-                      non-qualified stock options
-                    </a>{' '}
-                    income should be entered here.{' '}
-                    <a
-                      href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1540.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'inherit', textDecoration: 'underline' }}
-                    >
-                      Qualified stock options
-                    </a>{' '}
-                    are not currently supported.
+                    Only non-qualified stock option income (
+                    <SourceLink source="nta1543" variant="compact" />) should be entered here.
+                    Qualified stock options (
+                    <SourceLink source="nta1540" variant="compact" />) are not currently supported.
                   </Typography>
                 </AccordionDetails>
               </Accordion>

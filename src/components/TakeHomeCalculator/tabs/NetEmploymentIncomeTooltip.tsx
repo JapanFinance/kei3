@@ -4,10 +4,13 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { getEmploymentIncomeDeductionPeriod } from '../../../data/netEmploymentIncome';
+import {
+  getEmploymentIncomeDeductionPeriod,
+  EMPLOYMENT_INCOME_DEDUCTION_SOURCE_IDS,
+  INCOME_ADJUSTMENT_DEDUCTION_SOURCE_IDS,
+} from '../../../data/netEmploymentIncome';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
-import SourceLinks from '../../ui/SourceLinks';
 import ReferenceTable from '../../ui/ReferenceTable';
 import { getEmploymentIncomeDeductionHighlightIndex } from './referenceTableHighlight';
 
@@ -84,7 +87,13 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
       : undefined;
 
   return (
-    <DetailedTooltip title="Employment Income Details">
+    <DetailedTooltip
+      title="Employment Income Details"
+      sources={[
+        ...EMPLOYMENT_INCOME_DEDUCTION_SOURCE_IDS,
+        ...(incomeAdjustmentDeduction > 0 ? INCOME_ADJUSTMENT_DEDUCTION_SOURCE_IDS : []),
+      ]}
+    >
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
         Calculation Breakdown
       </Typography>
@@ -140,18 +149,6 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
           ...tierRows.map(row => [row.range, row.deduction]),
         ]}
       />
-      <SourceLinks
-        sources={[
-          {
-            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm',
-            label: '給与所得控除 - NTA',
-          },
-          {
-            href: 'https://www.nta.go.jp/english/taxes/individual/12012.htm',
-            label: 'Overview of deduction for employment income - NTA (English)',
-          },
-        ]}
-      />
 
       {incomeAdjustmentDeduction > 0 && (
         <Box sx={{ mt: 1.5 }}>
@@ -167,14 +164,6 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
           <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>Rounding:</strong> Fractional yen amounts are rounded up.
           </Typography>
-          <SourceLinks
-            sources={[
-              {
-                href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm',
-                label: '所得金額調整控除 - NTA',
-              },
-            ]}
-          />
         </Box>
       )}
     </DetailedTooltip>

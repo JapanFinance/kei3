@@ -39,6 +39,7 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
   return (
     <DetailedTooltip
       title={`Other Income Deductions (${isNational ? 'National' : 'Residence'} Tax)`}
+      sources={rows.flatMap(item => ADDITIONAL_DEDUCTION_INFO[item.key].sources)}
     >
       <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 460 } }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
@@ -84,15 +85,7 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
               variant="body2"
               sx={{ fontSize: '0.85em', color: 'text.secondary', mt: 1 }}
             >
-              <strong>{info.name}:</strong> {info.explanation}{' '}
-              <a
-                href={info.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-              >
-                {info.sourceLabel}
-              </a>
+              <strong>{info.name}:</strong> {info.explanation}
             </Typography>
           );
         })}

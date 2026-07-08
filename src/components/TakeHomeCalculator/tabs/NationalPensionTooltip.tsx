@@ -4,9 +4,12 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import { getNationalPensionMonthlyContribution } from '../../../data/nationalPensionContribution';
+import {
+  getNationalPensionMonthlyContribution,
+  NATIONAL_PENSION_CONTRIBUTION_SOURCE_IDS,
+} from '../../../data/nationalPensionContribution';
 import { formatJPY } from '../../../utils/formatters';
-import SourceLinks from '../../ui/SourceLinks';
+import SourceFooter from '../../ui/SourceFooter';
 
 const formatMonthShort = (month: number): string =>
   new Date(2000, month).toLocaleString('en', { month: 'short' });
@@ -90,14 +93,7 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year })
           </tr>
         </tbody>
       </table>
-      <SourceLinks
-        sources={[
-          {
-            href: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01',
-            label: '国民年金保険料の金額 (Japan Pension Service)',
-          },
-        ]}
-      />
+      <SourceFooter sources={NATIONAL_PENSION_CONTRIBUTION_SOURCE_IDS} />
     </Box>
   );
 };

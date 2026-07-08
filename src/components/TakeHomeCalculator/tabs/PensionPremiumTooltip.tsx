@@ -12,6 +12,7 @@ import {
   type StandardMonthlyRemunerationBracket,
 } from '../../../utils/pensionCalculator';
 import SMRTableTooltip from './SMRTableTooltip';
+import SourceFooter from '../../ui/SourceFooter';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 
@@ -173,11 +174,8 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
         tableContainerDataAttr="data-pension-table-container"
         currentRowId="current-pension-row"
         getCurrentRowSummary={getCurrentRowSummary}
-        officialSourceLink={{
-          url: 'https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/20200825.html',
-          text: '厚生年金保険料額表 (Japan Pension Service)',
-        }}
       />
+      <SourceFooter sources={['jpsSmrPremiumTable']} />
     </Box>
   );
 };
