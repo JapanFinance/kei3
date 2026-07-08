@@ -4,6 +4,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 /** Inline style shared by every source anchor across the tooltips. */
 const SOURCE_LINK_STYLE: React.CSSProperties = {
@@ -58,6 +59,9 @@ const SourceLinks: React.FC<SourceLinksProps> = ({ sources, heading }) => (
         <li key={i}>
           <a href={source.href} target="_blank" rel="noopener noreferrer" style={SOURCE_LINK_STYLE}>
             {source.label}
+            <OpenInNewIcon
+              sx={{ fontSize: '0.85em', ml: 0.4, verticalAlign: '-0.15em', color: 'inherit' }}
+            />
           </a>
         </li>
       ))}

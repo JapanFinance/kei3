@@ -52,4 +52,14 @@ describe('SourceLinks', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
+
+  it('appends a decorative external-link icon inside each link', () => {
+    render(<SourceLinks sources={[{ label: 'A', href: 'https://example.com/a' }]} />);
+
+    // The icon lives inside the anchor but is aria-hidden, so the link name is unchanged.
+    const link = screen.getByRole('link', { name: 'A' });
+    const icon = link.querySelector('svg');
+    expect(icon).not.toBeNull();
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+  });
 });
