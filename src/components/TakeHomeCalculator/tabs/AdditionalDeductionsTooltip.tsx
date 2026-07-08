@@ -74,8 +74,8 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
         </TableContainer>
         <Typography variant="body2" sx={{ fontSize: '0.85em', color: 'text.secondary', mb: 1 }}>
           {isNational
-            ? 'These reduce your taxable income for national income tax.'
-            : 'These reduce your taxable income for residence tax. The life and earthquake insurance deductions are smaller for residence tax than for income tax.'}
+            ? 'These reduce taxable income for national income tax.'
+            : 'These reduce taxable income for residence tax. The life and earthquake insurance deductions are smaller for residence tax than for income tax.'}
         </Typography>
         {rows.map(item => {
           const info = ADDITIONAL_DEDUCTION_INFO[item.key];

@@ -295,8 +295,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       Contributions to iDeCo (individual defined contribution pension) and corporate
-                      defined contribution plans reduce your taxable income for income tax and
-                      residence tax. Employer contributions cannot be included in this deduction.
+                      defined contribution plans reduce taxable income for income tax and residence
+                      tax. Employer contributions cannot be included in this deduction.
                     </Typography>
                   </Box>
                 </DetailedTooltip>
@@ -399,8 +399,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       Taxable Income Calculation
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Taxable income is calculated by subtracting all applicable deductions from
-                      your net income.
+                      Taxable income is calculated by subtracting all applicable deductions from net
+                      income.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Formula:</strong> Net Income - Applicable Deductions = Taxable Income
@@ -460,7 +460,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 >
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A tax credit (税額控除) for homeowners with a home loan. It reduces your base
+                      A tax credit (税額控除) for homeowners with a home loan. It reduces the base
                       income tax before the reconstruction surtax is calculated.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 0.5 }}>
@@ -469,7 +469,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     </Typography>
                     {results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        Your available credit amount is larger than your income tax. The remainder
+                        The available credit amount is larger than the income tax. The remainder
                         spills over to residence tax. See the <strong>Home Loan Tax Credit</strong>{' '}
                         line under Residence Tax (below) for the spillover cap and any amount that
                         cannot be claimed.
@@ -646,7 +646,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       Taxable income for residence tax is calculated by subtracting all applicable
-                      deductions from your net income.
+                      deductions from net income.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Formula:</strong> Net Income - Applicable Deductions = Taxable Income
@@ -675,8 +675,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     Income-based Portion (所得割): 10% of Taxable Income
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    This portion is calculated as a percentage of your taxable income and split
-                    between municipal and prefectural governments.
+                    This portion is calculated as a percentage of taxable income and split between
+                    municipal and prefectural governments.
                   </Typography>
                   <ReferenceTable
                     headers={['Component', 'Rate']}
@@ -770,14 +770,14 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 >
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      When your available credit amount exceeds your income tax, the remainder
-                      spills over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500
-                      for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of your{' '}
+                      When the available credit amount exceeds the income tax, the remainder spills
+                      over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for
+                      2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of the{' '}
                       <strong>income tax</strong> taxable total income (所得税の課税総所得金額等).
                     </Typography>
                     {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>Your spillover cap:</strong>{' '}
+                        <strong>Spillover cap:</strong>{' '}
                         {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.applied)} (the
                         lower of{' '}
                         {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.flatCap)} and{' '}
@@ -789,8 +789,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     )}
                     {results.homeLoanTaxCredit.unusedCredit > 0 && (
                       <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
-                        Your available credit amount (
-                        {formatJPY(results.homeLoanTaxCredit.availableCredit)}) is more than your
+                        The available credit amount (
+                        {formatJPY(results.homeLoanTaxCredit.availableCredit)}) is more than the
                         income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus
                         this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)})
                         combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be

@@ -87,18 +87,18 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               <DetailedTooltip title="Donation Limit Explanation" icon={SIMPLE_TOOLTIP_ICON}>
                 <Box>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    This limit is the maximum donation for which your out-of-pocket cost is only
+                    This limit is the maximum donation for which the out-of-pocket cost is only
                     2,000 yen, based on the input income and other options.
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    Actual limits may vary depending on your deductions and municipality.
+                    Actual limits may vary depending on the applicable deductions and municipality.
                   </Typography>
                   <Typography variant="body2">
-                    If you claim deductions or tax credits not supported by this calculator, this
-                    limit will not be accurate for you (it will likely be too high).
+                    If deductions or tax credits not supported by this calculator are claimed, this
+                    limit will not be accurate (it will likely be too high).
                   </Typography>
                   <Box sx={{ mt: 1 }}>
-                    You can use{' '}
+                    Use{' '}
                     <a
                       href="https://kaikei7.com/furusato_nouzei_keisan/"
                       target="_blank"
@@ -131,9 +131,9 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
               <DetailedTooltip title="Income Tax Reduction" icon={SIMPLE_TOOLTIP_ICON}>
                 <Box>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    This reduction is received if you file a tax return (確定申告) including your
+                    This reduction is received when filing a tax return (確定申告) including the
                     Furusato Nozei donations. It is applied in the form of a donation deduction that
-                    reduces your taxable income.
+                    reduces taxable income.
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Donation Deduction (寄付金控除):</strong>{' '}
@@ -145,8 +145,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                     without this donation deduction.
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    If you use the One-Stop Exception system (ワンストップ特例制度), this reduction
-                    will be applied to your residence tax instead of your income tax.
+                    With the One-Stop Exception system (ワンストップ特例制度), this reduction is
+                    applied to residence tax instead of income tax.
                   </Typography>
                   <Box sx={{ mt: 1 }}>
                     <a
@@ -179,8 +179,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                     Tax Credits vs. Realized Reduction
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    The total tax credits shown on your residence tax notice may differ slightly
-                    from the effective tax reduction due to rounding in the calculation process.
+                    The total tax credits shown on the residence tax notice may differ slightly from
+                    the effective tax reduction due to rounding in the calculation process.
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>Basic Deduction (基本控除):</strong>{' '}
@@ -317,12 +317,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             ⚠️ Warning: High Out-of-Pocket Cost
           </Typography>
           <Typography variant="body2">
-            Your out-of-pocket cost is higher than the expected ≈2,000 yen. This happens if you file
-            a tax return (確定申告) when your taxable income changes income tax brackets after
-            applying the Furusato Nozei donation deduction.
+            The out-of-pocket cost is higher than the expected ≈2,000 yen. This happens when filing
+            a tax return (確定申告) if taxable income changes income tax brackets after applying the
+            Furusato Nozei donation deduction.
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-            This issue is avoided if you use the One-Stop Exception system (ワンストップ特例制度).
+            This issue is avoided by using the One-Stop Exception system (ワンストップ特例制度).
           </Typography>
         </Box>
       )}

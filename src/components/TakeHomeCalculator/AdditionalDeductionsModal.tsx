@@ -246,7 +246,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
       >
         {/* Income Deductions (所得控除) */}
         <Box>
-          <SectionHeader tooltip="Deductions (所得控除) reduce your taxable income before tax is calculated.">
+          <SectionHeader tooltip="Deductions (所得控除) reduce taxable income before tax is calculated.">
             Income Deductions (所得控除)
           </SectionHeader>
           <Card variant="outlined">
@@ -265,8 +265,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 >
                   iDeCo / Corporate DC Plan Contributions
                   <SimpleTooltip sources={['nta1135', 'mhlwDcPlanOverview']}>
-                    Contributions reduce your taxable income via the 小規模企業共済等掛金控除
-                    deduction.
+                    Contributions reduce taxable income via the 小規模企業共済等掛金控除 deduction.
                   </SimpleTooltip>
                 </Typography>
                 <SpinnerNumberField
@@ -477,10 +476,10 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               >
                 Medical Expenses (医療費控除)
                 <SimpleTooltip>
-                  Enter what you paid in medical expenses and any reimbursements (insurance payouts,
+                  Enter the medical expenses paid and any reimbursements (insurance payouts,
                   高額療養費, government subsidies, etc.). The calculator subtracts the income-based
-                  floor for you, so enter the raw amounts — not a deduction figure. This is the
-                  standard 医療費控除 only; the セルフメディケーション税制 (医療費控除の特例)
+                  floor automatically, so enter the raw amounts — not a deduction figure. This is
+                  the standard 医療費控除 only; the セルフメディケーション税制 (医療費控除の特例)
                   alternative isn&apos;t supported yet.
                 </SimpleTooltip>
               </Typography>
@@ -530,7 +529,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
 
         {/* Tax Credits (税額控除) */}
         <Box>
-          <SectionHeader tooltip="Tax credits (税額控除) reduce the tax you owe directly, after it has been calculated.">
+          <SectionHeader tooltip="Tax credits (税額控除) reduce the tax owed directly, after it has been calculated.">
             Tax Credits (税額控除)
           </SectionHeader>
           <Card variant="outlined">
@@ -565,7 +564,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     shiftStep={10_000}
                     min={0}
                     helperText={
-                      'From your withholding statement, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'
+                      'From the withholding statement, use 住宅借入金等特別控除可能額 (not 住宅借入金等特別控除の額).'
                     }
                   />
                 </FormControl>
@@ -674,12 +673,12 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     The year-end balance is capped by a{' '}
                     <strong>borrowing limit (借入限度額)</strong>. That limit depends on the home's
                     energy-efficiency standard (認定長期優良住宅, ZEH水準, 省エネ基準, or 一般住宅),
-                    your household, and your move-in year. The credit runs for{' '}
+                    family composition, and the move-in year. The credit runs for{' '}
                     <strong>10 or 13 years</strong>.
                   </Typography>
                   <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                     After the first year, this figure appears as{' '}
-                    <strong>住宅借入金等特別控除可能額</strong> on your annual withholding summary
+                    <strong>住宅借入金等特別控除可能額</strong> on the annual withholding summary
                     (源泉徴収票). To work it out for the first year, or to check the limits, see{' '}
                     <SourceLink source="mlitHomeLoanTaxReduction" /> (which has the full limit
                     table) and <SourceLink source="ntaHomeLoanCreditGuide" />.

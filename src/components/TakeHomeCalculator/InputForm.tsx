@@ -218,7 +218,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
           fontWeight: 700,
         }}
       >
-        Your Information
+        Taxpayer Information
       </Typography>
       <Box className="form-group">
         <Card variant="outlined">
@@ -554,10 +554,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </Typography>
                   <SimpleTooltip>
                     Manually enter the total social insurance amount paid in the year (e.g. Health
-                    Insurance + Pension + Employment Insurance). This option should be used only if
-                    you have a situation where the automatic calculation does not reflect your
-                    actual payments. Employees generally can find this amount on their annual
-                    withholding statement (源泉徴収票) as the item labelled 社会保険料等の金額.
+                    Insurance + Pension + Employment Insurance). This option should be used only
+                    when the automatic calculation does not reflect the taxpayer's actual payments.
+                    Employees generally can find this amount on their annual withholding statement
+                    (源泉徴収票) as the item labelled 社会保険料等の金額.
                   </SimpleTooltip>
                 </Box>
               }
@@ -596,9 +596,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 >
                   Health Insurance Provider
                   <SimpleTooltip>
-                    Your health insurance provider affects your premium calculations. Employment
-                    income workers are usually enrolled in employee health insurance, but some may
-                    be enrolled in National Health Insurance depending on factors such as employer
+                    The health insurance provider affects premium calculations. Employment income
+                    workers are usually enrolled in employee health insurance, but some may be
+                    enrolled in National Health Insurance depending on factors such as employer
                     size, work hours, and income thresholds.
                   </SimpleTooltip>
                 </Typography>
@@ -637,7 +637,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If you are covered as a dependent under employee health insurance, select "None". This is only available if your income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if income is below ¥${DEPENDENT_INCOME_THRESHOLD.toLocaleString()}.`}
                   </FormHelperText>
                 )}
               </FormControl>
@@ -689,8 +689,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       Long-term Care
                       <SimpleTooltip>
                         Enter the employee's share of the Long-term Care premium rate (usually half
-                        of the total rate). This only applies if you are aged 40-64. Look for
-                        介護保険料率 on the provider's website.
+                        of the total rate). This only applies to ages 40-64. Look for 介護保険料率
+                        on the provider's website.
                       </SimpleTooltip>
                     </Typography>
                     <SpinnerNumberField
@@ -772,7 +772,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             Additional Deductions &amp; Credits
             <SimpleTooltip>
               Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax
-              credit). These affect your income tax, residence tax, and furusato nozei limit.
+              credit). These affect income tax, residence tax, and the furusato nozei limit.
             </SimpleTooltip>
           </Typography>
           <Button

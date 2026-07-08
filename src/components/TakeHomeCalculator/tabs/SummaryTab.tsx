@@ -251,7 +251,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
                   >
                     <Box>
                       <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        Your out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)})
+                        The out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)})
                         is higher than the expected ≈2,000 yen.
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
