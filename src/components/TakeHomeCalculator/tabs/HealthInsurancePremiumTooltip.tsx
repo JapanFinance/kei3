@@ -385,7 +385,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
             Premium calculation parameters for {region} are not available in the current data.
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 1 }}>
-            National Health Insurance premiums vary by municipality. Please check with your local
+            National Health Insurance premiums vary by municipality. Please check with the local
             city/ward office for specific rates.
           </Typography>
         </Box>
@@ -411,7 +411,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
           NHI premiums are calculated using income-based rates plus per-capita amounts, with annual
           caps applied to each portion. NHI premiums are based on last year's reported income. These
-          calculations assume your income is the same as the previous year.
+          calculations assume income is the same as the previous year.
         </Typography>
 
         {ratesBlended && (
@@ -519,7 +519,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     ];
 
     const getCurrentRowSummary = (row: StandardMonthlyRemunerationBracket) => {
-      return `Your Grade: ${row.grade} (SMR: ${formatJPY(row.smrAmount)})`;
+      return `Grade: ${row.grade} (SMR: ${formatJPY(row.smrAmount)})`;
     };
 
     return (

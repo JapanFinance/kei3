@@ -45,7 +45,7 @@ export const ADDITIONAL_DEDUCTION_INFO: Record<
   medical: {
     name: 'Medical expenses',
     explanation:
-      'The deduction is your medical expenses minus any reimbursements, minus the lower of ¥100,000 and 5% of your total net income, capped at ¥2,000,000.',
+      'The deduction is the medical expenses minus any reimbursements, minus the lower of ¥100,000 and 5% of total net income, capped at ¥2,000,000.',
     sourceLabel: '医療費控除 (NTA No.1120)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm',
   },

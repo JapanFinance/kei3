@@ -550,7 +550,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 fontWeight: 500,
               }}
             >
-              Your Income: {formatJPY(currentIncome)}
+              Input Income: {formatJPY(currentIncome)}
             </Typography>
           </Box>
         )}
@@ -603,7 +603,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 color: 'primary.main',
               }}
             >
-              Your income is higher than ~
+              This income is higher than ~
               {calculateEstimatedIncomePercentile(currentIncome).toFixed(1)}% of households in
               Japan.
             </Typography>
@@ -735,8 +735,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   What are percentiles and quintiles?
                 </Typography>
                 <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
-                  <strong>Percentiles:</strong> If you're in the 70th percentile, your income is
-                  higher than 70% of all households.
+                  <strong>Percentiles:</strong> An income in the 70th percentile is higher than 70%
+                  of all households.
                 </Typography>
                 <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
                   <strong>Quintiles:</strong> The population divided into 5 equal groups (20% each),

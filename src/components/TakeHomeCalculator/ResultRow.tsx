@@ -14,7 +14,7 @@ const labelTooltips: Record<string, string> = {
   'Employment Insurance': 'Insurance for unemployment and work-related benefits.',
   'Income Tax': 'Income tax paid to the national government.',
   'Residence Tax':
-    'Local income tax paid to your local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If your income fluctuates from year to year, consider the effect on your residence tax billed in arrears.',
+    'Local income tax paid to the local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If income fluctuates from year to year, consider the effect on the residence tax billed in arrears.',
   'Total Deductions': 'Sum of all taxes and social insurance payments.',
 };
 

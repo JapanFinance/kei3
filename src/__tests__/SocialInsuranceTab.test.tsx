@@ -164,7 +164,7 @@ describe('SocialInsuranceTab', () => {
     render(<SocialInsuranceTab inputs={highIncomeInputs} results={mockResults} />);
 
     // 1. Check Health Insurance Tooltip -> Should show SMR 790,000
-    expect(screen.getAllByText(/Your Grade:/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Grade:/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/¥790,000/).length).toBeGreaterThan(0);
 
     // 2. Check Pension Tooltip -> Should show Pension SMR 650,000
