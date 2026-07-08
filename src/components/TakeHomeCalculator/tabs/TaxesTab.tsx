@@ -29,9 +29,11 @@ import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
 import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
 import {
-  getDedupedNationalBasicDeductionTiers,
+  buildNationalBasicDeductionRows,
   getNationalBasicDeductionHighlightIndex,
+  buildResidenceBasicDeductionRows,
   getResidenceBasicDeductionHighlightIndex,
+  buildNationalIncomeTaxBracketRows,
   getNationalIncomeTaxBracketHighlightIndex,
 } from './referenceTableHighlight';
 
@@ -381,20 +383,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   <ReferenceTable
                     headers={['Net Income (¥)', 'Deduction Amount']}
                     highlightedRow={nationalBasicDeductionHighlight}
-                    rows={[
-                      // Deduplicate consecutive tiers with the same deduction (shared with the
-                      // highlight-index helper so the two views can't drift apart).
-                      ...getDedupedNationalBasicDeductionTiers(basicDeductionTiers).map(tier => [
-                        `Up to ${tier.maxIncomeInclusive.toLocaleString('en')}`,
-                        tier.deduction.toLocaleString('en'),
-                      ]),
-                      [
-                        `Over ${basicDeductionTiers[
-                          basicDeductionTiers.length - 1
-                        ]!.maxIncomeInclusive.toLocaleString('en')}`,
-                        '0',
-                      ],
-                    ]}
+                    rows={buildNationalBasicDeductionRows(basicDeductionTiers)}
                   />
                   <SourceLinks
                     heading="Official Sources (NTA)"
@@ -504,15 +493,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       <ReferenceTable
                         headers={['Taxable Income (¥)', 'Tax Rate', 'Deduction (¥)']}
                         highlightedRow={incomeTaxBracketHighlight}
-                        rows={[
-                          ['Up to 1,949,000', '5%', '0'],
-                          ['1,949,001 - 3,299,000', '10%', '97,500'],
-                          ['3,299,001 - 6,949,000', '20%', '427,500'],
-                          ['6,949,001 - 8,999,000', '23%', '636,000'],
-                          ['8,999,001 - 17,999,000', '33%', '1,536,000'],
-                          ['17,999,001 - 39,999,000', '40%', '2,796,000'],
-                          ['40,000,000 and above', '45%', '4,796,000'],
-                        ]}
+                        rows={buildNationalIncomeTaxBracketRows()}
                       />
                       <SourceLinks
                         sources={[
@@ -689,12 +670,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   <ReferenceTable
                     headers={['Net Income (¥)', 'Deduction Amount']}
                     highlightedRow={residenceBasicDeductionHighlight}
-                    rows={[
-                      ['Up to 24,000,000', '430,000'],
-                      ['24,000,001 - 24,500,000', '290,000'],
-                      ['24,500,001 - 25,000,000', '150,000'],
-                      ['Over 25,000,000', '0'],
-                    ]}
+                    rows={buildResidenceBasicDeductionRows()}
                   />
                   <SourceLinks
                     sources={[

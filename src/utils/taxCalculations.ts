@@ -33,6 +33,7 @@ import { COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP } from '../constants/taxThres
 import { getCommutingAllowanceAnnualAmount } from './formatters';
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
+import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
 import {
   getEmploymentIncomeDeductionPeriod,
   calculateNetEmploymentIncomeForPeriod,
@@ -183,32 +184,23 @@ export const calculateNationalIncomeTaxBasicDeduction = (
 };
 
 /**
- * Calculates the base national income tax (before reconstruction surtax) based on taxable income
- * Source: National Tax Agency tax brackets for 2025
- * https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
+ * Calculates the base national income tax (before reconstruction surtax) from taxable income, using
+ * the shared {@link NATIONAL_INCOME_TAX_BRACKETS} speed table (net tax = income × rate − deduction).
+ * Keeping the brackets as data lets the tooltip table and its row highlight reuse the exact same
+ * bounds and amounts.
+ * Source: National Tax Agency tax brackets — https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
  */
 export const calculateNationalIncomeTaxBase = (taxableIncome: number): number => {
   // Clamp taxable income to 0 if negative
-  taxableIncome = Math.max(0, taxableIncome);
+  const clampedTaxableIncome = Math.max(0, taxableIncome);
 
-  let baseTax: number;
-  if (taxableIncome <= 1949000) {
-    baseTax = taxableIncome * 0.05;
-  } else if (taxableIncome <= 3299000) {
-    baseTax = taxableIncome * 0.1 - 97500;
-  } else if (taxableIncome <= 6949000) {
-    baseTax = taxableIncome * 0.2 - 427500;
-  } else if (taxableIncome <= 8999000) {
-    baseTax = taxableIncome * 0.23 - 636000;
-  } else if (taxableIncome <= 17999000) {
-    baseTax = taxableIncome * 0.33 - 1536000;
-  } else if (taxableIncome <= 39999000) {
-    baseTax = taxableIncome * 0.4 - 2796000;
-  } else {
-    baseTax = taxableIncome * 0.45 - 4796000;
+  for (const bracket of NATIONAL_INCOME_TAX_BRACKETS) {
+    if (clampedTaxableIncome <= bracket.maxTaxableIncomeInclusive) {
+      return clampedTaxableIncome * bracket.rate - bracket.deduction;
+    }
   }
 
-  return baseTax;
+  return 0; // Unreachable: the final bracket's bound is Infinity
 };
 
 /**
