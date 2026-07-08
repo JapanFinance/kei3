@@ -21,13 +21,20 @@ import { formatJPY } from '../../../utils/formatters';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import WarningIcon from '@mui/icons-material/Warning';
 import { DetailedTooltip } from '../../ui/Tooltips';
-import SourceLinks from '../../ui/SourceLinks';
 import ReferenceTable from '../../ui/ReferenceTable';
 import { ResultRow } from '../ResultRow';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
-import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
+import {
+  getNationalBasicDeductionTiers,
+  NATIONAL_BASIC_DEDUCTION_SOURCE_IDS,
+} from '../../../data/nationalBasicDeduction';
+import { HOME_LOAN_TAX_CREDIT_SOURCE_IDS } from '../../../data/homeLoanTaxCredit';
+import {
+  NATIONAL_DEPENDENT_DEDUCTION_SOURCE_IDS,
+  RESIDENCE_DEPENDENT_DEDUCTION_SOURCE_IDS,
+} from '../../../utils/dependentDeductions';
 
 interface TaxesTabProps {
   results: TakeHomeResults;
@@ -90,46 +97,6 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
         <Typography variant="body2" sx={{ mb: 2, fontStyle: 'italic' }}>
           No dependent deductions applied.
         </Typography>
-      )}
-      {isNational ? (
-        <SourceLinks
-          heading="Official Sources (NTA)"
-          sources={[
-            {
-              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm',
-              label: '扶養控除 (Dependent Deduction)',
-            },
-            {
-              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1177.htm',
-              label: '特定親族特別控除 (Specific Relative Special Deduction)',
-            },
-            {
-              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm',
-              label: '配偶者控除 (Spouse Deduction)',
-            },
-            {
-              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm',
-              label: '配偶者特別控除 (Spouse Special Deduction)',
-            },
-            {
-              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm',
-              label: '障害者控除 (Disability Deduction)',
-            },
-          ]}
-        />
-      ) : (
-        <SourceLinks
-          sources={[
-            {
-              href: 'https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html',
-              label: '人的控除 (Residence tax deduction amounts - Nerima City)',
-            },
-            {
-              href: 'https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html',
-              label: '令和7年度税制改正 (2025 Tax Reform - Nerima City)',
-            },
-          ]}
-        />
       )}
     </Box>
   );
@@ -213,7 +180,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <span>
                 Net Business / Misc Income
                 {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
-                  <DetailedTooltip title="Business & Miscellaneous Income">
+                  <DetailedTooltip title="Business & Miscellaneous Income" sources={['nta2072']}>
                     <Box>
                       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                         Calculation Breakdown
@@ -266,14 +233,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           Return. This amount is deducted from business income after expenses before
                           calculating taxable income.
                         </Typography>
-                        <SourceLinks
-                          sources={[
-                            {
-                              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm',
-                              label: '青色申告特別控除 - NTA',
-                            },
-                          ]}
-                        />
                       </Box>
                     </Box>
                   </DetailedTooltip>
@@ -300,7 +259,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 iDeCo/Corp DC Deduction
-                <DetailedTooltip title="iDeCo and Corporate DC Contributions">
+                <DetailedTooltip
+                  title="iDeCo and Corporate DC Contributions"
+                  sources={['nta1135', 'mhlwDcPlanOverview']}
+                >
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Small Enterprise Mutual Aid Contribution Deduction (小規模企業共済等掛金控除)
@@ -310,18 +272,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       defined contribution plans reduce your taxable income for income tax and
                       residence tax. Employer contributions cannot be included in this deduction.
                     </Typography>
-                    <SourceLinks
-                      sources={[
-                        {
-                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1135.htm',
-                          label: '小規模企業共済等掛金控除 (NTA)',
-                        },
-                        {
-                          href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html',
-                          label: '確定拠出年金制度の概要 (MHLW)',
-                        },
-                      ]}
-                    />
                   </Box>
                 </DetailedTooltip>
               </span>
@@ -353,7 +303,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           label={
             <span>
               Basic Deduction
-              <DetailedTooltip title="National Income Tax Basic Deduction">
+              <DetailedTooltip
+                title="National Income Tax Basic Deduction"
+                sources={NATIONAL_BASIC_DEDUCTION_SOURCE_IDS}
+              >
                 <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
                   <ReferenceTable
                     headers={['Net Income (¥)', 'Deduction Amount']}
@@ -376,19 +329,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       ],
                     ]}
                   />
-                  <SourceLinks
-                    heading="Official Sources (NTA)"
-                    sources={[
-                      {
-                        href: 'https://www.nta.go.jp/users/gensen/2025kiso/index.htm#a-01',
-                        label: '令和７年度税制改正による所得税の基礎控除の見直し等について',
-                      },
-                      {
-                        href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm',
-                        label: '基礎控除',
-                      },
-                    ]}
-                  />
                 </Box>
               </DetailedTooltip>
             </span>
@@ -402,7 +342,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Dependent Deductions
-                <DetailedTooltip title="Dependent-Related Deductions (National Tax)">
+                <DetailedTooltip
+                  title="Dependent-Related Deductions (National Tax)"
+                  sources={NATIONAL_DEPENDENT_DEDUCTION_SOURCE_IDS}
+                >
                   <DependentDeductionTooltip
                     deductions={results.dependentDeductions}
                     taxType="national"
@@ -436,7 +379,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Taxable Income
-                <DetailedTooltip title="Taxable Income for National Income Tax">
+                <DetailedTooltip
+                  title="Taxable Income for National Income Tax"
+                  sources={['nta2260']}
+                >
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Taxable Income Calculation
@@ -452,14 +398,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       <strong>Rounding:</strong> The taxable income is rounded down to the nearest
                       1,000 yen before applying tax rates.
                     </Typography>
-                    <SourceLinks
-                      sources={[
-                        {
-                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm',
-                          label: '所得税の税率 - NTA',
-                        },
-                      ]}
-                    />
                   </Box>
                 </DetailedTooltip>
               </span>
@@ -474,7 +412,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Base Income Tax
-                <DetailedTooltip title="Base Income Tax">
+                <DetailedTooltip title="Base Income Tax" sources={['nta2260']}>
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       This is the income tax calculated using the standard progressive tax brackets,
@@ -493,14 +431,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           ['40,000,000 and above', '45%', '4,796,000'],
                         ]}
                       />
-                      <SourceLinks
-                        sources={[
-                          {
-                            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm',
-                            label: '所得税の税率 - NTA',
-                          },
-                        ]}
-                      />
                     </Box>
                   </Box>
                 </DetailedTooltip>
@@ -516,7 +446,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Home Loan Tax Credit
-                <DetailedTooltip title="Home Loan Tax Credit — Income Tax Portion">
+                <DetailedTooltip
+                  title="Home Loan Tax Credit — Income Tax Portion"
+                  sources={HOME_LOAN_TAX_CREDIT_SOURCE_IDS}
+                >
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       A tax credit (税額控除) for homeowners with a home loan. It reduces your base
@@ -534,18 +467,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         cannot be claimed.
                       </Typography>
                     )}
-                    <SourceLinks
-                      sources={[
-                        {
-                          href: 'https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm',
-                          label: '住宅借入金等特別控除 - NTA',
-                        },
-                        {
-                          href: 'https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html',
-                          label: '住宅ローン減税 - 国土交通省 (MLIT)',
-                        },
-                      ]}
-                    />
                   </Box>
                 </DetailedTooltip>
               </span>
@@ -560,7 +481,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Reconstruction Surtax
-                <DetailedTooltip title="Special Reconstruction Surtax">
+                <DetailedTooltip
+                  title="Special Reconstruction Surtax"
+                  sources={['nta2260', 'ntaReconstructionSurtax']}
+                >
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       復興特別所得税
@@ -578,18 +502,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Period:</strong> January 1, 2013 - December 31, 2037 (25 years)
                     </Typography>
-                    <SourceLinks
-                      sources={[
-                        {
-                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm',
-                          label: '所得税の税率 - NTA',
-                        },
-                        {
-                          href: 'https://www.nta.go.jp/publication/pamph/shotoku/fukko_tokubetsu/index.htm',
-                          label: '個人の方に係る復興特別所得税のあらまし - NTA',
-                        },
-                      ]}
-                    />
                   </Box>
                 </DetailedTooltip>
               </span>
@@ -603,7 +515,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           label={
             <span>
               Total Income Tax
-              <DetailedTooltip title="Total Income Tax Calculation">
+              <DetailedTooltip title="Total Income Tax Calculation" sources={['nta2260']}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                     Total Income Tax = Base Income Tax (− Tax Credits) + Reconstruction Surtax
@@ -612,14 +524,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     <strong>Rounding:</strong> The sum of base income tax and surtax is rounded down
                     to the nearest 100 yen for the final amount.
                   </Typography>
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm',
-                        label: '所得税の税率 - NTA',
-                      },
-                    ]}
-                  />
                 </Box>
               </DetailedTooltip>
             </span>
@@ -663,26 +567,19 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           label={
             <span>
               Basic Deduction
-              <DetailedTooltip title="Residence Tax Basic Deduction">
-                <>
-                  <ReferenceTable
-                    headers={['Net Income (¥)', 'Deduction Amount']}
-                    rows={[
-                      ['Up to 24,000,000', '430,000'],
-                      ['24,000,001 - 24,500,000', '290,000'],
-                      ['24,500,001 - 25,000,000', '150,000'],
-                      ['Over 25,000,000', '0'],
-                    ]}
-                  />
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: 'https://www.city.yokohama.lg.jp/kurashi/koseki-zei-hoken/zeikin/y-shizei/kojin-shiminzei-kenminzei/kaisei/R3zeiseikaisei.html#4',
-                        label: '令和3年度税制改正 (2021 Tax Reform - Yokohama City)',
-                      },
-                    ]}
-                  />
-                </>
+              <DetailedTooltip
+                title="Residence Tax Basic Deduction"
+                sources={['yokohamaResidenceTaxReform2021']}
+              >
+                <ReferenceTable
+                  headers={['Net Income (¥)', 'Deduction Amount']}
+                  rows={[
+                    ['Up to 24,000,000', '430,000'],
+                    ['24,000,001 - 24,500,000', '290,000'],
+                    ['24,500,001 - 25,000,000', '150,000'],
+                    ['Over 25,000,000', '0'],
+                  ]}
+                />
               </DetailedTooltip>
             </span>
           }
@@ -695,7 +592,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Dependent Deductions
-                <DetailedTooltip title="Dependent-Related Deductions (Residence Tax)">
+                <DetailedTooltip
+                  title="Dependent-Related Deductions (Residence Tax)"
+                  sources={RESIDENCE_DEPENDENT_DEDUCTION_SOURCE_IDS}
+                >
                   <DependentDeductionTooltip
                     deductions={results.dependentDeductions}
                     taxType="residence"
@@ -729,7 +629,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Taxable Income
-                <DetailedTooltip title="Taxable Income for Residence Tax">
+                <DetailedTooltip
+                  title="Taxable Income for Residence Tax"
+                  sources={['tokyoResidenceTax']}
+                >
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Taxable Income Calculation
@@ -745,14 +648,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       <strong>Rounding:</strong> The taxable income is rounded down to the nearest
                       1,000 yen before applying tax rates.
                     </Typography>
-                    <SourceLinks
-                      sources={[
-                        {
-                          href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
-                          label: '個人住民税 (Tokyo Bureau of Taxation)',
-                        },
-                      ]}
-                    />
                   </Box>
                 </DetailedTooltip>
               </span>
@@ -767,7 +662,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           label={
             <span>
               Income-based Portion
-              <DetailedTooltip title="Income-based Residence Tax">
+              <DetailedTooltip title="Income-based Residence Tax" sources={['tokyoResidenceTax']}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                     Income-based Portion (所得割): 10% of Taxable Income
@@ -788,14 +683,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     <strong>Rounding:</strong> The municipal and prefectural portions are each
                     rounded down to the nearest 100 yen after applying any tax credits.
                   </Typography>
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
-                        label: '個人住民税 (Tokyo Bureau of Taxation)',
-                      },
-                    ]}
-                  />
                 </Box>
               </DetailedTooltip>
             </span>
@@ -870,7 +757,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     }}
                   />
                 )}
-                <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
+                <DetailedTooltip
+                  title="Home Loan Tax Credit — Residence Tax Spillover"
+                  sources={HOME_LOAN_TAX_CREDIT_SOURCE_IDS}
+                >
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       When your available credit amount exceeds your income tax, the remainder
@@ -918,7 +808,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           label={
             <span>
               Per Capita Portion
-              <DetailedTooltip title="Per Capita Residence Tax">
+              <DetailedTooltip title="Per Capita Residence Tax" sources={['tokyoResidenceTax']}>
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                     Per Capita Portion (均等割): Fixed Amount
@@ -939,14 +829,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     <strong>Purpose:</strong> Covers basic administrative costs and local services
                     that benefit all residents equally.
                   </Typography>
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
-                        label: '個人住民税 (Tokyo Bureau of Taxation)',
-                      },
-                    ]}
-                  />
                 </Box>
               </DetailedTooltip>
             </span>

@@ -10,6 +10,7 @@ import { getProviderDefinition } from '../../../data/employeesHealthInsurance/pr
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
+import SourceFooter from '../../ui/SourceFooter';
 
 interface HealthInsuranceBonusTooltipProps {
   inputs: TakeHomeInputs;
@@ -151,21 +152,10 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
         </Typography>
       </Box>
 
-      {/* Source Link */}
-      {sourceUrl && (
-        <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">
-            <strong>Source:</strong>{' '}
-            <a
-              href={sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'inherit', textDecoration: 'underline' }}
-            >
-              {providerLabel} Premium Rates
-            </a>
-          </Typography>
-        </Box>
+      {sourceUrl !== undefined && (
+        <SourceFooter
+          sources={[{ org: providerLabel, title: 'Premium rate table', url: sourceUrl }]}
+        />
       )}
     </>
   );

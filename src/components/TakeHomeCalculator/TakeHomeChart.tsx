@@ -42,6 +42,7 @@ import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type { Dependent } from '../../types/dependents';
 import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
 import { DetailedTooltip } from '../ui/Tooltips';
+import SourceLink from '../ui/SourceLink';
 import { detectCaps } from '../../utils/capDetection';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
@@ -708,16 +709,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 variant="body2"
                 sx={{ mt: 1.5, mb: 1.5, fontSize: '0.9rem', fontStyle: 'italic' }}
               >
-                Data source:{' '}
-                <a
-                  href="https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa24/index.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'inherit', textDecoration: 'underline' }}
-                >
-                  Ministry of Health, Labour and Welfare's 2024 Comprehensive Survey of Living
-                  Conditions
-                </a>
+                Data source: <SourceLink source="mhlwLivingConditionsSurvey2024" />
               </Typography>
 
               {/* Explanation of quintiles and percentiles */}

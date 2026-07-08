@@ -12,8 +12,8 @@
  * The threshold tracks changes to the basic deduction (基礎控除) — when the basic
  * deduction is raised, this threshold is raised by the same amount.
  *
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm — 扶養控除
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm — 配偶者控除
+ * Sources: OFFICIAL_SOURCES.nta1180 (扶養控除) and OFFICIAL_SOURCES.nta1191 (配偶者控除) in
+ * `data/officialSources.ts`.
  */
 
 export interface DependentDeductionThresholdPeriod {

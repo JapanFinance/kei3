@@ -8,9 +8,9 @@
  * rather than being folded into a single combined figure.
  *
  * Sources:
- *   - 生命保険料控除 (national): NTA No.1140 https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1140.htm
+ *   - 生命保険料控除 (national): OFFICIAL_SOURCES.nta1140 in `data/officialSources.ts`
  *   - 生命保険料控除 (residence): 練馬区 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/seimeihokenryokojo.html
- *   - 地震保険料控除 (national): NTA No.1145 https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1145.htm
+ *   - 地震保険料控除 (national): OFFICIAL_SOURCES.nta1145 in `data/officialSources.ts`
  *   - 地震保険料控除 (residence): 練馬区 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jishinhokenryoukojo.html
  *
  * These figures have been stable since the 新契約 regime began in 2012 (life) and the

@@ -7,9 +7,17 @@
  * The contribution is a fixed monthly amount set per fiscal year (April–March).
  * Assumes monthly payment (毎月納付), the default payment method with no advance discount.
  *
- * Source: https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html
+ * Sources: {@link NATIONAL_PENSION_CONTRIBUTION_SOURCE_IDS} (also shown to users by the National
+ * Pension tooltip).
  * Historical rates: https://www.nenkin.go.jp/service/kokunen/hokenryo/hensen.html
  */
+
+import type { OfficialSourceId } from './officialSources';
+
+/** The official sources behind the contribution amounts in this module. */
+export const NATIONAL_PENSION_CONTRIBUTION_SOURCE_IDS: OfficialSourceId[] = [
+  'jpsNationalPensionPremium',
+];
 
 export interface NationalPensionContributionPeriod {
   /** The date from which this rate applies (inclusive). Month is 0-indexed (0=Jan, 3=Apr). */

@@ -6,7 +6,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import Link from '@mui/material/Link';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
@@ -29,6 +28,7 @@ import {
   DEPENDENT_AGE_CATEGORIES,
 } from '../../../types/dependents';
 import { SimpleTooltip } from '../../ui/Tooltips';
+import SourceLink from '../../ui/SourceLink';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { formatJPY } from '../../../utils/formatters';
 import {
@@ -374,14 +374,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           ))}
         </Select>
         <FormHelperText>
-          See{' '}
-          <Link
-            href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            NTA disability deduction guide
-          </Link>
+          See <SourceLink source="nta1160" />
         </FormHelperText>
       </FormControl>
 

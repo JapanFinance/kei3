@@ -38,6 +38,7 @@ import type {
 } from '../../types/tax';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip, DetailedTooltip } from '../ui/Tooltips';
+import SourceLink from '../ui/SourceLink';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import {
   earliestEligibleMoveInYear,
@@ -109,20 +110,8 @@ const DeductionCalcTooltip: React.FC<{ infoKey: keyof typeof ADDITIONAL_DEDUCTIO
 }) => {
   const info = ADDITIONAL_DEDUCTION_INFO[infoKey];
   return (
-    <DetailedTooltip title={info.name} icon={SIMPLE_TOOLTIP_ICON}>
-      <Box>
-        <Typography variant="body2">{info.explanation}</Typography>
-        <Box sx={{ mt: 1 }}>
-          <a
-            href={info.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-          >
-            {info.sourceLabel}
-          </a>
-        </Box>
-      </Box>
+    <DetailedTooltip title={info.name} icon={SIMPLE_TOOLTIP_ICON} sources={info.sources}>
+      <Typography variant="body2">{info.explanation}</Typography>
     </DetailedTooltip>
   );
 };
@@ -274,15 +263,11 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     color: 'text.primary',
                   }}
                 >
-                  <a
-                    href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit', fontWeight: 500 }}
-                  >
-                    iDeCo / Corporate DC Plan
-                  </a>
-                  {' '}Contributions
+                  iDeCo / Corporate DC Plan Contributions
+                  <SimpleTooltip sources={['nta1135', 'mhlwDcPlanOverview']}>
+                    Contributions reduce your taxable income via the 小規模企業共済等掛金控除
+                    deduction.
+                  </SimpleTooltip>
                 </Typography>
                 <SpinnerNumberField
                   id="dcPlanContributions"
@@ -617,27 +602,19 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   label={
                     <Typography variant="body2" component="span" sx={{ fontSize: '0.85rem' }}>
                       Purchase subject to consumption tax? (特定取得)
-                      <DetailedTooltip title="特定取得" icon={SIMPLE_TOOLTIP_ICON}>
-                        <Box>
-                          <Typography variant="body2">
-                            Check this if consumption tax was charged on the purchase — i.e. a new
-                            build, or a pre-owned home bought from a consumption tax-collecting
-                            business. Uncheck it if no consumption tax was charged, such as a
-                            pre-owned home bought from a private individual. For 2014–2021 move-ins
-                            this changes the residence tax spillover cap (特定取得 → 7% / ¥136,500;
-                            non-特定取得 → 5% / ¥97,500).
-                          </Typography>
-                          <Box sx={{ mt: 1 }}>
-                            <a
-                              href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/090929.html"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-                            >
-                              総務省: 個人住民税の住宅ローン控除
-                            </a>
-                          </Box>
-                        </Box>
+                      <DetailedTooltip
+                        title="特定取得"
+                        icon={SIMPLE_TOOLTIP_ICON}
+                        sources={['micResidenceTaxHomeLoanCredit']}
+                      >
+                        <Typography variant="body2">
+                          Check this if consumption tax was charged on the purchase — i.e. a new
+                          build, or a pre-owned home bought from a consumption tax-collecting
+                          business. Uncheck it if no consumption tax was charged, such as a
+                          pre-owned home bought from a private individual. For 2014–2021 move-ins
+                          this changes the residence tax spillover cap (特定取得 → 7% / ¥136,500;
+                          non-特定取得 → 5% / ¥97,500).
+                        </Typography>
                       </DetailedTooltip>
                     </Typography>
                   }
@@ -703,25 +680,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
                     After the first year, this figure appears as{' '}
                     <strong>住宅借入金等特別控除可能額</strong> on your annual withholding summary
-                    (源泉徴収票). To work it out for the first year, or to check the limits, see the{' '}
-                    <a
-                      href="https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'inherit', textDecoration: 'underline' }}
-                    >
-                      MLIT overview
-                    </a>{' '}
-                    (which has the full limit table) and the{' '}
-                    <a
-                      href="https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/keisubetsu/juutaku.htm"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'inherit', textDecoration: 'underline' }}
-                    >
-                      NTA guide
-                    </a>
-                    .
+                    (源泉徴収票). To work it out for the first year, or to check the limits, see{' '}
+                    <SourceLink source="mlitHomeLoanTaxReduction" /> (which has the full limit
+                    table) and <SourceLink source="ntaHomeLoanCreditGuide" />.
                   </Typography>
                 </AccordionDetails>
               </Accordion>

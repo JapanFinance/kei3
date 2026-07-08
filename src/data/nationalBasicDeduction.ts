@@ -7,8 +7,17 @@
  * The deduction is determined by the taxpayer's net income (合計所得金額).
  * Each tier lists the maximum net income (inclusive) and the corresponding deduction amount.
  *
- * Source: NTA overview: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm
+ * Sources: {@link NATIONAL_BASIC_DEDUCTION_SOURCE_IDS} (also shown to users by the Basic
+ * Deduction tooltip); per-period statute deep links are in the comments below.
  */
+
+import type { OfficialSourceId } from './officialSources';
+
+/** The official sources behind the tier tables in this module. */
+export const NATIONAL_BASIC_DEDUCTION_SOURCE_IDS: OfficialSourceId[] = [
+  'ntaBasicDeduction2025Reform',
+  'nta1199',
+];
 
 export interface BasicDeductionTier {
   /** Maximum net income (inclusive) for this tier, in yen */

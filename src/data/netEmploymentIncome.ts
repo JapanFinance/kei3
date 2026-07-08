@@ -14,10 +14,21 @@
  *    {@link import("../utils/dependentDeductions").hasIncomeAdjustmentDeductionDependent}, and the two are
  *    combined in `taxCalculations.ts`.
  *
- * Sources:
- *  - 給与所得控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
- *  - 所得金額調整控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
+ * Sources: {@link EMPLOYMENT_INCOME_DEDUCTION_SOURCE_IDS} and
+ * {@link INCOME_ADJUSTMENT_DEDUCTION_SOURCE_IDS} (also shown to users by the Net Employment
+ * Income tooltip).
  */
+
+import type { OfficialSourceId } from './officialSources';
+
+/** The official sources behind the 給与所得控除 tables in this module. */
+export const EMPLOYMENT_INCOME_DEDUCTION_SOURCE_IDS: OfficialSourceId[] = [
+  'nta1410',
+  'ntaEmploymentIncomeDeductionEn',
+];
+
+/** The official sources behind the 所得金額調整控除 computation in this module. */
+export const INCOME_ADJUSTMENT_DEDUCTION_SOURCE_IDS: OfficialSourceId[] = ['nta1411'];
 
 /** One tier in the standard percentage-formula region. */
 export interface EmploymentIncomeStandardTier {
