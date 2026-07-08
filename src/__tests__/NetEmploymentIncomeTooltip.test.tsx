@@ -48,4 +48,21 @@ describe('NetEmploymentIncomeTooltip', () => {
     expect(screen.getByText(`-${formatJPY(150_000)}`)).toBeInTheDocument(); // 所得金額調整控除
     expect(screen.getByText(formatJPY(7_900_000))).toBeInTheDocument(); // Net
   });
+
+  it('highlights the deduction-table row that applies to the gross income', () => {
+    // gross 10M (2026) → above the 8,500,000 tier, so the "8,500,001 and above" cap row is current.
+    render(
+      <NetEmploymentIncomeTooltip
+        grossEmploymentIncome={10_000_000}
+        netEmploymentIncome={8_050_000}
+        year={2026}
+      />,
+    );
+
+    const marked = Array.from(document.querySelectorAll('tbody tr')).filter(
+      tr => tr.getAttribute('aria-current') === 'true',
+    );
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toHaveTextContent('8,500,001 and above');
+  });
 });

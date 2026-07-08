@@ -9,25 +9,18 @@ import {
   calculateDependentTotalNetIncome,
   getDependentEligibilityMax,
 } from './dependentDeductions';
+import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
 
 /**
- * Calculates the basic deduction (基礎控除) for residence tax based on income
- * Source: https://www.machi-gr-blog.com/【住民税】給与所得控除・基礎控除の改正でどう変わる？/
- * - 430,000 yen for income up to 24,000,000 yen
- * - 290,000 yen for income between 24,000,001 and 24,500,000 yen
- * - 150,000 yen for income between 24,500,001 and 25,000,000 yen
- * - 0 yen for income above 25,000,000 yen
+ * Calculates the basic deduction (基礎控除) for residence tax from net income, using the shared
+ * {@link RESIDENCE_TAX_BASIC_DEDUCTION_TIERS} (net income above the last tier → 0). Keeping the
+ * tiers as data lets the tooltip table and its row highlight reuse the exact same numbers.
  */
 export const calculateResidenceTaxBasicDeduction = (netIncome: number): number => {
-  if (netIncome <= 24000000) {
-    return 430000;
-  } else if (netIncome <= 24500000) {
-    return 290000;
-  } else if (netIncome <= 25000000) {
-    return 150000;
-  } else {
-    return 0;
+  for (const tier of RESIDENCE_TAX_BASIC_DEDUCTION_TIERS) {
+    if (netIncome <= tier.maxIncomeInclusive) return tier.deduction;
   }
+  return 0;
 };
 
 const RESIDENCE_TAX_RATE = 0.1;
