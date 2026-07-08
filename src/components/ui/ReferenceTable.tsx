@@ -3,16 +3,12 @@
 
 import React from 'react';
 import Box from '@mui/material/Box';
-import type { SxProps, Theme } from '@mui/material/styles';
-import { mergeSx } from '../../utils/sx';
 
 interface ReferenceTableProps {
   /** Column headings, one per column. */
   headers: React.ReactNode[];
   /** Table body: an array of rows, each an array of cells matching the header count. */
   rows: React.ReactNode[][];
-  /** Overrides/extends the table styling. */
-  sx?: SxProps<Theme>;
 }
 
 /**
@@ -20,26 +16,23 @@ interface ReferenceTableProps {
  * tiers, tax brackets, per-capita amounts, …). Feed it `headers` and `rows` as data; the borders,
  * padding and font sizing are baked in so every tooltip table renders identically.
  */
-const ReferenceTable: React.FC<ReferenceTableProps> = ({ headers, rows, sx }) => (
+const ReferenceTable: React.FC<ReferenceTableProps> = ({ headers, rows }) => (
   <Box
     component="table"
-    sx={mergeSx(
-      {
-        borderCollapse: 'collapse',
-        width: '100%',
-        fontSize: '0.95em',
-        '& td': {
-          padding: '2px 6px',
-        },
-        '& th': {
-          borderBottom: 1,
-          borderColor: 'divider',
-          padding: '2px 6px',
-          textAlign: 'left',
-        },
+    sx={{
+      borderCollapse: 'collapse',
+      width: '100%',
+      fontSize: '0.95em',
+      '& td': {
+        padding: '2px 6px',
       },
-      sx,
-    )}
+      '& th': {
+        borderBottom: 1,
+        borderColor: 'divider',
+        padding: '2px 6px',
+        textAlign: 'left',
+      },
+    }}
   >
     <thead>
       <tr>

@@ -252,11 +252,7 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
       )}
 
       {officialSourceLink && (
-        <SourceLinks
-          heading="Official Source:"
-          sx={{ mt: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}
-          sources={[{ href: officialSourceLink.url, label: officialSourceLink.text }]}
-        />
+        <SourceLinks sources={[{ href: officialSourceLink.url, label: officialSourceLink.text }]} />
       )}
     </Box>
   );

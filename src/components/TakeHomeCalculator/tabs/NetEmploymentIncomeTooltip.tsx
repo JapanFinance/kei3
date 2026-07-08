@@ -154,7 +154,6 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
             <strong>Rounding:</strong> Fractional yen amounts are rounded up.
           </Typography>
           <SourceLinks
-            heading="Official Source:"
             sources={[
               {
                 href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm',

@@ -599,7 +599,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 salary. The employer also contributes to employment insurance separately.
               </Typography>
               <SourceLinks
-                heading="Official Source:"
                 sources={[
                   {
                     href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000108634.html',

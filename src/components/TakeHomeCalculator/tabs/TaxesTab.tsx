@@ -93,7 +93,7 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
       )}
       {isNational ? (
         <SourceLinks
-          heading="Official NTA Sources:"
+          heading="Official Sources (NTA):"
           sources={[
             {
               href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm',
@@ -675,11 +675,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     ]}
                   />
                   <SourceLinks
-                    heading={null}
                     sources={[
                       {
                         href: 'https://www.city.yokohama.lg.jp/kurashi/koseki-zei-hoken/zeikin/y-shizei/kojin-shiminzei-kenminzei/kaisei/R3zeiseikaisei.html#4',
-                        label: 'Official Source (Yokohama City)',
+                        label: '令和3年度税制改正 (2021 Tax Reform - Yokohama City)',
                       },
                     ]}
                   />

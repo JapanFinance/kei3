@@ -91,8 +91,6 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year })
         </tbody>
       </table>
       <SourceLinks
-        heading="Source:"
-        sx={{ mt: 1, fontSize: '0.85rem' }}
         sources={[
           {
             href: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01',
