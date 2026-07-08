@@ -3,7 +3,19 @@
 
 import React from 'react';
 import Box from '@mui/material/Box';
-import { HIGHLIGHTED_ROW_SX } from './tableRowHighlight';
+import type { SxProps, Theme } from '@mui/material/styles';
+
+/**
+ * The calm "this is your row" highlight for the row the current taxpayer falls in (see
+ * `highlightedRow`): a tinted background plus a slightly heavier weight, sized for these short,
+ * fully-visible tables. It reads quieter than the SMR premium table
+ * ({@link import('../TakeHomeCalculator/tabs/SMRTableTooltip').default}), whose `primary.main`
+ * background and scale transform are tuned for spotting one row inside a 47-row scrollable list.
+ */
+const HIGHLIGHTED_ROW_SX: SxProps<Theme> = {
+  bgcolor: 'action.selected',
+  fontWeight: 600,
+};
 
 interface ReferenceTableProps {
   /** Column headings, one per column. */
