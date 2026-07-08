@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { getNationalPensionMonthlyContribution } from '../../../data/nationalPensionContribution';
 import { formatJPY } from '../../../utils/formatters';
+import SourceLinks from '../../ui/SourceLinks';
 
 const formatMonthShort = (month: number): string =>
   new Date(2000, month).toLocaleString('en', { month: 'short' });
@@ -89,17 +90,14 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year })
           </tr>
         </tbody>
       </table>
-      <Box sx={{ mt: 1, fontSize: '0.85rem' }}>
-        Source:{' '}
-        <a
-          href="https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
-        >
-          国民年金保険料の金額 (Japan Pension Service)
-        </a>
-      </Box>
+      <SourceLinks
+        sources={[
+          {
+            href: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01',
+            label: '国民年金保険料の金額 (Japan Pension Service)',
+          },
+        ]}
+      />
     </Box>
   );
 };

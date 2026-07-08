@@ -1,0 +1,58 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import React from 'react';
+import Box from '@mui/material/Box';
+
+interface ReferenceTableProps {
+  /** Column headings, one per column. */
+  headers: React.ReactNode[];
+  /** Table body: an array of rows, each an array of cells matching the header count. */
+  rows: React.ReactNode[][];
+}
+
+/**
+ * The compact two/three-column reference table used across the calculator tooltips (deduction
+ * tiers, tax brackets, per-capita amounts, …). Feed it `headers` and `rows` as data; the borders,
+ * padding and font sizing are baked in so every tooltip table renders identically.
+ */
+const ReferenceTable: React.FC<ReferenceTableProps> = ({ headers, rows }) => (
+  <Box
+    component="table"
+    sx={{
+      borderCollapse: 'collapse',
+      width: '100%',
+      fontSize: '0.95em',
+      '& td': {
+        padding: '2px 6px',
+      },
+      '& th': {
+        borderBottom: 1,
+        borderColor: 'divider',
+        padding: '2px 6px',
+        textAlign: 'left',
+      },
+    }}
+  >
+    <thead>
+      <tr>
+        {headers.map((header, i) => (
+          <th key={i} scope="col">
+            {header}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row, ri) => (
+        <tr key={ri}>
+          {row.map((cell, ci) => (
+            <td key={ci}>{cell}</td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </Box>
+);
+
+export default ReferenceTable;

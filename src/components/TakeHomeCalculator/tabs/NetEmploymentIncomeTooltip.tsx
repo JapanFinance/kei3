@@ -7,6 +7,8 @@ import Typography from '@mui/material/Typography';
 import { getEmploymentIncomeDeductionPeriod } from '../../../data/netEmploymentIncome';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import SourceLinks from '../../ui/SourceLinks';
+import ReferenceTable from '../../ui/ReferenceTable';
 
 const fmtNum = (n: number) => n.toLocaleString('en');
 
@@ -117,75 +119,25 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
         Employment Income Deduction Table
       </Typography>
-      <Box
-        component="table"
-        sx={{
-          borderCollapse: 'collapse',
-          width: '100%',
-          fontSize: '0.95em',
-          '& td': {
-            padding: '2px 6px',
+      <ReferenceTable
+        headers={['Gross Employment Income (¥)', 'Deduction Amount']}
+        rows={[
+          [`Up to ${fmtNum(flatUpperBound)}`, fmtNum(period.flatFloorDeduction)],
+          ...tierRows.map(row => [row.range, row.deduction]),
+        ]}
+      />
+      <SourceLinks
+        sources={[
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm',
+            label: '給与所得控除 - NTA',
           },
-          '& th': {
-            borderBottom: 1,
-            borderColor: 'divider',
-            padding: '2px 6px',
-            textAlign: 'left',
+          {
+            href: 'https://www.nta.go.jp/english/taxes/individual/12012.htm',
+            label: 'Overview of deduction for employment income - NTA (English)',
           },
-        }}
-      >
-        <thead>
-          <tr>
-            <th>Gross Employment Income (¥)</th>
-            <th>Deduction Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Up to {fmtNum(flatUpperBound)}</td>
-            <td>{fmtNum(period.flatFloorDeduction)}</td>
-          </tr>
-          {tierRows.map((row, i) => (
-            <tr key={i}>
-              <td>{row.range}</td>
-              <td>{row.deduction}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Box>
-      <Box sx={{ mt: 1 }}>
-        Official Sources:
-        <ul>
-          <li>
-            <a
-              href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'var(--primary-main)',
-                textDecoration: 'underline',
-                fontSize: '0.95em',
-              }}
-            >
-              給与所得控除 - NTA
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://www.nta.go.jp/english/taxes/individual/12012.htm"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                color: 'var(--primary-main)',
-                textDecoration: 'underline',
-                fontSize: '0.95em',
-              }}
-            >
-              Overview of deduction for employment income - NTA (English)
-            </a>
-          </li>
-        </ul>
-      </Box>
+        ]}
+      />
 
       {incomeAdjustmentDeduction > 0 && (
         <Box sx={{ mt: 1.5 }}>
@@ -201,25 +153,14 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
           <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>Rounding:</strong> Fractional yen amounts are rounded up.
           </Typography>
-          <Box sx={{ mt: 1 }}>
-            Official Source:
-            <ul>
-              <li>
-                <a
-                  href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    color: 'var(--primary-main)',
-                    textDecoration: 'underline',
-                    fontSize: '0.95em',
-                  }}
-                >
-                  所得金額調整控除 - NTA
-                </a>
-              </li>
-            </ul>
-          </Box>
+          <SourceLinks
+            sources={[
+              {
+                href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm',
+                label: '所得金額調整控除 - NTA',
+              },
+            ]}
+          />
         </Box>
       )}
     </DetailedTooltip>
