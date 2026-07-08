@@ -93,7 +93,7 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
       )}
       {isNational ? (
         <SourceLinks
-          heading="Official Sources (NTA):"
+          heading="Official Sources (NTA)"
           sources={[
             {
               href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm',
@@ -377,7 +377,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     ]}
                   />
                   <SourceLinks
-                    heading="Official Sources (NTA):"
+                    heading="Official Sources (NTA)"
                     sources={[
                       {
                         href: 'https://www.nta.go.jp/users/gensen/2025kiso/index.htm#a-01',

@@ -9,8 +9,8 @@ describe('SourceLinks', () => {
   it('uses the singular default heading for one source', () => {
     render(<SourceLinks sources={[{ label: '基礎控除', href: 'https://example.com/a' }]} />);
 
-    expect(screen.getByText(/Official Source:/)).toBeInTheDocument();
-    expect(screen.queryByText(/Official Sources:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Official Source')).toBeInTheDocument();
+    expect(screen.queryByText('Official Sources')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '基礎控除' })).toHaveAttribute(
       'href',
       'https://example.com/a',
@@ -27,14 +27,14 @@ describe('SourceLinks', () => {
       />,
     );
 
-    expect(screen.getByText(/Official Sources:/)).toBeInTheDocument();
+    expect(screen.getByText('Official Sources')).toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(2);
   });
 
   it('renders a custom heading when provided', () => {
     render(
       <SourceLinks
-        heading="Official Sources (NTA):"
+        heading="Official Sources (NTA)"
         sources={[
           { label: 'A', href: 'https://example.com/a' },
           { label: 'B', href: 'https://example.com/b' },
@@ -42,7 +42,7 @@ describe('SourceLinks', () => {
       />,
     );
 
-    expect(screen.getByText(/Official Sources \(NTA\):/)).toBeInTheDocument();
+    expect(screen.getByText('Official Sources (NTA)')).toBeInTheDocument();
   });
 
   it('opens links in a new tab with rel protection', () => {
