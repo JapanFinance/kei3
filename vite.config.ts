@@ -7,10 +7,19 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import Sitemap from 'vite-plugin-sitemap';
 
+// Vite does not minify index.html, so HTML comments (e.g. the documentation
+// block for the inline stale-build probe) would ship to every visitor.
+const stripHtmlComments = (): PluginOption => ({
+  name: 'strip-html-comments',
+  apply: 'build',
+  transformIndexHtml: html => html.replace(/[ \t]*<!--[\s\S]*?-->\n?/g, ''),
+});
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
     cloudflare(),
+    stripHtmlComments(),
     react(),
     Sitemap({
       hostname: 'https://kei3.japanfinance.org/',
