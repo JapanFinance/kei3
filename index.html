@@ -98,16 +98,19 @@
         const historyStyleBoot =
           document.wasDiscarded === true || navType === undefined || navType === 'back_forward';
         if (!historyStyleBoot) return;
-        const entrySrc = doc => doc.querySelector('script[type="module"]')?.getAttribute('src');
-        const bootedWith = entrySrc(document);
-        if (!bootedWith) return;
+        const moduleSrcs = doc =>
+          Array.from(doc.querySelectorAll('script[type="module"][src]'), s =>
+            s.getAttribute('src'),
+          ).join('\n');
+        const bootedModules = moduleSrcs(document);
+        if (!bootedModules) return;
         fetch(`/?stale-probe=${Date.now()}`, { cache: 'no-store' })
           .then(async response => {
             if (!response.ok) return;
-            const latest = entrySrc(
+            const latest = moduleSrcs(
               new DOMParser().parseFromString(await response.text(), 'text/html'),
             );
-            if (!latest || latest === bootedWith) return;
+            if (!latest || latest === bootedModules) return;
             if (sessionStorage.getItem('reloaded-for-app-version') === latest) return;
             sessionStorage.setItem('reloaded-for-app-version', latest);
             window.location.reload();
