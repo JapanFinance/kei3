@@ -1,0 +1,8 @@
+# Vite writes content-hashed filenames under /assets/, so their contents can
+# never change at a given URL. Without this, Workers static assets serves them
+# with `max-age=0, must-revalidate`, forcing a revalidation that 404s once a
+# newer deploy drops the old hashes — restored tabs then render blank. (Most
+# frequent on mobile, but any restored tab is affected, e.g. desktop session
+# restore after a restart.)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
