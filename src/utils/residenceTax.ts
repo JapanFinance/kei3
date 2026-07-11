@@ -555,10 +555,25 @@ function calculateIncomeTaxReduction(
 }
 
 /**
+ * Returns the 特例控除割合 for the band that `taxableIncome` falls in.
+ *
+ * The bands and ratios are the statute's own table (第37条の2第11項第一号: 195万円以下 →
+ * 100分の85, …, 4,000万円超 → 100分の45), where each ratio equals 90% minus the band's rate below.
+ * 附則第5条の6 replaces each ratio for 平成26年度〜令和20年度 (2014–2038) with the value that folds
+ * in the 復興特別所得税 factor (100分の85 → 100分の84.895, which equals 90% − 5% × 1.021), so this
+ * function computes the replaced ratio as 1 − donationBasicDeductionRate − (band rate × 1.021).
+ *
+ * Deliberately not derived from NATIONAL_INCOME_TAX_BRACKETS: the statute defines this table
+ * itself and does not reference 所得税法, so the two tables only coincide under current law. They
+ * already disagree at exact band boundaries — 1,950,000 is inside the 85% band here (195万円以下),
+ * while the 速算表 data ends its 5% row at 1,949,000 and starts the 10% row at 1,950,000 (equal
+ * tax either way at that point, but a different marginal rate). If the income tax brackets are
+ * reformed, this table changes only when 地方税法 itself is amended.
  *
  * @param taxableIncome taxable income for residence tax minus the personal deduction difference (住民税の課税総所得金額 - 人的控除差調整額)
  * @returns 特例控除割合
- * @see 地方税法第37条の二
+ * @see 地方税法第37条の2第11項第一号（道府県民税）・第314条の7第11項第一号（市町村民税）
+ * @see 地方税法附則第5条の6（復興特別所得税分の読替え、平成26年度〜令和20年度）
  */
 function getSpecialDeductionMultiplier(taxableIncome: number): number {
   let incomeTaxRate: number;
@@ -570,7 +585,7 @@ function getSpecialDeductionMultiplier(taxableIncome: number): number {
   else if (taxableIncome <= 40000000) incomeTaxRate = 0.4;
   else incomeTaxRate = 0.45; // Over 40 million
 
-  incomeTaxRate *= 1.021; // Add 2.1% surtax
+  incomeTaxRate *= 1.021; // 附則第5条の6 read-replacement: fold the 復興特別所得税 factor into the ratio
 
   return 1 - donationBasicDeductionRate - incomeTaxRate;
 }
