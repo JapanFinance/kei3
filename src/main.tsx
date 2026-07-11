@@ -4,10 +4,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Root } from './Root';
-import { reloadIfNewVersionAvailable } from './utils/appVersion';
 import './index.css';
-
-void reloadIfNewVersionAvailable();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

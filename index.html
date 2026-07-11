@@ -60,5 +60,60 @@
       </noscript>
     </div>
     <script type="module" src="/src/main.tsx"></script>
+    <!--
+      Stale-build recovery. Browsers may restore a suspended tab (mobile tab
+      discard, desktop session restore, back/forward) from a cached index.html
+      without revalidating it (RFC 9111 exempts history-style loads), so a tab
+      restored after a deploy would otherwise keep running the old app
+      indefinitely — or render blank if its assets were evicted from the cache
+      and the deploy has since removed them. SvelteKit (version.pollInterval /
+      updated) and Nuxt (outdated-build check) ship the same recovery built in.
+
+      Deliberately inlined, non-module, and dependency-free so it runs while
+      the document parses even when every bundled asset fails to load; a
+      version of this logic inside the entry chunk cannot recover from an
+      evicted entry. It must stay after the entry <script> above so the entry
+      tag is in the DOM when it reads it.
+
+      Constraints discovered by testing real session restores (2026-07):
+      - Fresh navigations and reloads always revalidate index.html (served
+        max-age=0, must-revalidate), so only history-style boots (type
+        "back_forward", Chrome's document.wasDiscarded, or an unreadable
+        navigation type) can be stale — all other boots skip the probe and
+        cost nothing.
+      - The probe URL carries a unique query string because Chromium answers
+        fetches issued during a session-restore boot from the HTTP cache even
+        with cache:"no-store"; only never-cached URLs reach the network.
+        (Workers assets ignores query strings when resolving paths. Nuxt uses
+        the same Date.now() query technique.)
+      - The reload this triggers boots with navigation type "reload", which
+        never probes, so a reload loop is impossible; the sessionStorage
+        marker is a redundant safeguard for intermediaries that keep serving
+        the old HTML.
+      - When offline, the fetch rejects and the cached app keeps working.
+    -->
+    <script>
+      (() => {
+        const navType = performance.getEntriesByType('navigation')[0]?.type;
+        const historyStyleBoot =
+          document.wasDiscarded === true || navType === undefined || navType === 'back_forward';
+        if (!historyStyleBoot) return;
+        const entrySrc = doc => doc.querySelector('script[type="module"]')?.getAttribute('src');
+        const bootedWith = entrySrc(document);
+        if (!bootedWith) return;
+        fetch(`/?stale-probe=${Date.now()}`, { cache: 'no-store' })
+          .then(async response => {
+            if (!response.ok) return;
+            const latest = entrySrc(
+              new DOMParser().parseFromString(await response.text(), 'text/html'),
+            );
+            if (!latest || latest === bootedWith) return;
+            if (sessionStorage.getItem('reloaded-for-app-version') === latest) return;
+            sessionStorage.setItem('reloaded-for-app-version', latest);
+            window.location.reload();
+          })
+          .catch(() => {});
+      })();
+    </script>
   </body>
 </html>
