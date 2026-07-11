@@ -5,13 +5,11 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { getEmploymentIncomeDeductionPeriod } from '../../../data/netEmploymentIncome';
-import { formatJPY } from '../../../utils/formatters';
+import { formatJPY, formatNumber } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import SourceLinks from '../../ui/SourceLinks';
 import ReferenceTable from '../../ui/ReferenceTable';
 import { getEmploymentIncomeDeductionHighlightIndex } from './referenceTableHighlight';
-
-const fmtNum = (n: number) => n.toLocaleString('en');
 
 interface NetEmploymentIncomeTooltipProps {
   /** Gross employment income (給与等の収入金額) in yen. */
@@ -61,12 +59,12 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
     const deductionPct = Math.round((1 - tier.retentionRate) * 100);
 
     const range = isCap
-      ? `${fmtNum(lower)} and above`
-      : `${fmtNum(lower)} – ${fmtNum(tier.grossMaxInclusive)}`;
+      ? `${formatNumber(lower)} and above`
+      : `${formatNumber(lower)} – ${formatNumber(tier.grossMaxInclusive)}`;
 
     const deduction = isCap
-      ? `${fmtNum(tier.offset)} (max)`
-      : `${deductionPct}% of income + ${fmtNum(tier.offset)}`;
+      ? `${formatNumber(tier.offset)} (max)`
+      : `${deductionPct}% of income + ${formatNumber(tier.offset)}`;
 
     return { range, deduction };
   });
@@ -136,7 +134,7 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
         headers={['Gross Employment Income (¥)', 'Deduction Amount']}
         highlightedRow={deductionTableHighlight}
         rows={[
-          [`Up to ${fmtNum(flatUpperBound)}`, fmtNum(period.flatFloorDeduction)],
+          [`Up to ${formatNumber(flatUpperBound)}`, formatNumber(period.flatFloorDeduction)],
           ...tierRows.map(row => [row.range, row.deduction]),
         ]}
       />

@@ -22,7 +22,11 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { formatJPY, getFrequencyAnnualMultiplier } from '../../../utils/formatters';
+import {
+  formatJPY,
+  formatMonthLong,
+  getFrequencyAnnualMultiplier,
+} from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 
@@ -211,7 +215,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <Select value={month} label="Month Paid" onChange={e => setMonth(e.target.value)}>
               {Array.from({ length: 12 }, (_, i) => (
                 <MenuItem key={i} value={i}>
-                  {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                  {formatMonthLong(i)}
                 </MenuItem>
               ))}
             </Select>

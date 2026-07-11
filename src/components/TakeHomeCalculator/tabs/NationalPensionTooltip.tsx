@@ -5,11 +5,8 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { getNationalPensionMonthlyContribution } from '../../../data/nationalPensionContribution';
-import { formatJPY } from '../../../utils/formatters';
+import { formatJPY, formatMonthShort } from '../../../utils/formatters';
 import SourceLinks from '../../ui/SourceLinks';
-
-const formatMonthShort = (month: number): string =>
-  new Date(2000, month).toLocaleString('en', { month: 'short' });
 
 const cellStyle = { padding: '2px 8px 2px 0' } as const;
 const rightCellStyle = { ...cellStyle, textAlign: 'right' as const };
