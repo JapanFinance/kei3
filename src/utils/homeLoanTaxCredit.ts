@@ -15,6 +15,7 @@ import {
   getHomeLoanTaxCreditCohort,
   HOME_LOAN_TAX_CREDIT_COHORTS,
 } from '../data/homeLoanTaxCredit';
+import { formatJPY } from './formatters';
 
 const EMPTY_RESULT: HomeLoanTaxCreditResult = {
   availableCredit: 0,
@@ -89,7 +90,7 @@ export function applyHomeLoanTaxCredit(
   // Eligibility: income limit (合計所得金額 ceiling for the cohort).
   if (netIncome > cohort.incomeLimit) {
     warnings.push(
-      `Home loan tax credit not applied: net income exceeds the ¥${cohort.incomeLimit.toLocaleString()} ` +
+      `Home loan tax credit not applied: net income exceeds the ${formatJPY(cohort.incomeLimit)} ` +
         `eligibility limit for a ${input.moveInYear} move-in.`,
     );
     return { ...EMPTY_RESULT, warnings };
@@ -121,8 +122,8 @@ export function applyHomeLoanTaxCredit(
 
   if (unusedCredit > 0) {
     warnings.push(
-      `¥${unusedCredit.toLocaleString()} of the credit could not be applied: it exceeds the income tax ` +
-        `plus the ¥${residenceTaxCap.toLocaleString()} spillover cap for residence tax this year.`,
+      `${formatJPY(unusedCredit)} of the credit could not be applied: it exceeds the income tax ` +
+        `plus the ${formatJPY(residenceTaxCap)} spillover cap for residence tax this year.`,
     );
   }
 
