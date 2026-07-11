@@ -9,10 +9,20 @@ import Sitemap from 'vite-plugin-sitemap';
 
 // Vite does not minify index.html, so HTML comments (e.g. the documentation
 // block for the inline stale-build probe) would ship to every visitor.
+// Removal is repeated until the output stabilizes because deleting a comment
+// can join surrounding text into a new "<!--" (CodeQL js/incomplete-multi-
+// character-sanitization); a single pass could leave such a comment in place.
 const stripHtmlComments = (): PluginOption => ({
   name: 'strip-html-comments',
   apply: 'build',
-  transformIndexHtml: html => html.replace(/[ \t]*<!--[\s\S]*?-->\n?/g, ''),
+  transformIndexHtml: html => {
+    let previous;
+    do {
+      previous = html;
+      html = html.replace(/[ \t]*<!--[\s\S]*?-->\n?/g, '');
+    } while (html !== previous);
+    return html;
+  },
 });
 
 // https://vite.dev/config/
