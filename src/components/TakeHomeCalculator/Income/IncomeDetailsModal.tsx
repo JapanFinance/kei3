@@ -22,7 +22,11 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 import type { IncomeStream } from '../../../types/tax';
 import { IncomeStreamForm } from './IncomeStreamForm';
-import { formatJPY, getCommutingAllowanceAnnualAmount } from '../../../utils/formatters';
+import {
+  formatJPY,
+  formatMonthLong,
+  getCommutingAllowanceAnnualAmount,
+} from '../../../utils/formatters';
 
 interface IncomeDetailsModalProps {
   open: boolean;
@@ -76,7 +80,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         if (stream.frequency === '6-months') return '6 Months';
         return 'Annual';
       case 'bonus':
-        return new Date(0, stream.month).toLocaleString('default', { month: 'long' });
+        return formatMonthLong(stream.month);
       case 'stockCompensation':
         return stream.issuerDomicile === 'foreign' ? 'Foreign' : 'Domestic';
       default:

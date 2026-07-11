@@ -5,7 +5,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
-import { formatJPY, formatPercent } from '../../../utils/formatters';
+import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -610,8 +610,6 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                       });
                     }
                   }
-                  const formatMonth = (m: number) =>
-                    new Date(2000, m).toLocaleString('en', { month: 'short' });
                   const annualTotal = monthlyRates.reduce((sum, mr) => sum + mr.premium, 0);
                   return (
                     <table
@@ -666,8 +664,8 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                           const count = g.endMonth - g.startMonth + 1;
                           const monthLabel =
                             g.startMonth === g.endMonth
-                              ? formatMonth(g.startMonth)
-                              : `${formatMonth(g.startMonth)}\u2013${formatMonth(g.endMonth)}`;
+                              ? formatMonthShort(g.startMonth)
+                              : `${formatMonthShort(g.startMonth)}\u2013${formatMonthShort(g.endMonth)}`;
                           return (
                             <tr key={idx}>
                               <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>

@@ -124,7 +124,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label || 'Unknown';
     const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, incomeYear);
     const incomeLabel =
-      totalNetIncome === 0 ? 'No income' : `Net income: ¥${totalNetIncome.toLocaleString()}`;
+      totalNetIncome === 0 ? 'No income' : `Net income: ${formatJPY(totalNetIncome)}`;
     return `${relationship}, Age: ${ageLabel}, ${incomeLabel}`;
   };
 

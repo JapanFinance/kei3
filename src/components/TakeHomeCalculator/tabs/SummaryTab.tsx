@@ -20,6 +20,22 @@ interface SummaryTabProps {
   results: TakeHomeResults;
 }
 
+/**
+ * Formats an amount as "¥X (Y.Y%)" of the total, or bare "¥X" when the share is hidden.
+ * The summary hides the share on mobile, where horizontal space is tight.
+ *
+ * @param decimals Fraction digits for the share. Defaults to 1.
+ */
+const formatAmountWithShare = (
+  amount: number,
+  total: number,
+  showShare: boolean,
+  decimals = 1,
+): string =>
+  showShare
+    ? `${formatJPY(amount)} (${((amount / total) * 100).toFixed(decimals)}%)`
+    : formatJPY(amount);
+
 const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -67,51 +83,44 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         {results.socialInsuranceOverride !== undefined ? (
           <ResultRow
             label="Total Social Insurance (Manual)"
-            value={
-              !isMobile
-                ? `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)`
-                : formatJPY(totalSocialInsurance)
-            }
+            value={formatAmountWithShare(totalSocialInsurance, results.annualIncome, !isMobile)}
             type="subtotal"
           />
         ) : (
           <>
             <ResultRow
               label="Health Insurance"
-              value={
-                !isMobile
-                  ? `${formatJPY(results.healthInsurance)} (${((results.healthInsurance / results.annualIncome) * 100).toFixed(1)}%)`
-                  : formatJPY(results.healthInsurance)
-              }
+              value={formatAmountWithShare(
+                results.healthInsurance,
+                results.annualIncome,
+                !isMobile,
+              )}
               type="indented"
             />
             <ResultRow
               label="Pension Payments"
-              value={
-                !isMobile
-                  ? `${formatJPY(results.pensionPayments)} (${((results.pensionPayments / results.annualIncome) * 100).toFixed(1)}%)`
-                  : formatJPY(results.pensionPayments)
-              }
+              value={formatAmountWithShare(
+                results.pensionPayments,
+                results.annualIncome,
+                !isMobile,
+              )}
               type="indented"
             />
             {results.hasEmploymentIncome && (
               <ResultRow
                 label="Employment Insurance"
-                value={
-                  !isMobile
-                    ? `${formatJPY(results.employmentInsurance ?? 0)} (${(((results.employmentInsurance ?? 0) / results.annualIncome) * 100).toFixed(2)}%)`
-                    : formatJPY(results.employmentInsurance ?? 0)
-                }
+                value={formatAmountWithShare(
+                  results.employmentInsurance ?? 0,
+                  results.annualIncome,
+                  !isMobile,
+                  2,
+                )}
                 type="indented"
               />
             )}
             <ResultRow
               label="Total Social Insurance"
-              value={
-                !isMobile
-                  ? `${formatJPY(totalSocialInsurance)} (${((totalSocialInsurance / results.annualIncome) * 100).toFixed(1)}%)`
-                  : formatJPY(totalSocialInsurance)
-              }
+              value={formatAmountWithShare(totalSocialInsurance, results.annualIncome, !isMobile)}
               type="subtotal"
             />
           </>
@@ -145,35 +154,32 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         </Typography>
         <ResultRow
           label="Income Tax"
-          value={
-            !isMobile
-              ? `${formatJPY(results.nationalIncomeTax)} (${((results.nationalIncomeTax / results.annualIncome) * 100).toFixed(1)}%)`
-              : formatJPY(results.nationalIncomeTax)
-          }
+          value={formatAmountWithShare(results.nationalIncomeTax, results.annualIncome, !isMobile)}
           type="indented"
         />
         <ResultRow
           label="Residence Tax"
-          value={
-            !isMobile
-              ? `${formatJPY(results.residenceTax.totalResidenceTax)} (${((results.residenceTax.totalResidenceTax / results.annualIncome) * 100).toFixed(1)}%)`
-              : formatJPY(results.residenceTax.totalResidenceTax)
-          }
+          value={formatAmountWithShare(
+            results.residenceTax.totalResidenceTax,
+            results.annualIncome,
+            !isMobile,
+          )}
           type="indented"
         />
         <ResultRow
           label="Total Taxes"
-          value={
-            !isMobile
-              ? `${formatJPY(totalTaxes)} (${((totalTaxes / results.annualIncome) * 100).toFixed(1)}%)`
-              : formatJPY(totalTaxes)
-          }
+          value={formatAmountWithShare(totalTaxes, results.annualIncome, !isMobile)}
           type="subtotal"
         />
       </Box>
 
       {/* Total Deductions */}
       <Box>
+        {/*
+          Stays inline rather than using formatAmountWithShare: this row shows the amount as a
+          negative (a reduction) while its share of income is the positive magnitude, so the shown
+          amount and the share basis differ in sign.
+        */}
         <ResultRow
           label="Total Deductions"
           value={

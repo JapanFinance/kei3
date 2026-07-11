@@ -15,9 +15,7 @@
 import type { BasicDeductionTier } from '../../../data/nationalBasicDeduction';
 import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../../../data/residenceTaxBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../../../data/nationalIncomeTaxBrackets';
-
-/** Formats a yen amount the way the tooltip tables do (grouped thousands, no ¥ sign). */
-const fmt = (n: number): string => n.toLocaleString('en');
+import { formatNumber } from '../../../utils/formatters';
 
 // ── National income tax basic deduction (基礎控除) ─────────────────────────────────────────────
 
@@ -36,10 +34,10 @@ export const buildNationalBasicDeductionRows = (
   tiers: ReadonlyArray<BasicDeductionTier>,
 ): string[][] => [
   ...getDedupedNationalBasicDeductionTiers(tiers).map(tier => [
-    `Up to ${fmt(tier.maxIncomeInclusive)}`,
-    fmt(tier.deduction),
+    `Up to ${formatNumber(tier.maxIncomeInclusive)}`,
+    formatNumber(tier.deduction),
   ]),
-  [`Over ${fmt(tiers[tiers.length - 1]!.maxIncomeInclusive)}`, '0'],
+  [`Over ${formatNumber(tiers[tiers.length - 1]!.maxIncomeInclusive)}`, '0'],
 ];
 
 /**
@@ -68,11 +66,11 @@ export const buildResidenceBasicDeductionRows = (): string[][] => {
   return [
     ...tiers.map((tier, i) => [
       i === 0
-        ? `Up to ${fmt(tier.maxIncomeInclusive)}`
-        : `${fmt(tiers[i - 1]!.maxIncomeInclusive + 1)} - ${fmt(tier.maxIncomeInclusive)}`,
-      fmt(tier.deduction),
+        ? `Up to ${formatNumber(tier.maxIncomeInclusive)}`
+        : `${formatNumber(tiers[i - 1]!.maxIncomeInclusive + 1)} - ${formatNumber(tier.maxIncomeInclusive)}`,
+      formatNumber(tier.deduction),
     ]),
-    [`Over ${fmt(tiers[tiers.length - 1]!.maxIncomeInclusive)}`, '0'],
+    [`Over ${formatNumber(tiers[tiers.length - 1]!.maxIncomeInclusive)}`, '0'],
   ];
 };
 
@@ -96,15 +94,15 @@ export const buildNationalIncomeTaxBracketRows = (): string[][] =>
   NATIONAL_INCOME_TAX_BRACKETS.map((bracket, i, arr) => {
     let range: string;
     if (i === 0) {
-      range = `Up to ${fmt(bracket.maxTaxableIncomeInclusive)}`;
+      range = `Up to ${formatNumber(bracket.maxTaxableIncomeInclusive)}`;
     } else if (!isFinite(bracket.maxTaxableIncomeInclusive)) {
       // Taxable income is floored to 1,000, so the first amount in the top bracket is the previous
       // bound + 1,000 (e.g. 39,999,000 → 40,000,000), which reads cleaner than the raw +1.
-      range = `${fmt(arr[i - 1]!.maxTaxableIncomeInclusive + 1000)} and above`;
+      range = `${formatNumber(arr[i - 1]!.maxTaxableIncomeInclusive + 1000)} and above`;
     } else {
-      range = `${fmt(arr[i - 1]!.maxTaxableIncomeInclusive + 1)} - ${fmt(bracket.maxTaxableIncomeInclusive)}`;
+      range = `${formatNumber(arr[i - 1]!.maxTaxableIncomeInclusive + 1)} - ${formatNumber(bracket.maxTaxableIncomeInclusive)}`;
     }
-    return [range, `${Math.round(bracket.rate * 100)}%`, fmt(bracket.deduction)];
+    return [range, `${Math.round(bracket.rate * 100)}%`, formatNumber(bracket.deduction)];
   });
 
 /**
