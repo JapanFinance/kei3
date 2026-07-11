@@ -15,6 +15,20 @@ export function isHistoryStyleBoot(navType: string | undefined, wasDiscarded: bo
   return wasDiscarded || navType === undefined || navType === 'back_forward';
 }
 
+/**
+ * Extracts the entry module script path (e.g. "/assets/index-<hash>.js") from
+ * an index.html document. Vite content-hashes the filename, so it changes with
+ * every build and doubles as the deployed app version.
+ */
+export function extractEntryScriptSrc(html: string): string | null {
+  return (
+    new DOMParser()
+      .parseFromString(html, 'text/html')
+      .querySelector('script[type="module"]')
+      ?.getAttribute('src') ?? null
+  );
+}
+
 const RELOADED_FOR_VERSION_KEY = 'reloaded-for-app-version';
 
 /**
@@ -27,13 +41,26 @@ const RELOADED_FOR_VERSION_KEY = 'reloaded-for-app-version';
  * `updated` and Nuxt's outdated-build check ship the same pattern built in;
  * this is the minimal equivalent for a static Vite app: on history-style
  * boots only — the sole moment a stale build can start running and, by
- * definition, before any user input exists — HEAD-probe this build's own
- * content-hashed entry script. 404 means a newer deploy replaced it; reload
- * once to pick it up. A live page that is merely resumed never re-runs this,
- * so it can never interrupt anyone mid-session, and the reload it triggers
- * boots with navigation type "reload", which never probes — so a loop is
- * impossible by construction. When offline, the fetch rejects and the cached
- * app keeps working.
+ * definition, before any user input exists — fetch the current index.html
+ * and compare its entry-script hash against the one this page booted from;
+ * on mismatch, reload once to pick up the new build.
+ *
+ * The probe must be a GET of the HTML at a never-cached URL. Chromium serves
+ * fetches made during a session-restore boot from the HTTP cache regardless
+ * of `cache: "no-store"` — observed 2026-07: both a HEAD of the (cached)
+ * entry script and a GET of "/" issued at boot returned the cached responses
+ * without server contact, leaving the probe blind in exactly the scenario it
+ * exists for, while requests to URLs absent from the cache reached the
+ * network even mid-restore. A unique query string (ignored by Workers assets
+ * path resolution) makes every probe such a URL. Comparing the fetched HTML's
+ * entry hash (rather than HEAD-probing our own entry for 404) also keeps the
+ * probe meaningful on hosts that retain old deploys' assets.
+ *
+ * A live page that is merely resumed never re-runs this, so it can never
+ * interrupt anyone mid-session, and the reload it triggers boots with
+ * navigation type "reload", which never probes — so a loop is impossible by
+ * construction. When offline, the fetch rejects and the cached app keeps
+ * working.
  */
 export async function reloadIfNewVersionAvailable(): Promise<void> {
   const navType = (
@@ -42,14 +69,16 @@ export async function reloadIfNewVersionAvailable(): Promise<void> {
   const wasDiscarded = (document as Document & { wasDiscarded?: boolean }).wasDiscarded === true;
   if (!isHistoryStyleBoot(navType, wasDiscarded)) return;
 
-  const entrySrc = document.querySelector('script[type="module"]')?.getAttribute('src');
-  if (!entrySrc) return;
+  const bootedWith = document.querySelector('script[type="module"]')?.getAttribute('src');
+  if (!bootedWith) return;
   try {
-    const response = await fetch(entrySrc, { method: 'HEAD', cache: 'no-store' });
-    if (response.status !== 404) return;
+    const response = await fetch(`/?stale-probe=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return;
+    const latest = extractEntryScriptSrc(await response.text());
+    if (!latest || latest === bootedWith) return;
     // Belt and braces alongside the reload-never-probes property above.
-    if (sessionStorage.getItem(RELOADED_FOR_VERSION_KEY) === entrySrc) return;
-    sessionStorage.setItem(RELOADED_FOR_VERSION_KEY, entrySrc);
+    if (sessionStorage.getItem(RELOADED_FOR_VERSION_KEY) === latest) return;
+    sessionStorage.setItem(RELOADED_FOR_VERSION_KEY, latest);
     window.location.reload();
   } catch {
     // Network unavailable; a restored tab keeps working from cache.
