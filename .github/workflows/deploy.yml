@@ -41,3 +41,49 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+      - name: Check bundle size
+        run: |
+          set -o pipefail
+          npx size-limit --json | tee size-limit.json
+      - name: Bundle size summary
+        if: always()
+        env:
+          REPORT_MODE: summary
+        run: node .github/size-report.mjs size-limit.json
+      - name: Upload size report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-limit-report
+          path: size-limit.json
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Posting the bundle-size PR comment is the only step that needs write access.
+  # It runs in its own job that installs no dependencies, so the build job (which
+  # runs `npm ci`, i.e. third-party install code) stays read-only and never holds
+  # a PR-writable token. Job level is the narrowest scope GitHub Actions offers —
+  # there is no per-step `permissions`.
+  size-report:
+    needs: build
+    if: ${{ github.event_name == 'pull_request' && (needs.build.result == 'success' || needs.build.result == 'failure') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Download size report
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: size-limit-report
+      - name: Comment bundle size on PR
+        env:
+          REPORT_MODE: comment
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/size-report.mjs size-limit.json
