@@ -6,22 +6,24 @@
 // after `npm run build`.
 //
 // One check over the built JS and CSS (dist/assets/*.{js,css}), gated on the
-// combined gzipped size. The budget is deliberately tight — a couple of kB
-// above the current total — so any real size increase fails CI. An intentional,
-// justified increase should raise this limit in the same change that adds the
-// weight. (Sourcemaps, dist/assets/*.map, are dev-only and excluded.)
+// combined Brotli size — what Cloudflare serves to modern browsers (gzip is
+// only the fallback for old clients). The budget is deliberately tight — a
+// couple of kB above the current total — so any real size increase fails CI. An
+// intentional, justified increase should raise this limit in the same change
+// that adds the weight. (Sourcemaps, dist/assets/*.map, are dev-only, excluded.)
 //
-// Size only: measuring the shipped bytes is fast and deterministic. Real-world
-// performance (render, interactivity) is covered separately by Lighthouse, not
-// by size-limit's synthetic in-browser timing.
+// The Brotli figure is a stable proxy, not Cloudflare's exact bytes: size-limit
+// compresses at Node's max quality while Cloudflare uses a lower level, so it
+// serves a little more. That's fine — the budget tracks regressions, not the
+// absolute transfer size. Real-world performance is covered by Lighthouse.
 //
-// Baseline when added (2026-07): ~310 kB gzip combined (309,555 B = 307,904 JS
-// + 1,651 CSS).
+// Baseline when added (2026-07): ~264 kB Brotli combined (264,038 B; ~310 kB
+// gzip).
 export default [
   {
     name: 'Total JS + CSS',
     path: 'dist/assets/*.{js,css}',
-    gzip: true,
-    limit: '312 kB',
+    brotli: true,
+    limit: '266 kB',
   },
 ];

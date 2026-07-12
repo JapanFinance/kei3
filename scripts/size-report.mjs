@@ -32,11 +32,11 @@ function renderMarkdown(report) {
   return [
     '### 📦 Bundle size',
     '',
-    '| Check | Gzip | Budget | Result |',
+    '| Check | Brotli | Budget | Result |',
     '| --- | --- | --- | --- |',
     ...rows,
     '',
-    '<sub>Gzipped size of the built JS (`dist/assets/*.js`). CI fails on any increase; raise the budget deliberately when the growth is intended.</sub>',
+    '<sub>Brotli-compressed size of the built JS + CSS (`dist/assets/*.{js,css}`) — what Cloudflare serves modern browsers. CI fails on any increase; raise the budget deliberately when the growth is intended.</sub>',
   ].join('\n');
 }
 
