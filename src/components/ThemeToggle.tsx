@@ -12,23 +12,9 @@ const ThemeToggle = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { mode, systemMode, setMode } = useColorScheme();
 
-  // `mode` is undefined on the first render (before MUI reads the stored
-  // preference). Render a disabled placeholder of the same size so the toolbar
-  // layout stays stable and there is no icon flicker.
-  if (!mode) {
-    return (
-      <IconButton
-        size={isMobile ? 'small' : 'medium'}
-        disabled
-        sx={{ ml: 1 }}
-        aria-label="Toggle color mode"
-      >
-        <Brightness4 />
-      </IconButton>
-    );
-  }
-
-  // `mode` may be 'system'; resolve it to the concrete scheme for the icon.
+  // noSsr (set on the ThemeProvider) makes `mode` defined on the first render,
+  // so no undefined-first-render guard is needed. `mode` may be 'system' —
+  // resolve it to the concrete scheme for the icon.
   const isDark = (mode === 'system' ? systemMode : mode) === 'dark';
 
   return (
