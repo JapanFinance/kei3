@@ -77,7 +77,7 @@ jobs:
         with:
           node-version: '24'
       - name: Download size report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: size-limit-report
