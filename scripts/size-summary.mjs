@@ -32,7 +32,7 @@ const summary = [
   '| --- | --- | --- | --- | --- | --- | --- |',
   ...rows,
   '',
-  '<sub>¹ download on size-limit’s default slow-3G profile · ² execution on a throttled Snapdragon 410 CPU. Both are intentionally pessimistic, so totals run higher than real desktop or 4G load.</sub>',
+  '<sub>Only gzipped size is gated. Load¹ / Exec² / Total are shown for tracking, not enforced — ¹ download on size-limit’s default slow-3G profile, ² execution on a throttled Snapdragon 410 CPU. Both are intentionally pessimistic, so totals run higher than real desktop or 4G load.</sub>',
   '',
 ].join('\n');
 

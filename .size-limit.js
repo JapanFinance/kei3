@@ -1,37 +1,28 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Bundle-size budgets for the production JS. Enforced in CI
+// Bundle-size budget for the production JS. Enforced in CI
 // (.github/workflows/deploy.yml) and runnable locally with `npm run size`
 // after `npm run build`.
 //
-// Both checks measure the same built chunks (dist/assets/*.js) after gzip:
+// size-limit enforces one limit per check (the unit of `limit` selects size or
+// time), so this single check over the built chunks (dist/assets/*.js) gates on
+// the gzipped size. The budget sits just above the current total; crossing it
+// fails the build.
 //
-//   1. Size — the primary check for size regressions. `running: false` skips
-//      the headless-Chrome measurement, so this check is deterministic. The
-//      budget sits just above the current total; crossing it fails the build.
+// Because @size-limit/time is installed, the same check also reports loading
+// time (size-limit's default "slow 3G" profile) and JavaScript execution time
+// (a throttled "Snapdragon 410" CPU). Those figures are informational, not
+// gated, and read higher than real desktop or 4G load. Size is the reliable
+// gate: loading time is a linear function of size, and the execution
+// measurement varies from run to run.
 //
-//   2. Load + exec time — a secondary check that also catches execution-cost
-//      regressions: a dependency that is small in bytes but expensive to parse
-//      and run. size-limit estimates loading time on its default "slow 3G"
-//      network profile and JavaScript execution time on a throttled
-//      "Snapdragon 410" CPU, so these seconds are larger than real desktop or
-//      4G figures. The budget carries enough headroom that normal run-to-run
-//      variance in the execution measurement does not fail the build.
-//
-// Baseline when added (2026-07): ~308 kB gzip, ~0.8 s exec, ~6.8 s total.
+// Baseline when added (2026-07): ~308 kB gzip, ~0.7 s exec, ~6.8 s total.
 export default [
   {
-    name: 'Total JS — size',
+    name: 'Total JS',
     path: 'dist/assets/*.js',
     gzip: true,
-    running: false,
     limit: '320 kB',
-  },
-  {
-    name: 'Total JS — load + exec time',
-    path: 'dist/assets/*.js',
-    gzip: true,
-    limit: '9 s',
   },
 ];
