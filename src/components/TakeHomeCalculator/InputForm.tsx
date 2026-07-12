@@ -10,7 +10,6 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
-import InputLabel from '@mui/material/InputLabel';
 import Switch from '@mui/material/Switch';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -375,6 +374,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   className="income-slider"
                   value={inputs.annualIncome}
                   onChange={handleSliderChange}
+                  aria-label="Annual income"
+                  getAriaValueText={value => formatJPY(value)}
                   min={0}
                   max={20000000}
                   step={10000}
@@ -594,7 +595,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     color: 'text.primary',
                   }}
                 >
-                  Health Insurance Provider
+                  <span id="healthInsuranceProvider-label">Health Insurance Provider</span>
                   <SimpleTooltip>
                     The health insurance provider affects premium calculations. Employment income
                     workers are usually enrolled in employee health insurance, but some may be
@@ -602,12 +603,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     size, work hours, and income thresholds.
                   </SimpleTooltip>
                 </Typography>
-                <InputLabel
-                  id="healthInsuranceProvider-label"
-                  sx={{ position: 'absolute', left: '-9999px', opacity: 0 }}
-                >
-                  Health Insurance Provider
-                </InputLabel>
                 <Select
                   id="healthInsuranceProvider"
                   name="healthInsuranceProvider"
