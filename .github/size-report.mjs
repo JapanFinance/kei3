@@ -8,7 +8,7 @@
 //   - comment: upsert a single "sticky" comment on the pull request (when
 //     PR_NUMBER and GITHUB_TOKEN are set), created once then updated in place.
 //
-// Usage: node scripts/size-report.mjs [report.json]
+// Usage: node .github/size-report.mjs [report.json]
 //
 // The PR comment uses only Node's built-in fetch against the GitHub REST API
 // and the Actions-provided GITHUB_TOKEN — no third-party GitHub Action. Comment

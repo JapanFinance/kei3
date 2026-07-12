@@ -49,7 +49,7 @@ jobs:
         if: always()
         env:
           REPORT_MODE: summary
-        run: node scripts/size-report.mjs size-limit.json
+        run: node .github/size-report.mjs size-limit.json
       - name: Upload size report
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,4 +86,4 @@ jobs:
           REPORT_MODE: comment
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node scripts/size-report.mjs size-limit.json
+        run: node .github/size-report.mjs size-limit.json
