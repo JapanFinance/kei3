@@ -41,3 +41,10 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+      - name: Check bundle size
+        run: |
+          set -o pipefail
+          npx size-limit --json | tee size-limit.json
+      - name: Bundle size summary
+        if: always()
+        run: node scripts/size-summary.mjs size-limit.json >> "$GITHUB_STEP_SUMMARY"

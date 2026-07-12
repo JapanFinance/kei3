@@ -25,3 +25,6 @@ dist-ssr
 
 .wrangler
 .claude
+
+# size-limit --json report written during CI
+size-limit.json
