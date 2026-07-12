@@ -266,7 +266,7 @@ describe('TakeHomeInputForm Tests', () => {
 
       // Income mode selection should be present
       expect(screen.getByRole('group', { name: /income mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /salary/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salary' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /misc/i })).toBeInTheDocument();
     });
 
@@ -450,7 +450,7 @@ describe('Dependent Coverage UI Behavior', () => {
       render(<TakeHomeInputForm inputs={manualInputs} dispatch={mockDispatch} />);
 
       // Check if the input field is visible
-      expect(screen.getByLabelText(/Total Social Insurance Amount/i)).toBeInTheDocument();
+      expect(screen.getByLabelText('Total Social Insurance Amount')).toBeInTheDocument();
 
       // Check if the provider dropdown is NOT visible
       expect(
@@ -463,7 +463,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
       render(<TakeHomeInputForm inputs={manualInputs} dispatch={mockDispatch} />);
 
-      expect(screen.queryByLabelText(/Total Social Insurance Amount/i)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Total Social Insurance Amount')).not.toBeInTheDocument();
       expect(
         screen.getByRole('combobox', { name: /health insurance provider/i }),
       ).toBeInTheDocument();
@@ -479,7 +479,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
       render(<TakeHomeInputForm inputs={manualInputs} dispatch={mockDispatch} />);
 
-      const amountInput = screen.getByLabelText(/Total Social Insurance Amount/i);
+      const amountInput = screen.getByLabelText('Total Social Insurance Amount');
       await user.type(amountInput, '5');
 
       expect(mockDispatch).toHaveBeenCalled();

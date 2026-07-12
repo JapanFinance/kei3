@@ -14,7 +14,7 @@ describe('App Integration - Income Mode Switching', () => {
     render(<App mode="light" toggleColorMode={() => {}} />);
 
     // 1. Initial State: Salary Mode -> Kyokai Kenpo
-    expect(screen.getByRole('button', { name: /salary/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Salary' })).toHaveAttribute('aria-pressed', 'true');
 
     // Verify provider is Kyokai Kenpo (or default employee provider)
     expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toHaveTextContent(

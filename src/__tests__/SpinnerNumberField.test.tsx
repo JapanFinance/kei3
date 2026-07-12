@@ -10,7 +10,7 @@ describe('SpinnerNumberField', () => {
 
     render(<SpinnerNumberField value={123456} onChange={mockOnChange} label="Test Amount" />);
 
-    const input = screen.getByLabelText(/Test Amount/i);
+    const input = screen.getByLabelText('Test Amount');
     expect(input).toBeInTheDocument();
 
     // The input should display the formatted value with commas and yen symbol
@@ -22,7 +22,7 @@ describe('SpinnerNumberField', () => {
 
     render(<SpinnerNumberField value={0} onChange={mockOnChange} label="Test Amount" />);
 
-    const input = screen.getByLabelText(/Test Amount/i);
+    const input = screen.getByLabelText('Test Amount');
 
     // Simulate user typing
     fireEvent.change(input, { target: { value: '¥789,000' } });
@@ -43,7 +43,7 @@ describe('SpinnerNumberField', () => {
       />,
     );
 
-    const input = screen.getByLabelText(/Test Amount/i);
+    const input = screen.getByLabelText('Test Amount');
 
     // Test arrow up - should increment by step
     fireEvent.keyDown(input, { key: 'ArrowUp' });
@@ -67,7 +67,7 @@ describe('SpinnerNumberField', () => {
       />,
     );
 
-    const input = screen.getByLabelText(/Test Amount/i);
+    const input = screen.getByLabelText('Test Amount');
 
     // Test shift+arrow up - should increment by shiftStep
     fireEvent.keyDown(input, { key: 'ArrowUp', shiftKey: true });
@@ -86,7 +86,7 @@ describe('SpinnerNumberField', () => {
       />,
     );
 
-    const input = screen.getByLabelText(/Test Amount Near Min/i);
+    const input = screen.getByLabelText('Test Amount Near Min');
 
     // Test arrow down near min - should cap at 0 (not go negative)
     fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -100,16 +100,15 @@ describe('SpinnerNumberField', () => {
       <SpinnerNumberField value={100000} onChange={mockOnChange} label="Test Amount" step={5000} />,
     );
 
-    // Find the spinner buttons by their icons
-    const upButton = screen.getByTestId('KeyboardArrowUpIcon').closest('button');
-    const downButton = screen.getByTestId('KeyboardArrowDownIcon').closest('button');
+    const upButton = screen.getByRole('button', { name: 'Increase Test Amount' });
+    const downButton = screen.getByRole('button', { name: 'Decrease Test Amount' });
 
     // Test up button click
-    fireEvent.click(upButton!);
+    fireEvent.click(upButton);
     expect(mockOnChange).toHaveBeenCalledWith(105000);
 
     // Test down button click
-    fireEvent.click(downButton!);
+    fireEvent.click(downButton);
     expect(mockOnChange).toHaveBeenCalledWith(95000);
   });
 
@@ -118,7 +117,7 @@ describe('SpinnerNumberField', () => {
 
     render(<SpinnerNumberField value={1500000} onChange={mockOnChange} label="Test Amount" />);
 
-    const input = screen.getByLabelText(/Test Amount/i);
+    const input = screen.getByLabelText('Test Amount');
 
     // Should show formatted value with yen prefix
     expect(input.getAttribute('value')).toBe('¥1,500,000');
@@ -129,7 +128,7 @@ describe('SpinnerNumberField', () => {
 
     render(<SpinnerNumberField value={100000} onChange={mockOnChange} label="Test Amount" />);
 
-    const input = screen.getByLabelText(/Test Amount/i);
+    const input = screen.getByLabelText('Test Amount');
 
     // Should have inputMode="numeric" attribute for mobile keyboards
     expect(input).toHaveAttribute('inputmode', 'numeric');
