@@ -241,7 +241,7 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     await user.click(screen.getByRole('option', { name: /1 Month/i }));
 
     // Enter amount > 150,000
-    const amountInput = screen.getByLabelText(/Allowance Amount/i);
+    const amountInput = screen.getByLabelText('Allowance Amount');
 
     // Verify initial helper text is present
     expect(screen.getByText(/Commuting allowance up to 150,000 yen/i)).toBeInTheDocument();

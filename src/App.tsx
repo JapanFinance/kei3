@@ -131,6 +131,7 @@ function App({ mode, toggleColorMode }: AppProps) {
       />
 
       <Box
+        component="main"
         sx={{
           maxWidth: 1536, // max-w-6xl equivalent
           mx: 'auto',

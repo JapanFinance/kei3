@@ -117,10 +117,20 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
           endAdornment: !isMobile ? (
             <InputAdornment position="end">
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <IconButton size="small" onClick={handleIncrement} sx={{ p: 0.25, height: 16 }}>
+                <IconButton
+                  size="small"
+                  onClick={handleIncrement}
+                  aria-label={label ? `Increase ${label}` : 'Increase value'}
+                  sx={{ p: 0.25, height: 16 }}
+                >
                   <KeyboardArrowUpIcon fontSize="small" />
                 </IconButton>
-                <IconButton size="small" onClick={handleDecrement} sx={{ p: 0.25, height: 16 }}>
+                <IconButton
+                  size="small"
+                  onClick={handleDecrement}
+                  aria-label={label ? `Decrease ${label}` : 'Decrease value'}
+                  sx={{ p: 0.25, height: 16 }}
+                >
                   <KeyboardArrowDownIcon fontSize="small" />
                 </IconButton>
               </Box>
