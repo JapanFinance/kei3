@@ -71,7 +71,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
           size="small"
           sx={{
             ...DEFAULT_ICON_BUTTON_SX,
-            ...(iconSx || {}),
+            ...iconSx,
           }}
           aria-label={iconAriaLabel || 'More information'}
         >
@@ -136,7 +136,7 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
         size="small"
         sx={{
           ...DEFAULT_ICON_BUTTON_SX,
-          ...(iconSx || {}),
+          ...iconSx,
         }}
         aria-label={iconAriaLabel || 'More information'}
       >
