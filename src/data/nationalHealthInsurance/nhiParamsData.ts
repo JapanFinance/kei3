@@ -353,7 +353,7 @@ const allNHIRegions: Record<string, NHIRegionDefinition> = {
         effectiveFrom: { year: 2026, month: 3 },
         params: {
           source:
-            'http://www.city.shinagawa.tokyo.jp/PC/procedure/procedure-kenkouhoken/procedure-kenkouhoken-hokenryo/hpg000019306.html',
+            'https://www.city.shinagawa.tokyo.jp/PC/procedure/procedure-kenkouhoken/procedure-kenkouhoken-hokenryo/hpg000019306.html',
           medicalRate: 0.0751,
           supportRate: 0.028,
           ltcRateForEligible: 0.0243,
