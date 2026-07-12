@@ -1,12 +1,12 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Suspense, lazy, useState, useMemo } from 'react';
+import { Suspense, lazy } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import { keyframes } from '@mui/material/styles';
-import { getTheme } from './theme';
+import { theme } from './theme';
 import './index.css';
 
 // Defer loading of the main App component
@@ -44,34 +44,15 @@ export const LoadingFallback = () => (
 );
 
 export const Root = () => {
-  const [mode, setMode] = useState<'light' | 'dark'>(() => {
-    // Check for saved theme preference
-    const savedMode = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedMode) return savedMode;
-
-    // Check system preference
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-
-    return 'light';
-  });
-
-  const theme = useMemo(() => getTheme(mode), [mode]);
-
-  const toggleColorMode = () => {
-    setMode(prevMode => {
-      const newMode = prevMode === 'light' ? 'dark' : 'light';
-      localStorage.setItem('theme', newMode);
-      return newMode;
-    });
-  };
-
+  // MUI owns the color scheme: it reads/persists the mode (localStorage
+  // 'mui-mode'), syncs across tabs, and toggles the .light/.dark class on
+  // <html>. `defaultMode="system"` follows the OS preference until the user
+  // chooses one via the ThemeToggle (which uses useColorScheme).
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={theme} defaultMode="system" disableTransitionOnChange>
       <CssBaseline />
       <Suspense fallback={<LoadingFallback />}>
-        <App mode={mode} toggleColorMode={toggleColorMode} />
+        <App />
       </Suspense>
     </ThemeProvider>
   );

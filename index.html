@@ -5,6 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Japan Take-Home Pay Calculator</title>
 
+    <!--
+      Apply the color-scheme class to <html> before first paint so the correct
+      background (set per-scheme in index.css) shows immediately, with no flash,
+      even when the saved preference differs from the OS setting. This is the
+      client-side-rendering counterpart to MUI's InitColorSchemeScript (which
+      targets SSR): MUI's --mui-palette-* variables are injected by JavaScript
+      and are absent before the bundle runs, so the pre-paint colors come from
+      static CSS keyed on this class. MUI (colorSchemeSelector: 'class') then
+      manages the same .light/.dark class once it mounts. Inline and
+      dependency-free so it runs while the document parses.
+    -->
+    <script>
+      (() => {
+        try {
+          // Carry over the preference saved under the pre-migration 'theme' key.
+          const legacy = localStorage.getItem('theme');
+          if (legacy && !localStorage.getItem('mui-mode')) {
+            localStorage.setItem('mui-mode', legacy);
+          }
+          const mode = localStorage.getItem('mui-mode') || 'system';
+          const dark =
+            mode === 'dark' ||
+            (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.add(dark ? 'dark' : 'light');
+        } catch {
+          /* localStorage/matchMedia may be unavailable; MUI applies the class on mount */
+        }
+      })();
+    </script>
+
     <!-- SEO Meta Tags -->
     <meta
       name="description"
