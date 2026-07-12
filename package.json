@@ -7,6 +7,7 @@
     "dev": "vite dev",
     "build": "tsc -b && vite build",
     "build:analyze": "tsc -b && vite build --mode analyze",
+    "size": "size-limit",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "prettier --write .",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.44.0",
+    "@size-limit/file": "^12.1.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -39,6 +41,7 @@
     "oxlint-tsgolint": "^0.24.0",
     "prettier": "3.9.5",
     "rollup-plugin-visualizer": "^7.0.1",
+    "size-limit": "^12.1.0",
     "typescript": "~7.0.2",
     "vite": "^8.1.4",
     "vite-plugin-sitemap": "^0.8.2",
