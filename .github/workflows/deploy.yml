@@ -31,6 +31,11 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    # pull-requests: write lets the size report post/update its sticky PR comment
+    # with the built-in GITHUB_TOKEN (no third-party action). Scoped to this job.
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -45,6 +50,9 @@ jobs:
         run: |
           set -o pipefail
           npx size-limit --json | tee size-limit.json
-      - name: Bundle size summary
+      - name: Report bundle size
         if: always()
-        run: node scripts/size-summary.mjs size-limit.json >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/size-report.mjs size-limit.json
