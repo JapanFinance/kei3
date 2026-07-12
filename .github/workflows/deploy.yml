@@ -84,4 +84,6 @@ jobs:
         with:
           name: lighthouse-reports
           path: .lighthouseci
+          # .lighthouseci is a dotfile dir; upload-artifact skips hidden paths by default.
+          include-hidden-files: true
           if-no-files-found: ignore
