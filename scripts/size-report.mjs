@@ -1,10 +1,12 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Renders the `size-limit --json` report and publishes it to two places:
-//   1. The GitHub Actions job summary (when $GITHUB_STEP_SUMMARY is set).
-//   2. A single "sticky" comment on the pull request (when PR_NUMBER and
-//      GITHUB_TOKEN are set), created once and updated in place on later runs.
+// Renders the `size-limit --json` report and publishes it, selected by the
+// REPORT_MODE env var ('summary' | 'comment', or both when unset):
+//   - summary: append the table to the GitHub Actions job summary
+//     ($GITHUB_STEP_SUMMARY) — used on every push and pull request.
+//   - comment: upsert a single "sticky" comment on the pull request (when
+//     PR_NUMBER and GITHUB_TOKEN are set), created once then updated in place.
 //
 // Usage: node scripts/size-report.mjs [report.json]
 //
@@ -20,24 +22,21 @@ import { appendFileSync, readFileSync } from 'node:fs';
 const MARKER = '<!-- size-limit-report -->';
 
 const kb = bytes => `${(bytes / 1000).toFixed(1)} kB`;
-const seconds = value => (value == null ? '—' : `${value.toFixed(2)} s`);
 
 function renderMarkdown(report) {
   const rows = report.map(check => {
     const budget = check.sizeLimit == null ? '—' : kb(check.sizeLimit);
-    const hasTime = check.loading != null || check.running != null;
-    const total = hasTime ? seconds((check.loading ?? 0) + (check.running ?? 0)) : '—';
     const result = check.passed ? '✅ pass' : '❌ over budget';
-    return `| ${check.name} | ${kb(check.size)} | ${budget} | ${seconds(check.loading)} | ${seconds(check.running)} | ${total} | ${result} |`;
+    return `| ${check.name} | ${kb(check.size)} | ${budget} | ${result} |`;
   });
   return [
     '### 📦 Bundle size',
     '',
-    '| Check | Gzip | Size budget | Load¹ | Exec² | Total | Result |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
+    '| Check | Gzip | Budget | Result |',
+    '| --- | --- | --- | --- |',
     ...rows,
     '',
-    '<sub>Only gzipped size is gated. Load¹ / Exec² / Total are shown for tracking, not enforced — ¹ download on size-limit’s default slow-3G profile, ² execution on a throttled Snapdragon 410 CPU. Both are intentionally pessimistic, so totals run higher than real desktop or 4G load.</sub>',
+    '<sub>Gzipped size of the built JS (`dist/assets/*.js`). CI fails on any increase; raise the budget deliberately when the growth is intended.</sub>',
   ].join('\n');
 }
 
@@ -96,9 +95,13 @@ try {
   process.exit(0);
 }
 
+const mode = process.env.REPORT_MODE ?? 'both'; // 'summary' | 'comment' | 'both'
 const markdown = renderMarkdown(report);
 console.log(markdown);
-if (process.env.GITHUB_STEP_SUMMARY) {
+
+if (mode !== 'comment' && process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${markdown}\n`);
 }
-await upsertComment(markdown);
+if (mode !== 'summary') {
+  await upsertComment(markdown);
+}

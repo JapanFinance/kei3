@@ -5,18 +5,16 @@
 // (.github/workflows/deploy.yml) and runnable locally with `npm run size`
 // after `npm run build`.
 //
-// size-limit enforces one limit per check (the unit of `limit` selects size or
-// time), so this single check over the built chunks (dist/assets/*.js) gates on
-// the gzipped size. The budget is deliberately tight — a couple of kB above the
-// current total — so any real size increase fails CI. An intentional, justified
+// One check over the built chunks (dist/assets/*.js), gated on the gzipped
+// size. The budget is deliberately tight — a couple of kB above the current
+// total — so any real size increase fails CI. An intentional, justified
 // increase should raise this limit in the same change that adds the weight.
 //
-// Because @size-limit/time is installed, the same check also reports loading
-// time (size-limit's default "slow 3G" profile) and JavaScript execution time
-// (a throttled "Snapdragon 410" CPU). Those figures are informational, not
-// gated, and read higher than real desktop or 4G load.
+// Size only: measuring the shipped bytes is fast and deterministic. Real-world
+// performance (render, interactivity) is covered separately by Lighthouse, not
+// by size-limit's synthetic in-browser timing.
 //
-// Baseline when added (2026-07): ~308 kB gzip (307,904 B), ~6.8 s total.
+// Baseline when added (2026-07): ~308 kB gzip (307,904 B).
 export default [
   {
     name: 'Total JS',
