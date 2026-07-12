@@ -20,19 +20,24 @@ declare module '@mui/material/styles' {
 // so no per-mode JavaScript is needed.
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
+  // Only values that differ from MUI's defaults are set here; everything else
+  // (secondary, text, divider, action, the other background half) uses the
+  // default palette. `primary.main` equals the default but must be present to
+  // attach the custom `50` shade — a light-blue tint used by tooltip callouts
+  // (bgcolor: 'primary.50'). `background` is overridden so paper contrasts with
+  // the page: MUI's defaults make default and paper identical (both #fff light,
+  // both #121212 dark), which would flatten cards against the background.
   colorSchemes: {
     light: {
       palette: {
         primary: { main: '#1976d2', 50: '#e3f2fd' },
-        secondary: { main: '#9c27b0' },
-        background: { default: '#f5f5f5', paper: '#ffffff' },
+        background: { default: '#f5f5f5' },
       },
     },
     dark: {
       palette: {
         primary: { main: '#1976d2', 50: 'rgba(25, 118, 210, 0.12)' },
-        secondary: { main: '#9c27b0' },
-        background: { default: '#121212', paper: '#1e1e1e' },
+        background: { paper: '#1e1e1e' },
       },
     },
   },
