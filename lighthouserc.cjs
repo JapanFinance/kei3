@@ -8,20 +8,21 @@
 // WHAT IS AUDITED
 // LHCI serves the production build in dist/ from its own static server over
 // http://localhost and audits the single page. This is deterministic and does
-// not depend on a Cloudflare deploy having finished. The trade-off is that the
-// local static server has no CDN compression, cache headers, or HTTP/2, so
-// Lighthouse's PERFORMANCE score reads noticeably lower here than the deployed
-// site does — which is why performance is tracked (warn), not gated (see below).
+// not depend on a Cloudflare deploy having finished. The PERFORMANCE score is
+// sensitive to the runner and to the absence of production's CDN compression,
+// caching, and HTTP/2 — the same build scores ~87 on the CI runner but ~63 on a
+// local static server — so it is tracked (warn), not gated (see below). The
+// three content/checklist categories are stable across environments and gated.
 //
 // AGGREGATION
 // Each run is noisy, so we take numberOfRuns and assert against the median
 // ("representative") run. scripts/lighthouse-report.mjs reports that same run,
 // so the PR comment and the CI gate always show the same numbers.
 //
-// THRESHOLDS (baseline captured 2026-07 against this build; median of 3 runs)
-//   Performance     ~63   warn  ≥ 50   noisy + understated on the un-CDN'd local
-//                                       build; a regression is surfaced, not a
-//                                       hard failure.
+// THRESHOLDS (median of 3 runs; category scores confirmed on the CI runner 2026-07)
+//   Performance     ~87   warn  ≥ 50   environment-sensitive (~63 on a local
+//                                       static server); a regression is
+//                                       surfaced, not a hard failure.
 //   Accessibility    91   error ≥ 90   deterministic; 3 known imperfect audits
 //                                       (color-contrast, unlabeled Slider input,
 //                                       heading-order) hold it below 100.

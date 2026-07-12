@@ -86,7 +86,7 @@ function renderMarkdown(run, budgets, numberOfRuns) {
     '| --- | --- | --- | --- |',
     ...rows,
     '',
-    '<sub>Accessibility, Best Practices, and SEO are gated — CI fails below the floor. Performance is measured against the local static build (no CDN compression, caching, or HTTP/2), so it reads lower than production and is tracked, not gated. Full HTML reports are attached to the workflow run as the <code>lighthouse-reports</code> artifact.</sub>',
+    '<sub>Accessibility, Best Practices, and SEO are gated — CI fails below the floor. Performance is measured against a local static build and is sensitive to the runner and to the absence of production CDN compression/caching/HTTP-2, so it is tracked, not gated. Full HTML reports are attached to the workflow run as the <code>lighthouse-reports</code> artifact.</sub>',
   ].join('\n');
 }
 
