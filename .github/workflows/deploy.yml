@@ -41,3 +41,47 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+
+  lighthouse:
+    needs: test
+    runs-on: ubuntu-latest
+    # pull-requests: write lets the Lighthouse report post/update its sticky PR
+    # comment with the built-in GITHUB_TOKEN (no third-party action). Scoped to
+    # this job. Chrome is preinstalled on ubuntu-latest, so no browser install.
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      # Collect, then write reports (manifest + HTML) to disk, then assert. The
+      # report and artifact steps run before/around the gate with `always()` so
+      # the PR comment and artifact are produced even when the gate fails. @lhci/cli
+      # is pinned and run via npx to keep the heavy Lighthouse/Chrome toolchain out
+      # of the other jobs and the shipped dependency tree.
+      - name: Collect Lighthouse results
+        run: npx --yes @lhci/cli@0.15.1 collect --config=lighthouserc.cjs
+      - name: Write Lighthouse reports
+        run: npx --yes @lhci/cli@0.15.1 upload --config=lighthouserc.cjs
+      - name: Report Lighthouse scores
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node scripts/lighthouse-report.mjs
+      - name: Assert Lighthouse budgets
+        run: npx --yes @lhci/cli@0.15.1 assert --config=lighthouserc.cjs
+      - name: Upload Lighthouse report artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci
+          if-no-files-found: ignore

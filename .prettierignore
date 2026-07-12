@@ -2,6 +2,7 @@ dist
 node_modules
 .claude
 .wrangler
+.lighthouseci
 package-lock.json
 
 # Markdown is left to authors (the changelog is parsed with a specific structure).

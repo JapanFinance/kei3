@@ -25,3 +25,6 @@ dist-ssr
 
 .wrangler
 .claude
+
+# Lighthouse CI report output (generated in CI, uploaded as an artifact)
+.lighthouseci
