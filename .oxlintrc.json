@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": { "correctness": "error", "perf": "error" },
+  "options": { "typeAware": true },
+  "plugins": ["typescript", "oxc", "unicorn", "react"],
+  "ignorePatterns": ["dist", ".claude"],
+  "jsPlugins": [{ "name": "local", "specifier": "./scripts/oxlint-plugins/local.js" }],
+  "rules": {
+    "no-restricted-imports": ["error", { "patterns": [{ "regex": "^@mui/[^/]+$" }] }],
+    "local/license-header": "error",
+    "local/no-jsx-unicode-escape": "error",
+    "react/exhaustive-deps": "warn",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/restrict-template-expressions": [
+      "error",
+      { "allowNumber": true, "allowBoolean": true }
+    ],
+    "react/jsx-key": "off",
+    "react/no-array-index-key": "off",
+    "react/no-object-type-as-default-prop": "off",
+    "unicorn/prefer-set-has": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/__tests__/**/*.{ts,tsx}"],
+      "plugins": ["typescript", "oxc", "unicorn", "react", "vitest"],
+      "rules": { "vitest/require-mock-type-parameters": "off" }
+    }
+  ]
+}
