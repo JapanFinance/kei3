@@ -41,23 +41,24 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Check bundle size
-        run: |
-          set -o pipefail
-          npx size-limit --json | tee size-limit.json
-      - name: Bundle size summary
-        if: always()
-        env:
-          REPORT_MODE: summary
-        run: node .github/size-report.mjs size-limit.json
+      - name: Measure bundle size
+        run: node .github/size-report.mjs measure
       - name: Upload size report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: size-limit-report
-          path: size-limit.json
+          name: size-report
+          path: size-report.json
           if-no-files-found: ignore
           retention-days: 1
+      # On a push to the default branch, cache the report keyed by commit SHA so
+      # a later PR can restore its base commit's sizes and show per-chunk deltas
+      - name: Cache size report for base diff
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@v4
+        with:
+          path: size-report.json
+          key: size-report-${{ github.sha }}
 
   # Posting the bundle-size PR comment is the only step that needs write access.
   # It runs in its own job that installs no dependencies, so the build job (which
@@ -76,14 +77,26 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Download size report
+      - name: Download PR size report
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
-          name: size-limit-report
+          name: size-report
+          path: pr
+      # The base commit's report, cached by its own main build.
+      # A cache miss yields an absolute (no-delta) comment.
+      - name: Restore baseline size report (base commit)
+        uses: actions/cache/restore@v4
+        with:
+          path: size-report.json
+          key: size-report-${{ github.event.pull_request.base.sha }}
       - name: Comment bundle size on PR
         env:
-          REPORT_MODE: comment
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node .github/size-report.mjs size-limit.json
+        # Give the two reports clear names: the artifact (this PR's build) and the
+        # restored cache (the base commit's build; absent on a miss → absolute).
+        run: |
+          [ -f pr/size-report.json ] && mv pr/size-report.json size-report-pr.json || true
+          [ -f size-report.json ] && mv size-report.json size-report-baseline.json || true
+          node .github/size-report.mjs comment size-report-pr.json size-report-baseline.json

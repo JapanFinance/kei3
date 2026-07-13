@@ -26,5 +26,5 @@ dist-ssr
 .wrangler
 .claude
 
-# size-limit --json report written during CI
-size-limit.json
+# bundle-size report written during CI
+size-report.json
