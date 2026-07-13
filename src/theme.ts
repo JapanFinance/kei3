@@ -6,10 +6,7 @@ import { createTheme } from '@mui/material/styles';
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
   // Only `background` differs from MUI's defaults, overridden so paper
-  // contrasts with the page: MUI's defaults make default and paper identical
-  // (both #fff light, both #121212 dark), which would flatten cards against the
-  // background. Everything else (primary, secondary, text, divider, action)
-  // uses the default palette.
+  // contrasts with the page.
   colorSchemes: {
     light: { palette: { background: { default: '#f5f5f5' } } },
     dark: { palette: { background: { paper: '#1e1e1e' } } },

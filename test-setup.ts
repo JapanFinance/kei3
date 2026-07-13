@@ -11,18 +11,3 @@ import { vi } from 'vitest';
 vi.mock('@mui/material/useMediaQuery', () => ({
   default: vi.fn(() => false), // Always return desktop view by default
 }));
-
-// jsdom does not implement window.matchMedia, which MUI's useColorScheme calls
-// to detect the system color scheme. Provide a minimal light-mode stub.
-if (!window.matchMedia) {
-  window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  })) as unknown as typeof window.matchMedia;
-}
