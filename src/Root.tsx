@@ -44,15 +44,6 @@ export const LoadingFallback = () => (
 );
 
 export const Root = () => {
-  // MUI owns the color scheme: it reads/persists the mode (localStorage
-  // 'mui-mode'), syncs across tabs, and toggles the .light/.dark class on
-  // <html>. defaultMode is 'system' by default (follows the OS preference until
-  // the user picks one via the ThemeToggle). noSsr renders once instead of
-  // twice — the recommended optimization for a client-only app, which also
-  // avoids the mode flicker on refresh. disableTransitionOnChange keeps the
-  // toggle crisp: without it, components with color transitions (Button
-  // background, icon fill) would fade while the background snaps, an
-  // inconsistent partial animation.
   return (
     <ThemeProvider theme={theme} noSsr disableTransitionOnChange>
       <CssBaseline />

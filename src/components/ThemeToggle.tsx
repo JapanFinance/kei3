@@ -11,10 +11,6 @@ const ThemeToggle = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { mode, systemMode, setMode } = useColorScheme();
-
-  // noSsr (set on the ThemeProvider) makes `mode` defined on the first render,
-  // so no undefined-first-render guard is needed. `mode` may be 'system' —
-  // resolve it to the concrete scheme for the icon.
   const isDark = (mode === 'system' ? systemMode : mode) === 'dark';
 
   return (
