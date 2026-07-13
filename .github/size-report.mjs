@@ -27,9 +27,10 @@ import { join } from 'node:path';
 const ASSETS_DIR = 'dist/assets';
 const REPORT_PATH = 'size-report.json';
 const MARKER = '<!-- size-limit-report -->';
-// Deliberately tight — ~2 kB over the current total (~263.3 kB) — so any real
-// increase fails CI. Raise it in the same change that legitimately adds weight.
-const BUDGET_BYTES = 265_000;
+// Matches main's existing size-limit budget (264 kB) — this PR is a
+// behavior-preserving refactor and must not move the gate. Current total is
+// ~263.3 kB. Raise this in the same change that legitimately adds weight.
+const BUDGET_BYTES = 264_000;
 
 const kb = bytes => `${(bytes / 1000).toFixed(1)} kB`;
 // Drop Vite's "-<8-char hash>" so a chunk is comparable across commits.
@@ -95,7 +96,7 @@ function renderMarkdown(report, base) {
     '',
     '</details>',
     '',
-    '<sub>Brotli size of the built JS + CSS (`dist/assets/*.{js,css}`) — a regression tripwire, close to but not exactly what Cloudflare serves. Δ is vs the PR base commit.</sub>',
+    `<sub>Brotli size of the built JS + CSS (\`dist/assets/*.{js,css}\`) — a regression tripwire, close to but not exactly what Cloudflare serves.${withDelta ? ' Δ is vs the PR base commit.' : ''}</sub>`,
   ].join('\n');
 }
 

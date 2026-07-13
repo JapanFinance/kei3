@@ -51,10 +51,12 @@ jobs:
           path: size-report.json
           if-no-files-found: ignore
           retention-days: 1
-      # On main, cache the report keyed by commit SHA so a PR can restore its
-      # base commit's sizes and show per-chunk deltas — no base rebuild needed.
+      # On a push to the default branch, cache the report keyed by commit SHA so
+      # a later PR can restore its base commit's sizes and show per-chunk deltas
+      # — no base rebuild. (The workflow only runs `push` on main anyway; the ref
+      # check makes the default-branch-only intent explicit and future-proof.)
       - name: Cache size report for base diff
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: actions/cache/save@v4
         with:
           path: size-report.json
@@ -77,16 +79,16 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Download size report (head)
+      - name: Download PR size report
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: size-report
-          path: head
+          path: pr
       # The base commit's report, cached by its own main build. Absent until this
-      # feature is on main and a base build has cached one — then deltas appear;
-      # a cache miss just yields an absolute (no-delta) comment.
-      - name: Restore base size report
+      # feature is on main and a base build has cached one — then per-chunk deltas
+      # appear; a cache miss just yields an absolute (no-delta) comment.
+      - name: Restore baseline size report (base commit)
         uses: actions/cache/restore@v4
         with:
           path: size-report.json
@@ -95,4 +97,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node .github/size-report.mjs comment head/size-report.json size-report.json
+        # Give the two reports clear names: the artifact (this PR's build) and the
+        # restored cache (the base commit's build; absent on a miss → absolute).
+        run: |
+          [ -f pr/size-report.json ] && mv pr/size-report.json size-report-pr.json || true
+          [ -f size-report.json ] && mv size-report.json size-report-baseline.json || true
+          node .github/size-report.mjs comment size-report-pr.json size-report-baseline.json
