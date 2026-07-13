@@ -3,6 +3,8 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeProvider } from '@mui/material/styles';
+import { theme } from '../theme';
 import App from '../App';
 
 // Mock scrollIntoView to avoid errors in JSDOM
@@ -11,7 +13,11 @@ window.HTMLElement.prototype.scrollIntoView = function () {};
 describe('App Integration - Income Mode Switching', () => {
   it('should switch health insurance provider when changing income mode', async () => {
     const user = userEvent.setup();
-    render(<App mode="light" toggleColorMode={() => {}} />);
+    render(
+      <ThemeProvider theme={theme}>
+        <App />
+      </ThemeProvider>,
+    );
 
     // 1. Initial State: Salary Mode -> Kyokai Kenpo
     expect(screen.getByRole('button', { name: 'Salary' })).toHaveAttribute('aria-pressed', 'true');

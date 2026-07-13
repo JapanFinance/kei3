@@ -5,6 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Japan Take-Home Pay Calculator</title>
 
+    <!--
+      Apply the color-scheme class to <html> before first paint so the correct
+      background shows immediately, with no flash, even when the saved preference
+      differs from the OS setting. MUI's variables are injected by JavaScript
+      and are absent before the bundle runs, so the pre-paint colors come from
+      static CSS keyed on this class. MUI (colorSchemeSelector: 'class') then
+      manages the same .light/.dark class once it mounts. Inline and
+      dependency-free so it runs while the document parses.
+    -->
+    <script>
+      (() => {
+        try {
+          const legacy = localStorage.getItem('theme');
+          if (legacy && !localStorage.getItem('mui-mode')) {
+            localStorage.setItem('mui-mode', legacy);
+          }
+          const mode = localStorage.getItem('mui-mode') || 'system';
+          const dark =
+            mode === 'dark' ||
+            (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.classList.add(dark ? 'dark' : 'light');
+        } catch {}
+      })();
+    </script>
+
     <!-- SEO Meta Tags -->
     <meta
       name="description"

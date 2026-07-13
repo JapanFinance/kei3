@@ -20,12 +20,7 @@ const TakeHomeResultsDisplay = lazy(
 const TakeHomeChart = lazy(() => import('./components/TakeHomeCalculator/TakeHomeChart'));
 const ChangelogModal = lazy(() => import('./components/ChangelogModal'));
 
-interface AppProps {
-  mode: 'light' | 'dark';
-  toggleColorMode: () => void;
-}
-
-function App({ mode, toggleColorMode }: AppProps) {
+function App() {
   // Changelog modal management
   const {
     isOpen: isChangelogOpen,
@@ -125,8 +120,6 @@ function App({ mode, toggleColorMode }: AppProps) {
     >
       <SiteHeader
         title="Japan Take-Home Pay Calculator"
-        mode={mode}
-        toggleColorMode={toggleColorMode}
         actions={<ChangelogButton onClick={openChangelog} />}
       />
 
@@ -226,7 +219,7 @@ function App({ mode, toggleColorMode }: AppProps) {
             This calculator offers no guarantee of accuracy or completeness. Not all situations are
             covered.
           </p>
-          <p className="mt-1">Consult with a tax professional for specific tax advice.</p>
+          <p>Consult with a tax professional for specific tax advice.</p>
         </Box>
 
         {/* Changelog Modal */}

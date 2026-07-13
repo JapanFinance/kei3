@@ -2,34 +2,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import IconButton from '@mui/material/IconButton';
-import { useTheme } from '@mui/material/styles';
+import { useColorScheme, useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Brightness4 from '@mui/icons-material/Brightness4';
 import Brightness7 from '@mui/icons-material/Brightness7';
 
-interface ThemeToggleProps {
-  toggleColorMode: () => void;
-  mode: 'light' | 'dark';
-}
-
-const ThemeToggle = ({ toggleColorMode, mode }: ThemeToggleProps) => {
+const ThemeToggle = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { mode, systemMode, setMode } = useColorScheme();
+  const isDark = (mode === 'system' ? systemMode : mode) === 'dark';
 
   return (
     <IconButton
-      onClick={toggleColorMode}
+      onClick={() => setMode(isDark ? 'light' : 'dark')}
       color="inherit"
       size={isMobile ? 'small' : 'medium'}
       sx={{
         ml: 1,
         '&:hover': {
-          backgroundColor: theme.palette.action.hover,
+          backgroundColor: 'action.hover',
         },
       }}
-      aria-label={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`}
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
-      {mode === 'light' ? <Brightness4 /> : <Brightness7 />}
+      {isDark ? <Brightness7 /> : <Brightness4 />}
     </IconButton>
   );
 };

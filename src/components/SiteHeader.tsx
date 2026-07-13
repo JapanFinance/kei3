@@ -10,8 +10,6 @@ import ThemeToggle from './ThemeToggle';
 interface SiteHeaderProps {
   /** Title shown in the bar. */
   title: string;
-  mode: 'light' | 'dark';
-  toggleColorMode: () => void;
   /** Optional controls rendered before the theme toggle (e.g. the changelog button). */
   actions?: ReactNode;
 }
@@ -22,7 +20,7 @@ interface SiteHeaderProps {
  * on mobile. Static (scrolls away with the page): its controls are "on
  * load" affordances, not needed while scrolling.
  */
-export default function SiteHeader({ title, mode, toggleColorMode, actions }: SiteHeaderProps) {
+export default function SiteHeader({ title, actions }: SiteHeaderProps) {
   return (
     <AppBar
       position="static"
@@ -49,7 +47,7 @@ export default function SiteHeader({ title, mode, toggleColorMode, actions }: Si
           {title}
         </Typography>
         {actions}
-        <ThemeToggle mode={mode} toggleColorMode={toggleColorMode} />
+        <ThemeToggle />
       </Toolbar>
     </AppBar>
   );
