@@ -28,3 +28,6 @@ dist-ssr
 
 # bundle-size report written during CI
 size-report.json
+
+# Lighthouse results (summary + HTML report) written during CI
+lighthouse-results/

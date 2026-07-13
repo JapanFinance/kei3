@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "build:analyze": "tsc -b && vite build --mode analyze",
     "size": "node .github/size-report.mjs measure",
+    "lighthouse:install": "npm install --no-save lighthouse@13.4.0 chrome-launcher@^1.2.1",
+    "lighthouse": "node .github/lighthouse-run.mjs local",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "prettier --write .",

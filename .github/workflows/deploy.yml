@@ -100,3 +100,85 @@ jobs:
           [ -f pr/size-report.json ] && mv pr/size-report.json size-report-pr.json || true
           [ -f size-report.json ] && mv size-report.json size-report-baseline.json || true
           node .github/size-report.mjs comment size-report-pr.json size-report-baseline.json
+
+  lighthouse:
+    needs: test
+    runs-on: ubuntu-latest
+    # Read-only, mirroring the build / size-report split: the job that runs
+    # `npm ci`, installs Lighthouse, and drives Chrome never holds a PR-writable
+    # token — the separate lighthouse-report job posts the comment. pull-requests:
+    # read lets the preview step find the Cloudflare preview URL in the bot's PR
+    # comment. Chrome is preinstalled on ubuntu-latest, so there is no browser install.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      # Lighthouse is not a project dependency; install it (pinned, no lockfile
+      # write) only here, so the test and build jobs stay lean.
+      - name: Install Lighthouse
+        run: npm run lighthouse:install
+      - name: Audit local build
+        run: node .github/lighthouse-run.mjs local
+      # On pull requests, also measure performance against the Cloudflare preview
+      # deployment (real CDN). Best-effort: it waits for the preview of this
+      # commit and never fails the job, so a slow or missing deploy just omits the
+      # preview number.
+      - name: Audit Cloudflare preview performance
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node .github/lighthouse-run.mjs preview
+      - name: Job summary
+        if: always()
+        run: node .github/lighthouse-report.mjs summary
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-report
+          path: lighthouse-results
+          if-no-files-found: ignore
+          retention-days: 1
+      # The gate runs last so the summary and artifact are produced even when it
+      # fails. It reads the scores written by "Audit local build".
+      - name: Assert Lighthouse budgets
+        run: node .github/lighthouse-run.mjs gate
+
+  # Posting the Lighthouse PR comment is the only step that needs write access, so
+  # it runs in its own job that installs nothing — the lighthouse job (which runs
+  # `npm ci` and installs Lighthouse) stays read-only. Mirrors the size-report job.
+  lighthouse-report:
+    needs: lighthouse
+    if: ${{ github.event_name == 'pull_request' && (needs.lighthouse.result == 'success' || needs.lighthouse.result == 'failure') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Download Lighthouse report
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: lighthouse-report
+          path: lighthouse-results
+      - name: Comment Lighthouse scores on PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: node .github/lighthouse-report.mjs comment
