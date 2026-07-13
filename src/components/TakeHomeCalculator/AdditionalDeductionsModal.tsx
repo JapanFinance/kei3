@@ -117,7 +117,7 @@ const DeductionCalcTooltip: React.FC<{ infoKey: keyof typeof ADDITIONAL_DEDUCTIO
             href={info.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+            style={{ color: 'var(--mui-palette-primary-main)', textDecoration: 'underline' }}
           >
             {info.sourceLabel}
           </a>
@@ -632,7 +632,10 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                               href="https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/090929.html"
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+                              style={{
+                                color: 'var(--mui-palette-primary-main)',
+                                textDecoration: 'underline',
+                              }}
                             >
                               総務省: 個人住民税の住宅ローン控除
                             </a>

@@ -89,7 +89,7 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
                 href={info.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: 'var(--primary-main)', textDecoration: 'underline' }}
+                style={{ color: 'var(--mui-palette-primary-main)', textDecoration: 'underline' }}
               >
                 {info.sourceLabel}
               </a>

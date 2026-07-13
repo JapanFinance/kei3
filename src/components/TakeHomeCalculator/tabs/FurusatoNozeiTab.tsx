@@ -102,7 +102,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                       href="https://kaikei7.com/furusato_nouzei_keisan/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: 'var(--primary-main)' }}
+                      style={{ color: 'var(--mui-palette-primary-main)' }}
                     >
                       kaikei7
                     </a>{' '}
@@ -152,7 +152,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                       href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/"
                       target="_blank"
                       style={{
-                        color: 'var(--primary-main)',
+                        color: 'var(--mui-palette-primary-main)',
                         textDecoration: 'underline',
                         fontSize: '0.95em',
                       }}

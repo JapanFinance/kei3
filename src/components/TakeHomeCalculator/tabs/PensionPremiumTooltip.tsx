@@ -93,7 +93,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
         <Box
           sx={{
             p: 1.5,
-            bgcolor: 'var(--action-hover)',
+            bgcolor: 'action.hover',
             borderBottom: '1px solid',
             borderColor: 'divider',
           }}
