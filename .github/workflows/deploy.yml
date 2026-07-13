@@ -41,21 +41,14 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      - name: Check bundle size
-        run: |
-          set -o pipefail
-          npx size-limit --json | tee size-limit.json
-      - name: Bundle size summary
-        if: always()
-        env:
-          REPORT_MODE: summary
-        run: node .github/size-report.mjs size-limit.json
+      - name: Measure bundle size
+        run: node .github/size-report.mjs measure
       - name: Upload size report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: size-limit-report
-          path: size-limit.json
+          name: size-report
+          path: size-report.json
           if-no-files-found: ignore
           retention-days: 1
 
@@ -80,10 +73,9 @@ jobs:
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: size-limit-report
+          name: size-report
       - name: Comment bundle size on PR
         env:
-          REPORT_MODE: comment
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node .github/size-report.mjs size-limit.json
+        run: node .github/size-report.mjs comment size-report.json
