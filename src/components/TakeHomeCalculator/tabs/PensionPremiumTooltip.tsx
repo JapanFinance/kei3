@@ -127,7 +127,13 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
 
         {/* Main Calculation Highlight */}
         <Box
-          sx={{ p: 1.5, bgcolor: theme => alpha(theme.palette.primary.main, 0.12), display: 'flex', flexDirection: 'column', gap: 1 }}
+          sx={{
+            p: 1.5,
+            bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+          }}
         >
           <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
             Monthly Pension Contribution

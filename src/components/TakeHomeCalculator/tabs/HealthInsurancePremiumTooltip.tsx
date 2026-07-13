@@ -290,7 +290,9 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
           />
         </Box>
 
-        <Box sx={{ p: 1, bgcolor: theme => alpha(theme.palette.primary.main, 0.12), borderRadius: 1 }}>
+        <Box
+          sx={{ p: 1, bgcolor: theme => alpha(theme.palette.primary.main, 0.12), borderRadius: 1 }}
+        >
           <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
             Total: {formatJPY(prevCalc.final)} × 3⁄10
             {' + '}
@@ -578,7 +580,13 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
           {/* Main Calculation Highlight */}
           <Box
-            sx={{ p: 1.5, bgcolor: theme => alpha(theme.palette.primary.main, 0.12), display: 'flex', flexDirection: 'column', gap: 1 }}
+            sx={{
+              p: 1.5,
+              bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+            }}
           >
             {ratesVary && monthlyRates.length === 12 ? (
               <>
