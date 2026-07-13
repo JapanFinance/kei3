@@ -94,13 +94,11 @@ body {
   }
 }
 
-/* Form Base Styles */
+/* Form Base Styles. The InputForm Box sets its background, padding, corner
+   radius, and shadow through its own sx prop (bgcolor/p/borderRadius/boxShadow),
+   which wins over this rule, so only the properties sx does not set live here. */
 .form-container {
-  background-color: var(--mui-palette-background-paper, #ffffff);
   color: var(--mui-palette-text-primary, rgba(0, 0, 0, 0.87));
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
   border: 1px solid var(--mui-palette-divider, rgba(0, 0, 0, 0.12));
   width: 100%;
   margin: 0 auto;
@@ -108,38 +106,6 @@ body {
   box-sizing: border-box;
   position: relative;
   z-index: 1;
-}
-
-/* Typography */
-.form-container .MuiTypography-root {
-  color: var(--mui-palette-text-primary);
-}
-
-/* Form Labels */
-.form-container .MuiFormLabel-root {
-  color: var(--mui-palette-text-secondary);
-}
-
-.form-container .MuiFormLabel-root.Mui-focused {
-  color: var(--mui-palette-primary-main, #1976d2);
-}
-
-/* Input Fields */
-.form-container .MuiInputBase-root {
-  color: var(--mui-palette-text-primary);
-}
-
-/* Outlined Inputs */
-.form-container .MuiOutlinedInput-notchedOutline {
-  border-color: var(--mui-palette-divider);
-}
-
-.form-container .MuiOutlinedInput-notchedOutline:hover {
-  border-color: var(--mui-palette-text-secondary);
-}
-
-.form-container .Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-width: 1px;
 }
 
 /* Form Groups */

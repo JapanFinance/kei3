@@ -21,5 +21,17 @@ export const theme = createTheme({
     MuiTextField: { defaultProps: { size: 'small' } },
     MuiFormControl: { defaultProps: { size: 'small' } },
     MuiAutocomplete: { defaultProps: { size: 'small' } },
+    // Soften the resting outline on every outlined input: use the theme's
+    // divider colour (0.12 opacity) instead of MUI's default 0.23. This was
+    // previously a `.form-container` CSS rule that reached only the main
+    // InputForm, so dialog and modal inputs kept MUI's darker default; setting
+    // it here applies the lighter border consistently across every input.
+    // Hover, focus, error, and disabled states keep MUI's defaults — those are
+    // applied via higher-specificity root selectors and are unaffected here.
+    MuiOutlinedInput: {
+      styleOverrides: {
+        notchedOutline: { borderColor: 'var(--mui-palette-divider)' },
+      },
+    },
   },
 });
