@@ -53,8 +53,6 @@ jobs:
           retention-days: 1
       # On a push to the default branch, cache the report keyed by commit SHA so
       # a later PR can restore its base commit's sizes and show per-chunk deltas
-      # — no base rebuild. (The workflow only runs `push` on main anyway; the ref
-      # check makes the default-branch-only intent explicit and future-proof.)
       - name: Cache size report for base diff
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: actions/cache/save@v4
@@ -85,9 +83,8 @@ jobs:
         with:
           name: size-report
           path: pr
-      # The base commit's report, cached by its own main build. Absent until this
-      # feature is on main and a base build has cached one — then per-chunk deltas
-      # appear; a cache miss just yields an absolute (no-delta) comment.
+      # The base commit's report, cached by its own main build.
+      # A cache miss yields an absolute (no-delta) comment.
       - name: Restore baseline size report (base commit)
         uses: actions/cache/restore@v4
         with:

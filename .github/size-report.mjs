@@ -27,9 +27,7 @@ import { join } from 'node:path';
 const ASSETS_DIR = 'dist/assets';
 const REPORT_PATH = 'size-report.json';
 const MARKER = '<!-- size-limit-report -->';
-// Matches main's existing size-limit budget (264 kB) — this PR is a
-// behavior-preserving refactor and must not move the gate. Current total is
-// ~263.3 kB. Raise this in the same change that legitimately adds weight.
+// Adjust this in the same change that expectedly changes the size.
 const BUDGET_BYTES = 264_000;
 
 const kb = bytes => `${(bytes / 1000).toFixed(1)} kB`;
