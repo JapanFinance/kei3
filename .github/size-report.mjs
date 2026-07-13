@@ -1,42 +1,101 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Renders the `size-limit --json` report and publishes it, selected by the
-// REPORT_MODE env var ('summary' | 'comment', or both when unset):
-//   - summary: append the table to the GitHub Actions job summary
-//     ($GITHUB_STEP_SUMMARY) — used on every push and pull request.
-//   - comment: upsert a single "sticky" comment on the pull request (when
-//     PR_NUMBER and GITHUB_TOKEN are set), created once then updated in place.
+// Self-hosted bundle-size tooling — replaces size-limit with Node's built-in
+// zlib. Used by CI (.github/workflows/deploy.yml) and locally via `npm run size`
+// after `npm run build`.
 //
-// Usage: node .github/size-report.mjs [report.json]
+// Modes (first CLI arg):
+//   measure
+//     Read dist/assets, compute per-file Brotli sizes, write size-report.json,
+//     append the table to the job summary ($GITHUB_STEP_SUMMARY), and exit
+//     non-zero if the total exceeds the budget — this is the CI gate.
+//   comment <headReport> [baseReport]
+//     Upsert the sticky PR comment from a report JSON. Given a base report (the
+//     PR's base commit, restored from the Actions cache) it also shows the
+//     per-chunk delta.
 //
-// The PR comment uses only Node's built-in fetch against the GitHub REST API
-// and the Actions-provided GITHUB_TOKEN — no third-party GitHub Action. Comment
-// failures (e.g. the read-only token on pull requests from forks) are logged
-// and ignored so they never fail the build; the size gate is the `size-limit`
-// step itself.
+// Brotli approximates what Cloudflare serves modern browsers; it is a relative
+// regression tripwire, not the exact transfer size (Cloudflare compresses at a
+// lower quality). Node's default (max-quality) Brotli matches size-limit's
+// figure to the byte.
 
-import { appendFileSync, readFileSync } from 'node:fs';
+import { appendFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { brotliCompressSync } from 'node:zlib';
+import { join } from 'node:path';
 
-// Marks our comment so later runs find and update it instead of adding a new one.
+const ASSETS_DIR = 'dist/assets';
+const REPORT_PATH = 'size-report.json';
 const MARKER = '<!-- size-limit-report -->';
+// Deliberately tight — ~2 kB over the current total (~263.3 kB) — so any real
+// increase fails CI. Raise it in the same change that legitimately adds weight.
+const BUDGET_BYTES = 265_000;
 
 const kb = bytes => `${(bytes / 1000).toFixed(1)} kB`;
+// Drop Vite's "-<8-char hash>" so a chunk is comparable across commits.
+const chunkName = file => file.replace(/-[\w-]{8}(\.\w+)$/, '$1');
 
-function renderMarkdown(report) {
-  const rows = report.map(check => {
-    const budget = check.sizeLimit == null ? '—' : kb(check.sizeLimit);
-    const result = check.passed ? '✅ pass' : '❌ over budget';
-    return `| ${check.name} | ${kb(check.size)} | ${budget} | ${result} |`;
+function measure() {
+  const files = readdirSync(ASSETS_DIR).filter(f => /\.(js|css)$/.test(f));
+  const entries = files
+    .map(f => ({
+      name: chunkName(f),
+      size: brotliCompressSync(readFileSync(join(ASSETS_DIR, f))).length,
+    }))
+    .sort((a, b) => b.size - a.size);
+  const total = entries.reduce((sum, e) => sum + e.size, 0);
+  return { total, budget: BUDGET_BYTES, files: entries };
+}
+
+function readReport(path) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+function deltaText(prev, cur) {
+  if (prev == null) return 'new';
+  const diff = cur - prev;
+  if (diff === 0) return '—';
+  return `${diff > 0 ? '+' : '-'}${kb(Math.abs(diff))}`;
+}
+
+function renderMarkdown(report, base) {
+  const withDelta = Boolean(base);
+  const baseSizes = new Map((base?.files ?? []).map(f => [f.name, f.size]));
+
+  const rows = report.files.map(f => {
+    const cells = [`\`${f.name}\``, kb(f.size)];
+    if (withDelta) cells.push(deltaText(baseSizes.get(f.name), f.size));
+    return `| ${cells.join(' | ')} |`;
   });
+  if (withDelta) {
+    const headNames = new Set(report.files.map(f => f.name));
+    for (const f of base.files) {
+      if (!headNames.has(f.name)) rows.push(`| \`${f.name}\` | — | removed |`);
+    }
+  }
+
+  const totalRow = withDelta
+    ? `| **Total** | **${kb(report.total)}** | **${deltaText(base.total, report.total)}** |`
+    : `| **Total** | **${kb(report.total)}** |`;
+  const status = report.total <= report.budget ? '✅' : '❌ over budget';
+
   return [
-    '### 📦 Bundle size',
+    `### 📦 Bundle size — ${kb(report.total)} Brotli / ${kb(report.budget)} budget ${status}`,
     '',
-    '| Check | Brotli | Budget | Result |',
-    '| --- | --- | --- | --- |',
+    '<details><summary>Per-file breakdown</summary>',
+    '',
+    withDelta ? '| Chunk | Brotli | Δ vs base |' : '| Chunk | Brotli |',
+    withDelta ? '| --- | --: | --: |' : '| --- | --: |',
     ...rows,
+    totalRow,
     '',
-    '<sub>Brotli-compressed size of the built JS + CSS (`dist/assets/*.{js,css}`) — what Cloudflare serves modern browsers. CI fails on any increase; raise the budget deliberately when the growth is intended.</sub>',
+    '</details>',
+    '',
+    '<sub>Brotli size of the built JS + CSS (`dist/assets/*.{js,css}`) — a regression tripwire, close to but not exactly what Cloudflare serves. Δ is vs the PR base commit.</sub>',
   ].join('\n');
 }
 
@@ -86,22 +145,31 @@ async function upsertComment(markdown) {
   }
 }
 
-const reportPath = process.argv[2] ?? 'size-limit.json';
-let report;
-try {
-  report = JSON.parse(readFileSync(reportPath, 'utf8'));
-} catch (error) {
-  console.warn(`No size report at ${reportPath}: ${error.message}`);
-  process.exit(0);
-}
+const mode = process.argv[2];
 
-const mode = process.env.REPORT_MODE ?? 'both'; // 'summary' | 'comment' | 'both'
-const markdown = renderMarkdown(report);
-console.log(markdown);
-
-if (mode !== 'comment' && process.env.GITHUB_STEP_SUMMARY) {
-  appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${markdown}\n`);
-}
-if (mode !== 'summary') {
+if (mode === 'measure') {
+  const report = measure();
+  writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
+  const markdown = renderMarkdown(report);
+  console.log(markdown);
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${markdown}\n`);
+  }
+  if (report.total > report.budget) {
+    console.error(`Bundle size ${kb(report.total)} exceeds budget ${kb(report.budget)}.`);
+    process.exit(1);
+  }
+} else if (mode === 'comment') {
+  const report = readReport(process.argv[3] ?? REPORT_PATH);
+  if (!report) {
+    console.warn('No head size report; skipping comment.');
+    process.exit(0);
+  }
+  const base = process.argv[4] ? readReport(process.argv[4]) : undefined;
+  const markdown = renderMarkdown(report, base);
+  console.log(markdown);
   await upsertComment(markdown);
+} else {
+  console.error('Usage: node .github/size-report.mjs measure | comment <head> [base]');
+  process.exit(1);
 }
