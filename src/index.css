@@ -5,17 +5,9 @@
   -moz-osx-font-smoothing: grayscale;
   color-scheme: light dark;
 
-  /* The app's own custom properties, aliased to MUI's theme variables so they
-     follow the active color scheme (the .light/.dark class MUI sets on <html>
-     via colorSchemeSelector). Kept because .form-container rules and component
-     sx read these names; MUI owns the actual per-mode values. */
-  --background-default: var(--mui-palette-background-default);
-  --background-paper: var(--mui-palette-background-paper);
-  --text-primary: var(--mui-palette-text-primary);
-  --text-secondary: var(--mui-palette-text-secondary);
-  --divider: var(--mui-palette-divider);
-  --primary-main: var(--mui-palette-primary-main);
-  --action-hover: var(--mui-palette-action-hover);
+  /* Stronger-than-divider rule used for the "Total" separator in tooltip
+     tables. MUI has no palette token for it, so it is kept as an explicitly
+     scheme-scoped variable (overridden for dark below). */
   --border-strong: #aaa;
 
   /* Pre-paint <html> background. MUI's --mui-palette-* vars are injected by JS
@@ -90,7 +82,7 @@ body {
 
 .range-slider .MuiSlider-markLabel {
   font-size: 0.75rem;
-  color: var(--text-secondary, rgba(0, 0, 0, 0.6));
+  color: var(--mui-palette-text-secondary, rgba(0, 0, 0, 0.6));
   white-space: nowrap;
   margin-top: 8px;
 }
@@ -104,12 +96,12 @@ body {
 
 /* Form Base Styles */
 .form-container {
-  background-color: var(--background-paper, #ffffff);
-  color: var(--text-primary, rgba(0, 0, 0, 0.87));
+  background-color: var(--mui-palette-background-paper, #ffffff);
+  color: var(--mui-palette-text-primary, rgba(0, 0, 0, 0.87));
   padding: 1.5rem;
   border-radius: 0.5rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--divider, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--mui-palette-divider, rgba(0, 0, 0, 0.12));
   width: 100%;
   margin: 0 auto;
   max-width: 100%;
@@ -120,42 +112,30 @@ body {
 
 /* Typography */
 .form-container .MuiTypography-root {
-  color: var(--text-primary);
+  color: var(--mui-palette-text-primary);
 }
 
 /* Form Labels */
 .form-container .MuiFormLabel-root {
-  color: var(--text-secondary);
+  color: var(--mui-palette-text-secondary);
 }
 
 .form-container .MuiFormLabel-root.Mui-focused {
-  color: var(--primary-main, #1976d2);
+  color: var(--mui-palette-primary-main, #1976d2);
 }
 
 /* Input Fields */
 .form-container .MuiInputBase-root {
-  color: var(--text-primary);
-}
-
-.form-container .MuiInputBase-root:before {
-  border-bottom-color: var(--divider);
-}
-
-.form-container .MuiInputBase-root:hover:not(.Mui-disabled, .Mui-error):before {
-  border-bottom-color: var(--text-secondary);
-}
-
-.form-container .MuiInputBase-root.Mui-focused:after {
-  border-bottom-color: var(--primary-main, #1976d2);
+  color: var(--mui-palette-text-primary);
 }
 
 /* Outlined Inputs */
 .form-container .MuiOutlinedInput-notchedOutline {
-  border-color: var(--divider);
+  border-color: var(--mui-palette-divider);
 }
 
 .form-container .MuiOutlinedInput-notchedOutline:hover {
-  border-color: var(--text-secondary);
+  border-color: var(--mui-palette-text-secondary);
 }
 
 .form-container .Mui-focused .MuiOutlinedInput-notchedOutline {
@@ -196,7 +176,7 @@ body {
 
 .income-slider .MuiSlider-markLabel {
   font-size: 0.75rem;
-  color: var(--text-secondary, rgba(0, 0, 0, 0.6));
+  color: var(--mui-palette-text-secondary, rgba(0, 0, 0, 0.6));
   white-space: nowrap;
   margin-top: 8px;
 }

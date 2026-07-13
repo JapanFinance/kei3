@@ -160,7 +160,7 @@ const SMRTableTooltip: React.FC<SMRTableTooltipProps> = ({
               position: 'sticky',
               top: 0,
               zIndex: 1,
-              boxShadow: '0 1px 0 0 var(--divider)', // Subtle shadow to separate from content
+              boxShadow: '0 1px 0 0 var(--mui-palette-divider)', // Subtle shadow to separate from content
             },
             '& td:first-of-type': {
               textAlign: 'left',

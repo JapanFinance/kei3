@@ -13,15 +13,19 @@ const cellStyle = { padding: '2px 8px 2px 0' } as const;
 const rightCellStyle = { ...cellStyle, textAlign: 'right' as const };
 const headerStyle = {
   ...cellStyle,
-  borderBottom: '1px solid var(--divider)',
+  borderBottom: '1px solid var(--mui-palette-divider)',
   fontWeight: 'normal' as const,
 };
 const rightHeaderStyle = {
   ...rightCellStyle,
-  borderBottom: '1px solid var(--divider)',
+  borderBottom: '1px solid var(--mui-palette-divider)',
   fontWeight: 'normal' as const,
 };
-const totalStyle = { ...rightCellStyle, borderTop: '1px solid var(--divider)', fontWeight: 600 };
+const totalStyle = {
+  ...rightCellStyle,
+  borderTop: '1px solid var(--mui-palette-divider)',
+  fontWeight: 600,
+};
 
 interface SalaryTooltipProps {
   monthlyIncome: number;
