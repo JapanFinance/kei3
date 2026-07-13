@@ -4,6 +4,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { alpha } from '@mui/material/styles';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 import {
@@ -92,7 +93,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
         <Box
           sx={{
             p: 1.5,
-            bgcolor: 'var(--action-hover)',
+            bgcolor: 'action.hover',
             borderBottom: '1px solid',
             borderColor: 'divider',
           }}
@@ -126,7 +127,13 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
 
         {/* Main Calculation Highlight */}
         <Box
-          sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}
+          sx={{
+            p: 1.5,
+            bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+          }}
         >
           <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
             Monthly Pension Contribution

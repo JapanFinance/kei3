@@ -4,6 +4,7 @@
 import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import { alpha } from '@mui/material/styles';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import {
@@ -289,7 +290,9 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
           />
         </Box>
 
-        <Box sx={{ p: 1, bgcolor: 'primary.50', borderRadius: 1 }}>
+        <Box
+          sx={{ p: 1, bgcolor: theme => alpha(theme.palette.primary.main, 0.12), borderRadius: 1 }}
+        >
           <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
             Total: {formatJPY(prevCalc.final)} × 3⁄10
             {' + '}
@@ -543,7 +546,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           <Box
             sx={{
               p: 1.5,
-              bgcolor: 'var(--action-hover)',
+              bgcolor: 'action.hover',
               borderBottom: '1px solid',
               borderColor: 'divider',
             }}
@@ -577,7 +580,13 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
           {/* Main Calculation Highlight */}
           <Box
-            sx={{ p: 1.5, bgcolor: 'primary.50', display: 'flex', flexDirection: 'column', gap: 1 }}
+            sx={{
+              p: 1.5,
+              bgcolor: theme => alpha(theme.palette.primary.main, 0.12),
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+            }}
           >
             {ratesVary && monthlyRates.length === 12 ? (
               <>
@@ -620,7 +629,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                           <th
                             style={{
                               padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--divider)',
+                              borderBottom: '1px solid var(--mui-palette-divider)',
                               fontWeight: 'normal',
                               textAlign: 'left',
                             }}
@@ -630,7 +639,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                           <th
                             style={{
                               padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--divider)',
+                              borderBottom: '1px solid var(--mui-palette-divider)',
                               fontWeight: 'normal',
                               textAlign: 'right',
                             }}
@@ -640,7 +649,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                           <th
                             style={{
                               padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--divider)',
+                              borderBottom: '1px solid var(--mui-palette-divider)',
                               fontWeight: 'normal',
                               textAlign: 'right',
                             }}
@@ -650,7 +659,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                           <th
                             style={{
                               padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--divider)',
+                              borderBottom: '1px solid var(--mui-palette-divider)',
                               fontWeight: 'normal',
                               textAlign: 'right',
                             }}
@@ -687,7 +696,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                             style={{
                               padding: '2px 8px 2px 0',
                               textAlign: 'right',
-                              borderTop: '1px solid var(--divider)',
+                              borderTop: '1px solid var(--mui-palette-divider)',
                               fontWeight: 600,
                             }}
                           >
@@ -697,7 +706,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                             style={{
                               padding: '2px 8px 2px 0',
                               textAlign: 'right',
-                              borderTop: '1px solid var(--divider)',
+                              borderTop: '1px solid var(--mui-palette-divider)',
                               fontWeight: 600,
                             }}
                           >

@@ -54,12 +54,7 @@ const ChangelogModal = lazy(() =>
         .then(() => import('./components/ChangelogModal')),
 );
 
-interface AppProps {
-  mode: 'light' | 'dark';
-  toggleColorMode: () => void;
-}
-
-function App({ mode, toggleColorMode }: AppProps) {
+function App() {
   // Changelog modal management
   const {
     isOpen: isChangelogOpen,
@@ -123,12 +118,11 @@ function App({ mode, toggleColorMode }: AppProps) {
     >
       <SiteHeader
         title="Japan Take-Home Pay Calculator"
-        mode={mode}
-        toggleColorMode={toggleColorMode}
         actions={<ChangelogButton onClick={openChangelog} />}
       />
 
       <Box
+        component="main"
         sx={{
           maxWidth: 1536, // max-w-6xl equivalent
           mx: 'auto',
@@ -221,7 +215,7 @@ function App({ mode, toggleColorMode }: AppProps) {
             This calculator offers no guarantee of accuracy or completeness. Not all situations are
             covered.
           </p>
-          <p className="mt-1">Consult with a tax professional for specific tax advice.</p>
+          <p>Consult with a tax professional for specific tax advice.</p>
         </Box>
 
         {/* Changelog Modal */}

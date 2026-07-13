@@ -175,7 +175,7 @@ export const generateChartData = (
         y: result.healthInsurance,
         breakdown,
       })),
-      borderColor: 'var(--text-primary)',
+      borderColor: 'var(--mui-palette-text-primary)',
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) => (caps.healthInsuranceCapped ? 2 : 0)),
       yAxisID: 'y',
@@ -189,7 +189,7 @@ export const generateChartData = (
         y: result.pensionPayments,
         breakdown,
       })),
-      borderColor: 'var(--text-primary)',
+      borderColor: 'var(--mui-palette-text-primary)',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) =>
         caps.pensionCapped || caps.pensionFixed ? 2 : 0,

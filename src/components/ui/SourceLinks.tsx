@@ -8,7 +8,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 /** Inline style shared by every source anchor across the tooltips. */
 const SOURCE_LINK_STYLE: React.CSSProperties = {
-  color: 'var(--primary-main)',
+  color: 'var(--mui-palette-primary-main)',
   textDecoration: 'underline',
   fontSize: '0.95em',
 };

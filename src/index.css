@@ -1,107 +1,30 @@
 /* Base Styles */
 :root {
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-}
-
-:root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color-scheme: light dark;
-  color: var(--color-gray-900);
-  background-color: #ffffff;
+
+  /* Stronger-than-divider rule used for the "Total" separator in tooltip
+     tables. MUI has no palette token for it, so it is kept as an explicitly
+     scheme-scoped variable (overridden for dark below). */
+  --border-strong: #aaa;
+
+  /* Pre-paint <html> background. MUI's --mui-palette-* vars are injected by JS
+     and are absent before React mounts, so these literals (matching the
+     palette's background.default) paint the correct background as soon as the
+     inline script in index.html applies the .light/.dark class. */
+  background-color: #f5f5f5;
+}
+
+:root.dark {
+  --border-strong: rgba(255, 255, 255, 0.23);
+  background-color: #121212;
 }
 
 body {
   min-height: 100vh;
   margin: 0;
-  background-color: var(--color-gray-50);
-  color: var(--color-gray-900);
-}
-
-/* Dark mode styles */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #ffffff;
-    background-color: var(--color-gray-900);
-  }
-
-  body {
-    background-color: var(--color-gray-900);
-    color: #ffffff;
-  }
-}
-
-/* Common Paper Component Styles */
-.paper {
-  background-color: var(--mui-palette-background-paper);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease-in-out;
-}
-
-.paper:hover {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-/* Card Styles */
-.card {
-  padding: 1.5rem;
-  background-color: var(--mui-palette-background-paper);
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--mui-palette-divider);
-  transition: all 0.2s ease-in-out;
-}
-
-.card:hover {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-/* Stat Box Styles */
-.stat-box {
-  padding: 1rem;
-  background-color: var(--mui-palette-background-paper);
-  border: 1px solid var(--mui-palette-divider);
-  border-radius: 0.5rem;
-  transition: all 0.2s ease-in-out;
-}
-
-.stat-box:hover {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-/* Chart Card Container */
-.chart-card {
-  width: 100%;
-  padding: 1.5rem;
-  background-color: var(--mui-palette-background-paper);
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--mui-palette-divider);
-  margin-top: 1.5rem;
-  transition: all 0.2s ease-in-out;
-}
-
-.chart-card:hover {
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Chart Container */
@@ -129,22 +52,8 @@ body {
 .legend-marker {
   width: 3px;
   height: 16px;
-  margin-right: 0.5rem;
+  margin-right: 4px;
   border-radius: 2px;
-}
-
-/* Slider Container */
-.slider-container {
-  margin-top: 1.5rem;
-  padding: 1.5rem;
-  background-color: var(--mui-palette-background-paper);
-  border: 1px solid var(--mui-palette-divider);
-  border-radius: 0.5rem;
-  position: relative;
-  overflow: visible;
-  width: 100%;
-  max-width: 100%;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Slider Styles */
@@ -173,26 +82,9 @@ body {
 
 .range-slider .MuiSlider-markLabel {
   font-size: 0.75rem;
-  color: var(--text-secondary, rgba(0, 0, 0, 0.6));
+  color: var(--mui-palette-text-secondary, rgba(0, 0, 0, 0.6));
   white-space: nowrap;
   margin-top: 8px;
-}
-
-.range-slider .MuiSlider-valueLabel {
-  background-color: var(--mui-palette-primary-main);
-  border-radius: 4px;
-  padding: 8px;
-}
-
-.range-slider .MuiSlider-valueLabel:before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  background-color: var(--mui-palette-primary-main);
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
 }
 
 /* Responsive adjustments */
@@ -202,75 +94,14 @@ body {
   }
 }
 
-/* Chart container */
-.chart-container {
-  height: 400px;
-  margin-bottom: 2rem;
-}
-
-/* Legend styles */
-.chart-legend {
-  display: flex;
-  justify-content: center;
-  gap: 0.75rem;
-  margin: 0.5rem 0 1.5rem;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  transition: opacity 0.3s ease-in-out;
-}
-
-.legend-marker {
-  width: 3px;
-  height: 16px;
-  margin-right: 4px;
-  border-radius: 2px;
-}
-
-/* Results section */
-.results-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 600px) {
-  .results-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Utility classes */
-.flex-between {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.text-success {
-  color: var(--mui-palette-success-main);
-}
-
-.font-medium {
-  font-weight: 500;
-}
-
-.font-semibold {
-  font-weight: 600;
-}
-
 /* Form Base Styles */
 .form-container {
-  background-color: var(--background-paper, #ffffff);
-  color: var(--text-primary, rgba(0, 0, 0, 0.87));
+  background-color: var(--mui-palette-background-paper, #ffffff);
+  color: var(--mui-palette-text-primary, rgba(0, 0, 0, 0.87));
   padding: 1.5rem;
   border-radius: 0.5rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--divider, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--mui-palette-divider, rgba(0, 0, 0, 0.12));
   width: 100%;
   margin: 0 auto;
   max-width: 100%;
@@ -281,70 +112,34 @@ body {
 
 /* Typography */
 .form-container .MuiTypography-root {
-  color: var(--text-primary);
+  color: var(--mui-palette-text-primary);
 }
 
 /* Form Labels */
 .form-container .MuiFormLabel-root {
-  color: var(--text-secondary);
+  color: var(--mui-palette-text-secondary);
 }
 
 .form-container .MuiFormLabel-root.Mui-focused {
-  color: var(--primary-main, #1976d2);
+  color: var(--mui-palette-primary-main, #1976d2);
 }
 
 /* Input Fields */
 .form-container .MuiInputBase-root {
-  color: var(--text-primary);
-}
-
-.form-container .MuiInputBase-root:before {
-  border-bottom-color: var(--divider);
-}
-
-.form-container .MuiInputBase-root:hover:not(.Mui-disabled, .Mui-error):before {
-  border-bottom-color: var(--text-secondary);
-}
-
-.form-container .MuiInputBase-root.Mui-focused:after {
-  border-bottom-color: var(--primary-main, #1976d2);
+  color: var(--mui-palette-text-primary);
 }
 
 /* Outlined Inputs */
 .form-container .MuiOutlinedInput-notchedOutline {
-  border-color: var(--divider);
-}
-
-.form-container .MuiOutlinedInput-notchedOutline:hover {
-  border-color: var(--text-secondary);
-}
-
-.form-container .Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: var(--mui-palette-primary-main);
-  border-width: 1px;
-}
-
-/* Icons */
-.form-container .MuiSvgIcon-root {
-  color: var(--mui-palette-text-secondary);
-}
-
-/* Disabled State */
-.form-container .Mui-disabled {
-  color: var(--mui-palette-text-disabled);
-  -webkit-text-fill-color: var(--mui-palette-text-disabled);
-}
-
-.form-container .Mui-disabled .MuiOutlinedInput-notchedOutline {
   border-color: var(--mui-palette-divider);
 }
 
-.form-container .Mui-disabled .MuiFormLabel-root {
-  color: var(--mui-palette-text-disabled);
+.form-container .MuiOutlinedInput-notchedOutline:hover {
+  border-color: var(--mui-palette-text-secondary);
 }
 
-.form-container .Mui-disabled .MuiSelect-icon {
-  color: var(--mui-palette-action-disabled);
+.form-container .Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-width: 1px;
 }
 
 /* Form Groups */
@@ -353,14 +148,6 @@ body {
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 1.5rem;
-}
-
-/* Responsive Form Groups */
-@media (min-width: 600px) {
-  .form-group-row {
-    flex-direction: row;
-    align-items: flex-start;
-  }
 }
 
 /* Slider Styles */
@@ -389,27 +176,9 @@ body {
 
 .income-slider .MuiSlider-markLabel {
   font-size: 0.75rem;
-  color: var(--text-secondary, rgba(0, 0, 0, 0.6));
+  color: var(--mui-palette-text-secondary, rgba(0, 0, 0, 0.6));
   white-space: nowrap;
   margin-top: 8px;
-}
-
-.income-slider .MuiSlider-valueLabel {
-  background-color: var(--mui-palette-primary-main);
-  border-radius: 4px;
-  padding: 8px;
-  color: #fff;
-}
-
-.income-slider .MuiSlider-valueLabel:before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  background-color: var(--mui-palette-primary-main);
-  position: absolute;
-  bottom: -4px;
-  left: 50%;
-  transform: translateX(-50%) rotate(45deg);
 }
 
 /* Responsive adjustments */
@@ -417,52 +186,4 @@ body {
   .income-slider .MuiSlider-mark[data-index^='m'] {
     display: none;
   }
-}
-
-/* Income Type Toggle */
-.income-type-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background-color: var(--mui-palette-action-hover);
-  border-radius: 1rem;
-  padding: 0.5rem;
-  width: fit-content;
-}
-
-.income-type-label {
-  min-width: 60px;
-  text-align: center;
-  color: var(--mui-palette-text-secondary);
-  font-weight: 400;
-}
-
-.income-type-label.active {
-  color: var(--mui-palette-primary-main);
-  font-weight: 600;
-}
-
-/* Tooltip Styles */
-.help-tooltip {
-  background-color: var(--mui-palette-background-paper);
-  color: var(--mui-palette-text-primary);
-  border: 1px solid var(--mui-palette-divider);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
-}
-
-.help-tooltip .MuiTooltip-arrow {
-  color: var(--mui-palette-background-paper);
-}
-
-.help-tooltip .MuiTooltip-arrow:before {
-  border: 1px solid var(--mui-palette-divider);
-}
-
-.help-icon {
-  opacity: 0.6;
-  transition: opacity 0.2s ease-in-out;
-}
-
-.help-icon:hover {
-  opacity: 0.9;
 }
