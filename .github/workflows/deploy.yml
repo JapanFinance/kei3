@@ -55,7 +55,7 @@ jobs:
       # a later PR can restore its base commit's sizes and show per-chunk deltas
       - name: Cache size report for base diff
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: size-report.json
           key: size-report-${{ github.sha }}
@@ -86,7 +86,7 @@ jobs:
       # The base commit's report, cached by its own main build.
       # A cache miss yields an absolute (no-delta) comment.
       - name: Restore baseline size report (base commit)
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: size-report.json
           key: size-report-${{ github.event.pull_request.base.sha }}
