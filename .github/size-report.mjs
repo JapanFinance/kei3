@@ -59,8 +59,11 @@ function readReport(path) {
 function deltaText(prev, cur) {
   if (prev == null) return 'new';
   const diff = cur - prev;
-  if (diff === 0) return '—';
-  return `${diff > 0 ? '+' : '-'}${kb(Math.abs(diff))}`;
+  const magnitude = kb(Math.abs(diff));
+  // Treat sub-0.05 kB moves (which round to "0.0 kB") as unchanged, so a chunk
+  // that shifted by a handful of bytes shows "—" rather than a noisy "+0.0 kB".
+  if (magnitude === '0.0 kB') return '—';
+  return `${diff > 0 ? '+' : '-'}${magnitude}`;
 }
 
 function renderMarkdown(report, base) {
