@@ -51,6 +51,14 @@ jobs:
           path: size-report.json
           if-no-files-found: ignore
           retention-days: 1
+      # On main, cache the report keyed by commit SHA so a PR can restore its
+      # base commit's sizes and show per-chunk deltas — no base rebuild needed.
+      - name: Cache size report for base diff
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/cache/save@v4
+        with:
+          path: size-report.json
+          key: size-report-${{ github.sha }}
 
   # Posting the bundle-size PR comment is the only step that needs write access.
   # It runs in its own job that installs no dependencies, so the build job (which
@@ -69,13 +77,22 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Download size report
+      - name: Download size report (head)
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           name: size-report
+          path: head
+      # The base commit's report, cached by its own main build. Absent until this
+      # feature is on main and a base build has cached one — then deltas appear;
+      # a cache miss just yields an absolute (no-delta) comment.
+      - name: Restore base size report
+        uses: actions/cache/restore@v4
+        with:
+          path: size-report.json
+          key: size-report-${{ github.event.pull_request.base.sha }}
       - name: Comment bundle size on PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node .github/size-report.mjs comment size-report.json
+        run: node .github/size-report.mjs comment head/size-report.json size-report.json
