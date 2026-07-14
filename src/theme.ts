@@ -21,5 +21,12 @@ export const theme = createTheme({
     MuiTextField: { defaultProps: { size: 'small' } },
     MuiFormControl: { defaultProps: { size: 'small' } },
     MuiAutocomplete: { defaultProps: { size: 'small' } },
+    // Soften the resting outline on every outlined input: use the theme's
+    // divider colour (0.12 opacity) instead of MUI's default 0.23.
+    MuiOutlinedInput: {
+      styleOverrides: {
+        notchedOutline: { borderColor: 'var(--mui-palette-divider)' },
+      },
+    },
   },
 });
