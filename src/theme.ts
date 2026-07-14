@@ -32,5 +32,14 @@ export const theme = createTheme({
     // transform. Sites that want a transform set it explicitly in sx.
     MuiButton: { styleOverrides: { root: { textTransform: 'none' } } },
     MuiToggleButton: { styleOverrides: { root: { textTransform: 'none' } } },
+    // Every accordion in the app is the flat kind: no shadow, no expanded
+    // gutter jump, outlined with the divider hairline. Call sites keep only
+    // their spacing.
+    MuiAccordion: {
+      defaultProps: { disableGutters: true, elevation: 0 },
+      styleOverrides: {
+        root: { border: '1px solid var(--mui-palette-divider)' },
+      },
+    },
   },
 });

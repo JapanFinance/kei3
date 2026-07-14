@@ -497,11 +497,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 amount of financial benefit realized.
               </Typography>
 
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
-              >
+              <Accordion sx={{ mb: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     Exchange Rate
@@ -524,11 +520,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
-              >
+              <Accordion sx={{ mb: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     RS / RSU / PS / PSU{' '}
@@ -544,11 +536,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
-              >
+              <Accordion sx={{ mb: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     Stock Options
@@ -582,11 +570,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
-              >
+              <Accordion sx={{ mb: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     ESPP (Employee Stock Purchase Plan)
@@ -601,11 +585,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </AccordionDetails>
               </Accordion>
 
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mb: 1, border: '1px solid', borderColor: 'divider' }}
-              >
+              <Accordion sx={{ mb: 1 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     Foreign-Source Income & Non-Permanent Tax Residents
