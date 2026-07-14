@@ -112,6 +112,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    outputs:
+      # Direct link to the uploaded HTML report(s), rendered into the PR comment.
+      artifact-url: ${{ steps.upload-report.outputs.artifact-url }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
@@ -131,7 +134,9 @@ jobs:
       # On pull requests, also measure performance against the Cloudflare preview
       # deployment (real CDN). Best-effort: it waits for the preview of this
       # commit and never fails the job, so a slow or missing deploy just omits the
-      # preview number.
+      # preview number. Preview URLs skip the zone-level Cloudflare layer (e.g.
+      # the injected bot-detection script), so only performance is meaningful
+      # there — production below is the full delivered experience.
       - name: Audit Cloudflare preview performance
         if: github.event_name == 'pull_request'
         continue-on-error: true
@@ -140,17 +145,39 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node .github/lighthouse-run.mjs preview
-      - name: Job summary
-        if: always()
-        run: node .github/lighthouse-report.mjs summary
+      # On pushes to main, audit the live site in all four categories — what
+      # users actually experience, Cloudflare layer included. Tracked in the job
+      # summary and the cached baseline, never gated (it moves for reasons no PR
+      # causes). Best-effort: waits for the deploy to serve this commit's build.
+      - name: Audit production
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        run: node .github/lighthouse-run.mjs production
       - name: Upload Lighthouse report
+        id: upload-report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse-report
           path: lighthouse-results
           if-no-files-found: ignore
-          retention-days: 1
+          # Long enough to revisit from a PR discussion; the summary.json used by
+          # the report job is consumed within minutes either way.
+          retention-days: 14
+      - name: Job summary
+        if: always()
+        env:
+          LIGHTHOUSE_ARTIFACT_URL: ${{ steps.upload-report.outputs.artifact-url }}
+        run: node .github/lighthouse-report.mjs summary
+      # On a push to the default branch, cache the summary keyed by commit SHA so
+      # a later PR can restore its base commit's scores and show deltas — the
+      # same mechanism as the bundle-size report.
+      - name: Cache Lighthouse summary for base diff
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/cache/save@v6
+        with:
+          path: lighthouse-results/summary.json
+          key: lighthouse-summary-${{ github.sha }}
       # The gate runs last so the summary and artifact are produced even when it
       # fails. It reads the scores written by "Audit local build".
       - name: Assert Lighthouse budgets
@@ -176,9 +203,22 @@ jobs:
         continue-on-error: true
         with:
           name: lighthouse-report
-          path: lighthouse-results
+          path: pr
+      # The base commit's summary, cached by its own main build.
+      # A cache miss yields an absolute (no-delta) comment.
+      - name: Restore baseline summary (base commit)
+        uses: actions/cache/restore@v6
+        with:
+          path: lighthouse-results/summary.json
+          key: lighthouse-summary-${{ github.event.pull_request.base.sha }}
       - name: Comment Lighthouse scores on PR
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: node .github/lighthouse-report.mjs comment
+          LIGHTHOUSE_ARTIFACT_URL: ${{ needs.lighthouse.outputs.artifact-url }}
+        # Give the two summaries clear names: the artifact (this PR's audit) and
+        # the restored cache (the base commit's; absent on a miss → absolute).
+        run: |
+          [ -f pr/summary.json ] && mv pr/summary.json lighthouse-summary-pr.json || true
+          [ -f lighthouse-results/summary.json ] && mv lighthouse-results/summary.json lighthouse-summary-baseline.json || true
+          node .github/lighthouse-report.mjs comment lighthouse-summary-pr.json lighthouse-summary-baseline.json

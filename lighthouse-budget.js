@@ -12,14 +12,23 @@
 // ourselves keeps the audit on the current engine, and keeps the whole toolchain
 // self-hosted (no third-party GitHub Action, matching the bundle-size report).
 //
-// WHAT IS AUDITED
-//   - The production build in dist/, served locally by a small static server
-//     that negotiates Brotli/gzip the way Cloudflare does, so the
-//     transfer-size-sensitive performance metrics are realistic. This gate is
-//     deterministic and does not wait on a Cloudflare deploy.
-//   - On pull requests, PERFORMANCE is also measured against the Cloudflare
-//     preview deployment (real CDN, HTTP/2, edge caching, real latency). That
-//     pass is best-effort and never gates — see below.
+// WHAT IS AUDITED — lab for the gate, reality for tracking
+//   - GATE (pull requests and pushes): the production build in dist/, served
+//     locally by a small static server that negotiates Brotli/gzip the way
+//     Cloudflare does. Deterministic and isolated from everything a PR cannot
+//     change, so a regression here is attributable to the change under review.
+//     On pull requests the scores are also diffed against the PR's base commit
+//     (restored from the Actions cache, like the bundle-size report).
+//   - TRACKED (pull requests): PERFORMANCE against the Cloudflare preview
+//     deployment (real CDN, HTTP/2, edge latency). Perf only: workers.dev
+//     previews do not get the zone-level Cloudflare layer (e.g. the injected
+//     bot-detection script), so their other categories match the local build.
+//   - TRACKED (pushes to main): all four categories against PROD_URL — what
+//     users actually experience, including the Cloudflare layer. Prod scores
+//     include things no PR causes (injected scripts, managed robots.txt), so
+//     they are recorded, never gated. Reality baseline on Lighthouse 13.4
+//     (2026-07): perf ~82, a11y 95, best-practices 77 (Cloudflare bot-script
+//     deprecations + favicon 404), seo 100.
 //   - Only the initial load is measured. The results panel and chart are lazy
 //     and are not exercised (see KNOBS).
 //
@@ -32,8 +41,8 @@
 //
 // THRESHOLDS — median of RUNS runs. Baseline measured on Lighthouse 13.4 against
 // dist/ built from main (2026-07), served locally with Brotli:
-//   Performance     warn  ≥ 0.75   ~0.89 on the CI runner (noisy: individual
-//                                   runs 75–89), ~0.82 on the real CDN. Tracked.
+//   Performance     warn  ≥ 0.75   ~0.90 on the CI runner (noisy: individual
+//                                   runs 75–91), ~0.82 on the real CDN. Tracked.
 //   Accessibility   error ≥ 0.90   currently 0.95. Held below 1.0 by
 //                                   color-contrast on muted text and a subtitle2
 //                                   rendered as <h6> (heading-order).
@@ -50,14 +59,19 @@
 // KNOBS
 //   - RUNS: more runs give steadier medians at the cost of CI time.
 //   - FORM_FACTOR: 'mobile' (Lighthouse's throttled default) or 'desktop'.
+//     Only performance differs by form factor — the other three categories are
+//     DOM/checklist-based — so auditing desktop too would only add a second,
+//     higher performance number.
 //   - PREVIEW_PERF: set false to skip the best-effort Cloudflare-preview
 //     performance pass and report only the local number.
+//   - PROD_URL: the deployed site audited on pushes to main.
 //   - Deeper states: point the runner at a Puppeteer script to drive the
 //     calculator into its results + chart state before auditing.
 
 export const RUNS = 3;
 export const FORM_FACTOR = 'mobile';
 export const PREVIEW_PERF = true;
+export const PROD_URL = 'https://kei3.japanfinance.org/';
 
 // [category]: { level, minScore }. level 'error' fails CI when the median score
 // is below minScore; 'warn' is reported but never fails. Object order is the

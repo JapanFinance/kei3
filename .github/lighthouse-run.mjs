@@ -18,6 +18,12 @@
 //            by commit SHA + "Deployment successful"), audit its PERFORMANCE, and
 //            merge the number into summary.json. Always exits 0.
 //
+//   production  Best-effort, pushes to main only. Audit PROD_URL — what users
+//            actually experience, Cloudflare layer included — in all four
+//            categories, after waiting for the deploy to serve this commit's
+//            build. Tracked, never gated; merged into summary.json. Always
+//            exits 0.
+//
 // Uses only Node built-ins plus the pinned `lighthouse` and `chrome-launcher`.
 
 import { createServer } from 'node:http';
@@ -25,7 +31,14 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
-import { BUDGETS, CATEGORY_LABELS, FORM_FACTOR, PREVIEW_PERF, RUNS } from '../lighthouse-budget.js';
+import {
+  BUDGETS,
+  CATEGORY_LABELS,
+  FORM_FACTOR,
+  PREVIEW_PERF,
+  PROD_URL,
+  RUNS,
+} from '../lighthouse-budget.js';
 
 /* eslint-disable no-await-in-loop -- The audit runs and the Cloudflare-deploy
    poll are intentionally sequential: running Chrome audits in parallel would
@@ -75,6 +88,23 @@ const MIME = {
 
 const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
 const pct = score => (score == null ? '—' : String(Math.round(score * 100)));
+const sleep = ms => new Promise(done => setTimeout(done, ms));
+
+// The score-weighted audits that hold a category below 1.0 in the given run —
+// the concrete "what to fix" behind each imperfect number. Weight-0 audits are
+// informational and cannot move a score, so they are skipped.
+function collectImperfectAudits(lhr) {
+  const result = {};
+  for (const category of CATEGORIES) {
+    const items = lhr.categories[category].auditRefs
+      .filter(ref => ref.weight > 0)
+      .map(ref => lhr.audits[ref.id])
+      .filter(audit => audit && audit.score !== null && audit.score < 1)
+      .map(audit => ({ id: audit.id, title: audit.title, score: audit.score }));
+    if (items.length) result[category] = items;
+  }
+  return result;
+}
 
 // Static server that pre-compresses every served file (Brotli + gzip) once at
 // startup, so response latency during the audit is not skewed by compression
@@ -190,14 +220,15 @@ async function runOnce(url, onlyCategories) {
   }
 }
 
-// Audit `url` RUNS times; return the per-category median scores and the HTML
-// report of the run whose performance is the median (the representative run).
+// Audit `url` RUNS times; return the per-category median scores plus the HTML
+// report and imperfect audits of the run whose performance is the median (the
+// representative run).
 async function auditAllCategories(url) {
   const runs = [];
   for (let i = 0; i < RUNS; i++) {
     const rc = await runOnce(url);
     const scores = Object.fromEntries(CATEGORIES.map(c => [c, rc.lhr.categories[c].score]));
-    runs.push({ scores, report: rc.report });
+    runs.push({ scores, report: rc.report, lhr: rc.lhr });
     console.log(
       `  run ${i + 1}/${RUNS}: ${CATEGORIES.map(c => `${c}=${pct(scores[c])}`).join('  ')}`,
     );
@@ -207,7 +238,11 @@ async function auditAllCategories(url) {
   );
   const repPerf = median(runs.map(r => r.scores.performance));
   const representative = runs.find(r => r.scores.performance === repPerf) ?? runs.at(-1);
-  return { categories, report: representative.report };
+  return {
+    categories,
+    report: representative.report,
+    imperfectAudits: collectImperfectAudits(representative.lhr),
+  };
 }
 
 async function cmdLocal() {
@@ -231,7 +266,7 @@ async function cmdLocal() {
     formFactor: FORM_FACTOR,
     runs: RUNS,
     budgets: BUDGETS,
-    local: { categories: result.categories },
+    local: { categories: result.categories, imperfectAudits: result.imperfectAudits },
   };
   await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
   await writeFile(join(OUT_DIR, 'report.html'), result.report);
@@ -293,7 +328,6 @@ async function resolvePreviewUrl({ repo, prNumber, headSha, token }) {
   };
   const shaPrefix = headSha.slice(0, 8);
   const deadline = Date.now() + 8 * 60 * 1000; // 8 min
-  const sleep = ms => new Promise(done => setTimeout(done, ms));
 
   while (Date.now() < deadline) {
     try {
@@ -363,11 +397,76 @@ async function cmdPreview() {
   }
 }
 
+// Module-script srcs of an HTML document — the same build fingerprint the
+// stale-build boot probe in index.html uses. Two documents with equal srcs were
+// produced by the same build.
+const moduleSrcs = html =>
+  [...html.matchAll(/<script[^>]+type="module"[^>]+src="([^"]+)"/g)].map(m => m[1]).join('\n');
+
+// Wait (up to 5 min) until PROD_URL serves the same build as the local dist/,
+// so the audit measures this commit's deploy rather than the previous one.
+// Returns whether they matched; the audit proceeds either way.
+async function waitForDeployedBuild(url) {
+  let local;
+  try {
+    local = moduleSrcs(readFileSync(join(DIST_DIR, 'index.html'), 'utf8'));
+  } catch {
+    return false; // no local build to compare against; audit whatever is live
+  }
+  const deadline = Date.now() + 5 * 60 * 1000;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok && moduleSrcs(await res.text()) === local) return true;
+    } catch {
+      /* transient network error; retry until the deadline */
+    }
+    console.log('  waiting for the production deploy to serve this build …');
+    await sleep(15 * 1000);
+  }
+  return false;
+}
+
+async function cmdProduction() {
+  await ensureLighthouse();
+  const deployedMatch = await waitForDeployedBuild(PROD_URL);
+  if (!deployedMatch) {
+    console.warn('Production is not serving this build yet; auditing what is live.');
+  }
+  console.log(`Production: auditing ${PROD_URL} — ${FORM_FACTOR}, ${RUNS} run(s)`);
+  try {
+    const result = await auditAllCategories(PROD_URL);
+    let summary = {};
+    try {
+      summary = JSON.parse(readFileSync(SUMMARY_PATH, 'utf8'));
+    } catch {
+      /* summary may not exist if the local step was skipped; start fresh */
+    }
+    summary.production = {
+      url: PROD_URL,
+      deployedMatch,
+      runs: RUNS,
+      categories: result.categories,
+      imperfectAudits: result.imperfectAudits,
+    };
+    await mkdir(OUT_DIR, { recursive: true });
+    await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
+    await writeFile(join(OUT_DIR, 'report-production.html'), result.report);
+    console.log('\nProduction median category scores:');
+    for (const c of CATEGORIES) {
+      console.log(`  ${CATEGORY_LABELS[c].padEnd(16)} ${pct(result.categories[c])}`);
+    }
+  } catch (error) {
+    console.warn(`Production audit failed (${error.message}); skipping.`);
+  }
+}
+
 const command = process.argv[2] ?? 'local';
 if (command === 'local') await cmdLocal();
 else if (command === 'gate') cmdGate();
 else if (command === 'preview') await cmdPreview();
+else if (command === 'production') await cmdProduction();
 else {
-  console.error(`Unknown command "${command}". Use: local | gate | preview`);
+  console.error(`Unknown command "${command}". Use: local | gate | preview | production`);
   process.exit(1);
 }
