@@ -226,7 +226,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               sx={{
                 fontSize: '0.97rem',
                 fontWeight: 500,
-                color: 'text.primary',
                 textAlign: 'center',
                 mb: 1,
               }}
@@ -430,7 +429,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 alignItems: 'center',
                 fontSize: '0.97rem',
                 fontWeight: 500,
-                color: 'text.primary',
               }}
             >
               Age Range
@@ -491,7 +489,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 mb: 0.5,
                 fontSize: '0.97rem',
                 fontWeight: 500,
-                color: 'text.primary',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.5,
@@ -592,7 +589,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     fontSize: '0.97rem',
                     fontWeight: 500,
                     mb: 0.2,
-                    color: 'text.primary',
                   }}
                 >
                   <span id="healthInsuranceProvider-label">Health Insurance Provider</span>
@@ -758,7 +754,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               mb: 0.5,
               fontSize: '0.97rem',
               fontWeight: 500,
-              color: 'text.primary',
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,
