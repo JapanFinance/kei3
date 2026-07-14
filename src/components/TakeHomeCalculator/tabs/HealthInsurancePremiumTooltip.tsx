@@ -22,6 +22,14 @@ import {
   type StandardMonthlyRemunerationBracket,
 } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
+import {
+  tableStyle,
+  cellStyle,
+  rightCellStyle,
+  headerStyle,
+  rightHeaderStyle,
+  totalStyle,
+} from '../../ui/tooltipTableStyles';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
 
@@ -621,51 +629,13 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   }
                   const annualTotal = monthlyRates.reduce((sum, mr) => sum + mr.premium, 0);
                   return (
-                    <table
-                      style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}
-                    >
+                    <table style={tableStyle}>
                       <thead>
                         <tr>
-                          <th
-                            style={{
-                              padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--mui-palette-divider)',
-                              fontWeight: 'normal',
-                              textAlign: 'left',
-                            }}
-                          >
-                            Months
-                          </th>
-                          <th
-                            style={{
-                              padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--mui-palette-divider)',
-                              fontWeight: 'normal',
-                              textAlign: 'right',
-                            }}
-                          >
-                            Rate
-                          </th>
-                          <th
-                            style={{
-                              padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--mui-palette-divider)',
-                              fontWeight: 'normal',
-                              textAlign: 'right',
-                            }}
-                          >
-                            Monthly
-                          </th>
-                          <th
-                            style={{
-                              padding: '2px 8px 2px 0',
-                              borderBottom: '1px solid var(--mui-palette-divider)',
-                              fontWeight: 'normal',
-                              textAlign: 'right',
-                            }}
-                          >
-                            Subtotal
-                          </th>
+                          <th style={{ ...headerStyle, textAlign: 'left' }}>Months</th>
+                          <th style={rightHeaderStyle}>Rate</th>
+                          <th style={rightHeaderStyle}>Monthly</th>
+                          <th style={rightHeaderStyle}>Subtotal</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -677,41 +647,18 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                               : `${formatMonthShort(g.startMonth)}\u2013${formatMonthShort(g.endMonth)}`;
                           return (
                             <tr key={idx}>
-                              <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>
-                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
-                                {formatPercent(g.rate)}
-                              </td>
-                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
-                                {formatJPY(g.premium)}
-                              </td>
-                              <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
-                                {formatJPY(g.premium * count)}
-                              </td>
+                              <td style={cellStyle}>{monthLabel}</td>
+                              <td style={rightCellStyle}>{formatPercent(g.rate)}</td>
+                              <td style={rightCellStyle}>{formatJPY(g.premium)}</td>
+                              <td style={rightCellStyle}>{formatJPY(g.premium * count)}</td>
                             </tr>
                           );
                         })}
                         <tr>
-                          <td
-                            colSpan={3}
-                            style={{
-                              padding: '2px 8px 2px 0',
-                              textAlign: 'right',
-                              borderTop: '1px solid var(--mui-palette-divider)',
-                              fontWeight: 600,
-                            }}
-                          >
+                          <td colSpan={3} style={totalStyle}>
                             Annual Total
                           </td>
-                          <td
-                            style={{
-                              padding: '2px 8px 2px 0',
-                              textAlign: 'right',
-                              borderTop: '1px solid var(--mui-palette-divider)',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {formatJPY(annualTotal)}
-                          </td>
+                          <td style={totalStyle}>{formatJPY(annualTotal)}</td>
                         </tr>
                       </tbody>
                     </table>
