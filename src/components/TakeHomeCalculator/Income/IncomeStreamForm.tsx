@@ -268,7 +268,6 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   px: 2,
                   py: 0.5,
                   fontSize: '0.85rem',
-                  textTransform: 'none',
                   fontWeight: 500,
                 },
                 '& .MuiToggleButton-root.Mui-selected': {

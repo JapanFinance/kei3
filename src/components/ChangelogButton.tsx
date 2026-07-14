@@ -77,7 +77,6 @@ export default function ChangelogButton({ onClick }: ChangelogButtonProps) {
       }
       sx={{
         color: 'text.secondary',
-        textTransform: 'none',
         '&:hover': {
           color: 'text.primary',
           backgroundColor: 'action.hover',
