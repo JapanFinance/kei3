@@ -258,6 +258,15 @@ async function runOnce(url, onlyCategories) {
 // report and imperfect audits of the run whose performance is the median (the
 // representative run).
 async function auditAllCategories(url) {
+  // Discard one warmup audit. The first audit on a runner is consistently and
+  // substantially pessimistic — measured on GitHub-hosted runners as performance
+  // 64-69 against 88-89 for every run after it, across three identical runs of
+  // the same commit — because the first Chrome launch pages in the binary and
+  // warms the OS file cache. The median mostly hides it, but it still drags the
+  // metrics, which are the numbers worth trusting.
+  console.log('  warmup run (discarded) …');
+  await runOnce(url);
+
   const runs = [];
   for (let i = 0; i < RUNS; i++) {
     const rc = await runOnce(url);

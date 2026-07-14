@@ -32,12 +32,29 @@
 //   - Only the initial load is measured. The results panel and chart are lazy
 //     and are not exercised (see KNOBS).
 //
-// WHY PERFORMANCE IS NOT GATED
-// Performance is noisy on shared CI runners (CPU-bound scripting/TBT), and the
-// MUI-dominated bundle sets a floor no config change can move. It is tracked
-// (warn) so a regression is surfaced, not turned into a hard failure — the same
-// stance the bundle-size budget takes on execution time. The three
-// content/checklist categories are deterministic across environments and gated.
+// WHY PERFORMANCE IS NOT GATED, AND WHAT TO READ INSTEAD
+// Lighthouse's own variability guidance warns against measuring performance on
+// "burstable"/"shared-core" instances, which is what GitHub-hosted runners are.
+// Measured here across three identical runs of one commit (after discarding a
+// warmup run, and taking the median of RUNS):
+//   FCP ±10 ms, LCP ±30 ms, Speed Index ±10 ms — trustworthy.
+//   TBT ±50 ms (±25%) — CPU-bound, the metric the shared runner does distort.
+//   performance score ±1 point; accessibility/best-practices/SEO: zero variance.
+// So the four category scores are a coarse tripwire, not an instrument: a real
+// win (say 250 ms of LCP) is worth about a point, indistinguishable from that
+// ±1. Judge a performance change on the METRICS the report prints instead —
+// 250 ms against ±30 ms of noise is unmistakable. Performance is therefore
+// tracked (warn), never gated, as the bundle-size budget treats execution time.
+// The three content/checklist categories carry no timing and are gated.
+//
+// These are lab numbers: a model of a mobile visitor computed by simulated
+// throttling from the resource graph, not a recording of one. Absolute values do
+// not match production (LCP ~3.0 s here vs ~3.8 s live, which also carries
+// Cloudflare's injected script). Their value is that both sides of a diff are
+// measured identically, so a delta is attributable to the change — and the same
+// bytes and request waterfall drive the real page, so improvements move the same
+// direction, if not the same magnitude. For changes that are purely about bytes,
+// .github/size-report.mjs is a sharper instrument still: exact, and noiseless.
 //
 // THRESHOLDS — median of RUNS runs. Baseline measured on Lighthouse 13.4 against
 // dist/ built from main (2026-07), served locally with Brotli:
