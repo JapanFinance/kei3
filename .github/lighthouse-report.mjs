@@ -138,7 +138,7 @@ function renderMarkdown(summary, base) {
 
   const artifactUrl = process.env.LIGHTHOUSE_ARTIFACT_URL;
   if (artifactUrl) {
-    lines.push('', `Full HTML report: [\`lighthouse-report\` artifact](${artifactUrl}).`);
+    lines.push('', `📄 [Full Lighthouse HTML report](${artifactUrl}) — no ZIP to unpack.`);
   }
 
   lines.push(

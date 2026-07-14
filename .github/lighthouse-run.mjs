@@ -48,6 +48,11 @@ import {
 const DIST_DIR = 'dist';
 const OUT_DIR = 'lighthouse-results';
 const SUMMARY_PATH = join(OUT_DIR, 'summary.json');
+// These file names become the artifact names in CI: the workflow uploads them
+// with upload-artifact's `archive: false`, which skips the ZIP wrapper and names
+// the artifact after the file, so the report opens directly.
+const REPORT_PATH = join(OUT_DIR, 'lighthouse-report.html');
+const PRODUCTION_REPORT_PATH = join(OUT_DIR, 'lighthouse-report-production.html');
 const CATEGORIES = Object.keys(CATEGORY_LABELS);
 
 // Standard headless flags for GitHub-hosted runners.
@@ -269,12 +274,12 @@ async function cmdLocal() {
     local: { categories: result.categories, imperfectAudits: result.imperfectAudits },
   };
   await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
-  await writeFile(join(OUT_DIR, 'report.html'), result.report);
+  await writeFile(REPORT_PATH, result.report);
   console.log('\nMedian category scores:');
   for (const c of CATEGORIES) {
     console.log(`  ${CATEGORY_LABELS[c].padEnd(16)} ${pct(result.categories[c])}`);
   }
-  console.log(`\nWrote ${SUMMARY_PATH} and ${join(OUT_DIR, 'report.html')}`);
+  console.log(`\nWrote ${SUMMARY_PATH} and ${REPORT_PATH}`);
 }
 
 function cmdGate() {
@@ -451,7 +456,7 @@ async function cmdProduction() {
     };
     await mkdir(OUT_DIR, { recursive: true });
     await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
-    await writeFile(join(OUT_DIR, 'report-production.html'), result.report);
+    await writeFile(PRODUCTION_REPORT_PATH, result.report);
     console.log('\nProduction median category scores:');
     for (const c of CATEGORIES) {
       console.log(`  ${CATEGORY_LABELS[c].padEnd(16)} ${pct(result.categories[c])}`);

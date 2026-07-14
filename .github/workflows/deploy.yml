@@ -153,16 +153,37 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         continue-on-error: true
         run: node .github/lighthouse-run.mjs production
-      - name: Upload Lighthouse report
+      # The summary is a job-to-job handoff for the comment, so it stays zipped
+      # and short-lived; nobody opens it by hand.
+      - name: Upload Lighthouse summary
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse-summary
+          path: lighthouse-results/summary.json
+          if-no-files-found: ignore
+          retention-days: 1
+      # The HTML report is for humans: `archive: false` uploads the file itself
+      # rather than a ZIP, so the link in the PR comment yields the report
+      # directly. It permits a single file only, and the file name becomes the
+      # artifact name — hence lighthouse-report.html.
+      - name: Upload Lighthouse HTML report
         id: upload-report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: lighthouse-report
-          path: lighthouse-results
+          path: lighthouse-results/lighthouse-report.html
+          archive: false
           if-no-files-found: ignore
-          # Long enough to revisit from a PR discussion; the summary.json used by
-          # the report job is consumed within minutes either way.
+          # Long enough to revisit from a PR discussion.
+          retention-days: 14
+      - name: Upload production HTML report
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v7
+        with:
+          path: lighthouse-results/lighthouse-report-production.html
+          archive: false
+          if-no-files-found: ignore
           retention-days: 14
       - name: Job summary
         if: always()
@@ -198,11 +219,11 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-      - name: Download Lighthouse report
+      - name: Download Lighthouse summary
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
-          name: lighthouse-report
+          name: lighthouse-summary
           path: pr
       # The base commit's summary, cached by its own main build.
       # A cache miss yields an absolute (no-delta) comment.
