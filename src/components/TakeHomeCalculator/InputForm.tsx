@@ -458,7 +458,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   px: 2,
                   py: 0.5,
                   fontSize: '0.85rem',
-                  textTransform: 'none',
                   fontWeight: 500,
                   '&.Mui-selected': {
                     bgcolor: 'primary.main',
@@ -519,7 +518,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 size="medium"
                 sx={{
                   minWidth: 140,
-                  textTransform: 'none',
                 }}
               >
                 Manage
@@ -776,7 +774,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             onClick={() => setAdditionalModalOpen(true)}
             size="medium"
             fullWidth
-            sx={{ textTransform: 'none', justifyContent: 'flex-start' }}
+            sx={{ justifyContent: 'flex-start' }}
           >
             {(() => {
               const parts: string[] = [];

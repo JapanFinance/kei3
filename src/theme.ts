@@ -28,5 +28,9 @@ export const theme = createTheme({
         notchedOutline: { borderColor: 'var(--mui-palette-divider)' },
       },
     },
+    // Render button labels as written instead of MUI's default uppercase
+    // transform. Sites that want a transform set it explicitly in sx.
+    MuiButton: { styleOverrides: { root: { textTransform: 'none' } } },
+    MuiToggleButton: { styleOverrides: { root: { textTransform: 'none' } } },
   },
 });
