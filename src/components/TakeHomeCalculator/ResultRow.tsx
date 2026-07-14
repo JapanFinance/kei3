@@ -64,12 +64,10 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       labelSpecificSx = {
         fontWeight: 500,
         fontSize: isMobile ? '0.98rem' : '1rem',
-        color: 'text.primary',
       };
       valueSpecificSx = {
         fontWeight: 500,
         fontSize: isMobile ? '0.98rem' : '1rem',
-        color: 'text.primary',
       };
       boxSx.py = isMobile ? 0.3 : 1.1; // slightly reduced
       break;
@@ -80,7 +78,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
         display: 'flex',
         alignItems: 'center',
       };
-      valueSpecificSx = { fontSize: '0.95rem', color: 'text.primary' };
+      valueSpecificSx = { fontSize: '0.95rem' };
       boxSx.pl = theme.spacing(2.5); // Indentation for sub-items
       boxSx.py = isMobile ? 0.18 : 0.6;
       break;
@@ -96,7 +94,6 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       labelSpecificSx = {
         fontSize: isMobile ? '1.05rem' : '1.1rem',
         fontWeight: 600,
-        color: 'text.primary',
       };
       valueSpecificSx = {
         fontSize: isMobile ? '1.05rem' : '1.1rem',
@@ -160,7 +157,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       break;
     default: // 'default' for percentage row
       labelSpecificSx = { fontSize: '0.95rem', color: 'text.secondary' };
-      valueSpecificSx = { fontSize: '0.95rem', fontWeight: 500, color: 'text.primary' };
+      valueSpecificSx = { fontSize: '0.95rem', fontWeight: 500 };
       break;
   }
 
