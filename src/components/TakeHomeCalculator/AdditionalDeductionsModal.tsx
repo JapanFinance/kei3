@@ -667,11 +667,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Box>
                 )}
 
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
-              >
+              <Accordion sx={{ mt: 2 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     How is the available credit amount calculated?
