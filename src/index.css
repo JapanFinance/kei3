@@ -94,9 +94,7 @@ body {
   }
 }
 
-/* Form Base Styles. The InputForm Box sets its background, padding, corner
-   radius, and shadow through its own sx prop (bgcolor/p/borderRadius/boxShadow),
-   which wins over this rule, so only the properties sx does not set live here. */
+/* Form Base Styles */
 .form-container {
   color: var(--mui-palette-text-primary, rgba(0, 0, 0, 0.87));
   border: 1px solid var(--mui-palette-divider, rgba(0, 0, 0, 0.12));
