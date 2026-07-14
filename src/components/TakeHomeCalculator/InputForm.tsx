@@ -405,14 +405,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  '& .MuiInputBase-root': {
-                    fontSize: { xs: '0.97rem', sm: '1.05rem' },
-                    py: { xs: 0.2, sm: 0.4 },
-                  },
-                  '& .MuiInputBase-input': {
-                    fontSize: { xs: '0.95rem', sm: '1rem' },
-                    py: { xs: 0.2, sm: 0.4 },
-                  },
                 }}
               >
                 <SpinnerNumberField
