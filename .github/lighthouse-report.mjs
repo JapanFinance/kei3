@@ -57,6 +57,56 @@ function deltaText(prev, cur) {
   return diff > 0 ? `+${diff}` : String(diff);
 }
 
+// The metrics the performance score is built from, in presentation order.
+const METRIC_LABELS = {
+  'first-contentful-paint': 'First Contentful Paint',
+  'largest-contentful-paint': 'Largest Contentful Paint',
+  'total-blocking-time': 'Total Blocking Time',
+  'cumulative-layout-shift': 'Cumulative Layout Shift',
+  'speed-index': 'Speed Index',
+};
+
+const formatMetric = (value, unit) => {
+  if (unit === 'unitless') return value.toFixed(3);
+  return value >= 1000 ? `${(value / 1000).toFixed(2)} s` : `${Math.round(value)} ms`;
+};
+
+// Signed movement, lower being better. Sub-10 ms (or sub-0.001 CLS) reads as
+// unchanged rather than as noise, the way the size report ignores sub-0.05 kB.
+function metricDelta(previous, current, unit) {
+  if (previous == null || current == null) return '—';
+  const diff = current - previous;
+  if (unit === 'unitless') {
+    return Math.abs(diff) < 0.001 ? '—' : `${diff > 0 ? '+' : '-'}${Math.abs(diff).toFixed(3)}`;
+  }
+  if (Math.abs(diff) < 10) return '—';
+  return `${diff > 0 ? '+' : '-'}${formatMetric(Math.abs(diff), unit)}`;
+}
+
+function renderMetrics(metrics, baseMetrics) {
+  const ids = Object.keys(METRIC_LABELS).filter(id => metrics?.[id]);
+  if (!ids.length) return [];
+  const withDelta = Boolean(baseMetrics);
+  const rows = ids.map(id => {
+    const metric = metrics[id];
+    const cells = [METRIC_LABELS[id], formatMetric(metric.value, metric.unit)];
+    if (withDelta) cells.push(metricDelta(baseMetrics[id]?.value, metric.value, metric.unit));
+    return `| ${cells.join(' | ')} |`;
+  });
+  return [
+    '',
+    '<details><summary>Performance metrics — the sharper signal for performance work</summary>',
+    '',
+    withDelta ? '| Metric | Value | Δ vs base |' : '| Metric | Value |',
+    withDelta ? '| --- | --: | --: |' : '| --- | --: |',
+    ...rows,
+    '',
+    '<sub>Lower is better. Watch these rather than the score when judging a performance change: the score maps each metric through a log-normal curve and weights it (LCP 25%, TBT 30%, CLS 25%, FCP 10%, SI 10%), so a genuine win can be worth a fraction of a point and round away here while showing clearly above.</sub>',
+    '',
+    '</details>',
+  ];
+}
+
 // One bullet per score-weighted audit that holds a category below 100.
 function auditLines(imperfectAudits) {
   const lines = [];
@@ -86,7 +136,8 @@ function renderMarkdown(summary, base) {
   const lines = [
     '### 🔦 Lighthouse',
     '',
-    `${runLabel} · production build (\`dist/\`) served locally (${summary.formFactor ?? 'mobile'}).`,
+    `${runLabel} · this PR's build (\`dist/\`) served locally (${summary.formFactor ?? 'mobile'})` +
+      `${withDelta ? ", compared against the base commit's identical local audit" : ''}.`,
     '',
     withDelta
       ? '| Category | Score | Δ vs base | Floor | Status |'
@@ -117,6 +168,8 @@ function renderMarkdown(summary, base) {
     );
   }
 
+  lines.push(...renderMetrics(summary.local?.metrics, base?.local?.metrics));
+
   // What concretely holds each score below 100 — usually enough to diagnose a
   // drop without downloading the full report.
   const details = [
@@ -138,12 +191,12 @@ function renderMarkdown(summary, base) {
 
   const artifactUrl = process.env.LIGHTHOUSE_ARTIFACT_URL;
   if (artifactUrl) {
-    lines.push('', `📄 [Full Lighthouse HTML report](${artifactUrl}) — no ZIP to unpack.`);
+    lines.push('', `📄 [Full Lighthouse HTML report](${artifactUrl})`);
   }
 
   lines.push(
     '',
-    `<sub>Accessibility, Best Practices, and SEO are gated — CI fails below the floor. Performance is tracked, not gated: it is noisy on shared runners and bounded by the bundle. The gate audits the built <code>dist/</code> over a Brotli-compressing local server, so it isolates what this change affects; the Cloudflare preview (pull requests) and production (pushes to main) rows are the delivered experience.${withDelta ? ' Δ is vs the PR base commit.' : ''}</sub>`,
+    `<sub>Accessibility, Best Practices, and SEO are gated — CI fails below the floor. Performance is tracked, not gated: it is noisy on shared runners and bounded by the bundle. Everything in the table above is measured the same way on both sides — this PR's build and the base commit's build, each served from an identical Brotli-compressing local server — so a Δ is caused by this change, not by the environment. The Cloudflare preview and production figures are separate trend lines for the delivered experience; they are never differenced against the table.</sub>`,
   );
   return lines.join('\n');
 }

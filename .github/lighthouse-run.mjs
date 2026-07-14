@@ -95,6 +95,35 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
 const pct = score => (score == null ? '—' : String(Math.round(score * 100)));
 const sleep = ms => new Promise(done => setTimeout(done, ms));
 
+// The five metrics the performance score is computed from, reported alongside it
+// because they are the sharper instrument. The score maps each metric through a
+// log-normal curve and weights it (LCP 25%, TBT 30%, CLS 25%, FCP 10%, SI 10%),
+// so a real win — say 200 ms of LCP — can be worth a fraction of a point and
+// round away, while the metric itself moves visibly.
+const METRIC_IDS = [
+  'first-contentful-paint',
+  'largest-contentful-paint',
+  'total-blocking-time',
+  'cumulative-layout-shift',
+  'speed-index',
+];
+
+// Median of each metric across the runs, with the unit Lighthouse reports it in.
+function collectMetrics(runs) {
+  const metrics = {};
+  for (const id of METRIC_IDS) {
+    const values = runs
+      .map(run => run.lhr.audits[id]?.numericValue)
+      .filter(value => typeof value === 'number');
+    if (!values.length) continue;
+    metrics[id] = {
+      value: median(values),
+      unit: runs[0].lhr.audits[id]?.numericUnit ?? 'millisecond',
+    };
+  }
+  return metrics;
+}
+
 // The score-weighted audits that hold a category below 1.0 in the given run —
 // the concrete "what to fix" behind each imperfect number. Weight-0 audits are
 // informational and cannot move a score, so they are skipped.
@@ -245,6 +274,7 @@ async function auditAllCategories(url) {
   const representative = runs.find(r => r.scores.performance === repPerf) ?? runs.at(-1);
   return {
     categories,
+    metrics: collectMetrics(runs),
     report: representative.report,
     imperfectAudits: collectImperfectAudits(representative.lhr),
   };
@@ -271,7 +301,11 @@ async function cmdLocal() {
     formFactor: FORM_FACTOR,
     runs: RUNS,
     budgets: BUDGETS,
-    local: { categories: result.categories, imperfectAudits: result.imperfectAudits },
+    local: {
+      categories: result.categories,
+      metrics: result.metrics,
+      imperfectAudits: result.imperfectAudits,
+    },
   };
   await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
   await writeFile(REPORT_PATH, result.report);
@@ -452,6 +486,7 @@ async function cmdProduction() {
       deployedMatch,
       runs: RUNS,
       categories: result.categories,
+      metrics: result.metrics,
       imperfectAudits: result.imperfectAudits,
     };
     await mkdir(OUT_DIR, { recursive: true });
