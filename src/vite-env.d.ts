@@ -17,5 +17,9 @@ declare module 'chart.js' {
         currentIncome: number;
       };
     };
+    percentileBands?: {
+      /** 五分位値 are published on a 全世帯 basis only, so the bands hide for other 世帯類型. */
+      show?: boolean;
+    };
   }
 }

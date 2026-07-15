@@ -278,6 +278,7 @@ export const getChartOptions = (
   chartRange: ChartRange,
   currentIncome: number,
   useCompactLabelFormat: boolean = false,
+  medianIncome: number = MEDIAN_INCOME_VALUE,
 ): ChartOptions<'bar' | 'line'> => {
   const maxIncome = chartRange.max;
   const minIncome = chartRange.min;
@@ -287,7 +288,7 @@ export const getChartOptions = (
   );
   const medianIncomePosition = Math.max(
     0,
-    Math.min(1, (MEDIAN_INCOME_VALUE - minIncome) / (maxIncome - minIncome)),
+    Math.min(1, (medianIncome - minIncome) / (maxIncome - minIncome)),
   );
 
   return {

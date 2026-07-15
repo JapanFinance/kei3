@@ -17,7 +17,10 @@ import {
 } from 'chart.js';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import Box from '@mui/material/Box';
+import FormControl from '@mui/material/FormControl';
+import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
@@ -40,8 +43,16 @@ import {
 } from '../../utils/chartConfig';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type { Dependent } from '../../types/dependents';
-import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
+import {
+  QUINTILE_DATA,
+  HOUSEHOLD_INCOME_DISTRIBUTIONS,
+  HOUSEHOLD_TYPE_ORDER,
+  DEFAULT_HOUSEHOLD_TYPE,
+  type HouseholdType,
+} from '../../data/income';
+import { estimateIncomePercentile } from '../../utils/incomeDistribution';
 import { DetailedTooltip } from '../ui/Tooltips';
+import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { detectCaps } from '../../utils/capDetection';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
@@ -79,6 +90,8 @@ const QUINTILE_BANDS = [
 const percentileBandsPlugin = {
   id: 'percentileBands',
   beforeDraw: (chart: ChartJS<'bar' | 'line'>) => {
+    if (chart.options.plugins?.percentileBands?.show === false) return;
+
     const { ctx, scales } = chart;
     const { x: xScale, y: yScale } = scales;
 
@@ -182,35 +195,21 @@ const STEP_SIZE = 1000000; // 1M steps
 const YOUR_INCOME_COLOR = 'rgba(255, 99, 132, 1)';
 const MEDIAN_INCOME_COLOR = 'rgba(255, 206, 86, 1)';
 
-// Utility function to calculate income percentile
-const calculateEstimatedIncomePercentile = (income: number): number => {
-  if (income <= 0) return 0;
-
-  // Use detailed income range distribution data for accurate calculation
-  let cumulativePercent = 0;
-
-  // Find the income range and calculate cumulative percentage
-  for (const [, range] of Object.entries(INCOME_RANGE_DISTRIBUTION)) {
-    if (income < range.max_exclusive) {
-      // Income falls within this range
-      if (income >= range.min_inclusive) {
-        // Calculate position within the range
-        const rangeSpan = range.max_exclusive - range.min_inclusive;
-        const positionInRange = income - range.min_inclusive;
-        const percentWithinRange =
-          rangeSpan > 0 ? (positionInRange / rangeSpan) * range.percent : 0;
-
-        return cumulativePercent + percentWithinRange;
-      } else {
-        // Income is below this range, return cumulative up to previous ranges
-        return cumulativePercent;
-      }
-    }
-    cumulativePercent += range.percent;
-  }
-  // The distribution covers up to Infinity, so this should never be reached
-  throw new Error(`Income ${formatJPY(income)} not within distribution range`);
-};
+const INCOME_SURVEY_SOURCES: Source[] = [
+  {
+    label: '2025（令和７）年 国民生活基礎調査の概況 (Comprehensive Survey of Living Conditions)',
+    href: 'https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html',
+  },
+  {
+    label:
+      '所得票 第０２１表 世帯数の相対度数分布・世帯類型別 (income distribution by household type)',
+    href: 'https://www.e-stat.go.jp/stat-search/files?toukei=00450061&tstat=000001244376&cycle=7&tclass1=000001244380',
+  },
+  {
+    label: '用語の説明 (definitions of each 世帯類型)',
+    href: 'https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/dl/07.pdf',
+  },
+];
 
 // Utility function to get percentile band for income
 const getPercentileBand = (income: number): { label: string; color: string } => {
@@ -244,6 +243,13 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   // Track whether the user has manually adjusted the range
   const [hasManuallyAdjustedRange, setHasManuallyAdjustedRange] = useState(false);
   const [manualChartRange, setManualChartRange] = useState<ChartRange | null>(null);
+
+  // Which 世帯類型 the median line and the percentile estimate are measured against.
+  const [householdType, setHouseholdType] = useState<HouseholdType>(DEFAULT_HOUSEHOLD_TYPE);
+  const distribution = HOUSEHOLD_INCOME_DISTRIBUTIONS[householdType];
+  // 五分位値 exist on a 全世帯 basis only, so the bands would contradict the percentile estimate
+  // for any other 世帯類型.
+  const showQuintileBands = householdType === 'all';
 
   // Function to calculate auto-centered range based on income
   const calculateAutoCenteredRange = (income: number): ChartRange => {
@@ -335,13 +341,19 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   // Get chart options using the utility function
   const chartOptions = useMemo<ChartOptions<'bar' | 'line'>>(() => {
-    const baseOptions = getChartOptions(chartRange, currentIncome, useCompactLabelFormat);
+    const baseOptions = getChartOptions(
+      chartRange,
+      currentIncome,
+      useCompactLabelFormat,
+      distribution.median,
+    );
 
     // Enhance tooltips to include percentile and cap information
     return {
       ...baseOptions,
       plugins: {
         ...baseOptions.plugins,
+        percentileBands: { show: showQuintileBands },
         tooltip: {
           ...baseOptions.plugins?.tooltip,
           callbacks: {
@@ -349,9 +361,15 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             afterTitle: (tooltipItems: TooltipItem<'bar' | 'line'>[]) => {
               if (tooltipItems.length > 0 && tooltipItems[0]?.parsed.x != null) {
                 const income = tooltipItems[0].parsed.x;
-                const estimatedPercentile = calculateEstimatedIncomePercentile(income);
-                const band = getPercentileBand(income);
-                let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
+                const estimate = estimateIncomePercentile(income, distribution.ranges);
+                // Above the open-ended top bracket the survey supports only a bound, and the
+                // quintile bands are 全世帯-only, so both are dropped where they do not apply.
+                let info = estimate.isTopBracket
+                  ? `top ~${estimate.topBracketPercent.toFixed(1)}% of ${distribution.labelJa}`
+                  : `~${estimate.percentile.toFixed(1)} percentile`;
+                if (!estimate.isTopBracket && showQuintileBands) {
+                  info += ` (${getPercentileBand(income).label})`;
+                }
 
                 // Calculate full tax results for this income level to get cap status.
                 // Scale the user's actual streams to the hovered income the same way
@@ -413,6 +431,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     medicalExpenses,
     homeLoanTaxCredit,
     incomeStreams,
+    distribution,
+    showQuintileBands,
   ]);
 
   // Use media query to determine if we should show minor marks
@@ -432,7 +452,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const yourIncomeIsVisibleInChart =
     currentIncome > 0 && currentIncome >= chartRange.min && currentIncome <= chartRange.max;
   const medianIncomeIsVisibleInChart =
-    MEDIAN_INCOME_VALUE >= chartRange.min && MEDIAN_INCOME_VALUE <= chartRange.max;
+    distribution.median >= chartRange.min && distribution.median <= chartRange.max;
+
+  const percentileEstimate = useMemo(
+    () => estimateIncomePercentile(currentIncome, distribution.ranges),
+    [currentIncome, distribution],
+  );
 
   return (
     <Paper
@@ -509,6 +534,74 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         )}
       </Box>
 
+      {/* Chooses the 世帯類型 the median line and percentile estimate are measured against */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 1,
+          mb: { xs: 1, sm: 1.5 },
+        }}
+      >
+        <Typography
+          id="household-type-label"
+          variant="body2"
+          color="text.secondary"
+          sx={{ fontSize: { xs: '0.95rem', sm: '1rem' }, fontWeight: 500 }}
+        >
+          Compare against:
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 320 } }}>
+          <Select
+            id="household-type"
+            name="household-type"
+            labelId="household-type-label"
+            value={householdType}
+            onChange={event => setHouseholdType(event.target.value as HouseholdType)}
+          >
+            {HOUSEHOLD_TYPE_ORDER.map(type => (
+              <MenuItem key={type} value={type}>
+                {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <DetailedTooltip
+          title="Household types (世帯類型)"
+          icon={SIMPLE_TOOLTIP_ICON}
+          iconAriaLabel="Learn more about the household types"
+        >
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1.5 }}>
+              The survey reports the income distribution separately for each 世帯類型 below. Picking
+              one changes the median line, the percentile estimate, and the bars' comparison group.
+            </Typography>
+            <Box component="dl" sx={{ m: 0 }}>
+              {HOUSEHOLD_TYPE_ORDER.map(type => (
+                <Box key={type} sx={{ mb: 1 }}>
+                  <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>
+                    {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label}
+                  </Typography>
+                  <Typography
+                    component="dd"
+                    variant="body2"
+                    sx={{ m: 0, fontSize: '0.85rem', color: 'text.secondary' }}
+                  >
+                    {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].definition} Median{' '}
+                    {formatJPY(HOUSEHOLD_INCOME_DISTRIBUTIONS[type].median)}.
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+            <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
+              The 再掲 groups overlap the others, so the six do not add up to 全世帯.
+            </Typography>
+            <SourceLinks sources={INCOME_SURVEY_SOURCES} />
+          </Box>
+        </DetailedTooltip>
+      </Box>
+
       {/* Custom Legend for Income Lines */}
       <Box
         className="chart-legend"
@@ -582,7 +675,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               fontWeight: 500,
             }}
           >
-            Median Income: {formatJPY(MEDIAN_INCOME_VALUE)}
+            Median Income: {formatJPY(distribution.median)}
           </Typography>
         </Box>
         {currentIncome > 0 && (
@@ -603,149 +696,145 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 color: 'primary.main',
               }}
             >
-              This income is higher than ~
-              {calculateEstimatedIncomePercentile(currentIncome).toFixed(1)}% of households in
-              Japan.
+              {percentileEstimate.isTopBracket
+                ? `This income is in the top ~${percentileEstimate.topBracketPercent.toFixed(1)}% of ${distribution.sentenceLabel} in Japan.`
+                : `This income is higher than ~${percentileEstimate.percentile.toFixed(1)}% of ${distribution.sentenceLabel} in Japan.`}
             </Typography>
           </Box>
         )}
 
-        {/* Quintile Bands Legend Item */}
-        <Box
-          className="legend-item"
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
+        {/* Quintile Bands Legend Item. 五分位値 are published on a 全世帯 basis only. */}
+        {showQuintileBands && (
+          <Box
+            className="legend-item"
             sx={{
-              fontSize: { xs: '0.92rem', sm: '0.95rem' },
-              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
             }}
           >
-            Background colors show income distribution quintiles
-          </Typography>
-          <DetailedTooltip
-            title="Income Distribution Quintiles"
-            icon={SIMPLE_TOOLTIP_ICON}
-            iconAriaLabel="Learn more about income distribution quintiles"
-          >
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1.5 }}>
-                The colored background bands represent household income distribution quintiles based
-                on official Japanese government data:
-              </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                fontSize: { xs: '0.92rem', sm: '0.95rem' },
+                fontWeight: 500,
+              }}
+            >
+              Background colors show income distribution quintiles
+            </Typography>
+            <DetailedTooltip
+              title="Income Distribution Quintiles"
+              icon={SIMPLE_TOOLTIP_ICON}
+              iconAriaLabel="Learn more about income distribution quintiles"
+            >
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1.5 }}>
+                  The colored background bands represent household income distribution quintiles
+                  based on official Japanese government data:
+                </Typography>
 
-              {/* Quintile Data Table */}
-              <Box
-                component="table"
-                sx={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  mb: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                  // Shared styles for table cells
-                  '& th, & td': {
-                    p: 1,
-                    fontSize: '0.85rem',
-                    borderBottom: '1px solid',
+                {/* Quintile Data Table */}
+                <Box
+                  component="table"
+                  sx={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    mb: 1.5,
+                    border: '1px solid',
                     borderColor: 'divider',
-                  },
-                  '& th': {
-                    fontWeight: 600,
-                  },
-                  '& td:last-child, & th:last-child': {
-                    textAlign: 'right',
-                  },
-                  '& tr:last-child td': {
-                    borderBottom: 'none',
-                  },
-                }}
-              >
-                <Box component="thead" sx={{ bgcolor: 'action.hover' }}>
-                  <Box component="tr">
-                    <Box component="th">Percentile</Box>
-                    <Box component="th">Income Range</Box>
-                  </Box>
-                </Box>
-                <Box component="tbody">
-                  <Box component="tr">
-                    <Box component="td">0-20th</Box>
-                    <Box component="td">¥0 - {formatJPY(QUINTILE_DATA[20])}</Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">20-40th</Box>
-                    <Box component="td">
-                      {formatJPY(QUINTILE_DATA[20])} - {formatJPY(QUINTILE_DATA[40])}
-                    </Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">40-60th</Box>
-                    <Box component="td">
-                      {formatJPY(QUINTILE_DATA[40])} - {formatJPY(QUINTILE_DATA[60])}
-                    </Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">60-80th</Box>
-                    <Box component="td">
-                      {formatJPY(QUINTILE_DATA[60])} - {formatJPY(QUINTILE_DATA[80])}
-                    </Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">80-100th</Box>
-                    <Box component="td">{formatJPY(QUINTILE_DATA[80])} and above</Box>
-                  </Box>
-                </Box>
-              </Box>
-              <Typography
-                variant="body2"
-                sx={{ mt: 1.5, mb: 1.5, fontSize: '0.9rem', fontStyle: 'italic' }}
-              >
-                Data source:{' '}
-                <a
-                  href="https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'inherit', textDecoration: 'underline' }}
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    // Shared styles for table cells
+                    '& th, & td': {
+                      p: 1,
+                      fontSize: '0.85rem',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                    },
+                    '& th': {
+                      fontWeight: 600,
+                    },
+                    '& td:last-child, & th:last-child': {
+                      textAlign: 'right',
+                    },
+                    '& tr:last-child td': {
+                      borderBottom: 'none',
+                    },
+                  }}
                 >
-                  Ministry of Health, Labour and Welfare's 2025 Comprehensive Survey of Living
-                  Conditions
-                </a>
-              </Typography>
+                  <Box component="thead" sx={{ bgcolor: 'action.hover' }}>
+                    <Box component="tr">
+                      <Box component="th">Percentile</Box>
+                      <Box component="th">Income Range</Box>
+                    </Box>
+                  </Box>
+                  <Box component="tbody">
+                    <Box component="tr">
+                      <Box component="td">0-20th</Box>
+                      <Box component="td">¥0 - {formatJPY(QUINTILE_DATA[20])}</Box>
+                    </Box>
+                    <Box component="tr">
+                      <Box component="td">20-40th</Box>
+                      <Box component="td">
+                        {formatJPY(QUINTILE_DATA[20])} - {formatJPY(QUINTILE_DATA[40])}
+                      </Box>
+                    </Box>
+                    <Box component="tr">
+                      <Box component="td">40-60th</Box>
+                      <Box component="td">
+                        {formatJPY(QUINTILE_DATA[40])} - {formatJPY(QUINTILE_DATA[60])}
+                      </Box>
+                    </Box>
+                    <Box component="tr">
+                      <Box component="td">60-80th</Box>
+                      <Box component="td">
+                        {formatJPY(QUINTILE_DATA[60])} - {formatJPY(QUINTILE_DATA[80])}
+                      </Box>
+                    </Box>
+                    <Box component="tr">
+                      <Box component="td">80-100th</Box>
+                      <Box component="td">{formatJPY(QUINTILE_DATA[80])} and above</Box>
+                    </Box>
+                  </Box>
+                </Box>
 
-              {/* Explanation of quintiles and percentiles */}
-              <Box
-                sx={{
-                  mt: 1.5,
-                  p: 1.5,
-                  bgcolor: 'action.hover',
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}>
-                  What are percentiles and quintiles?
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
-                  <strong>Percentiles:</strong> An income in the 70th percentile is higher than 70%
-                  of all households.
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
-                  <strong>Quintiles:</strong> The population divided into 5 equal groups (20% each),
-                  from lowest to highest income.
-                </Typography>
+                {/* Explanation of quintiles and percentiles */}
+                <Box
+                  sx={{
+                    mt: 1.5,
+                    p: 1.5,
+                    bgcolor: 'action.hover',
+                    borderRadius: 1,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}
+                  >
+                    What are percentiles and quintiles?
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
+                    <strong>Percentiles:</strong> An income in the 70th percentile is higher than
+                    70% of all households.
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
+                    <strong>Quintiles:</strong> The population divided into 5 equal groups (20%
+                    each), from lowest to highest income.
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
+                    The survey publishes 五分位値 for 全世帯 only, reporting how each 世帯類型
+                    spreads across those same bands rather than giving each one its own. The bands
+                    therefore appear only while 全世帯 is selected.
+                  </Typography>
+                </Box>
+                <SourceLinks sources={INCOME_SURVEY_SOURCES} />
               </Box>
-            </Box>
-          </DetailedTooltip>
-        </Box>
+            </DetailedTooltip>
+          </Box>
+        )}
       </Box>
 
       <Paper
