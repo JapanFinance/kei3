@@ -710,12 +710,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               >
                 Data source:{' '}
                 <a
-                  href="https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa24/index.html"
+                  href="https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ color: 'inherit', textDecoration: 'underline' }}
                 >
-                  Ministry of Health, Labour and Welfare's 2024 Comprehensive Survey of Living
+                  Ministry of Health, Labour and Welfare's 2025 Comprehensive Survey of Living
                   Conditions
                 </a>
               </Typography>
