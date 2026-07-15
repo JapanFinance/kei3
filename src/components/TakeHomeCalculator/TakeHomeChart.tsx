@@ -183,7 +183,7 @@ const YOUR_INCOME_COLOR = 'rgba(255, 99, 132, 1)';
 const MEDIAN_INCOME_COLOR = 'rgba(255, 206, 86, 1)';
 
 // Utility function to calculate income percentile
-const calculateEstimatedIncomePercentile = (income: number): number => {
+export const calculateEstimatedIncomePercentile = (income: number): number => {
   if (income <= 0) return 0;
 
   // Use detailed income range distribution data for accurate calculation

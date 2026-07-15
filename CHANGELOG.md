@@ -7,6 +7,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 ### Updated
 
 - Updated the income distribution chart and its quintile tooltip to the Ministry of Health, Labour and Welfare's 2025 Comprehensive Survey of Living Conditions ([2025（令和７）年 国民生活基礎調査の概況](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html)), which reports income earned during the 2024 calendar year. The median household income marker moves from ¥4,100,000 to ¥4,510,000, and the quintile bands and percentile estimates have been revalued to match.
+- Refined the household percentile estimate below ¥5,000,000 to use the survey's finer ¥500,000 income brackets, published in [第６表 of the 統計表](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/dl/06.pdf), instead of interpolating across ¥1,000,000 brackets. Most households sit in this range, so the estimate is now more accurate there; it shifts by up to about one percentile point at the lowest incomes.
 
 ## 2026-06-29
 
