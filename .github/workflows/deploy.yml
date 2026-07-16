@@ -126,32 +126,36 @@ jobs:
       - name: Build
         run: npm run build
       # Lighthouse is not a project dependency; install it (pinned, no lockfile
-      # write) only here, so the test and build jobs stay lean.
+      # write) only here, so the test and build jobs stay lean. The build above
+      # is only used as the fingerprint that tells the main-push audits the
+      # deploy they are looking at is this commit's.
       - name: Install Lighthouse
         run: npm run lighthouse:install
-      - name: Audit local build
-        run: node .github/lighthouse-run.mjs local
-      # On pull requests, also measure performance against the Cloudflare preview
-      # deployment (real CDN). Best-effort: it waits for the preview of this
-      # commit and never fails the job, so a slow or missing deploy just omits the
-      # preview number. Preview URLs skip the zone-level Cloudflare layer (e.g.
-      # the injected bot-detection script), so only performance is meaningful
-      # there — production below is the full delivered experience.
-      - name: Audit Cloudflare preview performance
+      # Pull requests: the gated audit runs against this PR's own Cloudflare
+      # preview deployment (found by matching the head commit in the Cloudflare
+      # bot's comment). Not best-effort — without it the gate has nothing to
+      # check, so a missing preview fails the job; re-run once Cloudflare has
+      # deployed.
+      - name: Audit Cloudflare preview
         if: github.event_name == 'pull_request'
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node .github/lighthouse-run.mjs preview
-      # On pushes to main, audit the live site in all four categories — what
-      # users actually experience, Cloudflare layer included. Tracked in the job
-      # summary and the cached baseline, never gated (it moves for reasons no PR
-      # causes). Best-effort: waits for the deploy to serve this commit's build.
+      # Pushes to main (and manual dispatches): audit deployed main on the root
+      # workers.dev subdomain — the same environment class as PR previews. This
+      # is the baseline later pull requests diff against; best-effort, since a
+      # missing baseline only costs those PRs their Δ column.
+      - name: Audit main baseline (workers.dev)
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        run: node .github/lighthouse-run.mjs baseline
+      # Pushes to main: the reality check. Audits the custom domain — what users
+      # experience, Cloudflare zone layer included — and the gate then checks its
+      # non-performance categories at the same floors.
       - name: Audit production
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        continue-on-error: true
         run: node .github/lighthouse-run.mjs production
       # The summary is a job-to-job handoff for the comment, so it stays zipped
       # and short-lived; nobody opens it by hand.
@@ -200,7 +204,9 @@ jobs:
           path: lighthouse-results/summary.json
           key: lighthouse-summary-${{ github.sha }}
       # The gate runs last so the summary and artifact are produced even when it
-      # fails. It reads the scores written by "Audit local build".
+      # fails. It checks every budget against the head audit (preview on PRs,
+      # workers.dev main otherwise) and the non-performance budgets against the
+      # production audit when present.
       - name: Assert Lighthouse budgets
         run: node .github/lighthouse-run.mjs gate
 

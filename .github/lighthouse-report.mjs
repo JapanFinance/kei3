@@ -83,13 +83,19 @@ function metricDelta(previous, current, unit) {
   return `${diff > 0 ? '+' : '-'}${formatMetric(Math.abs(diff), unit)}`;
 }
 
+// min–max across the runs; "—" when the runs agreed.
+function rangeText(metric) {
+  if (metric.min == null || metric.max == null || metric.min === metric.max) return '—';
+  return `${formatMetric(metric.min, metric.unit)} – ${formatMetric(metric.max, metric.unit)}`;
+}
+
 function renderMetrics(metrics, baseMetrics) {
   const ids = Object.keys(METRIC_LABELS).filter(id => metrics?.[id]);
   if (!ids.length) return [];
   const withDelta = Boolean(baseMetrics);
   const rows = ids.map(id => {
     const metric = metrics[id];
-    const cells = [METRIC_LABELS[id], formatMetric(metric.value, metric.unit)];
+    const cells = [METRIC_LABELS[id], formatMetric(metric.value, metric.unit), rangeText(metric)];
     if (withDelta) cells.push(metricDelta(baseMetrics[id]?.value, metric.value, metric.unit));
     return `| ${cells.join(' | ')} |`;
   });
@@ -97,11 +103,11 @@ function renderMetrics(metrics, baseMetrics) {
     '',
     '<details><summary>Performance metrics — the sharper signal for performance work</summary>',
     '',
-    withDelta ? '| Metric | Value | Δ vs base |' : '| Metric | Value |',
-    withDelta ? '| --- | --: | --: |' : '| --- | --: |',
+    withDelta ? '| Metric | Median | Range | Δ vs main |' : '| Metric | Median | Range |',
+    withDelta ? '| --- | --: | --: | --: |' : '| --- | --: | --: |',
     ...rows,
     '',
-    '<sub>Lower is better. Watch these rather than the score when judging a performance change: the score maps each metric through a log-normal curve and weights it (LCP 25%, TBT 30%, CLS 25%, FCP 10%, SI 10%), so a genuine win can be worth a fraction of a point and round away here while showing clearly above.</sub>',
+    '<sub>Lower is better. Judge a performance change here rather than on the score: the score maps each metric through a log-normal curve and weights it (LCP 25%, TBT 30%, CLS 25%, FCP 10%, SI 10%), so a genuine win can be worth a fraction of a point and round away above while showing clearly here. A wide range means the shared runner was contended — re-run the job for a cleaner sample before concluding anything. Δ compares against main audited in the same workers.dev environment. CLS flipping between 0.000 and 0.023 is one small real shift at the detection threshold, not a regression.</sub>',
     '',
     '</details>',
   ];
@@ -119,9 +125,10 @@ function auditLines(imperfectAudits) {
 }
 
 function renderMarkdown(summary, base) {
-  const scores = summary.local?.categories ?? {};
+  const head = summary.head ?? {};
+  const scores = head.categories ?? {};
   const budgets = summary.budgets ?? {};
-  const baseScores = base?.local?.categories;
+  const baseScores = base?.head?.categories;
   const withDelta = Boolean(baseScores);
 
   const rows = CATEGORIES.map(([id, label]) => {
@@ -136,44 +143,43 @@ function renderMarkdown(summary, base) {
   const lines = [
     '### 🔦 Lighthouse',
     '',
-    `${runLabel} · this PR's build (\`dist/\`) served locally (${summary.formFactor ?? 'mobile'})` +
-      `${withDelta ? ", compared against the base commit's identical local audit" : ''}.`,
+    `${runLabel} · ${head.env ?? 'head'} (${summary.formFactor ?? 'mobile'})` +
+      `${withDelta ? ' · Δ vs main in the same environment' : ''}.`,
     '',
     withDelta
-      ? '| Category | Score | Δ vs base | Floor | Status |'
+      ? '| Category | Score | Δ vs main | Floor | Status |'
       : '| Category | Score | Floor | Status |',
     withDelta ? '| --- | --: | --: | --: | --- |' : '| --- | --: | --: | --- |',
     ...rows,
   ];
 
-  if (summary.preview?.performance != null) {
-    lines.push(
-      '',
-      `**Performance on the Cloudflare preview** (real CDN): **${pct(summary.preview.performance)}** — ` +
-        `<a href="${summary.preview.url}">preview</a> · tracked, not gated.`,
-    );
-  }
-
   if (summary.production?.categories) {
     const production = summary.production;
-    const scoreLine = CATEGORIES.map(
-      ([id, label]) => `${label} **${pct(production.categories[id])}**`,
-    ).join(' · ');
+    // Production's non-performance categories are gated at its own floors
+    // (renormalization differs — see lighthouse-budget.js); mark a breach
+    // inline so the summary explains a failed check at a glance.
+    const prodBudgets = production.budgets ?? budgets;
+    const scoreLine = CATEGORIES.map(([id, label]) => {
+      const score = production.categories[id];
+      const gated = id !== 'performance';
+      const breach = gated && prodBudgets[id]?.minScore != null && score < prodBudgets[id].minScore;
+      return `${label} **${pct(score)}**${breach ? ' ❌' : ''}`;
+    }).join(' · ');
     const staleNote = production.deployedMatch
       ? ''
-      : ' (the deploy had not caught up to this commit; scores are for the previously live build)';
+      : ' (the deploy had not caught up to this commit; scores are for the previously live build and were not gated)';
     lines.push(
       '',
-      `**Production** (<a href="${production.url}">${new URL(production.url).hostname}</a>, Cloudflare layer included): ${scoreLine} · tracked, not gated${staleNote}.`,
+      `**Production** (<a href="${production.url}">${new URL(production.url).hostname}</a>, Cloudflare zone layer included): ${scoreLine} · non-performance categories gated, performance tracked${staleNote}.`,
     );
   }
 
-  lines.push(...renderMetrics(summary.local?.metrics, base?.local?.metrics));
+  lines.push(...renderMetrics(head.metrics, base?.head?.metrics));
 
   // What concretely holds each score below 100 — usually enough to diagnose a
   // drop without downloading the full report.
   const details = [
-    ...auditLines(summary.local?.imperfectAudits),
+    ...auditLines(head.imperfectAudits),
     ...(summary.production?.imperfectAudits
       ? auditLines(summary.production.imperfectAudits).map(line => `${line} *(production)*`)
       : []),
@@ -196,7 +202,7 @@ function renderMarkdown(summary, base) {
 
   lines.push(
     '',
-    `<sub>Accessibility, Best Practices, and SEO are gated — CI fails below the floor. Performance is tracked, not gated: it is noisy on shared runners and bounded by the bundle. Everything in the table above is measured the same way on both sides — this PR's build and the base commit's build, each served from an identical Brotli-compressing local server — so a Δ is caused by this change, not by the environment. The Cloudflare preview and production figures are separate trend lines for the delivered experience; they are never differenced against the table.</sub>`,
+    `<sub>Accessibility, Best Practices, and SEO are gated at floors equal to their current scores — they are deterministic, so any drop is a real regression; CI fails below the floor. Performance is tracked, not gated. The table audits this change's own Cloudflare deployment; Δ compares against main audited in the same workers.dev environment class (no zone layer on either side), so a Δ is caused by the change, not the environment. Audits that can only fail as environment artifacts are skipped and the scores renormalized: is-crawlable on workers.dev hosts (served noindex by design), deprecations and inspector-issues on production (Cloudflare's injected bot-detection script) — see lighthouse-budget.js.</sub>`,
   );
   return lines.join('\n');
 }

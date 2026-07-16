@@ -1,28 +1,38 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Runs Lighthouse for CI, driven by lighthouse-budget.js. Three subcommands:
+// Runs Lighthouse for CI, driven by lighthouse-budget.js. Subcommands — the
+// audits only MEASURE and write lighthouse-results/; `gate` enforces, run as a
+// later step so the artifact and PR comment are produced even when it fails:
 //
-//   local    Serve dist/ from a small static server (Brotli/gzip, immutable
-//            asset caching — like Cloudflare) and audit it RUNS times. Write the
-//            median category scores and the representative HTML report to
-//            lighthouse-results/. This only MEASURES; the CI gate is `gate`, run
-//            as a later step so the artifact and PR comment are produced even
-//            when the gate fails. Always exits 0 (a failed audit run throws).
+//   preview  Pull requests: the gated head audit. Find the Cloudflare preview
+//            URL for the PR's head commit (from the Cloudflare bot's PR comment,
+//            matched by commit SHA + "Deployment successful"), audit all four
+//            categories with the head skip list, and write summary.head. Exits
+//            non-zero when no preview turns up — the gate has nothing to check
+//            without it.
+//
+//   baseline Pushes to main: audit deployed main on the root workers.dev
+//            subdomain — the same environment class as PR previews — and write
+//            summary.head. Cached by commit SHA so later pull requests diff
+//            against it. Exits 0 when the route is unavailable (a missing
+//            baseline only degrades PR comments to absolute scores).
+//
+//   production  Pushes to main: audit PROD_URL — what users experience,
+//            Cloudflare zone layer included — with the production skip list,
+//            after waiting for the deploy to serve this commit's build. Written
+//            to summary.production; the gate checks its non-performance
+//            categories.
 //
 //   gate     Read lighthouse-results/summary.json and exit non-zero if any
-//            error-level category is below its floor. This is the CI gate.
+//            error-level category is below its floor: all budgets against
+//            summary.head, non-performance budgets against summary.production
+//            (skipped with a note when the audited deploy was not this commit's
+//            build).
 //
-//   preview  Best-effort, pull requests only. Find the Cloudflare preview URL for
-//            the PR's head commit (from the Cloudflare bot's PR comment, matched
-//            by commit SHA + "Deployment successful"), audit its PERFORMANCE, and
-//            merge the number into summary.json. Always exits 0.
-//
-//   production  Best-effort, pushes to main only. Audit PROD_URL — what users
-//            actually experience, Cloudflare layer included — in all four
-//            categories, after waiting for the deploy to serve this commit's
-//            build. Tracked, never gated; merged into summary.json. Always
-//            exits 0.
+//   local    Dev convenience, not used in CI: serve dist/ from a small static
+//            server (Brotli/gzip, immutable asset caching — like Cloudflare)
+//            and audit it as the head. Advisory — CI gates deployed URLs.
 //
 // Uses only Node built-ins plus the pinned `lighthouse` and `chrome-launcher`.
 
@@ -35,9 +45,11 @@ import {
   BUDGETS,
   CATEGORY_LABELS,
   FORM_FACTOR,
-  PREVIEW_PERF,
   PROD_URL,
+  PRODUCTION_BUDGETS,
   RUNS,
+  SKIPPED_AUDITS,
+  WORKERS_URL,
 } from '../lighthouse-budget.js';
 
 /* eslint-disable no-await-in-loop -- The audit runs and the Cloudflare-deploy
@@ -58,9 +70,8 @@ const CATEGORIES = Object.keys(CATEGORY_LABELS);
 // Standard headless flags for GitHub-hosted runners.
 const CHROME_FLAGS = ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu'];
 
-// Desktop overrides; mobile (Lighthouse's throttled default) needs no config.
+// Desktop setting overrides; mobile (Lighthouse's throttled default) needs none.
 const DESKTOP_CONFIG = {
-  extends: 'lighthouse:default',
   settings: {
     formFactor: 'desktop',
     screenEmulation: {
@@ -108,7 +119,9 @@ const METRIC_IDS = [
   'speed-index',
 ];
 
-// Median of each metric across the runs, with the unit Lighthouse reports it in.
+// Median of each metric across the runs, with the unit Lighthouse reports it in
+// and the min–max range — a wide range means the shared runner was contended
+// and a re-run is worth more than a conclusion.
 function collectMetrics(runs) {
   const metrics = {};
   for (const id of METRIC_IDS) {
@@ -118,6 +131,8 @@ function collectMetrics(runs) {
     if (!values.length) continue;
     metrics[id] = {
       value: median(values),
+      min: Math.min(...values),
+      max: Math.max(...values),
       unit: runs[0].lhr.audits[id]?.numericUnit ?? 'millisecond',
     };
   }
@@ -233,15 +248,22 @@ async function ensureLighthouse() {
 
 // Launch Chrome, run Lighthouse once, always kill Chrome (swallowing the
 // Windows-only temp-dir cleanup EPERM so a local run still returns its result).
-async function runOnce(url, onlyCategories) {
+// skipAudits (see SKIPPED_AUDITS) removes environment-artifact audits from the
+// run; the affected category renormalizes over its remaining audits.
+async function runOnce(url, skipAudits) {
   const chrome = await launchChrome({
     chromeFlags: CHROME_FLAGS,
     chromePath: process.env.CHROME_PATH || undefined,
   });
   try {
     const flags = { port: chrome.port, output: 'html', logLevel: 'error' };
-    if (onlyCategories) flags.onlyCategories = onlyCategories;
-    const config = FORM_FACTOR === 'desktop' ? DESKTOP_CONFIG : undefined;
+    const config = {
+      extends: 'lighthouse:default',
+      settings: {
+        ...(FORM_FACTOR === 'desktop' ? DESKTOP_CONFIG.settings : {}),
+        skipAudits: skipAudits ?? [],
+      },
+    };
     return await lighthouse(url, flags, config);
   } finally {
     try {
@@ -257,7 +279,7 @@ async function runOnce(url, onlyCategories) {
 // Audit `url` RUNS times; return the per-category median scores plus the HTML
 // report and imperfect audits of the run whose performance is the median (the
 // representative run).
-async function auditAllCategories(url) {
+async function auditAllCategories(url, skipAudits) {
   // Discard one warmup audit. The first audit on a runner is consistently and
   // substantially pessimistic — measured on GitHub-hosted runners as performance
   // 64-69 against 88-89 for every run after it, across three identical runs of
@@ -265,11 +287,11 @@ async function auditAllCategories(url) {
   // warms the OS file cache. The median mostly hides it, but it still drags the
   // metrics, which are the numbers worth trusting.
   console.log('  warmup run (discarded) …');
-  await runOnce(url);
+  await runOnce(url, skipAudits);
 
   const runs = [];
   for (let i = 0; i < RUNS; i++) {
-    const rc = await runOnce(url);
+    const rc = await runOnce(url, skipAudits);
     const scores = Object.fromEntries(CATEGORIES.map(c => [c, rc.lhr.categories[c].score]));
     runs.push({ scores, report: rc.report, lhr: rc.lhr });
     console.log(
@@ -289,40 +311,71 @@ async function auditAllCategories(url) {
   };
 }
 
+// Read the summary written by earlier steps, or start a fresh one.
+function readSummary() {
+  try {
+    return JSON.parse(readFileSync(SUMMARY_PATH, 'utf8'));
+  } catch {
+    return { formFactor: FORM_FACTOR, runs: RUNS, budgets: BUDGETS };
+  }
+}
+
+// Persist an audit as the head (the gated side of the summary) along with its
+// HTML report, and print the scores.
+async function saveHead(env, url, result, extra = {}) {
+  const summary = readSummary();
+  summary.generatedAt = new Date().toISOString();
+  summary.head = {
+    env,
+    url,
+    runs: RUNS,
+    categories: result.categories,
+    metrics: result.metrics,
+    imperfectAudits: result.imperfectAudits,
+    ...extra,
+  };
+  await mkdir(OUT_DIR, { recursive: true });
+  await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
+  await writeFile(REPORT_PATH, result.report);
+  console.log(`\nMedian category scores (${env}):`);
+  for (const c of CATEGORIES) {
+    console.log(`  ${CATEGORY_LABELS[c].padEnd(16)} ${pct(result.categories[c])}`);
+  }
+  console.log(`\nWrote ${SUMMARY_PATH} and ${REPORT_PATH}`);
+}
+
 async function cmdLocal() {
   if (!existsSync(DIST_DIR)) {
     console.error(`No ${DIST_DIR}/ found. Run \`npm run build\` first.`);
     process.exit(1);
   }
   await ensureLighthouse();
-  await mkdir(OUT_DIR, { recursive: true });
   const server = await startServer(DIST_DIR);
   console.log(`Auditing ${server.url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   let result;
   try {
-    result = await auditAllCategories(server.url);
+    result = await auditAllCategories(server.url, SKIPPED_AUDITS.head);
   } finally {
     await server.close();
   }
+  await saveHead('local dist/ (dev, advisory)', server.url, result);
+}
 
-  const summary = {
-    generatedAt: new Date().toISOString(),
-    formFactor: FORM_FACTOR,
-    runs: RUNS,
-    budgets: BUDGETS,
-    local: {
-      categories: result.categories,
-      metrics: result.metrics,
-      imperfectAudits: result.imperfectAudits,
-    },
-  };
-  await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
-  await writeFile(REPORT_PATH, result.report);
-  console.log('\nMedian category scores:');
-  for (const c of CATEGORIES) {
-    console.log(`  ${CATEGORY_LABELS[c].padEnd(16)} ${pct(result.categories[c])}`);
+// Check `scores` against the budgets; returns failure labels and prints passes.
+function checkBudgets(scores, budgets, context) {
+  const failures = [];
+  for (const [category, budget] of Object.entries(budgets)) {
+    if (budget.level !== 'error') continue;
+    const score = scores[category];
+    if (score == null) {
+      console.warn(`No ${context} score for ${category}; skipping.`);
+      continue;
+    }
+    const label = `${CATEGORY_LABELS[category]} ${pct(score)} (floor ${pct(budget.minScore)}, ${context})`;
+    if (score < budget.minScore) failures.push(label);
+    else console.log(`  ok  ${label}`);
   }
-  console.log(`\nWrote ${SUMMARY_PATH} and ${REPORT_PATH}`);
+  return failures;
 }
 
 function cmdGate() {
@@ -333,19 +386,28 @@ function cmdGate() {
     console.error(`Cannot read ${SUMMARY_PATH}: ${error.message}`);
     process.exit(1);
   }
-  const scores = summary.local?.categories ?? {};
+
   const failures = [];
-  for (const [category, budget] of Object.entries(BUDGETS)) {
-    if (budget.level !== 'error') continue;
-    const score = scores[category];
-    if (score == null) {
-      console.warn(`No score for ${category}; skipping.`);
-      continue;
-    }
-    const label = `${CATEGORY_LABELS[category]} ${pct(score)} (floor ${pct(budget.minScore)})`;
-    if (score < budget.minScore) failures.push(label);
-    else console.log(`  ok  ${label}`);
+  if (summary.head?.categories) {
+    failures.push(...checkBudgets(summary.head.categories, BUDGETS, summary.head.env));
   }
+  if (summary.production?.categories) {
+    if (summary.production.deployedMatch === false) {
+      console.warn(
+        'Production served a different build than this commit; its scores are recorded but not gated.',
+      );
+    } else {
+      // Production is checked on everything except performance, which the
+      // Cloudflare zone layer prices (see lighthouse-budget.js).
+      const { performance: _performance, ...nonPerformance } = PRODUCTION_BUDGETS;
+      failures.push(...checkBudgets(summary.production.categories, nonPerformance, 'production'));
+    }
+  }
+  if (!summary.head?.categories && !summary.production?.categories) {
+    console.warn('No audited scores in the summary; nothing to gate.');
+    return;
+  }
+
   if (failures.length) {
     console.error('\nLighthouse gate FAILED:');
     for (const failure of failures) console.error(`  ✗ ${failure}`);
@@ -400,49 +462,31 @@ async function resolvePreviewUrl({ repo, prNumber, headSha, token }) {
   return null;
 }
 
+// The gated head audit on pull requests. A missing preview is a hard failure:
+// silently skipping would let the PR merge ungated.
 async function cmdPreview() {
-  if (!PREVIEW_PERF) {
-    console.log('Preview perf disabled in lighthouse-budget.js; skipping.');
-    return;
-  }
   const repo = process.env.GITHUB_REPOSITORY;
   const prNumber = process.env.PR_NUMBER;
   const headSha = process.env.HEAD_SHA;
   const token = process.env.GITHUB_TOKEN;
   if (!repo || !prNumber || !headSha) {
-    console.log('Preview perf: no pull-request context; skipping.');
-    return;
+    console.error('Preview: missing GITHUB_REPOSITORY / PR_NUMBER / HEAD_SHA.');
+    process.exit(1);
   }
 
   const url = await resolvePreviewUrl({ repo, prNumber, headSha, token });
   if (!url) {
-    console.log('Preview perf: no ready Cloudflare preview found within the timeout; skipping.');
-    return;
+    console.error(
+      'No Cloudflare preview for this commit within the timeout. ' +
+        'If the Cloudflare build is slow or failed, re-run this job once it has deployed.',
+    );
+    process.exit(1);
   }
 
   await ensureLighthouse();
-  console.log(`Preview perf: auditing ${url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
-  try {
-    const scores = [];
-    for (let i = 0; i < RUNS; i++) {
-      const rc = await runOnce(url, ['performance']);
-      const score = rc.lhr.categories.performance.score;
-      scores.push(score);
-      console.log(`  run ${i + 1}/${RUNS}: performance=${pct(score)}`);
-    }
-    const performance = median(scores);
-    let summary = {};
-    try {
-      summary = JSON.parse(readFileSync(SUMMARY_PATH, 'utf8'));
-    } catch {
-      /* summary may not exist if the local step was skipped; start fresh */
-    }
-    summary.preview = { url, performance, runs: RUNS };
-    await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
-    console.log(`Preview perf: performance=${pct(performance)} (median of ${RUNS}).`);
-  } catch (error) {
-    console.warn(`Preview perf: audit failed (${error.message}); skipping.`);
-  }
+  console.log(`Auditing Cloudflare preview ${url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
+  const result = await auditAllCategories(url, SKIPPED_AUDITS.head);
+  await saveHead('Cloudflare preview', url, result);
 }
 
 // Module-script srcs of an HTML document — the same build fingerprint the
@@ -451,9 +495,9 @@ async function cmdPreview() {
 const moduleSrcs = html =>
   [...html.matchAll(/<script[^>]+type="module"[^>]+src="([^"]+)"/g)].map(m => m[1]).join('\n');
 
-// Wait (up to 5 min) until PROD_URL serves the same build as the local dist/,
-// so the audit measures this commit's deploy rather than the previous one.
-// Returns whether they matched; the audit proceeds either way.
+// Wait (up to 5 min) until the deployed URL serves the same build as the local
+// dist/, so the audit measures this commit's deploy rather than the previous
+// one. Returns whether they matched; the audit proceeds either way.
 async function waitForDeployedBuild(url) {
   let local;
   try {
@@ -475,38 +519,63 @@ async function waitForDeployedBuild(url) {
   return false;
 }
 
+// The baseline audit on pushes to main: deployed main on the root workers.dev
+// subdomain, the environment PR previews are diffed against. Exits 0 when the
+// route is unavailable — a missing baseline only costs later PRs their Δ column.
+async function cmdBaseline() {
+  try {
+    const probe = await fetch(WORKERS_URL, { cache: 'no-store' });
+    if (!probe.ok) {
+      console.warn(
+        `Baseline: ${WORKERS_URL} returned ${probe.status} (workers_dev route disabled?); skipping.`,
+      );
+      return;
+    }
+  } catch (error) {
+    console.warn(`Baseline: cannot reach ${WORKERS_URL} (${error.message}); skipping.`);
+    return;
+  }
+
+  await ensureLighthouse();
+  const deployedMatch = await waitForDeployedBuild(WORKERS_URL);
+  if (!deployedMatch) {
+    console.warn('Baseline: workers.dev is not serving this build yet; auditing what is live.');
+  }
+  console.log(`Auditing main baseline ${WORKERS_URL} — ${FORM_FACTOR}, ${RUNS} run(s)`);
+  const result = await auditAllCategories(WORKERS_URL, SKIPPED_AUDITS.head);
+  await saveHead('workers.dev (main)', WORKERS_URL, result, { deployedMatch });
+}
+
+// The reality check on pushes to main: the custom domain, zone layer included.
+// The gate checks its non-performance categories, so a hard audit failure here
+// exits non-zero rather than silently skipping the check.
 async function cmdProduction() {
   await ensureLighthouse();
   const deployedMatch = await waitForDeployedBuild(PROD_URL);
   if (!deployedMatch) {
     console.warn('Production is not serving this build yet; auditing what is live.');
   }
-  console.log(`Production: auditing ${PROD_URL} — ${FORM_FACTOR}, ${RUNS} run(s)`);
-  try {
-    const result = await auditAllCategories(PROD_URL);
-    let summary = {};
-    try {
-      summary = JSON.parse(readFileSync(SUMMARY_PATH, 'utf8'));
-    } catch {
-      /* summary may not exist if the local step was skipped; start fresh */
-    }
-    summary.production = {
-      url: PROD_URL,
-      deployedMatch,
-      runs: RUNS,
-      categories: result.categories,
-      metrics: result.metrics,
-      imperfectAudits: result.imperfectAudits,
-    };
-    await mkdir(OUT_DIR, { recursive: true });
-    await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
-    await writeFile(PRODUCTION_REPORT_PATH, result.report);
-    console.log('\nProduction median category scores:');
-    for (const c of CATEGORIES) {
-      console.log(`  ${CATEGORY_LABELS[c].padEnd(16)} ${pct(result.categories[c])}`);
-    }
-  } catch (error) {
-    console.warn(`Production audit failed (${error.message}); skipping.`);
+  console.log(`Auditing production ${PROD_URL} — ${FORM_FACTOR}, ${RUNS} run(s)`);
+  const result = await auditAllCategories(PROD_URL, SKIPPED_AUDITS.production);
+  const summary = readSummary();
+  summary.generatedAt = new Date().toISOString();
+  summary.production = {
+    url: PROD_URL,
+    deployedMatch,
+    runs: RUNS,
+    // Production floors differ from the head's (see lighthouse-budget.js);
+    // stored here so the report marks breaches against the right floor.
+    budgets: PRODUCTION_BUDGETS,
+    categories: result.categories,
+    metrics: result.metrics,
+    imperfectAudits: result.imperfectAudits,
+  };
+  await mkdir(OUT_DIR, { recursive: true });
+  await writeFile(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
+  await writeFile(PRODUCTION_REPORT_PATH, result.report);
+  console.log('\nProduction median category scores:');
+  for (const c of CATEGORIES) {
+    console.log(`  ${CATEGORY_LABELS[c].padEnd(16)} ${pct(result.categories[c])}`);
   }
 }
 
@@ -514,8 +583,11 @@ const command = process.argv[2] ?? 'local';
 if (command === 'local') await cmdLocal();
 else if (command === 'gate') cmdGate();
 else if (command === 'preview') await cmdPreview();
+else if (command === 'baseline') await cmdBaseline();
 else if (command === 'production') await cmdProduction();
 else {
-  console.error(`Unknown command "${command}". Use: local | gate | preview | production`);
+  console.error(
+    `Unknown command "${command}". Use: preview | baseline | production | gate | local`,
+  );
   process.exit(1);
 }
