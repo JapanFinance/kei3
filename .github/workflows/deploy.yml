@@ -123,10 +123,18 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
-      - name: Build
+      # The audits target live URLs; nothing in this job is served from the
+      # checkout. This build exists only as a fingerprint for the main-push
+      # audits: a push to main starts Cloudflare's deploy and this workflow in
+      # parallel, so the audits poll the deployed site until its HTML references
+      # the same content-hashed assets as this commit's own build — otherwise
+      # scores could be recorded against whatever older deploy is still live.
+      # Pull requests resolve their preview URL by commit SHA from the
+      # Cloudflare bot's comment, which already proves the deployed commit, so
+      # they need no fingerprint and skip the build.
+      - name: Build (deploy fingerprint)
+        if: github.event_name != 'pull_request'
         run: npm run build
-      # The build above is only used as the fingerprint that tells the
-      # main-push audits the deploy they are looking at is this commit's.
       # Pull requests: the gated audit runs against this PR's own Cloudflare
       # preview deployment (found by matching the head commit in the Cloudflare
       # bot's comment). Not best-effort — without it the gate has nothing to
