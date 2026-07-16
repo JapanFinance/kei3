@@ -87,7 +87,6 @@ const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> =
     sx={{
       fontSize: '0.95rem',
       fontWeight: 700,
-      color: 'text.primary',
       display: 'flex',
       alignItems: 'center',
       mb: 1,
@@ -271,7 +270,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     fontSize: '0.95rem',
                     fontWeight: 500,
                     mb: 0.5,
-                    color: 'text.primary',
                   }}
                 >
                   <a
@@ -308,7 +306,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   mb: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  color: 'text.primary',
                 }}
               >
                 Life Insurance (生命保険料控除)
@@ -431,7 +428,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   mb: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  color: 'text.primary',
                 }}
               >
                 Earthquake Insurance (地震保険料控除)
@@ -487,7 +483,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   mb: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  color: 'text.primary',
                 }}
               >
                 Medical Expenses (医療費控除)
@@ -557,7 +552,6 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   mb: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  color: 'text.primary',
                 }}
               >
                 Home Loan Tax Credit (住宅ローン控除)
@@ -673,11 +667,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Box>
                 )}
 
-              <Accordion
-                disableGutters
-                elevation={0}
-                sx={{ mt: 2, border: '1px solid', borderColor: 'divider' }}
-              >
+              <Accordion sx={{ mt: 2 }}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     How is the available credit amount calculated?

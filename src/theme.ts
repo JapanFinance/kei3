@@ -21,5 +21,25 @@ export const theme = createTheme({
     MuiTextField: { defaultProps: { size: 'small' } },
     MuiFormControl: { defaultProps: { size: 'small' } },
     MuiAutocomplete: { defaultProps: { size: 'small' } },
+    // Soften the resting outline on every outlined input: use the theme's
+    // divider colour (0.12 opacity) instead of MUI's default 0.23.
+    MuiOutlinedInput: {
+      styleOverrides: {
+        notchedOutline: { borderColor: 'var(--mui-palette-divider)' },
+      },
+    },
+    // Render button labels as written instead of MUI's default uppercase
+    // transform. Sites that want a transform set it explicitly in sx.
+    MuiButton: { styleOverrides: { root: { textTransform: 'none' } } },
+    MuiToggleButton: { styleOverrides: { root: { textTransform: 'none' } } },
+    // Every accordion in the app is the flat kind: no shadow, no expanded
+    // gutter jump, outlined with the divider hairline. Call sites keep only
+    // their spacing.
+    MuiAccordion: {
+      defaultProps: { disableGutters: true, elevation: 0 },
+      styleOverrides: {
+        root: { border: '1px solid var(--mui-palette-divider)' },
+      },
+    },
   },
 });
