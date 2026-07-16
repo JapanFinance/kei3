@@ -5,22 +5,6 @@
 // .github/lighthouse-run.mjs (which audits and enforces it) and surfaced on the
 // pull request by .github/lighthouse-report.mjs.
 //
-// This runs the `lighthouse` package directly, not @lhci/cli, whose newest
-// release lags the engine by about a year (it bundles 12.6 while the engine is
-// on 13.x). Calling Lighthouse ourselves keeps the audit on the current engine
-// and the whole toolchain self-hosted (no third-party GitHub Action, matching
-// the bundle-size report).
-//
-// lighthouse and chrome-launcher are ordinary devDependencies: the lockfile
-// pins their whole transitive tree (an install at CI time would re-resolve
-// transitive ranges on every run, unpinned), and Dependabot proposes updates.
-// lighthouse is pinned exactly because it is a scoring engine — versions
-// legitimately move scores (13.4 added an accessibility audit 12.6 lacked, and
-// fixed a robots.txt false negative). A Dependabot engine bump validates
-// itself: its PR's own preview is audited with the new engine, so a scoring
-// shift fails that PR's gate and the floors get adjusted deliberately in the
-// same change.
-//
 // WHAT IS AUDITED — every audit runs against a deployed Cloudflare environment
 //   - Pull requests GATE on the per-commit Cloudflare preview URL (all four
 //     categories), found by matching the PR's head commit in the Cloudflare
