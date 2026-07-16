@@ -495,7 +495,7 @@ async function waitForDeployedBuild(url) {
     } catch {
       /* transient network error; retry until the deadline */
     }
-    console.log('  waiting for the production deploy to serve this build …');
+    console.log('  waiting for the deploy to serve this build …');
     await sleep(15 * 1000);
   }
   return false;
@@ -531,9 +531,16 @@ async function cmdBaseline() {
 // The gate checks its non-performance categories, so a hard audit failure here
 // exits non-zero rather than silently skipping the check.
 async function cmdProduction() {
-  const deployedMatch = await waitForDeployedBuild(PROD_URL);
+  // Deploy freshness is verified on the root workers.dev host, not the custom
+  // domain: the same Worker deployment serves both hostnames, so freshness on
+  // one proves the other — and the custom domain's bot mitigation challenges a
+  // plain fetch from a datacenter address, so polling it directly never sees
+  // the real HTML and always timed out (observed on the first main-push run:
+  // the workers.dev fingerprint matched instantly while the custom domain
+  // "waited" for a deploy that was already live; Chrome's audits pass fine).
+  const deployedMatch = await waitForDeployedBuild(WORKERS_URL);
   if (!deployedMatch) {
-    console.warn('Production is not serving this build yet; auditing what is live.');
+    console.warn('The deploy is not serving this build yet; auditing what is live.');
   }
   console.log(`Auditing production ${PROD_URL} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   const result = await auditAllCategories(PROD_URL, SKIPPED_AUDITS.production);
