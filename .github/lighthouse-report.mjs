@@ -14,7 +14,7 @@
 // When LIGHTHOUSE_ARTIFACT_URL is set (the upload step's artifact-url output),
 // the output links the full HTML report(s) directly.
 //
-// Usage: node .github/lighthouse-report.mjs [summary|comment] [head.json] [base.json]
+// Usage: node .github/lighthouse-report.mjs [summary|comment] [this-run.json] [base.json]
 //
 // Like .github/size-report.mjs, the PR comment uses only Node's built-in fetch
 // against the GitHub REST API and the Actions-provided GITHUB_TOKEN — no
@@ -125,10 +125,10 @@ function auditLines(imperfectAudits) {
 }
 
 function renderMarkdown(summary, base) {
-  const head = summary.head ?? {};
-  const scores = head.categories ?? {};
+  const app = summary.app ?? {};
+  const scores = app.categories ?? {};
   const budgets = summary.budgets ?? {};
-  const baseScores = base?.head?.categories;
+  const baseScores = base?.app?.categories;
   const withDelta = Boolean(baseScores);
 
   const rows = CATEGORIES.map(([id, label]) => {
@@ -143,7 +143,7 @@ function renderMarkdown(summary, base) {
   const lines = [
     '### 🔦 Lighthouse',
     '',
-    `${runLabel} · ${head.env ?? 'head'} (${summary.formFactor ?? 'mobile'})` +
+    `${runLabel} · ${app.env ?? 'app'} (${summary.formFactor ?? 'mobile'})` +
       `${withDelta ? ' · Δ vs main in the same environment' : ''}.`,
     '',
     withDelta
@@ -174,12 +174,12 @@ function renderMarkdown(summary, base) {
     );
   }
 
-  lines.push(...renderMetrics(head.metrics, base?.head?.metrics));
+  lines.push(...renderMetrics(app.metrics, base?.app?.metrics));
 
   // What concretely holds each score below 100 — usually enough to diagnose a
   // drop without downloading the full report.
   const details = [
-    ...auditLines(head.imperfectAudits),
+    ...auditLines(app.imperfectAudits),
     ...(summary.production?.imperfectAudits
       ? auditLines(summary.production.imperfectAudits).map(line => `${line} *(production)*`)
       : []),

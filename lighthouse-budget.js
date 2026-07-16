@@ -39,9 +39,14 @@
 //   - Only the initial load is measured. The results panel and chart are lazy
 //     and are not exercised (see KNOBS).
 //
-// SKIPPED AUDITS — environment artifacts, not app defects. A skipped audit is
-// removed from scoring and the category renormalizes over the rest.
-//   head (workers.dev hosts): is-crawlable — every workers.dev host serves
+// SKIPPED AUDITS — environment artifacts, not application defects. A skipped
+// audit is removed from scoring and the category renormalizes over the rest.
+// Throughout this tooling, "app" is the application as this repo's code
+// delivers it, audited on a bare workers.dev host (or the local dev server) with
+// no Cloudflare zone layer; "production" is the delivered site on the custom
+// domain, zone layer included.
+//   app (workers.dev hosts; also applied to the advisory local audit so its
+//     scoring matches): is-crawlable — every workers.dev host serves
 //     X-Robots-Tag: noindex (Cloudflare adds it to preview URLs; public/_headers
 //     adds it to the root) precisely so this duplicate of the site is not
 //     indexed. The audit would fail by design, not by defect; production, where
@@ -113,14 +118,14 @@ export const WORKERS_URL = 'https://kei3.ts6081.workers.dev/';
 
 // Environment-artifact audits removed from scoring (see SKIPPED AUDITS above).
 export const SKIPPED_AUDITS = {
-  head: ['is-crawlable'],
+  app: ['is-crawlable'],
   production: ['deprecations', 'inspector-issues'],
 };
 
 // [category]: { level, minScore }. level 'error' fails CI when the median score
 // is below minScore; 'warn' is reported but never fails. The gate applies all
-// levels to the head audit (preview / workers.dev baseline) and the error
-// levels except performance to the production audit.
+// levels to the app audit (the PR preview, or main via workers.dev) and the
+// error levels except performance to the production audit.
 export const BUDGETS = {
   performance: { level: 'warn', minScore: 0.75 },
   accessibility: { level: 'error', minScore: 0.95 },

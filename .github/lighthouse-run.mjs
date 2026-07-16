@@ -5,16 +5,16 @@
 // audits only MEASURE and write lighthouse-results/; `gate` enforces, run as a
 // later step so the artifact and PR comment are produced even when it fails:
 //
-//   preview  Pull requests: the gated head audit. Find the Cloudflare preview
+//   preview  Pull requests: the gated app audit. Find the Cloudflare preview
 //            URL for the PR's head commit (from the Cloudflare bot's PR comment,
 //            matched by commit SHA + "Deployment successful"), audit all four
-//            categories with the head skip list, and write summary.head. Exits
+//            categories with the app skip list, and write summary.app. Exits
 //            non-zero when no preview turns up — the gate has nothing to check
 //            without it.
 //
 //   baseline Pushes to main: audit deployed main on the root workers.dev
 //            subdomain — the same environment class as PR previews — and write
-//            summary.head. Cached by commit SHA so later pull requests diff
+//            summary.app. Cached by commit SHA so later pull requests diff
 //            against it. Exits 0 when the route is unavailable (a missing
 //            baseline only degrades PR comments to absolute scores).
 //
@@ -26,13 +26,13 @@
 //
 //   gate     Read lighthouse-results/summary.json and exit non-zero if any
 //            error-level category is below its floor: all budgets against
-//            summary.head, non-performance budgets against summary.production
+//            summary.app, non-performance budgets against summary.production
 //            (skipped with a note when the audited deploy was not this commit's
 //            build).
 //
 //   local    Dev convenience, not used in CI: serve dist/ from a small static
 //            server (Brotli/gzip, immutable asset caching — like Cloudflare)
-//            and audit it as the head. Advisory — CI gates deployed URLs.
+//            and audit it as the app audit. Advisory — CI gates deployed URLs.
 //
 // Uses only Node built-ins plus the pinned `lighthouse` and `chrome-launcher`.
 
@@ -303,12 +303,13 @@ function readSummary() {
   }
 }
 
-// Persist an audit as the head (the gated side of the summary) along with its
-// HTML report, and print the scores.
-async function saveHead(env, url, result, extra = {}) {
+// Persist an audit as the app audit (the gated, diffed side of the summary —
+// the application without the Cloudflare zone layer) along with its HTML
+// report, and print the scores.
+async function saveApp(env, url, result, extra = {}) {
   const summary = readSummary();
   summary.generatedAt = new Date().toISOString();
-  summary.head = {
+  summary.app = {
     env,
     url,
     runs: RUNS,
@@ -336,11 +337,11 @@ async function cmdLocal() {
   console.log(`Auditing ${server.url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   let result;
   try {
-    result = await auditAllCategories(server.url, SKIPPED_AUDITS.head);
+    result = await auditAllCategories(server.url, SKIPPED_AUDITS.app);
   } finally {
     await server.close();
   }
-  await saveHead('local dist/ (dev, advisory)', server.url, result);
+  await saveApp('local dist/ (dev, advisory)', server.url, result);
 }
 
 // Check `scores` against the budgets; returns failure labels and prints passes.
@@ -370,8 +371,8 @@ function cmdGate() {
   }
 
   const failures = [];
-  if (summary.head?.categories) {
-    failures.push(...checkBudgets(summary.head.categories, BUDGETS, summary.head.env));
+  if (summary.app?.categories) {
+    failures.push(...checkBudgets(summary.app.categories, BUDGETS, summary.app.env));
   }
   if (summary.production?.categories) {
     if (summary.production.deployedMatch === false) {
@@ -385,7 +386,7 @@ function cmdGate() {
       failures.push(...checkBudgets(summary.production.categories, nonPerformance, 'production'));
     }
   }
-  if (!summary.head?.categories && !summary.production?.categories) {
+  if (!summary.app?.categories && !summary.production?.categories) {
     console.warn('No audited scores in the summary; nothing to gate.');
     return;
   }
@@ -444,7 +445,7 @@ async function resolvePreviewUrl({ repo, prNumber, headSha, token }) {
   return null;
 }
 
-// The gated head audit on pull requests. A missing preview is a hard failure:
+// The gated app audit on pull requests. A missing preview is a hard failure:
 // silently skipping would let the PR merge ungated.
 async function cmdPreview() {
   const repo = process.env.GITHUB_REPOSITORY;
@@ -466,8 +467,8 @@ async function cmdPreview() {
   }
 
   console.log(`Auditing Cloudflare preview ${url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
-  const result = await auditAllCategories(url, SKIPPED_AUDITS.head);
-  await saveHead('Cloudflare preview', url, result);
+  const result = await auditAllCategories(url, SKIPPED_AUDITS.app);
+  await saveApp('Cloudflare preview', url, result);
 }
 
 // Module-script srcs of an HTML document — the same build fingerprint the
@@ -522,8 +523,8 @@ async function cmdBaseline() {
     console.warn('Baseline: workers.dev is not serving this build yet; auditing what is live.');
   }
   console.log(`Auditing main baseline ${WORKERS_URL} — ${FORM_FACTOR}, ${RUNS} run(s)`);
-  const result = await auditAllCategories(WORKERS_URL, SKIPPED_AUDITS.head);
-  await saveHead('workers.dev (main)', WORKERS_URL, result, { deployedMatch });
+  const result = await auditAllCategories(WORKERS_URL, SKIPPED_AUDITS.app);
+  await saveApp('workers.dev (main)', WORKERS_URL, result, { deployedMatch });
 }
 
 // The reality check on pushes to main: the custom domain, zone layer included.
@@ -542,8 +543,9 @@ async function cmdProduction() {
     url: PROD_URL,
     deployedMatch,
     runs: RUNS,
-    // Production floors differ from the head's (see lighthouse-budget.js);
-    // stored here so the report marks breaches against the right floor.
+    // Production floors can differ from the app audit's (see
+    // lighthouse-budget.js); stored here so the report marks breaches against
+    // the right floor.
     budgets: PRODUCTION_BUDGETS,
     categories: result.categories,
     metrics: result.metrics,

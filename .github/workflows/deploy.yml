@@ -200,9 +200,9 @@ jobs:
           path: lighthouse-results/summary.json
           key: lighthouse-summary-${{ github.sha }}
       # The gate runs last so the summary and artifact are produced even when it
-      # fails. It checks every budget against the head audit (preview on PRs,
-      # workers.dev main otherwise) and the non-performance budgets against the
-      # production audit when present.
+      # fails. It checks every budget against the app audit (the PR's preview,
+      # or main via workers.dev otherwise) and the non-performance budgets
+      # against the production audit when present.
       - name: Assert Lighthouse budgets
         run: node .github/lighthouse-run.mjs gate
 
