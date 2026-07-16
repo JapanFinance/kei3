@@ -6,6 +6,13 @@ routes = [
 ]
 
 preview_urls = true
+# Serve deployed main on kei3.ts6081.workers.dev as well: CI audits it as the
+# Lighthouse baseline, in the same environment class as the per-PR preview URLs
+# (no zone-level layer such as the injected bot-detection script), so pull
+# requests can diff their preview metrics against main apples-to-apples.
+# public/_headers serves every workers.dev host with X-Robots-Tag: noindex, so
+# this second route is not indexed; kei3.japanfinance.org stays canonical.
+workers_dev = true
 
 [assets]
 directory = "./dist/"
