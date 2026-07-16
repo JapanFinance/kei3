@@ -83,8 +83,6 @@ export interface HouseholdIncomeDistribution {
   id: HouseholdType;
   /** Selector label: English wording followed by the official Japanese 世帯類型 name. */
   label: string;
-  /** Same wording as `label`, cased to sit mid-sentence ("…higher than ~50% of {sentenceLabel}"). */
-  sentenceLabel: string;
   /** The 世帯類型 name exactly as printed in the 統計表. */
   labelJa: string;
   /** Definition from 用語の説明, restated in English:
@@ -107,7 +105,6 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   all: {
     id: 'all',
     label: 'All households (全世帯)',
-    sentenceLabel: 'all households (全世帯)',
     labelJa: '全世帯',
     definition: 'Every surveyed household, with no restriction on age or composition.',
     median: 4_510_000,
@@ -119,7 +116,6 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   elderly: {
     id: 'elderly',
     label: 'Elderly households (高齢者世帯)',
-    sentenceLabel: 'elderly households (高齢者世帯)',
     labelJa: '高齢者世帯',
     definition:
       'Households made up only of people aged 65 or over, or of such people plus children under 18.',
@@ -132,7 +128,6 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   nonElderly: {
     id: 'nonElderly',
     label: 'Non-elderly households (高齢者世帯以外の世帯)',
-    sentenceLabel: 'non-elderly households (高齢者世帯以外の世帯)',
     labelJa: '高齢者世帯以外の世帯',
     definition:
       'Every household that is not a 高齢者世帯. This is not the same as a household with no older members: a household where someone under 65 lives with a person aged 65 or over is counted here.',
@@ -145,7 +140,6 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   with65Plus: {
     id: 'with65Plus',
     label: 'Households with a member aged 65 or over (65歳以上の者のいる世帯)',
-    sentenceLabel: 'households with a member aged 65 or over (65歳以上の者のいる世帯)',
     labelJa: '65歳以上の者のいる世帯',
     definition:
       'Any household with at least one member aged 65 or over. Published as a 再掲 (regrouping), so it overlaps both 高齢者世帯 and 高齢者世帯以外の世帯.',
@@ -158,7 +152,6 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   withChildren: {
     id: 'withChildren',
     label: 'Households with children (児童のいる世帯)',
-    sentenceLabel: 'households with children (児童のいる世帯)',
     labelJa: '児童のいる世帯',
     definition:
       'Households with at least one 児童, defined in the 2025 survey as a person under 18. Published as a 再掲 (regrouping).',
@@ -171,7 +164,6 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   singleMother: {
     id: 'singleMother',
     label: 'Single-mother households (母子世帯)',
-    sentenceLabel: 'single-mother households (母子世帯)',
     labelJa: '母子世帯',
     definition:
       'Households made up only of a woman under 65 who has no spouse, through death, separation, or never having married, together with her children under 20, including adopted children.',
