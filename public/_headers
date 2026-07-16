@@ -6,3 +6,16 @@
 # restore after a restart.)
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# The favicons sit at the site root, not under /assets/, so their URLs are
+# unhashed and fall through to the Workers-Assets default of
+# `max-age=0, must-revalidate` — a revalidation round-trip on every load.
+# They change rarely but their URLs are stable, so the `immutable` rule above
+# would be wrong here: a replaced icon could not be picked up for a year.
+# Cache for a week instead; the ETag still permits a 304 once that expires.
+/favicon.svg
+  Cache-Control: public, max-age=604800
+/favicon.ico
+  Cache-Control: public, max-age=604800
+/apple-touch-icon.png
+  Cache-Control: public, max-age=604800
