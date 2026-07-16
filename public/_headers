@@ -6,3 +6,15 @@
 # restore after a restart.)
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# The Worker is also reachable on workers.dev hosts: the per-version preview
+# URLs, and the root kei3.ts6081.workers.dev subdomain that CI audits as the
+# Lighthouse baseline environment (enabled by workers_dev in wrangler.toml).
+# Serve every workers.dev host with noindex so no second copy of the site is
+# indexed — only the canonical kei3.japanfinance.org, which this host-scoped
+# rule cannot match. Each :placeholder matches one host segment, so the rule
+# covers both the root subdomain and version-prefixed preview hosts. (Preview
+# URLs already get an automatic noindex from Cloudflare; the root does not,
+# which is why this rule exists.)
+https://:version.:subdomain.workers.dev/*
+  X-Robots-Tag: noindex
