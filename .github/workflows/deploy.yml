@@ -105,8 +105,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     # Read-only, mirroring the build / size-report split: the job that runs
-    # `npm ci`, installs Lighthouse, and drives Chrome never holds a PR-writable
-    # token — the separate lighthouse-report job posts the comment. pull-requests:
+    # `npm ci` and drives Chrome never holds a PR-writable token — the separate
+    # lighthouse-report job posts the comment. pull-requests:
     # read lets the preview step find the Cloudflare preview URL in the bot's PR
     # comment. Chrome is preinstalled on ubuntu-latest, so there is no browser install.
     permissions:
@@ -125,12 +125,8 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
-      # Lighthouse is not a project dependency; install it (pinned, no lockfile
-      # write) only here, so the test and build jobs stay lean. The build above
-      # is only used as the fingerprint that tells the main-push audits the
-      # deploy they are looking at is this commit's.
-      - name: Install Lighthouse
-        run: npm run lighthouse:install
+      # The build above is only used as the fingerprint that tells the
+      # main-push audits the deploy they are looking at is this commit's.
       # Pull requests: the gated audit runs against this PR's own Cloudflare
       # preview deployment (found by matching the head commit in the Cloudflare
       # bot's comment). Not best-effort — without it the gate has nothing to

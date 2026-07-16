@@ -36,6 +36,8 @@
 //
 // Uses only Node built-ins plus the pinned `lighthouse` and `chrome-launcher`.
 
+import { launch as launchChrome } from 'chrome-launcher';
+import lighthouse from 'lighthouse';
 import { createServer } from 'node:http';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -227,25 +229,6 @@ function startServer(dir) {
   });
 }
 
-// Lighthouse and chrome-launcher are installed on demand (`npm run lighthouse:install`,
-// or the CI step) rather than tracked as devDependencies, so `npm ci` for the app stays
-// lean and their large dependency tree is not pulled into the test/build jobs. Load them
-// lazily: `gate` (which only reads the summary) needs neither, and a missing install
-// yields a clear message instead of a module-resolution stack trace.
-let lighthouse;
-let launchChrome;
-
-async function ensureLighthouse() {
-  if (lighthouse) return;
-  try {
-    ({ default: lighthouse } = await import('lighthouse'));
-    ({ launch: launchChrome } = await import('chrome-launcher'));
-  } catch {
-    console.error('Lighthouse is not installed. Run `npm run lighthouse:install` first.');
-    process.exit(1);
-  }
-}
-
 // Launch Chrome, run Lighthouse once, always kill Chrome (swallowing the
 // Windows-only temp-dir cleanup EPERM so a local run still returns its result).
 // skipAudits (see SKIPPED_AUDITS) removes environment-artifact audits from the
@@ -349,7 +332,6 @@ async function cmdLocal() {
     console.error(`No ${DIST_DIR}/ found. Run \`npm run build\` first.`);
     process.exit(1);
   }
-  await ensureLighthouse();
   const server = await startServer(DIST_DIR);
   console.log(`Auditing ${server.url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   let result;
@@ -483,7 +465,6 @@ async function cmdPreview() {
     process.exit(1);
   }
 
-  await ensureLighthouse();
   console.log(`Auditing Cloudflare preview ${url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   const result = await auditAllCategories(url, SKIPPED_AUDITS.head);
   await saveHead('Cloudflare preview', url, result);
@@ -536,7 +517,6 @@ async function cmdBaseline() {
     return;
   }
 
-  await ensureLighthouse();
   const deployedMatch = await waitForDeployedBuild(WORKERS_URL);
   if (!deployedMatch) {
     console.warn('Baseline: workers.dev is not serving this build yet; auditing what is live.');
@@ -550,7 +530,6 @@ async function cmdBaseline() {
 // The gate checks its non-performance categories, so a hard audit failure here
 // exits non-zero rather than silently skipping the check.
 async function cmdProduction() {
-  await ensureLighthouse();
   const deployedMatch = await waitForDeployedBuild(PROD_URL);
   if (!deployedMatch) {
     console.warn('Production is not serving this build yet; auditing what is live.');
