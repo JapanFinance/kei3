@@ -6,7 +6,13 @@
     <title>Japan Take-Home Pay Calculator</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!--
+      No <link rel="apple-touch-icon"> on purpose: declaring it makes desktop
+      browsers (Firefox, Chrome) eagerly download it as a bookmark/tile icon on
+      every visitor's first load, even though they never use it for the tab.
+      iOS Safari still finds public/apple-touch-icon.png by its root-path name
+      when a user taps Add to Home Screen, so the home-screen icon is unaffected.
+    -->
 
     <!--
       Apply the color-scheme class to <html> before first paint so the correct
