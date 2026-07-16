@@ -112,7 +112,6 @@ function App() {
       sx={{
         minHeight: '100vh',
         bgcolor: 'background.default',
-        color: 'text.primary',
         overflowX: 'hidden',
       }}
     >
