@@ -359,13 +359,15 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               if (tooltipItems.length > 0 && tooltipItems[0]?.parsed.x != null) {
                 const income = tooltipItems[0].parsed.x;
                 const estimate = estimateIncomePercentile(income, distribution.ranges);
-                // Name the comparison group so this per-type figure is not read as the 全世帯
+                // Name the comparison group so this per-type figure is not read as the all-households
                 // quintile bands drawn behind the bars. Above the open-ended top bracket the survey
                 // supports only a bound. The band label is appended only for 全世帯, where the bands
                 // and the percentile describe the same population.
+                const groupLabel =
+                  distribution.label.charAt(0).toLowerCase() + distribution.label.slice(1);
                 let info = estimate.isTopBracket
-                  ? `top ~${estimate.topBracketPercent.toFixed(1)}% of ${distribution.labelJa}`
-                  : `~${estimate.percentile.toFixed(1)} percentile of ${distribution.labelJa}`;
+                  ? `top ~${estimate.topBracketPercent.toFixed(1)}% of ${groupLabel}`
+                  : `~${estimate.percentile.toFixed(1)} percentile of ${groupLabel}`;
                 if (!estimate.isTopBracket && showQuintileBands) {
                   info += ` (${getPercentileBand(income).label})`;
                 }
@@ -658,15 +660,16 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             >
               <Box>
                 <Typography variant="body2" sx={{ mb: 1.5 }}>
-                  The survey reports the income distribution separately for each 世帯類型 below.
-                  Picking one changes the median line, the percentile estimate, and the bars'
-                  comparison group.
+                  The survey reports the income distribution separately for each household type
+                  (世帯類型) below. Picking one changes the median line, the percentile estimate,
+                  and the bars' comparison group.
                 </Typography>
                 <Box component="dl" sx={{ m: 0 }}>
                   {HOUSEHOLD_TYPE_ORDER.map(type => (
                     <Box key={type} sx={{ mb: 1 }}>
                       <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>
-                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label}
+                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label} (
+                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].labelJa})
                       </Typography>
                       <Typography
                         component="dd"
@@ -680,7 +683,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   ))}
                 </Box>
                 <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
-                  The 再掲 groups overlap the others, so the six do not add up to 全世帯.
+                  The 再掲 (regrouping) groups overlap the others, so the six do not add up to all
+                  households.
                 </Typography>
                 <SourceLinks sources={INCOME_SURVEY_SOURCES} />
               </Box>
@@ -706,7 +710,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               fontWeight: 500,
             }}
           >
-            Background bands show 全世帯 income quintiles
+            Background bands show income quintiles for all households
           </Typography>
           <DetailedTooltip
             title="Income Distribution Quintiles"
@@ -715,9 +719,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           >
             <Box>
               <Typography variant="body2" sx={{ mb: 1.5 }}>
-                The colored background bands are the 全世帯 (overall-population) income quintiles
-                from official Japanese government data. They stay fixed as a reference even when the
-                percentile above is measured against a different 世帯類型:
+                The colored background bands are the income quintiles across all households from
+                official Japanese government data. They stay fixed as a reference even when the
+                percentile above is measured against a different household type:
               </Typography>
 
               {/* Quintile Data Table */}
@@ -808,9 +812,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   from lowest to highest income.
                 </Typography>
                 <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
-                  The survey publishes 五分位値 for 全世帯 only, reporting how each 世帯類型 spreads
-                  across those same bands rather than giving each one its own. The bands therefore
-                  always show the 全世帯 quintiles, regardless of the selected comparison group.
+                  The survey publishes these quintile boundaries for all households only, reporting
+                  how each household type spreads across those same bands rather than giving each
+                  one its own. The bands therefore always show the all-households quintiles,
+                  regardless of the selected comparison group.
                 </Typography>
               </Box>
               <SourceLinks sources={INCOME_SURVEY_SOURCES} />
