@@ -72,16 +72,17 @@
 //   Accessibility   error ≥ 0.95   held below 1.0 by color-contrast on muted
 //                                   text and a subtitle2 rendered as <h6>
 //                                   (heading-order).
-//   Best Practices  error ≥ 0.96   held below 1.0 by a console 404 for
-//                                   /favicon.ico (no favicon is shipped).
-//                                   0.95 on production: skipping the two
-//                                   zone-artifact audits shrinks the category's
-//                                   weight denominator, so the same favicon 404
-//                                   renormalizes one point lower. Same defect,
-//                                   different arithmetic — fix the favicon and
-//                                   both floors should rise to 1.0.
+//   Best Practices  error ≥ 1.00   perfect since the favicon landed (its 404
+//                                   was the one failing audit).
 //   SEO             error ≥ 1.00   (with is-crawlable skipped on workers.dev
 //                                   hosts; production passes it outright).
+//
+// When a category has failing audits, the two environments can need DIFFERENT
+// floors for the same defect: a skipped audit leaves the category's weight
+// denominator, so one failing audit renormalizes to a lower score where more
+// audits are skipped (while the favicon 404 was live, Best Practices was 0.96
+// on workers.dev hosts but 0.95 on production). PRODUCTION_BUDGETS exists for
+// that case; today the floors coincide.
 //
 // KNOBS
 //   - RUNS: more runs give steadier medians at the cost of CI time.
@@ -115,16 +116,16 @@ export const SKIPPED_AUDITS = {
 export const BUDGETS = {
   performance: { level: 'warn', minScore: 0.75 },
   accessibility: { level: 'error', minScore: 0.95 },
-  'best-practices': { level: 'error', minScore: 0.96 },
+  'best-practices': { level: 'error', minScore: 1 },
   seo: { level: 'error', minScore: 1 },
 };
 
 // Production floors. The gate applies these (except performance) to the
-// production audit; Best Practices differs from BUDGETS because the production
-// skip list renormalizes the same failing audit differently (see THRESHOLDS).
+// production audit. They currently coincide with BUDGETS, but set any
+// category here when renormalization makes the same defect score differently
+// per environment (see THRESHOLDS).
 export const PRODUCTION_BUDGETS = {
   ...BUDGETS,
-  'best-practices': { level: 'error', minScore: 0.95 },
 };
 
 // Category id -> display label, in presentation order.
