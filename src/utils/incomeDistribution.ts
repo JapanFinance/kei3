@@ -63,3 +63,33 @@ export const estimateIncomePercentile = (
   // ranges ends with an open-ended bracket, so the loop always returns before falling through.
   throw new Error(`Income ${income} is not within the distribution's range`);
 };
+
+/**
+ * Inverse of `estimateIncomePercentile`: the income whose estimated percentile is `percentile`.
+ *
+ * Walks the same un-normalized cumulative sum as the forward function, so a boundary derived here
+ * agrees exactly with the percentile estimate. Measured against the published 全世帯 五分位値
+ * (the one type where the survey prints the true boundaries), this lands within +1万-5万,
+ * biased slightly high like the forward interpolation.
+ */
+export const estimateIncomeAtPercentile = (
+  percentile: number,
+  ranges: readonly IncomeRange[],
+): number => {
+  if (percentile <= 0) return 0;
+
+  let cumulativePercent = 0;
+
+  for (const range of ranges) {
+    if (range.percent > 0 && cumulativePercent + range.percent >= percentile) {
+      if (!Number.isFinite(range.max_exclusive)) return range.min_inclusive;
+      const rangeSpan = range.max_exclusive - range.min_inclusive;
+      return range.min_inclusive + ((percentile - cumulativePercent) / range.percent) * rangeSpan;
+    }
+    cumulativePercent += range.percent;
+  }
+
+  // percentile exceeds the distribution's total (the rounded percentages sum to ~100, not 100
+  // exactly), so the answer is the open-ended top bracket's floor.
+  return ranges[ranges.length - 1]!.min_inclusive;
+};

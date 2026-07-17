@@ -17,5 +17,9 @@ declare module 'chart.js' {
         currentIncome: number;
       };
     };
+    percentileBands?: {
+      /** The selected household type's Q20/Q40/Q60/Q80 boundary incomes, in yen. */
+      boundaries?: number[];
+    };
   }
 }

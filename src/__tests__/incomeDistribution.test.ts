@@ -10,7 +10,7 @@ import {
   DEFAULT_HOUSEHOLD_TYPE,
   type HouseholdType,
 } from '../data/income';
-import { estimateIncomePercentile } from '../utils/incomeDistribution';
+import { estimateIncomePercentile, estimateIncomeAtPercentile } from '../utils/incomeDistribution';
 
 const ALL_TYPES = Object.values(HOUSEHOLD_INCOME_DISTRIBUTIONS);
 
@@ -151,5 +151,45 @@ describe('estimateIncomePercentile', () => {
     expect(nonElderly).toBeLessThan(all);
     expect(all).toBeLessThan(elderly);
     expect(nonElderly).toBeCloseTo(50, 0);
+  });
+});
+
+describe('estimateIncomeAtPercentile', () => {
+  it('reports zero at or below the 0th percentile', () => {
+    const { ranges } = HOUSEHOLD_INCOME_DISTRIBUTIONS.all;
+    expect(estimateIncomeAtPercentile(0, ranges)).toBe(0);
+    expect(estimateIncomeAtPercentile(-1, ranges)).toBe(0);
+  });
+
+  // The bands derived from these boundaries must agree with the percentile estimate exactly:
+  // hovering an income inside the "40-60th" band must always estimate between 40 and 60.
+  it.each(ALL_TYPES)('$labelJa inverts the forward estimate exactly', ({ ranges: typeRanges }) => {
+    for (const percentile of [20, 40, 60, 80]) {
+      const income = estimateIncomeAtPercentile(percentile, typeRanges);
+      const roundTrip = estimateIncomePercentile(income, typeRanges).percentile;
+      expect(roundTrip).toBeCloseTo(percentile, 6);
+    }
+  });
+
+  it.each(ALL_TYPES)('$labelJa quintile boundaries increase in order', ({ ranges: typeRanges }) => {
+    const [q20, q40, q60, q80] = [20, 40, 60, 80].map(p =>
+      estimateIncomeAtPercentile(p, typeRanges),
+    );
+    expect(q20).toBeGreaterThan(0);
+    expect(q40).toBeGreaterThan(q20!);
+    expect(q60).toBeGreaterThan(q40!);
+    expect(q80).toBeGreaterThan(q60!);
+    // Every type's quintiles sit below the open-ended top bracket, so none degenerate to its floor.
+    expect(q80).toBeLessThan(20_000_000);
+  });
+
+  // Measures the method's accuracy on the one type where the survey publishes the true 五分位値.
+  // This bound is what justifies estimating the other types' boundaries from their buckets.
+  it('reproduces the published 全世帯 五分位値 within 5万', () => {
+    const { ranges } = HOUSEHOLD_INCOME_DISTRIBUTIONS.all;
+    for (const [percentile, published] of Object.entries(QUINTILE_DATA)) {
+      const estimated = estimateIncomeAtPercentile(Number(percentile), ranges);
+      expect(Math.abs(estimated - published)).toBeLessThanOrEqual(50_000);
+    }
   });
 });
