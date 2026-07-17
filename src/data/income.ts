@@ -31,51 +31,76 @@ export interface IncomeRange {
 export type HouseholdType =
   'all' | 'elderly' | 'nonElderly' | 'with65Plus' | 'withChildren' | 'singleMother';
 
-/** Upper bound (exclusive) of each 所得金額階級, in yen.
- *
- * Every household type is tabulated against these same 25 brackets: 50万 steps to 1000万, then
- * 1000～1100 / 1100～1200 / 1200～1500 / 1500～2000, then the open-ended 2000万円以上. */
-const BRACKET_MAX_EXCLUSIVE: readonly number[] = [
-  500_000,
-  1_000_000,
-  1_500_000,
-  2_000_000,
-  2_500_000,
-  3_000_000,
-  3_500_000,
-  4_000_000,
-  4_500_000,
-  5_000_000,
-  5_500_000,
-  6_000_000,
-  6_500_000,
-  7_000_000,
-  7_500_000,
-  8_000_000,
-  8_500_000,
-  9_000_000,
-  9_500_000,
-  10_000_000,
-  11_000_000,
-  12_000_000,
-  15_000_000,
-  20_000_000,
-  Infinity,
+/** One row of 第０２１表: a bracket's upper bound (exclusive, yen) followed by the 相対度数分布
+ * percentage for each household type, in `DISTRIBUTION_COLUMNS` order. */
+type DistributionRow = [
+  maxExclusive: number,
+  all: number,
+  elderly: number,
+  nonElderly: number,
+  with65Plus: number,
+  withChildren: number,
+  singleMother: number,
 ];
 
-/** Pairs a type's 相対度数分布 row with the shared bracket edges.
+/** Which table column belongs to which household type. */
+const DISTRIBUTION_COLUMNS: Record<HouseholdType, 1 | 2 | 3 | 4 | 5 | 6> = {
+  all: 1,
+  elderly: 2,
+  nonElderly: 3,
+  with65Plus: 4,
+  withChildren: 5,
+  singleMother: 6,
+};
+
+/** 世帯数の相対度数分布 (%) by 所得金額階級, from 所得票 第０２１表 of the 2025 統計表 on e-Stat:
+ * https://www.e-stat.go.jp/stat-search/files?toukei=00450061&tstat=000001244376&cycle=7&tclass1=000001244380
+ *
+ * Laid out as the table prints it: one row per bracket, one column per household type. The
+ * brackets run in 50万 steps to 1000万, then 1000～1100 / 1100～1200 / 1200～1500 / 1500～2000,
+ * then the open-ended 2000万円以上. (The 概況's 第６表 shows the same cuts but stops at
+ * 「1000万円以上」; 第０２１表 carries the same rows out to 2000万円以上, the bracket the 全世帯
+ * chart has always used.)
  *
  * MHLW prints 「-」 (no applicable cases) for some 母子世帯 brackets; those are carried as 0. */
-const toRanges = (percents: readonly number[]): IncomeRange[] => {
-  if (percents.length !== BRACKET_MAX_EXCLUSIVE.length) {
-    throw new Error(
-      `Expected ${BRACKET_MAX_EXCLUSIVE.length} bracket percentages, received ${percents.length}`,
-    );
-  }
-  return percents.map((percent, i) => ({
-    min_inclusive: i === 0 ? 0 : BRACKET_MAX_EXCLUSIVE[i - 1]!,
-    max_exclusive: BRACKET_MAX_EXCLUSIVE[i]!,
-    percent,
+// prettier-ignore
+const DISTRIBUTION_TABLE: readonly DistributionRow[] = [
+  // upper bound   all  elderly  non-  65+ in  with  single
+  //   (yen)            (高齢者) elderly household children mother
+  [   500_000,  0.7,  0.9,  0.6,  0.6,  0.0,  0.0],
+  [ 1_000_000,  5.1,  9.6,  2.8,  6.7,  0.6,  2.6],
+  [ 1_500_000,  5.9, 10.6,  3.5,  7.7,  1.5,  6.9],
+  [ 2_000_000,  6.3, 12.2,  3.2,  9.0,  1.4,  9.2],
+  [ 2_500_000,  7.0, 11.5,  4.6,  9.1,  2.6, 20.5],
+  [ 3_000_000,  6.5, 10.5,  4.4,  8.3,  2.3, 10.7],
+  [ 3_500_000,  6.9, 10.3,  5.0,  8.5,  1.9,  8.2],
+  [ 4_000_000,  6.1,  8.0,  5.1,  7.5,  2.7, 13.9],
+  [ 4_500_000,  5.1,  5.1,  5.0,  5.1,  3.2,  6.6],
+  [ 5_000_000,  4.5,  4.1,  4.8,  4.4,  3.9,  6.3],
+  [ 5_500_000,  5.1,  3.8,  5.7,  4.6,  5.3,  4.1],
+  [ 6_000_000,  4.1,  2.5,  4.9,  3.6,  5.1,  2.0],
+  [ 6_500_000,  4.1,  2.0,  5.3,  3.1,  6.2,  0.8],
+  [ 7_000_000,  3.3,  1.6,  4.2,  2.8,  4.7,  2.5],
+  [ 7_500_000,  3.3,  1.2,  4.4,  2.2,  6.5,  0.4],
+  [ 8_000_000,  2.9,  1.3,  3.7,  2.2,  5.2,  2.9],
+  [ 8_500_000,  2.7,  0.5,  3.8,  1.5,  5.9,  0.5],
+  [ 9_000_000,  2.3,  0.6,  3.1,  1.6,  4.4,  0.5],
+  [ 9_500_000,  2.3,  0.4,  3.2,  1.3,  4.8,  0.0],
+  [10_000_000,  2.0,  0.5,  2.8,  1.3,  4.0,  0.0],
+  [11_000_000,  3.1,  0.6,  4.4,  2.0,  6.5,  0.0],
+  [12_000_000,  2.3,  0.4,  3.3,  1.4,  5.1,  0.0],
+  [15_000_000,  4.3,  0.8,  6.1,  2.8,  8.0,  1.4],
+  [20_000_000,  2.6,  0.3,  3.7,  1.6,  4.8,  0.0],
+  [  Infinity,  1.6,  0.4,  2.2,  1.0,  3.3,  0.0],
+];
+
+/** Reads one household type's column off the table as bracket ranges. */
+const toRanges = (type: HouseholdType): IncomeRange[] => {
+  const column = DISTRIBUTION_COLUMNS[type];
+  return DISTRIBUTION_TABLE.map((row, i) => ({
+    min_inclusive: i === 0 ? 0 : DISTRIBUTION_TABLE[i - 1]![0],
+    max_exclusive: row[0],
+    percent: row[column],
   }));
 };
 
@@ -93,11 +118,7 @@ export interface HouseholdIncomeDistribution {
   ranges: IncomeRange[];
 }
 
-/** 世帯数の相対度数分布 (%) per 世帯類型, from 所得票 第０２１表 of the 2025 統計表 on e-Stat:
- * https://www.e-stat.go.jp/stat-search/files?toukei=00450061&tstat=000001244376&cycle=7&tclass1=000001244380
- *
- * The 概況's 第６表 shows the same cuts but stops at 「1000万円以上」; 第０２１表 carries the same
- * rows out to 2000万円以上, the bracket the 全世帯 chart has always used.
+/** Each 世帯類型's labels, definition, published 中央値, and its column of `DISTRIBUTION_TABLE`.
  *
  * Ordered for the selector: 全世帯 first, then the two-way 高齢者世帯 split, then the two 再掲
  * regroupings, then 母子世帯. */
@@ -108,10 +129,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     labelJa: '全世帯',
     definition: 'Every surveyed household, with no restriction on age or composition.',
     median: 4_510_000,
-    ranges: toRanges([
-      0.7, 5.1, 5.9, 6.3, 7.0, 6.5, 6.9, 6.1, 5.1, 4.5, 5.1, 4.1, 4.1, 3.3, 3.3, 2.9, 2.7, 2.3, 2.3,
-      2.0, 3.1, 2.3, 4.3, 2.6, 1.6,
-    ]),
+    ranges: toRanges('all'),
   },
   elderly: {
     id: 'elderly',
@@ -120,10 +138,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     definition:
       'Households made up only of people aged 65 or over, or of such people plus children under 18.',
     median: 2_730_000,
-    ranges: toRanges([
-      0.9, 9.6, 10.6, 12.2, 11.5, 10.5, 10.3, 8.0, 5.1, 4.1, 3.8, 2.5, 2.0, 1.6, 1.2, 1.3, 0.5, 0.6,
-      0.4, 0.5, 0.6, 0.4, 0.8, 0.3, 0.4,
-    ]),
+    ranges: toRanges('elderly'),
   },
   nonElderly: {
     id: 'nonElderly',
@@ -132,10 +147,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     definition:
       'Every household that is not a 高齢者世帯. This is not the same as a household with no older members: a household where someone under 65 lives with a person aged 65 or over is counted here.',
     median: 6_000_000,
-    ranges: toRanges([
-      0.6, 2.8, 3.5, 3.2, 4.6, 4.4, 5.0, 5.1, 5.0, 4.8, 5.7, 4.9, 5.3, 4.2, 4.4, 3.7, 3.8, 3.1, 3.2,
-      2.8, 4.4, 3.3, 6.1, 3.7, 2.2,
-    ]),
+    ranges: toRanges('nonElderly'),
   },
   with65Plus: {
     id: 'with65Plus',
@@ -144,10 +156,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     definition:
       'Any household with at least one member aged 65 or over. Published as a 再掲 (regrouping), so it overlaps both 高齢者世帯 and 高齢者世帯以外の世帯.',
     median: 3_490_000,
-    ranges: toRanges([
-      0.6, 6.7, 7.7, 9.0, 9.1, 8.3, 8.5, 7.5, 5.1, 4.4, 4.6, 3.6, 3.1, 2.8, 2.2, 2.2, 1.5, 1.6, 1.3,
-      1.3, 2.0, 1.4, 2.8, 1.6, 1.0,
-    ]),
+    ranges: toRanges('with65Plus'),
   },
   withChildren: {
     id: 'withChildren',
@@ -156,10 +165,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     definition:
       'Households with at least one 児童, defined in the 2025 survey as a person under 18. Published as a 再掲 (regrouping).',
     median: 7_660_000,
-    ranges: toRanges([
-      0.0, 0.6, 1.5, 1.4, 2.6, 2.3, 1.9, 2.7, 3.2, 3.9, 5.3, 5.1, 6.2, 4.7, 6.5, 5.2, 5.9, 4.4, 4.8,
-      4.0, 6.5, 5.1, 8.0, 4.8, 3.3,
-    ]),
+    ranges: toRanges('withChildren'),
   },
   singleMother: {
     id: 'singleMother',
@@ -168,10 +174,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     definition:
       'Households made up only of a woman under 65 who has no spouse, through death, separation, or never having married, together with her children under 20, including adopted children.',
     median: 2_990_000,
-    ranges: toRanges([
-      0.0, 2.6, 6.9, 9.2, 20.5, 10.7, 8.2, 13.9, 6.6, 6.3, 4.1, 2.0, 0.8, 2.5, 0.4, 2.9, 0.5, 0.5,
-      0.0, 0.0, 0.0, 0.0, 1.4, 0.0, 0.0,
-    ]),
+    ranges: toRanges('singleMother'),
   },
 };
 
