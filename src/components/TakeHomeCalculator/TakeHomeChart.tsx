@@ -253,10 +253,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     [quintilesAreEstimated, distribution],
   );
 
-  // Estimated boundaries display rounded to the nearest ¥10,000 and marked "~", so the tooltip
-  // does not imply more precision than the estimate carries; published boundaries show exact.
+  // Estimated boundaries display rounded down to the nearest ¥10,000 and marked "~", so the
+  // tooltip does not imply more precision than the estimate carries. Down, not to nearest: the
+  // interpolation runs measurably high against the published 全世帯 boundaries, so rounding down
+  // moves the display toward the true value. Published boundaries show exact.
   const formatQuintileBoundary = (value: number): string =>
-    quintilesAreEstimated ? `~${formatJPY(Math.round(value / 10_000) * 10_000)}` : formatJPY(value);
+    quintilesAreEstimated ? `~${formatJPY(Math.floor(value / 10_000) * 10_000)}` : formatJPY(value);
 
   // Function to calculate auto-centered range based on income
   const calculateAutoCenteredRange = (income: number): ChartRange => {
