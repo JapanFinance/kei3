@@ -133,7 +133,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   },
   elderly: {
     id: 'elderly',
-    label: 'Elderly households',
+    label: 'Only elderly households',
     labelJa: '高齢者世帯',
     definition:
       'Households made up only of people aged 65 or over, or of such people plus children under 18.',
@@ -151,7 +151,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   },
   with65Plus: {
     id: 'with65Plus',
-    label: 'Households with a member aged 65 or over',
+    label: 'Households with elderly',
     labelJa: '65歳以上の者のいる世帯',
     definition:
       'Any household with at least one member aged 65 or over. Published as a 再掲 (regrouping), so it overlaps both 高齢者世帯 and 高齢者世帯以外の世帯.',

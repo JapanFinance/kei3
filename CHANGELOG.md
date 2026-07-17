@@ -6,7 +6,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### New
 
-- Added a household type selector to the income distribution chart. The median line and the percentile estimate can now be measured against any of the six household types (世帯類型) the survey publishes: all households (全世帯), elderly households (高齢者世帯), non-elderly households (高齢者世帯以外の世帯), households with a member aged 65 or over (65歳以上の者のいる世帯), households with children (児童のいる世帯), and single-mother households (母子世帯). A ¥5,000,000 income ranks above ~54% of all households but above only ~39% of non-elderly households, since the all-households figure includes elderly households. Each type's definition and median are in the tooltip next to the selector, taken from the survey's [用語の説明](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/dl/07.pdf).
+- Added a household type selector to the income distribution chart. The median line and the percentile estimate can now be measured against any of the six household types (世帯類型) the survey publishes: all households (全世帯), only elderly households (高齢者世帯), non-elderly households (高齢者世帯以外の世帯), households with elderly (65歳以上の者のいる世帯), households with children (児童のいる世帯), and single-mother households (母子世帯). A ¥5,000,000 income ranks above ~54% of all households but above only ~39% of non-elderly households, since the all-households figure includes elderly households. Each type's definition and median are in the tooltip next to the selector, taken from the survey's [用語の説明](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/dl/07.pdf).
 
 ### Updated
 
