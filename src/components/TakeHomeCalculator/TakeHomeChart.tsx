@@ -59,7 +59,7 @@ import { detectCaps } from '../../utils/capDetection';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 
-// Percentile band styling; the boundary incomes between bands follow the selected household type.
+// Quintile band styling; the boundary incomes between bands follow the selected household type.
 const QUINTILE_BAND_STYLES = [
   { label: '0-20th percentile', color: 'rgba(255, 99, 132, 0.1)' }, // Light red
   { label: '20-40th percentile', color: 'rgba(255, 159, 64, 0.1)' }, // Light orange
@@ -71,13 +71,13 @@ const QUINTILE_BAND_STYLES = [
 /** The five band edges implied by the four quintile boundaries: 0, Q20, Q40, Q60, Q80, ∞. */
 const toBandEdges = (boundaries: readonly number[]): number[] => [0, ...boundaries, Infinity];
 
-// Chart.js plugin for percentile background bands. Reads the selected household type's quintile
+// Chart.js plugin for the quintile background bands. Reads the selected household type's quintile
 // boundaries from the chart options, the same channel the median line uses.
-const percentileBandsPlugin = {
-  id: 'percentileBands',
+const quintileBandsPlugin = {
+  id: 'quintileBands',
   beforeDraw: (chart: ChartJS<'bar' | 'line'>) => {
     // Chart.js types plugin options as DeepPartial, so narrow the elements back to numbers.
-    const boundaries = chart.options.plugins?.percentileBands?.boundaries?.filter(
+    const boundaries = chart.options.plugins?.quintileBands?.boundaries?.filter(
       (b): b is number => typeof b === 'number',
     );
     if (!boundaries || boundaries.length !== 4) return;
@@ -133,7 +133,7 @@ ChartJS.register(
   BarController,
   LineController,
   currentAndMedianIncomeChartPlugin,
-  percentileBandsPlugin,
+  quintileBandsPlugin,
 );
 
 interface TakeHomeChartProps {
@@ -206,8 +206,8 @@ const INCOME_SURVEY_SOURCES: Source[] = [
  * open menu keeps the capitalized labels; only sentence positions use this. */
 const lowercaseFirst = (label: string): string => label.charAt(0).toLowerCase() + label.slice(1);
 
-// Utility function to get the percentile band an income falls in, given the quintile boundaries
-const getPercentileBand = (income: number, boundaries: readonly number[]): { label: string } => {
+// Utility function to get the quintile band an income falls in, given the quintile boundaries
+const getQuintileBand = (income: number, boundaries: readonly number[]): { label: string } => {
   const edges = toBandEdges(boundaries);
   const index = QUINTILE_BAND_STYLES.findIndex(
     (_, i) => income >= edges[i]! && income < edges[i + 1]!,
@@ -366,7 +366,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       ...baseOptions,
       plugins: {
         ...baseOptions.plugins,
-        percentileBands: { boundaries: quintileBoundaries },
+        quintileBands: { boundaries: quintileBoundaries },
         tooltip: {
           ...baseOptions.plugins?.tooltip,
           callbacks: {
@@ -382,7 +382,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   ? `top ~${estimate.topBracketPercent.toFixed(1)}% of ${groupLabel}`
                   : `~${estimate.percentile.toFixed(1)} percentile of ${groupLabel}`;
                 if (!estimate.isTopBracket) {
-                  info += ` (${getPercentileBand(income, quintileBoundaries).label})`;
+                  info += ` (${getQuintileBand(income, quintileBoundaries).label})`;
                 }
 
                 // Calculate full tax results for this income level to get cap status.

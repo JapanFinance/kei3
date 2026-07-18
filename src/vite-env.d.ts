@@ -17,9 +17,12 @@ declare module 'chart.js' {
         currentIncome: number;
       };
     };
-    percentileBands?: {
-      /** The selected household type's Q20/Q40/Q60/Q80 boundary incomes, in yen. */
-      boundaries?: number[];
+    quintileBands?: {
+      /** The selected household type's quintile boundary incomes (Q20/Q40/Q60/Q80), in yen.
+       * Not marked optional: the plugin draws nothing without them, and Chart.js wraps every
+       * plugin option in DeepPartial anyway, so use sites see them as possibly-undefined
+       * regardless. */
+      boundaries: number[];
     };
   }
 }
