@@ -258,7 +258,9 @@ export const generateChartData = (
       label: 'Take-Home %',
       data: resultsAndCaps.map(({ result }, i) => ({
         x: incomePoints[i]!,
-        y: (result.takeHomeIncome / incomePoints[i]!) * 100,
+        // Undefined at the ¥0 point (division by zero); NaN renders as a gap in the line
+        // and is excluded from the y1 scale bounds.
+        y: incomePoints[i]! > 0 ? (result.takeHomeIncome / incomePoints[i]!) * 100 : Number.NaN,
       })),
       borderColor: 'rgb(105, 105, 105)',
       backgroundColor: 'rgba(105, 105, 105, 0.7)',

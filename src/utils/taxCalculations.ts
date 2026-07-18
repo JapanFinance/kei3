@@ -10,7 +10,6 @@ import type {
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
-  DEFAULT_PROVIDER,
   DEPENDENT_COVERAGE_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
@@ -26,7 +25,6 @@ import {
   calculateFurusatoNozeiDetails,
   calculateResidenceTax,
   calculateResidenceTaxBasicDeduction,
-  NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from './residenceTax';
 import {
   calculateDependentDeductions,
@@ -229,27 +227,6 @@ export const calculateNationalIncomeTax = (taxableIncome: number): number => {
   return Math.floor((baseTax + reconstructionSurtax) / 100) * 100;
 };
 
-const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
-  annualIncome: 0,
-  hasEmploymentIncome: true,
-  nationalIncomeTax: 0,
-  residenceTax: NON_TAXABLE_RESIDENCE_TAX_DETAIL,
-  healthInsurance: 0,
-  pensionPayments: 0,
-  employmentInsurance: 0,
-  takeHomeIncome: 0,
-  furusatoNozei: calculateFurusatoNozeiDetails(0, NON_TAXABLE_RESIDENCE_TAX_DETAIL),
-  dcPlanContributions: 0,
-  salaryIncome: 0,
-  healthInsuranceProvider: DEFAULT_PROVIDER,
-  region: 'Tokyo',
-  isSubjectToLongTermCarePremium: false,
-  grossEmploymentIncome: 0,
-  incomeAdjustmentDeduction: 0,
-  totalNetIncome: 0,
-  additionalDeductions: { national: 0, residence: 0, items: [] },
-};
-
 /**
  * Intermediate breakdown of income streams for calculation
  */
@@ -379,19 +356,19 @@ export const calculateTotalNetIncome = (
 };
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
-  const {
-    salaryIncome,
-    bonusIncome,
-    netBusinessAndMiscIncome,
-    blueFilerDeduction,
-    totalAnnualIncome,
-    commutingAllowance,
-    stockCompensationIncome,
-  } = calculateIncomeBreakdown(inputs.incomeStreams);
+  const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
+  const { bonusIncome, blueFilerDeduction, commutingAllowance, stockCompensationIncome } =
+    incomeBreakdown;
 
-  if (totalAnnualIncome <= 0) {
-    return DEFAULT_TAKE_HOME_RESULTS;
-  }
+  // Negative stream totals are only reachable through direct API use — the UI's inputs do
+  // not produce them. Clamp to zero so a negative amount cannot flow into the insurance
+  // calculators (which throw on negative income) or distort the totals. Zero income is NOT
+  // special-cased: fixed charges (NHI per-capita amounts, the National Pension, minimum-grade
+  // employee premiums) are still owed at zero income, so the result is computed normally and
+  // stays consistent with any small positive income.
+  const salaryIncome = Math.max(0, incomeBreakdown.salaryIncome);
+  const netBusinessAndMiscIncome = Math.max(0, incomeBreakdown.netBusinessAndMiscIncome);
+  const totalAnnualIncome = Math.max(0, incomeBreakdown.totalAnnualIncome);
 
   // Use the calculated total annual income instead of inputs.annualIncome for consistency
   const annualIncome = totalAnnualIncome;

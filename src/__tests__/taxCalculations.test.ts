@@ -251,8 +251,9 @@ describe('calculateTaxes', () => {
     expect(result.takeHomeIncome).toBe(27_215_225);
   });
 
-  // Test edge cases
-  it('handles zero income correctly', () => {
+  // Test edge cases. Zero income is not special-cased: fixed charges under the selected
+  // provider are still owed, so the result is consistent with any small positive income.
+  it('computes real fixed charges at zero income (employee provider)', () => {
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
@@ -270,13 +271,21 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
-    expect(result.healthInsurance).toBe(0);
-    expect(result.pensionPayments).toBe(0);
+    // Kyokai Kenpo Tokyo, SMR grade 1 (58,000), calendar 2026 spans three rate periods:
+    // Jan-Mar (FY2025) 3 × round(58,000 × 0.04955) = 3 × 2,874 = 8,622
+    // Apr 58,000 × 0.04925 = 2,856.5 → halfTrunc → 2,856
+    // May-Dec (adds 子ども・子育て支援金) 8 × round(58,000 × 0.0504) = 8 × 2,923 = 23,384
+    expect(result.healthInsurance).toBe(34_862);
+    // Employees' pension SMR grade 1 (88,000): 12 × round(88,000 × 0.183 / 2) = 12 × 8,052
+    expect(result.pensionPayments).toBe(96_624);
     expect(result.employmentInsurance).toBe(0);
-    expect(result.takeHomeIncome).toBe(0);
+    expect(result.hasEmploymentIncome).toBe(false);
+    expect(result.furusatoNozei.limit).toBe(0);
+    // Minimum-grade premiums are owed even with no salary; take-home is honestly negative
+    expect(result.takeHomeIncome).toBe(-131_486);
   });
 
-  it('handles negative income correctly', () => {
+  it('treats negative income the same as zero income', () => {
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
@@ -291,9 +300,61 @@ describe('calculateTaxes', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     };
+    // Negative amounts are only reachable through direct API use; they clamp to zero and
+    // produce the same result as zero income.
     const result = calculateTaxes(inputs);
+    expect(result.annualIncome).toBe(0);
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.healthInsurance).toBe(34_862);
+    expect(result.pensionPayments).toBe(96_624);
+    expect(result.employmentInsurance).toBe(0);
+    expect(result.takeHomeIncome).toBe(-131_486);
+  });
+
+  it('computes real fixed charges at zero income (NHI with and without pension exemption)', () => {
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 0, id: 'test' }],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
+    // 7割軽減 in both fiscal years of the calendar-2026 blend (see the NHI reduction tests):
+    // medical 14,253 + support 5,208 + child support 393 = 19,854
+    expect(result.healthInsurance).toBe(19_854);
+    expect(result.nhiReductionRatios).toEqual({ prevFY: 0.7, currFY: 0.7 });
+    expect(result.pensionPayments).toBe(213_810);
+    expect(result.takeHomeIncome).toBe(-233_664);
+
+    // With the full exemption requested, only the reduced NHI per-capita amounts remain
+    const exempted = calculateTaxes({ ...inputs, nationalPensionExemption: true });
+    expect(exempted.pensionPayments).toBe(0);
+    expect(exempted.takeHomeIncome).toBe(-19_854);
+  });
+
+  it('keeps zero income at zero take-home under dependent coverage', () => {
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 0, frequency: 'annual' as const, id: 'test' },
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
     expect(result.healthInsurance).toBe(0);
     expect(result.pensionPayments).toBe(0);
     expect(result.employmentInsurance).toBe(0);
