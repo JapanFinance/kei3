@@ -14,19 +14,6 @@ import { estimateIncomePercentile, estimateIncomeAtPercentile } from '../utils/i
 
 const ALL_TYPES = Object.values(HOUSEHOLD_INCOME_DISTRIBUTIONS);
 
-/** Solves for the income whose estimated percentile is `target`, by bisection. */
-const incomeAtPercentile = (type: HouseholdType, target: number): number => {
-  const { ranges } = HOUSEHOLD_INCOME_DISTRIBUTIONS[type];
-  let low = 0;
-  let high = 20_000_000;
-  for (let i = 0; i < 60; i++) {
-    const mid = (low + high) / 2;
-    if (estimateIncomePercentile(mid, ranges).percentile < target) low = mid;
-    else high = mid;
-  }
-  return (low + high) / 2;
-};
-
 describe('household income distributions', () => {
   it('covers every household type in the selector order exactly once', () => {
     expect([...HOUSEHOLD_TYPE_ORDER].sort()).toEqual(
@@ -56,12 +43,12 @@ describe('household income distributions', () => {
   // The load-bearing check on the extraction: 第０２１表 prints six household-type columns against
   // one set of bracket rows, so a column read off by one would still look plausible. Each type's
   // published 中央値 is the independent value that catches it.
-  it.each(ALL_TYPES)('$labelJa interpolates to its published 中央値', ({ id, median }) => {
+  it.each(ALL_TYPES)('$labelJa interpolates to its published 中央値', ({ ranges, median }) => {
     // Interpolation runs slightly high against the published median, which the survey computes from
     // ungrouped responses; 10万 leaves room for that bias without admitting a wrong column, whose
     // medians differ from each other by 50万 or more.
-    expect(incomeAtPercentile(id, 50)).toBeCloseTo(median, -5);
-    expect(Math.abs(incomeAtPercentile(id, 50) - median)).toBeLessThanOrEqual(100_000);
+    const interpolated = estimateIncomeAtPercentile(50, ranges);
+    expect(Math.abs(interpolated - median)).toBeLessThanOrEqual(100_000);
   });
 
   it('orders the household types as the survey reports them', () => {
@@ -83,7 +70,10 @@ describe('household income distributions', () => {
     // 五分位値 are published on a 全世帯 basis only, so they should line up with that distribution
     // and no other. Tolerance is wide because the survey derives them from ungrouped responses.
     for (const [percentile, income] of Object.entries(QUINTILE_DATA)) {
-      const interpolated = incomeAtPercentile('all', Number(percentile));
+      const interpolated = estimateIncomeAtPercentile(
+        Number(percentile),
+        HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges,
+      );
       expect(Math.abs(interpolated - income)).toBeLessThanOrEqual(400_000);
     }
   });
@@ -162,9 +152,11 @@ describe('estimateIncomeAtPercentile', () => {
   });
 
   // The bands derived from these boundaries must agree with the percentile estimate exactly:
-  // hovering an income inside the "40-60th" band must always estimate between 40 and 60.
+  // hovering an income inside the "40-60th" band must always estimate between 40 and 60. This
+  // exactness is also what lets the 中央値 and 五分位値 checksum tests above invert through this
+  // function instead of bisecting the forward estimate, so 50 is included alongside the quintiles.
   it.each(ALL_TYPES)('$labelJa inverts the forward estimate exactly', ({ ranges: typeRanges }) => {
-    for (const percentile of [20, 40, 60, 80]) {
+    for (const percentile of [10, 20, 40, 50, 60, 80, 90]) {
       const income = estimateIncomeAtPercentile(percentile, typeRanges);
       const roundTrip = estimateIncomePercentile(income, typeRanges).percentile;
       expect(roundTrip).toBeCloseTo(percentile, 6);
