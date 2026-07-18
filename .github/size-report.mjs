@@ -76,7 +76,8 @@ function renderMarkdown(report, base) {
   if (withDelta) {
     const headNames = new Set(report.files.map(f => f.name));
     for (const f of base.files) {
-      if (!headNames.has(f.name)) rows.push(`| \`${f.name}\` | — | removed |`);
+      if (!headNames.has(f.name))
+        rows.push(`| \`${f.name}\` | ${kb(f.size)} | -${kb(f.size)} (removed) |`);
     }
   }
 
