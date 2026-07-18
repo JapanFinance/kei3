@@ -197,7 +197,7 @@ const INCOME_SURVEY_SOURCES: Source[] = [
     href: 'https://www.e-stat.go.jp/stat-search/files?toukei=00450061&tstat=000001244376&cycle=7&tclass1=000001244380',
   },
   {
-    label: '用語の説明 (definitions of each 世帯類型)',
+    label: '用語の説明 (definitions of each household type)',
     href: 'https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/dl/07.pdf',
   },
 ];
@@ -246,8 +246,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const distribution = HOUSEHOLD_INCOME_DISTRIBUTIONS[householdType];
 
   // The survey publishes exact 五分位値 for 全世帯 only; every other type's quintile boundaries
-  // are estimated by inverting its bucketed distribution — the same data behind the percentile
-  // estimate, so the bands and the estimate agree by construction.
+  // are estimated by inverting its bucketed distribution
   const quintilesAreEstimated = householdType !== 'all';
   const quintileBoundaries = useMemo<number[]>(
     () =>
@@ -675,8 +674,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               <Box>
                 <Typography variant="body2" sx={{ mb: 1.5 }}>
                   The survey reports the income distribution separately for each household type
-                  (世帯類型) below. Picking one changes the median line, the percentile estimate,
-                  and the bars' comparison group.
+                  (世帯類型) below. Picking one changes the income distribution compared with the
+                  input income.
                 </Typography>
                 <Box component="dl" sx={{ m: 0 }}>
                   {HOUSEHOLD_TYPE_ORDER.map(type => (
@@ -724,8 +723,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               fontWeight: 500,
             }}
           >
-            Background bands show{' '}
-            {quintilesAreEstimated ? 'estimated income quintiles' : 'income quintiles'}
+            Background colors show income quintiles
           </Typography>
           <DetailedTooltip
             title="Income Distribution Quintiles"
@@ -734,7 +732,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           >
             <Box>
               <Typography variant="body2" sx={{ mb: 1.5 }}>
-                The colored background bands divide the selected comparison group into five equal
+                The colored background bands divide the selected household type into five equal
                 groups (quintiles) by household income:
               </Typography>
 
@@ -817,10 +815,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   from lowest to highest income.
                 </Typography>
                 <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
-                  The survey publishes exact quintile boundaries only for all households. For any
-                  other household type, boundaries marked ~ are estimated from that type's bucketed
-                  income distribution — the same data behind the percentile estimate, so the bands
-                  always agree with it.
+                  The survey publishes exact quintile boundaries only for all households. For other
+                  household types, boundaries are estimated from income distribution data.
                 </Typography>
               </Box>
               <SourceLinks sources={INCOME_SURVEY_SOURCES} />
