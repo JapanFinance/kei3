@@ -68,6 +68,7 @@ describe('TakeHomeInputForm Tests', () => {
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
+    nationalPensionExemption: false,
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
@@ -324,6 +325,7 @@ describe('Dependent Coverage UI Behavior', () => {
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
+    nationalPensionExemption: false,
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
@@ -647,6 +649,7 @@ describe('Age Selection', () => {
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
+    nationalPensionExemption: false,
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
@@ -865,6 +868,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,
+    nationalPensionExemption: false,
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
@@ -918,6 +922,7 @@ describe('TakeHomeInputForm Income Details Modal', () => {
       longTermCareCategory1Premium: 0,
       ageRange,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      nationalPensionExemption: false,
       region: 'Tokyo',
       dcPlanContributions: 0,
       dependents: [],
@@ -967,6 +972,7 @@ describe('Commuting Allowance Integration', () => {
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo',
+      nationalPensionExemption: false,
       region: 'Tokyo',
       dcPlanContributions: 0,
       dependents: [],
@@ -1024,6 +1030,7 @@ describe('Investment Income Integration', () => {
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo',
+      nationalPensionExemption: false,
       region: 'Tokyo',
       dcPlanContributions: 0,
       dependents: [],
@@ -1094,6 +1101,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo', // An employee provider
+      nationalPensionExemption: false,
       region: 'Tokyo',
       dcPlanContributions: 0,
       dependents: [],
@@ -1155,6 +1163,7 @@ describe('Additional Deductions & Credits: foreign tax credit', () => {
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39',
     healthInsuranceProvider: 'KyokaiKenpo',
+    nationalPensionExemption: false,
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
@@ -1191,5 +1200,72 @@ describe('Additional Deductions & Credits: foreign tax credit', () => {
       field: 'foreignTaxCredit',
       value: { foreignTaxOnTaxReturn: 20_000 },
     });
+  });
+});
+
+describe('National Pension Exemption Toggle', () => {
+  const mockDispatch = vi.fn();
+
+  const nhiInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    annualIncome: 600_000,
+    incomeYear: 2026,
+    incomeMode: 'advanced',
+    incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 600_000 }],
+    savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39',
+    healthInsuranceProvider: 'NationalHealthInsurance',
+    nationalPensionExemption: false,
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  beforeEach(() => {
+    mockDispatch.mockClear();
+  });
+
+  it('renders the toggle when NHI is selected and income is within the threshold', async () => {
+    const user = userEvent.setup();
+    render(<TakeHomeInputForm inputs={nhiInputs} dispatch={mockDispatch} />);
+
+    // Net income 600,000 ≤ 670,000 single-person threshold → the toggle is offered
+    const toggle = screen.getByRole('switch', { name: /national pension full exemption/i });
+    await user.click(toggle);
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'setField',
+      field: 'nationalPensionExemption',
+      value: true,
+    });
+  });
+
+  it('does not render the toggle when income exceeds the threshold', () => {
+    const inputs: TakeHomeFormState = {
+      ...nhiInputs,
+      annualIncome: 700_000,
+      incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 700_000 }],
+    };
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    // Net income 700,000 > 670,000 → the toggle is hidden (a stale `true` is a no-op)
+    expect(screen.queryByRole('switch', { name: /national pension full exemption/i })).toBeNull();
+  });
+
+  it('does not render the toggle for employee providers', () => {
+    const inputs: TakeHomeFormState = {
+      ...nhiInputs,
+      incomeMode: 'salary',
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 600_000, frequency: 'annual' }],
+      healthInsuranceProvider: 'KyokaiKenpo',
+    };
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    expect(screen.queryByRole('switch', { name: /national pension full exemption/i })).toBeNull();
   });
 });

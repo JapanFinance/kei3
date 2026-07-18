@@ -4,11 +4,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import { DEDUCTION_TYPES, type Dependent, type DisabilityLevel } from '../types/dependents';
+import {
+  DEDUCTION_TYPES,
+  type Dependent,
+  type DependentAgeRange,
+  type DisabilityLevel,
+  type SpouseAgeRange,
+} from '../types/dependents';
 import {
   calculateDependentDeductions,
   calculateDependentNetIncomeComponents,
   calculateDependentTotalNetIncome,
+  countDependentsWithinEligibilityIncome,
   hasDependentRelativeUnder23,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions';
@@ -2217,5 +2224,44 @@ describe('所得金額調整控除（子ども・特別障害者等を有する�
     expect(components.netEmploymentIncome).toBe(6_900_000);
     expect(components.netPublicPensionIncome).toBe(1_300_000);
     expect(components.totalNetIncome).toBe(8_200_000);
+  });
+});
+
+describe('countDependentsWithinEligibilityIncome', () => {
+  const makeDependent = (
+    id: string,
+    relationship: 'spouse' | 'child',
+    ageRange: SpouseAgeRange | DependentAgeRange,
+    otherNetIncome: number,
+  ): Dependent =>
+    ({
+      id,
+      relationship,
+      ageRange,
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome },
+    }) as Dependent;
+
+  it('counts a spouse and children, including children under 16', () => {
+    const dependents = [
+      makeDependent('s', 'spouse', 'under65', 0),
+      makeDependent('c1', 'child', 'under16', 0),
+      makeDependent('c2', 'child', '19to22', 0),
+    ];
+    expect(countDependentsWithinEligibilityIncome(dependents, 2026)).toBe(3);
+  });
+
+  it('excludes dependents whose net income exceeds the eligibility max', () => {
+    // 2026 eligibility max is 620,000 (令和8年度税制改正); the boundary is inclusive.
+    const dependents = [
+      makeDependent('ok', 'child', '19to22', 620_000),
+      makeDependent('over', 'child', '19to22', 620_001),
+    ];
+    expect(countDependentsWithinEligibilityIncome(dependents, 2026)).toBe(1);
+  });
+
+  it('is zero with no dependents', () => {
+    expect(countDependentsWithinEligibilityIncome([], 2026)).toBe(0);
   });
 });

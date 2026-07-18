@@ -37,6 +37,7 @@ const TestWrapper = ({ initialState }: { initialState?: Partial<TakeHomeFormStat
     ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,
+    nationalPensionExemption: false,
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,

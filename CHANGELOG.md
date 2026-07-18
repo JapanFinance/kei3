@@ -4,6 +4,10 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ## 2026-10-24
 
+### New
+
+- Added an opt-in toggle for the National Pension contribution full exemption ([国民年金保険料の全額免除](https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html)). The toggle appears under the social insurance settings when National Health Insurance is selected and income is at or below the statutory threshold ((number of dependents + 1) × ¥350,000 + ¥320,000; ¥670,000 for a single person). When enabled, the pension contribution drops to ¥0 and the take-home chart shows the eligibility step across incomes. The exemption requires an application in reality and reduces future basic-pension accrual to one half for exempted periods, so it is never applied automatically — see the pension tooltip for details.
+
 ### Fixed
 
 - National Health Insurance premiums now apply the statutory low-income reduction ([均等割額・平等割額の軽減](https://www.city.setagaya.lg.jp/02060/300.html)). Households with income at or below nationally set thresholds have the per capita (均等割) and household flat rate (平等割) amounts reduced by 70%, 50%, or 20%. Municipalities apply this reduction based on household income (determined through tax returns, employer wage reports, or pension statements). Premiums on low incomes were previously overstated. For example, at zero income in Osaka the 2026 premium is ¥27,563, not ¥91,881. The National Health Insurance portion tooltips show the applied reduction on the per capita and flat-rate amounts with thresholds and official municipal guidance.

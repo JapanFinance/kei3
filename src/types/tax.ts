@@ -813,6 +813,13 @@ export interface TakeHomeFormState {
   longTermCareCategory1Premium: number;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
+  /**
+   * Request the National Pension contribution full exemption (国民年金保険料の全額免除).
+   * Only takes effect when the National Pension applies (NHI provider) and the income test
+   * passes; the toggle is only rendered while eligible, and a stale `true` at higher income
+   * is a no-op in the calculation.
+   */
+  nationalPensionExemption: boolean;
   dependents: Dependent[];
   dcPlanContributions: number;
   manualSocialInsuranceEntry: boolean;
@@ -843,6 +850,8 @@ export interface TakeHomeInputs {
   longTermCareCategory1Premium?: number | undefined;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
+  /** See {@link TakeHomeFormState.nationalPensionExemption}. Absent means not requested. */
+  nationalPensionExemption?: boolean | undefined;
   dependents: Dependent[];
   dcPlanContributions: number;
   manualSocialInsuranceEntry: boolean;
@@ -1059,6 +1068,14 @@ export interface TakeHomeResults {
    */
   nhiReductionRatios?:
     | { prevFY: NHIPremiumReductionRatio; currFY: NHIPremiumReductionRatio }
+    | undefined;
+  /**
+   * National Pension full exemption (全額免除) status. Only set when the National Pension
+   * applies (NHI provider, automatic calculation): undefined for employee providers,
+   * dependent coverage, and manual social-insurance entry.
+   */
+  nationalPensionExemption?:
+    | { requested: boolean; eligible: boolean; applied: boolean; incomeThreshold: number }
     | undefined;
   // 後期高齢者医療制度 breakdown (only at ages 75+); the portions sum to healthInsurance
   latterStageMedicalPortion?: number | undefined;
