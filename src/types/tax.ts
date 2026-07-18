@@ -220,6 +220,13 @@ export interface TakeHomeFormState {
   isSubjectToLongTermCarePremium: boolean;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
+  /**
+   * Request the National Pension contribution full exemption (国民年金保険料の全額免除).
+   * Only takes effect when the National Pension applies (NHI provider) and the income test
+   * passes; the toggle is only rendered while eligible, and a stale `true` at higher income
+   * is a no-op in the calculation.
+   */
+  nationalPensionExemption: boolean;
   dependents: Dependent[];
   dcPlanContributions: number;
   manualSocialInsuranceEntry: boolean;
@@ -238,6 +245,8 @@ export interface TakeHomeInputs {
   isSubjectToLongTermCarePremium: boolean;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
+  /** See {@link TakeHomeFormState.nationalPensionExemption}. Absent means not requested. */
+  nationalPensionExemption?: boolean | undefined;
   dependents: Dependent[];
   dcPlanContributions: number;
   manualSocialInsuranceEntry: boolean;
@@ -327,6 +336,14 @@ export interface TakeHomeResults {
    * the calendar year (0 = no reduction, 0.7 = 7割軽減). Only set when NHI is selected.
    */
   nhiReductionRatios?: { prevFY: number; currFY: number } | undefined;
+  /**
+   * National Pension full exemption (全額免除) status. Only set when the National Pension
+   * applies (NHI provider, automatic calculation): undefined for employee providers,
+   * dependent coverage, and manual social-insurance entry.
+   */
+  nationalPensionExemption?:
+    | { requested: boolean; eligible: boolean; applied: boolean; incomeThreshold: number }
+    | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;

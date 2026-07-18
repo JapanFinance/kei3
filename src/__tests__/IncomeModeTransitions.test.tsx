@@ -33,6 +33,7 @@ const TestWrapper = ({ initialState }: { initialState?: Partial<TakeHomeFormStat
     isSubjectToLongTermCarePremium: false,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,
+    nationalPensionExemption: false,
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,

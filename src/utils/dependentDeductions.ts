@@ -59,6 +59,21 @@ export function calculateDependentTotalNetIncome(income: DependentIncome, year: 
 }
 
 /**
+ * Counts 扶養親族等 (同一生計配偶者と扶養親族): dependents — spouse included, children under
+ * 16 included — whose 合計所得金額 is within the year's eligibility threshold. This is the
+ * 扶養親族等の数 used by the National Pension contribution exemption income test.
+ */
+export function countDependentsWithinEligibilityIncome(
+  dependents: Dependent[],
+  year: number,
+): number {
+  const eligibilityMax = getDependentEligibilityMax(year);
+  return dependents.filter(
+    dependent => calculateDependentTotalNetIncome(dependent.income, year) <= eligibilityMax,
+  ).length;
+}
+
+/**
  * Whether the taxpayer has a dependent that qualifies them for the
  * 所得金額調整控除（子ども・特別障害者等を有する者等）. Two of the three statutory conditions are
  * derivable from the dependent data this calculator models:

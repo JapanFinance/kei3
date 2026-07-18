@@ -14,7 +14,10 @@ import {
   DEPENDENT_COVERAGE_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
-import { calculatePensionBreakdown } from './pensionCalculator';
+import {
+  calculatePensionBreakdown,
+  calculateNationalPensionFullExemptionThreshold,
+} from './pensionCalculator';
 import {
   calculateHealthInsuranceBreakdown,
   calculateNationalHealthInsurancePremiumWithBreakdown,
@@ -27,6 +30,7 @@ import {
 } from './residenceTax';
 import {
   calculateDependentDeductions,
+  countDependentsWithinEligibilityIncome,
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
 import { COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP } from '../constants/taxThresholds';
@@ -433,6 +437,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   let employmentInsurance = 0;
   let socialInsuranceDeduction: number;
   let nhiBreakdown = null;
+  let nationalPensionExemption: TakeHomeResults['nationalPensionExemption'];
 
   // Bonus breakdown variables
   let healthInsuranceOnBonus = 0;
@@ -508,16 +513,30 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       pensionPayments = pensionResult.total;
       pensionOnBonus = pensionResult.bonusPortion;
     } else {
-      // National Pension
-      const pensionResult = calculatePensionBreakdown(
-        isInEmployeePensionSystem,
-        0,
-        true,
-        [],
-        incomeYear,
-      );
-      pensionPayments = pensionResult.total;
-      pensionOnBonus = pensionResult.bonusPortion;
+      // National Pension. The full exemption (全額免除) zeroes the contribution when
+      // requested and the income test passes; the statutory test is on 前年所得, applied
+      // here to the current year's 合計所得金額 (steady-state single-year model).
+      const dependentCount = countDependentsWithinEligibilityIncome(inputs.dependents, incomeYear);
+      const incomeThreshold = calculateNationalPensionFullExemptionThreshold(dependentCount);
+      const requested = inputs.nationalPensionExemption ?? false;
+      const eligible = netIncome <= incomeThreshold;
+      const applied = requested && eligible;
+      nationalPensionExemption = { requested, eligible, applied, incomeThreshold };
+
+      if (applied) {
+        pensionPayments = 0;
+        pensionOnBonus = 0;
+      } else {
+        const pensionResult = calculatePensionBreakdown(
+          isInEmployeePensionSystem,
+          0,
+          true,
+          [],
+          incomeYear,
+        );
+        pensionPayments = pensionResult.total;
+        pensionOnBonus = pensionResult.bonusPortion;
+      }
     }
 
     // Employment Insurance also includes full commuting allowance
@@ -691,6 +710,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     nhiLongTermCarePortion: nhiBreakdown?.longTermCarePortion,
     nhiChildSupportPortion: nhiBreakdown?.childSupportPortion,
     nhiReductionRatios: nhiBreakdown?.reductionRatios,
+    nationalPensionExemption,
     // Context needed for cap detection
     salaryIncome,
     healthInsuranceProvider: inputs.healthInsuranceProvider,

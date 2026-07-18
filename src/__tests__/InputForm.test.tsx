@@ -38,6 +38,7 @@ describe('TakeHomeInputForm Tests', () => {
     savedIncomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
+    nationalPensionExemption: false,
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
@@ -298,6 +299,7 @@ describe('Dependent Coverage UI Behavior', () => {
     savedIncomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
+    nationalPensionExemption: false,
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
@@ -498,6 +500,7 @@ describe('Age Range Selection', () => {
     savedIncomeStreams: [],
     isSubjectToLongTermCarePremium: false,
     healthInsuranceProvider: 'KyokaiKenpo',
+    nationalPensionExemption: false,
     region: 'Tokyo',
     dcPlanContributions: 0,
     dependents: [],
@@ -539,6 +542,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     isSubjectToLongTermCarePremium: false,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,
+    nationalPensionExemption: false,
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
@@ -582,6 +586,7 @@ describe('Commuting Allowance Integration', () => {
       savedIncomeStreams: [],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: 'KyokaiKenpo',
+      nationalPensionExemption: false,
       region: 'Tokyo',
       dcPlanContributions: 0,
       dependents: [],
@@ -643,6 +648,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
       savedIncomeStreams: [],
       isSubjectToLongTermCarePremium: false,
       healthInsuranceProvider: 'KyokaiKenpo', // An employee provider
+      nationalPensionExemption: false,
       region: 'Tokyo',
       dcPlanContributions: 0,
       dependents: [],
@@ -686,5 +692,73 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
     // 5. Assert UI Outcome
     // The provider should now be "National Health Insurance"
     expect(providerSelect).toHaveTextContent('National Health Insurance');
+  });
+});
+
+describe('National Pension Exemption Toggle', () => {
+  const mockDispatch = vi.fn();
+
+  const nhiInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    annualIncome: 600_000,
+    incomeYear: 2026,
+    incomeMode: 'miscellaneous',
+    incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 600_000 }],
+    savedIncomeStreams: [],
+    isSubjectToLongTermCarePremium: false,
+    healthInsuranceProvider: 'NationalHealthInsurance',
+    nationalPensionExemption: false,
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  beforeEach(() => {
+    mockDispatch.mockClear();
+  });
+
+  it('renders the toggle when NHI is selected and income is within the threshold', async () => {
+    const user = userEvent.setup();
+    render(<TakeHomeInputForm inputs={nhiInputs} dispatch={mockDispatch} />);
+
+    // Net income 600,000 ≤ 670,000 single-person threshold → the toggle is offered
+    const toggle = screen.getByRole('switch', { name: /national pension full exemption/i });
+    await user.click(toggle);
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'setField',
+      field: 'nationalPensionExemption',
+      value: true,
+    });
+  });
+
+  it('does not render the toggle when income exceeds the threshold', () => {
+    const inputs: TakeHomeFormState = {
+      ...nhiInputs,
+      annualIncome: 700_000,
+      incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 700_000 }],
+    };
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    // Net income 700,000 > 670,000 → the toggle is hidden (a stale `true` is a no-op)
+    expect(
+      screen.queryByRole('switch', { name: /national pension full exemption/i }),
+    ).toBeNull();
+  });
+
+  it('does not render the toggle for employee providers', () => {
+    const inputs: TakeHomeFormState = {
+      ...nhiInputs,
+      incomeMode: 'salary',
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 600_000, frequency: 'annual' }],
+      healthInsuranceProvider: 'KyokaiKenpo',
+    };
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    expect(
+      screen.queryByRole('switch', { name: /national pension full exemption/i }),
+    ).toBeNull();
   });
 });

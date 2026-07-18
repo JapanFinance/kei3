@@ -138,6 +138,7 @@ interface TakeHomeChartProps {
   isEmploymentIncome: boolean;
   isSubjectToLongTermCarePremium: boolean;
   healthInsuranceProvider: HealthInsuranceProviderId;
+  nationalPensionExemption?: boolean;
   region: string;
   dcPlanContributions: number;
   dependents: Dependent[];
@@ -226,6 +227,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   isEmploymentIncome,
   isSubjectToLongTermCarePremium,
   healthInsuranceProvider,
+  nationalPensionExemption,
   region,
   dcPlanContributions,
   dependents,
@@ -301,6 +303,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         incomeYear,
         isSubjectToLongTermCarePremium,
         healthInsuranceProvider,
+        nationalPensionExemption,
         region,
         dcPlanContributions,
         dependents,
@@ -319,6 +322,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       incomeYear,
       isSubjectToLongTermCarePremium,
       healthInsuranceProvider,
+      nationalPensionExemption,
       region,
       dcPlanContributions,
       dependents,
@@ -361,6 +365,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   isEmploymentIncome,
                   isSubjectToLongTermCarePremium,
                   healthInsuranceProvider,
+                  nationalPensionExemption,
                   region,
                   dcPlanContributions,
                   dependents,
@@ -402,6 +407,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     isEmploymentIncome,
     isSubjectToLongTermCarePremium,
     healthInsuranceProvider,
+    nationalPensionExemption,
     region,
     dcPlanContributions,
     dependents,
