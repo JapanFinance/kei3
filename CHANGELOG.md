@@ -6,13 +6,12 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### New
 
-- Added a household type selector to the income distribution chart. The percentile estimate, median line, and background quintile bands can now be compared against any of the six household types (世帯類型) the survey publishes. For example, a ¥5,000,000 income ranks above ~54% of all households but above only ~39% of non-elderly households (高齢者世帯以外の世帯), since the all-households figures include elderly households. Each type's definition and median income are in the tooltip beside the selector.
+- Added a household type selector to the income distribution chart. The percentile estimates can now be compared against any of the household types the survey publishes instead of only the "all households" population.
 
 ### Updated
 
-- Updated the income distribution to the Ministry of Health, Labour and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year. The median household income marker moves from ¥4,100,000 to ¥4,510,000.
+- Updated the income distribution to the Ministry of Health, Labour and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
 - The percentile estimate is more precise below ¥10,000,000, where the survey's income brackets now resolve in ¥500,000 steps instead of ¥1,000,000.
-- An income above ¥20,000,000 is now described as being in the top share of households (for all households, the top ~1.6%) rather than with a precise-looking percentile, since the survey groups all incomes above that level together.
 
 ## 2026-06-29
 
