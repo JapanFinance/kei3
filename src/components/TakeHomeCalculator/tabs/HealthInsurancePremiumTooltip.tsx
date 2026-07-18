@@ -24,22 +24,26 @@ import {
   getNHIParamsForMonth,
   nhiParamsDiffer,
 } from '../../../data/nationalHealthInsurance/nhiParamsData';
+import { getNHIPremiumReductionThresholdsForMonth } from '../../../data/nationalHealthInsurance/nhiPremiumReduction';
 import type { Rate } from '../../../data/rate';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
+  type NHIPremiumReductionRatio,
 } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import {
   calculateNationalHealthInsurancePortion,
+  getNHIPremiumReductionRatioForMonth,
   premiumCalculationBase,
   nationalHealthInsurancePortionDiffers,
   type NationalHealthInsurancePortion,
   type NationalHealthInsurancePortionKey,
 } from '../../../utils/healthInsuranceCalculator';
+import SourceLinks from '../../ui/SourceLinks';
 import SMRTableTooltip from './SMRTableTooltip';
 
 const PORTION_LABELS: Record<NationalHealthInsurancePortionKey, string> = {
@@ -49,6 +53,13 @@ const PORTION_LABELS: Record<NationalHealthInsurancePortionKey, string> = {
   childSupport: 'Child Support Portion',
 };
 
+/** Display names for the 均等割額・平等割額の軽減 tiers, keyed by reduction ratio. */
+const REDUCTION_TIER_LABELS: Record<NHIPremiumReductionRatio, string> = {
+  0.7: '7割軽減',
+  0.5: '5割軽減',
+  0.2: '2割軽減',
+  0: '',
+};
 interface NHIPortionTooltipProps {
   portion: NationalHealthInsurancePortionKey;
   results: TakeHomeResults;
@@ -79,11 +90,27 @@ const PortionBreakdown: React.FC<{
       {formatJPY(calc.incomeBased)}
     </Typography>
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-      Per-capita (均等割): {formatJPY(calc.perCapita)}
+      Per-capita (均等割):{' '}
+      {calc.reductionRatio > 0 ? (
+        <>
+          {formatJPY(calc.perCapitaFull)} × {Math.round((1 - calc.reductionRatio) * 100)}%
+          <sup>†</sup> = {formatJPY(calc.perCapita)}
+        </>
+      ) : (
+        formatJPY(calc.perCapita)
+      )}
     </Typography>
-    {calc.householdFlat > 0 && (
+    {calc.householdFlatFull > 0 && (
       <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-        Household flat rate (平等割): {formatJPY(calc.householdFlat)}
+        Household flat rate (平等割):{' '}
+        {calc.reductionRatio > 0 ? (
+          <>
+            {formatJPY(calc.householdFlatFull)} × {Math.round((1 - calc.reductionRatio) * 100)}%
+            <sup>†</sup> = {formatJPY(calc.householdFlat)}
+          </>
+        ) : (
+          formatJPY(calc.householdFlat)
+        )}
       </Typography>
     )}
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
@@ -136,6 +163,11 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   const prevFYData = getNHIParamsForMonth(region, year, 0); // Jan → previous FY
   const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
 
+  // Low-income reduction tier per fiscal year — must reproduce the calculator's judgement
+  // exactly, or the parity assertions below throw in dev builds.
+  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 0);
+  const currReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 3);
+
   if (!currFYData) {
     return (
       <Box>
@@ -145,7 +177,12 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   }
 
   const base = premiumCalculationBase(results.totalNetIncome);
-  const currCalc = calculateNationalHealthInsurancePortion(base, currFYData, portion);
+  const currCalc = calculateNationalHealthInsurancePortion(
+    base,
+    currFYData,
+    portion,
+    currReductionRatio,
+  );
   if (!currCalc) {
     return (
       <Box>
@@ -168,7 +205,8 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   // parameters are unchanged blends to its single-year premium.
   const blended =
     prevFYData !== undefined &&
-    nationalHealthInsurancePortionDiffers(prevFYData, currFYData, portion);
+    (nationalHealthInsurancePortionDiffers(prevFYData, currFYData, portion) ||
+      prevReductionRatio !== currReductionRatio);
 
   const source = currFYData.source && (
     <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
@@ -184,8 +222,54 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     </Typography>
   );
 
+  const hasReduction = currReductionRatio > 0 || (blended && prevReductionRatio > 0);
+
+  const reductionTierDescription = (() => {
+    if (blended && prevReductionRatio !== currReductionRatio) {
+      const prevText = `${Math.round(prevReductionRatio * 100)}% (${REDUCTION_TIER_LABELS[prevReductionRatio]})`;
+      const currText = `${Math.round(currReductionRatio * 100)}% (${REDUCTION_TIER_LABELS[currReductionRatio]})`;
+      return `Jan–Mar ${prevText}, Jun–Dec ${currText}`;
+    }
+    const ratio = currReductionRatio > 0 ? currReductionRatio : prevReductionRatio;
+    return `${Math.round(ratio * 100)}% (${REDUCTION_TIER_LABELS[ratio]})`;
+  })();
+
+  const reductionFootnote = hasReduction && (
+    <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed', borderColor: 'divider' }}>
+      <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
+        <sup>†</sup> Reflects the statutory {reductionTierDescription} low-income reduction
+        (均等割額の軽減) on per-capita and household flat-rate amounts, applied based on household
+        total net income (総所得金額等).
+      </Typography>
+      <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
+        {(() => {
+          const thresholds = getNHIPremiumReductionThresholdsForMonth(year, 3);
+          return (
+            `Single-person thresholds for FY${year}: ` +
+            `70% ≤ ${formatJPY(thresholds.baseAmount)}; ` +
+            `50% ≤ ${formatJPY(thresholds.baseAmount + thresholds.fiftyPercentPerInsured)}; ` +
+            `20% ≤ ${formatJPY(thresholds.baseAmount + thresholds.twentyPercentPerInsured)}.`
+          );
+        })()}
+      </Typography>
+      <SourceLinks
+        sources={[
+          {
+            href: 'https://www.city.setagaya.lg.jp/02060/300.html',
+            label: '国民健康保険料の軽減・減免 - 世田谷区',
+          },
+        ]}
+      />
+    </Box>
+  );
+
   if (blended) {
-    const prevCalc = calculateNationalHealthInsurancePortion(base, prevFYData, portion);
+    const prevCalc = calculateNationalHealthInsurancePortion(
+      base,
+      prevFYData,
+      portion,
+      prevReductionRatio,
+    );
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
 
@@ -243,6 +327,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
         </Box>
 
         {source}
+        {reductionFootnote}
       </Box>
     );
   }
@@ -256,6 +341,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
       <PortionBreakdown label="" calculationBase={base} calc={currCalc} premium={portionPremium} />
 
       {source}
+      {reductionFootnote}
     </Box>
   );
 };
@@ -309,6 +395,12 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           NHI premiums are calculated using income-based rates plus per-capita amounts, with annual
           caps applied to each portion. NHI premiums are based on last year's reported income. These
           calculations assume income is the same as the previous year.
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
+          Households with income at or below statutory thresholds receive a 70%, 50%, or 20%
+          reduction of the per-capita (均等割) and household flat rate (平等割) amounts
+          (均等割額の軽減). Municipalities determine eligibility based on the household's declared
+          or reported income (via tax returns, employer wage reports, or pension statements).
         </Typography>
 
         {ratesBlended && (

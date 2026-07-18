@@ -15,6 +15,7 @@ import {
   calculateEmployeesHealthInsuranceBonusBreakdown,
   calculateNationalHealthInsurancePortion,
   calculateNationalHealthInsurancePremiumWithBreakdown,
+  getNHIPremiumReductionRatioForMonth,
   premiumCalculationBase,
 } from '../utils/healthInsuranceCalculator';
 
@@ -22,6 +23,7 @@ const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
 const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
 
 const FY2025 = 2025;
+const YEAR_2026 = 2026;
 
 describe('calculateHealthInsuranceBreakdown for employees', () => {
   describe('Kyokai Kenpo (Tokyo)', () => {
@@ -213,13 +215,20 @@ describe('calculateNationalHealthInsurancePremiumWithBreakdown for non-employees
     ).toBe(1_090_000);
   });
 
-  it('handles zero income correctly', () => {
+  it('handles zero income correctly in 2026', () => {
+    // Zero income is within the 7割軽減 tier (≤ ¥430,000) for both FY2025 and FY2026.
+    // Tokyo 2026 blends FY2025 (3/10) and FY2026 (7/10):
+    // Medical: round(14,190 × 0.3 + 14,280 × 0.7) = 14,253
+    // Support: round(5,040 × 0.3 + 5,280 × 0.7) = 5,208
+    // Child support (FY2026): round(0 × 0.3 + 562 × 0.7) = 393
+    // Total without LTC: 19,854
     expect(
-      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, FY2025, 'Tokyo').total,
-    ).toBe(64_100);
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, YEAR_2026, 'Tokyo').total,
+    ).toBe(19_854);
+    // With LTC: + round(4,980 × 0.3 + 5,340 × 0.7) = 5,232 → total 25,086
     expect(
-      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, FY2025, 'Tokyo').total,
-    ).toBe(80_700);
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, YEAR_2026, 'Tokyo').total,
+    ).toBe(25_086);
   });
 
   it('handles negative income correctly', () => {
@@ -264,13 +273,140 @@ describe('calculateNationalHealthInsurancePremiumWithBreakdown for employees wit
     ).toBe(1_090_000);
   });
 
-  it('handles zero employment income correctly', () => {
+  it('handles zero employment income correctly in 2026', () => {
+    // 7割軽減 applies (≤ ¥430,000): Tokyo 2026 total is 19,854; with LTC adds 5,232 = 25,086
     expect(
-      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, FY2025, 'Tokyo').total,
-    ).toBe(64_100);
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, YEAR_2026, 'Tokyo').total,
+    ).toBe(19_854);
     expect(
-      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, FY2025, 'Tokyo').total,
-    ).toBe(80_700);
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, YEAR_2026, 'Tokyo').total,
+    ).toBe(25_086);
+  });
+});
+
+describe('NHI low-income premium reduction (均等割額の軽減)', () => {
+  // Statutory thresholds for a single insured person (被保険者数 = 1, 給与所得者等 = 1):
+  //   FY2025 (令和7年度): 7割 ≤ 430,000; 5割 ≤ 430,000 + 305,000 = 735,000; 2割 ≤ 430,000 + 560,000 = 990,000
+  //   FY2026 (令和8年度): 7割 ≤ 430,000; 5割 ≤ 430,000 + 310,000 = 740,000; 2割 ≤ 430,000 + 570,000 = 1,000,000
+  // Sources: 国民健康保険法施行令 第29条の7,
+  //          https://www.city.setagaya.lg.jp/02060/300.html,
+  //          https://www.city.nara.lg.jp/site/kokuminkenkouhoken/9305.html
+
+  describe('FY2026 statutory threshold ratio evaluation', () => {
+    // Evaluated for month 3 (April 2026, start of FY2026)
+    it.each([
+      { income: 0, expected: 0.7 },
+      { income: 430_000, expected: 0.7 },
+      { income: 430_001, expected: 0.5 },
+      { income: 740_000, expected: 0.5 },
+      { income: 740_001, expected: 0.2 },
+      { income: 1_000_000, expected: 0.2 },
+      { income: 1_000_001, expected: 0 },
+    ])('returns ratio $expected at net income $income', ({ income, expected }) => {
+      expect(getNHIPremiumReductionRatioForMonth(income, YEAR_2026, 3)).toBe(expected);
+    });
+  });
+
+  describe('calendar year 2026 blended calculations', () => {
+    // Calendar 2026 blends FY2025 (Jan–Mar, 3/10) and FY2026 (Apr–Dec, 7/10).
+    // In Tokyo, FY2025 per-capita is 47,300/16,800; FY2026 is 47,600/17,600 + child support 1,873.
+
+    it('applies 7割軽減 up to and including net income 430,000', () => {
+      // Both FYs apply 7割軽減. Taxable income (430,000 − 430,000) = 0, so only reduced per-capita remains:
+      // FY2025: (47,300 + 16,800) × 0.3 = 19,230
+      // FY2026: (47,600 + 17,600 + 1,873) × 0.3 = 14,280 + 5,280 + 562 = 20,122
+      // Blended: round(14,190 × 0.3 + 14,280 × 0.7) = 14,253; round(5,040 × 0.3 + 5,280 × 0.7) = 5,208;
+      //          round(0 × 0.3 + 562 × 0.7) = 393 → total 19,854
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        430_000,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0.7, currFY: 0.7 });
+      expect(result.total).toBe(19_854);
+    });
+
+    it('applies 5割軽減 in both fiscal years just above the 7割 threshold', () => {
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        430_001,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0.5, currFY: 0.5 });
+      expect(result.total).toBe(33_091);
+    });
+
+    it('applies 5割軽減 in both fiscal years up to 735,000', () => {
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        735_000,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0.5, currFY: 0.5 });
+      expect(result.total).toBe(65_196);
+    });
+
+    it('handles threshold transition where FY2025 is 2割 and FY2026 is 5割 (735,001 to 740,000)', () => {
+      // 740,000 exceeds FY2025's 5割 threshold (735,000) so FY2025 applies 2割,
+      // but is within FY2026's revised 5割 threshold (740,000) so FY2026 applies 5割.
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        740_000,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0.2, currFY: 0.5 });
+      expect(result.total).toBe(71_491);
+    });
+
+    it('applies 2割軽減 in both fiscal years just above the FY2026 5割 threshold', () => {
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        740_001,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0.2, currFY: 0.2 });
+      expect(result.total).toBe(85_576);
+    });
+
+    it('applies 2割軽減 in both fiscal years up to 990,000', () => {
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        990_000,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0.2, currFY: 0.2 });
+      expect(result.total).toBe(111_890);
+    });
+
+    it('handles threshold transition where FY2025 is unreduced and FY2026 is 2割 (990,001 to 1,000,000)', () => {
+      // 1,000,000 exceeds FY2025's 2割 threshold (990,000) so FY2025 applies no reduction,
+      // but is within FY2026's revised 2割 threshold (1,000,000) so FY2026 applies 2割.
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        1_000_000,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0, currFY: 0.2 });
+      expect(result.total).toBe(116_789);
+    });
+
+    it('applies no reduction in either fiscal year above the FY2026 2割 threshold', () => {
+      const result = calculateNationalHealthInsurancePremiumWithBreakdown(
+        1_000_001,
+        false,
+        YEAR_2026,
+        'Tokyo',
+      );
+      expect(result.reductionRatios).toEqual({ prevFY: 0, currFY: 0 });
+      expect(result.total).toBe(126_179);
+    });
   });
 });
 
@@ -315,18 +451,21 @@ describe('calculateNationalHealthInsurancePremiumWithBreakdown for Osaka', () =>
     ).toBe(1_060_000); // 650k + 240k + 170k
   });
 
-  it('handles zero income correctly for Osaka (only per-capita and household flat amounts)', () => {
-    // Medical: 0 + 34,424 + 33,574 = 67,998
-    // Support: 0 + 11,034 + 10,761 = 21,795
-    // Total without LTC: 89,793
+  it('handles zero income correctly for Osaka in 2026 (reduced per-capita and household flat amounts)', () => {
+    // 7割軽減 applies to both 均等割 and 平等割 in Osaka for 2026:
+    // FY2025: Medical (34,424 + 33,574) × 0.3 = 20,399.4 → 20,399; Support (11,034 + 10,761) × 0.3 = 6,538.5 → 6,539
+    // FY2026: Medical (34,990 + 33,908) × 0.3 = 20,669.4 → 20,669; Support (11,191 + 10,845) × 0.3 = 6,610.8 → 6,611;
+    //         Child support 1,841 × 0.3 = 552.3 → 552
+    // Blended: Medical 20,588 + Support 6,589 + Child 386 = 27,563
     expect(
-      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, FY2025, 'Osaka').total,
-    ).toBe(89_793);
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, YEAR_2026, 'Osaka').total,
+    ).toBe(27_563);
 
-    // With LTC: + 18,784 = 108,577
+    // With LTC: FY2025 LTC 18,784 × 0.3 = 5,635; FY2026 LTC 18,682 × 0.3 = 5,605
+    // Blended LTC: round(5,635 × 0.3 + 5,605 × 0.7) = 5,614 → total 33,177
     expect(
-      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, FY2025, 'Osaka').total,
-    ).toBe(108_577);
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, YEAR_2026, 'Osaka').total,
+    ).toBe(33_177);
   });
 });
 

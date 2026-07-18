@@ -130,6 +130,15 @@ export type ProviderRegion = string;
 export const DEFAULT_PROVIDER_REGION = 'DEFAULT';
 
 /**
+ * Statutory NHI low-income premium reduction (均等割額・平等割額の軽減) ratio:
+ * - 0.7: 7割軽減 (70% reduction)
+ * - 0.5: 5割軽減 (50% reduction)
+ * - 0.2: 2割軽減 (20% reduction)
+ * - 0: No reduction
+ */
+export type NHIPremiumReductionRatio = 0.7 | 0.5 | 0.2 | 0;
+
+/**
  * Parameters for calculating National Health Insurance (NHI) premiums.
  * These values vary by municipality.
  * All rates are annual. Caps are annual. Per-capita amounts are annual.

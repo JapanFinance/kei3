@@ -3,7 +3,11 @@
 
 import type { Rate } from '../data/rate';
 import type { Dependent, DependentDeductionResults, DisabilityLevel } from './dependents';
-import type { HealthInsuranceProviderId, LongTermCareCategory1Estimate } from './healthInsurance';
+import type {
+  HealthInsuranceProviderId,
+  LongTermCareCategory1Estimate,
+  NHIPremiumReductionRatio,
+} from './healthInsurance';
 import type { TaxpayerAgeRange } from './taxpayerAge';
 
 export type IncomeMode = 'salary' | 'advanced';
@@ -1049,6 +1053,13 @@ export interface TakeHomeResults {
   nhiElderlySupportCapped?: boolean | undefined;
   nhiLongTermCareCapped?: boolean | undefined;
   nhiChildSupportCapped?: boolean | undefined;
+  /**
+   * NHI low-income reduction (均等割額・平等割額の軽減) ratio applied in each fiscal year of
+   * the calendar year (0 = no reduction, 0.7 = 7割軽減). Only set when NHI is selected.
+   */
+  nhiReductionRatios?:
+    | { prevFY: NHIPremiumReductionRatio; currFY: NHIPremiumReductionRatio }
+    | undefined;
   // 後期高齢者医療制度 breakdown (only at ages 75+); the portions sum to healthInsurance
   latterStageMedicalPortion?: number | undefined;
   latterStageChildSupportPortion?: number | undefined;
