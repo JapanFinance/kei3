@@ -357,8 +357,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     const baseOptions = getChartOptions(
       chartRange,
       currentIncome,
-      useCompactLabelFormat,
       distribution.median,
+      useCompactLabelFormat,
     );
 
     // Enhance tooltips to include percentile and cap information

@@ -190,9 +190,3 @@ export const HOUSEHOLD_TYPE_ORDER: readonly HouseholdType[] = [
 
 /** The distribution shown until another 世帯類型 is picked. */
 export const DEFAULT_HOUSEHOLD_TYPE: HouseholdType = 'all';
-
-/** 全世帯 中央値, in yen. */
-export const MEDIAN_INCOME_VALUE = HOUSEHOLD_INCOME_DISTRIBUTIONS.all.median;
-
-/** 全世帯 相対度数分布. */
-export const INCOME_RANGE_DISTRIBUTION = HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges;

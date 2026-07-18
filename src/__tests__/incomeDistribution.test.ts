@@ -6,7 +6,6 @@ import {
   HOUSEHOLD_INCOME_DISTRIBUTIONS,
   HOUSEHOLD_TYPE_ORDER,
   QUINTILE_DATA,
-  MEDIAN_INCOME_VALUE,
   DEFAULT_HOUSEHOLD_TYPE,
   type HouseholdType,
 } from '../data/income';
@@ -40,42 +39,42 @@ describe('household income distributions', () => {
     expect(ranges.every(range => range.percent >= 0)).toBe(true);
   });
 
-  // The load-bearing check on the extraction: 第０２１表 prints six household-type columns against
-  // one set of bracket rows, so a column read off by one would still look plausible. Each type's
-  // published 中央値 is the independent value that catches it.
+  // The load-bearing check on the transcription. The source table (mirrored by DISTRIBUTION_TABLE)
+  // prints all six household types side by side, so a mistake that assigns one type's percentages
+  // to a neighboring type still yields plausible-looking data. Each type's published 中央値 is an
+  // independent number such a mix-up cannot reproduce: interpolating another type's percentages
+  // misses it by 50万 or more, far outside the tolerance here.
   it.each(ALL_TYPES)('$labelJa interpolates to its published 中央値', ({ ranges, median }) => {
-    // Interpolation runs slightly high against the published median, which the survey computes from
-    // ungrouped responses; 10万 leaves room for that bias without admitting a wrong column, whose
-    // medians differ from each other by 50万 or more.
+    // Interpolation sits slightly high of the published medians (up to +4.2万 measured across the
+    // six types), because the survey computes them from ungrouped responses while the brackets
+    // spread each bucket evenly; 5万 covers that bias with little room beyond it.
     const interpolated = estimateIncomeAtPercentile(50, ranges);
-    expect(Math.abs(interpolated - median)).toBeLessThanOrEqual(100_000);
+    expect(Math.abs(interpolated - median)).toBeLessThanOrEqual(50_000);
   });
 
-  it('orders the household types as the survey reports them', () => {
-    // Guards against silently swapping two types' data: the survey's own medians rank this way.
-    const medianOf = (type: HouseholdType) => HOUSEHOLD_INCOME_DISTRIBUTIONS[type].median;
-    expect(medianOf('elderly')).toBeLessThan(medianOf('all'));
-    expect(medianOf('with65Plus')).toBeLessThan(medianOf('all'));
-    expect(medianOf('all')).toBeLessThan(medianOf('nonElderly'));
-    expect(medianOf('nonElderly')).toBeLessThan(medianOf('withChildren'));
-    expect(medianOf('singleMother')).toBeLessThan(medianOf('all'));
-  });
-
-  it('keeps 全世帯 as the exported default distribution', () => {
-    expect(MEDIAN_INCOME_VALUE).toBe(4_510_000);
-    expect(HOUSEHOLD_INCOME_DISTRIBUTIONS.all.median).toBe(MEDIAN_INCOME_VALUE);
-  });
-
-  it('keeps the 全世帯 五分位値 consistent with the 全世帯 distribution', () => {
-    // 五分位値 are published on a 全世帯 basis only, so they should line up with that distribution
-    // and no other. Tolerance is wide because the survey derives them from ungrouped responses.
-    for (const [percentile, income] of Object.entries(QUINTILE_DATA)) {
-      const interpolated = estimateIncomeAtPercentile(
-        Number(percentile),
-        HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges,
+  it('keeps the published 中央値 in the survey ranking across types', () => {
+    // The checksum above ties each type's ranges to its own median, but it cannot notice two whole
+    // entries being swapped, since a median travels with its ranges. Pinning the medians' relative
+    // order ties each household-type id to data of the right magnitude:
+    // 高齢者世帯 273 < 母子世帯 299 < 65歳以上 349 < 全世帯 451 < 高齢者世帯以外 600 < 児童 766万.
+    const surveyOrder: HouseholdType[] = [
+      'elderly',
+      'singleMother',
+      'with65Plus',
+      'all',
+      'nonElderly',
+      'withChildren',
+    ];
+    for (let i = 1; i < surveyOrder.length; i++) {
+      expect(HOUSEHOLD_INCOME_DISTRIBUTIONS[surveyOrder[i - 1]!].median).toBeLessThan(
+        HOUSEHOLD_INCOME_DISTRIBUTIONS[surveyOrder[i]!].median,
       );
-      expect(Math.abs(interpolated - income)).toBeLessThanOrEqual(400_000);
     }
+  });
+
+  it('defaults to 全世帯, whose median is the survey headline value', () => {
+    expect(DEFAULT_HOUSEHOLD_TYPE).toBe('all');
+    expect(HOUSEHOLD_INCOME_DISTRIBUTIONS.all.median).toBe(4_510_000);
   });
 });
 
@@ -87,14 +86,19 @@ describe('estimateIncomePercentile', () => {
     expect(estimateIncomePercentile(-1, ranges).percentile).toBe(0);
   });
 
-  it('increases monotonically across the distribution', () => {
-    let previous = -1;
-    for (let income = 0; income <= 25_000_000; income += 250_000) {
-      const { percentile } = estimateIncomePercentile(income, ranges);
-      expect(percentile).toBeGreaterThanOrEqual(previous);
-      previous = percentile;
-    }
-  });
+  // Per type, because 母子世帯 has zero-percent brackets: the estimate must plateau across those,
+  // not decrease or jump.
+  it.each(ALL_TYPES)(
+    '$labelJa increases monotonically across incomes',
+    ({ ranges: typeRanges }) => {
+      let previous = -1;
+      for (let income = 0; income <= 25_000_000; income += 250_000) {
+        const { percentile } = estimateIncomePercentile(income, typeRanges);
+        expect(percentile).toBeGreaterThanOrEqual(previous);
+        previous = percentile;
+      }
+    },
+  );
 
   it('interpolates within a bracket rather than stepping', () => {
     const low = estimateIncomePercentile(5_100_000, ranges).percentile;
@@ -121,7 +125,9 @@ describe('estimateIncomePercentile', () => {
   it('reports the 全世帯 top bracket as the published 2000万円以上 share', () => {
     const estimate = estimateIncomePercentile(30_000_000, ranges);
     expect(estimate.topBracketPercent).toBe(1.6);
-    expect(estimate.percentile).toBeGreaterThan(97);
+    // The bound is the 24 finite brackets' sum: the published 100.1 total minus the 1.6 top share.
+    // toBeCloseTo rather than toBe because summing 24 decimals accumulates float error.
+    expect(estimate.percentile).toBeCloseTo(98.5, 6);
   });
 
   it('separates the household types at a working-age income', () => {
@@ -175,8 +181,9 @@ describe('estimateIncomeAtPercentile', () => {
     expect(q80).toBeLessThan(20_000_000);
   });
 
-  // Measures the method's accuracy on the one type where the survey publishes the true 五分位値.
-  // This bound is what justifies estimating the other types' boundaries from their buckets.
+  // Serves double duty: it measures the estimator on the one type where the survey publishes the
+  // true 五分位値 — the bound that justifies estimating the other types' band boundaries from
+  // their buckets — and it pins QUINTILE_DATA to the 全世帯 distribution it must accompany.
   it('reproduces the published 全世帯 五分位値 within 5万', () => {
     const { ranges } = HOUSEHOLD_INCOME_DISTRIBUTIONS.all;
     for (const [percentile, published] of Object.entries(QUINTILE_DATA)) {
@@ -184,4 +191,30 @@ describe('estimateIncomeAtPercentile', () => {
       expect(Math.abs(estimated - published)).toBeLessThanOrEqual(50_000);
     }
   });
+
+  it.each(ALL_TYPES)('$labelJa income increases with percentile', ({ ranges: typeRanges }) => {
+    let previous = 0;
+    for (let percentile = 1; percentile <= 99; percentile++) {
+      const income = estimateIncomeAtPercentile(percentile, typeRanges);
+      expect(income).toBeGreaterThanOrEqual(previous);
+      previous = income;
+    }
+  });
+
+  it('returns the top bracket floor for a percentile inside the open-ended bracket', () => {
+    // 全世帯's 24 finite brackets sum to 98.5, so 99 lands inside 2000万円以上, which has no width
+    // to interpolate across.
+    expect(estimateIncomeAtPercentile(99, HOUSEHOLD_INCOME_DISTRIBUTIONS.all.ranges)).toBe(
+      20_000_000,
+    );
+  });
+
+  // The rounded bucket percentages sum to 99.7-100.1, not exactly 100, so a requested percentile
+  // can exceed a type's total outright. The top bracket's floor is the only supportable answer.
+  it.each(ALL_TYPES)(
+    '$labelJa caps at the top bracket floor beyond its total',
+    ({ ranges: typeRanges }) => {
+      expect(estimateIncomeAtPercentile(101, typeRanges)).toBe(20_000_000);
+    },
+  );
 });
