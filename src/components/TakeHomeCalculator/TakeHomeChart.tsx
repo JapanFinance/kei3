@@ -697,8 +697,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   ))}
                 </Box>
                 <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
-                  The 再掲 (regrouping) groups overlap the others, so the six do not add up to all
-                  households.
+                  Some groups overlap — a household can be counted in more than one — so the six do
+                  not add up to all households.
                 </Typography>
                 <SourceLinks sources={INCOME_SURVEY_SOURCES} />
               </Box>

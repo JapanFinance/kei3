@@ -28,16 +28,21 @@ describe('household income distributions', () => {
     expect(sum).toBeLessThanOrEqual(100.5);
   });
 
-  it.each(ALL_TYPES)('$labelJa brackets are contiguous and open-ended at the top', ({ ranges }) => {
-    expect(ranges).toHaveLength(25);
-    expect(ranges[0]!.min_inclusive).toBe(0);
-    for (let i = 1; i < ranges.length; i++) {
-      expect(ranges[i]!.min_inclusive).toBe(ranges[i - 1]!.max_exclusive);
-    }
-    expect(ranges[ranges.length - 1]!.min_inclusive).toBe(20_000_000);
-    expect(ranges[ranges.length - 1]!.max_exclusive).toBe(Infinity);
-    expect(ranges.every(range => range.percent >= 0)).toBe(true);
-  });
+  it.each(ALL_TYPES)(
+    '$labelJa brackets are contiguous and open-ended at the top',
+    ({ id, ranges }) => {
+      // 全世帯 swaps the two coarse 1200万〜2000万 brackets for 図９'s eight 1M-yen steps, the
+      // finest published data; the other types only exist against 第０２１表's 25 brackets.
+      expect(ranges).toHaveLength(id === 'all' ? 31 : 25);
+      expect(ranges[0]!.min_inclusive).toBe(0);
+      for (let i = 1; i < ranges.length; i++) {
+        expect(ranges[i]!.min_inclusive).toBe(ranges[i - 1]!.max_exclusive);
+      }
+      expect(ranges[ranges.length - 1]!.min_inclusive).toBe(20_000_000);
+      expect(ranges[ranges.length - 1]!.max_exclusive).toBe(Infinity);
+      expect(ranges.every(range => range.percent >= 0)).toBe(true);
+    },
+  );
 
   // The load-bearing check on the transcription. The source table (mirrored by DISTRIBUTION_TABLE)
   // prints all six household types side by side, so a mistake that assigns one type's percentages
@@ -125,9 +130,10 @@ describe('estimateIncomePercentile', () => {
   it('reports the 全世帯 top bracket as the published 2000万円以上 share', () => {
     const estimate = estimateIncomePercentile(30_000_000, ranges);
     expect(estimate.topBracketPercent).toBe(1.6);
-    // The bound is the 24 finite brackets' sum: the published 100.1 total minus the 1.6 top share.
-    // toBeCloseTo rather than toBe because summing 24 decimals accumulates float error.
-    expect(estimate.percentile).toBeCloseTo(98.5, 6);
+    // The bound is the finite brackets' sum: 98.4, not 第０２１表's 100.1 - 1.6 = 98.5, because
+    // 図９'s finer 15〜20M rows sum to 2.5 where 第０２１表 prints 2.6 (rounding between the two
+    // published tables). toBeCloseTo rather than toBe absorbs float summation error.
+    expect(estimate.percentile).toBeCloseTo(98.4, 6);
   });
 
   it('separates the household types at a working-age income', () => {

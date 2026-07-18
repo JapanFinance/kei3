@@ -14,10 +14,10 @@
  * reports how each 世帯類型 spreads across these fixed bands rather than giving each type its own
  * boundaries, so these values must not be paired with a household-type distribution. */
 export const QUINTILE_DATA = {
-  20: 2_120_000, // 20th percentile income (第Ⅰ五分位値)
-  40: 3_600_000, // 40th percentile income (第Ⅱ五分位値)
-  60: 5_560_000, // 60th percentile income (第Ⅲ五分位値)
-  80: 8_590_000, // 80th percentile income (第Ⅳ五分位値)
+  20: 2_120_000, // 20th percentile income
+  40: 3_600_000, // 40th percentile income
+  60: 5_560_000, // 60th percentile income
+  80: 8_590_000, // 80th percentile income
 };
 
 /** One 所得金額階級 bucket. `max_exclusive` is Infinity for the open-ended top bucket. */
@@ -60,7 +60,8 @@ const DISTRIBUTION_COLUMNS: Record<HouseholdType, 1 | 2 | 3 | 4 | 5 | 6> = {
  * brackets run in 50万 steps to 1000万, then 1000～1100 / 1100～1200 / 1200～1500 / 1500～2000,
  * then the open-ended 2000万円以上. (The 概況's 第６表 shows the same cuts but stops at
  * 「1000万円以上」; 第０２１表 carries the same rows out to 2000万円以上, the bracket the 全世帯
- * chart has always used.)
+ * chart has always used. 全世帯 alone gets finer 1200万〜2000万 rows swapped in from 図９ — see
+ * {@link ALL_HOUSEHOLDS_TAIL_DETAIL}.)
  *
  * MHLW prints 「-」 (no applicable cases) for some 母子世帯 brackets; those are carried as 0. */
 // prettier-ignore
@@ -94,14 +95,47 @@ const DISTRIBUTION_TABLE: readonly DistributionRow[] = [
   [  Infinity,  1.6,  0.4,  2.2,  1.0,  3.3,  0.0],
 ];
 
-/** Reads one household type's column off the table as bracket ranges. */
+/** 図９'s finer 全世帯 tail: 1M-yen steps over 1200万〜2000万, from the 概況's
+ * 図９ 所得金額階級別世帯数の相対度数分布, which publishes this detail for 全世帯 only:
+ * https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html
+ *
+ * The 12〜15M rows sum to 第０２１表's 1200～1500 bracket exactly (4.3); the 15〜20M rows sum to
+ * 2.5 against 第０２１表's 2.6 — a rounding difference between the two published tables, carried
+ * here as 図９ prints it rather than rescaled to match. */
+// prettier-ignore
+const ALL_HOUSEHOLDS_TAIL_DETAIL: readonly [maxExclusive: number, percent: number][] = [
+  [13_000_000, 1.9],
+  [14_000_000, 1.4],
+  [15_000_000, 1.0],
+  [16_000_000, 0.7],
+  [17_000_000, 0.7],
+  [18_000_000, 0.3],
+  [19_000_000, 0.5],
+  [20_000_000, 0.3],
+];
+
+/** Reads one household type's column off the table as bracket ranges. 全世帯 additionally swaps
+ * the two coarse 1200万〜2000万 brackets for 図９'s 1M-yen steps, the finest published data;
+ * the other types are only published against the shared table's brackets. */
 const toRanges = (type: HouseholdType): IncomeRange[] => {
   const column = DISTRIBUTION_COLUMNS[type];
-  return DISTRIBUTION_TABLE.map((row, i) => ({
+  const ranges: IncomeRange[] = DISTRIBUTION_TABLE.map((row, i) => ({
     min_inclusive: i === 0 ? 0 : DISTRIBUTION_TABLE[i - 1]![0],
     max_exclusive: row[0],
     percent: row[column],
   }));
+  if (type !== 'all') return ranges;
+
+  const finerTail: IncomeRange[] = ALL_HOUSEHOLDS_TAIL_DETAIL.map(([maxExclusive, percent], i) => ({
+    min_inclusive: i === 0 ? 12_000_000 : ALL_HOUSEHOLDS_TAIL_DETAIL[i - 1]![0],
+    max_exclusive: maxExclusive,
+    percent,
+  }));
+  return [
+    ...ranges.filter(range => range.max_exclusive <= 12_000_000),
+    ...finerTail,
+    ranges[ranges.length - 1]!,
+  ];
 };
 
 export interface HouseholdIncomeDistribution {
@@ -118,10 +152,12 @@ export interface HouseholdIncomeDistribution {
   ranges: IncomeRange[];
 }
 
-/** Each 世帯類型's labels, definition, published 中央値, and its column of `DISTRIBUTION_TABLE`.
+/** Each 世帯類型's labels, definition, published 中央値, and its column of
+ * {@link DISTRIBUTION_TABLE}.
  *
- * Ordered for the selector: 全世帯 first, then the two-way 高齢者世帯 split, then the two 再掲
- * regroupings, then 母子世帯. */
+ * The declaration order is the selector order ({@link HOUSEHOLD_TYPE_ORDER} derives from it):
+ * 全世帯 first, then the two-way 高齢者世帯 split, the two overlapping 再掲 regroupings, then
+ * 母子世帯. */
 export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdIncomeDistribution> = {
   all: {
     id: 'all',
@@ -153,8 +189,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     id: 'with65Plus',
     label: 'Households with elderly',
     labelJa: '65歳以上の者のいる世帯',
-    definition:
-      'Any household with at least one member aged 65 or over. Published as a 再掲 (regrouping), so it overlaps both 高齢者世帯 and 高齢者世帯以外の世帯.',
+    definition: 'Any household with at least one member aged 65 or over.',
     median: 3_490_000,
     ranges: toRanges('with65Plus'),
   },
@@ -163,7 +198,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
     label: 'Households with children',
     labelJa: '児童のいる世帯',
     definition:
-      'Households with at least one 児童, defined in the 2025 survey as a person under 18. Published as a 再掲 (regrouping).',
+      'Households with at least one 児童, defined in the 2025 survey as a person under 18.',
     median: 7_660_000,
     ranges: toRanges('withChildren'),
   },
@@ -178,15 +213,11 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
   },
 };
 
-/** Selector order for the household-type distributions. */
-export const HOUSEHOLD_TYPE_ORDER: readonly HouseholdType[] = [
-  'all',
-  'elderly',
-  'nonElderly',
-  'with65Plus',
-  'withChildren',
-  'singleMother',
-];
+/** Selector order for the household types, derived from the declaration order of
+ * {@link HOUSEHOLD_INCOME_DISTRIBUTIONS} so the two cannot drift apart. */
+export const HOUSEHOLD_TYPE_ORDER = Object.keys(
+  HOUSEHOLD_INCOME_DISTRIBUTIONS,
+) as readonly HouseholdType[];
 
 /** The distribution shown until another 世帯類型 is picked. */
 export const DEFAULT_HOUSEHOLD_TYPE: HouseholdType = 'all';
