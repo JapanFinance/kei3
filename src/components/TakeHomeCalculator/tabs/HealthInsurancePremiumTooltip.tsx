@@ -14,6 +14,7 @@ import {
   type NationalHealthInsuranceRegionParams,
 } from '../../../types/healthInsurance';
 import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
+import { getNHIPremiumReductionRatioForMonth } from '../../../utils/healthInsuranceCalculator';
 import SMRTableTooltip from './SMRTableTooltip';
 import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
@@ -65,34 +66,62 @@ const PORTION_CONFIG: Record<
   },
 };
 
+/** Display names for the 均等割額・平等割額の軽減 tiers, keyed by reduction ratio. */
+const REDUCTION_TIER_LABELS: Record<number, string> = {
+  0.7: '7割軽減',
+  0.5: '5割軽減',
+  0.2: '2割軽減',
+};
+
 function calculatePortionForFY(
   nhiTaxableIncome: number,
   params: NationalHealthInsuranceRegionParams,
   portion: NHIPortionType,
+  reductionRatio: number,
 ): {
   incomeBasedAmount: number;
   perCapita: number;
+  perCapitaFull: number;
   householdFlat: number;
+  householdFlatFull: number;
+  reductionRatio: number;
   uncapped: number;
   cap: number;
   final: number;
 } {
   const config = PORTION_CONFIG[portion];
   const rate = params[config.rateKey] as number | undefined;
-  const perCapita = (params[config.perCapitaKey] as number | undefined) ?? 0;
-  const householdFlat = (params[config.householdFlatKey] as number | undefined) ?? 0;
+  const perCapitaFull = (params[config.perCapitaKey] as number | undefined) ?? 0;
+  const householdFlatFull = (params[config.householdFlatKey] as number | undefined) ?? 0;
   const cap = params[config.capKey] as number | undefined;
 
   if (!rate || !cap) {
-    return { incomeBasedAmount: 0, perCapita: 0, householdFlat: 0, uncapped: 0, cap: 0, final: 0 };
+    return {
+      incomeBasedAmount: 0,
+      perCapita: 0,
+      perCapitaFull: 0,
+      householdFlat: 0,
+      householdFlatFull: 0,
+      reductionRatio: 0,
+      uncapped: 0,
+      cap: 0,
+      final: 0,
+    };
   }
 
+  // Mirrors the calculator: the low-income reduction scales the per-capita and household
+  // flat rate amounts before the cap; the income-based portion is unaffected.
+  const perCapita = perCapitaFull * (1 - reductionRatio);
+  const householdFlat = householdFlatFull * (1 - reductionRatio);
   const incomeBasedAmount = nhiTaxableIncome * rate;
   const uncapped = incomeBasedAmount + perCapita + householdFlat;
   return {
     incomeBasedAmount,
     perCapita,
+    perCapitaFull,
     householdFlat,
+    householdFlatFull,
+    reductionRatio,
     uncapped,
     cap,
     final: Math.min(uncapped, cap),
@@ -128,11 +157,17 @@ const PortionBreakdown: React.FC<{
       {formatJPY(calc.incomeBasedAmount)}
     </Typography>
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-      Per-capita (均等割): {formatJPY(calc.perCapita)}
+      Per-capita (均等割):{' '}
+      {calc.reductionRatio > 0
+        ? `${formatJPY(calc.perCapitaFull)} × ${Math.round((1 - calc.reductionRatio) * 100)}% (${REDUCTION_TIER_LABELS[calc.reductionRatio]}) = ${formatJPY(calc.perCapita)}`
+        : formatJPY(calc.perCapita)}
     </Typography>
-    {calc.householdFlat > 0 && (
+    {calc.householdFlatFull > 0 && (
       <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-        Household flat rate (平等割): {formatJPY(calc.householdFlat)}
+        Household flat rate (平等割):{' '}
+        {calc.reductionRatio > 0
+          ? `${formatJPY(calc.householdFlatFull)} × ${Math.round((1 - calc.reductionRatio) * 100)}% (${REDUCTION_TIER_LABELS[calc.reductionRatio]}) = ${formatJPY(calc.householdFlat)}`
+          : formatJPY(calc.householdFlat)}
       </Typography>
     )}
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
@@ -180,6 +215,11 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   const prevFYData = getNHIParamsForMonth(region, year, 0); // Jan → previous FY
   const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
 
+  // Low-income reduction tier per fiscal year — must reproduce the calculator's judgement
+  // exactly, or the parity assertions below throw in dev builds.
+  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 0);
+  const currReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 3);
+
   if (!currFYData) {
     return (
       <Box>
@@ -216,7 +256,9 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
           (prevFYData[config.capKey] as number | undefined) !==
             (currFYData[config.capKey] as number | undefined) ||
           (prevFYData[config.householdFlatKey] as number | undefined) !==
-            (currFYData[config.householdFlatKey] as number | undefined))));
+            (currFYData[config.householdFlatKey] as number | undefined))) ||
+      // Same parameters, but the low-income reduction tier changes at the FY boundary
+      (prevRate && prevReductionRatio !== currReductionRatio));
 
   // For blended calculation, we need NHI taxable income from each FY's deduction
   // (in practice, the deduction is usually the same, but use each FY's value for correctness)
@@ -224,7 +266,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     ? Math.max(0, results.totalNetIncome - prevFYData.nhiStandardDeduction)
     : nhiTaxableIncome;
 
-  const currCalc = calculatePortionForFY(nhiTaxableIncome, currFYData, portion);
+  const currCalc = calculatePortionForFY(nhiTaxableIncome, currFYData, portion, currReductionRatio);
 
   // The tooltip's displayed total should match the authoritative value from the calculator.
   const resultValueByPortion: Record<NHIPortionType, number | undefined> = {
@@ -235,7 +277,12 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   };
 
   if (ratesBlended) {
-    const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData, portion);
+    const prevCalc = calculatePortionForFY(
+      prevNhiTaxableIncome,
+      prevFYData,
+      portion,
+      prevReductionRatio,
+    );
     const blendedAmount = Math.round((prevCalc.final * 3) / 10 + (currCalc.final * 7) / 10);
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
@@ -415,6 +462,12 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
           NHI premiums are calculated using income-based rates plus per-capita amounts, with annual
           caps applied to each portion. NHI premiums are based on last year's reported income. These
           calculations assume income is the same as the previous year.
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 1, fontSize: '0.85rem' }}>
+          Households with income at or below statutory thresholds receive a 70%, 50%, or 20%
+          reduction of the per-capita (均等割) and household flat rate (平等割) amounts
+          (均等割額の軽減). Municipalities apply the reduction automatically based on declared
+          income; no application is required.
         </Typography>
 
         {ratesBlended && (

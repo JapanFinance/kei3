@@ -144,4 +144,37 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       },
     );
   });
+
+  describe('blended year at low income (均等割額の軽減 applies)', () => {
+    const { results, inputs, breakdown } = buildNHIScenario(100_000, region, false);
+
+    it('applies 7割軽減 in both fiscal years', () => {
+      expect(breakdown.reductionRatios).toEqual({ prevFY: 0.7, currFY: 0.7 });
+    });
+
+    const portionsToTest: { portion: NHIPortionType; expected: number }[] = [
+      { portion: 'medical', expected: breakdown.medicalPortion },
+      { portion: 'elderlySupport', expected: breakdown.elderlySupportPortion },
+      { portion: 'childSupport', expected: breakdown.childSupportPortion },
+    ];
+
+    it.each(portionsToTest)(
+      '$portion tooltip total matches calculator with the reduction ($expected)',
+      ({ portion, expected }) => {
+        const { container } = render(
+          <NHIPortionTooltip portion={portion} results={results} inputs={inputs} />,
+        );
+        const values = Array.from(container.querySelectorAll('strong')).map(el => el.textContent);
+        expect(values).toContain(formatJPY(expected));
+      },
+    );
+
+    it('renders the reduction math on the per-capita line', () => {
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('7割軽減');
+      expect(container.textContent).toContain('× 30%');
+    });
+  });
 });
