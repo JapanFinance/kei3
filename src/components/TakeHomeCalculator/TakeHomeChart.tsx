@@ -202,6 +202,10 @@ const INCOME_SURVEY_SOURCES: Source[] = [
   },
 ];
 
+/** Lowercases a household-type label's first letter so it can sit mid-sentence. The dropdown's
+ * open menu keeps the capitalized labels; only sentence positions use this. */
+const lowercaseFirst = (label: string): string => label.charAt(0).toLowerCase() + label.slice(1);
+
 // Utility function to get the percentile band an income falls in, given the quintile boundaries
 const getPercentileBand = (income: number, boundaries: readonly number[]): { label: string } => {
   const edges = toBandEdges(boundaries);
@@ -373,8 +377,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 const estimate = estimateIncomePercentile(income, distribution.ranges);
                 // Above the open-ended top bracket the survey supports only a bound, so the band
                 // label is dropped there.
-                const groupLabel =
-                  distribution.label.charAt(0).toLowerCase() + distribution.label.slice(1);
+                const groupLabel = lowercaseFirst(distribution.label);
                 let info = estimate.isTopBracket
                   ? `top ~${estimate.topBracketPercent.toFixed(1)}% of ${groupLabel}`
                   : `~${estimate.percentile.toFixed(1)} percentile of ${groupLabel}`;
@@ -645,6 +648,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               variant="standard"
               value={householdType}
               onChange={event => setHouseholdType(event.target.value as HouseholdType)}
+              renderValue={value => lowercaseFirst(HOUSEHOLD_INCOME_DISTRIBUTIONS[value].label)}
               inputProps={{ 'aria-label': 'Comparison household type' }}
               sx={{
                 verticalAlign: 'baseline',
