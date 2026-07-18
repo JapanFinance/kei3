@@ -65,12 +65,19 @@ export const estimateIncomePercentile = (
 };
 
 /**
- * Inverse of `estimateIncomePercentile`: the income whose estimated percentile is `percentile`.
+ * Inverse of {@link estimateIncomePercentile}: the income whose estimated percentile is
+ * `percentile`.
  *
  * Walks the same un-normalized cumulative sum as the forward function, so a boundary derived here
  * agrees exactly with the percentile estimate. Measured against the published 全世帯 五分位値
  * (the one type where the survey prints the true boundaries), this lands within +1万-5万,
  * biased slightly high like the forward interpolation.
+ *
+ * The result is capped at the open-ended top bracket's floor (¥20M in the survey data): the
+ * bracket has no width to interpolate across, so any percentile landing inside it — or beyond the
+ * distribution's rounded total — returns the floor, a lower bound rather than a point estimate.
+ * Quintile boundaries stay well below the cap for every household type, but a caller asking for
+ * an extreme percentile (~99th and up) gets the floor, not a meaningful income.
  */
 export const estimateIncomeAtPercentile = (
   percentile: number,
