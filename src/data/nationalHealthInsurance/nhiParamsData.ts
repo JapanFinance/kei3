@@ -570,7 +570,7 @@ const allNHIRegions: Record<string, NHIRegionDefinition> = {
           supportCap: 260000,
           ltcCapForEligible: 170000,
           childSupportRate: 0.0027,
-          childSupportPerCapita: 73,
+          childSupportPerCapita: 1873,
           childSupportCap: 30000,
           nhiStandardDeduction: 430000,
         },
