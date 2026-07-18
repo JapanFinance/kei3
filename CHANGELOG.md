@@ -2,6 +2,17 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-07-18
+
+### New
+
+- Added a household type selector to the income distribution chart. The percentile estimates can now be compared against any of the household types the survey publishes instead of only the "all households" population.
+
+### Updated
+
+- Updated the income distribution to the Ministry of Health, Labour and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
+- The percentile estimate is more precise below ¥10,000,000, where the survey's income brackets now resolve in ¥500,000 steps instead of ¥1,000,000.
+
 ## 2026-06-29
 
 ### New
