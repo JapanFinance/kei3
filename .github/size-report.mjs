@@ -28,7 +28,9 @@ const ASSETS_DIR = 'dist/assets';
 const REPORT_PATH = 'size-report.json';
 const MARKER = '<!-- size-limit-report -->';
 // Adjust this in the same change that expectedly changes the size.
-const BUDGET_BYTES = 264_000;
+// 2026-07-18: 264k -> 266k for the household-type income distributions (six survey columns of
+// bracket data plus the selector UI, ~2.1 kB Brotli).
+const BUDGET_BYTES = 266_000;
 
 const kb = bytes => `${(bytes / 1000).toFixed(1)} kB`;
 // Drop Vite's "-<8-char hash>" so a chunk is comparable across commits.
