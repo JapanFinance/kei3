@@ -138,7 +138,8 @@ function App() {
             fallback={
               <Box
                 sx={{
-                  height: 256,
+                  // Matches TakeHomeResultsDisplay's natural content height at default inputs.
+                  height: { xs: 617, md: 811 },
                   borderRadius: 1,
                   bgcolor: 'action.hover',
                   animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -158,8 +159,9 @@ function App() {
           fallback={
             <Box
               sx={{
-                height: 384,
-                mt: 4,
+                // Matches TakeHomeChart's rendered height at default inputs
+                height: { xs: 720, md: 724 },
+                mt: { xs: 2, md: 3 },
                 borderRadius: 1,
                 bgcolor: 'action.hover',
                 animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
