@@ -14,17 +14,12 @@ import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHome
 import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
 
 // Deferred modules load in priority order: results, then chart, then changelog.
-//
-// React.lazy only starts a fetch when the component first renders, and the
-// results display renders only after the first debounced calculation — so its
-// import is started eagerly here, at module scope, to keep it from loading last.
 const resultsModulePromise = import('./components/TakeHomeCalculator/TakeHomeResults');
 const TakeHomeResultsDisplay = lazy(() => resultsModulePromise);
 
-// The chart module (which pulls in chart.js) waits for the results module so
-// the visible numbers get the network and main thread first. A results load
-// failure already surfaces through its own Suspense boundary; it should not
-// also block the chart, hence the catch before chaining.
+// The chart (which pulls in chart.js) loads after the results module so the
+// visible numbers come first; the catch keeps a results load failure from
+// also blocking the chart.
 const chartModulePromise = resultsModulePromise
   .catch(() => undefined)
   .then(() => import('./components/TakeHomeCalculator/TakeHomeChart'));
@@ -93,17 +88,9 @@ function App() {
     normalizeInitialFormState,
   );
 
-  // Results are derived from the inputs: computed during the first render (the
-  // default inputs are static, so no waiting on a timer) and recomputed when
-  // the inputs change. useDeferredValue keeps rapid changes (e.g. slider
-  // drags) responsive: the urgent render shows the new input values with the
-  // previous results, and the recalculation runs in an interruptible
-  // background render. TakeHomeFormState is a structural superset of
-  // TakeHomeInputs, so the form state passes directly; the annotation narrows
-  // the deferred value to the calculation's view of it. Recalculation keys on
-  // the state object's identity, which is fine-grained enough: the only
-  // reducer action that changes form-only state alone is an income-mode
-  // switch — a discrete click, not a high-frequency input path.
+  // Recalculating on the deferred value keeps rapid input changes (e.g. slider
+  // drags) responsive: the urgent render reuses the previous results and the
+  // recalculation runs in an interruptible background render.
   const deferredInputs = useDeferredValue<TakeHomeInputs>(inputs);
   const results = useMemo(() => calculateTaxes(deferredInputs), [deferredInputs]);
 
