@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import { keyframes } from '@mui/material/styles';
+import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { theme } from './theme';
 import './index.css';
 
@@ -18,28 +19,42 @@ const spin = keyframes`
   to { transform: rotate(360deg); }
 `;
 
-// Create a loading component
+// The loading screen renders the real site header so first paint carries the
+// page title (its largest contentful element) instead of only a spinner —
+// borders are not "content", so a bare spinner leaves first-paint metrics
+// waiting for the whole app. App renders the same component when it loads,
+// keeping the pixels identical; only the header's changelog button appears
+// with the app.
 export const LoadingFallback = () => (
   <Box
     sx={{
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: 'column',
       minHeight: '100vh',
       bgcolor: 'background.default',
     }}
   >
+    <SiteHeader title={SITE_TITLE} />
     <Box
       sx={{
-        width: 48,
-        height: 48,
-        borderRadius: '50%',
-        border: '4px solid',
-        borderColor: 'primary.main',
-        borderTopColor: 'transparent',
-        animation: `${spin} 1s linear infinite`,
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
-    />
+    >
+      <Box
+        sx={{
+          width: 48,
+          height: 48,
+          borderRadius: '50%',
+          border: '4px solid',
+          borderColor: 'primary.main',
+          borderTopColor: 'transparent',
+          animation: `${spin} 1s linear infinite`,
+        }}
+      />
+    </Box>
   </Box>
 );
 

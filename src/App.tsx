@@ -3,7 +3,7 @@
 
 import { useReducer, useDeferredValue, useMemo, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box';
-import SiteHeader from './components/SiteHeader';
+import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import ChangelogButton from './components/ChangelogButton';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import type { TakeHomeFormState, TakeHomeInputs } from './types/tax';
@@ -102,10 +102,7 @@ function App() {
         overflowX: 'hidden',
       }}
     >
-      <SiteHeader
-        title="Japan Take-Home Pay Calculator"
-        actions={<ChangelogButton onClick={openChangelog} />}
-      />
+      <SiteHeader title={SITE_TITLE} actions={<ChangelogButton onClick={openChangelog} />} />
 
       <Box
         component="main"

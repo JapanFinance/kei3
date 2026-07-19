@@ -28,7 +28,7 @@ const ASSETS_DIR = 'dist/assets';
 const REPORT_PATH = 'size-report.json';
 const MARKER = '<!-- size-limit-report -->';
 // Adjust this in the same change that expectedly changes the size.
-const BUDGET_BYTES = 266_000;
+const BUDGET_BYTES = 270_000;
 
 const kb = bytes => `${(bytes / 1000).toFixed(1)} kB`;
 // Drop Vite's "-<8-char hash>" so a chunk is comparable across commits.
