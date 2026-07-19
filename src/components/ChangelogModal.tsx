@@ -21,7 +21,7 @@ import {
   type ChangelogEntry,
   type ParsedChangelog,
 } from '../utils/changelogUtils';
-import changelogContent from '../../CHANGELOG.md?raw';
+import { changelogContent } from '../utils/changelogData';
 
 interface ChangelogModalProps {
   open: boolean;
