@@ -8,24 +8,14 @@ import { getEmploymentInsuranceRate } from '../../../data/employmentInsurance';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { BonusIncomeStream } from '../../../types/tax';
-
-const cellStyle = { padding: '2px 8px 2px 0' } as const;
-const rightCellStyle = { ...cellStyle, textAlign: 'right' as const };
-const headerStyle = {
-  ...cellStyle,
-  borderBottom: '1px solid var(--mui-palette-divider)',
-  fontWeight: 'normal' as const,
-};
-const rightHeaderStyle = {
-  ...rightCellStyle,
-  borderBottom: '1px solid var(--mui-palette-divider)',
-  fontWeight: 'normal' as const,
-};
-const totalStyle = {
-  ...rightCellStyle,
-  borderTop: '1px solid var(--mui-palette-divider)',
-  fontWeight: 600,
-};
+import {
+  tableStyle,
+  cellStyle,
+  rightCellStyle,
+  headerStyle,
+  rightHeaderStyle,
+  totalStyle,
+} from '../../ui/tooltipTableStyles';
 
 interface SalaryTooltipProps {
   monthlyIncome: number;
@@ -47,7 +37,7 @@ const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ monthlyIncome, y
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
         Employment Insurance ({year})
       </Typography>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+      <table style={tableStyle}>
         <thead>
           <tr>
             <th style={headerStyle}>Month</th>
@@ -97,7 +87,7 @@ const BonusBreakdownTooltip: React.FC<BonusTooltipProps> = ({ bonuses, year }) =
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
         Employment Insurance on Bonuses ({year})
       </Typography>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+      <table style={tableStyle}>
         <thead>
           <tr>
             <th style={headerStyle}>Month</th>

@@ -7,24 +7,14 @@ import Typography from '@mui/material/Typography';
 import { getNationalPensionMonthlyContribution } from '../../../data/nationalPensionContribution';
 import { formatJPY, formatMonthShort } from '../../../utils/formatters';
 import SourceLinks from '../../ui/SourceLinks';
-
-const cellStyle = { padding: '2px 8px 2px 0' } as const;
-const rightCellStyle = { ...cellStyle, textAlign: 'right' as const };
-const headerStyle = {
-  ...cellStyle,
-  borderBottom: '1px solid var(--mui-palette-divider)',
-  fontWeight: 'normal' as const,
-};
-const rightHeaderStyle = {
-  ...rightCellStyle,
-  borderBottom: '1px solid var(--mui-palette-divider)',
-  fontWeight: 'normal' as const,
-};
-const totalStyle = {
-  ...rightCellStyle,
-  borderTop: '1px solid var(--mui-palette-divider)',
-  fontWeight: 600,
-};
+import {
+  tableStyle,
+  cellStyle,
+  rightCellStyle,
+  headerStyle,
+  rightHeaderStyle,
+  totalStyle,
+} from '../../ui/tooltipTableStyles';
 
 interface NationalPensionTooltipProps {
   year: number;
@@ -60,7 +50,7 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year })
         National pension contributions are a fixed amount regardless of income level.
         {!allSame && ' The monthly amount changes in April with the fiscal year.'}
       </Typography>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+      <table style={tableStyle}>
         <thead>
           <tr>
             <th style={headerStyle}>Period</th>
