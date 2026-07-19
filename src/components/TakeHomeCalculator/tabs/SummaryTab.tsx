@@ -15,6 +15,7 @@ import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
 import { ResultRow } from '../ResultRow';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import LowIncomeNotices from './LowIncomeNotices';
 
 interface SummaryTabProps {
   results: TakeHomeResults;
@@ -22,7 +23,8 @@ interface SummaryTabProps {
 
 /**
  * Formats an amount as "¥X (Y.Y%)" of the total, or bare "¥X" when the share is hidden.
- * The summary hides the share on mobile, where horizontal space is tight.
+ * The summary hides the share on mobile, where horizontal space is tight, and whenever the
+ * total is not positive (a share of zero income is undefined).
  *
  * @param decimals Fraction digits for the share. Defaults to 1.
  */
@@ -32,7 +34,7 @@ const formatAmountWithShare = (
   showShare: boolean,
   decimals = 1,
 ): string =>
-  showShare
+  showShare && total > 0
     ? `${formatJPY(amount)} (${((amount / total) * 100).toFixed(decimals)}%)`
     : formatJPY(amount);
 
@@ -45,10 +47,12 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
     results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
+  // Null when income is not positive: a take-home share of zero income is undefined.
   const takeHomePercentage =
     results.annualIncome > 0
       ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%`
-      : '100%';
+      : null;
+  const takeHomeTone = results.takeHomeIncome < 0 ? ('warning' as const) : ('success' as const);
 
   return (
     <Box>
@@ -183,7 +187,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         <ResultRow
           label="Total Deductions"
           value={
-            !isMobile
+            !isMobile && results.annualIncome > 0
               ? `${formatJPY(-totalDeductions)} (${((totalDeductions / results.annualIncome) * 100).toFixed(1)}%)`
               : formatJPY(-totalDeductions)
           }
@@ -197,23 +201,28 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       <ResultRow
         label="Take-Home Pay"
         value={
-          <Box component="span" sx={{ color: 'success.main', fontWeight: 700 }}>
+          <Box component="span" sx={{ color: `${takeHomeTone}.main`, fontWeight: 700 }}>
             {formatJPY(results.takeHomeIncome)}
-            <Box
-              component="span"
-              sx={{
-                color: 'success.dark',
-                fontWeight: 600,
-                ml: 1,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              ({takeHomePercentage})
-            </Box>
+            {takeHomePercentage !== null && (
+              <Box
+                component="span"
+                sx={{
+                  color: `${takeHomeTone}.dark`,
+                  fontWeight: 600,
+                  ml: 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ({takeHomePercentage})
+              </Box>
+            )}
           </Box>
         }
         type="final"
+        tone={takeHomeTone}
       />
+
+      <LowIncomeNotices results={results} />
 
       {/* Furusato Nozei Summary */}
       {results.furusatoNozei.limit > 0 && (
