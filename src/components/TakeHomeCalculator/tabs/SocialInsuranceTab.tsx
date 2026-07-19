@@ -30,6 +30,16 @@ import CapIndicator from '../../ui/CapIndicator';
 import { detectCaps } from '../../../utils/capDetection';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import { getNHIPremiumReductionThresholdsForMonth } from '../../../data/nationalHealthInsurance/nhiPremiumReduction';
+
+/** Formats a 均等割額・平等割額の軽減 ratio for display, e.g. 0.7 → "70% (7割軽減)". */
+const formatNHIReductionRatio = (ratio: number): string => {
+  if (ratio <= 0) {
+    return '0%';
+  }
+  const tierLabel = ratio === 0.7 ? '7割軽減' : ratio === 0.5 ? '5割軽減' : '2割軽減';
+  return `${Math.round(ratio * 100)}% (${tierLabel})`;
+};
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -305,6 +315,57 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             )}
             type="subtotal"
           />
+          {results.nhiReductionRatios &&
+            (results.nhiReductionRatios.prevFY > 0 || results.nhiReductionRatios.currFY > 0) && (
+              <ResultRow
+                label="Low-Income Reduction (均等割額の軽減)"
+                labelSuffix={
+                  <DetailedTooltip title="Low-Income Premium Reduction">
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        When total income (総所得金額等) is at or below statutory thresholds, the
+                        per-capita (均等割) and household flat rate (平等割) portions of the premium
+                        are reduced by 70%, 50%, or 20% (均等割額の軽減). The thresholds are set
+                        nationally and revised each fiscal year; municipalities apply the reduction
+                        automatically based on declared income — no application is required.
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        {(() => {
+                          const thresholds = getNHIPremiumReductionThresholdsForMonth(
+                            inputs.incomeYear,
+                            3,
+                          );
+                          return (
+                            `Thresholds for a single-person household in FY${inputs.incomeYear}: ` +
+                            `70% at or below ${formatJPY(thresholds.baseAmount)}; ` +
+                            `50% at or below ${formatJPY(thresholds.baseAmount + thresholds.fiftyPercentPerInsured)}; ` +
+                            `20% at or below ${formatJPY(thresholds.baseAmount + thresholds.twentyPercentPerInsured)}.`
+                          );
+                        })()}
+                      </Typography>
+                      <SourceLinks
+                        sources={[
+                          {
+                            href: 'https://laws.e-gov.go.jp/law/333CO0000000362',
+                            label: '国民健康保険法施行令 - e-Gov',
+                          },
+                          {
+                            href: 'https://www.city.setagaya.lg.jp/02060/300.html',
+                            label: '国民健康保険料の軽減・減免 - 世田谷区',
+                          },
+                        ]}
+                      />
+                    </Box>
+                  </DetailedTooltip>
+                }
+                value={
+                  results.nhiReductionRatios.prevFY === results.nhiReductionRatios.currFY
+                    ? formatNHIReductionRatio(results.nhiReductionRatios.currFY)
+                    : `Jan–Mar: ${formatNHIReductionRatio(results.nhiReductionRatios.prevFY)} / Jun–Dec: ${formatNHIReductionRatio(results.nhiReductionRatios.currFY)}`
+                }
+                type="default"
+              />
+            )}
         </>
       ) : (
         <>

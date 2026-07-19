@@ -322,6 +322,11 @@ export interface TakeHomeResults {
   nhiElderlySupportPortion?: number | undefined;
   nhiLongTermCarePortion?: number | undefined;
   nhiChildSupportPortion?: number | undefined;
+  /**
+   * NHI low-income reduction (均等割額・平等割額の軽減) ratio applied in each fiscal year of
+   * the calendar year (0 = no reduction, 0.7 = 7割軽減). Only set when NHI is selected.
+   */
+  nhiReductionRatios?: { prevFY: number; currFY: number } | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;

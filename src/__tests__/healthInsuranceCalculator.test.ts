@@ -213,12 +213,15 @@ describe('calculateHealthInsurancePremium for non-employees', () => {
   });
 
   it('handles zero income correctly', () => {
+    // Zero income is within the 7割軽減 tier (≤ ¥430,000), so per-capita amounts are 30%:
+    // Medical: 47,300 × 0.3 = 14,190; Support: 16,800 × 0.3 = 5,040 → total 19,230
     expect(
       calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
-    ).toBe(64_100);
+    ).toBe(19_230);
+    // With LTC: + 16,600 × 0.3 = 4,980 → total 24,210
     expect(
       calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
-    ).toBe(80_700);
+    ).toBe(24_210);
   });
 
   it('handles negative income correctly', () => {
@@ -295,12 +298,120 @@ describe('calculateHealthInsurancePremium for employees with NHI', () => {
   });
 
   it('handles zero employment income correctly', () => {
+    // 7割軽減 applies (≤ ¥430,000): (47,300 + 16,800) × 0.3 = 19,230; LTC adds 16,600 × 0.3
     expect(
       calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
-    ).toBe(64_100);
+    ).toBe(19_230);
     expect(
       calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
-    ).toBe(80_700);
+    ).toBe(24_210);
+  });
+});
+
+describe('NHI low-income premium reduction (均等割額の軽減)', () => {
+  // FY2025 (令和7年度) thresholds for a single insured person (被保険者数 = 1):
+  //   7割軽減: 総所得金額等 ≤ 430,000
+  //   5割軽減: ≤ 430,000 + 305,000 = 735,000
+  //   2割軽減: ≤ 430,000 + 560,000 = 990,000
+  // Sources: https://laws.e-gov.go.jp/law/333CO0000000362,
+  //          https://www.city.nara.lg.jp/site/kokuminkenkouhoken/9305.html
+  // Tokyo FY2025: medicalRate 7.71%, supportRate 2.69%; per-capita 47,300 / 16,800;
+  // nhiStandardDeduction 430,000. Portions round independently of the total (existing behavior).
+
+  it('applies 7割軽減 up to and including net income 430,000', () => {
+    // Taxable income (430,000 − 430,000) = 0, so only reduced per-capita amounts remain:
+    // (47,300 + 16,800) × 0.3 = 19,230
+    expect(
+      calculateHealthInsurancePremium(
+        430_000,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
+    ).toBe(19_230);
+  });
+
+  it('applies 5割軽減 just above the 7割 threshold', () => {
+    // Medical: 1 × 0.0771 + 47,300 × 0.5 = 23,650.0771; Support: 1 × 0.0269 + 16,800 × 0.5 = 8,400.0269
+    // Total: round(32,050.104) = 32,050
+    expect(
+      calculateHealthInsurancePremium(
+        430_001,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
+    ).toBe(32_050);
+  });
+
+  it('applies 5割軽減 up to and including net income 735,000', () => {
+    // Medical: 305,000 × 0.0771 + 23,650 = 47,165.5; Support: 305,000 × 0.0269 + 8,400 = 16,604.5
+    // Total: round(63,770.0) = 63,770
+    expect(
+      calculateHealthInsurancePremium(
+        735_000,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
+    ).toBe(63_770);
+  });
+
+  it('applies 2割軽減 just above the 5割 threshold', () => {
+    // Medical: 305,001 × 0.0771 + 47,300 × 0.8 = 61,355.577; Support: 305,001 × 0.0269 + 13,440 = 21,644.527
+    // Total: round(83,000.104) = 83,000
+    expect(
+      calculateHealthInsurancePremium(
+        735_001,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
+    ).toBe(83_000);
+  });
+
+  it('applies 2割軽減 up to and including net income 990,000', () => {
+    // Medical: 560,000 × 0.0771 + 37,840 = 81,016; Support: 560,000 × 0.0269 + 13,440 = 28,504
+    expect(
+      calculateHealthInsurancePremium(
+        990_000,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
+    ).toBe(109_520);
+  });
+
+  it('applies no reduction above the 2割 threshold', () => {
+    // Medical: 560,001 × 0.0771 + 47,300 = 90,476.077; Support: 560,001 × 0.0269 + 16,800 = 31,864.027
+    // Total: round(122,340.104) = 122,340
+    expect(
+      calculateHealthInsurancePremium(
+        990_001,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
+    ).toBe(122_340);
+  });
+
+  it('applies the reduction per fiscal year in a blended calendar year', () => {
+    // Calendar 2026 blends FY2025 (Jan–Mar, 3/10) and FY2026 (Jun–Dec, 7/10) with 7割軽減 in
+    // both fiscal years at zero income. Per-FY portions round before blending:
+    // Medical: round(14,190 × 0.3 + 14,280 × 0.7) = 14,253   (47,300 / 47,600 × 0.3)
+    // Support: round(5,040 × 0.3 + 5,280 × 0.7) = 5,208      (16,800 / 17,600 × 0.3)
+    // Child support (introduced FY2026, also reduced): round(0 × 0.3 + round(1,873 × 0.3) × 0.7)
+    //   = round(562 × 0.7) = 393
+    // Total: 14,253 + 5,208 + 393 = 19,854
+    expect(
+      calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, 2026, 'Tokyo'),
+    ).toBe(19_854);
   });
 });
 
@@ -368,18 +479,19 @@ describe('calculateHealthInsurancePremium for Osaka (with household flat rate)',
     ).toBe(1_060_000); // 650k + 240k + 170k
   });
 
-  it('handles zero income correctly for Osaka (only per-capita and household flat amounts)', () => {
-    // Medical: 0 + 34,424 + 33,574 = 67,998
-    // Support: 0 + 11,034 + 10,761 = 21,795
-    // Total without LTC: 89,793
+  it('handles zero income correctly for Osaka (reduced per-capita and household flat amounts)', () => {
+    // 7割軽減 applies to both 均等割 and 平等割:
+    // Medical: (34,424 + 33,574) × 0.3 = 20,399.4
+    // Support: (11,034 + 10,761) × 0.3 = 6,538.5
+    // Total without LTC: round(26,937.9) = 26,938
     expect(
       calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Osaka'),
-    ).toBe(89_793);
+    ).toBe(26_938);
 
-    // With LTC: + 18,784 = 108,577
+    // With LTC: + 18,784 × 0.3 = 5,635.2 → round(32,573.1) = 32,573
     expect(
       calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Osaka'),
-    ).toBe(108_577);
+    ).toBe(32_573);
   });
 });
 

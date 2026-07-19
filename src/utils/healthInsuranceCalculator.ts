@@ -9,6 +9,10 @@ import type {
 import type { BonusIncomeStream } from '../types/tax';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
+  getNHIPremiumReductionThresholdsForMonth,
+  type NHIPremiumReductionThresholds,
+} from '../data/nationalHealthInsurance/nhiPremiumReduction';
+import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
@@ -30,6 +34,12 @@ export interface NationalHealthInsuranceBreakdown {
   longTermCarePortion: number;
   childSupportPortion: number;
   total: number;
+  /**
+   * Low-income reduction (均等割額・平等割額の軽減) ratio applied in each fiscal year of the
+   * calendar year (0 = no reduction, 0.7 = 7割軽減). The two can differ when the annual
+   * threshold revision moves the same income into a different tier across the April boundary.
+   */
+  reductionRatios: { prevFY: number; currFY: number };
 }
 
 /**
@@ -271,6 +281,50 @@ export function calculateHealthInsurancePremium(
   ).total;
 }
 
+/** The possible 均等割額・平等割額の軽減 ratios, largest first. */
+export type NHIPremiumReductionRatio = 0.7 | 0.5 | 0.2 | 0;
+
+/**
+ * Determines the NHI low-income premium reduction (均等割額・平等割額の軽減) ratio.
+ *
+ * The statutory test compares the household's 総所得金額等 to the thresholds. This calculator
+ * models a single insured person with no loss carryover or 専従者 items, so 合計所得金額
+ * (totalNetIncome) is the same figure, 被保険者数 = 1, and the 10万円 × (給与所得者等の数 − 1)
+ * allowance is zero. Boundaries are inclusive (以下).
+ */
+export function calculateNHIPremiumReductionRatio(
+  totalNetIncome: number,
+  thresholds: NHIPremiumReductionThresholds,
+): NHIPremiumReductionRatio {
+  const insuredCount = 1;
+  if (totalNetIncome <= thresholds.baseAmount) {
+    return 0.7;
+  }
+  if (totalNetIncome <= thresholds.baseAmount + thresholds.fiftyPercentPerInsured * insuredCount) {
+    return 0.5;
+  }
+  if (totalNetIncome <= thresholds.baseAmount + thresholds.twentyPercentPerInsured * insuredCount) {
+    return 0.2;
+  }
+  return 0;
+}
+
+/**
+ * Reduction ratio for the fiscal year in effect at the given year and month.
+ * Used by the engine (per fiscal year of the blend) and by the NHI tooltips, which must
+ * reproduce the engine's arithmetic exactly.
+ */
+export function getNHIPremiumReductionRatioForMonth(
+  totalNetIncome: number,
+  year: number,
+  month: number,
+): NHIPremiumReductionRatio {
+  return calculateNHIPremiumReductionRatio(
+    totalNetIncome,
+    getNHIPremiumReductionThresholdsForMonth(year, month),
+  );
+}
+
 /**
  * Calculates National Health Insurance premium breakdown based on regional parameters.
  */
@@ -278,16 +332,22 @@ function calculateNationalHealthInsurancePremiumBreakdown(
   annualIncome: number,
   isSubjectToLongTermCarePremium: boolean, // Person is 40-64 years old
   params: NationalHealthInsuranceRegionParams,
-): NationalHealthInsuranceBreakdown {
+  reductionRatio: number,
+): Omit<NationalHealthInsuranceBreakdown, 'reductionRatios'> {
   // Calculate NHI taxable income (住民税算定基礎額等 - often previous year's income minus a standard deduction)
   // For simplicity, using current annual income minus the NHI standard deduction.
   // Real-world calculations might use prior year's certified income.
   const nhiTaxableIncome = Math.max(0, annualIncome - params.nhiStandardDeduction);
 
+  // The low-income reduction (均等割額・平等割額の軽減) scales the per-capita and household
+  // flat rate portions of every component; the income-based (所得割) portions are unaffected.
+  // Applied before each portion's cap.
+  const reductionKeepFactor = 1 - reductionRatio;
+
   // 1. Medical Portion (医療分)
   const incomeBasedMedical = nhiTaxableIncome * params.medicalRate;
-  const perCapitaMedical = params.medicalPerCapita;
-  const householdFlatMedical = params.medicalHouseholdFlat || 0;
+  const perCapitaMedical = params.medicalPerCapita * reductionKeepFactor;
+  const householdFlatMedical = (params.medicalHouseholdFlat || 0) * reductionKeepFactor;
   const totalMedicalPremium = Math.min(
     incomeBasedMedical + perCapitaMedical + householdFlatMedical,
     params.medicalCap,
@@ -295,8 +355,8 @@ function calculateNationalHealthInsurancePremiumBreakdown(
 
   // 2. Elderly Support Portion (後期高齢者支援金分)
   const incomeBasedSupport = nhiTaxableIncome * params.supportRate;
-  const perCapitaSupport = params.supportPerCapita;
-  const householdFlatSupport = params.supportHouseholdFlat || 0;
+  const perCapitaSupport = params.supportPerCapita * reductionKeepFactor;
+  const householdFlatSupport = (params.supportHouseholdFlat || 0) * reductionKeepFactor;
   const totalSupportPremium = Math.min(
     incomeBasedSupport + perCapitaSupport + householdFlatSupport,
     params.supportCap,
@@ -311,8 +371,8 @@ function calculateNationalHealthInsurancePremiumBreakdown(
     params.ltcCapForEligible
   ) {
     const incomeBasedLtc = nhiTaxableIncome * params.ltcRateForEligible;
-    const perCapitaLtc = params.ltcPerCapitaForEligible;
-    const householdFlatLtc = params.ltcHouseholdFlatForEligible || 0;
+    const perCapitaLtc = params.ltcPerCapitaForEligible * reductionKeepFactor;
+    const householdFlatLtc = (params.ltcHouseholdFlatForEligible || 0) * reductionKeepFactor;
     totalLtcPremium = Math.min(
       incomeBasedLtc + perCapitaLtc + householdFlatLtc,
       params.ltcCapForEligible,
@@ -323,8 +383,8 @@ function calculateNationalHealthInsurancePremiumBreakdown(
   let totalChildSupportPremium = 0;
   if (params.childSupportRate && params.childSupportCap) {
     const incomeBasedChildSupport = nhiTaxableIncome * params.childSupportRate;
-    const perCapitaChildSupport = params.childSupportPerCapita || 0;
-    const householdFlatChildSupport = params.childSupportHouseholdFlat || 0;
+    const perCapitaChildSupport = (params.childSupportPerCapita || 0) * reductionKeepFactor;
+    const householdFlatChildSupport = (params.childSupportHouseholdFlat || 0) * reductionKeepFactor;
     totalChildSupportPremium = Math.min(
       incomeBasedChildSupport + perCapitaChildSupport + householdFlatChildSupport,
       params.childSupportCap,
@@ -371,6 +431,11 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
   const prevFYParams = getNHIParamsForMonth(regionKey, year, 0);
   const currFYParams = getNHIParamsForMonth(regionKey, year, 3);
 
+  // The low-income reduction tier is judged per fiscal year: the annual threshold revision
+  // can move the same income into a different tier across the April boundary.
+  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(annualIncome, year, 0);
+  const currReductionRatio = getNHIPremiumReductionRatioForMonth(annualIncome, year, 3);
+
   if (!currFYParams) {
     console.error(
       `National Health Insurance parameters not found for region: ${region}. Returning zero breakdown.`,
@@ -381,21 +446,30 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
       longTermCarePortion: 0,
       childSupportPortion: 0,
       total: 0,
+      reductionRatios: { prevFY: 0, currFY: 0 },
     };
   }
 
-  // If both fiscal years have the same params (no rate change), use single calculation
-  // to avoid rounding artifacts from the blending arithmetic.
-  if (!prevFYParams || prevFYParams === currFYParams) {
-    return calculateNationalHealthInsurancePremiumBreakdown(
-      annualIncome,
-      isSubjectToLongTermCarePremium,
-      currFYParams,
-    );
+  // If both fiscal years have the same params (no rate change) and the same reduction tier,
+  // use a single calculation to avoid rounding artifacts from the blending arithmetic.
+  if (
+    (!prevFYParams || prevFYParams === currFYParams) &&
+    prevReductionRatio === currReductionRatio
+  ) {
+    return {
+      ...calculateNationalHealthInsurancePremiumBreakdown(
+        annualIncome,
+        isSubjectToLongTermCarePremium,
+        currFYParams,
+        currReductionRatio,
+      ),
+      reductionRatios: { prevFY: currReductionRatio, currFY: currReductionRatio },
+    };
   }
 
   // Check if the params are actually different by comparing key rate fields
   const paramsMatch =
+    !!prevFYParams &&
     prevFYParams.medicalRate === currFYParams.medicalRate &&
     prevFYParams.supportRate === currFYParams.supportRate &&
     prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
@@ -409,24 +483,32 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
     prevFYParams.childSupportPerCapita === currFYParams.childSupportPerCapita &&
     prevFYParams.childSupportCap === currFYParams.childSupportCap;
 
-  if (paramsMatch) {
-    return calculateNationalHealthInsurancePremiumBreakdown(
-      annualIncome,
-      isSubjectToLongTermCarePremium,
-      currFYParams,
-    );
+  if (paramsMatch && prevReductionRatio === currReductionRatio) {
+    return {
+      ...calculateNationalHealthInsurancePremiumBreakdown(
+        annualIncome,
+        isSubjectToLongTermCarePremium,
+        currFYParams,
+        currReductionRatio,
+      ),
+      reductionRatios: { prevFY: currReductionRatio, currFY: currReductionRatio },
+    };
   }
 
-  // Calculate full annual breakdown for each fiscal year
+  // Calculate full annual breakdown for each fiscal year. prevFYParams is defined here:
+  // getNHIParamsForMonth falls back to the region's oldest entry, so it only returns
+  // undefined when the region itself is unknown — handled by the !currFYParams branch above.
   const prevFY = calculateNationalHealthInsurancePremiumBreakdown(
     annualIncome,
     isSubjectToLongTermCarePremium,
-    prevFYParams,
+    prevFYParams!,
+    prevReductionRatio,
   );
   const currFY = calculateNationalHealthInsurancePremiumBreakdown(
     annualIncome,
     isSubjectToLongTermCarePremium,
     currFYParams,
+    currReductionRatio,
   );
 
   // Blend: 3/10 of previous FY + 7/10 of current FY (10-installment payment schedule)
@@ -444,5 +526,12 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
   );
   const total = medicalPortion + elderlySupportPortion + longTermCarePortion + childSupportPortion;
 
-  return { medicalPortion, elderlySupportPortion, longTermCarePortion, childSupportPortion, total };
+  return {
+    medicalPortion,
+    elderlySupportPortion,
+    longTermCarePortion,
+    childSupportPortion,
+    total,
+    reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
+  };
 }
