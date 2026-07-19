@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState, useEffect, useCallback } from 'react';
+import { getLastViewedDate, hasNewUpdates, parseChangelog } from '../utils/changelogUtils';
+import changelogContent from '../../CHANGELOG.md?raw';
 
 export const CHANGELOG_HASH = '#changelog';
 
@@ -9,6 +11,8 @@ export interface UseChangelogModalReturn {
   isOpen: boolean;
   openModal: () => void;
   closeModal: () => void;
+  /** True when the changelog has entries newer than the last viewed date. */
+  hasNewFeatures: boolean;
 }
 
 /**
@@ -17,6 +21,14 @@ export interface UseChangelogModalReturn {
  */
 export function useChangelogModal(): UseChangelogModalReturn {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasNewFeatures, setHasNewFeatures] = useState(() => {
+    try {
+      return hasNewUpdates(parseChangelog(changelogContent), getLastViewedDate() || undefined);
+    } catch (error) {
+      console.warn('Failed to check for changelog updates:', error);
+      return false;
+    }
+  });
 
   // Check if the page loads with the changelog hash
   useEffect(() => {
@@ -40,6 +52,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
 
   const openModal = useCallback(() => {
     setIsOpen(true);
+    setHasNewFeatures(false); // Remove the unread dot once viewed
     // Update URL hash when opening modal
     if (window.location.hash !== CHANGELOG_HASH) {
       window.history.pushState(null, '', CHANGELOG_HASH);
@@ -59,5 +72,6 @@ export function useChangelogModal(): UseChangelogModalReturn {
     isOpen,
     openModal,
     closeModal,
+    hasNewFeatures,
   };
 }

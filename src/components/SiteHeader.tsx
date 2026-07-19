@@ -7,6 +7,13 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import ThemeToggle from './ThemeToggle';
 
+/**
+ * Shared by {@link import('../App').default} and the loading fallback in
+ * {@link import('../Root').Root}, which renders the same header so the title —
+ * the page's largest contentful element — paints before the app has loaded.
+ */
+export const SITE_TITLE = 'Japan Take-Home Pay Calculator';
+
 interface SiteHeaderProps {
   /** Title shown in the bar. */
   title: string;

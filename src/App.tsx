@@ -3,7 +3,7 @@
 
 import { useReducer, useDeferredValue, useMemo, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box';
-import SiteHeader from './components/SiteHeader';
+import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import ChangelogButton from './components/ChangelogButton';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import type { TakeHomeFormState, TakeHomeInputs } from './types/tax';
@@ -58,6 +58,7 @@ function App() {
     isOpen: isChangelogOpen,
     openModal: openChangelog,
     closeModal: closeChangelog,
+    hasNewFeatures,
   } = useChangelogModal();
 
   // Default values for the form
@@ -106,8 +107,8 @@ function App() {
       }}
     >
       <SiteHeader
-        title="Japan Take-Home Pay Calculator"
-        actions={<ChangelogButton onClick={openChangelog} />}
+        title={SITE_TITLE}
+        actions={<ChangelogButton onClick={openChangelog} showBadge={hasNewFeatures} />}
       />
 
       <Box
