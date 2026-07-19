@@ -12,6 +12,7 @@ import SummaryTab from './tabs/SummaryTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';
 import TaxesTab from './tabs/TaxesTab';
 import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
+import { useLoadMilestone } from '../../utils/loadMilestones';
 
 interface DetailedTaxResultsProps {
   results: TakeHomeResults;
@@ -47,6 +48,8 @@ const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number]) => (
 );
 
 const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, inputs }) => {
+  useLoadMilestone('results-rendered');
+
   const [currentTab, setCurrentTab] = React.useState(0);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {

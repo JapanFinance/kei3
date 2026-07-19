@@ -141,6 +141,39 @@ function collectMetrics(runs) {
   return metrics;
 }
 
+// The app's own load milestones: performance.mark entries the app fires one
+// frame after each component's first commit paints (src/utils/loadMilestones.ts
+// owns the names; both lists must match). They say when the app's content
+// actually renders, which FCP/LCP stopped saying once the loading shell became
+// the first paint. Unlike the simulated metrics above, mark times are observed
+// on the unthrottled runner. Older deploys predate the marks and simply yield
+// no entries.
+const MILESTONE_IDS = ['app-rendered', 'results-rendered', 'chart-rendered'];
+
+// Median mark time across the runs, in the metrics' {value, min, max, unit}
+// shape so the report renders both tables with the same helpers.
+function collectMilestones(runs) {
+  const milestones = {};
+  for (const id of MILESTONE_IDS) {
+    const values = runs
+      .map(
+        run =>
+          run.lhr.audits['user-timings']?.details?.items?.find(
+            item => item.timingType === 'Mark' && item.name === id,
+          )?.startTime,
+      )
+      .filter(value => typeof value === 'number');
+    if (!values.length) continue;
+    milestones[id] = {
+      value: median(values),
+      min: Math.min(...values),
+      max: Math.max(...values),
+      unit: 'millisecond',
+    };
+  }
+  return milestones;
+}
+
 // The score-weighted audits that hold a category below 1.0 in the given run —
 // the concrete "what to fix" behind each imperfect number. Weight-0 audits are
 // informational and cannot move a score, so they are skipped.
@@ -289,6 +322,7 @@ async function auditAllCategories(url, skipAudits) {
   return {
     categories,
     metrics: collectMetrics(runs),
+    milestones: collectMilestones(runs),
     report: representative.report,
     imperfectAudits: collectImperfectAudits(representative.lhr),
   };
@@ -315,6 +349,7 @@ async function saveApp(env, url, result, extra = {}) {
     runs: RUNS,
     categories: result.categories,
     metrics: result.metrics,
+    milestones: result.milestones,
     imperfectAudits: result.imperfectAudits,
     ...extra,
   };
@@ -556,6 +591,7 @@ async function cmdProduction() {
     budgets: PRODUCTION_BUDGETS,
     categories: result.categories,
     metrics: result.metrics,
+    milestones: result.milestones,
     imperfectAudits: result.imperfectAudits,
   };
   await mkdir(OUT_DIR, { recursive: true });

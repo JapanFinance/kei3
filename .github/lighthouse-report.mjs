@@ -113,6 +113,48 @@ function renderMetrics(metrics, baseMetrics) {
   ];
 }
 
+// The app's own load milestones — performance.mark entries fired one frame
+// after each component's first commit paints (src/utils/loadMilestones.ts owns
+// the names). Display labels in presentation order.
+const MILESTONE_LABELS = {
+  'app-rendered': 'App rendered',
+  'results-rendered': 'Results rendered',
+  'chart-rendered': 'Chart rendered',
+};
+
+// `withDelta` follows the presence of a baseline summary, not of baseline
+// milestones: a baseline from before the marks existed still gets a Δ column,
+// with "new" in place of a number, so the column appears the moment it can.
+function renderMilestones(milestones, baseMilestones, withDelta) {
+  const ids = Object.keys(MILESTONE_LABELS).filter(id => milestones?.[id]);
+  if (!ids.length) return [];
+  const rows = ids.map(id => {
+    const milestone = milestones[id];
+    const cells = [
+      MILESTONE_LABELS[id],
+      formatMetric(milestone.value, milestone.unit),
+      rangeText(milestone),
+    ];
+    if (withDelta) {
+      const base = baseMilestones?.[id];
+      cells.push(base ? metricDelta(base.value, milestone.value, milestone.unit) : 'new');
+    }
+    return `| ${cells.join(' | ')} |`;
+  });
+  return [
+    '',
+    "<details><summary>App milestones — when the app's content actually renders</summary>",
+    '',
+    withDelta ? '| Milestone | Median | Range | Δ vs main |' : '| Milestone | Median | Range |',
+    withDelta ? '| --- | --: | --: | --: |' : '| --- | --: | --: |',
+    ...rows,
+    '',
+    `<sub>Lower is better. User Timing marks fired by the app one frame after each component's first commit paints: the app replacing the loading shell, then the lazy results panel, then the chart (a canvas, which Largest Contentful Paint never considers). The headline FCP/LCP are simulated (Lantern) values, but these marks are observed times on the unthrottled shared runner — absolute values are small and contention-sensitive, so judge the Δ against main in the same environment, not the absolute number.${withDelta ? ' "new" means the main baseline predates these marks.' : ''}</sub>`,
+    '',
+    '</details>',
+  ];
+}
+
 // One bullet per score-weighted audit that holds a category below 100.
 function auditLines(imperfectAudits) {
   const lines = [];
@@ -175,6 +217,7 @@ function renderMarkdown(summary, base) {
   }
 
   lines.push(...renderMetrics(app.metrics, base?.app?.metrics));
+  lines.push(...renderMilestones(app.milestones, base?.app?.milestones, Boolean(base?.app)));
 
   // What concretely holds each score below 100 — usually enough to diagnose a
   // drop without downloading the full report.

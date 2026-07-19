@@ -12,6 +12,7 @@ import { calculateTaxes } from './utils/taxCalculations';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
 import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
 import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
+import { useLoadMilestone } from './utils/loadMilestones';
 
 // Deferred modules load in priority order: results, then chart, then changelog.
 const resultsModulePromise = import('./components/TakeHomeCalculator/TakeHomeResults');
@@ -50,6 +51,8 @@ const ChangelogModal = lazy(() =>
 );
 
 function App() {
+  useLoadMilestone('app-rendered');
+
   // Changelog modal management
   const {
     isOpen: isChangelogOpen,

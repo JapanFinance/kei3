@@ -58,6 +58,7 @@ import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { detectCaps } from '../../utils/capDetection';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
+import { useLoadMilestone } from '../../utils/loadMilestones';
 
 // Quintile band styling; the boundary incomes between bands follow the selected household type.
 const QUINTILE_BAND_STYLES = [
@@ -234,6 +235,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   medicalExpenses,
   homeLoanTaxCredit,
 }) => {
+  useLoadMilestone('chart-rendered');
+
   const theme = useTheme();
 
   // Track whether the user has manually adjusted the range
