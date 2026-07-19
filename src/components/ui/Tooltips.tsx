@@ -46,14 +46,15 @@ const BaseTooltip: React.FC<BaseTooltipProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const showDialog = isMobile;
+  const isTouchDevice = useMediaQuery('(hover: none)');
+  const showDialog = isTouchDevice;
+  const isNarrow = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
   const tooltipContent = (
-    <Box sx={{ maxWidth: 420, p: 1, fontSize: isMobile ? '0.85rem' : '1rem' }}>
+    <Box sx={{ maxWidth: 420, p: 1, fontSize: isNarrow ? '0.85rem' : '1rem' }}>
       {title && (
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
           {title}

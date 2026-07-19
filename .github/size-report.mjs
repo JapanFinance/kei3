@@ -80,13 +80,17 @@ function renderMarkdown(report, base) {
     }
   }
 
+  const totalDelta = withDelta ? deltaText(base.total, report.total) : undefined;
   const totalRow = withDelta
-    ? `| **Total** | **${kb(report.total)}** | **${deltaText(base.total, report.total)}** |`
+    ? `| **Total** | **${kb(report.total)}** | **${totalDelta}** |`
     : `| **Total** | **${kb(report.total)}** |`;
   const status = report.total <= report.budget ? '✅' : '❌ over budget';
+  const deltaSuffix = withDelta
+    ? ` (${totalDelta === '—' ? 'no change' : `${totalDelta} vs base`})`
+    : '';
 
   return [
-    `### 📦 Bundle size — ${kb(report.total)} Brotli / ${kb(report.budget)} budget ${status}`,
+    `### 📦 Bundle size — ${kb(report.total)} Brotli${deltaSuffix} / ${kb(report.budget)} budget ${status}`,
     '',
     '<details><summary>Per-file breakdown</summary>',
     '',
