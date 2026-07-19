@@ -55,6 +55,7 @@ function App() {
     isOpen: isChangelogOpen,
     openModal: openChangelog,
     closeModal: closeChangelog,
+    hasNewFeatures,
   } = useChangelogModal();
 
   // Default values for the form
@@ -102,7 +103,10 @@ function App() {
         overflowX: 'hidden',
       }}
     >
-      <SiteHeader title={SITE_TITLE} actions={<ChangelogButton onClick={openChangelog} />} />
+      <SiteHeader
+        title={SITE_TITLE}
+        actions={<ChangelogButton onClick={openChangelog} showBadge={hasNewFeatures} />}
+      />
 
       <Box
         component="main"

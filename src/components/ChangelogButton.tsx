@@ -1,80 +1,70 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Badge from '@mui/material/Badge';
-import Tooltip from '@mui/material/Tooltip';
 import Button from '@mui/material/Button';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
-import {
-  getLastViewedDate,
-  hasNewUpdates,
-  parseChangelog,
-  type ParsedChangelog,
-} from '../utils/changelogUtils';
-import changelogContent from '../../CHANGELOG.md?raw';
 
 interface ChangelogButtonProps {
-  onClick: () => void;
+  /** Absent while the app is still loading; the button renders disabled. */
+  onClick?: () => void;
+  /** Shows the unread-updates dot. */
+  showBadge?: boolean;
 }
 
-export default function ChangelogButton({ onClick }: ChangelogButtonProps) {
-  const [hasNewFeatures, setHasNewFeatures] = useState(() => {
-    try {
-      const changelog: ParsedChangelog = parseChangelog(changelogContent);
-      const lastViewed = getLastViewedDate();
-      return hasNewUpdates(changelog, lastViewed || undefined);
-    } catch (error) {
-      console.warn('Failed to check for changelog updates:', error);
-      return false;
-    }
-  });
+/**
+ * Presentational only — no changelog-data imports, so the loading fallback in
+ * {@link import('../Root').Root} can render the identical (disabled) button
+ * before the app and the changelog content have loaded. The unread-dot state
+ * lives in {@link import('../hooks/useChangelogModal').useChangelogModal}.
+ *
+ * The hover hint is a native title attribute rather than a MUI Tooltip:
+ * Tooltip pulls the popper positioning engine, which nothing else needs
+ * before first paint.
+ */
+export default function ChangelogButton({ onClick, showBadge = false }: ChangelogButtonProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const handleClick = () => {
-    setHasNewFeatures(false); // Remove badge when clicked
-    onClick();
-  };
+  const icon = (
+    <Badge color="error" variant="dot" invisible={!showBadge}>
+      <AnnouncementIcon />
+    </Badge>
+  );
 
   if (isMobile) {
     // Mobile: Icon button only
     return (
-      <Tooltip title="What's New" arrow>
-        <IconButton
-          onClick={handleClick}
-          color="inherit"
-          size="small"
-          aria-label="View changelog"
-          sx={{
-            color: 'text.secondary',
-            '&:hover': {
-              color: 'text.primary',
-            },
-          }}
-        >
-          <Badge color="error" variant="dot" invisible={!hasNewFeatures}>
-            <AnnouncementIcon />
-          </Badge>
-        </IconButton>
-      </Tooltip>
+      <IconButton
+        onClick={onClick}
+        disabled={!onClick}
+        color="inherit"
+        size="small"
+        aria-label="View changelog"
+        title="What's New"
+        sx={{
+          color: 'text.secondary',
+          '&:hover': {
+            color: 'text.primary',
+          },
+        }}
+      >
+        {icon}
+      </IconButton>
     );
   }
 
   // Desktop: Text button
   return (
     <Button
-      onClick={handleClick}
+      onClick={onClick}
+      disabled={!onClick}
       color="inherit"
       size="small"
-      startIcon={
-        <Badge color="error" variant="dot" invisible={!hasNewFeatures}>
-          <AnnouncementIcon />
-        </Badge>
-      }
+      startIcon={icon}
       sx={{
         color: 'text.secondary',
         '&:hover': {

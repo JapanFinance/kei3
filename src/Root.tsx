@@ -7,6 +7,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import { keyframes } from '@mui/material/styles';
 import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
+import ChangelogButton from './components/ChangelogButton';
 import { theme } from './theme';
 import './index.css';
 
@@ -22,9 +23,9 @@ const spin = keyframes`
 // The loading screen renders the real site header so first paint carries the
 // page title (its largest contentful element) instead of only a spinner —
 // borders are not "content", so a bare spinner leaves first-paint metrics
-// waiting for the whole app. App renders the same component when it loads,
-// keeping the pixels identical; only the header's changelog button appears
-// with the app.
+// waiting for the whole app. App renders the same components when it loads,
+// keeping the pixels identical; the changelog button (disabled here — its
+// modal has not loaded yet) becomes interactive with the app.
 export const LoadingFallback = () => (
   <Box
     sx={{
@@ -34,7 +35,7 @@ export const LoadingFallback = () => (
       bgcolor: 'background.default',
     }}
   >
-    <SiteHeader title={SITE_TITLE} />
+    <SiteHeader title={SITE_TITLE} actions={<ChangelogButton />} />
     <Box
       sx={{
         flex: 1,
