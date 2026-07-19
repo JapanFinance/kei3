@@ -775,14 +775,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                             National Pension Full Exemption (全額免除)
                           </Typography>
                           <SimpleTooltip>
-                            The National Pension system offers income-based contribution
-                            exemptions (国民年金保険料免除制度). Full exemption (全額免除) applies
-                            when the previous year's income is at or below (number of dependents +
-                            1) × ¥350,000 + ¥320,000. An application to the municipal office or
-                            pension office is required — the exemption is not applied
-                            automatically. Fully exempted periods accrue one half of the normal
-                            basic pension amount. This calculator assumes income is the same as
-                            the previous year.
+                            The National Pension system offers income-based contribution exemptions
+                            (国民年金保険料免除制度). Full exemption (全額免除) applies when the
+                            previous year's income is at or below (number of dependents + 1) ×
+                            ¥350,000 + ¥320,000. An application to the municipal office or pension
+                            office is required — the exemption is not applied automatically. Fully
+                            exempted periods accrue one half of the normal basic pension amount.
+                            This calculator assumes income is the same as the previous year.
                           </SimpleTooltip>
                         </Box>
                       }
