@@ -10,7 +10,8 @@
 //            matched by commit SHA + "Deployment successful"), audit all four
 //            categories with the app skip list, and write summary.app. Exits
 //            non-zero when no preview turns up — the gate has nothing to check
-//            without it.
+//            without it. preview, baseline, and local also run the
+//            devtools-throttled milestone pass (auditMilestones).
 //
 //   baseline Pushes to main: audit deployed main on the root workers.dev
 //            subdomain — the same environment class as PR previews — and write
@@ -47,6 +48,8 @@ import {
   BUDGETS,
   CATEGORY_LABELS,
   FORM_FACTOR,
+  MILESTONE_RUNS,
+  MILESTONE_THROTTLING,
   PROD_URL,
   PRODUCTION_BUDGETS,
   RUNS,
@@ -141,6 +144,88 @@ function collectMetrics(runs) {
   return metrics;
 }
 
+// The app's own load milestones: performance.mark entries the app fires one
+// frame after each component's first commit paints (src/utils/loadMilestones.ts
+// owns the names; both lists must match). They say when the app's content
+// actually renders, which FCP/LCP stopped saying once the loading shell became
+// the first paint. Older deploys predate the marks and simply yield no entries.
+const MILESTONE_IDS = ['app-rendered', 'results-rendered', 'chart-rendered'];
+
+// Median milestone times across the throttled pass's runs, in the metrics'
+// {value, min, max, unit} shape so the report renders both tables with the
+// same helpers. The pass's observed first contentful paint is included as the
+// anchor the marks are read against.
+function collectMilestones(runs) {
+  const milestones = {};
+  const collect = (id, values) => {
+    if (!values.length) return;
+    milestones[id] = {
+      value: median(values),
+      min: Math.min(...values),
+      max: Math.max(...values),
+      unit: 'millisecond',
+    };
+  };
+  collect(
+    'first-contentful-paint',
+    runs
+      .map(run => run.lhr.audits['first-contentful-paint']?.numericValue)
+      .filter(value => typeof value === 'number'),
+  );
+  for (const id of MILESTONE_IDS) {
+    collect(
+      id,
+      runs
+        .map(
+          run =>
+            run.lhr.audits['user-timings']?.details?.items?.find(
+              item => item.timingType === 'Mark' && item.name === id,
+            )?.startTime,
+        )
+        .filter(value => typeof value === 'number'),
+    );
+  }
+  return milestones;
+}
+
+// The milestone pass: MILESTONE_RUNS performance-only runs under REAL
+// (devtools) throttling. Real throttling because on an unthrottled connection
+// the lazy chunks arrive inside React's reveal-coalescing window, every
+// milestone lands in the same frame, and a cascade regression stays invisible
+// until it crosses that window; throttled, the cascade keeps the shape a real
+// visitor sees. No warmup run: the main audit's runs already paged Chrome in,
+// and the median absorbs what remains. Best-effort — milestones inform the PR
+// comment but gate nothing, so a failure logs and drops the section rather
+// than failing the job.
+async function auditMilestones(url) {
+  console.log(
+    `Milestone pass: ${MILESTONE_RUNS} run(s) with devtools throttling (slow 4G, 4x CPU) …`,
+  );
+  try {
+    const runs = [];
+    for (let i = 0; i < MILESTONE_RUNS; i++) {
+      const rc = await runOnce(url, [], {
+        throttlingMethod: 'devtools',
+        throttling: MILESTONE_THROTTLING,
+        onlyCategories: ['performance'],
+      });
+      runs.push({ lhr: rc.lhr });
+      const fcp = rc.lhr.audits['first-contentful-paint']?.numericValue;
+      const marks = (rc.lhr.audits['user-timings']?.details?.items ?? [])
+        .filter(item => item.timingType === 'Mark')
+        .map(item => `${item.name}=${Math.round(item.startTime)}ms`)
+        .join('  ');
+      console.log(
+        `  run ${i + 1}/${MILESTONE_RUNS}: FCP=${fcp == null ? '—' : `${Math.round(fcp)}ms`}  ${marks}`,
+      );
+    }
+    return { milestones: collectMilestones(runs), milestoneRuns: MILESTONE_RUNS };
+  } catch (error) {
+    console.warn(`Milestone pass failed (${error.message}); reporting without milestones.`);
+    return {};
+  }
+}
+
 // The score-weighted audits that hold a category below 1.0 in the given run —
 // the concrete "what to fix" behind each imperfect number. Weight-0 audits are
 // informational and cannot move a score, so they are skipped.
@@ -233,7 +318,8 @@ function startServer(dir) {
 // Windows-only temp-dir cleanup EPERM so a local run still returns its result).
 // skipAudits (see SKIPPED_AUDITS) removes environment-artifact audits from the
 // run; the affected category renormalizes over its remaining audits.
-async function runOnce(url, skipAudits) {
+// extraSettings lets the milestone pass switch to devtools throttling.
+async function runOnce(url, skipAudits, extraSettings = {}) {
   const chrome = await launchChrome({
     chromeFlags: CHROME_FLAGS,
     chromePath: process.env.CHROME_PATH || undefined,
@@ -245,6 +331,7 @@ async function runOnce(url, skipAudits) {
       settings: {
         ...(FORM_FACTOR === 'desktop' ? DESKTOP_CONFIG.settings : {}),
         skipAudits: skipAudits ?? [],
+        ...extraSettings,
       },
     };
     return await lighthouse(url, flags, config);
@@ -336,12 +423,14 @@ async function cmdLocal() {
   const server = await startServer(DIST_DIR);
   console.log(`Auditing ${server.url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   let result;
+  let milestonePass;
   try {
     result = await auditAllCategories(server.url, SKIPPED_AUDITS.app);
+    milestonePass = await auditMilestones(server.url);
   } finally {
     await server.close();
   }
-  await saveApp('local dist/ (dev, advisory)', server.url, result);
+  await saveApp('local dist/ (dev, advisory)', server.url, result, milestonePass);
 }
 
 // Check `scores` against the budgets; returns failure labels and prints passes.
@@ -468,7 +557,7 @@ async function cmdPreview() {
 
   console.log(`Auditing Cloudflare preview ${url} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   const result = await auditAllCategories(url, SKIPPED_AUDITS.app);
-  await saveApp('Cloudflare preview', url, result);
+  await saveApp('Cloudflare preview', url, result, await auditMilestones(url));
 }
 
 // Module-script srcs of an HTML document — the same build fingerprint the
@@ -524,7 +613,10 @@ async function cmdBaseline() {
   }
   console.log(`Auditing main baseline ${WORKERS_URL} — ${FORM_FACTOR}, ${RUNS} run(s)`);
   const result = await auditAllCategories(WORKERS_URL, SKIPPED_AUDITS.app);
-  await saveApp('workers.dev (main)', WORKERS_URL, result, { deployedMatch });
+  await saveApp('workers.dev (main)', WORKERS_URL, result, {
+    deployedMatch,
+    ...(await auditMilestones(WORKERS_URL)),
+  });
 }
 
 // The reality check on pushes to main: the custom domain, zone layer included.
