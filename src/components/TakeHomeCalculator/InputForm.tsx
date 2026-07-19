@@ -33,6 +33,8 @@ import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
+import { countDependentsWithinEligibilityIncome } from '../../utils/dependentDeductions';
+import { calculateNationalPensionFullExemptionThreshold } from '../../utils/pensionCalculator';
 import { formatJPY } from '../../utils/formatters';
 
 import type {
@@ -49,6 +51,7 @@ import type {
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
+  NATIONAL_HEALTH_INSURANCE_ID,
   isDependentCoverageEligible,
   DEPENDENT_INCOME_THRESHOLD,
 } from '../../types/healthInsurance';
@@ -201,6 +204,18 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     () => calculateTotalNetIncome(inputs.incomeStreams, inputs.incomeYear, inputs.dependents),
     [inputs.incomeStreams, inputs.incomeYear, inputs.dependents],
   );
+
+  // The National Pension full exemption toggle is rendered only while the income test
+  // passes; the engine re-checks eligibility, so a stale `true` above the threshold is a
+  // no-op rather than an error state.
+  const pensionExemptionThreshold = React.useMemo(
+    () =>
+      calculateNationalPensionFullExemptionThreshold(
+        countDependentsWithinEligibilityIncome(inputs.dependents, inputs.incomeYear),
+      ),
+    [inputs.dependents, inputs.incomeYear],
+  );
+  const isPensionExemptionEligible = taxpayerNetIncome <= pensionExemptionThreshold;
 
   return (
     <Box
@@ -734,6 +749,48 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   />
                 </FormControl>
               )}
+
+              {inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID &&
+                isPensionExemptionEligible && (
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={inputs.nationalPensionExemption}
+                          onChange={e =>
+                            dispatch({
+                              type: 'setField',
+                              field: 'nationalPensionExemption',
+                              value: e.target.checked,
+                            })
+                          }
+                          name="nationalPensionExemption"
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                            National Pension Full Exemption (全額免除)
+                          </Typography>
+                          <SimpleTooltip>
+                            The National Pension system offers income-based contribution exemptions
+                            (国民年金保険料免除制度). Full exemption (全額免除) applies when the
+                            previous year's income is at or below (number of dependents + 1) ×
+                            ¥350,000 + ¥320,000. An application to the municipal office or pension
+                            office is required — the exemption is not applied automatically. Fully
+                            exempted periods accrue one half of the normal basic pension amount.
+                            This calculator assumes income is the same as the previous year.
+                          </SimpleTooltip>
+                        </Box>
+                      }
+                    />
+                    <FormHelperText sx={{ mt: -0.5 }}>
+                      {`Income is within the full exemption threshold (${formatJPY(pensionExemptionThreshold)}).`}
+                    </FormHelperText>
+                  </Box>
+                )}
             </Box>
           )}
         </Box>

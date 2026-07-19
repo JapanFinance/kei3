@@ -636,13 +636,25 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           labelSuffix={
             isNationalHealthInsurance ? (
               <DetailedTooltip title="Pension Contribution">
-                <NationalPensionTooltip year={inputs.incomeYear} />
+                <NationalPensionTooltip
+                  year={inputs.incomeYear}
+                  exemption={results.nationalPensionExemption}
+                />
               </DetailedTooltip>
             ) : undefined
           }
           value={formatJPY(results.pensionPayments)}
           type="subtotal"
         />
+        {results.nationalPensionExemption?.applied && (
+          <Typography
+            variant="body2"
+            sx={{ color: 'text.secondary', fontSize: '0.85rem', mt: 0.5 }}
+          >
+            Full exemption (全額免除) applied. An application is required; exempted periods accrue
+            one half of the normal basic pension amount.
+          </Typography>
+        )}
       </Box>
 
       {/* Employment Insurance */}

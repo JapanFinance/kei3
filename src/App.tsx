@@ -45,6 +45,7 @@ function App() {
     isSubjectToLongTermCarePremium: false,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
+    nationalPensionExemption: false,
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
@@ -71,6 +72,7 @@ function App() {
         isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
         region: inputs.region,
         healthInsuranceProvider: inputs.healthInsuranceProvider,
+        nationalPensionExemption: inputs.nationalPensionExemption,
         dependents: inputs.dependents,
         dcPlanContributions: inputs.dcPlanContributions,
         manualSocialInsuranceEntry: inputs.manualSocialInsuranceEntry,
@@ -98,6 +100,7 @@ function App() {
     inputs.isSubjectToLongTermCarePremium,
     inputs.region,
     inputs.healthInsuranceProvider,
+    inputs.nationalPensionExemption,
     inputs.dependents,
     inputs.dcPlanContributions,
     inputs.manualSocialInsuranceEntry,
@@ -192,6 +195,7 @@ function App() {
             )}
             isSubjectToLongTermCarePremium={inputs.isSubjectToLongTermCarePremium}
             healthInsuranceProvider={inputs.healthInsuranceProvider}
+            nationalPensionExemption={inputs.nationalPensionExemption}
             region={inputs.region}
             dcPlanContributions={inputs.dcPlanContributions}
             dependents={inputs.dependents}

@@ -355,6 +355,126 @@ describe('calculateTaxes', () => {
     expect(result.takeHomeIncome).toBe(-127_760);
   });
 
+  it('applies the National Pension full exemption when requested and eligible', () => {
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 600_000, id: 'test' }],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      nationalPensionExemption: true,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
+
+    // Net income 600,000 ≤ threshold 670,000 ((0 + 1) × 350,000 + 320,000) → contribution 0
+    expect(result.pensionPayments).toBe(0);
+    expect(result.nationalPensionExemption).toEqual({
+      requested: true,
+      eligible: true,
+      applied: true,
+      incomeThreshold: 670_000,
+    });
+  });
+
+  it('charges the full National Pension when the exemption is requested above the threshold', () => {
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 700_000, id: 'test' }],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      nationalPensionExemption: true,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
+
+    // Net income 700,000 > 670,000: the stale request is a no-op, the full amount applies
+    expect(result.pensionPayments).toBe(213_810);
+    expect(result.nationalPensionExemption).toEqual({
+      requested: true,
+      eligible: false,
+      applied: false,
+      incomeThreshold: 670_000,
+    });
+  });
+
+  it('raises the exemption threshold with a dependent', () => {
+    const spouse = {
+      id: 'spouse',
+      relationship: 'spouse' as const,
+      ageCategory: 'under70' as const,
+      isCohabiting: true,
+      disability: 'none' as const,
+      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    };
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 1_000_000, id: 'test' }],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      nationalPensionExemption: true,
+      region: 'Tokyo',
+      dependents: [spouse],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
+
+    // One dependent: threshold (1 + 1) × 350,000 + 320,000 = 1,020,000 ≥ net income 1,000,000
+    expect(result.pensionPayments).toBe(0);
+    expect(result.nationalPensionExemption).toEqual({
+      requested: true,
+      eligible: true,
+      applied: true,
+      incomeThreshold: 1_020_000,
+    });
+  });
+
+  it('does not report exemption status outside the National Pension path', () => {
+    const employeeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
+      ],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      nationalPensionExemption: true,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const employeeResult = calculateTaxes(employeeInputs);
+    // Employees' pension is unaffected by the National Pension exemption request
+    expect(employeeResult.pensionPayments).toBe(450_180);
+    expect(employeeResult.nationalPensionExemption).toBeUndefined();
+
+    const dependentInputs = {
+      ...employeeInputs,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 1_200_000, frequency: 'annual' as const, id: 'test' },
+      ],
+      healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+    };
+    const dependentResult = calculateTaxes(dependentInputs);
+    // Dependent coverage already pays no pension; the exemption surface stays undefined
+    expect(dependentResult.pensionPayments).toBe(0);
+    expect(dependentResult.nationalPensionExemption).toBeUndefined();
+  });
+
   it('calculates taxes correctly for employment income with NHI', () => {
     // Test case for employees who work for small employers or are part-time/low income
     // and are therefore enrolled in National Health Insurance instead of employee insurance

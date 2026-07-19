@@ -54,6 +54,35 @@ export const EMPLOYEES_PENSION_BRACKETS: StandardMonthlyRemunerationBracket[] = 
 ];
 
 /**
+ * National Pension contribution full exemption (国民年金保険料の全額免除) income test:
+ * 前年所得 ≤ (扶養親族等の数 + 1) × 350,000円 + 320,000円.
+ *
+ * The statutory test is on the previous year's income; this calculator's steady-state
+ * single-year model applies it to the current year's 合計所得金額, assuming income is the
+ * same as the previous year. An application is required, and fully exempted periods accrue
+ * one half of the normal basic pension amount.
+ * Source: https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html
+ */
+export const NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON = 350_000;
+export const NATIONAL_PENSION_FULL_EXEMPTION_BASE = 320_000;
+
+/** The 全額免除 income threshold for a taxpayer with the given 扶養親族等の数. */
+export function calculateNationalPensionFullExemptionThreshold(dependentCount: number): number {
+  return (
+    (dependentCount + 1) * NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON +
+    NATIONAL_PENSION_FULL_EXEMPTION_BASE
+  );
+}
+
+/** Whether the 全額免除 income test passes. The boundary is inclusive (以下). */
+export function isEligibleForNationalPensionFullExemption(
+  netIncome: number,
+  dependentCount: number,
+): boolean {
+  return netIncome <= calculateNationalPensionFullExemptionThreshold(dependentCount);
+}
+
+/**
  * Utility function to find the Pension SMR bracket for a given monthly income
  */
 export function findPensionBracket(monthlyIncome: number): StandardMonthlyRemunerationBracket {
