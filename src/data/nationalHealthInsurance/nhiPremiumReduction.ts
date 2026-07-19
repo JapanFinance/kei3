@@ -91,7 +91,10 @@ export function getNHIPremiumReductionThresholdsForMonth(
 ): NHIPremiumReductionThresholds {
   for (const period of NHI_PREMIUM_REDUCTION_PERIODS) {
     const { effectiveFrom } = period;
-    if (year > effectiveFrom.year || (year === effectiveFrom.year && month >= effectiveFrom.month)) {
+    if (
+      year > effectiveFrom.year ||
+      (year === effectiveFrom.year && month >= effectiveFrom.month)
+    ) {
       return period;
     }
   }
