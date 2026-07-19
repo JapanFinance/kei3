@@ -6,7 +6,6 @@ import { formatJPY, formatYenCompact } from './formatters';
 import { calculateTaxes } from './taxCalculations';
 import { detectCaps } from './capDetection';
 import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, Plugin } from 'chart.js';
-import { MEDIAN_INCOME_VALUE } from '../data/income';
 
 // Create custom plugin for vertical lines
 export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
@@ -277,6 +276,7 @@ export const generateChartData = (
 export const getChartOptions = (
   chartRange: ChartRange,
   currentIncome: number,
+  medianIncome: number,
   useCompactLabelFormat: boolean = false,
 ): ChartOptions<'bar' | 'line'> => {
   const maxIncome = chartRange.max;
@@ -287,7 +287,7 @@ export const getChartOptions = (
   );
   const medianIncomePosition = Math.max(
     0,
-    Math.min(1, (MEDIAN_INCOME_VALUE - minIncome) / (maxIncome - minIncome)),
+    Math.min(1, (medianIncome - minIncome) / (maxIncome - minIncome)),
   );
 
   return {

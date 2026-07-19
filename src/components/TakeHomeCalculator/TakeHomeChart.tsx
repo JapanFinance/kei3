@@ -17,7 +17,9 @@ import {
 } from 'chart.js';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import Box from '@mui/material/Box';
+import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
@@ -40,45 +42,46 @@ import {
 } from '../../utils/chartConfig';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type { Dependent } from '../../types/dependents';
-import { MEDIAN_INCOME_VALUE, QUINTILE_DATA, INCOME_RANGE_DISTRIBUTION } from '../../data/income';
+import {
+  QUINTILE_DATA,
+  HOUSEHOLD_INCOME_DISTRIBUTIONS,
+  HOUSEHOLD_TYPE_ORDER,
+  DEFAULT_HOUSEHOLD_TYPE,
+  type HouseholdType,
+} from '../../data/income';
+import {
+  estimateIncomePercentile,
+  estimateIncomeAtPercentile,
+} from '../../utils/incomeDistribution';
 import { DetailedTooltip } from '../ui/Tooltips';
+import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { detectCaps } from '../../utils/capDetection';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 
-// Percentile bands configuration
-const QUINTILE_BANDS = [
-  { min: 0, max: QUINTILE_DATA[20], label: '0-20th percentile', color: 'rgba(255, 99, 132, 0.1)' }, // Light red
-  {
-    min: QUINTILE_DATA[20],
-    max: QUINTILE_DATA[40],
-    label: '20-40th percentile',
-    color: 'rgba(255, 159, 64, 0.1)',
-  }, // Light orange
-  {
-    min: QUINTILE_DATA[40],
-    max: QUINTILE_DATA[60],
-    label: '40-60th percentile',
-    color: 'rgba(153, 102, 255, 0.1)',
-  }, // Light purple
-  {
-    min: QUINTILE_DATA[60],
-    max: QUINTILE_DATA[80],
-    label: '60-80th percentile',
-    color: 'rgba(46, 125, 50, 0.1)',
-  }, // Light green
-  {
-    min: QUINTILE_DATA[80],
-    max: Infinity,
-    label: '80-100th percentile',
-    color: 'rgba(54, 162, 235, 0.1)',
-  }, // Light blue
+// Quintile band styling; the boundary incomes between bands follow the selected household type.
+const QUINTILE_BAND_STYLES = [
+  { label: '0-20th percentile', color: 'rgba(255, 99, 132, 0.1)' }, // Light red
+  { label: '20-40th percentile', color: 'rgba(255, 159, 64, 0.1)' }, // Light orange
+  { label: '40-60th percentile', color: 'rgba(153, 102, 255, 0.1)' }, // Light purple
+  { label: '60-80th percentile', color: 'rgba(46, 125, 50, 0.1)' }, // Light green
+  { label: '80-100th percentile', color: 'rgba(54, 162, 235, 0.1)' }, // Light blue
 ];
 
-// Chart.js plugin for percentile background bands
-const percentileBandsPlugin = {
-  id: 'percentileBands',
+/** The five band edges implied by the four quintile boundaries: 0, Q20, Q40, Q60, Q80, ∞. */
+const toBandEdges = (boundaries: readonly number[]): number[] => [0, ...boundaries, Infinity];
+
+// Chart.js plugin for the quintile background bands. Reads the selected household type's quintile
+// boundaries from the chart options, the same channel the median line uses.
+const quintileBandsPlugin = {
+  id: 'quintileBands',
   beforeDraw: (chart: ChartJS<'bar' | 'line'>) => {
+    // Chart.js types plugin options as DeepPartial, so narrow the elements back to numbers.
+    const boundaries = chart.options.plugins?.quintileBands?.boundaries?.filter(
+      (b): b is number => typeof b === 'number',
+    );
+    if (!boundaries || boundaries.length !== 4) return;
+
     const { ctx, scales } = chart;
     const { x: xScale, y: yScale } = scales;
 
@@ -87,12 +90,13 @@ const percentileBandsPlugin = {
     ctx.save();
 
     // Draw each percentile band
-    QUINTILE_BANDS.forEach(band => {
-      const xMin = Math.max(xScale.getPixelForValue(band.min), xScale.left);
-      const xMax = Math.min(xScale.getPixelForValue(band.max), xScale.right);
+    const edges = toBandEdges(boundaries);
+    QUINTILE_BAND_STYLES.forEach((style, i) => {
+      const xMin = Math.max(xScale.getPixelForValue(edges[i]!), xScale.left);
+      const xMax = Math.min(xScale.getPixelForValue(edges[i + 1]!), xScale.right);
 
       if (xMax > xMin) {
-        ctx.fillStyle = band.color;
+        ctx.fillStyle = style.color;
         ctx.fillRect(xMin, yScale.top, xMax - xMin, yScale.height);
       }
     });
@@ -103,7 +107,7 @@ const percentileBandsPlugin = {
     ctx.setLineDash([4, 4]); // Create dotted line pattern
 
     // Draw vertical lines at each percentile boundary
-    [QUINTILE_DATA[20], QUINTILE_DATA[40], QUINTILE_DATA[60], QUINTILE_DATA[80]].forEach(value => {
+    boundaries.forEach(value => {
       const x = xScale.getPixelForValue(value);
       if (x >= xScale.left && x <= xScale.right) {
         ctx.beginPath();
@@ -129,7 +133,7 @@ ChartJS.register(
   BarController,
   LineController,
   currentAndMedianIncomeChartPlugin,
-  percentileBandsPlugin,
+  quintileBandsPlugin,
 );
 
 interface TakeHomeChartProps {
@@ -183,42 +187,33 @@ const STEP_SIZE = 1000000; // 1M steps
 const YOUR_INCOME_COLOR = 'rgba(255, 99, 132, 1)';
 const MEDIAN_INCOME_COLOR = 'rgba(255, 206, 86, 1)';
 
-// Utility function to calculate income percentile
-const calculateEstimatedIncomePercentile = (income: number): number => {
-  if (income <= 0) return 0;
+const INCOME_SURVEY_SOURCES: Source[] = [
+  {
+    label: '2025（令和７）年 国民生活基礎調査の概況 (Comprehensive Survey of Living Conditions)',
+    href: 'https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html',
+  },
+  {
+    label:
+      '所得票 第０２１表 世帯数の相対度数分布・世帯類型別 (income distribution by household type)',
+    href: 'https://www.e-stat.go.jp/stat-search/files?toukei=00450061&tstat=000001244376&cycle=7&tclass1=000001244380',
+  },
+  {
+    label: '用語の説明 (definitions of each household type)',
+    href: 'https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/dl/07.pdf',
+  },
+];
 
-  // Use detailed income range distribution data for accurate calculation
-  let cumulativePercent = 0;
+/** Lowercases a household-type label's first letter so it can sit mid-sentence. The dropdown's
+ * open menu keeps the capitalized labels; only sentence positions use this. */
+const lowercaseFirst = (label: string): string => label.charAt(0).toLowerCase() + label.slice(1);
 
-  // Find the income range and calculate cumulative percentage
-  for (const [, range] of Object.entries(INCOME_RANGE_DISTRIBUTION)) {
-    if (income < range.max_exclusive) {
-      // Income falls within this range
-      if (income >= range.min_inclusive) {
-        // Calculate position within the range
-        const rangeSpan = range.max_exclusive - range.min_inclusive;
-        const positionInRange = income - range.min_inclusive;
-        const percentWithinRange =
-          rangeSpan > 0 ? (positionInRange / rangeSpan) * range.percent : 0;
-
-        return cumulativePercent + percentWithinRange;
-      } else {
-        // Income is below this range, return cumulative up to previous ranges
-        return cumulativePercent;
-      }
-    }
-    cumulativePercent += range.percent;
-  }
-  // The distribution covers up to Infinity, so this should never be reached
-  throw new Error(`Income ${formatJPY(income)} not within distribution range`);
-};
-
-// Utility function to get percentile band for income
-const getPercentileBand = (income: number): { label: string; color: string } => {
-  const band =
-    QUINTILE_BANDS.find(b => income >= b.min && income < b.max) ||
-    QUINTILE_BANDS[QUINTILE_BANDS.length - 1]!;
-  return { label: band.label, color: band.color };
+// Utility function to get the quintile band an income falls in, given the quintile boundaries
+const getQuintileBand = (income: number, boundaries: readonly number[]): { label: string } => {
+  const edges = toBandEdges(boundaries);
+  const index = QUINTILE_BAND_STYLES.findIndex(
+    (_, i) => income >= edges[i]! && income < edges[i + 1]!,
+  );
+  return QUINTILE_BAND_STYLES[index === -1 ? QUINTILE_BAND_STYLES.length - 1 : index]!;
 };
 
 const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
@@ -246,6 +241,29 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   // Track whether the user has manually adjusted the range
   const [hasManuallyAdjustedRange, setHasManuallyAdjustedRange] = useState(false);
   const [manualChartRange, setManualChartRange] = useState<ChartRange | null>(null);
+
+  // Which 世帯類型 the median line, the percentile estimate, and the quintile bands are measured
+  // against.
+  const [householdType, setHouseholdType] = useState<HouseholdType>(DEFAULT_HOUSEHOLD_TYPE);
+  const distribution = HOUSEHOLD_INCOME_DISTRIBUTIONS[householdType];
+
+  // The survey publishes exact 五分位値 for 全世帯 only; every other type's quintile boundaries
+  // are estimated by inverting its bucketed distribution
+  const quintilesAreEstimated = householdType !== 'all';
+  const quintileBoundaries = useMemo<number[]>(
+    () =>
+      quintilesAreEstimated
+        ? [20, 40, 60, 80].map(p => estimateIncomeAtPercentile(p, distribution.ranges))
+        : [QUINTILE_DATA[20], QUINTILE_DATA[40], QUINTILE_DATA[60], QUINTILE_DATA[80]],
+    [quintilesAreEstimated, distribution],
+  );
+
+  // Estimated boundaries display rounded down to the nearest ¥10,000 and marked "~", so the
+  // tooltip does not imply more precision than the estimate carries. Down, not to nearest: the
+  // interpolation runs measurably high against the published 全世帯 boundaries, so rounding down
+  // moves the display toward the true value. Published boundaries show exact.
+  const formatQuintileBoundary = (value: number): string =>
+    quintilesAreEstimated ? `~${formatJPY(Math.floor(value / 10_000) * 10_000)}` : formatJPY(value);
 
   // Function to calculate auto-centered range based on income
   const calculateAutoCenteredRange = (income: number): ChartRange => {
@@ -339,13 +357,19 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   // Get chart options using the utility function
   const chartOptions = useMemo<ChartOptions<'bar' | 'line'>>(() => {
-    const baseOptions = getChartOptions(chartRange, currentIncome, useCompactLabelFormat);
+    const baseOptions = getChartOptions(
+      chartRange,
+      currentIncome,
+      distribution.median,
+      useCompactLabelFormat,
+    );
 
     // Enhance tooltips to include percentile and cap information
     return {
       ...baseOptions,
       plugins: {
         ...baseOptions.plugins,
+        quintileBands: { boundaries: quintileBoundaries },
         tooltip: {
           ...baseOptions.plugins?.tooltip,
           callbacks: {
@@ -353,9 +377,16 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             afterTitle: (tooltipItems: TooltipItem<'bar' | 'line'>[]) => {
               if (tooltipItems.length > 0 && tooltipItems[0]?.parsed.x != null) {
                 const income = tooltipItems[0].parsed.x;
-                const estimatedPercentile = calculateEstimatedIncomePercentile(income);
-                const band = getPercentileBand(income);
-                let info = `~${estimatedPercentile.toFixed(1)} percentile (${band.label})`;
+                const estimate = estimateIncomePercentile(income, distribution.ranges);
+                // Above the open-ended top bracket the survey supports only a bound, so the band
+                // label is dropped there.
+                const groupLabel = lowercaseFirst(distribution.label);
+                let info = estimate.isTopBracket
+                  ? `top ~${estimate.topBracketPercent.toFixed(1)}% of ${groupLabel}`
+                  : `~${estimate.percentile.toFixed(1)} percentile of ${groupLabel}`;
+                if (!estimate.isTopBracket) {
+                  info += ` (${getQuintileBand(income, quintileBoundaries).label})`;
+                }
 
                 // Calculate full tax results for this income level to get cap status.
                 // Scale the user's actual streams to the hovered income the same way
@@ -419,6 +450,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     medicalExpenses,
     homeLoanTaxCredit,
     incomeStreams,
+    distribution,
+    quintileBoundaries,
   ]);
 
   // Use media query to determine if we should show minor marks
@@ -438,7 +471,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const yourIncomeIsVisibleInChart =
     currentIncome > 0 && currentIncome >= chartRange.min && currentIncome <= chartRange.max;
   const medianIncomeIsVisibleInChart =
-    MEDIAN_INCOME_VALUE >= chartRange.min && MEDIAN_INCOME_VALUE <= chartRange.max;
+    distribution.median >= chartRange.min && distribution.median <= chartRange.max;
+
+  const percentileEstimate = useMemo(
+    () => estimateIncomePercentile(currentIncome, distribution.ranges),
+    [currentIncome, distribution],
+  );
 
   return (
     <Paper
@@ -588,35 +626,93 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               fontWeight: 500,
             }}
           >
-            Median Income: {formatJPY(MEDIAN_INCOME_VALUE)}
+            Median Income: {formatJPY(distribution.median)}
           </Typography>
         </Box>
-        {currentIncome > 0 && (
-          <Box
-            className="legend-item"
+        {/* The comparison group reads inline within the percentile sentence. Always rendered
+            (not gated on income): the selection also drives the median line, which is meaningful
+            before any income is entered. */}
+        <Box className="legend-item" sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography
+            component="div"
+            variant="body2"
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
+              fontSize: { xs: '0.95rem', sm: '0.98rem' },
+              fontWeight: 500,
+              color: 'primary.main',
             }}
           >
-            <Typography
-              variant="body2"
-              color="text.secondary"
+            {currentIncome > 0
+              ? percentileEstimate.isTopBracket
+                ? `This income is in the top ~${percentileEstimate.topBracketPercent.toFixed(1)}% of `
+                : `This income is higher than ~${percentileEstimate.percentile.toFixed(1)}% of `
+              : 'Comparison group: '}
+            <Select
+              id="household-type"
+              name="household-type"
+              variant="standard"
+              value={householdType}
+              onChange={event => setHouseholdType(event.target.value as HouseholdType)}
+              renderValue={value => lowercaseFirst(HOUSEHOLD_INCOME_DISTRIBUTIONS[value].label)}
+              inputProps={{ 'aria-label': 'Comparison household type' }}
               sx={{
-                fontSize: { xs: '0.95rem', sm: '0.98rem' },
-                fontWeight: 500,
+                verticalAlign: 'baseline',
                 color: 'primary.main',
+                fontSize: 'inherit',
+                fontWeight: 600,
+                '& .MuiSelect-select': { py: 0 },
+                '& .MuiSelect-select:focus': { backgroundColor: 'transparent' },
+                '& .MuiSelect-icon': { color: 'primary.main' },
               }}
             >
-              This income is higher than ~
-              {calculateEstimatedIncomePercentile(currentIncome).toFixed(1)}% of households in
-              Japan.
-            </Typography>
-          </Box>
-        )}
+              {HOUSEHOLD_TYPE_ORDER.map(type => (
+                <MenuItem key={type} value={type}>
+                  {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label}
+                </MenuItem>
+              ))}
+            </Select>
+            {currentIncome > 0 && ' in Japan.'}
+            <DetailedTooltip
+              title="Household types (世帯類型)"
+              icon={SIMPLE_TOOLTIP_ICON}
+              iconAriaLabel="Learn more about the household types"
+            >
+              <Box>
+                <Typography variant="body2" sx={{ mb: 1.5 }}>
+                  The survey reports the income distribution separately for each household type
+                  (世帯類型) below. Picking one changes the income distribution compared with the
+                  input income.
+                </Typography>
+                <Box component="dl" sx={{ m: 0 }}>
+                  {HOUSEHOLD_TYPE_ORDER.map(type => (
+                    <Box key={type} sx={{ mb: 1 }}>
+                      <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>
+                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label} (
+                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].labelJa})
+                      </Typography>
+                      <Typography
+                        component="dd"
+                        variant="body2"
+                        sx={{ m: 0, fontSize: '0.85rem', color: 'text.secondary' }}
+                      >
+                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].definition} Median{' '}
+                        {formatJPY(HOUSEHOLD_INCOME_DISTRIBUTIONS[type].median)}.
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+                <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
+                  Some groups overlap — a household can be counted in more than one — so the six do
+                  not add up to all households.
+                </Typography>
+                <SourceLinks sources={INCOME_SURVEY_SOURCES} />
+              </Box>
+            </DetailedTooltip>
+          </Typography>
+        </Box>
 
-        {/* Quintile Bands Legend Item */}
+        {/* Quintile bands for the selected 世帯類型: published 五分位値 for 全世帯, estimated by
+            inverting the bucketed distribution for every other type. */}
         <Box
           className="legend-item"
           sx={{
@@ -633,7 +729,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               fontWeight: 500,
             }}
           >
-            Background colors show income distribution quintiles
+            Background colors show income quintiles
           </Typography>
           <DetailedTooltip
             title="Income Distribution Quintiles"
@@ -642,8 +738,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           >
             <Box>
               <Typography variant="body2" sx={{ mb: 1.5 }}>
-                The colored background bands represent household income distribution quintiles based
-                on official Japanese government data:
+                The colored background bands divide the selected household type into five equal
+                groups (quintiles) by household income:
               </Typography>
 
               {/* Quintile Data Table */}
@@ -682,49 +778,25 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   </Box>
                 </Box>
                 <Box component="tbody">
-                  <Box component="tr">
-                    <Box component="td">0-20th</Box>
-                    <Box component="td">¥0 - {formatJPY(QUINTILE_DATA[20])}</Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">20-40th</Box>
-                    <Box component="td">
-                      {formatJPY(QUINTILE_DATA[20])} - {formatJPY(QUINTILE_DATA[40])}
+                  {QUINTILE_BAND_STYLES.map((style, i) => (
+                    <Box component="tr" key={style.label}>
+                      <Box component="td">{style.label.replace(' percentile', '')}</Box>
+                      <Box component="td">
+                        {i === 0 && <>¥0 - {formatQuintileBoundary(quintileBoundaries[0]!)}</>}
+                        {i > 0 && i < QUINTILE_BAND_STYLES.length - 1 && (
+                          <>
+                            {formatQuintileBoundary(quintileBoundaries[i - 1]!)} -{' '}
+                            {formatQuintileBoundary(quintileBoundaries[i]!)}
+                          </>
+                        )}
+                        {i === QUINTILE_BAND_STYLES.length - 1 && (
+                          <>{formatQuintileBoundary(quintileBoundaries[3]!)} and above</>
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">40-60th</Box>
-                    <Box component="td">
-                      {formatJPY(QUINTILE_DATA[40])} - {formatJPY(QUINTILE_DATA[60])}
-                    </Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">60-80th</Box>
-                    <Box component="td">
-                      {formatJPY(QUINTILE_DATA[60])} - {formatJPY(QUINTILE_DATA[80])}
-                    </Box>
-                  </Box>
-                  <Box component="tr">
-                    <Box component="td">80-100th</Box>
-                    <Box component="td">{formatJPY(QUINTILE_DATA[80])} and above</Box>
-                  </Box>
+                  ))}
                 </Box>
               </Box>
-              <Typography
-                variant="body2"
-                sx={{ mt: 1.5, mb: 1.5, fontSize: '0.9rem', fontStyle: 'italic' }}
-              >
-                Data source:{' '}
-                <a
-                  href="https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa24/index.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'inherit', textDecoration: 'underline' }}
-                >
-                  Ministry of Health, Labour and Welfare's 2024 Comprehensive Survey of Living
-                  Conditions
-                </a>
-              </Typography>
 
               {/* Explanation of quintiles and percentiles */}
               <Box
@@ -744,11 +816,16 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   <strong>Percentiles:</strong> An income in the 70th percentile is higher than 70%
                   of all households.
                 </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
+                <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
                   <strong>Quintiles:</strong> The population divided into 5 equal groups (20% each),
                   from lowest to highest income.
                 </Typography>
+                <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
+                  The survey publishes exact quintile boundaries only for all households. For other
+                  household types, boundaries are estimated from income distribution data.
+                </Typography>
               </Box>
+              <SourceLinks sources={INCOME_SURVEY_SOURCES} />
             </Box>
           </DetailedTooltip>
         </Box>

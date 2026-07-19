@@ -106,9 +106,9 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       // If it were 100%, it would be the full FY2026 amount.
       // The blended amount should be roughly 70% of the full amount.
       // Verify it's less than the full FY2026 calculation by checking the ratio.
-      // Full FY2026 child support for 5M income in Nakano: 12,412 (from test comments above)
-      // Blended: round(0 * 0.3 + 12412 * 0.7) = 8,688
-      expect(breakdown.childSupportPortion).toBe(8_688);
+      // Full FY2026 child support for 5M income in Nakano: 14,212 (from test comments above)
+      // Blended: round(0 * 0.3 + 14212 * 0.7) = 9,948
+      expect(breakdown.childSupportPortion).toBe(9_948);
     });
   });
 
