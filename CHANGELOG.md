@@ -7,6 +7,12 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 ### New
 
 - Added an opt-in toggle for the National Pension contribution full exemption ([国民年金保険料の全額免除](https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html)). The toggle appears under the social insurance settings when National Health Insurance is selected and income is at or below the statutory threshold ((number of dependents + 1) × ¥350,000 + ¥320,000; ¥670,000 for a single person). When enabled, the pension contribution drops to ¥0 and the take-home chart shows the eligibility step across incomes. The exemption requires an application in reality and reduces future basic-pension accrual to one half for exempted periods, so it is never applied automatically — see the pension tooltip for details.
+- Added a household type selector to the income distribution chart. The percentile estimates can now be compared against any of the household types the survey publishes instead of only the "all households" population.
+
+### Updated
+
+- Updated the income distribution to the Ministry of Health, Labour and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
+- The percentile estimate is more precise below ¥10,000,000, where the survey's income brackets now resolve in ¥500,000 steps instead of ¥1,000,000.
 
 ### Fixed
 

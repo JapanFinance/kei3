@@ -322,7 +322,13 @@ describe('NHI low-income premium reduction (均等割額の軽減)', () => {
     // Taxable income (430,000 − 430,000) = 0, so only reduced per-capita amounts remain:
     // (47,300 + 16,800) × 0.3 = 19,230
     expect(
-      calculateHealthInsurancePremium(430_000, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateHealthInsurancePremium(
+        430_000,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
     ).toBe(19_230);
   });
 
@@ -330,7 +336,13 @@ describe('NHI low-income premium reduction (均等割額の軽減)', () => {
     // Medical: 1 × 0.0771 + 47,300 × 0.5 = 23,650.0771; Support: 1 × 0.0269 + 16,800 × 0.5 = 8,400.0269
     // Total: round(32,050.104) = 32,050
     expect(
-      calculateHealthInsurancePremium(430_001, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateHealthInsurancePremium(
+        430_001,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
     ).toBe(32_050);
   });
 
@@ -338,7 +350,13 @@ describe('NHI low-income premium reduction (均等割額の軽減)', () => {
     // Medical: 305,000 × 0.0771 + 23,650 = 47,165.5; Support: 305,000 × 0.0269 + 8,400 = 16,604.5
     // Total: round(63,770.0) = 63,770
     expect(
-      calculateHealthInsurancePremium(735_000, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateHealthInsurancePremium(
+        735_000,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
     ).toBe(63_770);
   });
 
@@ -346,14 +364,26 @@ describe('NHI low-income premium reduction (均等割額の軽減)', () => {
     // Medical: 305,001 × 0.0771 + 47,300 × 0.8 = 61,355.577; Support: 305,001 × 0.0269 + 13,440 = 21,644.527
     // Total: round(83,000.104) = 83,000
     expect(
-      calculateHealthInsurancePremium(735_001, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateHealthInsurancePremium(
+        735_001,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
     ).toBe(83_000);
   });
 
   it('applies 2割軽減 up to and including net income 990,000', () => {
     // Medical: 560,000 × 0.0771 + 37,840 = 81,016; Support: 560,000 × 0.0269 + 13,440 = 28,504
     expect(
-      calculateHealthInsurancePremium(990_000, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateHealthInsurancePremium(
+        990_000,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
     ).toBe(109_520);
   });
 
@@ -361,7 +391,13 @@ describe('NHI low-income premium reduction (均等割額の軽減)', () => {
     // Medical: 560,001 × 0.0771 + 47,300 = 90,476.077; Support: 560,001 × 0.0269 + 16,800 = 31,864.027
     // Total: round(122,340.104) = 122,340
     expect(
-      calculateHealthInsurancePremium(990_001, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateHealthInsurancePremium(
+        990_001,
+        false,
+        NATIONAL_HEALTH_INSURANCE_ID,
+        FY2025,
+        'Tokyo',
+      ),
     ).toBe(122_340);
   });
 
@@ -899,11 +935,11 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
 
   it('year=2026 blends FY2025 and FY2026 for Nakano (no LTC)', () => {
     // FY2025: medical 407,544 + support 147,359 + child 0 = 554,903
-    // FY2026: medical 414,071 + support 151,758 + child 12,412 = 578,241
+    // FY2026: medical 414,071 + support 151,758 + child 14,212 = 580,041
     // Blended: medical round(407,544×0.3 + 414,071×0.7) = 412,113
     //          support round(147,359×0.3 + 151,758×0.7) = 150,438
-    //          child   round(0×0.3 + 12,412×0.7)        = 8,688
-    //          total: 412,113 + 150,438 + 8,688          = 571,239
+    //          child   round(0×0.3 + 14,212×0.7)        = 9,948
+    //          total: 412,113 + 150,438 + 9,948          = 572,499
     expect(
       calculateHealthInsurancePremium(
         5_000_000,
@@ -912,14 +948,14 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
         2026,
         'Tokyo-Nakano',
       ),
-    ).toBe(571_239);
+    ).toBe(572_499);
   });
 
   it('year=2026 blends FY2025 and FY2026 for Nakano (with LTC)', () => {
     // FY2025 LTC (rate 2.20%, per-capita 17,400): 117,940
     // FY2026 LTC (rate 2.53%, per-capita 17,700): 133,321
     // Blended LTC: round(117,940×0.3 + 133,321×0.7) = 128,707
-    // Total: 571,239 + 128,707 = 699,946
+    // Total: 572,499 + 128,707 = 701,206
     expect(
       calculateHealthInsurancePremium(
         5_000_000,
@@ -928,7 +964,7 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
         2026,
         'Tokyo-Nakano',
       ),
-    ).toBe(699_946);
+    ).toBe(701_206);
   });
 
   it('year=2026 blends Osaka FY2025 and FY2026 (no LTC)', () => {

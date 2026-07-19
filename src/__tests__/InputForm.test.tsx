@@ -743,9 +743,7 @@ describe('National Pension Exemption Toggle', () => {
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
     // Net income 700,000 > 670,000 → the toggle is hidden (a stale `true` is a no-op)
-    expect(
-      screen.queryByRole('switch', { name: /national pension full exemption/i }),
-    ).toBeNull();
+    expect(screen.queryByRole('switch', { name: /national pension full exemption/i })).toBeNull();
   });
 
   it('does not render the toggle for employee providers', () => {
@@ -757,8 +755,6 @@ describe('National Pension Exemption Toggle', () => {
     };
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
-    expect(
-      screen.queryByRole('switch', { name: /national pension full exemption/i }),
-    ).toBeNull();
+    expect(screen.queryByRole('switch', { name: /national pension full exemption/i })).toBeNull();
   });
 });

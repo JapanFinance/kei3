@@ -67,7 +67,12 @@ jobs:
   # there is no per-step `permissions`.
   size-report:
     needs: build
-    if: ${{ github.event_name == 'pull_request' && (needs.build.result == 'success' || needs.build.result == 'failure') }}
+    # GitHub Actions implicitly ANDs success() onto any if: expression that
+    # contains no status-check function of its own, which would silently
+    # defeat the needs.build.result == 'failure' clause below. !cancelled()
+    # supplies that function (and, unlike always(), still skips this job when
+    # the workflow itself is cancelled).
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (needs.build.result == 'success' || needs.build.result == 'failure') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -219,7 +224,10 @@ jobs:
   # `npm ci` and installs Lighthouse) stays read-only. Mirrors the size-report job.
   lighthouse-report:
     needs: lighthouse
-    if: ${{ github.event_name == 'pull_request' && (needs.lighthouse.result == 'success' || needs.lighthouse.result == 'failure') }}
+    # See the size-report job's comment: without a status-check function,
+    # GitHub Actions implicitly ANDs success() onto this condition and
+    # defeats the needs.lighthouse.result == 'failure' clause below.
+    if: ${{ !cancelled() && github.event_name == 'pull_request' && (needs.lighthouse.result == 'success' || needs.lighthouse.result == 'failure') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
