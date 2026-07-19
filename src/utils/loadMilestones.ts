@@ -23,6 +23,11 @@ const marked = new Set<LoadMilestone>();
  * paints; nesting a second one defers the mark to just after that paint.
  * jsdom can lack requestAnimationFrame, so tests fall back to marking
  * immediately.
+ *
+ * Milestones can legitimately coincide: on a fast connection React reveals
+ * lazy components whose chunks arrived close together in a single commit, so
+ * their marks land in the same frame, microseconds apart in child-before-
+ * parent effect order. A slow connection separates the reveals and the marks.
  */
 export function useLoadMilestone(name: LoadMilestone): void {
   useEffect(() => {
