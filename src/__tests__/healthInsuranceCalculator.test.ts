@@ -935,11 +935,11 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
 
   it('year=2026 blends FY2025 and FY2026 for Nakano (no LTC)', () => {
     // FY2025: medical 407,544 + support 147,359 + child 0 = 554,903
-    // FY2026: medical 414,071 + support 151,758 + child 12,412 = 578,241
+    // FY2026: medical 414,071 + support 151,758 + child 14,212 = 580,041
     // Blended: medical round(407,544×0.3 + 414,071×0.7) = 412,113
     //          support round(147,359×0.3 + 151,758×0.7) = 150,438
-    //          child   round(0×0.3 + 12,412×0.7)        = 8,688
-    //          total: 412,113 + 150,438 + 8,688          = 571,239
+    //          child   round(0×0.3 + 14,212×0.7)        = 9,948
+    //          total: 412,113 + 150,438 + 9,948          = 572,499
     expect(
       calculateHealthInsurancePremium(
         5_000_000,
@@ -948,14 +948,14 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
         2026,
         'Tokyo-Nakano',
       ),
-    ).toBe(571_239);
+    ).toBe(572_499);
   });
 
   it('year=2026 blends FY2025 and FY2026 for Nakano (with LTC)', () => {
     // FY2025 LTC (rate 2.20%, per-capita 17,400): 117,940
     // FY2026 LTC (rate 2.53%, per-capita 17,700): 133,321
     // Blended LTC: round(117,940×0.3 + 133,321×0.7) = 128,707
-    // Total: 571,239 + 128,707 = 699,946
+    // Total: 572,499 + 128,707 = 701,206
     expect(
       calculateHealthInsurancePremium(
         5_000_000,
@@ -964,7 +964,7 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
         2026,
         'Tokyo-Nakano',
       ),
-    ).toBe(699_946);
+    ).toBe(701_206);
   });
 
   it('year=2026 blends Osaka FY2025 and FY2026 (no LTC)', () => {
