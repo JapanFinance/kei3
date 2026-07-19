@@ -115,8 +115,10 @@ function renderMetrics(metrics, baseMetrics) {
 
 // The app's own load milestones — performance.mark entries fired one frame
 // after each component's first commit paints (src/utils/loadMilestones.ts owns
-// the names). Display labels in presentation order.
+// the names) — plus the milestone pass's observed first contentful paint as
+// the anchor the marks are read against. Display labels in presentation order.
 const MILESTONE_LABELS = {
+  'first-contentful-paint': 'First paint',
   'app-rendered': 'App rendered',
   'results-rendered': 'Results rendered',
   'chart-rendered': 'Chart rendered',
@@ -125,7 +127,7 @@ const MILESTONE_LABELS = {
 // `withDelta` follows the presence of a baseline summary, not of baseline
 // milestones: a baseline from before the marks existed still gets a Δ column,
 // with "new" in place of a number, so the column appears the moment it can.
-function renderMilestones(milestones, baseMilestones, withDelta) {
+function renderMilestones(milestones, baseMilestones, withDelta, runsCount) {
   const ids = Object.keys(MILESTONE_LABELS).filter(id => milestones?.[id]);
   if (!ids.length) return [];
   const rows = ids.map(id => {
@@ -143,13 +145,13 @@ function renderMilestones(milestones, baseMilestones, withDelta) {
   });
   return [
     '',
-    "<details><summary>App milestones — when the app's content actually renders</summary>",
+    '<details><summary>App milestones — the load cascade under real throttling</summary>',
     '',
     withDelta ? '| Milestone | Median | Range | Δ vs main |' : '| Milestone | Median | Range |',
     withDelta ? '| --- | --: | --: | --: |' : '| --- | --: | --: |',
     ...rows,
     '',
-    `<sub>Lower is better. User Timing marks fired by the app one frame after each component's first commit paints: the app replacing the loading shell, then the lazy results panel, then the chart (a canvas, which Largest Contentful Paint never considers). The headline FCP/LCP are simulated (Lantern) values, but these marks are observed times on the unthrottled shared runner — absolute values are small and contention-sensitive, so judge the Δ against main in the same environment, not the absolute number. Identical times across milestones are real, not broken instrumentation: when the lazy chunks arrive close together — as they do on this runner's fast connection — React reveals them in a single commit and they paint in one frame, collapsing the cascade a slower real-world connection spreads apart (measured locally under devtools slow-4G throttling: the same build separates to roughly +0.5 s results, +1.6 s chart after app-rendered).${withDelta ? ' "new" means the main baseline predates these marks.' : ''}</sub>`,
+    `<sub>Lower is better. ${runsCount ? `Median of ${runsCount} runs` : 'Medians'} from a separate pass under real (devtools) throttling — slow 4G, 4× CPU, cold cache — so unlike the simulated table above these are observed times for a defined reference visitor, and the lazy-load cascade keeps its real shape instead of collapsing into one unthrottled frame. First paint is that pass's observed FCP; the other rows are User Timing marks the app fires one frame after each component's first commit paints: the app itself, then the lazy results panel, then the chart (a canvas, which Largest Contentful Paint never considers). The CPU multiplier also multiplies runner contention, so judge the Δ against main in the same environment before the absolute numbers. Milestones sharing a time were revealed in one React commit.${withDelta ? ' "new" means the main baseline predates these marks.' : ''}</sub>`,
     '',
     '</details>',
   ];
@@ -217,7 +219,14 @@ function renderMarkdown(summary, base) {
   }
 
   lines.push(...renderMetrics(app.metrics, base?.app?.metrics));
-  lines.push(...renderMilestones(app.milestones, base?.app?.milestones, Boolean(base?.app)));
+  lines.push(
+    ...renderMilestones(
+      app.milestones,
+      base?.app?.milestones,
+      Boolean(base?.app),
+      app.milestoneRuns,
+    ),
+  );
 
   // What concretely holds each score below 100 — usually enough to diagnose a
   // drop without downloading the full report.

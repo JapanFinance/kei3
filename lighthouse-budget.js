@@ -22,6 +22,15 @@
 //       +252 ms LCP, +11 ms TBT, −71 ms FCP vs the bare workers.dev host).
 //   - Only the initial load is measured. The results panel and chart are lazy
 //     and are not exercised (see KNOBS).
+//   - PR previews and the main baseline additionally run a MILESTONE pass:
+//     MILESTONE_RUNS extra runs under REAL (devtools) throttling that collect
+//     only the app's performance.mark load milestones and the observed first
+//     contentful paint for the PR comment's "App milestones" table. Real
+//     throttling because unthrottled the lazy chunks arrive inside React's
+//     reveal-coalescing window and every milestone lands in the same frame,
+//     masking cascade regressions until they cross that window. Production
+//     skips this pass: the zone's bot mitigation would price it, and the
+//     baseline already carries the trend.
 //
 // SKIPPED AUDITS — environment artifacts, not application defects. A skipped
 // audit is removed from scoring and the category renormalizes over the rest.
@@ -104,6 +113,18 @@ export const WORKERS_URL = 'https://kei3.ts6081.workers.dev/';
 export const SKIPPED_AUDITS = {
   app: ['is-crawlable'],
   production: ['deprecations', 'inspector-issues'],
+};
+
+// The milestone pass (see MILESTONE pass above): Lighthouse's own mobile
+// slow-4G devtools-throttling constants and standard 4x CPU multiplier — a
+// defined reference visitor on a cold cache. Applied with
+// throttlingMethod 'devtools', so its times are observed, not simulated.
+export const MILESTONE_RUNS = 3;
+export const MILESTONE_THROTTLING = {
+  requestLatencyMs: 562.5,
+  downloadThroughputKbps: 1474.56,
+  uploadThroughputKbps: 675,
+  cpuSlowdownMultiplier: 4,
 };
 
 // [category]: { level, minScore }. level 'error' fails CI when the median score
