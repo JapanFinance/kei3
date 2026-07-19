@@ -5,8 +5,6 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
@@ -20,45 +18,43 @@ interface DetailedTaxResultsProps {
   inputs: TakeHomeInputs;
 }
 
+// Below this width the full wordings no longer fit across the tab strip.
+const NARROW_TABS = '@container (max-width: 500px)';
+
+// Long tab wordings shorten by dropping their trailing words, which a container
+// query hides. Deciding in CSS rather than from a width measured after mount
+// means the wording that survives is already in place at first paint, so the
+// tab strip never re-lays-out. `display: none` also keeps the dropped words out
+// of the accessible name.
+const TAB_LABELS: readonly { head: string; tail?: string }[] = [
+  { head: 'Summary' },
+  { head: 'Social', tail: ' Insurance' },
+  { head: 'Taxes' },
+  { head: 'Furusato', tail: ' Nozei' },
+];
+
+const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number]) => (
+  // A single element keeps the wording on one line: MUI lays a Tab's children
+  // out as a flex column, so a bare text node and the tail would stack.
+  <span>
+    {head}
+    {tail && (
+      <Box component="span" sx={{ [NARROW_TABS]: { display: 'none' } }}>
+        {tail}
+      </Box>
+    )}
+  </span>
+);
+
 const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, inputs }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [currentTab, setCurrentTab] = React.useState(0);
-  const [containerWidth, setContainerWidth] = React.useState<number>(0);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-
-  // Use ResizeObserver to track container width
-  React.useEffect(() => {
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-      }
-    });
-
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
   };
 
-  // Use container width instead of screen breakpoint for tab labels
-  // Threshold around 500px works well for tab label switching
-  const useShortLabels = containerWidth > 0 && containerWidth < 500;
-
-  const tabLabels = useShortLabels
-    ? ['Summary', 'Social', 'Taxes', 'Furusato']
-    : ['Summary', 'Social Insurance', 'Taxes', 'Furusato Nozei'];
-
   return (
     <Paper
-      ref={containerRef}
       elevation={0}
       sx={{
         p: { xs: 1.2, sm: 2 },
@@ -85,25 +81,33 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
         Take-Home Pay Breakdown
       </Typography>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+      <Box
+        sx={{
+          borderBottom: 1,
+          borderColor: 'divider',
+          mb: 2,
+          containerType: 'inline-size',
+        }}
+      >
         <Tabs
           value={currentTab}
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
           sx={{
-            minHeight: isMobile ? 36 : 48,
+            minHeight: { xs: 36, sm: 48 },
             '& .MuiTab-root': {
-              fontSize: useShortLabels ? '0.8rem' : '0.9rem',
-              minHeight: isMobile ? 36 : 48,
-              padding: isMobile ? '6px 8px' : '12px 16px',
+              fontSize: '0.9rem',
+              minHeight: { xs: 36, sm: 48 },
+              padding: { xs: '6px 8px', sm: '12px 16px' },
+              [NARROW_TABS]: { fontSize: '0.8rem' },
             },
           }}
         >
-          {tabLabels.map((label, index) => (
+          {TAB_LABELS.map((label, index) => (
             <Tab
-              key={label}
-              label={label}
+              key={label.head}
+              label={renderTabLabel(label)}
               id={`tab-${index}`}
               aria-controls={`tabpanel-${index}`}
             />
