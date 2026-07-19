@@ -47,15 +47,15 @@ const LowIncomeNotices: React.FC<{ results: TakeHomeResults }> = ({ results }) =
   return (
     <Alert severity="warning" sx={{ mt: 1.5 }}>
       <Typography variant="body2" sx={{ mb: 0.5 }}>
-        Take-home pay is negative at this income: fixed social insurance charges exceed the
-        income, because they do not scale down to zero.
+        Take-home pay is negative at this income: fixed social insurance charges exceed the income,
+        because they do not scale down to zero.
       </Typography>
       <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
         {isNHI && (
           <li>
             <Typography variant="body2">
-              National Health Insurance charges per-person amounts (均等割) even at very low
-              income. The statutory low-income reduction (均等割額の軽減) is already applied.
+              National Health Insurance charges per-person amounts (均等割) even at very low income.
+              The statutory low-income reduction (均等割額の軽減) is already applied.
             </Typography>
           </li>
         )}
@@ -75,11 +75,10 @@ const LowIncomeNotices: React.FC<{ results: TakeHomeResults }> = ({ results }) =
             <Typography variant="body2">
               Employee health insurance and employees&apos; pension premiums are based on the
               standard monthly remuneration (標準報酬月額) table, which has a lowest grade with a
-              minimum premium. Enrollment as a short-time worker has statutory criteria (at least
-              20 scheduled working hours per week and, currently, monthly wages of at least
-              ¥88,000), so at salaries below those levels National Health Insurance and the
-              National Pension usually apply instead — selectable under Health Insurance
-              Provider.
+              minimum premium. Enrollment as a short-time worker has statutory criteria (at least 20
+              scheduled working hours per week and, currently, monthly wages of at least ¥88,000),
+              so at salaries below those levels National Health Insurance and the National Pension
+              usually apply instead — selectable under Health Insurance Provider.
             </Typography>
           </li>
         )}
