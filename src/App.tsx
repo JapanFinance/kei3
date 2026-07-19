@@ -139,10 +139,6 @@ function App() {
               <Box
                 sx={{
                   // Matches TakeHomeResultsDisplay's natural content height at default inputs.
-                  // On desktop (>= md) the results panel's own content (811px) is taller than
-                  // the input form column, so it - not the form - governs the shared grid
-                  // row's height; height: '100%' would undershoot here since an empty box
-                  // contributes ~0 to the grid's auto-track sizing pass.
                   height: { xs: 617, md: 811 },
                   borderRadius: 1,
                   bgcolor: 'action.hover',
@@ -163,8 +159,7 @@ function App() {
           fallback={
             <Box
               sx={{
-                // Matches TakeHomeChart's rendered height at default inputs, and its own mt
-                // breakpoints (mt: { xs: 2, sm: 3 } on the real Paper).
+                // Matches TakeHomeChart's rendered height at default inputs
                 height: { xs: 720, md: 724 },
                 mt: { xs: 2, md: 3 },
                 borderRadius: 1,
