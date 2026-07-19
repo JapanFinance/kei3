@@ -85,7 +85,9 @@ function renderMarkdown(report, base) {
     ? `| **Total** | **${kb(report.total)}** | **${totalDelta}** |`
     : `| **Total** | **${kb(report.total)}** |`;
   const status = report.total <= report.budget ? '✅' : '❌ over budget';
-  const deltaSuffix = withDelta ? ` (${totalDelta === '—' ? 'no change' : `${totalDelta} vs base`})` : '';
+  const deltaSuffix = withDelta
+    ? ` (${totalDelta === '—' ? 'no change' : `${totalDelta} vs base`})`
+    : '';
 
   return [
     `### 📦 Bundle size — ${kb(report.total)} Brotli${deltaSuffix} / ${kb(report.budget)} budget ${status}`,
