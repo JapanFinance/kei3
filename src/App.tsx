@@ -1,24 +1,53 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useReducer, useState, useEffect, Suspense, lazy } from 'react';
+import { useReducer, useDeferredValue, useMemo, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box';
 import SiteHeader from './components/SiteHeader';
 import ChangelogButton from './components/ChangelogButton';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
-import type { TakeHomeFormState, TakeHomeInputs, TakeHomeResults } from './types/tax';
+import type { TakeHomeFormState, TakeHomeInputs } from './types/tax';
 import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
 import { calculateTaxes } from './utils/taxCalculations';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
 import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
-import { useChangelogModal } from './hooks/useChangelogModal';
+import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
 
-// Lazy load components that aren't immediately needed
-const TakeHomeResultsDisplay = lazy(
-  () => import('./components/TakeHomeCalculator/TakeHomeResults'),
+// Deferred modules load in priority order: results, then chart, then changelog.
+const resultsModulePromise = import('./components/TakeHomeCalculator/TakeHomeResults');
+const TakeHomeResultsDisplay = lazy(() => resultsModulePromise);
+
+// The chart (which pulls in chart.js) loads after the results module so the
+// visible numbers come first; the catch keeps a results load failure from
+// also blocking the chart.
+const chartModulePromise = resultsModulePromise
+  .catch(() => undefined)
+  .then(() => import('./components/TakeHomeCalculator/TakeHomeChart'));
+const TakeHomeChart = lazy(() => chartModulePromise);
+
+// Safari does not implement requestIdleCallback; the timeout arguments bound
+// the wait so the module still loads promptly on a busy page.
+const whenBrowserIdle = () =>
+  new Promise<void>(resolve => {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => resolve(), { timeout: 2000 });
+    } else {
+      setTimeout(resolve, 2000);
+    }
+  });
+
+// The changelog is invisible until opened, so it loads once the browser is
+// idle after the chart module — ready before anyone clicks the button without
+// competing with visible content at startup. Deep links to #changelog need the
+// modal immediately and skip the deferral.
+const ChangelogModal = lazy(() =>
+  window.location.hash === CHANGELOG_HASH
+    ? import('./components/ChangelogModal')
+    : chartModulePromise
+        .catch(() => undefined)
+        .then(whenBrowserIdle)
+        .then(() => import('./components/ChangelogModal')),
 );
-const TakeHomeChart = lazy(() => import('./components/TakeHomeCalculator/TakeHomeChart'));
-const ChangelogModal = lazy(() => import('./components/ChangelogModal'));
 
 function App() {
   // Changelog modal management
@@ -59,55 +88,11 @@ function App() {
     normalizeInitialFormState,
   );
 
-  // State for calculation results
-  const [results, setResults] = useState<TakeHomeResults | null>(null);
-
-  // Debounce the tax calculation to prevent excessive updates from rapid slider changes
-  useEffect(() => {
-    const calculateAndSetResults = () => {
-      const calculationInputs: TakeHomeInputs = {
-        incomeStreams: inputs.incomeStreams,
-        incomeYear: inputs.incomeYear,
-        isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
-        region: inputs.region,
-        healthInsuranceProvider: inputs.healthInsuranceProvider,
-        dependents: inputs.dependents,
-        dcPlanContributions: inputs.dcPlanContributions,
-        manualSocialInsuranceEntry: inputs.manualSocialInsuranceEntry,
-        manualSocialInsuranceAmount: inputs.manualSocialInsuranceAmount,
-        customEHIRates: inputs.customEHIRates,
-        homeLoanTaxCredit: inputs.homeLoanTaxCredit,
-        lifeInsurance: inputs.lifeInsurance,
-        earthquakeInsurance: inputs.earthquakeInsurance,
-        medicalExpenses: inputs.medicalExpenses,
-      };
-
-      const takeHomePayResults = calculateTaxes(calculationInputs);
-      setResults(takeHomePayResults);
-    };
-
-    const handler = setTimeout(() => {
-      calculateAndSetResults();
-    }, 50);
-
-    // Cleanup function: clear the timeout if the effect re-runs before the timeout completes
-    return () => clearTimeout(handler);
-  }, [
-    inputs.incomeStreams,
-    inputs.incomeYear,
-    inputs.isSubjectToLongTermCarePremium,
-    inputs.region,
-    inputs.healthInsuranceProvider,
-    inputs.dependents,
-    inputs.dcPlanContributions,
-    inputs.manualSocialInsuranceEntry,
-    inputs.manualSocialInsuranceAmount,
-    inputs.customEHIRates,
-    inputs.homeLoanTaxCredit,
-    inputs.lifeInsurance,
-    inputs.earthquakeInsurance,
-    inputs.medicalExpenses,
-  ]);
+  // Recalculating on the deferred value keeps rapid input changes (e.g. slider
+  // drags) responsive: the urgent render reuses the previous results and the
+  // recalculation runs in an interruptible background render.
+  const deferredInputs = useDeferredValue<TakeHomeInputs>(inputs);
+  const results = useMemo(() => calculateTaxes(deferredInputs), [deferredInputs]);
 
   return (
     <Box
@@ -146,29 +131,27 @@ function App() {
           <TakeHomeInputForm
             inputs={inputs}
             dispatch={dispatch}
-            homeLoanTaxCreditResult={results?.homeLoanTaxCredit}
-            additionalDeductions={results?.additionalDeductions}
+            homeLoanTaxCreditResult={results.homeLoanTaxCredit}
+            additionalDeductions={results.additionalDeductions}
           />
-          {results && (
-            <Suspense
-              fallback={
-                <Box
-                  sx={{
-                    height: 256,
-                    borderRadius: 1,
-                    bgcolor: 'action.hover',
-                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    '@keyframes pulse': {
-                      '0%, 100%': { opacity: 1 },
-                      '50%': { opacity: 0.5 },
-                    },
-                  }}
-                />
-              }
-            >
-              <TakeHomeResultsDisplay results={results} inputs={inputs} />
-            </Suspense>
-          )}
+          <Suspense
+            fallback={
+              <Box
+                sx={{
+                  height: 256,
+                  borderRadius: 1,
+                  bgcolor: 'action.hover',
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                  '@keyframes pulse': {
+                    '0%, 100%': { opacity: 1 },
+                    '50%': { opacity: 0.5 },
+                  },
+                }}
+              />
+            }
+          >
+            <TakeHomeResultsDisplay results={results} inputs={deferredInputs} />
+          </Suspense>
         </Box>
 
         <Suspense
