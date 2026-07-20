@@ -335,7 +335,8 @@ export const getChartOptions = (
           footer: function (tooltipItems: TooltipItem<'bar' | 'line'>[]) {
             const item = tooltipItems[0];
             const raw = item?.raw as
-              { breakdown?: { label: string; amount: number }[] } | undefined;
+              | { breakdown?: { label: string; amount: number }[] }
+              | undefined;
 
             if (raw?.breakdown && raw.breakdown.length > 0) {
               return (

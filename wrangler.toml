@@ -1,9 +1,7 @@
 name = "kei3"
 compatibility_date = "2025-07-21"
 
-routes = [
-  { pattern = "kei3.japanfinance.org", custom_domain = true }
-]
+routes = [{ pattern = "kei3.japanfinance.org", custom_domain = true }]
 
 preview_urls = true
 # Serve deployed main on kei3.ts6081.workers.dev as well: CI audits it as the
