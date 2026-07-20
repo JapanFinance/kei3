@@ -28,9 +28,10 @@ export const theme = createTheme({
         notchedOutline: { borderColor: 'var(--mui-palette-divider)' },
       },
     },
-    // Render button labels as written instead of MUI's default uppercase
-    // transform. Sites that want a transform set it explicitly in sx.
+    // Render button and tab labels as written instead of MUI's default
+    // uppercase transform. Sites that want a transform set it explicitly in sx.
     MuiButton: { styleOverrides: { root: { textTransform: 'none' } } },
+    MuiTab: { styleOverrides: { root: { textTransform: 'none' } } },
     MuiToggleButton: { styleOverrides: { root: { textTransform: 'none' } } },
     // Every accordion in the app is the flat kind: no shadow, no expanded
     // gutter jump, outlined with the divider hairline. Call sites keep only

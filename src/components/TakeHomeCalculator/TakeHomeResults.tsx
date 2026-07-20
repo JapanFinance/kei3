@@ -20,7 +20,9 @@ interface DetailedTaxResultsProps {
   inputs: TakeHomeInputs;
 }
 
-// Below this width the full wordings no longer fit across the tab strip.
+// Below this width the full wordings no longer fit across the tab strip: they
+// need 467px at the desktop tab padding (measured 2026-07, Roboto), and the
+// margin up to 500 absorbs font-metric differences on Roboto-less platforms.
 const NARROW_TABS = '@container (max-width: 500px)';
 
 // Long tab wordings shorten by dropping their trailing words, which a container
