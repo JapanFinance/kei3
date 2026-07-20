@@ -20,8 +20,16 @@ interface DetailedTaxResultsProps {
   inputs: TakeHomeInputs;
 }
 
-// Below this width the full wordings no longer fit across the tab strip.
-const NARROW_TABS = '@container (max-width: 500px)';
+// The full wordings stop fitting at different container widths in the two tab
+// padding regimes: they need 469px of container at the desktop padding and
+// 419px at the mobile padding (measured 2026-07, bold; Arial and Segoe UI
+// fallbacks measure the same or narrower), so each regime gets its own
+// threshold, ~3.5% above the need for rendering variance. The 600px media
+// split must match the viewport breakpoint where the tab padding changes.
+const narrowTabs = (styles: Record<string, string>) => ({
+  '@container (max-width: 435px)': styles,
+  '@media (min-width: 600px)': { '@container (max-width: 485px)': styles },
+});
 
 // Long tab wordings shorten by dropping their trailing words, which a container
 // query hides. Deciding in CSS rather than from a width measured after mount
@@ -41,7 +49,7 @@ const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number]) => (
   <span>
     {head}
     {tail && (
-      <Box component="span" sx={{ [NARROW_TABS]: { display: 'none' } }}>
+      <Box component="span" sx={narrowTabs({ display: 'none' })}>
         {tail}
       </Box>
     )}
@@ -102,9 +110,17 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
             minHeight: { xs: 36, sm: 48 },
             '& .MuiTab-root': {
               fontSize: '0.9rem',
+              // Bold restores the apparent weight the labels had while they
+              // rendered uppercase; uniform across states so selecting a tab
+              // never changes tab widths.
+              fontWeight: 700,
+              // MUI's default 90px tab min-width plus bold short wordings fills
+              // the narrowest two-column container (363px) to the last pixel;
+              // 72px keeps the floor below every wording so tabs size to text.
+              minWidth: 72,
               minHeight: { xs: 36, sm: 48 },
               padding: { xs: '6px 8px', sm: '12px 16px' },
-              [NARROW_TABS]: { fontSize: '0.8rem' },
+              ...narrowTabs({ fontSize: '0.8rem' }),
             },
           }}
         >
