@@ -1,34 +1,34 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React, { useState } from 'react';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
-import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
 import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
 import FormLabel from '@mui/material/FormLabel';
 import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
-import FormHelperText from '@mui/material/FormHelperText';
-import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
-
-import Typography from '@mui/material/Typography';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Accordion from '@mui/material/Accordion';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Typography from '@mui/material/Typography';
+import React, { useState } from 'react';
+
+import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import {
   formatJPY,
   formatMonthLong,
   getFrequencyAnnualMultiplier,
 } from '../../../utils/formatters';
-import { DetailedTooltip } from '../../ui/Tooltips';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
+import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface IncomeStreamFormProps {
   initialData?: IncomeStream;

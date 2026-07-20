@@ -1,27 +1,28 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
-import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
-import {
-  DEFAULT_PROVIDER_REGION,
-  NATIONAL_HEALTH_INSURANCE_ID,
-  CUSTOM_PROVIDER_ID,
-  type NationalHealthInsuranceRegionParams,
-} from '../../../types/healthInsurance';
-import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
-import SMRTableTooltip from './SMRTableTooltip';
+import Typography from '@mui/material/Typography';
+import React from 'react';
+
 import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
 import {
   EHI_SMR_BRACKETS,
   type StandardMonthlyRemunerationBracket,
 } from '../../../data/employeesHealthInsurance/smrBrackets';
+import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
+import {
+  DEFAULT_PROVIDER_REGION,
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  type NationalHealthInsuranceRegionParams,
+} from '../../../types/healthInsurance';
+import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
+import SMRTableTooltip from './SMRTableTooltip';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
 

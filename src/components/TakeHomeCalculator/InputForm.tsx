@@ -1,40 +1,43 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React, { useState } from 'react';
-import type { Dispatch } from 'react';
-import TextField from '@mui/material/TextField';
-import FormControl from '@mui/material/FormControl';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import Slider from '@mui/material/Slider';
-import Switch from '@mui/material/Switch';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import FormHelperText from '@mui/material/FormHelperText';
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import { useTheme } from '@mui/material/styles';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Autocomplete from '@mui/material/Autocomplete';
-import Button from '@mui/material/Button';
-import Badge from '@mui/material/Badge';
-import PeopleIcon from '@mui/icons-material/People';
 import EditIcon from '@mui/icons-material/Edit';
+import PeopleIcon from '@mui/icons-material/People';
 import TuneIcon from '@mui/icons-material/Tune';
 import WarningIcon from '@mui/icons-material/Warning';
-import { SimpleTooltip } from '../ui/Tooltips';
-import { SpinnerNumberField } from '../ui/SpinnerNumberField';
+import Autocomplete from '@mui/material/Autocomplete';
+import Badge from '@mui/material/Badge';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import Slider from '@mui/material/Slider';
+import { useTheme } from '@mui/material/styles';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { DependentsModal } from './Dependents/DependentsModal';
-import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
-import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
-import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
-import { calculateTotalNetIncome } from '../../utils/taxCalculations';
-import { formatJPY } from '../../utils/formatters';
+import React, { useState } from 'react';
+import type { Dispatch } from 'react';
 
+import {
+  availableProvidersFor,
+  regionOptionsFor,
+  type FormAction,
+} from '../../state/takeHomeFormReducer';
+import {
+  DEFAULT_PROVIDER_REGION,
+  CUSTOM_PROVIDER_ID,
+  isDependentCoverageEligible,
+  DEPENDENT_INCOME_THRESHOLD,
+} from '../../types/healthInsurance';
 import type {
   TakeHomeFormState,
   IncomeMode,
@@ -46,17 +49,14 @@ import type {
   MedicalExpensesInput,
   AdditionalDeductionsResult,
 } from '../../types/tax';
-import {
-  DEFAULT_PROVIDER_REGION,
-  CUSTOM_PROVIDER_ID,
-  isDependentCoverageEligible,
-  DEPENDENT_INCOME_THRESHOLD,
-} from '../../types/healthInsurance';
-import {
-  availableProvidersFor,
-  regionOptionsFor,
-  type FormAction,
-} from '../../state/takeHomeFormReducer';
+import { formatJPY } from '../../utils/formatters';
+import { calculateTotalNetIncome } from '../../utils/taxCalculations';
+import { SpinnerNumberField } from '../ui/SpinnerNumberField';
+import { SimpleTooltip } from '../ui/Tooltips';
+import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
+import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
+import { DependentsModal } from './Dependents/DependentsModal';
+import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;

@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { calculatePensionBonusBreakdown } from '../utils/pensionCalculator';
-import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator';
+
 import { calculateMonthlyEmployeePremium } from '../data/employeesHealthInsurance/providerRates';
+import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator';
+import { calculatePensionBonusBreakdown } from '../utils/pensionCalculator';
 
 describe('Social Insurance Rounding', () => {
   describe('Pension Bonus Rounding', () => {

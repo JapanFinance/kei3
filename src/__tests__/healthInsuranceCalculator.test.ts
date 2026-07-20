@@ -2,17 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import {
-  calculateHealthInsurancePremium,
-  calculateHealthInsuranceBreakdown,
-  calculateEmployeesHealthInsuranceBonusBreakdown,
-} from '../utils/healthInsuranceCalculator';
+
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEFAULT_PROVIDER,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
+import {
+  calculateHealthInsurancePremium,
+  calculateHealthInsuranceBreakdown,
+  calculateEmployeesHealthInsuranceBonusBreakdown,
+} from '../utils/healthInsuranceCalculator';
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
 const ITS_KENPO_PROVIDER = 'KantoItsKenpo';

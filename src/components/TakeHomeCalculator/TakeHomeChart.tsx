@@ -1,8 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React, { useMemo, useRef, useState } from 'react';
-import { Chart } from 'react-chartjs-2';
+import Box from '@mui/material/Box';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
+import Slider from '@mui/material/Slider';
+import { useTheme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -16,14 +22,18 @@ import {
   LineController,
 } from 'chart.js';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
-import Box from '@mui/material/Box';
-import MenuItem from '@mui/material/MenuItem';
-import Paper from '@mui/material/Paper';
-import Select from '@mui/material/Select';
-import Slider from '@mui/material/Slider';
-import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
+import React, { useMemo, useRef, useState } from 'react';
+import { Chart } from 'react-chartjs-2';
+
+import {
+  QUINTILE_DATA,
+  HOUSEHOLD_INCOME_DISTRIBUTIONS,
+  HOUSEHOLD_TYPE_ORDER,
+  DEFAULT_HOUSEHOLD_TYPE,
+  type HouseholdType,
+} from '../../data/income';
+import type { Dependent } from '../../types/dependents';
+import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type {
   ChartRange,
   CustomEmployeesHealthInsuranceRates,
@@ -33,32 +43,23 @@ import type {
   MedicalExpensesInput,
   HomeLoanTaxCreditInput,
 } from '../../types/tax';
-import { formatJPY } from '../../utils/formatters';
+import { detectCaps } from '../../utils/capDetection';
 import {
   generateChartData,
   getChartOptions,
   scaleIncomeStreamsToIncome,
   currentAndMedianIncomeChartPlugin,
 } from '../../utils/chartConfig';
-import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
-import type { Dependent } from '../../types/dependents';
-import {
-  QUINTILE_DATA,
-  HOUSEHOLD_INCOME_DISTRIBUTIONS,
-  HOUSEHOLD_TYPE_ORDER,
-  DEFAULT_HOUSEHOLD_TYPE,
-  type HouseholdType,
-} from '../../data/income';
+import { formatJPY } from '../../utils/formatters';
 import {
   estimateIncomePercentile,
   estimateIncomeAtPercentile,
 } from '../../utils/incomeDistribution';
-import { DetailedTooltip } from '../ui/Tooltips';
-import SourceLinks, { type Source } from '../ui/SourceLinks';
-import { detectCaps } from '../../utils/capDetection';
+import { useLoadMilestone } from '../../utils/loadMilestones';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
-import { useLoadMilestone } from '../../utils/loadMilestones';
+import SourceLinks, { type Source } from '../ui/SourceLinks';
+import { DetailedTooltip } from '../ui/Tooltips';
 
 // Quintile band styling; the boundary incomes between bands follow the selected household type.
 const QUINTILE_BAND_STYLES = [

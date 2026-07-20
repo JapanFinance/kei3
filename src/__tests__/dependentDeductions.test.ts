@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
+
+import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
+import { DEDUCTION_TYPES, type Dependent } from '../types/dependents';
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
   hasDependentRelativeUnder23,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions';
-import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import { DEDUCTION_TYPES, type Dependent } from '../types/dependents';
 
 const TEST_INCOME_YEAR = 2026;
 

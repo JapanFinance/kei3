@@ -1,10 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import React from 'react';
 
 /** Inline style shared by every source anchor across the tooltips. */
 const SOURCE_LINK_STYLE: React.CSSProperties = {

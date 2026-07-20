@@ -1,15 +1,15 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
-import { calculateNationalIncomeTax } from './taxCalculations';
+import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
+import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
 import {
   calculateDependentTotalNetIncome,
   getDependentEligibilityMax,
 } from './dependentDeductions';
-import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
+import { calculateNationalIncomeTax } from './taxCalculations';
 
 /**
  * Calculates the basic deduction (基礎控除) for residence tax from net income, using the shared

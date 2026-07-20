@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
+
+import { getHomeLoanTaxCreditCohort } from '../data/homeLoanTaxCredit';
 import {
   applyHomeLoanTaxCredit,
   earliestEligibleMoveInYear,
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../utils/homeLoanTaxCredit';
-import { getHomeLoanTaxCreditCohort } from '../data/homeLoanTaxCredit';
 
 describe('getHomeLoanTaxCreditCohort', () => {
   it('returns the 2022+ band for 2022 and later move-ins', () => {

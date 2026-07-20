@@ -16,6 +16,7 @@
  * - 令和8年度住民税から適用される税制改正: https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/seido/8zeiseikaisei.html
  */
 
+import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
 import type {
   Dependent,
   DisabilityLevel,
@@ -27,7 +28,6 @@ import type {
 } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
-import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
 
 export { getDependentEligibilityMax };
 

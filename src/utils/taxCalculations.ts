@@ -1,36 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {
-  BonusIncomeStream,
-  IncomeStream,
-  TakeHomeInputs,
-  TakeHomeResults,
-} from '../types/tax';
-import type { Dependent } from '../types/dependents';
-import {
-  CUSTOM_PROVIDER_ID,
-  DEFAULT_PROVIDER,
-  DEPENDENT_COVERAGE_ID,
-  NATIONAL_HEALTH_INSURANCE_ID,
-} from '../types/healthInsurance';
-import { calculatePensionBreakdown } from './pensionCalculator';
-import {
-  calculateHealthInsuranceBreakdown,
-  calculateNationalHealthInsurancePremiumWithBreakdown,
-} from './healthInsuranceCalculator';
-import {
-  calculateFurusatoNozeiDetails,
-  calculateResidenceTax,
-  calculateResidenceTaxBasicDeduction,
-  NON_TAXABLE_RESIDENCE_TAX_DETAIL,
-} from './residenceTax';
-import {
-  calculateDependentDeductions,
-  hasIncomeAdjustmentDeductionDependent,
-} from './dependentDeductions';
 import { COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP } from '../constants/taxThresholds';
-import { getCommutingAllowanceAnnualAmount } from './formatters';
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
@@ -39,8 +10,37 @@ import {
   calculateNetEmploymentIncomeForPeriod,
   calculateIncomeAdjustmentDeductionAmount,
 } from '../data/netEmploymentIncome';
-import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
+import type { Dependent } from '../types/dependents';
+import {
+  CUSTOM_PROVIDER_ID,
+  DEFAULT_PROVIDER,
+  DEPENDENT_COVERAGE_ID,
+  NATIONAL_HEALTH_INSURANCE_ID,
+} from '../types/healthInsurance';
+import type {
+  BonusIncomeStream,
+  IncomeStream,
+  TakeHomeInputs,
+  TakeHomeResults,
+} from '../types/tax';
 import { calculateAdditionalDeductions } from './additionalDeductions';
+import {
+  calculateDependentDeductions,
+  hasIncomeAdjustmentDeductionDependent,
+} from './dependentDeductions';
+import { getCommutingAllowanceAnnualAmount } from './formatters';
+import {
+  calculateHealthInsuranceBreakdown,
+  calculateNationalHealthInsurancePremiumWithBreakdown,
+} from './healthInsuranceCalculator';
+import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
+import { calculatePensionBreakdown } from './pensionCalculator';
+import {
+  calculateFurusatoNozeiDetails,
+  calculateResidenceTax,
+  calculateResidenceTaxBasicDeduction,
+  NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+} from './residenceTax';
 
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.

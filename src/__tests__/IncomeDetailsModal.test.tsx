@@ -3,8 +3,9 @@
 
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { IncomeDetailsModal } from '../components/TakeHomeCalculator/Income/IncomeDetailsModal';
 import { describe, it, expect, vi } from 'vitest';
+
+import { IncomeDetailsModal } from '../components/TakeHomeCalculator/Income/IncomeDetailsModal';
 import type { IncomeStream } from '../types/tax';
 
 describe('IncomeDetailsModal - Business Income', () => {

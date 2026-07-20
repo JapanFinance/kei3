@@ -10,11 +10,11 @@
  * cohort-specific cap. The cohort is determined by the user's first move-in year.
  */
 
-import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../types/tax';
 import {
   getHomeLoanTaxCreditCohort,
   HOME_LOAN_TAX_CREDIT_COHORTS,
 } from '../data/homeLoanTaxCredit';
+import type { HomeLoanTaxCreditInput, HomeLoanTaxCreditResult } from '../types/tax';
 import { formatJPY } from './formatters';
 
 const EMPTY_RESULT: HomeLoanTaxCreditResult = {
