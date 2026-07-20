@@ -1,10 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { defineConfig, type PluginOption } from 'vite';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
+import { defineConfig, type PluginOption } from 'vite';
 import Sitemap from 'vite-plugin-sitemap';
 
 // Vite does not minify index.html, so HTML comments (e.g. the documentation

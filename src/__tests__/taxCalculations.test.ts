@@ -2,6 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
+
+import type { Dependent } from '../types/dependents';
+import {
+  DEFAULT_PROVIDER,
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  DEPENDENT_COVERAGE_ID,
+} from '../types/healthInsurance';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   calculateTaxes,
   calculateNetEmploymentIncome,
@@ -10,14 +19,6 @@ import {
   calculateNationalIncomeTax,
   calculateTotalNetIncome,
 } from '../utils/taxCalculations';
-import {
-  DEFAULT_PROVIDER,
-  NATIONAL_HEALTH_INSURANCE_ID,
-  CUSTOM_PROVIDER_ID,
-  DEPENDENT_COVERAGE_ID,
-} from '../types/healthInsurance';
-import type { Dependent } from '../types/dependents';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 describe('calculateNetEmploymentIncome', () => {
   describe('2026 tiers (R8)', () => {

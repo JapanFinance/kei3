@@ -1,10 +1,11 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ReactNode } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
+import type { ReactNode } from 'react';
+
 import ThemeToggle from './ThemeToggle';
 
 /**

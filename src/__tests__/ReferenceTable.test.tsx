@@ -3,6 +3,7 @@
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+
 import ReferenceTable from '../components/ui/ReferenceTable';
 
 const headers = ['Net Income (¥)', 'Deduction Amount'];

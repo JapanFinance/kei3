@@ -1,11 +1,12 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, Plugin } from 'chart.js';
+
 import type { TakeHomeInputs, ChartRange, IncomeStream } from '../types/tax';
+import { detectCaps } from './capDetection';
 import { formatJPY, formatYenCompact } from './formatters';
 import { calculateTaxes } from './taxCalculations';
-import { detectCaps } from './capDetection';
-import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, Plugin } from 'chart.js';
 
 // Create custom plugin for vertical lines
 export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {

@@ -21,8 +21,8 @@
 // figure to the byte.
 
 import { appendFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { brotliCompressSync } from 'node:zlib';
 import { join } from 'node:path';
+import { brotliCompressSync } from 'node:zlib';
 
 const ASSETS_DIR = 'dist/assets';
 const REPORT_PATH = 'size-report.json';

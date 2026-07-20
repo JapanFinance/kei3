@@ -1,13 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Typography from '@mui/material/Typography';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import React from 'react';
+
 import { getEmploymentInsuranceRate } from '../../../data/employmentInsurance';
-import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
-import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { BonusIncomeStream } from '../../../types/tax';
+import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
+import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
+import { DetailedTooltip } from '../../ui/Tooltips';
 
 const cellStyle = { padding: '2px 8px 2px 0' } as const;
 const rightCellStyle = { ...cellStyle, textAlign: 'right' as const };

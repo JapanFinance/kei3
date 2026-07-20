@@ -1,8 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TakeHomeFormState } from '../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, DEFAULT_INCOME_YEAR } from '../types/tax';
+import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
+import {
+  takeHomeFormReducer,
+  totalAnnualIncomeFromStreams,
+  availableProvidersFor,
+  regionOptionsFor,
+} from '../state/takeHomeFormReducer';
 import {
   DEFAULT_PROVIDER,
   DEFAULT_PROVIDER_REGION,
@@ -11,14 +17,8 @@ import {
   CUSTOM_PROVIDER_ID,
   DEPENDENT_INCOME_THRESHOLD,
 } from '../types/healthInsurance';
-import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
-import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
-import {
-  takeHomeFormReducer,
-  totalAnnualIncomeFromStreams,
-  availableProvidersFor,
-  regionOptionsFor,
-} from '../state/takeHomeFormReducer';
+import type { TakeHomeFormState } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, DEFAULT_INCOME_YEAR } from '../types/tax';
 
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,

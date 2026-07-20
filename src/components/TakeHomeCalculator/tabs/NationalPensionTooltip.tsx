@@ -1,9 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import React from 'react';
+
 import { getNationalPensionMonthlyContribution } from '../../../data/nationalPensionContribution';
 import { formatJPY, formatMonthShort } from '../../../utils/formatters';
 import SourceLinks from '../../ui/SourceLinks';

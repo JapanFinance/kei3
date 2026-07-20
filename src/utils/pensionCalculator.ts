@@ -1,10 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { BonusIncomeStream } from '../types/tax';
-import { roundSocialInsurancePremium } from './taxCalculations';
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
+import type { BonusIncomeStream } from '../types/tax';
+import { roundSocialInsurancePremium } from './taxCalculations';
 
 export type { StandardMonthlyRemunerationBracket };
 

@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import { calculateTaxes } from '../utils/taxCalculations';
+
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { calculateTaxes } from '../utils/taxCalculations';
 
 describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the default salary', () => {

@@ -1,20 +1,27 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Link from '@mui/material/Link';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
-import Switch from '@mui/material/Switch';
+import InputLabel from '@mui/material/InputLabel';
+import Link from '@mui/material/Link';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import { useTheme } from '@mui/material/styles';
+import Switch from '@mui/material/Switch';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import React, { useState } from 'react';
 
 import type {
   OtherDependent,
@@ -28,21 +35,14 @@ import {
   DISABILITY_LEVELS,
   DEPENDENT_AGE_CATEGORIES,
 } from '../../../types/dependents';
-import { SimpleTooltip } from '../../ui/Tooltips';
-import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { formatJPY } from '../../../utils/formatters';
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
+import { formatJPY } from '../../../utils/formatters';
 import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import Divider from '@mui/material/Divider';
+import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
+import { SimpleTooltip } from '../../ui/Tooltips';
 
 interface DependentFormProps {
   dependent: OtherDependent | null;

@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
+
+import type { DependentDeductionResults, Dependent } from '../types/dependents';
+import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
   calculateResidenceTax,
   calculateResidenceTaxBasicDeduction,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from '../utils/residenceTax';
-import { calculateDependentDeductions } from '../utils/dependentDeductions';
-import type { DependentDeductionResults, Dependent } from '../types/dependents';
 
 const TEST_INCOME_YEAR = 2026;
 

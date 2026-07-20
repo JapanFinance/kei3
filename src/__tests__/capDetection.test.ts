@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
+
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import type { TakeHomeResults, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
 import { detectCaps } from '../utils/capDetection';
 import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
-import type { TakeHomeResults, ResidenceTaxDetails, FurusatoNozeiDetails } from '../types/tax';
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../utils/healthInsuranceCalculator';
 
 const TEST_INCOME_YEAR = 2026;

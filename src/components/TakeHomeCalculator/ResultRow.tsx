@@ -1,11 +1,12 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
 import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import type { SxProps, Theme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import React from 'react';
+
 import { SimpleTooltip } from '../ui/Tooltips';
 
 const labelTooltips: Record<string, string> = {

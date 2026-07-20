@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState, useEffect, useCallback } from 'react';
-import { getLastViewedDate, hasNewUpdates, parseChangelog } from '../utils/changelogUtils';
+
 import changelogContent from '../../CHANGELOG.md?raw';
+import { getLastViewedDate, hasNewUpdates, parseChangelog } from '../utils/changelogUtils';
 
 export const CHANGELOG_HASH = '#changelog';
 

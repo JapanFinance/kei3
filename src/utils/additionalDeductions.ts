@@ -12,6 +12,11 @@
  * figure. None of these are 人的控除, so none affect the residence-tax 調整控除.
  */
 
+import {
+  calculateEarthquakeInsuranceDeduction,
+  calculateLifeInsuranceDeduction,
+} from '../data/insuranceDeductions';
+import type { Dependent } from '../types/dependents';
 import type {
   AdditionalDeductionItem,
   AdditionalDeductionsResult,
@@ -19,11 +24,6 @@ import type {
   LifeInsuranceInput,
   MedicalExpensesInput,
 } from '../types/tax';
-import type { Dependent } from '../types/dependents';
-import {
-  calculateEarthquakeInsuranceDeduction,
-  calculateLifeInsuranceDeduction,
-} from '../data/insuranceDeductions';
 import { hasDependentRelativeUnder23 } from './dependentDeductions';
 
 /** Medical expense deduction floor: the lower of ¥100,000 and 5% of total net income. */

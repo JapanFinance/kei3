@@ -1,19 +1,21 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, useEffect, type ReactNode } from 'react';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
+import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
-import Divider from '@mui/material/Divider';
-import Link from '@mui/material/Link';
-import CloseIcon from '@mui/icons-material/Close';
+import Typography from '@mui/material/Typography';
+import { useState, useEffect, type ReactNode } from 'react';
+
+import changelogContent from '../../CHANGELOG.md?raw';
 import {
   parseChangelog,
   setLastViewedDate,
@@ -21,7 +23,6 @@ import {
   type ChangelogEntry,
   type ParsedChangelog,
 } from '../utils/changelogUtils';
-import changelogContent from '../../CHANGELOG.md?raw';
 
 interface ChangelogModalProps {
   open: boolean;

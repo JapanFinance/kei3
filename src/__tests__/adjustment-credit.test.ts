@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { calculateResidenceTax, calculateAdjustmentCredit } from '../utils/residenceTax';
-import { calculateDependentDeductions } from '../utils/dependentDeductions';
+
 import { DEDUCTION_TYPES, type Dependent } from '../types/dependents';
+import { calculateDependentDeductions } from '../utils/dependentDeductions';
+import { calculateResidenceTax, calculateAdjustmentCredit } from '../utils/residenceTax';
 
 /**
  * Tests for adjustment credit (調整控除) calculation per Local Tax Act Article 314-6

@@ -1,9 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { StrictMode } from 'react';
 import { render } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import type { LoadMilestone } from '../utils/loadMilestones';
 
 // The hook keeps a module-level record of fired marks, so each test imports a

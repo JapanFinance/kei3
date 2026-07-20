@@ -1,13 +1,13 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useReducer } from 'react';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useReducer } from 'react';
+
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
-import type { TakeHomeFormState } from '../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
 import {
   getProviderDisplayName,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -15,8 +15,9 @@ import {
   DEFAULT_PROVIDER_REGION,
   DEFAULT_PROVIDER,
 } from '../types/healthInsurance';
+import type { TakeHomeFormState } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
-import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
 
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (

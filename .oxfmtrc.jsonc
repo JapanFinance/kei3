@@ -6,7 +6,8 @@
   "tabWidth": 2,
   "trailingComma": "all",
   "arrowParens": "avoid",
-  "sortPackageJson": false,
+  "sortPackageJson": true,
+  "sortImports": true,
   "ignorePatterns": [
     "dist",
     "node_modules",

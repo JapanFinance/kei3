@@ -1,15 +1,15 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { TakeHomeResults } from '../types/tax';
-import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   generateHealthInsurancePremiumTable,
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
+import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
+import type { TakeHomeResults } from '../types/tax';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
+import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
 
 export interface CapStatus {
   healthInsuranceCapped: boolean;

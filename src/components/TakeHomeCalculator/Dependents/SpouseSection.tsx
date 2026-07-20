@@ -1,34 +1,34 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
+import { useTheme } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
-import Typography from '@mui/material/Typography';
-
-import type { Spouse } from '../../../types/dependents';
-import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
-import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
-import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
-import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../../ui/Tooltips';
-import { formatJPY } from '../../../utils/formatters';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import { useTheme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import Divider from '@mui/material/Divider';
+import { useState } from 'react';
+
+import type { Spouse } from '../../../types/dependents';
+import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
+import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
+import { formatJPY } from '../../../utils/formatters';
+import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
+import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
+import { SimpleTooltip } from '../../ui/Tooltips';
 
 interface SpouseSectionProps {
   spouse: Spouse | null;

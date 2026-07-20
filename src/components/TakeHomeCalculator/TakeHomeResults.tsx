@@ -1,18 +1,19 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Typography from '@mui/material/Typography';
+import React from 'react';
+
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
-import SummaryTab from './tabs/SummaryTab';
-import SocialInsuranceTab from './tabs/SocialInsuranceTab';
-import TaxesTab from './tabs/TaxesTab';
-import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
 import { useLoadMilestone } from '../../utils/loadMilestones';
+import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
+import SocialInsuranceTab from './tabs/SocialInsuranceTab';
+import SummaryTab from './tabs/SummaryTab';
+import TaxesTab from './tabs/TaxesTab';
 
 interface DetailedTaxResultsProps {
   results: TakeHomeResults;
