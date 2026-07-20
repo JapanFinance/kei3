@@ -12,7 +12,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./test-setup.ts'],
     // `.claude` holds agent worktrees (full, sometimes-stale repo copies); without this,
-    // `vitest run` collects their test files too. Mirrors eslint's `ignores` and .prettierignore.
+    // `vitest run` collects their test files too. Mirrors the ignorePatterns in
+    // .oxlintrc.json and .oxfmtrc.jsonc.
     exclude: [...configDefaults.exclude, '**/.claude/**'],
   },
 });

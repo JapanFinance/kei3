@@ -68,7 +68,7 @@ describe('takeHomeFormReducer', () => {
       // excluded from SetFieldAction so this bypass can't compile.
       takeHomeFormReducer(baseState, { type: 'setField', field: 'incomeMode', value: 'salary' });
       // @ts-expect-error 'healthInsuranceProvider' has its own cascade (providerChanged).
-      // prettier-ignore
+      // oxfmt-ignore
       takeHomeFormReducer(baseState, { type: 'setField', field: 'healthInsuranceProvider', value: 'KyokaiKenpo' });
       // @ts-expect-error 'region' has its own cascade (regionChanged), which validates against the provider.
       takeHomeFormReducer(baseState, { type: 'setField', field: 'region', value: 'Osaka' });

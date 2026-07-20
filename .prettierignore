@@ -1,8 +1,0 @@
-dist
-node_modules
-.claude
-.wrangler
-package-lock.json
-
-# Markdown is left to authors (the changelog is parsed with a specific structure).
-*.md
