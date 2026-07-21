@@ -115,7 +115,11 @@ const securityHeaders = (options: {
         "style-src 'self' 'unsafe-inline'",
         `script-src ${scriptSrc}`,
         connectSrc,
-        'upgrade-insecure-requests',
+        // upgrade-insecure-requests is silently ignored in a report-only policy,
+        // and the browser logs a console warning saying so — which Lighthouse's
+        // best-practices audit counts as a browser error. Only emit it when
+        // enforcing, where it is honored.
+        options.cspReportOnly ? null : 'upgrade-insecure-requests',
         // report-to is the current Reporting API; report-uri is the legacy
         // mechanism still needed by browsers that have not implemented report-to.
         reportUrl ? 'report-to csp-endpoint' : null,
