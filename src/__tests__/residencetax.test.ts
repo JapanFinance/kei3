@@ -8,6 +8,7 @@ import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
   calculateResidenceTax,
   calculateResidenceTaxBasicDeduction,
+  MINOR_NON_TAXABLE_INCOME_LIMIT,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from '../utils/residenceTax';
 
@@ -439,5 +440,64 @@ describe('calculateResidenceTax - Personal Deduction Difference', () => {
       TEST_INCOME_YEAR,
     );
     expect(result.personalDeductionDifference).toBe(50_000);
+  });
+});
+
+describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
+  it('returns the non-taxable detail at 合計所得金額 1,350,000 for a minor', () => {
+    expect(
+      calculateResidenceTax(1_350_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 0, true),
+    ).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    expect(MINOR_NON_TAXABLE_INCOME_LIMIT).toBe(1_350_000);
+  });
+
+  it('taxes a minor normally above the limit', () => {
+    const result = calculateResidenceTax(
+      1_350_001,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      0,
+      true,
+    );
+    expect(result.totalResidenceTax).toBeGreaterThan(0);
+  });
+
+  it('taxes a non-minor normally at the same income', () => {
+    const result = calculateResidenceTax(
+      1_350_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      0,
+      false,
+    );
+    expect(result.totalResidenceTax).toBeGreaterThan(0);
+  });
+
+  it('still applies the general non-taxable limits to a minor above the minor limit', () => {
+    // A minor above 1.35M with enough dependents can still be non-taxable under the
+    // dependent-count limits (2 dependents → per-capita limit 1,360,000).
+    const dependents: Dependent[] = [
+      {
+        id: 'd1',
+        relationship: 'child',
+        ageCategory: 'under16',
+        isCohabiting: true,
+        disability: 'none',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      },
+      {
+        id: 'd2',
+        relationship: 'child',
+        ageCategory: 'under16',
+        isCohabiting: true,
+        disability: 'none',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      },
+    ];
+    const deductions = calculateDependentDeductions(dependents, TEST_INCOME_YEAR, 1_355_000);
+    const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 0, true);
+    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 });

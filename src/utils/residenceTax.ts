@@ -59,6 +59,14 @@ const forestEnvironmentTax = 1000; // 森林環境税
 const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironmentTax;
 
 /**
+ * 未成年者 (minors) with 前年中の合計所得金額 at or below this limit are exempt from residence
+ * tax entirely — both 所得割 and 均等割 (地方税法第24条の5第1項・第295条第1項).
+ * The same limit also covers 障害者・寡婦・ひとり親, which the calculator does not model.
+ * @see https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
+ */
+export const MINOR_NON_TAXABLE_INCOME_LIMIT = 1_350_000;
+
+/**
  * Calculates residence tax (住民税) based on net income and deductions
  * Rate: 10% (6% municipal tax + 4% prefectural tax) of taxable income
  * Taxable income = net income - social insurance deductions - residence tax basic deduction
@@ -69,6 +77,8 @@ const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironm
  * @param nonBasicDeductions - Social insurance + iDeCo deductions
  * @param dependentDeductions - Full dependent deduction results
  * @param taxCredit - Tax credit amount
+ * @param isNonTaxableMinor - Whether the taxpayer is a 未成年者, whose non-taxable limit is
+ *   {@link MINOR_NON_TAXABLE_INCOME_LIMIT} instead of the general limits
  */
 export const calculateResidenceTax = (
   netIncome: number,
@@ -76,7 +86,12 @@ export const calculateResidenceTax = (
   dependentDeductions: DependentDeductionResults,
   year: number,
   taxCredit: number = 0,
+  isNonTaxableMinor: boolean = false,
 ): ResidenceTaxDetails => {
+  if (isNonTaxableMinor && netIncome <= MINOR_NON_TAXABLE_INCOME_LIMIT) {
+    return NON_TAXABLE_RESIDENCE_TAX_DETAIL;
+  }
+
   const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions, year);
   const { perCapitaLimit, incomeBasedLimit } =
     getResidenceTaxExemptionLimits(qualifiedDependentsCount);

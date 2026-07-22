@@ -39,7 +39,7 @@ describe('SocialInsuranceTab', () => {
       { id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }, // 6M annual
       { id: '2', type: 'commutingAllowance', amount: 20000, frequency: 'monthly' }, // 240k annual
     ],
-    isSubjectToLongTermCarePremium: true,
+    ageRange: 'age40to59' as const,
     region: 'Tokyo',
     healthInsuranceProvider: 'KyokaiKenpo',
     dependents: [],
@@ -78,7 +78,7 @@ describe('SocialInsuranceTab', () => {
     takeHomeIncome: 4870000,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
-    isSubjectToLongTermCarePremium: true,
+    ageRange: 'age40to59' as const,
     hasEmploymentIncome: true,
     totalNetIncome: 4200000,
     dcPlanContributions: 0,
@@ -175,6 +175,45 @@ describe('SocialInsuranceTab', () => {
     // Check for capped value
     expect(screen.getAllByText('¥650,000').length).toBeGreaterThan(0);
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
+  });
+
+  it('replaces the pension rows with an enrollment note for a 70-74 employee', () => {
+    const inputs = { ...mockInputs, ageRange: 'age70to74' as const };
+    const results = { ...mockResults, ageRange: 'age70to74' as const, pensionPayments: 0 };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText("Employees' Pension")).toBeInTheDocument();
+    expect(screen.getByText(/enrollment ends at age 70/)).toBeInTheDocument();
+    expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
+    expect(screen.queryByText('Employees Pension Insurance Calculation')).not.toBeInTheDocument();
+  });
+
+  it('replaces the pension rows with an enrollment note for an NHI user outside 20-59', () => {
+    const inputs = {
+      ...mockInputs,
+      ageRange: 'age65to69' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      incomeStreams: [{ id: 'm1', type: 'miscellaneous' as const, amount: 4_000_000 }],
+    };
+    const results = {
+      ...mockResults,
+      ageRange: 'age65to69' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      pensionPayments: 0,
+      nhiMedicalPortion: 300_000,
+      nhiElderlySupportPortion: 100_000,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText('National Pension')).toBeInTheDocument();
+    expect(screen.getByText(/enrollment covers ages 20-59/)).toBeInTheDocument();
+    expect(screen.queryByText('Annual Contribution')).not.toBeInTheDocument();
   });
 
   it('hides Monthly Commuting Allowance row when 0', () => {

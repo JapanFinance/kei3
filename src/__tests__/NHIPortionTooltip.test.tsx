@@ -48,7 +48,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     dcPlanContributions: 0,
     healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
     region,
-    isSubjectToLongTermCarePremium: includeLTC,
+    ageRange: includeLTC ? ('age40to59' as const) : ('age20to39' as const),
     residenceTaxBasicDeduction: 430_000,
     totalNetIncome: annualIncome,
     nhiMedicalPortion: breakdown.medicalPortion,
@@ -63,7 +63,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
   const inputs: TakeHomeInputs = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ id: '1', type: 'business', amount: annualIncome }],
-    isSubjectToLongTermCarePremium: includeLTC,
+    ageRange: includeLTC ? ('age40to59' as const) : ('age20to39' as const),
     region,
     healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
     dependents: [],

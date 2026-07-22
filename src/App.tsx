@@ -9,6 +9,7 @@ import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
 import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
+import { DEFAULT_AGE_RANGE } from './types/ageRange';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
 import type { TakeHomeFormState, TakeHomeInputs } from './types/tax';
 import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
@@ -76,7 +77,7 @@ function App() {
       },
     ],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: DEFAULT_AGE_RANGE,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
@@ -180,7 +181,7 @@ function App() {
             isEmploymentIncome={inputs.incomeStreams.some(
               s => s.type === 'salary' || s.type === 'bonus',
             )}
-            isSubjectToLongTermCarePremium={inputs.isSubjectToLongTermCarePremium}
+            ageRange={inputs.ageRange}
             healthInsuranceProvider={inputs.healthInsuranceProvider}
             region={inputs.region}
             dcPlanContributions={inputs.dcPlanContributions}

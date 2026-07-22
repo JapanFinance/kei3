@@ -9,7 +9,16 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
-import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
+import {
+  isSubjectToEmployeesPension,
+  isSubjectToLongTermCarePremium,
+  isSubjectToNationalPension,
+} from '../../../types/ageRange';
+import {
+  DEPENDENT_COVERAGE_ID,
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+} from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
 import { detectCaps } from '../../../utils/capDetection';
@@ -48,6 +57,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
+  const includeLTC = isSubjectToLongTermCarePremium(inputs.ageRange);
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
   // We need to determine the rates here to pass to the breakdown calculator
@@ -68,7 +78,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
-        inputs.isSubjectToLongTermCarePremium,
+        includeLTC,
         inputs.incomeYear,
       );
     } else {
@@ -77,13 +87,26 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         provider,
         region,
         inputs.incomeYear,
-        inputs.isSubjectToLongTermCarePremium,
+        includeLTC,
       );
     }
   }
 
   // Detect if any caps are applied
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
+
+  // Replaces the pension rows when the age range exempts contributions entirely. Dependent
+  // coverage pays nothing for a different reason and keeps its existing display.
+  const pensionAgeNote =
+    inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID
+      ? undefined
+      : isNationalHealthInsurance
+        ? isSubjectToNationalPension(inputs.ageRange)
+          ? undefined
+          : 'No contributions: National Pension (国民年金) enrollment covers ages 20-59.'
+        : isSubjectToEmployeesPension(inputs.ageRange)
+          ? undefined
+          : "No contributions: Employees' Pension (厚生年金保険) enrollment ends at age 70.";
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -536,53 +559,64 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance ? 'National Pension' : "Employees' Pension"}
           </Typography>
         </Box>
-        {!isNationalHealthInsurance && (
-          <ResultRow
-            label="Monthly Contribution"
-            labelSuffix={
-              <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                <DetailedTooltip title="Pension Contribution">
-                  <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
-                </DetailedTooltip>
-                {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                  <CapIndicator
-                    capStatus={capStatus}
-                    contributionType="pension"
-                    iconOnly={isMobile}
-                  />
+        {pensionAgeNote ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1 }}>
+            {pensionAgeNote}
+          </Typography>
+        ) : (
+          <>
+            {!isNationalHealthInsurance && (
+              <ResultRow
+                label="Monthly Contribution"
+                labelSuffix={
+                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                    <DetailedTooltip title="Pension Contribution">
+                      <PensionPremiumTooltip
+                        inputs={inputs}
+                        standardMonthlyRemuneration={pensionSMR}
+                      />
+                    </DetailedTooltip>
+                    {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                      <CapIndicator
+                        capStatus={capStatus}
+                        contributionType="pension"
+                        iconOnly={isMobile}
+                      />
+                    )}
+                  </Box>
+                }
+                value={formatJPY(
+                  Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
                 )}
-              </Box>
-            }
-            value={formatJPY(
-              Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
+                type="indented"
+              />
             )}
-            type="indented"
-          />
+            {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
+              <ResultRow
+                label="Bonus Contribution"
+                labelSuffix={
+                  <DetailedTooltip title="Bonus Pension Contribution">
+                    <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
+                  </DetailedTooltip>
+                }
+                value={formatJPY(results.pensionOnBonus)}
+                type="indented"
+              />
+            )}
+            <ResultRow
+              label="Annual Contribution"
+              labelSuffix={
+                isNationalHealthInsurance ? (
+                  <DetailedTooltip title="Pension Contribution">
+                    <NationalPensionTooltip year={inputs.incomeYear} />
+                  </DetailedTooltip>
+                ) : undefined
+              }
+              value={formatJPY(results.pensionPayments)}
+              type="subtotal"
+            />
+          </>
         )}
-        {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
-          <ResultRow
-            label="Bonus Contribution"
-            labelSuffix={
-              <DetailedTooltip title="Bonus Pension Contribution">
-                <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
-              </DetailedTooltip>
-            }
-            value={formatJPY(results.pensionOnBonus)}
-            type="indented"
-          />
-        )}
-        <ResultRow
-          label="Annual Contribution"
-          labelSuffix={
-            isNationalHealthInsurance ? (
-              <DetailedTooltip title="Pension Contribution">
-                <NationalPensionTooltip year={inputs.incomeYear} />
-              </DetailedTooltip>
-            ) : undefined
-          }
-          value={formatJPY(results.pensionPayments)}
-          type="subtotal"
-        />
       </Box>
 
       {/* Employment Insurance */}

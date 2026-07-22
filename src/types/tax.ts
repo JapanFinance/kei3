@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { AgeRange } from './ageRange';
 import type { Dependent, DependentDeductionResults } from './dependents';
 import type { HealthInsuranceProviderId } from './healthInsurance';
 
@@ -222,7 +223,7 @@ export interface TakeHomeFormState {
   incomeYear: number;
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
-  isSubjectToLongTermCarePremium: boolean;
+  ageRange: AgeRange;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
@@ -240,7 +241,7 @@ export interface TakeHomeFormState {
 /** Interface for Calculation Logic (clean, normalized inputs) */
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
-  isSubjectToLongTermCarePremium: boolean;
+  ageRange: AgeRange;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
@@ -331,7 +332,7 @@ export interface TakeHomeResults {
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
-  isSubjectToLongTermCarePremium: boolean;
+  ageRange: AgeRange;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
 }

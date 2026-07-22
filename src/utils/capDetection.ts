@@ -6,6 +6,11 @@ import {
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+import {
+  isSubjectToEmployeesPension,
+  isSubjectToLongTermCarePremium,
+  isSubjectToNationalPension,
+} from '../types/ageRange';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
@@ -40,8 +45,10 @@ export function detectCaps(
   const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowanceIncome ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
-  // Check pension cap
-  const pensionCapped = checkPensionCap(isNationalPension, monthlyRemuneration);
+  // Check pension cap; a 70-74 employee pays no premium at all, so nothing can be capped.
+  const pensionCapped = isSubjectToEmployeesPension(results.ageRange)
+    ? checkPensionCap(isNationalPension, monthlyRemuneration)
+    : false;
   // Check health insurance cap
   const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration, year);
 
@@ -58,7 +65,8 @@ export function detectCaps(
   return {
     healthInsuranceCapped: healthInsuranceCapInfo.capped,
     pensionCapped,
-    pensionFixed: isNationalPension,
+    // "Fixed amount" only applies while National Pension contributions are actually due.
+    pensionFixed: isNationalPension && isSubjectToNationalPension(results.ageRange),
     healthInsuranceBonusCapped,
     healthInsuranceCapDetails: healthInsuranceCapInfo.details,
   };
@@ -156,7 +164,7 @@ function checkHealthInsuranceCap(
     let ltcCapped = false;
     if (
       results.nhiLongTermCarePortion !== undefined &&
-      results.isSubjectToLongTermCarePremium &&
+      isSubjectToLongTermCarePremium(results.ageRange) &&
       currFYParams.ltcCapForEligible
     ) {
       ltcCapped = isCappedInBothFYs(
