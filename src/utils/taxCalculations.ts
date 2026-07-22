@@ -10,6 +10,13 @@ import {
   calculateNetEmploymentIncomeForPeriod,
   calculateIncomeAdjustmentDeductionAmount,
 } from '../data/netEmploymentIncome';
+import {
+  DEFAULT_AGE_RANGE,
+  isResidenceTaxMinor,
+  isSubjectToEmployeesPension,
+  isSubjectToLongTermCarePremium,
+  isSubjectToNationalPension,
+} from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
@@ -239,7 +246,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   salaryIncome: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
   region: 'Tokyo',
-  isSubjectToLongTermCarePremium: false,
+  ageRange: DEFAULT_AGE_RANGE,
   grossEmploymentIncome: 0,
   incomeAdjustmentDeduction: 0,
   totalNetIncome: 0,
@@ -446,10 +453,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // - Employee health insurance: based on standard monthly remuneration
     // - National Health Insurance: based on net income
 
+    const subjectToLongTermCarePremium = isSubjectToLongTermCarePremium(inputs.ageRange);
+
     if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
       const hiResult = calculateHealthInsuranceBreakdown(
         netIncome,
-        inputs.isSubjectToLongTermCarePremium,
+        subjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
         incomeYear,
         inputs.region,
@@ -460,7 +469,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       // For NHI breakdown, also use net income
       nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
         netIncome,
-        inputs.isSubjectToLongTermCarePremium,
+        subjectToLongTermCarePremium,
         incomeYear,
         inputs.region,
       );
@@ -470,7 +479,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       // which INCLUDES the full commuting allowance (taxable + non-taxable).
       const hiResult = calculateHealthInsuranceBreakdown(
         salaryIncome + commutingAllowance,
-        inputs.isSubjectToLongTermCarePremium,
+        subjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
         incomeYear,
         inputs.region,
@@ -497,18 +506,21 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
       pensionPayments = 0;
     } else if (isInEmployeePensionSystem) {
-      // Pension also includes full commuting allowance in SMR
-      const pensionResult = calculatePensionBreakdown(
-        isInEmployeePensionSystem,
-        (salaryIncome + commutingAllowance) / 12,
-        true,
-        bonusIncome,
-        incomeYear,
-      );
-      pensionPayments = pensionResult.total;
-      pensionOnBonus = pensionResult.bonusPortion;
-    } else {
-      // National Pension
+      // Employees' Pension enrollment ends at age 70, so 70-74 pays nothing.
+      if (isSubjectToEmployeesPension(inputs.ageRange)) {
+        // Pension also includes full commuting allowance in SMR
+        const pensionResult = calculatePensionBreakdown(
+          isInEmployeePensionSystem,
+          (salaryIncome + commutingAllowance) / 12,
+          true,
+          bonusIncome,
+          incomeYear,
+        );
+        pensionPayments = pensionResult.total;
+        pensionOnBonus = pensionResult.bonusPortion;
+      }
+    } else if (isSubjectToNationalPension(inputs.ageRange)) {
+      // National Pension: contributions are due only for ages 20-59.
       const pensionResult = calculatePensionBreakdown(
         isInEmployeePensionSystem,
         0,
@@ -589,11 +601,14 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // then spilled over to residence tax up to the cap.
   // Calling residence tax with appliedToResidenceTax = 0 first gives us the
   // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
+  const nonTaxableMinor = isResidenceTaxMinor(inputs.ageRange);
   const preCreditResidenceTax = calculateResidenceTax(
     netIncome,
     socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
     dependentDeductions,
     incomeYear,
+    0,
+    nonTaxableMinor,
   );
 
   const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
@@ -624,6 +639,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           dependentDeductions,
           incomeYear,
           homeLoanTaxCreditResult.appliedToResidenceTax,
+          nonTaxableMinor,
         )
       : preCreditResidenceTax;
 
@@ -694,7 +710,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     salaryIncome,
     healthInsuranceProvider: inputs.healthInsuranceProvider,
     region: inputs.region,
-    isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
+    ageRange: inputs.ageRange,
     customEHIRates: inputs.customEHIRates,
     // Dependent deductions (always include, even if zero)
     ...(inputs.dependents.length > 0 && {

@@ -32,11 +32,12 @@ import {
   regionOptionsFor,
   type FormAction,
 } from '../../state/takeHomeFormReducer';
+import { AGE_RANGES, AGE_RANGE_LABELS } from '../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
   isDependentCoverageEligible,
-  DEPENDENT_INCOME_THRESHOLD,
+  getDependentIncomeThreshold,
 } from '../../types/healthInsurance';
 import type {
   TakeHomeFormState,
@@ -51,12 +52,37 @@ import type {
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
+import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
+import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../ui/Tooltips';
 import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
+
+const AGE_RANGE_SOURCES: Source[] = [
+  {
+    label: '協会けんぽの介護保険料率について (long-term care premiums, ages 40-64)',
+    href: 'https://www.kyoukaikenpo.or.jp/g7/cat330/1995-298/',
+  },
+  {
+    label: '国民年金の「第1号被保険者」とは (National Pension enrollment, ages 20-59)',
+    href: 'https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html',
+  },
+  {
+    label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
+    href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
+  },
+  {
+    label: '個人住民税の非課税 (residence-tax exemption for minors)',
+    href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06',
+  },
+  {
+    label: '後期高齢者医療制度 (medical system for ages 75 and over)',
+    href: 'https://www.gov-online.go.jp/article/202209/entry-10482.html',
+  },
+];
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
@@ -76,8 +102,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Check if dependent coverage is eligible based on income
-  const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome);
+  // Check if dependent coverage is eligible based on income and age
+  const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome, inputs.ageRange);
 
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
@@ -409,7 +435,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             flexWrap: 'wrap',
           }}
         >
-          {/* Age Switch */}
+          {/* Age Range */}
           <Box
             sx={{
               flex: 1,
@@ -431,45 +457,61 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 fontWeight: 500,
               }}
             >
-              Age Range
-              <SimpleTooltip>
-                People aged 40-64 are required to pay long-term care insurance premiums as part of
-                their health insurance.
-              </SimpleTooltip>
+              <span id="ageRange-label">Age Range</span>
+              <DetailedTooltip title="Age Range" icon={SIMPLE_TOOLTIP_ICON}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  The age range determines which social insurance premiums and tax rules apply.
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.5 } }}>
+                  <li>
+                    <Typography variant="body2">
+                      Ages 40-64 pay long-term care insurance premiums (介護保険料) as part of
+                      health insurance (介護保険第2号被保険者).
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      From age 65 (第1号被保険者), long-term care premiums are billed separately by
+                      the municipality and are not included in the calculation.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      National Pension (国民年金) contributions apply to ages 20-59; Employees'
+                      Pension (厚生年金保険) enrollment ends at age 70.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      Minors (未成年者) with 合計所得金額 of ¥1,350,000 or less are exempt from
+                      residence tax.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      Ages 75 and over are not supported: health coverage moves to the medical
+                      system for people aged 75 and over (後期高齢者医療制度).
+                    </Typography>
+                  </li>
+                </Box>
+                <SourceLinks sources={AGE_RANGE_SOURCES} />
+              </DetailedTooltip>
             </Typography>
-            <ToggleButtonGroup
-              value={inputs.isSubjectToLongTermCarePremium}
-              exclusive
-              onChange={(_, newValue: boolean | null) => {
-                if (newValue !== null) {
-                  dispatch({
-                    type: 'setField',
-                    field: 'isSubjectToLongTermCarePremium',
-                    value: newValue,
-                  });
-                }
-              }}
-              aria-label="age range"
+            <Select
+              id="ageRange"
+              name="ageRange"
+              labelId="ageRange-label"
+              value={inputs.ageRange}
+              onChange={e => dispatch({ type: 'ageRangeChanged', ageRange: e.target.value })}
               size="small"
-              sx={{
-                '& .MuiToggleButton-root': {
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      bgcolor: 'primary.dark',
-                    },
-                  },
-                },
-              }}
+              sx={{ ...sharedInputSx, minWidth: 120 }}
             >
-              <ToggleButton value={false}>&lt;40 or 65+</ToggleButton>
-              <ToggleButton value={true}>40-64</ToggleButton>
-            </ToggleButtonGroup>
+              {AGE_RANGES.map(range => (
+                <MenuItem key={range} value={range}>
+                  {AGE_RANGE_LABELS[range]}
+                </MenuItem>
+              ))}
+            </Select>
           </Box>
           {/* Dependents Button */}
           <Box
@@ -626,7 +668,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if income is below ${formatJPY(DEPENDENT_INCOME_THRESHOLD)}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if income is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>

@@ -3,6 +3,8 @@
 
 import { describe, it, expect } from 'vitest';
 
+import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
+import type { AgeRange } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
   DEFAULT_PROVIDER,
@@ -153,7 +155,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 1_500_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo', // Default for Kyokai Kenpo in tests
       dependents: [],
@@ -179,7 +181,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 2_500_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -205,7 +207,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -232,7 +234,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 50_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -259,7 +261,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 0, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -283,7 +285,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: -1_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -305,7 +307,7 @@ describe('calculateTaxes', () => {
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ type: 'miscellaneous' as const, amount: 5_000_000, id: 'test' }],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -331,7 +333,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo', // For NHI
       dependents: [],
@@ -369,7 +371,7 @@ describe('calculateTaxes', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -421,7 +423,7 @@ describe('calculateTaxes', () => {
           blueFilerDeduction: 650_000,
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -737,7 +739,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 1_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -769,7 +771,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 1_299_999, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -795,7 +797,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 1_200_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: true, // Should not matter for dependent coverage
+      ageRange: 'age40to59' as const, // Should not matter for dependent coverage
       healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -817,7 +819,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: true,
+      ageRange: 'age40to59' as const,
       healthInsuranceProvider: CUSTOM_PROVIDER_ID,
       region: 'Tokyo',
       dependents: [],
@@ -844,7 +846,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
       incomeStreams: [
         { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -869,7 +871,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
   it('caps Blue-Filer deduction at the amount of business income', () => {
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -905,7 +907,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
         { id: '1', type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const },
         { id: '2', type: 'miscellaneous' as const, amount: 1_000_000 },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -990,7 +992,7 @@ describe('Commuting Allowance', () => {
           id: 'c1',
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -1058,7 +1060,7 @@ describe('Commuting Allowance', () => {
           id: 'c1',
         }, // 50k taxable excess
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -1121,7 +1123,7 @@ describe('Commuting Allowance', () => {
           id: 'c1',
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -1147,7 +1149,7 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
     incomeStreams: [
       { type: 'salary' as const, amount: 8_000_000, frequency: 'annual' as const, id: 's1' },
     ],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
     dependents: [],
@@ -1290,7 +1292,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
           issuerDomicile: 'foreign' as const,
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -1338,7 +1340,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
           issuerDomicile: 'foreign' as const,
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -1394,7 +1396,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
           issuerDomicile: 'foreign' as const,
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -1435,7 +1437,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
           issuerDomicile: 'foreign' as const,
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
       dependents: [],
@@ -1507,7 +1509,7 @@ describe('RSU (Restricted Stock Unit) income', () => {
           issuerDomicile: 'foreign' as const,
         },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
       dependents: [],
@@ -1576,7 +1578,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     incomeStreams: [
       { id: 's1', type: 'salary' as const, amount: 22_000_000, frequency: 'annual' as const },
     ],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
     dependents,
@@ -1640,7 +1642,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
 describe('grossEmploymentIncome (canonical gross for the Net Employment Income tooltip)', () => {
   const baseInputs = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     region: 'Tokyo',
     dependents: [],
     dcPlanContributions: 0,
@@ -1714,5 +1716,122 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
       incomeStreams: [{ id: 'm1', type: 'miscellaneous' as const, amount: 3_000_000 }],
     });
     expect(result.grossEmploymentIncome).toBe(0);
+  });
+});
+
+describe('calculateTaxes age-range rules', () => {
+  const employeeInputs = (ageRange: AgeRange) => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
+      { type: 'bonus' as const, amount: 1_000_000, month: 5, id: 'bonus' },
+    ],
+    ageRange,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+
+  const nhiInputs = (ageRange: AgeRange) => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
+    ageRange,
+    healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+    region: 'Tokyo-Shinjuku',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+
+  describe("Employees' Pension enrollment ends at age 70", () => {
+    it('charges no employee pension at 70-74, including on bonuses', () => {
+      const result = calculateTaxes(employeeInputs('age70to74'));
+      expect(result.pensionPayments).toBe(0);
+      expect(result.pensionOnBonus).toBe(0);
+      // Health and employment insurance still apply.
+      expect(result.healthInsurance).toBeGreaterThan(0);
+      expect(result.employmentInsurance).toBeGreaterThan(0);
+    });
+
+    it('charges the same employee pension at 65-69 as at 20-39', () => {
+      const at65to69 = calculateTaxes(employeeInputs('age65to69'));
+      const at20to39 = calculateTaxes(employeeInputs('age20to39'));
+      expect(at65to69.pensionPayments).toBe(at20to39.pensionPayments);
+      expect(at65to69.pensionPayments).toBeGreaterThan(0);
+    });
+
+    it('charges employee pension below age 20 (no lower enrollment bound)', () => {
+      const under18 = calculateTaxes(employeeInputs('under18'));
+      const at20to39 = calculateTaxes(employeeInputs('age20to39'));
+      expect(under18.pensionPayments).toBe(at20to39.pensionPayments);
+    });
+  });
+
+  describe('National Pension covers ages 20-59', () => {
+    it.each(['age20to39', 'age40to59'] as const)('charges the fixed amount at %s', ageRange => {
+      const result = calculateTaxes(nhiInputs(ageRange));
+      expect(result.pensionPayments).toBe(getNationalPensionAnnualTotal(2026));
+    });
+
+    it.each(['under18', 'age18to19', 'age60to64', 'age65to69', 'age70to74'] as const)(
+      'charges nothing at %s',
+      ageRange => {
+        const result = calculateTaxes(nhiInputs(ageRange));
+        expect(result.pensionPayments).toBe(0);
+        // NHI premiums themselves still apply.
+        expect(result.healthInsurance).toBeGreaterThan(0);
+      },
+    );
+  });
+
+  describe('long-term care premium ages 40-64', () => {
+    it('matches the 40-59 premium at 60-64 and the 20-39 premium at 65-69', () => {
+      expect(calculateTaxes(employeeInputs('age60to64')).healthInsurance).toBe(
+        calculateTaxes(employeeInputs('age40to59')).healthInsurance,
+      );
+      expect(calculateTaxes(employeeInputs('age65to69')).healthInsurance).toBe(
+        calculateTaxes(employeeInputs('age20to39')).healthInsurance,
+      );
+      expect(calculateTaxes(employeeInputs('age40to59')).healthInsurance).toBeGreaterThan(
+        calculateTaxes(employeeInputs('age20to39')).healthInsurance,
+      );
+    });
+  });
+
+  describe('minor (未成年者) residence-tax non-taxation', () => {
+    const minorInputs = (ageRange: AgeRange, amount: number) => ({
+      ...nhiInputs(ageRange),
+      incomeStreams: [{ type: 'miscellaneous' as const, amount, id: 'test' }],
+    });
+
+    it('exempts residence tax entirely for a minor with 合計所得金額 at or below 1.35M', () => {
+      // Miscellaneous income counts at face value, so 合計所得金額 = 1,350,000 exactly.
+      const result = calculateTaxes(minorInputs('under18', 1_350_000));
+      expect(result.residenceTax.totalResidenceTax).toBe(0);
+      expect(result.residenceTax.perCapitaTax).toBe(0);
+      expect(result.furusatoNozei.limit).toBe(0);
+    });
+
+    it('taxes a minor normally above the 1.35M limit', () => {
+      const result = calculateTaxes(minorInputs('under18', 1_350_001));
+      expect(result.residenceTax.totalResidenceTax).toBeGreaterThan(0);
+    });
+
+    it('does not exempt an 18-19 year old at the same income', () => {
+      const minor = calculateTaxes(minorInputs('under18', 1_350_000));
+      const adult = calculateTaxes(minorInputs('age18to19', 1_350_000));
+      expect(minor.residenceTax.totalResidenceTax).toBe(0);
+      expect(adult.residenceTax.totalResidenceTax).toBeGreaterThan(0);
+    });
+  });
+
+  it('echoes the age range into the results for cap detection', () => {
+    expect(calculateTaxes(employeeInputs('age65to69')).ageRange).toBe('age65to69');
   });
 });

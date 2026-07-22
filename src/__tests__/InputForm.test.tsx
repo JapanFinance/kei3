@@ -37,7 +37,7 @@ describe('TakeHomeInputForm Tests', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
@@ -297,7 +297,7 @@ describe('Dependent Coverage UI Behavior', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
@@ -497,7 +497,7 @@ describe('Age Range Selection', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
@@ -506,25 +506,34 @@ describe('Age Range Selection', () => {
     manualSocialInsuranceAmount: 0,
   };
 
-  it('should toggle age range using segmented buttons', async () => {
+  beforeEach(() => {
+    mockDispatch.mockClear();
+  });
+
+  it('offers every age range and shows the current selection', async () => {
     const user = userEvent.setup();
     render(<TakeHomeInputForm inputs={baseInputs} dispatch={mockDispatch} />);
 
-    // Find the buttons
-    const under40Button = screen.getByRole('button', { name: /<40 or 65\+/i });
-    const over40Button = screen.getByRole('button', { name: /40-64/i });
+    const ageSelect = screen.getByRole('combobox', { name: /age range/i });
+    expect(ageSelect).toHaveTextContent('20-39');
 
-    // Initial state: <40 or 65+ is selected (false)
-    expect(under40Button).toHaveAttribute('aria-pressed', 'true');
-    expect(over40Button).toHaveAttribute('aria-pressed', 'false');
+    await user.click(ageSelect);
+    const listbox = screen.getByRole('listbox');
+    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64', '65-69', '70-74']) {
+      expect(within(listbox).getByRole('option', { name: label })).toBeInTheDocument();
+    }
+  });
 
-    // Click 40-64
-    await user.click(over40Button);
+  it('dispatches ageRangeChanged when a range is selected', async () => {
+    const user = userEvent.setup();
+    render(<TakeHomeInputForm inputs={baseInputs} dispatch={mockDispatch} />);
+
+    await user.click(screen.getByRole('combobox', { name: /age range/i }));
+    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: '40-59' }));
 
     expect(mockDispatch).toHaveBeenCalledWith({
-      type: 'setField',
-      field: 'isSubjectToLongTermCarePremium',
-      value: true,
+      type: 'ageRangeChanged',
+      ageRange: 'age40to59' as const,
     });
   });
 });
@@ -537,7 +546,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     incomeMode: 'advanced',
     incomeStreams: [],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
@@ -581,7 +590,7 @@ describe('Commuting Allowance Integration', () => {
       incomeMode: 'advanced',
       incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
       savedIncomeStreams: [],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo',
       region: 'Tokyo',
       dcPlanContributions: 0,
@@ -642,7 +651,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
         { id: '2', type: 'business', amount: 4000000 },
       ],
       savedIncomeStreams: [],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo', // An employee provider
       region: 'Tokyo',
       dcPlanContributions: 0,

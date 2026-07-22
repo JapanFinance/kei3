@@ -72,7 +72,7 @@ describe('HealthInsuranceBonusTooltip', () => {
   const mockInputs: TakeHomeInputs = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: 'KyokaiKenpo',
     dependents: [],
@@ -96,7 +96,7 @@ describe('HealthInsuranceBonusTooltip', () => {
         healthInsuranceRate: 3.5, // 3.5%
         longTermCareRate: 1.2,
       },
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
     };
 
     render(<HealthInsuranceBonusTooltip inputs={customInputs} />);

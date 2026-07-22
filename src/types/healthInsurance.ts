@@ -5,15 +5,29 @@ import {
   PROVIDER_DEFINITIONS,
   getProviderDefinition,
 } from '../data/employeesHealthInsurance/providerRateData';
+import type { AgeRange } from './ageRange';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
 export const CUSTOM_PROVIDER_ID = 'CustomProvider' as const;
 export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 
-// Income threshold for dependent coverage eligibility (1.3 million yen)
-// Source: https://www.mhlw.go.jp/stf/taiou_001_00002.html
+// Annual income thresholds for dependent coverage eligibility (被扶養者認定): under 1.3
+// million yen as a base, 1.8 million yen for dependents aged 60 or over (or with a
+// disability-pension-grade disability, which the calculator does not model). The 1.5
+// million yen band for ages 19-22 excluding spouses (effective 2025-10) is not modeled:
+// its 19/23 boundaries do not align with the age ranges the calculator collects.
+// Sources: https://www.mhlw.go.jp/stf/taiou_001_00002.html
+//          https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
+export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
+
+/** The dependent-coverage income threshold applicable to an {@link AgeRange}. */
+export function getDependentIncomeThreshold(ageRange: AgeRange): number {
+  return ageRange === 'age60to64' || ageRange === 'age65to69' || ageRange === 'age70to74'
+    ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
+    : DEPENDENT_INCOME_THRESHOLD;
+}
 
 // Exhaustive union type of all valid health insurance provider IDs
 export type HealthInsuranceProviderId =
@@ -23,12 +37,11 @@ export type HealthInsuranceProviderId =
   | typeof CUSTOM_PROVIDER_ID;
 
 /**
- * Checks if dependent coverage is eligible based on annual income.
- * Dependents must have income below 1.3 million yen to be covered.
- * Source: https://www.mhlw.go.jp/stf/taiou_001_00002.html
+ * Checks if dependent coverage is eligible based on annual income and the age-dependent
+ * threshold ({@link getDependentIncomeThreshold}).
  */
-export function isDependentCoverageEligible(annualIncome: number): boolean {
-  return annualIncome < DEPENDENT_INCOME_THRESHOLD;
+export function isDependentCoverageEligible(annualIncome: number, ageRange: AgeRange): boolean {
+  return annualIncome < getDependentIncomeThreshold(ageRange);
 }
 
 /**

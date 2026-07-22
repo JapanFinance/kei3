@@ -25,7 +25,7 @@ const createMockResults = (overrides: Partial<TakeHomeResults>): TakeHomeResults
     dcPlanContributions: 0,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     totalNetIncome: 0,
     salaryIncome: 0,
     ...overrides,
@@ -74,7 +74,7 @@ describe('detectCaps', () => {
       nhiMedicalPortion: 500000,
       nhiElderlySupportPortion: 200000,
       nhiChildSupportPortion: 10000,
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
     });
 
     const caps = detectCaps(results, TEST_INCOME_YEAR);
@@ -169,7 +169,7 @@ describe('NHI cap detection with real calculator output', () => {
       nhiElderlySupportPortion: breakdown.elderlySupportPortion,
       nhiLongTermCarePortion: breakdown.longTermCarePortion,
       nhiChildSupportPortion: breakdown.childSupportPortion,
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
     });
 
     const caps = detectCaps(results, TEST_INCOME_YEAR);
@@ -196,7 +196,7 @@ describe('NHI cap detection with real calculator output', () => {
       nhiElderlySupportPortion: breakdown.elderlySupportPortion,
       nhiLongTermCarePortion: breakdown.longTermCarePortion,
       nhiChildSupportPortion: breakdown.childSupportPortion,
-      isSubjectToLongTermCarePremium: true,
+      ageRange: 'age40to59' as const,
     });
 
     const caps = detectCaps(results, TEST_INCOME_YEAR);
@@ -224,7 +224,7 @@ describe('NHI cap detection with real calculator output', () => {
       nhiElderlySupportPortion: breakdown.elderlySupportPortion,
       nhiLongTermCarePortion: breakdown.longTermCarePortion,
       nhiChildSupportPortion: breakdown.childSupportPortion,
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
     });
 
     const caps = detectCaps(results, TEST_INCOME_YEAR);
@@ -233,5 +233,43 @@ describe('NHI cap detection with real calculator output', () => {
     expect(caps.healthInsuranceCapDetails?.medicalCapped).toBe(false);
     expect(caps.healthInsuranceCapDetails?.supportCapped).toBe(false);
     expect(caps.healthInsuranceCapDetails?.childSupportCapped).toBe(false);
+  });
+});
+
+describe('detectCaps age-range gating', () => {
+  it('does not report a pension cap for a 70-74 employee, who pays no premium', () => {
+    const results = createMockResults({
+      annualIncome: 24_000_000,
+      salaryIncome: 24_000_000,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      ageRange: 'age70to74' as const,
+    });
+
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
+
+    expect(caps.pensionCapped).toBe(false);
+    // Health insurance continues to age 74, so its cap still reports.
+    expect(caps.healthInsuranceCapped).toBe(true);
+  });
+
+  it('does not report the fixed-amount pension badge when National Pension is not due', () => {
+    const base = {
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo-Chiyoda',
+      nhiMedicalPortion: 500_000,
+      nhiElderlySupportPortion: 200_000,
+    };
+
+    const at20to39 = detectCaps(
+      createMockResults({ ...base, ageRange: 'age20to39' as const }),
+      TEST_INCOME_YEAR,
+    );
+    const at65to69 = detectCaps(
+      createMockResults({ ...base, ageRange: 'age65to69' as const }),
+      TEST_INCOME_YEAR,
+    );
+
+    expect(at20to39.pensionFixed).toBe(true);
+    expect(at65to69.pensionFixed).toBe(false);
   });
 });

@@ -27,7 +27,7 @@ const baseState: TakeHomeFormState = {
   incomeMode: 'salary',
   incomeStreams: [{ id: 'default-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
   savedIncomeStreams: [],
-  isSubjectToLongTermCarePremium: false,
+  ageRange: 'age20to39',
   region: 'Tokyo',
   healthInsuranceProvider: DEFAULT_PROVIDER,
   dependents: [],
@@ -78,8 +78,66 @@ describe('takeHomeFormReducer', () => {
       takeHomeFormReducer(baseState, { type: 'setField', field: 'incomeStreams', value: [] });
       // @ts-expect-error 'savedIncomeStreams' is managed by incomeModeChanged.
       takeHomeFormReducer(baseState, { type: 'setField', field: 'savedIncomeStreams', value: [] });
+      // @ts-expect-error 'ageRange' has its own cascade (ageRangeChanged), which re-checks
+      // dependent-coverage eligibility against the age-dependent income threshold.
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'ageRange', value: 'age40to59' });
 
       expect(true).toBe(true);
+    });
+  });
+
+  describe('ageRangeChanged', () => {
+    it('updates the age range and leaves a valid provider untouched', () => {
+      const result = takeHomeFormReducer(baseState, {
+        type: 'ageRangeChanged',
+        ageRange: 'age65to69',
+      });
+
+      expect(result).toEqual({ ...baseState, ageRange: 'age65to69' });
+    });
+
+    it('switches dependent coverage to NHI when the age change lowers the income threshold', () => {
+      // 1.5M is eligible at 60-64 (threshold 1.8M) but not at 40-59 (threshold 1.3M).
+      const state: TakeHomeFormState = {
+        ...baseState,
+        annualIncome: 1_500_000,
+        incomeStreams: [
+          { id: 'default-salary', type: 'salary', amount: 1_500_000, frequency: 'annual' },
+        ],
+        ageRange: 'age60to64',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'ageRangeChanged',
+        ageRange: 'age40to59',
+      });
+
+      expect(result.ageRange).toBe('age40to59');
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('keeps dependent coverage across age changes within the same threshold band', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        annualIncome: 1_500_000,
+        incomeStreams: [
+          { id: 'default-salary', type: 'salary', amount: 1_500_000, frequency: 'annual' },
+        ],
+        ageRange: 'age60to64',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'ageRangeChanged',
+        ageRange: 'age70to74',
+      });
+
+      expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);
+      expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
     });
   });
 
