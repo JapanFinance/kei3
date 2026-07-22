@@ -461,6 +461,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               <DetailedTooltip title="Age Range" icon={SIMPLE_TOOLTIP_ICON}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   The age range determines which social insurance premiums and tax rules apply.
+                  Select the range for the age reached by the end of the income year.
                 </Typography>
                 <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.5 } }}>
                   <li>
@@ -483,8 +484,16 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      Minors (未成年者) with 合計所得金額 of ¥1,350,000 or less are exempt from
-                      residence tax.
+                      Premium obligations actually start or stop in the month the boundary age is
+                      reached, while the calculator applies the selected range to the whole year. In
+                      a year containing a boundary birthday, the actual annual amounts fall between
+                      the results for the two adjacent ranges.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      Minors (未成年者) — under 18 as of the January 1 following the income year —
+                      with 合計所得金額 of ¥1,350,000 or less are exempt from residence tax.
                     </Typography>
                   </li>
                   <li>
