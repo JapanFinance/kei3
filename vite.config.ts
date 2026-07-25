@@ -29,23 +29,18 @@ const stripHtmlComments = (): PluginOption => ({
   },
 });
 
-// Content Security Policy, written into the deployed _headers at build time.
-//
-// index.html carries two inline scripts — the pre-paint theme setter and the
-// stale-build probe — both inlined on purpose so they run before first paint,
-// and the probe even when every bundled asset fails to load. script-src can
-// therefore not be 'self' alone; each inline script needs an sha256 source
-// expression. Deriving those hashes from the emitted HTML on every build,
-// rather than pinning them in the static _headers, means editing either inline
-// script can never leave behind a stale hash that would silently break the
-// live site (the theme flash returns, or the stale-build recovery stops).
-//
-// style-src keeps 'unsafe-inline': emotion (MUI) inserts <style> rules whose
-// content varies per render, so they cannot be hashed, and a per-request nonce
-// is impossible on pure static-asset serving with no Worker in front of the
-// HTML. Inline-style injection is a low risk and still earns a top grade from
-// the header scanners. A JSON-LD block is data, not executed, so script-src
-// does not apply to it and it needs no hash.
+/**
+ * Computes a script-src source expression for each executable inline script in
+ * the built HTML, so the policy can allow them without 'unsafe-inline'.
+ *
+ * A hash covers the exact script text, so deriving them from the emitted HTML
+ * on every build means editing an inline script cannot leave a stale hash
+ * behind. A JSON-LD block is data rather than code, so script-src does not
+ * apply to it and it is skipped.
+ *
+ * @param html - The emitted index.html
+ * @returns Quoted 'sha256-...' source expressions
+ */
 const inlineScriptHashes = (html: string): string[] => {
   const scriptTag = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi;
   const hashes: string[] = [];
@@ -70,6 +65,20 @@ const CSP_ENVIRONMENTS = [
   { host: 'https://:version.:subdomain.workers.dev/*', sentryEnvironment: 'staging' },
 ];
 
+/**
+ * Appends the Content-Security-Policy and Permissions-Policy to the _headers
+ * file copied from public/, hashing the built index.html for script-src.
+ *
+ * One CSP rule is written per entry in {@link CSP_ENVIRONMENTS}, so each
+ * deployed host reports under its own Sentry environment. Permissions-Policy is
+ * host-independent and applies to every path.
+ *
+ * @param options.cspReportOnly - Deliver as Content-Security-Policy-Report-Only,
+ *   which observes violations without blocking, and drop the directives such a
+ *   policy ignores
+ * @param options.reportEndpoint - Violation collector URL; empty omits every
+ *   reporting directive and header
+ */
 const securityHeaders = (options: {
   cspReportOnly: boolean;
   reportEndpoint: string;
@@ -159,12 +168,7 @@ const securityHeaders = (options: {
     const permissionsBlock = [
       '# Security headers. The Content-Security-Policy script-src hashes are',
       '# regenerated from the emitted index.html on every build by the',
-      '# security-headers plugin in vite.config, so editing an inline script',
-      '# can never leave a stale hash behind. HSTS, Referrer-Policy,',
-      '# X-Content-Type-Options and X-Frame-Options are set at the Cloudflare',
-      '# edge and are intentionally not duplicated here. CSP is emitted per',
-      '# environment below (host-scoped) so its reports carry a distinct Sentry',
-      '# tag; Permissions-Policy is environment-independent.',
+      '# security-headers plugin in vite.config.',
       '/*',
       `  Permissions-Policy: ${permissionsPolicy}`,
     ].join('\n');
