@@ -13,7 +13,6 @@ import {
 import {
   DEFAULT_AGE_RANGE,
   isResidenceTaxMinor,
-  isSubjectToEmployeesPension,
   isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../types/ageRange';
@@ -506,19 +505,16 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
       pensionPayments = 0;
     } else if (isInEmployeePensionSystem) {
-      // Employees' Pension enrollment ends at age 70, so 70-74 pays nothing.
-      if (isSubjectToEmployeesPension(inputs.ageRange)) {
-        // Pension also includes full commuting allowance in SMR
-        const pensionResult = calculatePensionBreakdown(
-          isInEmployeePensionSystem,
-          (salaryIncome + commutingAllowance) / 12,
-          true,
-          bonusIncome,
-          incomeYear,
-        );
-        pensionPayments = pensionResult.total;
-        pensionOnBonus = pensionResult.bonusPortion;
-      }
+      // Pension also includes full commuting allowance in SMR
+      const pensionResult = calculatePensionBreakdown(
+        isInEmployeePensionSystem,
+        (salaryIncome + commutingAllowance) / 12,
+        true,
+        bonusIncome,
+        incomeYear,
+      );
+      pensionPayments = pensionResult.total;
+      pensionOnBonus = pensionResult.bonusPortion;
     } else if (isSubjectToNationalPension(inputs.ageRange)) {
       // National Pension: contributions are due only for ages 20-59.
       const pensionResult = calculatePensionBreakdown(

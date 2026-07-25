@@ -90,10 +90,10 @@ describe('takeHomeFormReducer', () => {
     it('updates the age range and leaves a valid provider untouched', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'ageRangeChanged',
-        ageRange: 'age65to69',
+        ageRange: 'age60to64',
       });
 
-      expect(result).toEqual({ ...baseState, ageRange: 'age65to69' });
+      expect(result).toEqual({ ...baseState, ageRange: 'age60to64' });
     });
 
     it('switches dependent coverage to NHI when the age change lowers the income threshold', () => {
@@ -122,18 +122,18 @@ describe('takeHomeFormReducer', () => {
     it('keeps dependent coverage across age changes within the same threshold band', () => {
       const state: TakeHomeFormState = {
         ...baseState,
-        annualIncome: 1_500_000,
+        annualIncome: 1_200_000,
         incomeStreams: [
-          { id: 'default-salary', type: 'salary', amount: 1_500_000, frequency: 'annual' },
+          { id: 'default-salary', type: 'salary', amount: 1_200_000, frequency: 'annual' },
         ],
-        ageRange: 'age60to64',
+        ageRange: 'age18to19',
         healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
         region: DEFAULT_PROVIDER_REGION,
       };
 
       const result = takeHomeFormReducer(state, {
         type: 'ageRangeChanged',
-        ageRange: 'age70to74',
+        ageRange: 'age40to59',
       });
 
       expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);

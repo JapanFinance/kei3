@@ -519,7 +519,7 @@ describe('Age Range Selection', () => {
 
     await user.click(ageSelect);
     const listbox = screen.getByRole('listbox');
-    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64', '65-69', '70-74']) {
+    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64']) {
       expect(within(listbox).getByRole('option', { name: label })).toBeInTheDocument();
     }
   });

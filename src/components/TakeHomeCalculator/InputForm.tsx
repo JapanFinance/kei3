@@ -71,10 +71,6 @@ const AGE_RANGE_SOURCES: Source[] = [
     href: 'https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html',
   },
   {
-    label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
-    href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
-  },
-  {
     label: '個人住民税の非課税 (residence-tax exemption for minors)',
     href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06',
   },
@@ -472,14 +468,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      From age 65 (第1号被保険者), long-term care premiums are billed separately by
-                      the municipality and are not included in the calculation.
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2">
-                      National Pension (国民年金) contributions apply to ages 20-59; Employees'
-                      Pension (厚生年金保険) enrollment ends at age 70.
+                      National Pension (国民年金) contributions apply to ages 20-59.
                     </Typography>
                   </li>
                   <li>
@@ -498,8 +487,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      Ages 75 and over are not supported: health coverage moves to the medical
-                      system for people aged 75 and over (後期高齢者医療制度).
+                      Ages 65 and over are not supported: from age 65, long-term care premiums
+                      switch to the separately billed 第1号被保険者 system, and from age 75 health
+                      coverage moves to the medical system for people aged 75 and over
+                      (後期高齢者医療制度).
                     </Typography>
                   </li>
                 </Box>

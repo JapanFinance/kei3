@@ -6,11 +6,7 @@ import {
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
-import {
-  isSubjectToEmployeesPension,
-  isSubjectToLongTermCarePremium,
-  isSubjectToNationalPension,
-} from '../types/ageRange';
+import { isSubjectToLongTermCarePremium, isSubjectToNationalPension } from '../types/ageRange';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
@@ -45,10 +41,8 @@ export function detectCaps(
   const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowanceIncome ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
-  // Check pension cap; a 70-74 employee pays no premium at all, so nothing can be capped.
-  const pensionCapped = isSubjectToEmployeesPension(results.ageRange)
-    ? checkPensionCap(isNationalPension, monthlyRemuneration)
-    : false;
+  // Check pension cap
+  const pensionCapped = checkPensionCap(isNationalPension, monthlyRemuneration);
   // Check health insurance cap
   const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration, year);
 

@@ -24,7 +24,7 @@ export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
 
 /** The dependent-coverage income threshold applicable to an {@link AgeRange}. */
 export function getDependentIncomeThreshold(ageRange: AgeRange): number {
-  return ageRange === 'age60to64' || ageRange === 'age65to69' || ageRange === 'age70to74'
+  return ageRange === 'age60to64'
     ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
     : DEPENDENT_INCOME_THRESHOLD;
 }

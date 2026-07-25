@@ -10,7 +10,6 @@ import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import {
-  isSubjectToEmployeesPension,
   isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../../../types/ageRange';
@@ -98,15 +97,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Replaces the pension rows when the age range exempts contributions entirely. Dependent
   // coverage pays nothing for a different reason and keeps its existing display.
   const pensionAgeNote =
-    inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID
-      ? undefined
-      : isNationalHealthInsurance
-        ? isSubjectToNationalPension(inputs.ageRange)
-          ? undefined
-          : 'No contributions: National Pension (国民年金) enrollment covers ages 20-59.'
-        : isSubjectToEmployeesPension(inputs.ageRange)
-          ? undefined
-          : "No contributions: Employees' Pension (厚生年金保険) enrollment ends at age 70.";
+    inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID &&
+    isNationalHealthInsurance &&
+    !isSubjectToNationalPension(inputs.ageRange)
+      ? 'No contributions: National Pension (国民年金) enrollment covers ages 20-59.'
+      : undefined;
 
   if (results.socialInsuranceOverride !== undefined) {
     return (

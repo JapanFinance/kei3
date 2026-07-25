@@ -12,7 +12,7 @@ import {
 } from '../types/healthInsurance';
 
 const UNDER_60_RANGES = ['under18', 'age18to19', 'age20to39', 'age40to59'] as const;
-const AGE_60_PLUS_RANGES = ['age60to64', 'age65to69', 'age70to74'] as const;
+const AGE_60_PLUS_RANGES = ['age60to64'] as const;
 
 describe('getDependentIncomeThreshold', () => {
   it('is 1.3 million yen below age 60 and 1.8 million yen from age 60', () => {

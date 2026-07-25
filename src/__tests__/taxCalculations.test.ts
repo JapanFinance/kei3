@@ -1749,28 +1749,11 @@ describe('calculateTaxes age-range rules', () => {
     incomeYear: 2026,
   });
 
-  describe("Employees' Pension enrollment ends at age 70", () => {
-    it('charges no employee pension at 70-74, including on bonuses', () => {
-      const result = calculateTaxes(employeeInputs('age70to74'));
-      expect(result.pensionPayments).toBe(0);
-      expect(result.pensionOnBonus).toBe(0);
-      // Health and employment insurance still apply.
-      expect(result.healthInsurance).toBeGreaterThan(0);
-      expect(result.employmentInsurance).toBeGreaterThan(0);
-    });
-
-    it('charges the same employee pension at 65-69 as at 20-39', () => {
-      const at65to69 = calculateTaxes(employeeInputs('age65to69'));
-      const at20to39 = calculateTaxes(employeeInputs('age20to39'));
-      expect(at65to69.pensionPayments).toBe(at20to39.pensionPayments);
-      expect(at65to69.pensionPayments).toBeGreaterThan(0);
-    });
-
-    it('charges employee pension below age 20 (no lower enrollment bound)', () => {
-      const under18 = calculateTaxes(employeeInputs('under18'));
-      const at20to39 = calculateTaxes(employeeInputs('age20to39'));
-      expect(under18.pensionPayments).toBe(at20to39.pensionPayments);
-    });
+  it('charges employee pension below age 20 (no lower enrollment bound)', () => {
+    const under18 = calculateTaxes(employeeInputs('under18'));
+    const at20to39 = calculateTaxes(employeeInputs('age20to39'));
+    expect(under18.pensionPayments).toBe(at20to39.pensionPayments);
+    expect(under18.pensionPayments).toBeGreaterThan(0);
   });
 
   describe('National Pension covers ages 20-59', () => {
@@ -1779,24 +1762,18 @@ describe('calculateTaxes age-range rules', () => {
       expect(result.pensionPayments).toBe(getNationalPensionAnnualTotal(2026));
     });
 
-    it.each(['under18', 'age18to19', 'age60to64', 'age65to69', 'age70to74'] as const)(
-      'charges nothing at %s',
-      ageRange => {
-        const result = calculateTaxes(nhiInputs(ageRange));
-        expect(result.pensionPayments).toBe(0);
-        // NHI premiums themselves still apply.
-        expect(result.healthInsurance).toBeGreaterThan(0);
-      },
-    );
+    it.each(['under18', 'age18to19', 'age60to64'] as const)('charges nothing at %s', ageRange => {
+      const result = calculateTaxes(nhiInputs(ageRange));
+      expect(result.pensionPayments).toBe(0);
+      // NHI premiums themselves still apply.
+      expect(result.healthInsurance).toBeGreaterThan(0);
+    });
   });
 
   describe('long-term care premium ages 40-64', () => {
-    it('matches the 40-59 premium at 60-64 and the 20-39 premium at 65-69', () => {
+    it('matches the 40-59 premium at 60-64 and exceeds the 20-39 premium', () => {
       expect(calculateTaxes(employeeInputs('age60to64')).healthInsurance).toBe(
         calculateTaxes(employeeInputs('age40to59')).healthInsurance,
-      );
-      expect(calculateTaxes(employeeInputs('age65to69')).healthInsurance).toBe(
-        calculateTaxes(employeeInputs('age20to39')).healthInsurance,
       );
       expect(calculateTaxes(employeeInputs('age40to59')).healthInsurance).toBeGreaterThan(
         calculateTaxes(employeeInputs('age20to39')).healthInsurance,
@@ -1832,6 +1809,6 @@ describe('calculateTaxes age-range rules', () => {
   });
 
   it('echoes the age range into the results for cap detection', () => {
-    expect(calculateTaxes(employeeInputs('age65to69')).ageRange).toBe('age65to69');
+    expect(calculateTaxes(employeeInputs('age60to64')).ageRange).toBe('age60to64');
   });
 });

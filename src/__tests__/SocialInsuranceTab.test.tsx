@@ -177,29 +177,17 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
   });
 
-  it('replaces the pension rows with an enrollment note for a 70-74 employee', () => {
-    const inputs = { ...mockInputs, ageRange: 'age70to74' as const };
-    const results = { ...mockResults, ageRange: 'age70to74' as const, pensionPayments: 0 };
-
-    render(<SocialInsuranceTab inputs={inputs} results={results} />);
-
-    expect(screen.getByText("Employees' Pension")).toBeInTheDocument();
-    expect(screen.getByText(/enrollment ends at age 70/)).toBeInTheDocument();
-    expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
-    expect(screen.queryByText('Employees Pension Insurance Calculation')).not.toBeInTheDocument();
-  });
-
   it('replaces the pension rows with an enrollment note for an NHI user outside 20-59', () => {
     const inputs = {
       ...mockInputs,
-      ageRange: 'age65to69' as const,
+      ageRange: 'age60to64' as const,
       healthInsuranceProvider: 'NationalHealthInsurance' as const,
       region: 'Tokyo-Shinjuku',
       incomeStreams: [{ id: 'm1', type: 'miscellaneous' as const, amount: 4_000_000 }],
     };
     const results = {
       ...mockResults,
-      ageRange: 'age65to69' as const,
+      ageRange: 'age60to64' as const,
       healthInsuranceProvider: 'NationalHealthInsurance' as const,
       region: 'Tokyo-Shinjuku',
       hasEmploymentIncome: false,

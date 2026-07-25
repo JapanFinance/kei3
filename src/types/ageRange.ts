@@ -3,21 +3,14 @@
 
 /**
  * Taxpayer age ranges, in ascending order. Each boundary changes at least one calculation:
- * 18 (未成年者 residence-tax non-taxation), 20 and 60 (国民年金 enrollment), 40 and 65
- * (介護保険第2号被保険者 premiums via health insurance), 70 (厚生年金保険 enrollment).
- * Ages 75 and over are not supported: health coverage moves to the 後期高齢者医療制度,
- * whose premiums are not modeled.
+ * 18 (未成年者 residence-tax non-taxation), 20 and 60 (国民年金 enrollment), 40
+ * (介護保険第2号被保険者 premiums via health insurance).
+ * Ages 65 and over are not supported: from 65, long-term care premiums switch to the
+ * separately billed 第1号被保険者 system, and from 75 health coverage moves to the
+ * 後期高齢者医療制度 — neither premium system is modeled yet.
  * Source: https://www.gov-online.go.jp/article/202209/entry-10482.html
  */
-export const AGE_RANGES = [
-  'under18',
-  'age18to19',
-  'age20to39',
-  'age40to59',
-  'age60to64',
-  'age65to69',
-  'age70to74',
-] as const;
+export const AGE_RANGES = ['under18', 'age18to19', 'age20to39', 'age40to59', 'age60to64'] as const;
 
 export type AgeRange = (typeof AGE_RANGES)[number];
 
@@ -30,8 +23,6 @@ export const AGE_RANGE_LABELS: Record<AgeRange, string> = {
   age20to39: '20-39',
   age40to59: '40-59',
   age60to64: '60-64',
-  age65to69: '65-69',
-  age70to74: '70-74',
 };
 
 /**
@@ -51,15 +42,6 @@ export function isSubjectToLongTermCarePremium(ageRange: AgeRange): boolean {
  */
 export function isSubjectToNationalPension(ageRange: AgeRange): boolean {
   return ageRange === 'age20to39' || ageRange === 'age40to59';
-}
-
-/**
- * Whether employment at an applicable workplace carries Employees' Pension (厚生年金保険)
- * enrollment: everyone under age 70, with no lower age bound.
- * Source: https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html
- */
-export function isSubjectToEmployeesPension(ageRange: AgeRange): boolean {
-  return ageRange !== 'age70to74';
 }
 
 /**
