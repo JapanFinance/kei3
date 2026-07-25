@@ -109,6 +109,9 @@ const securityHeaders = (options: {
         "frame-ancestors 'none'",
         "form-action 'self'",
         "img-src 'self' data:",
+        // emotion (MUI) inserts <style> rules whose content varies per render,
+        // so they cannot be hashed, and a nonce would need per-request HTML
+        // that static-asset serving cannot produce.
         "style-src 'self' 'unsafe-inline'",
         `script-src ${scriptSrc}`,
         connectSrc,
