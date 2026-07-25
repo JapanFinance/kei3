@@ -58,6 +58,15 @@ const inlineScriptHashes = (html: string): string[] => {
 const CSP_REPORT_ENDPOINT =
   'https://o4511773324738560.ingest.us.sentry.io/api/4511773344661504/security/?sentry_key=4126ad22f0024108b9020384ab4b71fc';
 
+// Cloudflare Web Analytics is injected at the edge, into browser requests only:
+// a plain curl does not receive the beacon tag, so check for it with a browser
+// User-Agent and Accept. The beacon script is served from one host and reports
+// to another, so both need allowing.
+const CLOUDFLARE_ANALYTICS = {
+  script: 'https://static.cloudflareinsights.com',
+  connect: 'https://cloudflareinsights.com',
+};
+
 // CSP is emitted once per deployed environment, host-scoped, so each carries a
 // distinct Sentry environment tag and a request matches exactly one rule.
 const CSP_ENVIRONMENTS = [
@@ -90,7 +99,11 @@ const securityHeaders = (options: {
     const headersPath = resolve(outDir, '_headers');
     const indexPath = resolve(outDir, 'index.html');
 
-    const scriptSrc = ["'self'", ...inlineScriptHashes(readFileSync(indexPath, 'utf8'))].join(' ');
+    const scriptSrc = [
+      "'self'",
+      CLOUDFLARE_ANALYTICS.script,
+      ...inlineScriptHashes(readFileSync(indexPath, 'utf8')),
+    ].join(' ');
     const cspField = options.cspReportOnly
       ? 'Content-Security-Policy-Report-Only'
       : 'Content-Security-Policy';
@@ -99,7 +112,9 @@ const securityHeaders = (options: {
     // the browser blocks the report submission and the collector silently
     // receives nothing.
     const reportOrigin = options.reportEndpoint ? new URL(options.reportEndpoint).origin : '';
-    const connectSrc = reportOrigin ? `connect-src 'self' ${reportOrigin}` : "connect-src 'self'";
+    const connectSrc = ['connect-src', "'self'", CLOUDFLARE_ANALYTICS.connect, reportOrigin]
+      .filter(Boolean)
+      .join(' ');
 
     const cspFor = (reportUrl: string): string =>
       [
