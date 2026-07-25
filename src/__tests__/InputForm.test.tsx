@@ -282,8 +282,8 @@ describe('TakeHomeInputForm Tests', () => {
         screen.getByRole('combobox', { name: /health insurance provider/i }),
       ).toBeInTheDocument();
 
-      // Should have tooltip for Age Range
-      const ageRangeLabel = screen.getByText('Age Range');
+      // Should have tooltip for the Age input
+      const ageRangeLabel = screen.getByText('Age');
       expect(ageRangeLabel).toBeInTheDocument();
     });
   });
@@ -490,7 +490,7 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 });
 
-describe('Age Range Selection', () => {
+describe('Age Selection', () => {
   const mockDispatch = vi.fn();
   const baseInputs: TakeHomeFormState = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -517,7 +517,7 @@ describe('Age Range Selection', () => {
     const user = userEvent.setup();
     render(<TakeHomeInputForm inputs={baseInputs} dispatch={mockDispatch} />);
 
-    const ageSelect = screen.getByRole('combobox', { name: /age range/i });
+    const ageSelect = screen.getByRole('combobox', { name: 'Age' });
     expect(ageSelect).toHaveTextContent('20-39');
 
     await user.click(ageSelect);
@@ -531,7 +531,7 @@ describe('Age Range Selection', () => {
     const user = userEvent.setup();
     render(<TakeHomeInputForm inputs={baseInputs} dispatch={mockDispatch} />);
 
-    await user.click(screen.getByRole('combobox', { name: /age range/i }));
+    await user.click(screen.getByRole('combobox', { name: 'Age' }));
     await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: '40-59' }));
 
     expect(mockDispatch).toHaveBeenCalledWith({

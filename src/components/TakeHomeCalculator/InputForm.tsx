@@ -63,22 +63,23 @@ import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
 
+// Ordered to match the tooltip's bullets (youngest rule first).
 const AGE_RANGE_SOURCES: Source[] = [
   {
-    label: '協会けんぽの介護保険料率について (long-term care premiums, ages 40-64)',
-    href: 'https://www.kyoukaikenpo.or.jp/g7/cat330/1995-298/',
+    label: '個人住民税の非課税 (residence-tax exemption for minors)',
+    href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06',
   },
   {
     label: '国民年金の「第1号被保険者」とは (National Pension enrollment, ages 20-59)',
     href: 'https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html',
   },
   {
-    label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
-    href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
+    label: '協会けんぽの介護保険料率について (long-term care premiums, ages 40-64)',
+    href: 'https://www.kyoukaikenpo.or.jp/g7/cat330/1995-298/',
   },
   {
-    label: '個人住民税の非課税 (residence-tax exemption for minors)',
-    href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06',
+    label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
+    href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
   },
   {
     label: '後期高齢者医療制度 (medical system for ages 75 and over)',
@@ -459,7 +460,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             flexWrap: 'wrap',
           }}
         >
-          {/* Age Range */}
+          {/* Age */}
           <Box
             sx={{
               flex: 1,
@@ -481,13 +482,25 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 fontWeight: 500,
               }}
             >
-              <span id="ageRange-label">Age Range</span>
-              <DetailedTooltip title="Age Range" icon={SIMPLE_TOOLTIP_ICON}>
+              <span id="ageRange-label">Age</span>
+              <DetailedTooltip title="Age" icon={SIMPLE_TOOLTIP_ICON}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  The age range determines which social insurance premiums and tax rules apply.
-                  Select the range for the age reached by the end of the income year.
+                  Age determines which social insurance premiums and tax rules apply. Select the
+                  range for the age reached by the end of the income year.
                 </Typography>
                 <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.5 } }}>
+                  <li>
+                    <Typography variant="body2">
+                      Minors (未成年者) — under 18 as of the January 1 following the income year —
+                      with 合計所得金額 of ¥1,350,000 or less are exempt from residence tax.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      National Pension (国民年金) contributions apply to ages 20-59; Employees'
+                      Pension (厚生年金保険) enrollment ends at age 70.
+                    </Typography>
+                  </li>
                   <li>
                     <Typography variant="body2">
                       Ages 40-64 pay long-term care insurance premiums (介護保険料) as part of
@@ -503,12 +516,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      National Pension (国民年金) contributions apply to ages 20-59; Employees'
-                      Pension (厚生年金保険) enrollment ends at age 70.
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2">
                       From age 75, health coverage moves to the medical system for people aged 75
                       and over (後期高齢者医療制度), which replaces the health insurance provider
                       options.
@@ -520,12 +527,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       reached, while the calculator applies the selected range to the whole year. In
                       a year containing a boundary birthday, the actual annual amounts fall between
                       the results for the two adjacent ranges.
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2">
-                      Minors (未成年者) — under 18 as of the January 1 following the income year —
-                      with 合計所得金額 of ¥1,350,000 or less are exempt from residence tax.
                     </Typography>
                   </li>
                 </Box>
