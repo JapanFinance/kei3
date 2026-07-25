@@ -258,3 +258,44 @@ describe('detectCaps age-range gating', () => {
     expect(at60to64.pensionFixed).toBe(false);
   });
 });
+
+describe('detectCaps for the 後期高齢者医療制度', () => {
+  it('reports capped when the medical portion reaches the blended 賦課限度額', () => {
+    // Calendar 2026 blends FY2025 (cap 800,000) and FY2026 (cap 850,000):
+    // round(800,000/6 + 850,000×5/6) = 841,667.
+    const results = createMockResults({
+      healthInsuranceProvider: 'LatterStageElderly',
+      region: 'Tokyo',
+      ageRange: 'age75plus' as const,
+      latterStageMedicalPortion: 841_667,
+      latterStageChildSupportPortion: 17_500,
+    });
+
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
+    expect(caps.healthInsuranceCapped).toBe(true);
+    expect(caps.pensionCapped).toBe(false);
+  });
+
+  it('reports uncapped below the 賦課限度額', () => {
+    const results = createMockResults({
+      healthInsuranceProvider: 'LatterStageElderly',
+      region: 'Tokyo',
+      ageRange: 'age75plus' as const,
+      latterStageMedicalPortion: 403_750,
+      latterStageChildSupportPortion: 8_750,
+    });
+
+    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
+  });
+
+  it('uses the statutory cap for custom-rate entries', () => {
+    const results = createMockResults({
+      healthInsuranceProvider: 'CustomLatterStageElderly',
+      region: 'DEFAULT',
+      ageRange: 'age75plus' as const,
+      latterStageMedicalPortion: 871_000,
+    });
+
+    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(true);
+  });
+});

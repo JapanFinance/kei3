@@ -5,9 +5,21 @@ import {
   generateHealthInsurancePremiumTable,
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
+import {
+  getLatterStageParamsForMonth,
+  getLatterStageStatutoryCap,
+} from '../data/latterStageElderlyRates';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
-import { isSubjectToLongTermCarePremium, isSubjectToNationalPension } from '../types/ageRange';
-import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
+import {
+  isSubjectToEmployeesPension,
+  isSubjectToLongTermCarePremium,
+  isSubjectToNationalPension,
+} from '../types/ageRange';
+import {
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  isLatterStageProvider,
+} from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
 import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
@@ -41,8 +53,10 @@ export function detectCaps(
   const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowanceIncome ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
-  // Check pension cap
-  const pensionCapped = checkPensionCap(isNationalPension, monthlyRemuneration);
+  // Check pension cap; a 70+ employee pays no premium at all, so nothing can be capped.
+  const pensionCapped = isSubjectToEmployeesPension(results.ageRange)
+    ? checkPensionCap(isNationalPension, monthlyRemuneration)
+    : false;
   // Check health insurance cap
   const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration, year);
 
@@ -105,6 +119,26 @@ function checkHealthInsuranceCap(
     childSupportCapped?: boolean;
   };
 } {
+  if (isLatterStageProvider(results.healthInsuranceProvider)) {
+    // 後期高齢者医療: capped when the medical portion reaches its 賦課限度額. Custom-rate
+    // entries store the combined premium in the medical portion, capped at the nationwide
+    // statutory limit.
+    const medical = results.latterStageMedicalPortion;
+    if (medical === undefined) {
+      return { capped: false };
+    }
+    const prevFY = getLatterStageParamsForMonth(results.region, year, 0);
+    const currFY = getLatterStageParamsForMonth(results.region, year, 3);
+    if (!currFY) {
+      return { capped: medical >= getLatterStageStatutoryCap(year, 3) };
+    }
+    const blendedMedicalCap =
+      !prevFY || prevFY.medicalCap === currFY.medicalCap
+        ? currFY.medicalCap
+        : Math.round((prevFY.medicalCap * 1) / 6 + (currFY.medicalCap * 5) / 6);
+    return { capped: medical >= blendedMedicalCap };
+  }
+
   if (results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
     if (results.nhiMedicalPortion === undefined || results.nhiElderlySupportPortion === undefined) {
       // This shouldn't happen anymore since all context is in results

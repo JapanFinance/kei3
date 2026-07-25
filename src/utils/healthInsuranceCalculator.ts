@@ -6,10 +6,16 @@ import {
   getRegionalRatesForMonth,
 } from '../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
+import {
+  getLatterStageParamsForMonth,
+  getLatterStageStatutoryCap,
+} from '../data/latterStageElderlyRates';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
 import type {
   ProviderRegion,
   NationalHealthInsuranceRegionParams,
+  LatterStageElderlyRegionParams,
   HealthInsuranceProviderId,
 } from '../types/healthInsurance';
 import {
@@ -18,7 +24,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
-import type { BonusIncomeStream } from '../types/tax';
+import type { BonusIncomeStream, CustomLatterStageElderlyRates } from '../types/tax';
 import { roundSocialInsurancePremium } from './taxCalculations';
 
 /**
@@ -446,4 +452,136 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
   const total = medicalPortion + elderlySupportPortion + longTermCarePortion + childSupportPortion;
 
   return { medicalPortion, elderlySupportPortion, longTermCarePortion, childSupportPortion, total };
+}
+
+/** Breakdown of 後期高齢者医療制度 premium components. */
+export interface LatterStageElderlyBreakdown {
+  medicalPortion: number;
+  childSupportPortion: number;
+  total: number;
+}
+
+const ZERO_LATTER_STAGE_BREAKDOWN: LatterStageElderlyBreakdown = {
+  medicalPortion: 0,
+  childSupportPortion: 0,
+  total: 0,
+};
+
+/**
+ * The 賦課のもととなる所得金額: 総所得金額等 minus the 地方税法 basic deduction (43万円,
+ * stepping down above 合計所得金額 2,400万円 like the residence-tax basic deduction).
+ * Source: https://www.tokyo-ikiiki.net/seido/1001968/1001975/index.html
+ */
+function latterStagePremiumBase(netIncome: number): number {
+  let deduction = 0;
+  for (const tier of RESIDENCE_TAX_BASIC_DEDUCTION_TIERS) {
+    if (netIncome <= tier.maxIncomeInclusive) {
+      deduction = tier.deduction;
+      break;
+    }
+  }
+  return Math.max(0, netIncome - deduction);
+}
+
+const floorToHundred = (value: number): number => Math.floor(value / 100) * 100;
+
+/**
+ * Premium for one fiscal year's parameters: per portion, 均等割額 + 所得割率 × base,
+ * rounded down to ¥100 and capped at the portion's 賦課限度額, then summed.
+ * The low-income 均等割軽減 (7/5/2割) and the 元被扶養者 reduction are not applied,
+ * matching the calculator's current NHI treatment.
+ */
+function calculateLatterStagePremiumForParams(
+  netIncome: number,
+  params: LatterStageElderlyRegionParams,
+): LatterStageElderlyBreakdown {
+  const base = latterStagePremiumBase(netIncome);
+
+  const medicalPortion = Math.min(
+    floorToHundred(params.medicalPerCapita + base * params.medicalRate),
+    params.medicalCap,
+  );
+
+  let childSupportPortion = 0;
+  if (params.childSupportRate !== undefined && params.childSupportCap !== undefined) {
+    childSupportPortion = Math.min(
+      floorToHundred((params.childSupportPerCapita ?? 0) + base * params.childSupportRate),
+      params.childSupportCap,
+    );
+  }
+
+  return {
+    medicalPortion,
+    childSupportPortion,
+    total: medicalPortion + childSupportPortion,
+  };
+}
+
+/**
+ * Calculates the annual 後期高齢者医療制度 premium for a calendar year.
+ *
+ * Nearly all insured pay by 特別徴収: the premium is deducted from the six bimonthly
+ * pension payments, April through February. A calendar year therefore contains the
+ * previous fiscal year's February installment (1/6 of that annual premium) plus five of
+ * the current fiscal year's six installments (5/6), and the two fiscal years are blended
+ * accordingly. When both resolve to the same rate period the blend collapses to a single
+ * calculation.
+ *
+ * With `customRates` (prefectures without shipped data), the entered 均等割額 and
+ * 所得割率 are treated as the combined medical + child-support parameters for the whole
+ * year, capped at the nationwide statutory 賦課限度額.
+ */
+export function calculateLatterStageElderlyPremium(
+  netIncome: number,
+  year: number,
+  region?: string,
+  customRates?: CustomLatterStageElderlyRates,
+): LatterStageElderlyBreakdown {
+  if (customRates) {
+    const base = latterStagePremiumBase(netIncome);
+    const raw = floorToHundred(
+      Math.max(0, customRates.perCapitaAmount) +
+        (base * Math.max(0, customRates.incomeRatePercent)) / 100,
+    );
+    const total = Math.min(raw, getLatterStageStatutoryCap(year, 3));
+    return { medicalPortion: total, childSupportPortion: 0, total };
+  }
+
+  const regionKey = region as string;
+  // January resolves to the previous fiscal year's rates, April to the current ones.
+  const prevFYParams = getLatterStageParamsForMonth(regionKey, year, 0);
+  const currFYParams = getLatterStageParamsForMonth(regionKey, year, 3);
+
+  if (!currFYParams) {
+    console.error(
+      `後期高齢者医療 parameters not found for region: ${region}. Returning zero breakdown.`,
+    );
+    return ZERO_LATTER_STAGE_BREAKDOWN;
+  }
+
+  const currFY = calculateLatterStagePremiumForParams(netIncome, currFYParams);
+  if (
+    !prevFYParams ||
+    (prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
+      prevFYParams.medicalRate === currFYParams.medicalRate &&
+      prevFYParams.medicalCap === currFYParams.medicalCap &&
+      prevFYParams.childSupportPerCapita === currFYParams.childSupportPerCapita &&
+      prevFYParams.childSupportRate === currFYParams.childSupportRate &&
+      prevFYParams.childSupportCap === currFYParams.childSupportCap)
+  ) {
+    return currFY;
+  }
+
+  const prevFY = calculateLatterStagePremiumForParams(netIncome, prevFYParams);
+  const medicalPortion = Math.round(
+    (prevFY.medicalPortion * 1) / 6 + (currFY.medicalPortion * 5) / 6,
+  );
+  const childSupportPortion = Math.round(
+    (prevFY.childSupportPortion * 1) / 6 + (currFY.childSupportPortion * 5) / 6,
+  );
+  return {
+    medicalPortion,
+    childSupportPortion,
+    total: medicalPortion + childSupportPortion,
+  };
 }

@@ -224,6 +224,12 @@ export interface TakeHomeFormState {
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
   ageRange: AgeRange;
+  /**
+   * Annual 介護保険料 billed directly to a 第1号被保険者 (ages 65 and over), from the
+   * June-July 介護保険料決定通知書. Ignored below age 65 and under manual social
+   * insurance entry.
+   */
+  longTermCareCategory1Premium: number;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
@@ -231,6 +237,7 @@ export interface TakeHomeFormState {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+  customLatterStageRates?: CustomLatterStageElderlyRates | undefined;
   savedIncomeStreams: IncomeStream[];
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   lifeInsurance: LifeInsuranceInput;
@@ -242,6 +249,8 @@ export interface TakeHomeFormState {
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
   ageRange: AgeRange;
+  /** See {@link TakeHomeFormState.longTermCareCategory1Premium}. Absent means 0. */
+  longTermCareCategory1Premium?: number | undefined;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
@@ -249,6 +258,7 @@ export interface TakeHomeInputs {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+  customLatterStageRates?: CustomLatterStageElderlyRates | undefined;
   /**
    * Calendar year the income is taxed in. Required: every caller threads it through from
    * {@link TakeHomeFormState.incomeYear} (defaulted to {@link DEFAULT_INCOME_YEAR}), so the
@@ -264,6 +274,16 @@ export interface TakeHomeInputs {
 export interface CustomEmployeesHealthInsuranceRates {
   healthInsuranceRate: number;
   longTermCareRate: number;
+}
+
+/**
+ * User-entered 後期高齢者医療 rates for prefectures without shipped data: the annual
+ * 均等割額 and the 所得割率, both printed on the annual 保険料額決定通知書 and published
+ * by the prefecture's 広域連合. Entered as the combined medical + child-support figures.
+ */
+export interface CustomLatterStageElderlyRates {
+  perCapitaAmount: number;
+  incomeRatePercent: number;
 }
 
 export interface TakeHomeResults {
@@ -328,6 +348,15 @@ export interface TakeHomeResults {
   nhiElderlySupportPortion?: number | undefined;
   nhiLongTermCarePortion?: number | undefined;
   nhiChildSupportPortion?: number | undefined;
+  // 後期高齢者医療制度 breakdown (only at ages 75+); the portions sum to healthInsurance
+  latterStageMedicalPortion?: number | undefined;
+  latterStageChildSupportPortion?: number | undefined;
+  /**
+   * Annual 介護保険料第1号 amount actually applied (ages 65+ outside manual entry; 0
+   * otherwise). Included in the social insurance deduction but not in
+   * {@link healthInsurance}.
+   */
+  longTermCareCategory1Premium?: number | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;

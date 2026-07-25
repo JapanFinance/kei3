@@ -225,3 +225,89 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText('Total:')).toBeInTheDocument();
   });
 });
+
+describe('SocialInsuranceTab at ages 65 and over', () => {
+  const baseInputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 4_000_000 }],
+    ageRange: 'age75plus',
+    region: 'Tokyo',
+    healthInsuranceProvider: 'LatterStageElderly',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    longTermCareCategory1Premium: 150_000,
+    incomeYear: 2026,
+  };
+
+  const baseResults: TakeHomeResults = {
+    annualIncome: 4_000_000,
+    healthInsurance: 412_500,
+    pensionPayments: 0,
+    nationalIncomeTax: 100_000,
+    residenceTax: {
+      taxableIncome: 0,
+      cityProportion: 0,
+      prefecturalProportion: 0,
+      residenceTaxRate: 0,
+      basicDeduction: 0,
+      personalDeductionDifference: 0,
+      city: {
+        cityTaxableIncome: 0,
+        cityAdjustmentCredit: 0,
+        cityIncomeTax: 0,
+        cityPerCapitaTax: 0,
+      },
+      prefecture: {
+        prefecturalTaxableIncome: 0,
+        prefecturalAdjustmentCredit: 0,
+        prefecturalIncomeTax: 0,
+        prefecturalPerCapitaTax: 0,
+      },
+      perCapitaTax: 0,
+      forestEnvironmentTax: 0,
+      totalResidenceTax: 200_000,
+    },
+    takeHomeIncome: 3_000_000,
+    healthInsuranceProvider: 'LatterStageElderly',
+    region: 'Tokyo',
+    ageRange: 'age75plus',
+    hasEmploymentIncome: false,
+    grossEmploymentIncome: 0,
+    totalNetIncome: 4_000_000,
+    residenceTaxBasicDeduction: 430_000,
+    dcPlanContributions: 0,
+    furusatoNozei: {
+      limit: 0,
+      incomeTaxReduction: 0,
+      residenceTaxDonationBasicDeduction: 0,
+      residenceTaxSpecialDeduction: 0,
+      outOfPocketCost: 0,
+      residenceTaxReduction: 0,
+    },
+    salaryIncome: 0,
+    additionalDeductions: { national: 0, residence: 0, items: [] },
+    latterStageMedicalPortion: 403_750,
+    latterStageChildSupportPortion: 8_750,
+    longTermCareCategory1Premium: 150_000,
+  };
+
+  it('renders the latter-stage premium breakdown and no-pension note at 75+', () => {
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    expect(screen.getByText('Medical System for Ages 75+')).toBeInTheDocument();
+    expect(screen.getByText('Medical Portion')).toBeInTheDocument();
+    expect(screen.getByText('Child Support Portion')).toBeInTheDocument();
+    expect(screen.getAllByText('¥403,750').length).toBeGreaterThan(0);
+    expect(screen.getByText(/enrollment ends at age 70 and National Pension/)).toBeInTheDocument();
+    expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
+  });
+
+  it('renders the 第1号 long-term care premium row at 65+', () => {
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    expect(screen.getByText('Long-term Care Insurance')).toBeInTheDocument();
+    expect(screen.getAllByText('¥150,000').length).toBeGreaterThan(0);
+  });
+});

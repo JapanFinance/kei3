@@ -32,10 +32,11 @@ import {
   regionOptionsFor,
   type FormAction,
 } from '../../state/takeHomeFormReducer';
-import { AGE_RANGES, AGE_RANGE_LABELS } from '../../types/ageRange';
+import { AGE_RANGES, AGE_RANGE_LABELS, isLongTermCareCategory1Insured } from '../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
+  CUSTOM_LATTER_STAGE_ID,
   isDependentCoverageEligible,
   getDependentIncomeThreshold,
 } from '../../types/healthInsurance';
@@ -49,6 +50,7 @@ import type {
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
   AdditionalDeductionsResult,
+  CustomLatterStageElderlyRates,
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
@@ -71,12 +73,23 @@ const AGE_RANGE_SOURCES: Source[] = [
     href: 'https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html',
   },
   {
+    label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
+    href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
+  },
+  {
     label: '個人住民税の非課税 (residence-tax exemption for minors)',
     href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06',
   },
   {
     label: '後期高齢者医療制度 (medical system for ages 75 and over)',
     href: 'https://www.gov-online.go.jp/article/202209/entry-10482.html',
+  },
+];
+
+const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
+  {
+    label: '介護保険料の納め方 (第1号被保険者, billing and 特別徴収)',
+    href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
 
@@ -157,6 +170,21 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       type: 'setField',
       field: 'customEHIRates',
       value: { ...currentRates, [field]: rateValue },
+    });
+  };
+
+  const updateCustomLatterStageRate = (
+    field: keyof CustomLatterStageElderlyRates,
+    value: number,
+  ) => {
+    const currentRates = inputs.customLatterStageRates || {
+      perCapitaAmount: 0,
+      incomeRatePercent: 0,
+    };
+    dispatch({
+      type: 'setField',
+      field: 'customLatterStageRates',
+      value: { ...currentRates, [field]: value },
     });
   };
 
@@ -468,7 +496,22 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      National Pension (国民年金) contributions apply to ages 20-59.
+                      From age 65 (第1号被保険者), long-term care premiums are billed directly by
+                      the municipality; enter the billed annual amount in the field that appears for
+                      these ranges.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      National Pension (国民年金) contributions apply to ages 20-59; Employees'
+                      Pension (厚生年金保険) enrollment ends at age 70.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      From age 75, health coverage moves to the medical system for people aged 75
+                      and over (後期高齢者医療制度), which replaces the health insurance provider
+                      options.
                     </Typography>
                   </li>
                   <li>
@@ -483,14 +526,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     <Typography variant="body2">
                       Minors (未成年者) — under 18 as of the January 1 following the income year —
                       with 合計所得金額 of ¥1,350,000 or less are exempt from residence tax.
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2">
-                      Ages 65 and over are not supported: from age 65, long-term care premiums
-                      switch to the separately billed 第1号被保険者 system, and from age 75 health
-                      coverage moves to the medical system for people aged 75 and over
-                      (後期高齢者医療制度).
                     </Typography>
                   </li>
                 </Box>
@@ -673,7 +708,70 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
               </FormControl>
 
-              {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
+              {inputs.healthInsuranceProvider === CUSTOM_LATTER_STAGE_ID ? (
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <FormControl fullWidth>
+                    <Typography
+                      gutterBottom
+                      sx={{
+                        fontSize: '0.97rem',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      Per-capita Amount
+                      <SimpleTooltip>
+                        Enter the annual 均等割額 published by the prefecture's
+                        後期高齢者医療広域連合 (also printed on the 保険料額決定通知書), combining
+                        the 医療分 and 子ども・子育て支援金分 amounts.
+                      </SimpleTooltip>
+                    </Typography>
+                    <SpinnerNumberField
+                      id="customLatterStagePerCapita"
+                      name="customLatterStagePerCapita"
+                      value={inputs.customLatterStageRates?.perCapitaAmount ?? 0}
+                      onChange={value => updateCustomLatterStageRate('perCapitaAmount', value)}
+                      label="均等割額 (¥/year)"
+                      step={100}
+                      shiftStep={1000}
+                      min={0}
+                      sx={sharedInputSx}
+                    />
+                  </FormControl>
+                  <FormControl fullWidth>
+                    <Typography
+                      gutterBottom
+                      sx={{
+                        fontSize: '0.97rem',
+                        fontWeight: 500,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      Income Rate
+                      <SimpleTooltip>
+                        Enter the 所得割率 published by the prefecture's 後期高齢者医療広域連合,
+                        combining the 医療分 and 子ども・子育て支援金分 rates. It is applied to
+                        total net income minus the basic deduction.
+                      </SimpleTooltip>
+                    </Typography>
+                    <SpinnerNumberField
+                      id="customLatterStageIncomeRate"
+                      name="customLatterStageIncomeRate"
+                      value={inputs.customLatterStageRates?.incomeRatePercent ?? 0}
+                      onChange={value => updateCustomLatterStageRate('incomeRatePercent', value)}
+                      label="Rate (%)"
+                      step={0.01}
+                      shiftStep={0.1}
+                      prefix=""
+                      suffix="%"
+                      max={100}
+                      sx={sharedInputSx}
+                    />
+                  </FormControl>
+                </Box>
+              ) : inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <FormControl fullWidth>
                     <Typography
@@ -773,6 +871,53 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     selectOnFocus
                     handleHomeEndKeys
                     sx={sharedInputSx}
+                  />
+                </FormControl>
+              )}
+
+              {isLongTermCareCategory1Insured(inputs.ageRange) && (
+                <FormControl fullWidth>
+                  <Typography
+                    gutterBottom
+                    sx={{
+                      fontSize: '0.97rem',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      mb: 0.2,
+                    }}
+                  >
+                    Long-term Care Insurance (第1号)
+                    <DetailedTooltip
+                      title="Long-term Care Insurance (第1号)"
+                      icon={SIMPLE_TOOLTIP_ICON}
+                    >
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        From age 65 (介護保険第1号被保険者), long-term care premiums are set per
+                        municipality on income brackets and billed directly — usually deducted from
+                        pension payments (特別徴収). Enter the annual amount from the June-July
+                        介護保険料決定通知書 or pension payment statements; it is added to social
+                        insurance and the 社会保険料控除.
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        The billed amount is assessed on the previous year's income, so it does not
+                        change with the income entered in the calculator.
+                      </Typography>
+                      <SourceLinks sources={LTC_CATEGORY1_INPUT_SOURCES} />
+                    </DetailedTooltip>
+                  </Typography>
+                  <SpinnerNumberField
+                    id="longTermCareCategory1Premium"
+                    name="longTermCareCategory1Premium"
+                    value={inputs.longTermCareCategory1Premium}
+                    onChange={value =>
+                      dispatch({ type: 'setField', field: 'longTermCareCategory1Premium', value })
+                    }
+                    label="Annual Premium"
+                    step={1000}
+                    shiftStep={10000}
+                    min={0}
+                    sx={{ ...sharedInputSx, width: '100%' }}
                   />
                 </FormControl>
               )}

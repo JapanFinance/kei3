@@ -2,12 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import { LATTER_STAGE_REGION_OPTIONS } from '../data/latterStageElderlyRates';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../data/nationalHealthInsurance/nhiParamsData';
+import { isLatterStageElderly } from '../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
+  LATTER_STAGE_ELDERLY_ID,
+  CUSTOM_LATTER_STAGE_ID,
   getProviderDisplayName,
   isDependentCoverageEligible,
   type HealthInsuranceProviderId,
@@ -41,7 +45,14 @@ export function regionOptionsFor(provider: HealthInsuranceProviderId): RegionOpt
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
     return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
   }
-  if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
+  if (provider === LATTER_STAGE_ELDERLY_ID) {
+    return LATTER_STAGE_REGION_OPTIONS;
+  }
+  if (
+    provider === DEPENDENT_COVERAGE_ID ||
+    provider === CUSTOM_PROVIDER_ID ||
+    provider === CUSTOM_LATTER_STAGE_ID
+  ) {
     return [];
   }
   // `provider` has narrowed to an employee-provider id (the region-less ids returned above),
@@ -116,6 +127,16 @@ const customProviderOption: HealthInsuranceProviderOption = {
   displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID),
 };
 
+const latterStageProviderOption: HealthInsuranceProviderOption = {
+  id: LATTER_STAGE_ELDERLY_ID,
+  displayName: getProviderDisplayName(LATTER_STAGE_ELDERLY_ID),
+};
+
+const customLatterStageProviderOption: HealthInsuranceProviderOption = {
+  id: CUSTOM_LATTER_STAGE_ID,
+  displayName: getProviderDisplayName(CUSTOM_LATTER_STAGE_ID),
+};
+
 const employeeProviderOptions: HealthInsuranceProviderOption[] = (
   Object.keys(PROVIDER_DEFINITIONS) as (keyof typeof PROVIDER_DEFINITIONS)[]
 ).map(id => ({ id, displayName: getProviderDisplayName(id) }));
@@ -132,6 +153,11 @@ const employeeProviderOptions: HealthInsuranceProviderOption[] = (
 export function availableProvidersFor(
   state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'annualIncome' | 'ageRange'>,
 ): HealthInsuranceProviderOption[] {
+  // From age 75 everyone is in the 後期高齢者医療制度 regardless of employment, so it is
+  // the only coverage on offer (with the custom-rate variant for unlisted prefectures).
+  if (isLatterStageElderly(state.ageRange)) {
+    return [latterStageProviderOption, customLatterStageProviderOption];
+  }
   const dependentEligible = isDependentCoverageEligible(state.annualIncome, state.ageRange);
   if (hasEmploymentIncome(state)) {
     return dependentEligible

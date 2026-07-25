@@ -15,7 +15,9 @@ import {
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
+  CUSTOM_LATTER_STAGE_ID,
   DEPENDENT_INCOME_THRESHOLD,
+  LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, DEFAULT_INCOME_YEAR } from '../types/tax';
@@ -27,6 +29,7 @@ const baseState: TakeHomeFormState = {
   incomeMode: 'salary',
   incomeStreams: [{ id: 'default-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
   savedIncomeStreams: [],
+  longTermCareCategory1Premium: 0,
   ageRange: 'age20to39',
   region: 'Tokyo',
   healthInsuranceProvider: DEFAULT_PROVIDER,
@@ -738,5 +741,59 @@ describe('takeHomeFormReducer', () => {
     it('returns 0 for an empty stream list', () => {
       expect(totalAnnualIncomeFromStreams([])).toBe(0);
     });
+  });
+});
+
+describe('75+ provider forcing', () => {
+  it('offers only the latter-stage providers at 75+', () => {
+    const options = availableProvidersFor({ ...baseState, ageRange: 'age75plus' });
+    expect(options.map(o => o.id)).toEqual([LATTER_STAGE_ELDERLY_ID, CUSTOM_LATTER_STAGE_ID]);
+  });
+
+  it('forces the latter-stage provider when the age changes to 75+', () => {
+    const result = takeHomeFormReducer(baseState, {
+      type: 'ageRangeChanged',
+      ageRange: 'age75plus',
+    });
+
+    expect(result.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(result.region).toBe('Tokyo');
+  });
+
+  it('restores a regular provider when leaving 75+', () => {
+    const state: TakeHomeFormState = {
+      ...baseState,
+      ageRange: 'age75plus',
+      healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+      region: 'Tokyo',
+    };
+
+    const result = takeHomeFormReducer(state, {
+      type: 'ageRangeChanged',
+      ageRange: 'age65to69',
+    });
+
+    // Latter-stage coverage is no longer offered below 75; the cascade falls back to NHI.
+    expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+    expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+  });
+
+  it('keeps the latter-stage provider across income-mode changes at 75+', () => {
+    const state: TakeHomeFormState = {
+      ...baseState,
+      ageRange: 'age75plus',
+      healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+      region: 'Tokyo',
+    };
+
+    const result = takeHomeFormReducer(state, { type: 'incomeModeChanged', mode: 'salary' });
+
+    expect(result.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(result.region).toBe('Tokyo');
+  });
+
+  it('lists Tokyo as the only shipped latter-stage region', () => {
+    expect(regionOptionsFor(LATTER_STAGE_ELDERLY_ID).map(o => o.id)).toEqual(['Tokyo']);
+    expect(regionOptionsFor(CUSTOM_LATTER_STAGE_ID)).toEqual([]);
   });
 });

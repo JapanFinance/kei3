@@ -12,15 +12,19 @@ import {
 } from '../data/netEmploymentIncome';
 import {
   DEFAULT_AGE_RANGE,
+  isLongTermCareCategory1Insured,
   isResidenceTaxMinor,
+  isSubjectToEmployeesPension,
   isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
+  CUSTOM_LATTER_STAGE_ID,
   CUSTOM_PROVIDER_ID,
   DEFAULT_PROVIDER,
   DEPENDENT_COVERAGE_ID,
+  isLatterStageProvider,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
 import type {
@@ -37,7 +41,9 @@ import {
 import { getCommutingAllowanceAnnualAmount } from './formatters';
 import {
   calculateHealthInsuranceBreakdown,
+  calculateLatterStageElderlyPremium,
   calculateNationalHealthInsurancePremiumWithBreakdown,
+  type LatterStageElderlyBreakdown,
 } from './healthInsuranceCalculator';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { calculatePensionBreakdown } from './pensionCalculator';
@@ -437,8 +443,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   let healthInsurance = 0;
   let pensionPayments = 0;
   let employmentInsurance = 0;
+  let longTermCareCategory1Premium = 0;
   let socialInsuranceDeduction: number;
   let nhiBreakdown = null;
+  let latterStageBreakdown: LatterStageElderlyBreakdown | null = null;
 
   // Bonus breakdown variables
   let healthInsuranceOnBonus = 0;
@@ -454,7 +462,20 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const subjectToLongTermCarePremium = isSubjectToLongTermCarePremium(inputs.ageRange);
 
-    if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
+    if (isLatterStageProvider(inputs.healthInsuranceProvider)) {
+      // 後期高齢者医療制度 (ages 75+): premiums are income-based like NHI, with no bonus
+      // portion of their own. The custom provider computes zero until rates are entered
+      // (matching the custom EHI fallback) rather than hitting the region-table path.
+      latterStageBreakdown = calculateLatterStageElderlyPremium(
+        netIncome,
+        incomeYear,
+        inputs.region,
+        inputs.healthInsuranceProvider === CUSTOM_LATTER_STAGE_ID
+          ? (inputs.customLatterStageRates ?? { perCapitaAmount: 0, incomeRatePercent: 0 })
+          : undefined,
+      );
+      healthInsurance = latterStageBreakdown.total;
+    } else if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
       const hiResult = calculateHealthInsuranceBreakdown(
         netIncome,
         subjectToLongTermCarePremium,
@@ -500,21 +521,25 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // People covered as dependents do not pay pension premiums
     const isInEmployeePensionSystem =
       inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID &&
-      inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID;
+      inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID &&
+      !isLatterStageProvider(inputs.healthInsuranceProvider);
 
     if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
       pensionPayments = 0;
     } else if (isInEmployeePensionSystem) {
-      // Pension also includes full commuting allowance in SMR
-      const pensionResult = calculatePensionBreakdown(
-        isInEmployeePensionSystem,
-        (salaryIncome + commutingAllowance) / 12,
-        true,
-        bonusIncome,
-        incomeYear,
-      );
-      pensionPayments = pensionResult.total;
-      pensionOnBonus = pensionResult.bonusPortion;
+      // Employees' Pension enrollment ends at age 70, so 70-74 pays nothing.
+      if (isSubjectToEmployeesPension(inputs.ageRange)) {
+        // Pension also includes full commuting allowance in SMR
+        const pensionResult = calculatePensionBreakdown(
+          isInEmployeePensionSystem,
+          (salaryIncome + commutingAllowance) / 12,
+          true,
+          bonusIncome,
+          incomeYear,
+        );
+        pensionPayments = pensionResult.total;
+        pensionOnBonus = pensionResult.bonusPortion;
+      }
     } else if (isSubjectToNationalPension(inputs.ageRange)) {
       // National Pension: contributions are due only for ages 20-59.
       const pensionResult = calculatePensionBreakdown(
@@ -537,7 +562,14 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     employmentInsurance = eiResult.total;
     employmentInsuranceOnBonus = eiResult.bonusPortion;
 
-    socialInsuranceDeduction = healthInsurance + pensionPayments + employmentInsurance;
+    // 介護保険第1号 (ages 65+): the municipally billed annual amount entered by the user.
+    // Deductible as 社会保険料控除 like the other premiums.
+    if (isLongTermCareCategory1Insured(inputs.ageRange)) {
+      longTermCareCategory1Premium = Math.max(0, inputs.longTermCareCategory1Premium || 0);
+    }
+
+    socialInsuranceDeduction =
+      healthInsurance + pensionPayments + employmentInsurance + longTermCareCategory1Premium;
   }
 
   // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
@@ -702,6 +734,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     nhiElderlySupportPortion: nhiBreakdown?.elderlySupportPortion,
     nhiLongTermCarePortion: nhiBreakdown?.longTermCarePortion,
     nhiChildSupportPortion: nhiBreakdown?.childSupportPortion,
+    // 後期高齢者医療 breakdown fields (populated only at ages 75+)
+    latterStageMedicalPortion: latterStageBreakdown?.medicalPortion,
+    latterStageChildSupportPortion: latterStageBreakdown?.childSupportPortion,
+    longTermCareCategory1Premium:
+      longTermCareCategory1Premium > 0 ? longTermCareCategory1Premium : undefined,
     // Context needed for cap detection
     salaryIncome,
     healthInsuranceProvider: inputs.healthInsuranceProvider,
