@@ -1,6 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { cloudflare } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -22,6 +26,158 @@ const stripHtmlComments = (): PluginOption => ({
       html = html.replace(/[ \t]*<!--[\s\S]*?-->\n?/g, '');
     } while (html !== previous);
     return html;
+  },
+});
+
+/**
+ * Computes a script-src source expression for each executable inline script in
+ * the built HTML, so the policy can allow them without 'unsafe-inline'.
+ *
+ * A hash covers the exact script text, so deriving them from the emitted HTML
+ * on every build means editing an inline script cannot leave a stale hash
+ * behind. A JSON-LD block is data rather than code, so script-src does not
+ * apply to it and it is skipped.
+ *
+ * @param html - The emitted index.html
+ * @returns Quoted 'sha256-...' source expressions
+ */
+const inlineScriptHashes = (html: string): string[] => {
+  const scriptTag = /<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi;
+  const hashes: string[] = [];
+  for (let match = scriptTag.exec(html); match; match = scriptTag.exec(html)) {
+    if (/type\s*=\s*["']application\/ld\+json["']/i.test(match[1] ?? '')) continue;
+    const digest = createHash('sha256')
+      .update(match[2] ?? '', 'utf8')
+      .digest('base64');
+    hashes.push(`'sha256-${digest}'`);
+  }
+  return hashes;
+};
+
+// Empty disables all report directives.
+const CSP_REPORT_ENDPOINT =
+  'https://o4511773324738560.ingest.us.sentry.io/api/4511773344661504/security/?sentry_key=4126ad22f0024108b9020384ab4b71fc';
+
+// CSP is emitted once per deployed environment, host-scoped, so each carries a
+// distinct Sentry environment tag and a request matches exactly one rule.
+const CSP_ENVIRONMENTS = [
+  { host: 'https://kei3.japanfinance.org/*', sentryEnvironment: 'production' },
+  { host: 'https://:version.:subdomain.workers.dev/*', sentryEnvironment: 'staging' },
+];
+
+/**
+ * Appends the Content-Security-Policy and Permissions-Policy to the _headers
+ * file copied from public/, hashing the built index.html for script-src.
+ *
+ * One CSP rule is written per entry in {@link CSP_ENVIRONMENTS}, so each
+ * deployed host reports under its own Sentry environment. Permissions-Policy is
+ * host-independent and applies to every path.
+ *
+ * @param options.cspReportOnly - Deliver as Content-Security-Policy-Report-Only,
+ *   which observes violations without blocking, and drop the directives such a
+ *   policy ignores
+ * @param options.reportEndpoint - Violation collector URL; empty omits every
+ *   reporting directive and header
+ */
+const securityHeaders = (options: {
+  cspReportOnly: boolean;
+  reportEndpoint: string;
+}): PluginOption => ({
+  name: 'security-headers',
+  apply: 'build',
+  writeBundle(outputOptions) {
+    const outDir = resolve(outputOptions.dir ?? 'dist');
+    const headersPath = resolve(outDir, '_headers');
+    const indexPath = resolve(outDir, 'index.html');
+
+    const scriptSrc = ["'self'", ...inlineScriptHashes(readFileSync(indexPath, 'utf8'))].join(' ');
+    const cspField = options.cspReportOnly
+      ? 'Content-Security-Policy-Report-Only'
+      : 'Content-Security-Policy';
+
+    // Report ingest host must be in connect-src (or default-src), otherwise
+    // the browser blocks the report submission and the collector silently
+    // receives nothing.
+    const reportOrigin = options.reportEndpoint ? new URL(options.reportEndpoint).origin : '';
+    const connectSrc = reportOrigin ? `connect-src 'self' ${reportOrigin}` : "connect-src 'self'";
+
+    const cspFor = (reportUrl: string): string =>
+      [
+        "default-src 'self'",
+        "base-uri 'none'",
+        "object-src 'none'",
+        "frame-ancestors 'none'",
+        "form-action 'self'",
+        "img-src 'self' data:",
+        // emotion (MUI) inserts <style> rules whose content varies per render,
+        // so they cannot be hashed, and a nonce would need per-request HTML
+        // that static-asset serving cannot produce.
+        "style-src 'self' 'unsafe-inline'",
+        `script-src ${scriptSrc}`,
+        connectSrc,
+        // upgrade-insecure-requests is silently ignored in a report-only policy,
+        // and the browser logs a console warning
+        options.cspReportOnly ? null : 'upgrade-insecure-requests',
+        // report-to is the current Reporting API; report-uri is the legacy
+        // mechanism still needed by browsers that have not implemented report-to.
+        reportUrl ? 'report-to csp-endpoint' : null,
+        reportUrl ? `report-uri ${reportUrl}` : null,
+      ]
+        .filter(Boolean)
+        .join('; ');
+
+    const reportUrlFor = (env: string): string =>
+      options.reportEndpoint ? `${options.reportEndpoint}&sentry_environment=${env}` : '';
+
+    // Opt out of browser features the calculator never uses, so a future
+    // injected script cannot silently reach for them.
+    const permissionsPolicy = [
+      'accelerometer',
+      'autoplay',
+      'bluetooth',
+      'browsing-topics',
+      'camera',
+      'display-capture',
+      'encrypted-media',
+      'geolocation',
+      'gyroscope',
+      'hid',
+      'magnetometer',
+      'microphone',
+      'midi',
+      'payment',
+      'picture-in-picture',
+      'serial',
+      'usb',
+      'xr-spatial-tracking',
+    ]
+      .map(feature => `${feature}=()`)
+      .join(', ');
+
+    const envBlocks = CSP_ENVIRONMENTS.map(({ host, sentryEnvironment }) => {
+      const reportUrl = reportUrlFor(sentryEnvironment);
+      return [
+        host,
+        `  ${cspField}: ${cspFor(reportUrl)}`,
+        reportUrl
+          ? `  Report-To: {"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"${reportUrl}"}],"include_subdomains":true}`
+          : null,
+        reportUrl ? `  Reporting-Endpoints: csp-endpoint="${reportUrl}"` : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+    });
+
+    const permissionsBlock = [
+      '# Security headers. The Content-Security-Policy script-src hashes are',
+      '# regenerated from the emitted index.html on every build by the',
+      '# security-headers plugin in vite.config.',
+      '/*',
+      `  Permissions-Policy: ${permissionsPolicy}`,
+    ].join('\n');
+
+    const block = [permissionsBlock, ...envBlocks].join('\n\n');
+    writeFileSync(headersPath, `${readFileSync(headersPath, 'utf8').trimEnd()}\n\n${block}\n`);
   },
 });
 
@@ -98,6 +254,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     cloudflare(),
     stripHtmlComments(),
+    securityHeaders({ cspReportOnly: true, reportEndpoint: CSP_REPORT_ENDPOINT }),
     react(),
     Sitemap({
       hostname: 'https://kei3.japanfinance.org/',
