@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { cloudflare } from '@cloudflare/vite-plugin';
@@ -59,19 +59,12 @@ const inlineScriptHashes = (html: string): string[] => {
   return hashes;
 };
 
-// Sentry CSP report collector (the DSN's public ingest URL, safe to commit —
-// it appears in the response header to every visitor). Empty disables all
-// report directives. sentry_environment is appended per environment below so
-// reports are filterable in Sentry.
+// Empty disables all report directives.
 const CSP_REPORT_ENDPOINT =
   'https://o4511773324738560.ingest.us.sentry.io/api/4511773344661504/security/?sentry_key=4126ad22f0024108b9020384ab4b71fc';
 
 // CSP is emitted once per deployed environment, host-scoped, so each carries a
-// distinct Sentry environment tag and a request matches exactly one rule (two
-// matching rules would combine into two enforced policies). The workers.dev
-// pattern mirrors public/_headers; localhost preview matches neither and so
-// carries no CSP — the production zone layer it cannot reproduce is the only
-// environment worth validating a policy against anyway.
+// distinct Sentry environment tag and a request matches exactly one rule.
 const CSP_ENVIRONMENTS = [
   { host: 'https://kei3.japanfinance.org/*', sentryEnvironment: 'production' },
   { host: 'https://:version.:subdomain.workers.dev/*', sentryEnvironment: 'staging' },
@@ -87,19 +80,15 @@ const securityHeaders = (options: {
     const outDir = resolve(outputOptions.dir ?? 'dist');
     const headersPath = resolve(outDir, '_headers');
     const indexPath = resolve(outDir, 'index.html');
-    // The Cloudflare Worker build (once one exists) emits a separate bundle
-    // with neither file; only the static-asset output carries index.html and
-    // the _headers copied from public/.
-    if (!existsSync(headersPath) || !existsSync(indexPath)) return;
 
     const scriptSrc = ["'self'", ...inlineScriptHashes(readFileSync(indexPath, 'utf8'))].join(' ');
     const cspField = options.cspReportOnly
       ? 'Content-Security-Policy-Report-Only'
       : 'Content-Security-Policy';
 
-    // Sentry documents that its ingest host must be in connect-src (or
-    // default-src), otherwise the browser blocks the report submission and the
-    // collector silently receives nothing.
+    // Report ingest host must be in connect-src (or default-src), otherwise
+    // the browser blocks the report submission and the collector silently
+    // receives nothing.
     const reportOrigin = options.reportEndpoint ? new URL(options.reportEndpoint).origin : '';
     const connectSrc = reportOrigin ? `connect-src 'self' ${reportOrigin}` : "connect-src 'self'";
 
@@ -115,9 +104,7 @@ const securityHeaders = (options: {
         `script-src ${scriptSrc}`,
         connectSrc,
         // upgrade-insecure-requests is silently ignored in a report-only policy,
-        // and the browser logs a console warning saying so — which Lighthouse's
-        // best-practices audit counts as a browser error. Only emit it when
-        // enforcing, where it is honored.
+        // and the browser logs a console warning
         options.cspReportOnly ? null : 'upgrade-insecure-requests',
         // report-to is the current Reporting API; report-uri is the legacy
         // mechanism still needed by browsers that have not implemented report-to.
@@ -131,8 +118,7 @@ const securityHeaders = (options: {
       options.reportEndpoint ? `${options.reportEndpoint}&sentry_environment=${env}` : '';
 
     // Opt out of browser features the calculator never uses, so a future
-    // injected script cannot silently reach for them. Environment-independent,
-    // so it applies everywhere via /*.
+    // injected script cannot silently reach for them.
     const permissionsPolicy = [
       'accelerometer',
       'autoplay',
@@ -156,9 +142,6 @@ const securityHeaders = (options: {
       .map(feature => `${feature}=()`)
       .join(', ');
 
-    // Sentry recommends sending both the legacy Report-To JSON header and the
-    // modern Reporting-Endpoints header; report-to's group name resolves in
-    // either, covering browsers that implement one but not the other.
     const envBlocks = CSP_ENVIRONMENTS.map(({ host, sentryEnvironment }) => {
       const reportUrl = reportUrlFor(sentryEnvironment);
       return [
@@ -264,11 +247,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     cloudflare(),
     stripHtmlComments(),
-    // Report-Only during rollout: deliver the policy and collect violations
-    // without blocking, so the production custom domain can be observed before
-    // enforcing. Flip cspReportOnly to false once the collector shows no
-    // legitimate resource is caught (and Cloudflare JS Detections is off, since
-    // its injected inline script has no hash and would be blocked).
     securityHeaders({ cspReportOnly: true, reportEndpoint: CSP_REPORT_ENDPOINT }),
     react(),
     Sitemap({
