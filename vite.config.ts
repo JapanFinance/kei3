@@ -58,6 +58,13 @@ const inlineScriptHashes = (html: string): string[] => {
 const CSP_REPORT_ENDPOINT =
   'https://o4511773324738560.ingest.us.sentry.io/api/4511773344661504/security/?sentry_key=4126ad22f0024108b9020384ab4b71fc';
 
+// Cloudflare Web Analytics is injected at the edge, into browser requests only:
+// a plain curl does not receive the beacon tag, so check for it with a browser
+// User-Agent and Accept. The beacon reports to /cdn-cgi/rum on this origin, so
+// connect-src needs no entry of its own; were a later version to post to
+// cloudflareinsights.com instead, the violation reports would show it.
+const CLOUDFLARE_ANALYTICS_SCRIPT = 'https://static.cloudflareinsights.com';
+
 // CSP is emitted once per deployed environment, host-scoped, so each carries a
 // distinct Sentry environment tag and a request matches exactly one rule.
 const CSP_ENVIRONMENTS = [
@@ -90,7 +97,11 @@ const securityHeaders = (options: {
     const headersPath = resolve(outDir, '_headers');
     const indexPath = resolve(outDir, 'index.html');
 
-    const scriptSrc = ["'self'", ...inlineScriptHashes(readFileSync(indexPath, 'utf8'))].join(' ');
+    const scriptSrc = [
+      "'self'",
+      CLOUDFLARE_ANALYTICS_SCRIPT,
+      ...inlineScriptHashes(readFileSync(indexPath, 'utf8')),
+    ].join(' ');
     const cspField = options.cspReportOnly
       ? 'Content-Security-Policy-Report-Only'
       : 'Content-Security-Policy';
