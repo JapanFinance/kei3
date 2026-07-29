@@ -28,13 +28,6 @@ export const theme = createTheme({
         notchedOutline: { borderColor: 'var(--mui-palette-divider)' },
       },
     },
-    // Shared styling for the two app sliders (income input, chart range),
-    // moved here from descendant CSS in index.css. Marks are uniform 6px dots:
-    // markActive suppresses MUI's default active-mark restyle (paper background
-    // at 0.8 opacity). markLabel pins the label color for active marks too:
-    // styleOverrides merge after the component's markLabelActive variant, so
-    // active labels keep the secondary color instead of switching to
-    // text.primary, matching the previous higher-specificity CSS.
     MuiSlider: {
       styleOverrides: {
         mark: {
