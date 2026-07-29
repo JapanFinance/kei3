@@ -28,6 +28,25 @@ export const theme = createTheme({
         notchedOutline: { borderColor: 'var(--mui-palette-divider)' },
       },
     },
+    MuiSlider: {
+      styleOverrides: {
+        mark: {
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          backgroundColor: 'currentColor',
+        },
+        markActive: {
+          opacity: 1,
+          backgroundColor: 'currentColor',
+        },
+        markLabel: {
+          fontSize: '0.75rem',
+          color: 'var(--mui-palette-text-secondary)',
+          marginTop: 8,
+        },
+      },
+    },
     // Render button and tab labels as written instead of MUI's default
     // uppercase transform. Sites that want a transform set it explicitly in sx.
     MuiButton: { styleOverrides: { root: { textTransform: 'none' } } },
