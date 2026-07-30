@@ -316,6 +316,22 @@ const RESIDENCE_TAX_DEDUCTIONS = {
 } as const;
 
 /**
+ * Check if a family member's disability qualifies the taxpayer for 障害者控除 (Disability Deduction).
+ * The deduction applies only when the disabled family member is a 同一生計配偶者 or 扶養親族 —
+ * both require 合計所得金額 within {@link getDependentEligibilityMax}; a spouse or dependent
+ * earning above it does not qualify, regardless of disability level.
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm — 障害者控除
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/yogo/senmon.htm#word3 — 同一生計配偶者
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/yogo/senmon.htm#word7 — 扶養親族
+ */
+function isEligibleForDisabilityDeduction(dependent: Dependent, year: number): boolean {
+  if (dependent.disability === 'none') {
+    return false;
+  }
+  return calculateDependentTotalNetIncome(dependent.income, year) <= getDependentEligibilityMax(year);
+}
+
+/**
  * Get disability deduction amount for a given disability level
  * @param disability - The disability level
  * @param isCohabiting - Whether the dependent lives with the taxpayer
@@ -730,7 +746,8 @@ export function calculateDependentDeductions(
   // Process each dependent
   for (const dependent of dependents) {
     // 1. Handle Disability Deduction (separate entry)
-    if (dependent.disability !== 'none') {
+    const isDisabilityDeductionEligible = isEligibleForDisabilityDeduction(dependent, year);
+    if (isDisabilityDeductionEligible) {
       const disabilityDeduction = getDisabilityDeduction(
         dependent.disability,
         dependent.isCohabiting,
@@ -755,6 +772,12 @@ export function calculateDependentDeductions(
     }
 
     // 2. Handle Main Deduction (Spouse, Dependent, etc.)
+    // Tracks whether any of the branches below pushed a breakdown entry, so the fallback
+    // NOT_ELIGIBLE check afterward also catches a spouse who matched the outer "relationship
+    // === 'spouse'" branch but qualified for neither the spouse deduction nor the spouse special
+    // deduction (e.g. income above both ceilings) — that case cannot fall through an else-if
+    // chain rooted at the spouse check, so it is tracked explicitly instead.
+    let isMainDeductionApplied = false;
 
     // Spouse deductions
     if (dependent.relationship === 'spouse') {
@@ -770,6 +793,7 @@ export function calculateDependentDeductions(
           residenceTaxAmount: spouseDeduction.residence,
           deductionType: DEDUCTION_TYPES.SPOUSE,
         });
+        isMainDeductionApplied = true;
       } else if (isEligibleForSpouseSpecialDeduction(dependent, year)) {
         const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
         const spouseSpecialDeduction = getSpouseSpecialDeduction(
@@ -787,6 +811,7 @@ export function calculateDependentDeductions(
           residenceTaxAmount: spouseSpecialDeduction.residence,
           deductionType: DEDUCTION_TYPES.SPOUSE_SPECIAL,
         });
+        isMainDeductionApplied = true;
       }
     }
     // Specific relative special deduction
@@ -803,6 +828,7 @@ export function calculateDependentDeductions(
         residenceTaxAmount: specificRelativeDeduction.residence,
         deductionType: DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL,
       });
+      isMainDeductionApplied = true;
     }
     // Standard dependent deduction
     else if (isEligibleForDependentDeduction(dependent, year)) {
@@ -823,17 +849,18 @@ export function calculateDependentDeductions(
               ? DEDUCTION_TYPES.ELDERLY_DEPENDENT
               : DEDUCTION_TYPES.GENERAL_DEPENDENT,
       });
-    } else {
-      // Not eligible for any deduction (except disability which was already handled)
-      // Only add a "Not Eligible" entry if there was no disability deduction either.
-      if (dependent.disability === 'none') {
-        results.breakdown.push({
-          dependent,
-          nationalTaxAmount: 0,
-          residenceTaxAmount: 0,
-          deductionType: DEDUCTION_TYPES.NOT_ELIGIBLE,
-        });
-      }
+      isMainDeductionApplied = true;
+    }
+
+    // Not eligible for any deduction. Only add a "Not Eligible" entry if there was no
+    // disability deduction either.
+    if (!isMainDeductionApplied && !isDisabilityDeductionEligible) {
+      results.breakdown.push({
+        dependent,
+        nationalTaxAmount: 0,
+        residenceTaxAmount: 0,
+        deductionType: DEDUCTION_TYPES.NOT_ELIGIBLE,
+      });
     }
   }
 
