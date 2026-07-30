@@ -328,7 +328,9 @@ function isEligibleForDisabilityDeduction(dependent: Dependent, year: number): b
   if (dependent.disability === 'none') {
     return false;
   }
-  return calculateDependentTotalNetIncome(dependent.income, year) <= getDependentEligibilityMax(year);
+  return (
+    calculateDependentTotalNetIncome(dependent.income, year) <= getDependentEligibilityMax(year)
+  );
 }
 
 /**
