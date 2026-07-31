@@ -700,11 +700,12 @@ function calculateSpouseDeduction(
  * totals field it accumulates into, the breakdown type, and the amounts.
  */
 interface MainDeduction {
-  field:
-    | 'spouseDeduction'
-    | 'spouseSpecialDeduction'
-    | 'specificRelativeDeduction'
-    | 'dependentDeduction';
+  /**
+   * The totals field this deduction accumulates into. Derived from the results shape, minus
+   * `total` (a getter, not assignable) and `disabilityDeduction` (accumulated separately —
+   * 障害者控除 is not a main deduction).
+   */
+  field: Exclude<keyof DependentDeductionResults['nationalTax'], 'total' | 'disabilityDeduction'>;
   type: DeductionType;
   amount: DeductionAmount;
 }
@@ -770,6 +771,7 @@ function determineMainDeduction(
  * Calculate all dependent-related deductions
  *
  * @param dependents - user input array of dependents
+ * @param year
  * @param taxpayerNetIncome - Taxpayer's total net income (合計所得金額)
  * @returns Detailed breakdown of all deductions
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
