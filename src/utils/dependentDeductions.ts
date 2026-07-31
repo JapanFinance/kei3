@@ -696,9 +696,82 @@ function calculateSpouseDeduction(
 }
 
 /**
+ * The main (non-disability) deduction determined for a single dependent: which per-deduction
+ * totals field it accumulates into, the breakdown type, and the amounts.
+ */
+interface MainDeduction {
+  /**
+   * The totals field this deduction accumulates into. Derived from the results shape, minus
+   * `total` (a getter, not assignable) and `disabilityDeduction` (accumulated separately —
+   * 障害者控除 is not a main deduction).
+   */
+  field: Exclude<keyof DependentDeductionResults['nationalTax'], 'total' | 'disabilityDeduction'>;
+  type: DeductionType;
+  amount: DeductionAmount;
+}
+
+/**
+ * Determine which main deduction applies to a dependent, if any. A dependent qualifies for at
+ * most one: a spouse for 配偶者控除 or 配偶者特別控除, any other relative for 特定親族特別控除 or
+ * 扶養控除. Returns null when none applies (e.g. income above every ceiling, or a child under 16).
+ */
+function determineMainDeduction(
+  dependent: Dependent,
+  taxpayerNetIncome: number,
+  year: number,
+): MainDeduction | null {
+  if (dependent.relationship === 'spouse') {
+    if (isEligibleForSpouseDeduction(dependent, year)) {
+      return {
+        field: 'spouseDeduction',
+        type: DEDUCTION_TYPES.SPOUSE,
+        amount: calculateSpouseDeduction(dependent, taxpayerNetIncome, year),
+      };
+    }
+    if (isEligibleForSpouseSpecialDeduction(dependent, year)) {
+      return {
+        field: 'spouseSpecialDeduction',
+        type: DEDUCTION_TYPES.SPOUSE_SPECIAL,
+        amount: getSpouseSpecialDeduction(
+          calculateDependentTotalNetIncome(dependent.income, year),
+          taxpayerNetIncome,
+          year,
+        ),
+      };
+    }
+    return null;
+  }
+  if (isEligibleForSpecificRelativeSpecialDeduction(dependent, year)) {
+    return {
+      field: 'specificRelativeDeduction',
+      type: DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL,
+      amount: getSpecificRelativeDeduction(
+        calculateDependentTotalNetIncome(dependent.income, year),
+        year,
+      ),
+    };
+  }
+  if (isEligibleForDependentDeduction(dependent, year)) {
+    return {
+      field: 'dependentDeduction',
+      type: isSpecialDependent(dependent, year)
+        ? DEDUCTION_TYPES.SPECIAL_DEPENDENT
+        : isCohabitingElderlyDependent(dependent, year)
+          ? DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT
+          : isElderlyDependent(dependent, year)
+            ? DEDUCTION_TYPES.ELDERLY_DEPENDENT
+            : DEDUCTION_TYPES.GENERAL_DEPENDENT,
+      amount: calculateDependentDeduction(dependent, year),
+    };
+  }
+  return null;
+}
+
+/**
  * Calculate all dependent-related deductions
  *
  * @param dependents - user input array of dependents
+ * @param year
  * @param taxpayerNetIncome - Taxpayer's total net income (合計所得金額)
  * @returns Detailed breakdown of all deductions
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
@@ -774,84 +847,22 @@ export function calculateDependentDeductions(
     }
 
     // 2. Handle Main Deduction (Spouse, Dependent, etc.)
-    let isMainDeductionApplied = false;
-
-    // Spouse deductions
-    if (dependent.relationship === 'spouse') {
-      if (isEligibleForSpouseDeduction(dependent, year)) {
-        const spouseDeduction = calculateSpouseDeduction(dependent, taxpayerNetIncome, year);
-
-        results.nationalTax.spouseDeduction += spouseDeduction.national;
-        results.residenceTax.spouseDeduction += spouseDeduction.residence;
-
-        results.breakdown.push({
-          dependent,
-          nationalTaxAmount: spouseDeduction.national,
-          residenceTaxAmount: spouseDeduction.residence,
-          deductionType: DEDUCTION_TYPES.SPOUSE,
-        });
-        isMainDeductionApplied = true;
-      } else if (isEligibleForSpouseSpecialDeduction(dependent, year)) {
-        const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
-        const spouseSpecialDeduction = getSpouseSpecialDeduction(
-          totalNetIncome,
-          taxpayerNetIncome,
-          year,
-        );
-
-        results.nationalTax.spouseSpecialDeduction += spouseSpecialDeduction.national;
-        results.residenceTax.spouseSpecialDeduction += spouseSpecialDeduction.residence;
-
-        results.breakdown.push({
-          dependent,
-          nationalTaxAmount: spouseSpecialDeduction.national,
-          residenceTaxAmount: spouseSpecialDeduction.residence,
-          deductionType: DEDUCTION_TYPES.SPOUSE_SPECIAL,
-        });
-        isMainDeductionApplied = true;
-      }
-    }
-    // Specific relative special deduction
-    else if (isEligibleForSpecificRelativeSpecialDeduction(dependent, year)) {
-      const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
-      const specificRelativeDeduction = getSpecificRelativeDeduction(totalNetIncome, year);
-
-      results.nationalTax.specificRelativeDeduction += specificRelativeDeduction.national;
-      results.residenceTax.specificRelativeDeduction += specificRelativeDeduction.residence;
+    const mainDeduction = determineMainDeduction(dependent, taxpayerNetIncome, year);
+    if (mainDeduction) {
+      results.nationalTax[mainDeduction.field] += mainDeduction.amount.national;
+      results.residenceTax[mainDeduction.field] += mainDeduction.amount.residence;
 
       results.breakdown.push({
         dependent,
-        nationalTaxAmount: specificRelativeDeduction.national,
-        residenceTaxAmount: specificRelativeDeduction.residence,
-        deductionType: DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL,
+        nationalTaxAmount: mainDeduction.amount.national,
+        residenceTaxAmount: mainDeduction.amount.residence,
+        deductionType: mainDeduction.type,
       });
-      isMainDeductionApplied = true;
-    }
-    // Standard dependent deduction
-    else if (isEligibleForDependentDeduction(dependent, year)) {
-      const dependentDeduction = calculateDependentDeduction(dependent, year);
-
-      results.nationalTax.dependentDeduction += dependentDeduction.national;
-      results.residenceTax.dependentDeduction += dependentDeduction.residence;
-
-      results.breakdown.push({
-        dependent,
-        nationalTaxAmount: dependentDeduction.national,
-        residenceTaxAmount: dependentDeduction.residence,
-        deductionType: isSpecialDependent(dependent, year)
-          ? DEDUCTION_TYPES.SPECIAL_DEPENDENT
-          : isCohabitingElderlyDependent(dependent, year)
-            ? DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT
-            : isElderlyDependent(dependent, year)
-              ? DEDUCTION_TYPES.ELDERLY_DEPENDENT
-              : DEDUCTION_TYPES.GENERAL_DEPENDENT,
-      });
-      isMainDeductionApplied = true;
     }
 
     // Not eligible for any deduction. Only add a "Not Eligible" entry if there was no
     // disability deduction either.
-    if (!isMainDeductionApplied && !isDisabilityDeductionEligible) {
+    if (!mainDeduction && !isDisabilityDeductionEligible) {
       results.breakdown.push({
         dependent,
         nationalTaxAmount: 0,
