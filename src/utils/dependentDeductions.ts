@@ -774,11 +774,6 @@ export function calculateDependentDeductions(
     }
 
     // 2. Handle Main Deduction (Spouse, Dependent, etc.)
-    // Tracks whether any of the branches below pushed a breakdown entry, so the fallback
-    // NOT_ELIGIBLE check afterward also catches a spouse who matched the outer "relationship
-    // === 'spouse'" branch but qualified for neither the spouse deduction nor the spouse special
-    // deduction (e.g. income above both ceilings) — that case cannot fall through an else-if
-    // chain rooted at the spouse check, so it is tracked explicitly instead.
     let isMainDeductionApplied = false;
 
     // Spouse deductions
