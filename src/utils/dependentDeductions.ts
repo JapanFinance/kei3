@@ -337,7 +337,6 @@ function isEligibleForDisabilityDeduction(dependent: Dependent, year: number): b
  * Get disability deduction amount for a given disability level
  * @param disability - The disability level
  * @param isCohabiting - Whether the dependent lives with the taxpayer
- * @param forResidenceTax - Whether this is for residence tax (vs national tax)
  */
 export function getDisabilityDeduction(
   disability: DisabilityLevel,
@@ -516,8 +515,8 @@ const SPOUSE_SPECIAL_DEDUCTION_TABLE = {
  * Spouse Special Deduction applies when a spouse makes too much for the regular Spouse Deduction but below a threshold.
  *
  * @param spouseNetIncome - Spouse's total net income (合計所得金額)
- * @param forResidenceTax - Whether calculating for residence tax (vs national tax)
  * @param taxpayerNetIncome - Taxpayer's total net income (合計所得金額)
+ * @param year - tax year from which the rules will be applied
  * @returns Spouse Special Deduction amount
  *
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
@@ -658,6 +657,7 @@ function calculateDependentDeduction(dependent: Dependent, year: number): Deduct
  * Calculate Spouse Deduction (配偶者控除) for a spouse dependent
  * @param dependent - The spouse dependent
  * @param taxpayerNetIncome - Taxpayer's total net income (合計所得金額), used for phase-out calculation
+ * @param year - tax year from which the rules will be applied
  * @returns Deduction amounts for national and residence tax
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm
  */
