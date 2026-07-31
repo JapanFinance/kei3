@@ -1679,6 +1679,26 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
   });
 });
 
+describe('NOT_ELIGIBLE breakdown entry for a spouse with no applicable deduction', () => {
+  it('a non-disabled spouse above the 配偶者特別控除 ceiling gets a NOT_ELIGIBLE entry', () => {
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 1_330_001 }, // Using otherNetIncome for exact control
+    };
+    const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 5_000_000);
+    expect(result.nationalTax.total).toBe(0);
+    expect(result.residenceTax.total).toBe(0);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.nationalTaxAmount).toBe(0);
+    expect(result.breakdown[0]!.residenceTaxAmount).toBe(0);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+  });
+});
+
 describe('2025 income year (R7) — 58万円 threshold', () => {
   const year = 2025;
 
