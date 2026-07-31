@@ -1501,6 +1501,204 @@ describe('Dependent Deductions - Under 16', () => {
   });
 });
 
+describe('障害者控除 requires 合計所得金額 within the dependent eligibility threshold', () => {
+  // 2026 (TEST_INCOME_YEAR) threshold is ¥620,000.
+  const TAXPAYER_INCOME = 5_000_000;
+
+  describe('Spouse, regular disability (¥270,000 national / ¥260,000 residence)', () => {
+    it('applies at exactly 620,000 yen, alongside the spouse deduction', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under70',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(270_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(260_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.DISABILITY);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.SPOUSE);
+    });
+
+    it('does not apply at 620,001 yen, though 配偶者特別控除 still applies', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under70',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.SPOUSE_SPECIAL);
+    });
+  });
+
+  describe('Spouse, special disability (¥400,000 national / ¥300,000 residence)', () => {
+    it('applies at exactly 620,000 yen, alongside the spouse deduction', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under70',
+        isCohabiting: false,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(400_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(300_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.SPECIAL_DISABILITY,
+      );
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.SPOUSE);
+    });
+
+    it('does not apply at 620,001 yen, though 配偶者特別控除 still applies', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under70',
+        isCohabiting: false,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.SPOUSE_SPECIAL);
+    });
+  });
+
+  describe('Non-spouse dependent, regular disability (¥270,000 national / ¥260,000 residence)', () => {
+    // ageCategory 23to69 keeps the main deduction as GENERAL_DEPENDENT (not 特定親族特別控除,
+    // which only applies at 19-22), so it lapses at the same threshold as the disability
+    // deduction — isolating the NOT_ELIGIBLE fallthrough above it.
+    it('applies at exactly 620,000 yen, alongside the dependent deduction', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to69',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(270_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(260_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.DISABILITY);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.GENERAL_DEPENDENT,
+      );
+    });
+
+    it('does not apply at 620,001 yen; falls through to NOT_ELIGIBLE entirely', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to69',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.nationalTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.residenceTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+    });
+  });
+
+  describe('Non-spouse dependent, cohabiting special disability (¥750,000 national / ¥530,000 residence)', () => {
+    it('applies at exactly 620,000 yen, alongside the dependent deduction', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to69',
+        isCohabiting: true,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(750_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(530_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.SPECIAL_DISABILITY_COHABITING,
+      );
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.GENERAL_DEPENDENT,
+      );
+    });
+
+    it('does not apply at 620,001 yen; falls through to NOT_ELIGIBLE entirely', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to69',
+        isCohabiting: true,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.nationalTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.residenceTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+    });
+  });
+
+  it('a high-income disabled spouse (¥2,000,000) gets no deduction at all (regression)', () => {
+    // Above both the disability eligibility threshold and the 配偶者特別控除 upper bound
+    // (¥1,330,000), so neither the disability deduction nor any main deduction applies.
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'special',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 2_000_000 }, // Using otherNetIncome for exact control
+    };
+    const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+    expect(result.nationalTax.disabilityDeduction).toBe(0);
+    expect(result.residenceTax.disabilityDeduction).toBe(0);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+  });
+});
+
+describe('NOT_ELIGIBLE breakdown entry for a spouse with no applicable deduction', () => {
+  it('a non-disabled spouse above the 配偶者特別控除 ceiling gets a NOT_ELIGIBLE entry', () => {
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under70',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, otherNetIncome: 1_330_001 }, // Using otherNetIncome for exact control
+    };
+    const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 5_000_000);
+    expect(result.nationalTax.total).toBe(0);
+    expect(result.residenceTax.total).toBe(0);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.nationalTaxAmount).toBe(0);
+    expect(result.breakdown[0]!.residenceTaxAmount).toBe(0);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+  });
+});
+
 describe('2025 income year (R7) — 58万円 threshold', () => {
   const year = 2025;
 
