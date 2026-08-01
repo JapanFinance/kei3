@@ -17,16 +17,16 @@
  */
 
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
+import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import type {
   Dependent,
   DisabilityLevel,
-  DependentIncome,
   OtherDependent,
   DependentDeductionResults,
   DeductionAmount,
   DeductionType,
 } from '../types/dependents';
-import { DEDUCTION_TYPES } from '../types/dependents';
+import { DEDUCTION_TYPES, is65OrOlder } from '../types/dependents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
 
 export { getDependentEligibilityMax };
@@ -41,21 +41,51 @@ const SPOUSE_SPECIAL_DEDUCTION_MAX_INCOME = 1_330_000;
  */
 const SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME = 1_230_000;
 
+/** The subset of a {@link Dependent} needed to derive its income measures. */
+type DependentIncomeProfile = Pick<Dependent, 'income' | 'ageCategory'>;
+
+/**
+ * Calculate net public pension income (公的年金等に係る雑所得) for a dependent.
+ *
+ * The public pension deduction (公的年金等控除) depends on the age category (65 boundary) and on
+ * the dependent's total net income other than public pension income — here the net employment
+ * income plus other net income.
+ */
+export function calculateDependentNetPublicPensionIncome(
+  dependent: DependentIncomeProfile,
+  year: number,
+): number {
+  const { grossEmploymentIncome, grossPublicPensionIncome, otherNetIncome } = dependent.income;
+  const otherTotalNetIncome =
+    calculateNetEmploymentIncome(grossEmploymentIncome, year) + otherNetIncome;
+  return calculateNetPublicPensionIncome(
+    grossPublicPensionIncome,
+    is65OrOlder(dependent.ageCategory),
+    otherTotalNetIncome,
+    year,
+  );
+}
+
 /**
  * Calculate total net income (合計所得金額) for a dependent
  * This is used to determine eligibility for various dependent deductions
  *
- * @param income  The dependent's income breakdown
- * @param year    Income year for the employment income deduction lookup; defaults to current year
+ * @param dependent The dependent's income breakdown and age category (the age category selects
+ *                  the public pension deduction table)
+ * @param year      Income year for the deduction table lookups
  */
-export function calculateDependentTotalNetIncome(income: DependentIncome, year: number): number {
-  const { grossEmploymentIncome, otherNetIncome } = income;
+export function calculateDependentTotalNetIncome(
+  dependent: DependentIncomeProfile,
+  year: number,
+): number {
+  const { grossEmploymentIncome, otherNetIncome } = dependent.income;
 
   // Calculate net employment income using employment income deduction formula
   const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year);
 
-  // Total net income = net employment income + other net income
-  return netEmploymentIncome + otherNetIncome;
+  return (
+    netEmploymentIncome + calculateDependentNetPublicPensionIncome(dependent, year) + otherNetIncome
+  );
 }
 
 /**
@@ -83,7 +113,7 @@ export function hasIncomeAdjustmentDeductionDependent(
   const eligibilityMax = getDependentEligibilityMax(year);
   return dependents.some(dependent => {
     // 扶養親族 / 同一生計配偶者 status requires 合計所得金額 within the threshold.
-    if (calculateDependentTotalNetIncome(dependent.income, year) > eligibilityMax) {
+    if (calculateDependentTotalNetIncome(dependent, year) > eligibilityMax) {
       return false;
     }
     const isSpecialDisability = dependent.disability === 'special'; // ハ
@@ -108,7 +138,7 @@ export function hasDependentRelativeUnder23(dependents: Dependent[], year: numbe
   const eligibilityMax = getDependentEligibilityMax(year);
   return dependents.some(dependent => {
     if (dependent.relationship === 'spouse') return false; // a spouse is never a 扶養親族
-    if (calculateDependentTotalNetIncome(dependent.income, year) > eligibilityMax) return false;
+    if (calculateDependentTotalNetIncome(dependent, year) > eligibilityMax) return false;
     const age = dependent.ageCategory;
     return age === 'under16' || age === '16to18' || age === '19to22';
   });
@@ -131,7 +161,7 @@ function isEligibleForDependentDeduction(dependent: Dependent, year: number): bo
     return false;
   }
 
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent, year);
   return totalNetIncome <= getDependentEligibilityMax(year);
 }
 
@@ -193,7 +223,7 @@ function isEligibleForSpouseDeduction(dependent: Dependent, year: number): boole
   if (dependent.relationship !== 'spouse') {
     return false;
   }
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent, year);
   return totalNetIncome <= getDependentEligibilityMax(year);
 }
 
@@ -205,7 +235,7 @@ function isEligibleForSpouseSpecialDeduction(dependent: Dependent, year: number)
   if (dependent.relationship !== 'spouse') {
     return false;
   }
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent, year);
   return (
     totalNetIncome > getDependentEligibilityMax(year) &&
     totalNetIncome <= SPOUSE_SPECIAL_DEDUCTION_MAX_INCOME
@@ -232,7 +262,7 @@ function isEligibleForSpecificRelativeSpecialDeduction(
     return false;
   }
 
-  const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+  const totalNetIncome = calculateDependentTotalNetIncome(dependent, year);
   return (
     totalNetIncome > getDependentEligibilityMax(year) &&
     totalNetIncome <= SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME
@@ -328,9 +358,7 @@ function isEligibleForDisabilityDeduction(dependent: Dependent, year: number): b
   if (dependent.disability === 'none') {
     return false;
   }
-  return (
-    calculateDependentTotalNetIncome(dependent.income, year) <= getDependentEligibilityMax(year)
-  );
+  return calculateDependentTotalNetIncome(dependent, year) <= getDependentEligibilityMax(year);
 }
 
 /**
@@ -733,7 +761,7 @@ function determineMainDeduction(
         field: 'spouseSpecialDeduction',
         type: DEDUCTION_TYPES.SPOUSE_SPECIAL,
         amount: getSpouseSpecialDeduction(
-          calculateDependentTotalNetIncome(dependent.income, year),
+          calculateDependentTotalNetIncome(dependent, year),
           taxpayerNetIncome,
           year,
         ),
@@ -745,10 +773,7 @@ function determineMainDeduction(
     return {
       field: 'specificRelativeDeduction',
       type: DEDUCTION_TYPES.SPECIFIC_RELATIVE_SPECIAL,
-      amount: getSpecificRelativeDeduction(
-        calculateDependentTotalNetIncome(dependent.income, year),
-        year,
-      ),
+      amount: getSpecificRelativeDeduction(calculateDependentTotalNetIncome(dependent, year), year),
     };
   }
   if (isEligibleForDependentDeduction(dependent, year)) {
