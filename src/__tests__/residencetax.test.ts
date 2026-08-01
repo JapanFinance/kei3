@@ -485,7 +485,7 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
         ageCategory: 'under16',
         isCohabiting: true,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       },
       {
         id: 'd2',
@@ -493,7 +493,7 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
         ageCategory: 'under16',
         isCohabiting: true,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       },
     ];
     const deductions = calculateDependentDeductions(dependents, TEST_INCOME_YEAR, 1_355_000);
