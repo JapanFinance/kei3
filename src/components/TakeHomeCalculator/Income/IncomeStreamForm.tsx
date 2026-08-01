@@ -45,8 +45,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   onCancel,
   disabledTypes = [],
 }) => {
-  const [type, setType] = useState<IncomeStreamType>(initialData?.type || 'salary');
-  const [amount, setAmount] = useState<number>(initialData?.amount || 0);
+  const [type, setType] = useState<IncomeStreamType>(initialData?.type ?? 'salary');
+  const [amount, setAmount] = useState<number>(initialData?.amount ?? 0);
   const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(
     initialData?.type === 'salary' || initialData?.type === 'commutingAllowance'
       ? initialData.frequency
@@ -80,7 +80,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
   const handleSave = () => {
     if (!validate()) return;
-    const id = initialData?.id || Date.now().toString(36) + Math.random().toString(36).substring(2);
+    const id = initialData?.id ?? Date.now().toString(36) + Math.random().toString(36).substring(2);
     let stream: IncomeStream;
 
     if (type === 'salary') {
