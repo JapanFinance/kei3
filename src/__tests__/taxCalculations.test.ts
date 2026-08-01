@@ -1716,3 +1716,84 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
     expect(result.grossEmploymentIncome).toBe(0);
   });
 });
+
+describe('home loan credit spillover vs. a residence tax that levies no 所得割', () => {
+  // The spillover is deducted from the residence-tax 所得割 (地方税法附則第5条の4の2), so a year
+  // with no 所得割 absorbs none of it. Both 非課税 paths in calculateResidenceTax are covered:
+  // 所得割・均等割とも非課税, and 均等割のみ課税 (所得割が非課税).
+  const underSixteen = (id: string): Dependent => ({
+    id,
+    relationship: 'child',
+    ageCategory: 'under16',
+    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+    disability: 'none',
+    isCohabiting: true,
+  });
+
+  const householdWithSalary = (amount: number) =>
+    calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 's1', type: 'salary' as const, amount, frequency: 'annual' as const }],
+      isSubjectToLongTermCarePremium: false,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [underSixteen('d1'), underSixteen('d2'), underSixteen('d3')],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+      homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 300_000 },
+    });
+
+  it('applies no spillover when residence tax is fully 非課税', () => {
+    // 合計所得金額 1,670,000 ≤ the 1,710,000 均等割 exemption limit for three qualified
+    // dependents, so no residence tax at all is levied.
+    const result = householdWithSalary(2_400_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+
+    const credit = result.homeLoanTaxCredit!;
+    // The rate cap still has ¥7,200 of statutory headroom (5% × the ¥144,000 income-tax taxable
+    // total income), but no 所得割 exists for the spillover to reduce.
+    expect(credit.residenceTaxSpilloverCap?.incomeRateCap).toBe(7_200);
+    expect(credit.residenceTaxSpilloverCap?.residenceIncomeBasedCap).toBe(0);
+    expect(credit.appliedToResidenceTax).toBe(0);
+    expect(credit.appliedToIncomeTax).toBe(7_200);
+    expect(credit.unusedCredit).toBe(292_800); // the whole credit bar the ¥7,200 of income tax
+    expect(credit.warnings[0]).toContain('所得割');
+    // No spillover means no pre-credit 所得割 row for the Taxes tab to show.
+    expect(result.residenceTaxIncomeBasedBeforeHomeLoanCredit).toBeUndefined();
+  });
+
+  it('applies no spillover when only the 均等割 is levied', () => {
+    // 合計所得金額 1,740,000 is above the ¥1,710,000 均等割 limit but at or below the ¥1,820,000
+    // 所得割 limit, so residence tax is the ¥5,000 per-capita portion alone.
+    const result = householdWithSalary(2_600_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(5_000);
+    expect(result.residenceTax.perCapitaTax).toBe(5_000);
+    expect(
+      result.residenceTax.city.cityIncomeTax + result.residenceTax.prefecture.prefecturalIncomeTax,
+    ).toBe(0);
+
+    const credit = result.homeLoanTaxCredit!;
+    expect(credit.residenceTaxSpilloverCap?.incomeRateCap).toBe(13_400);
+    expect(credit.residenceTaxSpilloverCap?.residenceIncomeBasedCap).toBe(0);
+    // The credit must not reach the 均等割: residence tax stays at the full ¥5,000.
+    expect(credit.appliedToResidenceTax).toBe(0);
+    expect(credit.unusedCredit).toBe(300_000 - credit.appliedToIncomeTax);
+  });
+
+  it('still spills over once a 所得割 is actually levied', () => {
+    // One step up in salary crosses the 所得割 limit, and the spillover resumes — the clamp is
+    // driven by the 所得割 levied, not by the presence of a home loan credit.
+    const result = householdWithSalary(2_750_000);
+    const incomeBased =
+      result.residenceTax.city.cityIncomeTax + result.residenceTax.prefecture.prefecturalIncomeTax;
+    const credit = result.homeLoanTaxCredit!;
+    expect(credit.residenceTaxSpilloverCap!.residenceIncomeBasedCap).toBeGreaterThan(0);
+    expect(credit.appliedToResidenceTax).toBe(18_000); // the ¥18,000 rate cap binds, not the 所得割
+    // The pre-credit 所得割 row reconciles with the post-credit portion shown in the Taxes tab.
+    expect(result.residenceTaxIncomeBasedBeforeHomeLoanCredit! - incomeBased).toBe(
+      credit.appliedToResidenceTax,
+    );
+  });
+});
