@@ -26,7 +26,7 @@ import {
 import CapIndicator from '../../ui/CapIndicator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
@@ -90,13 +90,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Detect if any caps are applied
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
 
-  // Replaces the pension rows when the age range exempts contributions entirely. Only the
-  // NHI path has an age exemption; dependent coverage (a non-NHI provider) pays nothing for
-  // a different reason and keeps its existing display.
-  const pensionAgeNote =
-    isNationalHealthInsurance && !isSubjectToNationalPension(inputs.ageRange)
-      ? 'No contributions: National Pension (国民年金) enrollment covers ages 20-59.'
-      : undefined;
+  const nationalPensionDue = isSubjectToNationalPension(inputs.ageRange);
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -549,64 +543,60 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             {isNationalHealthInsurance ? 'National Pension' : "Employees' Pension"}
           </Typography>
         </Box>
-        {pensionAgeNote ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1 }}>
-            {pensionAgeNote}
-          </Typography>
-        ) : (
-          <>
-            {!isNationalHealthInsurance && (
-              <ResultRow
-                label="Monthly Contribution"
-                labelSuffix={
-                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                    <DetailedTooltip title="Pension Contribution">
-                      <PensionPremiumTooltip
-                        inputs={inputs}
-                        standardMonthlyRemuneration={pensionSMR}
-                      />
-                    </DetailedTooltip>
-                    {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                      <CapIndicator
-                        capStatus={capStatus}
-                        contributionType="pension"
-                        iconOnly={isMobile}
-                      />
-                    )}
-                  </Box>
-                }
-                value={formatJPY(
-                  Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
+        {!isNationalHealthInsurance && (
+          <ResultRow
+            label="Monthly Contribution"
+            labelSuffix={
+              <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                <DetailedTooltip title="Pension Contribution">
+                  <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
+                </DetailedTooltip>
+                {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                  <CapIndicator
+                    capStatus={capStatus}
+                    contributionType="pension"
+                    iconOnly={isMobile}
+                  />
                 )}
-                type="indented"
-              />
+              </Box>
+            }
+            value={formatJPY(
+              Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
             )}
-            {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
-              <ResultRow
-                label="Bonus Contribution"
-                labelSuffix={
-                  <DetailedTooltip title="Bonus Pension Contribution">
-                    <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
-                  </DetailedTooltip>
-                }
-                value={formatJPY(results.pensionOnBonus)}
-                type="indented"
-              />
-            )}
-            <ResultRow
-              label="Annual Contribution"
-              labelSuffix={
-                isNationalHealthInsurance ? (
-                  <DetailedTooltip title="Pension Contribution">
-                    <NationalPensionTooltip year={inputs.incomeYear} />
-                  </DetailedTooltip>
-                ) : undefined
-              }
-              value={formatJPY(results.pensionPayments)}
-              type="subtotal"
-            />
-          </>
+            type="indented"
+          />
         )}
+        {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
+          <ResultRow
+            label="Bonus Contribution"
+            labelSuffix={
+              <DetailedTooltip title="Bonus Pension Contribution">
+                <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
+              </DetailedTooltip>
+            }
+            value={formatJPY(results.pensionOnBonus)}
+            type="indented"
+          />
+        )}
+        <ResultRow
+          label="Annual Contribution"
+          labelSuffix={
+            isNationalHealthInsurance ? (
+              nationalPensionDue ? (
+                <DetailedTooltip title="Pension Contribution">
+                  <NationalPensionTooltip year={inputs.incomeYear} />
+                </DetailedTooltip>
+              ) : (
+                <SimpleTooltip>
+                  At the selected age there is no compulsory National Pension (国民年金)
+                  contribution: enrollment covers ages 20-59.
+                </SimpleTooltip>
+              )
+            ) : undefined
+          }
+          value={formatJPY(results.pensionPayments)}
+          type="subtotal"
+        />
       </Box>
 
       {/* Employment Insurance */}

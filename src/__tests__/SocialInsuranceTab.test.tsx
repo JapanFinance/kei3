@@ -23,7 +23,9 @@ vi.mock('../components/ui/Tooltips', async () => {
         )}
       </>
     ),
-    SimpleTooltip: () => <div data-testid="info-tooltip" />,
+    SimpleTooltip: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="info-tooltip">{children}</div>
+    ),
   };
 });
 
@@ -177,7 +179,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
   });
 
-  it('replaces the pension rows with an enrollment note for an NHI user outside 20-59', () => {
+  it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
     const inputs = {
       ...mockInputs,
       ageRange: 'age60to64' as const,
@@ -200,8 +202,13 @@ describe('SocialInsuranceTab', () => {
     render(<SocialInsuranceTab inputs={inputs} results={results} />);
 
     expect(screen.getByText('National Pension')).toBeInTheDocument();
-    expect(screen.getByText(/enrollment covers ages 20-59/)).toBeInTheDocument();
-    expect(screen.queryByText('Annual Contribution')).not.toBeInTheDocument();
+    expect(screen.getByText('Annual Contribution')).toBeInTheDocument();
+    expect(screen.getByText('¥0')).toBeInTheDocument();
+    expect(
+      screen.getByText(/no compulsory National Pension .* enrollment covers ages 20-59/),
+    ).toBeInTheDocument();
+    // The contribution-table tooltip is not shown while nothing is due.
+    expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
   });
 
   it('hides Monthly Commuting Allowance row when 0', () => {
