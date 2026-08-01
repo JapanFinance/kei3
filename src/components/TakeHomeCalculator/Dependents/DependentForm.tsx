@@ -68,24 +68,24 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   // Form state
   const [relationship, setRelationship] = useState<Exclude<DependentRelationship, 'spouse'>>(
-    dependent?.relationship || 'child',
+    dependent?.relationship ?? 'child',
   );
   const [ageCategory, setAgeCategory] = useState<DependentAgeCategory>(
-    dependent?.ageCategory || '16to18',
+    dependent?.ageCategory ?? '16to18',
   );
   const [income, setIncome] = useState<DependentIncome>(
-    dependent?.income || {
+    dependent?.income ?? {
       grossEmploymentIncome: 0,
       grossPublicPensionIncome: 0,
       otherNetIncome: 0,
     },
   );
-  const [disability, setDisability] = useState<DisabilityLevel>(dependent?.disability || 'none');
-  const [isCohabiting, setIsCohabiting] = useState(dependent?.isCohabiting || false);
+  const [disability, setDisability] = useState<DisabilityLevel>(dependent?.disability ?? 'none');
+  const [isCohabiting, setIsCohabiting] = useState(dependent?.isCohabiting ?? false);
 
   const handleSubmit = () => {
     const newDependent: OtherDependent = {
-      id: dependent?.id || `dep-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+      id: dependent?.id ?? `dep-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       relationship,
       ageCategory,
       income,
