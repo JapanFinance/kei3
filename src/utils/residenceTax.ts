@@ -72,7 +72,7 @@ export const MINOR_NON_TAXABLE_INCOME_LIMIT = 1_350_000;
  * January 1 (賦課期日) following the income year, which is what the under-18 age range
  * selects — whose 合計所得金額 is at or below {@link MINOR_NON_TAXABLE_INCOME_LIMIT}.
  */
-function isNonTaxableMinor(ageRange: AgeRange | undefined, netIncome: number): boolean {
+function isNonTaxableMinor(ageRange: AgeRange, netIncome: number): boolean {
   return ageRange === 'under18' && netIncome <= MINOR_NON_TAXABLE_INCOME_LIMIT;
 }
 
@@ -86,17 +86,17 @@ function isNonTaxableMinor(ageRange: AgeRange | undefined, netIncome: number): b
  * @param netIncome - Net income
  * @param nonBasicDeductions - Social insurance + iDeCo deductions
  * @param dependentDeductions - Full dependent deduction results
+ * @param ageRange - Taxpayer age range; required because the 未成年者 exemption
+ *   ({@link isNonTaxableMinor}) is part of the statutory calculation
  * @param taxCredit - Tax credit amount
- * @param ageRange - Taxpayer age range, for the 未成年者 exemption
- *   ({@link isNonTaxableMinor}); omitted in contexts with no age input
  */
 export const calculateResidenceTax = (
   netIncome: number,
   nonBasicDeductions: number,
   dependentDeductions: DependentDeductionResults,
   year: number,
+  ageRange: AgeRange,
   taxCredit: number = 0,
-  ageRange?: AgeRange,
 ): ResidenceTaxDetails => {
   if (isNonTaxableMinor(ageRange, netIncome)) {
     return { ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableMinor: true };
