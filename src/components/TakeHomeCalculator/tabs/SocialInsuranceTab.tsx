@@ -16,7 +16,6 @@ import {
   isSubjectToNationalPension,
 } from '../../../types/ageRange';
 import {
-  DEPENDENT_COVERAGE_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
   CUSTOM_LATTER_STAGE_ID,
@@ -34,7 +33,7 @@ import {
 import CapIndicator from '../../ui/CapIndicator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
@@ -122,21 +121,8 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Detect if any caps are applied
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
 
-  // Replaces the pension rows when the age range exempts contributions entirely. The
-  // dependent-coverage guard is load-bearing here: without it a 70-74 dependent would fall
-  // into the employees'-pension branch, but dependent coverage pays nothing for a different
-  // reason and keeps its existing display.
-  const pensionAgeNote = isLatterStage
-    ? "No contributions: Employees' Pension (厚生年金保険) enrollment ends at age 70 and National Pension (国民年金) enrollment at age 60."
-    : inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID
-      ? undefined
-      : isNationalHealthInsurance
-        ? isSubjectToNationalPension(inputs.ageRange)
-          ? undefined
-          : 'No contributions: National Pension (国民年金) enrollment covers ages 20-59.'
-        : isSubjectToEmployeesPension(inputs.ageRange)
-          ? undefined
-          : "No contributions: Employees' Pension (厚生年金保険) enrollment ends at age 70.";
+  const nationalPensionDue = isSubjectToNationalPension(inputs.ageRange);
+  const employeesPensionDue = isSubjectToEmployeesPension(inputs.ageRange);
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -646,64 +632,76 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 : "Employees' Pension"}
           </Typography>
         </Box>
-        {pensionAgeNote ? (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1 }}>
-            {pensionAgeNote}
-          </Typography>
-        ) : (
-          <>
-            {!isNationalHealthInsurance && (
-              <ResultRow
-                label="Monthly Contribution"
-                labelSuffix={
-                  <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                    <DetailedTooltip title="Pension Contribution">
-                      <PensionPremiumTooltip
-                        inputs={inputs}
-                        standardMonthlyRemuneration={pensionSMR}
-                      />
-                    </DetailedTooltip>
-                    {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                      <CapIndicator
-                        capStatus={capStatus}
-                        contributionType="pension"
-                        iconOnly={isMobile}
-                      />
-                    )}
-                  </Box>
-                }
-                value={formatJPY(
-                  Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
-                )}
-                type="indented"
-              />
-            )}
-            {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
-              <ResultRow
-                label="Bonus Contribution"
-                labelSuffix={
-                  <DetailedTooltip title="Bonus Pension Contribution">
-                    <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
-                  </DetailedTooltip>
-                }
-                value={formatJPY(results.pensionOnBonus)}
-                type="indented"
-              />
-            )}
-            <ResultRow
-              label="Annual Contribution"
-              labelSuffix={
-                isNationalHealthInsurance ? (
+        {!isIncomeBasedProvider && (
+          <ResultRow
+            label="Monthly Contribution"
+            labelSuffix={
+              employeesPensionDue ? (
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                   <DetailedTooltip title="Pension Contribution">
-                    <NationalPensionTooltip year={inputs.incomeYear} />
+                    <PensionPremiumTooltip
+                      inputs={inputs}
+                      standardMonthlyRemuneration={pensionSMR}
+                    />
                   </DetailedTooltip>
-                ) : undefined
-              }
-              value={formatJPY(results.pensionPayments)}
-              type="subtotal"
-            />
-          </>
+                  {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                    <CapIndicator
+                      capStatus={capStatus}
+                      contributionType="pension"
+                      iconOnly={isMobile}
+                    />
+                  )}
+                </Box>
+              ) : (
+                <SimpleTooltip>
+                  At the selected age there is no compulsory Employees' Pension (厚生年金保険)
+                  contribution: enrollment ends at age 70.
+                </SimpleTooltip>
+              )
+            }
+            value={formatJPY(
+              Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
+            )}
+            type="indented"
+          />
         )}
+        {results.pensionOnBonus !== undefined && results.pensionOnBonus > 0 && (
+          <ResultRow
+            label="Bonus Contribution"
+            labelSuffix={
+              <DetailedTooltip title="Bonus Pension Contribution">
+                <PensionBonusTooltip breakdown={calculatePensionBonusBreakdown(bonuses)} />
+              </DetailedTooltip>
+            }
+            value={formatJPY(results.pensionOnBonus)}
+            type="indented"
+          />
+        )}
+        <ResultRow
+          label="Annual Contribution"
+          labelSuffix={
+            isLatterStage ? (
+              <SimpleTooltip>
+                At the selected age there are no compulsory pension contributions: Employees'
+                Pension (厚生年金保険) enrollment ends at age 70 and National Pension (国民年金)
+                enrollment at age 60.
+              </SimpleTooltip>
+            ) : isNationalHealthInsurance ? (
+              nationalPensionDue ? (
+                <DetailedTooltip title="Pension Contribution">
+                  <NationalPensionTooltip year={inputs.incomeYear} />
+                </DetailedTooltip>
+              ) : (
+                <SimpleTooltip>
+                  At the selected age there is no compulsory National Pension (国民年金)
+                  contribution: enrollment covers ages 20-59.
+                </SimpleTooltip>
+              )
+            ) : undefined
+          }
+          value={formatJPY(results.pensionPayments)}
+          type="subtotal"
+        />
       </Box>
 
       {/* Long-term Care Insurance (第1号被保険者, ages 65+) */}

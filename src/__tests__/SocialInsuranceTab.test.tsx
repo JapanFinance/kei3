@@ -23,7 +23,9 @@ vi.mock('../components/ui/Tooltips', async () => {
         )}
       </>
     ),
-    SimpleTooltip: () => <div data-testid="info-tooltip" />,
+    SimpleTooltip: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="info-tooltip">{children}</div>
+    ),
   };
 });
 
@@ -177,7 +179,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
   });
 
-  it('replaces the pension rows with an enrollment note for an NHI user outside 20-59', () => {
+  it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
     const inputs = {
       ...mockInputs,
       ageRange: 'age60to64' as const,
@@ -200,8 +202,29 @@ describe('SocialInsuranceTab', () => {
     render(<SocialInsuranceTab inputs={inputs} results={results} />);
 
     expect(screen.getByText('National Pension')).toBeInTheDocument();
-    expect(screen.getByText(/enrollment covers ages 20-59/)).toBeInTheDocument();
-    expect(screen.queryByText('Annual Contribution')).not.toBeInTheDocument();
+    expect(screen.getByText('Annual Contribution')).toBeInTheDocument();
+    expect(screen.getByText('¥0')).toBeInTheDocument();
+    expect(
+      screen.getByText(/no compulsory National Pension .* enrollment covers ages 20-59/),
+    ).toBeInTheDocument();
+    // The contribution-table tooltip is not shown while nothing is due.
+    expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
+  });
+
+  it('keeps the pension rows with zero values and an age tooltip for a 70-74 employee', () => {
+    const inputs = { ...mockInputs, ageRange: 'age70to74' as const };
+    const results = { ...mockResults, ageRange: 'age70to74' as const, pensionPayments: 0 };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText("Employees' Pension")).toBeInTheDocument();
+    expect(screen.getByText('Monthly Contribution')).toBeInTheDocument();
+    expect(screen.getByText('Annual Contribution')).toBeInTheDocument();
+    expect(
+      screen.getByText(/no compulsory Employees' Pension .* enrollment ends at age 70/),
+    ).toBeInTheDocument();
+    // The SMR-based contribution tooltip is not shown while nothing is due.
+    expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
   });
 
   it('hides Monthly Commuting Allowance row when 0', () => {
