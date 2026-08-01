@@ -25,6 +25,7 @@ import { useState } from 'react';
 import type { Spouse } from '../../../types/dependents';
 import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
 import {
+  calculateDependentNetIncomeComponents,
   calculateDependentNetPublicPensionIncome,
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
@@ -72,6 +73,10 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
     if (!spouse) return;
     onChange({ ...spouse, ...updates });
   };
+
+  const pensionIncomeAdjustmentDeduction = spouse
+    ? calculateDependentNetIncomeComponents(spouse, incomeYear).pensionIncomeAdjustmentDeduction
+    : 0;
 
   return (
     <Box>
@@ -195,6 +200,40 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                     </Typography>
                   </Box>
                 </Box>
+
+                {pensionIncomeAdjustmentDeduction > 0 && (
+                  <>
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Income Adjustment Deduction (給与+年金) */}
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
+                        Income Adjustment (所得金額調整控除)
+                        <SimpleTooltip>
+                          When both employment income and public pension income are present
+                          (給与所得と年金所得の双方を有する者), the income amount adjustment
+                          deduction (所得金額調整控除) applies: net employment income (capped at
+                          ¥100,000) plus net public pension income (capped at ¥100,000), less
+                          ¥100,000, is deducted from net employment income.
+                        </SimpleTooltip>
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          Deduction
+                        </Typography>
+                        <Typography variant="body2" color="error.main">
+                          -{formatJPY(pensionIncomeAdjustmentDeduction)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </>
+                )}
 
                 <Divider sx={{ my: 2 }} />
 
@@ -323,6 +362,36 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                         </Typography>
                       </TableCell>
                     </TableRow>
+
+                    {/* Income Adjustment Deduction Row (給与+年金) */}
+                    {pensionIncomeAdjustmentDeduction > 0 && (
+                      <TableRow>
+                        <TableCell>
+                          Income Adjustment
+                          <SimpleTooltip>
+                            When both employment income and public pension income are present
+                            (給与所得と年金所得の双方を有する者), the income amount adjustment
+                            deduction (所得金額調整控除) applies: net employment income (capped at
+                            ¥100,000) plus net public pension income (capped at ¥100,000), less
+                            ¥100,000, is deducted from net employment income.
+                          </SimpleTooltip>
+                          <br />
+                          <Typography variant="caption" color="text.secondary">
+                            所得金額調整控除
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" color="text.secondary">
+                            —
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" color="error.main">
+                            -{formatJPY(pensionIncomeAdjustmentDeduction)}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
 
                     {/* Other Income Row */}
                     <TableRow>

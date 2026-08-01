@@ -27,7 +27,10 @@ import type {
   DeductionType,
 } from '../types/dependents';
 import { DEDUCTION_TYPES, is65OrOlder } from '../types/dependents';
-import { calculateNetEmploymentIncome } from './taxCalculations';
+import {
+  calculateNetEmploymentIncome,
+  calculatePensionIncomeAdjustmentDeduction,
+} from './taxCalculations';
 
 export { getDependentEligibilityMax };
 
@@ -66,6 +69,54 @@ export function calculateDependentNetPublicPensionIncome(
   );
 }
 
+/** Per-category net incomes composing a dependent's 合計所得金額. */
+export interface DependentNetIncomeComponents {
+  /** 給与所得, net of the 給与所得控除 and the 所得金額調整控除 below. */
+  netEmploymentIncome: number;
+  /**
+   * 所得金額調整控除（給与所得と年金所得の双方を有する者）, already reflected in
+   * {@link netEmploymentIncome}.
+   */
+  pensionIncomeAdjustmentDeduction: number;
+  /** 公的年金等に係る雑所得. */
+  netPublicPensionIncome: number;
+  /** 合計所得金額: the net components above plus the other net income. */
+  totalNetIncome: number;
+}
+
+/**
+ * Derive the net income (所得) components of a dependent's 合計所得金額: 給与所得 via the
+ * 給与所得控除, 公的年金等に係る雑所得 via the 公的年金等控除
+ * ({@link calculateDependentNetPublicPensionIncome}), and — when the dependent has both — the
+ * 所得金額調整控除（給与所得と年金所得の双方を有する者）
+ * ({@link calculatePensionIncomeAdjustmentDeduction}) subtracted from 給与所得.
+ */
+export function calculateDependentNetIncomeComponents(
+  dependent: DependentIncomeProfile,
+  year: number,
+): DependentNetIncomeComponents {
+  const { grossEmploymentIncome, otherNetIncome } = dependent.income;
+
+  const netEmploymentIncomeBeforePensionAdjustment = calculateNetEmploymentIncome(
+    grossEmploymentIncome,
+    year,
+  );
+  const netPublicPensionIncome = calculateDependentNetPublicPensionIncome(dependent, year);
+  const pensionIncomeAdjustmentDeduction = calculatePensionIncomeAdjustmentDeduction(
+    netEmploymentIncomeBeforePensionAdjustment,
+    netPublicPensionIncome,
+  );
+  const netEmploymentIncome =
+    netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
+
+  return {
+    netEmploymentIncome,
+    pensionIncomeAdjustmentDeduction,
+    netPublicPensionIncome,
+    totalNetIncome: netEmploymentIncome + netPublicPensionIncome + otherNetIncome,
+  };
+}
+
 /**
  * Calculate total net income (合計所得金額) for a dependent
  * This is used to determine eligibility for various dependent deductions
@@ -78,14 +129,7 @@ export function calculateDependentTotalNetIncome(
   dependent: DependentIncomeProfile,
   year: number,
 ): number {
-  const { grossEmploymentIncome, otherNetIncome } = dependent.income;
-
-  // Calculate net employment income using employment income deduction formula
-  const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year);
-
-  return (
-    netEmploymentIncome + calculateDependentNetPublicPensionIncome(dependent, year) + otherNetIncome
-  );
+  return calculateDependentNetIncomeComponents(dependent, year).totalNetIncome;
 }
 
 /**
