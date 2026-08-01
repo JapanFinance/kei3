@@ -881,7 +881,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               aria-labelledby="range-slider"
               getAriaLabel={index => (index === 0 ? 'Minimum income' : 'Maximum income')}
               getAriaValueText={value => formatJPY(value)}
-              className="range-slider"
               sx={{
                 mt: 0,
                 mb: 0,

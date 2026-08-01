@@ -23,11 +23,12 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 900_000, // Gross 90万円 → net 35万円 (under 58万円 limit)
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -96,6 +97,7 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 900_000, // Gross 90万円 → net 35万円
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -140,11 +142,12 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_600_001, // Gross 1,600,001円 → net 950,001円 (over 58万円, qualifies for spouse special deduction)
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -177,11 +180,12 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
         const spouse: Dependent = {
           id: '1',
           relationship: 'spouse',
-          ageCategory: 'under70',
+          ageCategory: 'under65',
           isCohabiting: false,
           disability: 'none',
           income: {
             grossEmploymentIncome: grossIncome,
+            grossPublicPensionIncome: 0,
             otherNetIncome: 0,
           },
         };
@@ -210,6 +214,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -228,11 +233,12 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       const dependent: Dependent = {
         id: '1',
         relationship: 'parent',
-        ageCategory: '23to69',
+        ageCategory: '23to64',
         isCohabiting: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -258,6 +264,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -283,6 +290,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -306,6 +314,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -333,6 +342,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -361,7 +371,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       ageCategory: '70plus',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     });
 
     // Chosen so residence taxable income stays ≤ ¥2M in both cases, keeping the adjustment credit
@@ -430,6 +440,7 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
         disability: 'regular',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -455,6 +466,7 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
         disability: 'special',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -478,6 +490,7 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
         disability: 'special',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -499,11 +512,12 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 900_000,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -516,6 +530,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -528,6 +543,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       disability: 'regular',
       income: {
         grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -557,6 +573,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 900_000,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -569,6 +586,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       disability: 'special',
       income: {
         grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -597,6 +615,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 900_000,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -609,6 +628,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -636,7 +656,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
         ageCategory: '16to18',
         isCohabiting: true,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       },
       {
         id: '2',
@@ -644,15 +664,15 @@ describe('Adjustment Credit - Combined Scenarios', () => {
         ageCategory: '19to22',
         isCohabiting: true,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       },
       {
         id: '3',
         relationship: 'child',
-        ageCategory: '23to69',
+        ageCategory: '23to64',
         isCohabiting: false,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       },
     ];
 
@@ -704,6 +724,7 @@ describe('Specific Relative Special Deduction (特定親族特別控除)', () =>
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_490_000, // Net = 750,000 (qualifies for specific relative special)
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };

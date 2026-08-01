@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Box from '@mui/material/Box';
-import { useReducer, useDeferredValue, useMemo, Suspense, lazy } from 'react';
+import { useReducer, useDeferredValue, useMemo, useCallback, Suspense, lazy } from 'react';
 
 import ChangelogButton from './components/ChangelogButton';
+import ChangelogLoadingDialog from './components/ChangelogLoadingDialog';
 import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
@@ -39,6 +40,14 @@ const whenBrowserIdle = () =>
     }
   });
 
+// Resolved by the first click on the changelog button. Racing it against the
+// wait below means an early click starts the download straight away instead of
+// leaving the visitor waiting out the idle timeout first.
+let changelogRequested = () => {};
+const changelogRequest = new Promise<void>(resolve => {
+  changelogRequested = resolve;
+});
+
 // The changelog is invisible until opened, so it loads once the browser is
 // idle after the chart module — ready before anyone clicks the button without
 // competing with visible content at startup. Deep links to #changelog need the
@@ -46,10 +55,10 @@ const whenBrowserIdle = () =>
 const ChangelogModal = lazy(() =>
   window.location.hash === CHANGELOG_HASH
     ? import('./components/ChangelogModal')
-    : chartModulePromise
-        .catch(() => undefined)
-        .then(whenBrowserIdle)
-        .then(() => import('./components/ChangelogModal')),
+    : Promise.race([
+        chartModulePromise.catch(() => undefined).then(whenBrowserIdle),
+        changelogRequest,
+      ]).then(() => import('./components/ChangelogModal')),
 );
 
 function App() {
@@ -60,8 +69,14 @@ function App() {
     isOpen: isChangelogOpen,
     openModal: openChangelog,
     closeModal: closeChangelog,
+    markViewed: markChangelogViewed,
     hasNewFeatures,
   } = useChangelogModal();
+
+  const handleOpenChangelog = useCallback(() => {
+    changelogRequested();
+    openChangelog();
+  }, [openChangelog]);
 
   // Default values for the form
   const defaultInputs: TakeHomeFormState = {
@@ -110,7 +125,7 @@ function App() {
     >
       <SiteHeader
         title={SITE_TITLE}
-        actions={<ChangelogButton onClick={openChangelog} showBadge={hasNewFeatures} />}
+        actions={<ChangelogButton onClick={handleOpenChangelog} showBadge={hasNewFeatures} />}
       />
 
       <Box
@@ -213,8 +228,14 @@ function App() {
         </Box>
 
         {/* Changelog Modal */}
-        <Suspense fallback={null}>
-          <ChangelogModal open={isChangelogOpen} onClose={closeChangelog} />
+        <Suspense
+          fallback={isChangelogOpen ? <ChangelogLoadingDialog onClose={closeChangelog} /> : null}
+        >
+          <ChangelogModal
+            open={isChangelogOpen}
+            onClose={closeChangelog}
+            onViewed={markChangelogViewed}
+          />
         </Suspense>
       </Box>
     </Box>
