@@ -123,8 +123,10 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Detect if any caps are applied
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
 
-  // Replaces the pension rows when the age range exempts contributions entirely. Dependent
-  // coverage pays nothing for a different reason and keeps its existing display.
+  // Replaces the pension rows when the age range exempts contributions entirely. The
+  // dependent-coverage guard is load-bearing here: without it a 70-74 dependent would fall
+  // into the employees'-pension branch, but dependent coverage pays nothing for a different
+  // reason and keeps its existing display.
   const pensionAgeNote = isLatterStage
     ? "No contributions: Employees' Pension (厚生年金保険) enrollment ends at age 70 and National Pension (国民年金) enrollment at age 60."
     : inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID

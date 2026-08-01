@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
+import type { AgeRange } from '../types/ageRange';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
@@ -67,6 +68,15 @@ const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironm
 export const MINOR_NON_TAXABLE_INCOME_LIMIT = 1_350_000;
 
 /**
+ * Whether the taxpayer qualifies for the 未成年者 exemption: a minor — under 18 as of the
+ * January 1 (賦課期日) following the income year, which is what the under-18 age range
+ * selects — whose 合計所得金額 is at or below {@link MINOR_NON_TAXABLE_INCOME_LIMIT}.
+ */
+function isNonTaxableMinor(ageRange: AgeRange, netIncome: number): boolean {
+  return ageRange === 'under18' && netIncome <= MINOR_NON_TAXABLE_INCOME_LIMIT;
+}
+
+/**
  * Calculates residence tax (住民税) based on net income and deductions
  * Rate: 10% (6% municipal tax + 4% prefectural tax) of taxable income
  * Taxable income = net income - social insurance deductions - residence tax basic deduction
@@ -76,20 +86,20 @@ export const MINOR_NON_TAXABLE_INCOME_LIMIT = 1_350_000;
  * @param netIncome - Net income
  * @param nonBasicDeductions - Social insurance + iDeCo deductions
  * @param dependentDeductions - Full dependent deduction results
+ * @param ageRange - Taxpayer age range; required because the 未成年者 exemption
+ *   ({@link isNonTaxableMinor}) is part of the statutory calculation
  * @param taxCredit - Tax credit amount
- * @param isNonTaxableMinor - Whether the taxpayer is a 未成年者, whose non-taxable limit is
- *   {@link MINOR_NON_TAXABLE_INCOME_LIMIT} instead of the general limits
  */
 export const calculateResidenceTax = (
   netIncome: number,
   nonBasicDeductions: number,
   dependentDeductions: DependentDeductionResults,
   year: number,
+  ageRange: AgeRange,
   taxCredit: number = 0,
-  isNonTaxableMinor: boolean = false,
 ): ResidenceTaxDetails => {
-  if (isNonTaxableMinor && netIncome <= MINOR_NON_TAXABLE_INCOME_LIMIT) {
-    return NON_TAXABLE_RESIDENCE_TAX_DETAIL;
+  if (isNonTaxableMinor(ageRange, netIncome)) {
+    return { ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableMinor: true };
   }
 
   const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions, year);
