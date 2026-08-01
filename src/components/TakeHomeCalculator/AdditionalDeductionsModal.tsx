@@ -66,6 +66,15 @@ interface AdditionalDeductionsModalProps {
   incomeYear: number;
 }
 
+/** The recurring look of a deduction-card title: name plus its info tooltip on one line. */
+const cardTitleSx = {
+  fontSize: '0.95rem',
+  fontWeight: 600,
+  mb: 1,
+  display: 'flex',
+  alignItems: 'center',
+} as const;
+
 /**
  * Shared style for the live "Deduction: …" readouts under each card: a muted line whose bold
  * figures are lifted to the primary colour so they stand out. Keeping the emphasis on the line
@@ -299,15 +308,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           {/* Life Insurance (生命保険料控除) */}
           <Card variant="outlined" sx={{ mt: 2 }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography
-                sx={{
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  mb: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
+              <Typography sx={cardTitleSx}>
                 Life Insurance (生命保険料控除)
                 <SimpleTooltip>
                   A deduction for life, medical-care, and pension insurance premiums. Enter the
@@ -421,15 +422,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           {/* Earthquake Insurance (地震保険料控除) */}
           <Card variant="outlined" sx={{ mt: 2 }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography
-                sx={{
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  mb: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
+              <Typography sx={cardTitleSx}>
                 Earthquake Insurance (地震保険料控除)
                 <SimpleTooltip>
                   A deduction for earthquake insurance premiums (and qualifying pre-2007 long-term
@@ -476,15 +469,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           {/* Medical Expenses (医療費控除) */}
           <Card variant="outlined" sx={{ mt: 2 }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography
-                sx={{
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  mb: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
+              <Typography sx={cardTitleSx}>
                 Medical Expenses (医療費控除)
                 <SimpleTooltip>
                   Enter the medical expenses paid and any reimbursements (insurance payouts,
@@ -545,15 +530,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           </SectionHeader>
           <Card variant="outlined">
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography
-                sx={{
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  mb: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
+              <Typography sx={cardTitleSx}>
                 Home Loan Tax Credit (住宅ローン控除)
                 <SimpleTooltip>
                   A tax credit for homeowners with a home loan, applied for 10-13 years from

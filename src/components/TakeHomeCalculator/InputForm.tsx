@@ -58,6 +58,9 @@ import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
 
+/** The recurring look of a field-group label sitting above an input cluster. */
+const fieldLabelSx = { fontSize: '0.97rem', fontWeight: 500 } as const;
+
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
   dispatch: Dispatch<FormAction>;
@@ -224,8 +227,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
           <CardContent sx={{ p: 2, pt: 1, '&:last-child': { pb: 2 } }}>
             <Typography
               sx={{
-                fontSize: '0.97rem',
-                fontWeight: 500,
+                ...fieldLabelSx,
                 textAlign: 'center',
                 mb: 1,
               }}
@@ -336,14 +338,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  '& .MuiInputBase-root': {
-                    fontSize: { xs: '0.97rem', sm: '1.05rem' },
-                    py: { xs: 0.2, sm: 0.4 },
-                  },
-                  '& .MuiInputBase-input': {
-                    fontSize: { xs: '0.95rem', sm: '1rem' },
-                    py: { xs: 0.2, sm: 0.4 },
-                  },
                 }}
               >
                 <SpinnerNumberField
@@ -423,11 +417,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
           >
             <Typography
               sx={{
+                ...fieldLabelSx,
                 mb: 0.2,
                 display: 'flex',
                 alignItems: 'center',
-                fontSize: '0.97rem',
-                fontWeight: 500,
               }}
             >
               Age Range
@@ -484,9 +477,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
           >
             <Typography
               sx={{
+                ...fieldLabelSx,
                 mb: 0.5,
-                fontSize: '0.97rem',
-                fontWeight: 500,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 0.5,
@@ -581,10 +573,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 <Typography
                   gutterBottom
                   sx={{
+                    ...fieldLabelSx,
                     display: 'flex',
                     alignItems: 'center',
-                    fontSize: '0.97rem',
-                    fontWeight: 500,
                     mb: 0.2,
                   }}
                 >
@@ -636,8 +627,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     <Typography
                       gutterBottom
                       sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
+                        ...fieldLabelSx,
                         display: 'flex',
                         alignItems: 'center',
                       }}
@@ -668,8 +658,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     <Typography
                       gutterBottom
                       sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
+                        ...fieldLabelSx,
                         display: 'flex',
                         alignItems: 'center',
                       }}
@@ -748,9 +737,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         >
           <Typography
             sx={{
+              ...fieldLabelSx,
               mb: 0.5,
-              fontSize: '0.97rem',
-              fontWeight: 500,
               display: 'flex',
               alignItems: 'center',
               gap: 0.5,
