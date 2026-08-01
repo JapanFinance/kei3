@@ -29,12 +29,14 @@ const stripHtmlComments = (): PluginOption => ({
   },
 });
 
-// chunkImportMap emits the import map both inlined into index.html (which is
-// what browsers use) and as an importmap.json bundle asset intended for
-// backends that render their own HTML. Nothing here consumes the file, so it
-// is removed rather than deployed as a stray servable asset. Removal has to
-// wait until writeBundle: vite:build-import-analysis reads the asset's mapping
-// during generateBundle, so deleting it from the bundle there fails the build.
+/**
+ * Removes the standalone importmap.json that build.chunkImportMap emits in
+ * addition to the copy inlined into index.html. Browsers only use the inline
+ * copy, so the file would deploy as a stray servable asset.
+ *
+ * Removal waits for writeBundle: vite:build-import-analysis consumes the
+ * asset during generateBundle, so it cannot be deleted from the bundle there.
+ */
 const dropImportMapAsset = (): PluginOption => ({
   name: 'drop-import-map-asset',
   apply: 'build',
@@ -299,14 +301,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    // Chunk-to-chunk imports use stable ids that an import map inlined into
-    // index.html resolves to the hashed filenames, so a content change in one
-    // chunk no longer re-hashes every chunk that imports it (without this, a
-    // single tax-data edit re-hashed six chunks — 54 kB instead of 13 kB
-    // re-downloaded). Needs import.meta.resolve (Safari 16.4+), slightly above
-    // the default baseline-widely-available target (Safari 16.0). The
-    // security-headers plugin hashes the inline import map like any other
-    // inline script.
+    // Chunks reference each other through stable ids resolved by an import
+    // map in index.html, so a deploy re-downloads only the chunks whose own
+    // modules changed instead of every chunk that imports them.
     chunkImportMap: true,
     sourcemap: true,
     rolldownOptions: {
