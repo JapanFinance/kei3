@@ -1,12 +1,13 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import React from 'react';
+
+import type { StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { formatJPY } from '../../../utils/formatters';
 import SourceLinks from '../../ui/SourceLinks';
-import type { StandardMonthlyRemunerationBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 
 interface SMRTableColumn {
   header: string;

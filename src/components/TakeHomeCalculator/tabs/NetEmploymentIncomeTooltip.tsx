@@ -1,14 +1,15 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import React from 'react';
+
 import { getEmploymentIncomeDeductionPeriod } from '../../../data/netEmploymentIncome';
 import { formatJPY, formatNumber } from '../../../utils/formatters';
-import { DetailedTooltip } from '../../ui/Tooltips';
-import SourceLinks from '../../ui/SourceLinks';
 import ReferenceTable from '../../ui/ReferenceTable';
+import SourceLinks from '../../ui/SourceLinks';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { getEmploymentIncomeDeductionHighlightIndex } from './referenceTableHighlight';
 
 interface NetEmploymentIncomeTooltipProps {

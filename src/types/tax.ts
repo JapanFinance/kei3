@@ -1,13 +1,18 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { HealthInsuranceProviderId } from './healthInsurance';
 import type { Dependent, DependentDeductionResults } from './dependents';
+import type { HealthInsuranceProviderId } from './healthInsurance';
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
 
 export type IncomeStreamType =
-  'salary' | 'bonus' | 'business' | 'miscellaneous' | 'commutingAllowance' | 'stockCompensation';
+  | 'salary'
+  | 'bonus'
+  | 'business'
+  | 'miscellaneous'
+  | 'commutingAllowance'
+  | 'stockCompensation';
 
 export interface BaseIncomeStream {
   id: string;

@@ -3,6 +3,7 @@
 
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+
 import { useChangelogModal } from '../hooks/useChangelogModal';
 
 describe('useChangelogModal', () => {

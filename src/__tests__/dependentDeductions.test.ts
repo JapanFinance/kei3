@@ -2,14 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
+
+import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
+import { DEDUCTION_TYPES, type Dependent } from '../types/dependents';
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
   hasDependentRelativeUnder23,
   hasIncomeAdjustmentDeductionDependent,
 } from '../utils/dependentDeductions';
-import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import { DEDUCTION_TYPES, type Dependent } from '../types/dependents';
 
 const TEST_INCOME_YEAR = 2026;
 
@@ -61,11 +62,12 @@ function getSpouseSpecialDeduction(
   const spouse: Dependent = {
     id: 'test-spouse',
     relationship: 'spouse',
-    ageCategory: 'under70',
+    ageCategory: 'under65',
     isCohabiting: true,
     disability: 'none',
     income: {
       grossEmploymentIncome: 0,
+      grossPublicPensionIncome: 0,
       otherNetIncome: spouseNetIncome,
     },
   };
@@ -89,6 +91,7 @@ function getSpecificRelativeDeduction(dependentNetIncome: number, year?: number)
     disability: 'none',
     income: {
       grossEmploymentIncome: 0,
+      grossPublicPensionIncome: 0,
       otherNetIncome: dependentNetIncome,
     },
   };
@@ -106,11 +109,12 @@ function getSpouseDeduction(isElderly: boolean, taxpayerNetIncome: number) {
   const dependent: Dependent = {
     id: 'test-spouse',
     relationship: 'spouse',
-    ageCategory: isElderly ? '70plus' : 'under70',
+    ageCategory: isElderly ? '70plus' : 'under65',
     isCohabiting: true,
     disability: 'none',
     income: {
       grossEmploymentIncome: 0,
+      grossPublicPensionIncome: 0,
       otherNetIncome: 0,
     },
   };
@@ -148,6 +152,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -163,6 +168,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -178,6 +184,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_359_999, // Net = 619,999
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -195,6 +202,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_130_001, // Net = 480,001
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -210,6 +218,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_200_000, // Net = 550,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -222,11 +231,12 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -237,11 +247,12 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_150_000, // Net = 500,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -256,11 +267,12 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -271,11 +283,12 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -286,11 +299,12 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_229_999, // Net = 579,999
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -303,11 +317,12 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_130_001, // Net = 480,001
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -325,6 +340,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -339,11 +355,12 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -354,11 +371,12 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -371,11 +389,12 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_980_000, // Net = 1,330,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -386,11 +405,12 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0, // Using otherNetIncome for exact control
+          grossPublicPensionIncome: 0,
           otherNetIncome: 1_330_001,
         },
       };
@@ -403,11 +423,12 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_130_001, // Net = 480,001
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -422,11 +443,12 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_390_000, // Net = 650,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -437,11 +459,12 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -539,6 +562,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -556,6 +580,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -571,6 +596,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 1_230_000, // Using otherNetIncome for exact control
         },
       };
@@ -586,6 +612,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         disability: 'none',
         income: {
           grossEmploymentIncome: 0, // Using otherNetIncome for exact control
+          grossPublicPensionIncome: 0,
           otherNetIncome: 1_230_001,
         },
       };
@@ -603,21 +630,23 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
       expect(isEligibleForSpecificRelativeSpecialDeduction(dependent)).toBe(false);
     });
 
-    it('age 23 (in 23to69 category) does not qualify', () => {
+    it('age 23 (in 23to64 category) does not qualify', () => {
       const dependent: Dependent = {
         id: '1',
         relationship: 'child',
-        ageCategory: '23to69',
+        ageCategory: '23to64',
         isCohabiting: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -633,6 +662,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -645,11 +675,12 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
       const spouse: Dependent = {
         id: '1',
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         isCohabiting: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
       };
@@ -795,6 +826,7 @@ describe('Special Dependent (特定扶養親族) Classification', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -810,6 +842,7 @@ describe('Special Dependent (特定扶養親族) Classification', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_360_001, // Net = 620,001
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -827,6 +860,7 @@ describe('Elderly Dependent Classification', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -842,6 +876,7 @@ describe('Elderly Dependent Classification', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_360_001, // Net = 620,001
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -861,7 +896,7 @@ describe('同居老親等 (cohabiting elderly direct ascendant) deduction', () =
     ageCategory: '70plus',
     isCohabiting,
     disability: 'none',
-    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   });
 
   it('cohabiting elderly parent gets the 同居老親等 amounts and type', () => {
@@ -893,9 +928,12 @@ describe('Total Net Income Calculation with Other Income', () => {
   it('combines employment income and other net income correctly', () => {
     const income = {
       grossEmploymentIncome: 1_000_000, // Net = 260,000
+      grossPublicPensionIncome: 0,
       otherNetIncome: 200_000,
     };
-    expect(calculateDependentTotalNetIncome(income, TEST_INCOME_YEAR)).toBe(460_000);
+    expect(
+      calculateDependentTotalNetIncome({ income, ageCategory: '16to18' }, TEST_INCOME_YEAR),
+    ).toBe(460_000);
   });
 
   it('threshold applies to total net income (employment + other)', () => {
@@ -907,6 +945,7 @@ describe('Total Net Income Calculation with Other Income', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_000_000, // Net = 260,000
+        grossPublicPensionIncome: 0,
         otherNetIncome: 360_000, // Total = 620,000
       },
     };
@@ -922,6 +961,7 @@ describe('Total Net Income Calculation with Other Income', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_000_000, // Net = 260,000
+        grossPublicPensionIncome: 0,
         otherNetIncome: 360_001, // Total = 620,001
       },
     };
@@ -1311,11 +1351,12 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -1349,11 +1390,12 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_690_001, // Net = 950,001 (95万円超～100万円 bracket)
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -1392,6 +1434,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
       disability: 'none',
       income: {
         grossEmploymentIncome: 900_000, // Net = 350,000
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -1430,6 +1473,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -1456,6 +1500,7 @@ describe('Dependent Deductions - Under 16', () => {
       disability: 'none',
       income: {
         grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -1480,6 +1525,7 @@ describe('Dependent Deductions - Under 16', () => {
       disability: 'regular',
       income: {
         grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
     };
@@ -1500,6 +1546,204 @@ describe('Dependent Deductions - Under 16', () => {
   });
 });
 
+describe('障害者控除 requires 合計所得金額 within the dependent eligibility threshold', () => {
+  // 2026 (TEST_INCOME_YEAR) threshold is ¥620,000.
+  const TAXPAYER_INCOME = 5_000_000;
+
+  describe('Spouse, regular disability (¥270,000 national / ¥260,000 residence)', () => {
+    it('applies at exactly 620,000 yen, alongside the spouse deduction', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under65',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(270_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(260_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.DISABILITY);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.SPOUSE);
+    });
+
+    it('does not apply at 620,001 yen, though 配偶者特別控除 still applies', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under65',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.SPOUSE_SPECIAL);
+    });
+  });
+
+  describe('Spouse, special disability (¥400,000 national / ¥300,000 residence)', () => {
+    it('applies at exactly 620,000 yen, alongside the spouse deduction', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under65',
+        isCohabiting: false,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(400_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(300_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.SPECIAL_DISABILITY,
+      );
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.SPOUSE);
+    });
+
+    it('does not apply at 620,001 yen, though 配偶者特別控除 still applies', () => {
+      const spouse: Dependent = {
+        id: '1',
+        relationship: 'spouse',
+        ageCategory: 'under65',
+        isCohabiting: false,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.SPOUSE_SPECIAL);
+    });
+  });
+
+  describe('Non-spouse dependent, regular disability (¥270,000 national / ¥260,000 residence)', () => {
+    // ageCategory 23to64 keeps the main deduction as GENERAL_DEPENDENT (not 特定親族特別控除,
+    // which only applies at 19-22), so it lapses at the same threshold as the disability
+    // deduction — isolating the NOT_ELIGIBLE fallthrough above it.
+    it('applies at exactly 620,000 yen, alongside the dependent deduction', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to64',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(270_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(260_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(DEDUCTION_TYPES.DISABILITY);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.GENERAL_DEPENDENT,
+      );
+    });
+
+    it('does not apply at 620,001 yen; falls through to NOT_ELIGIBLE entirely', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to64',
+        isCohabiting: false,
+        disability: 'regular',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.nationalTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.residenceTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+    });
+  });
+
+  describe('Non-spouse dependent, cohabiting special disability (¥750,000 national / ¥530,000 residence)', () => {
+    it('applies at exactly 620,000 yen, alongside the dependent deduction', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to64',
+        isCohabiting: true,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(750_000);
+      expect(result.residenceTax.disabilityDeduction).toBe(530_000);
+      expect(result.breakdown).toHaveLength(2);
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.SPECIAL_DISABILITY_COHABITING,
+      );
+      expect(result.breakdown.map(b => b.deductionType)).toContain(
+        DEDUCTION_TYPES.GENERAL_DEPENDENT,
+      );
+    });
+
+    it('does not apply at 620,001 yen; falls through to NOT_ELIGIBLE entirely', () => {
+      const dependent: Dependent = {
+        id: '1',
+        relationship: 'child',
+        ageCategory: '23to64',
+        isCohabiting: true,
+        disability: 'special',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
+      };
+      const result = calculateDependentDeductions([dependent], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+      expect(result.nationalTax.disabilityDeduction).toBe(0);
+      expect(result.residenceTax.disabilityDeduction).toBe(0);
+      expect(result.breakdown).toHaveLength(1);
+      expect(result.breakdown[0]!.nationalTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.residenceTaxAmount).toBe(0);
+      expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+    });
+  });
+
+  it('a high-income disabled spouse (¥2,000,000) gets no deduction at all (regression)', () => {
+    // Above both the disability eligibility threshold and the 配偶者特別控除 upper bound
+    // (¥1,330,000), so neither the disability deduction nor any main deduction applies.
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under65',
+      isCohabiting: true,
+      disability: 'special',
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 2_000_000 }, // Using otherNetIncome for exact control
+    };
+    const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, TAXPAYER_INCOME);
+    expect(result.nationalTax.disabilityDeduction).toBe(0);
+    expect(result.residenceTax.disabilityDeduction).toBe(0);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+  });
+});
+
+describe('NOT_ELIGIBLE breakdown entry for a spouse with no applicable deduction', () => {
+  it('a non-disabled spouse above the 配偶者特別控除 ceiling gets a NOT_ELIGIBLE entry', () => {
+    const spouse: Dependent = {
+      id: '1',
+      relationship: 'spouse',
+      ageCategory: 'under65',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_330_001 }, // Using otherNetIncome for exact control
+    };
+    const result = calculateDependentDeductions([spouse], TEST_INCOME_YEAR, 5_000_000);
+    expect(result.nationalTax.total).toBe(0);
+    expect(result.residenceTax.total).toBe(0);
+    expect(result.breakdown).toHaveLength(1);
+    expect(result.breakdown[0]!.nationalTaxAmount).toBe(0);
+    expect(result.breakdown[0]!.residenceTaxAmount).toBe(0);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
+  });
+});
+
 describe('2025 income year (R7) — 58万円 threshold', () => {
   const year = 2025;
 
@@ -1510,7 +1754,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
       ageCategory: '16to18',
       isCohabiting: false,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: netIncome },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: netIncome },
     };
   }
 
@@ -1518,10 +1762,10 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
     return {
       id: 'test-spouse',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: netIncome },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: netIncome },
     };
   }
 
@@ -1587,7 +1831,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
         ageCategory: '19to22',
         isCohabiting: false,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 580_000 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 580_000 },
       };
       expect(isEligibleForSpecificRelativeSpecialDeduction(dependent, year)).toBe(false);
       expect(isEligibleForDependentDeduction(dependent, year)).toBe(true);
@@ -1600,7 +1844,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
         ageCategory: '19to22',
         isCohabiting: false,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 580_001 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 580_001 },
       };
       expect(isEligibleForSpecificRelativeSpecialDeduction(dependent, year)).toBe(true);
     });
@@ -1618,7 +1862,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
         ageCategory: '19to22',
         isCohabiting: false,
         disability: 'none',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 600_000 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 600_000 },
       };
       expect(isEligibleForSpecificRelativeSpecialDeduction(dependent, 2025)).toBe(true);
       expect(isEligibleForDependentDeduction(dependent, 2026)).toBe(true);
@@ -1635,7 +1879,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
       ageCategory: '19to22',
       isCohabiting: false,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       ...overrides,
     }) as Dependent;
 
@@ -1682,7 +1926,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
 
     it('does NOT qualify via ロ for a dependent 23 or older without special disability', () => {
       expect(
-        hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '23to69' })], 2026),
+        hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '23to64' })], 2026),
       ).toBe(false);
       expect(
         hasIncomeAdjustmentDeductionDependent([dependent({ ageCategory: '70plus' })], 2026),
@@ -1692,7 +1936,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
     it('qualifies via ハ for a special-disability dependent of any age', () => {
       expect(
         hasIncomeAdjustmentDeductionDependent(
-          [dependent({ ageCategory: '23to69', disability: 'special' })],
+          [dependent({ ageCategory: '23to64', disability: 'special' })],
           2026,
         ),
       ).toBe(true);
@@ -1707,7 +1951,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
     it('does NOT qualify via ハ for a regular (non-special) disability', () => {
       expect(
         hasIncomeAdjustmentDeductionDependent(
-          [dependent({ ageCategory: '23to69', disability: 'regular' })],
+          [dependent({ ageCategory: '23to64', disability: 'regular' })],
           2026,
         ),
       ).toBe(false);
@@ -1717,12 +1961,12 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
       // 2026 threshold is ¥620,000.
       const richChild = dependent({
         ageCategory: '19to22',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 700_000 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 700_000 },
       });
       expect(hasIncomeAdjustmentDeductionDependent([richChild], 2026)).toBe(false);
       const poorChild = dependent({
         ageCategory: '19to22',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 620_000 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 },
       });
       expect(hasIncomeAdjustmentDeductionDependent([poorChild], 2026)).toBe(true);
     });
@@ -1732,10 +1976,10 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
         ({
           id: 'sp',
           relationship: 'spouse',
-          ageCategory: 'under70',
+          ageCategory: 'under65',
           isCohabiting: true,
           disability: 'none',
-          income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           ...overrides,
         }) as Dependent;
       expect(hasIncomeAdjustmentDeductionDependent([spouse()], 2026)).toBe(false);
@@ -1745,7 +1989,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
       // A high-earning special-disability spouse is not a 同一生計配偶者, so does not qualify.
       const richSpouse = spouse({
         disability: 'special',
-        income: { grossEmploymentIncome: 0, otherNetIncome: 700_000 },
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 700_000 },
       });
       expect(hasIncomeAdjustmentDeductionDependent([richSpouse], 2026)).toBe(false);
     });
@@ -1754,13 +1998,13 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
 
 describe('hasDependentRelativeUnder23', () => {
   const child = (
-    ageCategory: 'under16' | '16to18' | '19to22' | '23to69' | '70plus',
+    ageCategory: 'under16' | '16to18' | '19to22' | '23to64' | '70plus',
     otherNetIncome = 0,
   ): Dependent => ({
     id: 'd',
     relationship: 'child',
     ageCategory,
-    income: { grossEmploymentIncome: 0, otherNetIncome },
+    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome },
     disability: 'none',
     isCohabiting: true,
   });
@@ -1768,8 +2012,8 @@ describe('hasDependentRelativeUnder23', () => {
   const spouseUnder70: Dependent = {
     id: 's',
     relationship: 'spouse',
-    ageCategory: 'under70',
-    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    ageCategory: 'under65',
+    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     disability: 'none',
     isCohabiting: true,
   };
@@ -1780,7 +2024,7 @@ describe('hasDependentRelativeUnder23', () => {
   });
 
   it('is false for dependents aged 23 or older', () => {
-    expect(hasDependentRelativeUnder23([child('23to69')], 2026)).toBe(false);
+    expect(hasDependentRelativeUnder23([child('23to64')], 2026)).toBe(false);
     expect(hasDependentRelativeUnder23([child('70plus')], 2026)).toBe(false);
   });
 
@@ -1791,5 +2035,67 @@ describe('hasDependentRelativeUnder23', () => {
 
   it('is false with no dependents', () => {
     expect(hasDependentRelativeUnder23([], 2026)).toBe(false);
+  });
+});
+
+describe('Public Pension Income in Total Net Income', () => {
+  const pensionerParent = (
+    ageCategory: '23to64' | '65to69' | '70plus',
+    grossPublicPensionIncome: number,
+    isCohabiting = false,
+  ): Dependent => ({
+    id: 'p',
+    relationship: 'parent',
+    ageCategory,
+    income: { grossEmploymentIncome: 0, grossPublicPensionIncome, otherNetIncome: 0 },
+    disability: 'none',
+    isCohabiting,
+  });
+
+  it('applies the public pension deduction using the age category', () => {
+    // 65 or older: 1,500,000 − 1,100,000 = 400,000
+    expect(
+      calculateDependentTotalNetIncome(pensionerParent('65to69', 1_500_000), TEST_INCOME_YEAR),
+    ).toBe(400_000);
+    // Under 65: 1,500,000 × 75% − 275,000 = 850,000
+    expect(
+      calculateDependentTotalNetIncome(pensionerParent('23to64', 1_500_000), TEST_INCOME_YEAR),
+    ).toBe(850_000);
+  });
+
+  it('the 65 boundary changes spouse deduction eligibility for the same gross pension', () => {
+    const spouse = (ageCategory: 'under65' | '65to69'): Dependent => ({
+      id: 's',
+      relationship: 'spouse',
+      ageCategory,
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 1_500_000, otherNetIncome: 0 },
+      disability: 'none',
+      isCohabiting: true,
+    });
+    // 65-69: net 400,000 ≤ 620,000 → 配偶者控除
+    expect(isEligibleForSpouseDeduction(spouse('65to69'))).toBe(true);
+    // Under 65: net 850,000 > 620,000 → falls to 配偶者特別控除 instead
+    expect(isEligibleForSpouseDeduction(spouse('under65'))).toBe(false);
+    expect(isEligibleForSpouseSpecialDeduction(spouse('under65'))).toBe(true);
+  });
+
+  it('a cohabiting elderly parent on a model pension qualifies as 同居老親等', () => {
+    // 1,580,000 − 1,100,000 = 480,000 ≤ 620,000
+    const result = calculateDependentDeductions(
+      [pensionerParent('70plus', 1_580_000, true)],
+      TEST_INCOME_YEAR,
+    );
+    expect(result.nationalTax.dependentDeduction).toBe(580_000);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT);
+  });
+
+  it('a large pension puts a dependent over the eligibility threshold', () => {
+    // 3,000,000 − 1,100,000 = 1,900,000 > 620,000
+    const result = calculateDependentDeductions(
+      [pensionerParent('65to69', 3_000_000)],
+      TEST_INCOME_YEAR,
+    );
+    expect(result.nationalTax.dependentDeduction).toBe(0);
+    expect(result.breakdown[0]!.deductionType).toBe(DEDUCTION_TYPES.NOT_ELIGIBLE);
   });
 });

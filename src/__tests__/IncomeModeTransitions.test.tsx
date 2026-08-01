@@ -1,16 +1,17 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import '@testing-library/jest-dom';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { useReducer } from 'react';
+import { vi } from 'vitest';
+
+import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
+import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
+import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_REGION } from '../types/healthInsurance';
 import type { TakeHomeFormState, IncomeStream } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
-import { DEFAULT_PROVIDER, DEFAULT_PROVIDER_REGION } from '../types/healthInsurance';
-import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
-import { vi } from 'vitest';
 
 // Mock child components to keep the test focused on InputForm logic
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({

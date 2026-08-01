@@ -1,9 +1,9 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
 import type { SxProps, Theme } from '@mui/material/styles';
+import React from 'react';
 
 /**
  * The calm "this is your row" highlight for the row the current taxpayer falls in (see

@@ -1,10 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { calculateEmploymentInsurance } from '../utils/taxCalculations';
+import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { calculateHealthInsuranceBreakdown } from '../utils/healthInsuranceCalculator';
 import { calculatePensionBreakdown } from '../utils/pensionCalculator';
-import { DEFAULT_PROVIDER } from '../types/healthInsurance';
+import { calculateEmploymentInsurance } from '../utils/taxCalculations';
 
 const TEST_INCOME_YEAR = 2026;
 

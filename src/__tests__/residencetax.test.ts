@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
+
+import type { DependentDeductionResults, Dependent } from '../types/dependents';
+import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
   calculateResidenceTax,
   calculateResidenceTaxBasicDeduction,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from '../utils/residenceTax';
-import { calculateDependentDeductions } from '../utils/dependentDeductions';
-import type { DependentDeductionResults, Dependent } from '../types/dependents';
 
 const TEST_INCOME_YEAR = 2026;
 
@@ -257,10 +258,10 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
@@ -272,10 +273,10 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
@@ -291,7 +292,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       ageCategory: 'under16',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([child], TEST_INCOME_YEAR);
 
@@ -304,10 +305,10 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const child: Dependent = {
       id: '2',
@@ -315,7 +316,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       ageCategory: 'under16',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse, child], TEST_INCOME_YEAR);
 
@@ -327,10 +328,10 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const child: Dependent = {
       id: '2',
@@ -338,7 +339,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       ageCategory: 'under16',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse, child], TEST_INCOME_YEAR);
 
@@ -353,10 +354,10 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 1_000_000 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_000_000 },
     };
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
@@ -376,7 +377,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       ageCategory: 'under16',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([child], TEST_INCOME_YEAR);
 
@@ -396,10 +397,10 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under70',
+      ageCategory: 'under65',
       isCohabiting: true,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 

@@ -29,7 +29,12 @@ export interface IncomeRange {
 
 /** The 世帯類型 cuts published alongside 全世帯. */
 export type HouseholdType =
-  'all' | 'elderly' | 'nonElderly' | 'with65Plus' | 'withChildren' | 'singleMother';
+  | 'all'
+  | 'elderly'
+  | 'nonElderly'
+  | 'with65Plus'
+  | 'withChildren'
+  | 'singleMother';
 
 /** One row of 第０２１表: a bracket's upper bound (exclusive, yen) followed by the 相対度数分布
  * percentage for each household type, in `DISTRIBUTION_COLUMNS` order. */
@@ -64,7 +69,7 @@ const DISTRIBUTION_COLUMNS: Record<HouseholdType, 1 | 2 | 3 | 4 | 5 | 6> = {
  * {@link ALL_HOUSEHOLDS_TAIL_DETAIL}.)
  *
  * MHLW prints 「-」 (no applicable cases) for some 母子世帯 brackets; those are carried as 0. */
-// prettier-ignore
+// oxfmt-ignore
 const DISTRIBUTION_TABLE: readonly DistributionRow[] = [
   // upper bound   all  elderly  non-  65+ in  with  single
   //   (yen)            (高齢者) elderly household children mother
@@ -102,7 +107,7 @@ const DISTRIBUTION_TABLE: readonly DistributionRow[] = [
  * The 12〜15M rows sum to 第０２１表's 1200～1500 bracket exactly (4.3); the 15〜20M rows sum to
  * 2.5 against 第０２１表's 2.6 — a rounding difference between the two published tables, carried
  * here as 図９ prints it rather than rescaled to match. */
-// prettier-ignore
+// oxfmt-ignore
 const ALL_HOUSEHOLDS_TAIL_DETAIL: readonly [maxExclusive: number, percent: number][] = [
   [13_000_000, 1.9],
   [14_000_000, 1.4],

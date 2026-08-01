@@ -13,8 +13,8 @@
  */
 
 import type { BasicDeductionTier } from '../../../data/nationalBasicDeduction';
-import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../../../data/residenceTaxBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../../../data/nationalIncomeTaxBrackets';
+import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../../../data/residenceTaxBasicDeduction';
 import { formatNumber } from '../../../utils/formatters';
 
 // ── National income tax basic deduction (基礎控除) ─────────────────────────────────────────────

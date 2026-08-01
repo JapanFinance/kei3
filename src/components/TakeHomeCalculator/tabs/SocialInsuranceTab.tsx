@@ -1,35 +1,36 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
-import { formatJPY } from '../../../utils/formatters';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
-import { DetailedTooltip } from '../../ui/Tooltips';
-import SourceLinks from '../../ui/SourceLinks';
-import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
-import { ResultRow } from '../ResultRow';
-import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
-import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
-import PensionPremiumTooltip from './PensionPremiumTooltip';
-import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
-import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
-import PensionBonusTooltip from './PensionBonusTooltip';
-import NationalPensionTooltip from './NationalPensionTooltip';
+import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import React from 'react';
+
+import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
+import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import type { BonusIncomeStream } from '../../../types/tax';
+import { detectCaps } from '../../../utils/capDetection';
+import { formatJPY } from '../../../utils/formatters';
+import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
 import {
   calculatePensionBonusBreakdown,
   findPensionBracket,
 } from '../../../utils/pensionCalculator';
-import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
-import type { BonusIncomeStream } from '../../../types/tax';
 import CapIndicator from '../../ui/CapIndicator';
-import { detectCaps } from '../../../utils/capDetection';
-import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
-import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import SourceLinks from '../../ui/SourceLinks';
+import { DetailedTooltip } from '../../ui/Tooltips';
+import { ResultRow } from '../ResultRow';
+import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
+import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
+import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
+import NationalPensionTooltip from './NationalPensionTooltip';
+import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
+import PensionBonusTooltip from './PensionBonusTooltip';
+import PensionPremiumTooltip from './PensionPremiumTooltip';
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;

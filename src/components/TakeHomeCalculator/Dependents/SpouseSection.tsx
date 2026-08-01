@@ -1,34 +1,37 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState } from 'react';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
+import { useTheme } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
-import Typography from '@mui/material/Typography';
-
-import type { Spouse } from '../../../types/dependents';
-import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
-import { calculateDependentTotalNetIncome } from '../../../utils/dependentDeductions';
-import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
-import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../../ui/Tooltips';
-import { formatJPY } from '../../../utils/formatters';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import { useTheme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import Divider from '@mui/material/Divider';
+import { useState } from 'react';
+
+import type { Spouse } from '../../../types/dependents';
+import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
+import {
+  calculateDependentNetPublicPensionIncome,
+  calculateDependentTotalNetIncome,
+} from '../../../utils/dependentDeductions';
+import { formatJPY } from '../../../utils/formatters';
+import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
+import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
+import { SimpleTooltip } from '../../ui/Tooltips';
 
 interface SpouseSectionProps {
   spouse: Spouse | null;
@@ -49,9 +52,10 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
       const newSpouse: Spouse = {
         id: crypto.randomUUID(),
         relationship: 'spouse',
-        ageCategory: 'under70',
+        ageCategory: 'under65',
         income: {
           grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
         disability: 'none',
@@ -89,7 +93,8 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
               Income Information{' '}
               <SimpleTooltip>
                 Enter income amounts to calculate total net income (合計所得金額) and determine
-                deduction eligibility.
+                deduction eligibility. Survivor and disability pensions (遺族年金・障害年金) are
+                non-taxable and are not included.
               </SimpleTooltip>
             </Typography>
 
@@ -147,6 +152,52 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
 
                 <Divider sx={{ my: 2 }} />
 
+                {/* Public Pension Income */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
+                    Public Pension (公的年金等)
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Gross (収入)
+                    </Typography>
+                    <SpinnerNumberField
+                      value={spouse.income.grossPublicPensionIncome}
+                      onChange={(value: number) =>
+                        handleSpouseChange({
+                          income: {
+                            ...spouse.income,
+                            grossPublicPensionIncome: value,
+                          },
+                        })
+                      }
+                      step={10_000}
+                      shiftStep={100_000}
+                      sx={{ maxWidth: 180 }}
+                      inputProps={{ style: { textAlign: 'right' } }}
+                    />
+                  </Box>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Net (所得)
+                    </Typography>
+                    <Typography variant="body2">
+                      {formatJPY(calculateDependentNetPublicPensionIncome(spouse, incomeYear))}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
                 {/* Other Income */}
                 <Box sx={{ mb: 2 }}>
                   <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
@@ -187,7 +238,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       Total (合計所得金額)
                     </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {formatJPY(calculateDependentTotalNetIncome(spouse.income, incomeYear))}
+                      {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
                     </Typography>
                   </Box>
                 </Box>
@@ -241,6 +292,38 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       </TableCell>
                     </TableRow>
 
+                    {/* Public Pension Income Row */}
+                    <TableRow>
+                      <TableCell>
+                        Public Pension
+                        <br />
+                        <Typography variant="caption" color="text.secondary">
+                          公的年金等
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <SpinnerNumberField
+                          value={spouse.income.grossPublicPensionIncome}
+                          onChange={(value: number) =>
+                            handleSpouseChange({
+                              income: {
+                                ...spouse.income,
+                                grossPublicPensionIncome: value,
+                              },
+                            })
+                          }
+                          step={10_000}
+                          shiftStep={100_000}
+                          sx={{ maxWidth: 150 }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2">
+                          {formatJPY(calculateDependentNetPublicPensionIncome(spouse, incomeYear))}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+
                     {/* Other Income Row */}
                     <TableRow>
                       <TableCell>
@@ -281,7 +364,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       <TableCell align="right"></TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {formatJPY(calculateDependentTotalNetIncome(spouse.income, incomeYear))}
+                          {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
                         </Typography>
                       </TableCell>
                     </TableRow>

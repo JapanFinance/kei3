@@ -1,8 +1,9 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
 import CalculateIcon from '@mui/icons-material/Calculate';
+import HelpOutlineOutlinedIcon from '@mui/icons-material/HelpOutlineOutlined';
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { SimpleTooltip, DetailedTooltip } from './Tooltips';
 

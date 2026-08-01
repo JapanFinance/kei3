@@ -1,17 +1,18 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import type { TakeHomeResults } from '../../../types/tax';
-import { formatJPY } from '../../../utils/formatters';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import Box from '@mui/material/Box';
+import { useTheme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import React from 'react';
+
+import type { TakeHomeResults } from '../../../types/tax';
+import { formatJPY } from '../../../utils/formatters';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 
 interface FurusatoNozeiTabProps {

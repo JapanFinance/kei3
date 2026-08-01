@@ -37,13 +37,15 @@
 //
 // Uses only Node built-ins plus the pinned `lighthouse` and `chrome-launcher`.
 
-import { launch as launchChrome } from 'chrome-launcher';
-import lighthouse from 'lighthouse';
-import { createServer } from 'node:http';
-import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
+
+import { launch as launchChrome } from 'chrome-launcher';
+import lighthouse from 'lighthouse';
+
 import {
   BUDGETS,
   CATEGORY_LABELS,

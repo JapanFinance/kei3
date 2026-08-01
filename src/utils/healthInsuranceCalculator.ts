@@ -1,24 +1,24 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import {
+  calculateMonthlyEmployeePremium,
+  getRegionalRatesForMonth,
+} from '../data/employeesHealthInsurance/providerRates';
+import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
+import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import type {
   ProviderRegion,
   NationalHealthInsuranceRegionParams,
   HealthInsuranceProviderId,
 } from '../types/healthInsurance';
-import type { BonusIncomeStream } from '../types/tax';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
-import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
-import {
-  calculateMonthlyEmployeePremium,
-  getRegionalRatesForMonth,
-} from '../data/employeesHealthInsurance/providerRates';
+import type { BonusIncomeStream } from '../types/tax';
 import { roundSocialInsurancePremium } from './taxCalculations';
 
 /**
@@ -172,7 +172,8 @@ export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
 export function calculateEmployeesHealthInsuranceBonusBreakdown(
   bonuses: BonusIncomeStream[],
   providerOrRates:
-    string | { employeeHealthInsuranceRate: number; employeeLongTermCareRate: number },
+    | string
+    | { employeeHealthInsuranceRate: number; employeeLongTermCareRate: number },
   regionOrLTC: string | boolean,
   year: number,
   isSubjectToLongTermCarePremium?: boolean,

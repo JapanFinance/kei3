@@ -3,13 +3,12 @@
 
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
+
 import {
   NHIPortionTooltip,
   type NHIPortionType,
 } from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
-import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
-import { formatJPY } from '../utils/formatters';
 import type {
   TakeHomeResults,
   TakeHomeInputs,
@@ -17,6 +16,8 @@ import type {
   FurusatoNozeiDetails,
 } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { formatJPY } from '../utils/formatters';
+import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,

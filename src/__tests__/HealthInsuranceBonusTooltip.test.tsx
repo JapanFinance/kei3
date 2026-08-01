@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { render, screen } from '@testing-library/react';
+
 import HealthInsuranceBonusTooltip from '../components/TakeHomeCalculator/tabs/HealthInsuranceBonusTooltip';
 import { DEFAULT_PROVIDER_REGION, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { TakeHomeInputs } from '../types/tax';

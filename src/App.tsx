@@ -1,18 +1,19 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useReducer, useDeferredValue, useMemo, Suspense, lazy } from 'react';
 import Box from '@mui/material/Box';
-import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
+import { useReducer, useDeferredValue, useMemo, Suspense, lazy } from 'react';
+
 import ChangelogButton from './components/ChangelogButton';
+import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
+import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
+import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
+import { DEFAULT_PROVIDER } from './types/healthInsurance';
 import type { TakeHomeFormState, TakeHomeInputs } from './types/tax';
 import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
-import { calculateTaxes } from './utils/taxCalculations';
-import { DEFAULT_PROVIDER } from './types/healthInsurance';
-import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
-import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
 import { useLoadMilestone } from './utils/loadMilestones';
+import { calculateTaxes } from './utils/taxCalculations';
 
 // Deferred modules load in priority order: results, then chart, then changelog.
 const resultsModulePromise = import('./components/TakeHomeCalculator/TakeHomeResults');

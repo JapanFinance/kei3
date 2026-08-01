@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
+
 import {
   HOUSEHOLD_INCOME_DISTRIBUTIONS,
   HOUSEHOLD_TYPE_ORDER,

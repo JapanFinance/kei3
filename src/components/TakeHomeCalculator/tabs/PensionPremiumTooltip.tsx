@@ -1,10 +1,12 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import React from 'react';
+
+import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
 import {
@@ -12,9 +14,8 @@ import {
   EMPLOYEES_PENSION_RATE,
   type StandardMonthlyRemunerationBracket,
 } from '../../../utils/pensionCalculator';
-import SMRTableTooltip from './SMRTableTooltip';
-import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
+import SMRTableTooltip from './SMRTableTooltip';
 
 interface PensionPremiumTooltipProps {
   inputs: TakeHomeInputs;

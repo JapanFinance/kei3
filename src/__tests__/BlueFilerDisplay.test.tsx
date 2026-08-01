@@ -3,8 +3,9 @@
 
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import TaxesTab from '../components/TakeHomeCalculator/tabs/TaxesTab';
+
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
+import TaxesTab from '../components/TakeHomeCalculator/tabs/TaxesTab';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type {
   TakeHomeResults,

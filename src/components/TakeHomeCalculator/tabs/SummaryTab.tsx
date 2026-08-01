@@ -1,20 +1,21 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
-import { useTheme, alpha } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import type { TakeHomeResults } from '../../../types/tax';
-import { formatJPY } from '../../../utils/formatters';
-import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import WarningIcon from '@mui/icons-material/Warning';
-import { ResultRow } from '../ResultRow';
+import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
+import { useTheme, alpha } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import React from 'react';
+
+import type { TakeHomeResults } from '../../../types/tax';
+import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import { ResultRow } from '../ResultRow';
 
 interface SummaryTabProps {
   results: TakeHomeResults;

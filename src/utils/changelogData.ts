@@ -7,8 +7,8 @@
 // so the changelog text and parser bundle into the idle-loaded changelog chunk
 // rather than a chunk fetched before the calculator can render.
 
-import { getLastViewedDate, hasNewUpdates, parseChangelog } from './changelogUtils';
 import changelogContent from '../../CHANGELOG.md?raw';
+import { getLastViewedDate, hasNewUpdates, parseChangelog } from './changelogUtils';
 
 export { changelogContent };
 

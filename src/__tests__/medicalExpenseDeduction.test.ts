@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
+
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   calculateAdditionalDeductions,
   calculateMedicalExpenseDeduction,
 } from '../utils/additionalDeductions';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 describe('calculateMedicalExpenseDeduction', () => {
   it('subtracts the ¥100,000 floor when income is high', () => {

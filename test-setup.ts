@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import '@testing-library/jest-dom';
-
 // Note: useMediaQuery mock might not be needed since jsdom
 // naturally returns false for media queries, but keeping it
 // for explicit behavior and future-proofing

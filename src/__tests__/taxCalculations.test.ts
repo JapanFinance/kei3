@@ -2,6 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
+
+import type { Dependent } from '../types/dependents';
+import {
+  DEFAULT_PROVIDER,
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  DEPENDENT_COVERAGE_ID,
+} from '../types/healthInsurance';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   calculateTaxes,
   calculateNetEmploymentIncome,
@@ -10,14 +19,6 @@ import {
   calculateNationalIncomeTax,
   calculateTotalNetIncome,
 } from '../utils/taxCalculations';
-import {
-  DEFAULT_PROVIDER,
-  NATIONAL_HEALTH_INSURANCE_ID,
-  CUSTOM_PROVIDER_ID,
-  DEPENDENT_COVERAGE_ID,
-} from '../types/healthInsurance';
-import type { Dependent } from '../types/dependents';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 describe('calculateNetEmploymentIncome', () => {
   describe('2026 tiers (R8)', () => {
@@ -124,7 +125,7 @@ describe('calculateNetEmploymentIncome', () => {
       ageCategory: '19to22',
       isCohabiting: false,
       disability: 'none',
-      income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
 
     it('subtracts the 所得金額調整控除 when a qualifying dependent is passed and salary exceeds ¥8.5M', () => {
@@ -1255,7 +1256,7 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
           id: 'c1',
           relationship: 'child' as const,
           ageCategory: '19to22' as const,
-          income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           disability: 'none' as const,
           isCohabiting: true,
         },
@@ -1559,15 +1560,15 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     ageCategory: '19to22',
     isCohabiting: false,
     disability: 'none',
-    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   };
   const adultChild: Dependent = {
     id: 'c2',
     relationship: 'child',
-    ageCategory: '23to69',
+    ageCategory: '23to64',
     isCohabiting: false,
     disability: 'none',
-    income: { grossEmploymentIncome: 0, otherNetIncome: 0 },
+    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   };
 
   const baseInputs = (dependents: Dependent[]) => ({

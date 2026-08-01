@@ -1,14 +1,15 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
+import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import VerticalAlignTopIcon from '@mui/icons-material/VerticalAlignTop';
-import { DetailedTooltip } from './Tooltips';
+import React from 'react';
+
 import type { CapStatus } from '../../utils/capDetection';
 import { formatJPY } from '../../utils/formatters';
 import { ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP } from '../../utils/healthInsuranceCalculator';
+import { DetailedTooltip } from './Tooltips';
 
 interface CapIndicatorProps {
   capStatus: CapStatus;

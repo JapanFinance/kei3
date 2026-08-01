@@ -1,13 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import type { TakeHomeInputs } from '../../../types/tax';
-import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
+import React from 'react';
+
 import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
+import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
+import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 

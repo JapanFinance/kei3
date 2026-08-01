@@ -1,9 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
+
 import AdjustmentCreditTooltip from '../components/TakeHomeCalculator/tabs/AdjustmentCreditTooltip';
 import { formatJPY } from '../utils/formatters';
 

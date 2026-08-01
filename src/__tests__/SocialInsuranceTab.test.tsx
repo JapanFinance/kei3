@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { render, screen } from '@testing-library/react';
+import { vi, describe, it, expect, beforeAll } from 'vitest';
+
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
-import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 // Mock DetailedTooltip to render children directly for easier testing
 vi.mock('../components/ui/Tooltips', async () => {

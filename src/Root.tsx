@@ -1,14 +1,16 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { Suspense, lazy } from 'react';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
+import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider } from '@mui/material/styles';
 import { keyframes } from '@mui/material/styles';
-import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
+import { Suspense, lazy } from 'react';
+
 import ChangelogButton from './components/ChangelogButton';
+import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { theme } from './theme';
+
 import './index.css';
 
 // Defer loading of the main App component

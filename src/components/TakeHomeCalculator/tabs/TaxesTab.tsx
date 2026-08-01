@@ -1,34 +1,35 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import React, { useState } from 'react';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import Collapse from '@mui/material/Collapse';
-import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import { useTheme } from '@mui/material/styles';
+import Switch from '@mui/material/Switch';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import React, { useState } from 'react';
+
+import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
 import type { DependentDeductionResults } from '../../../types/dependents';
+import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import WarningIcon from '@mui/icons-material/Warning';
-import { DetailedTooltip } from '../../ui/Tooltips';
-import SourceLinks from '../../ui/SourceLinks';
-import ReferenceTable from '../../ui/ReferenceTable';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
+import ReferenceTable from '../../ui/ReferenceTable';
+import SourceLinks from '../../ui/SourceLinks';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
-import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
-import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
+import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import {
   buildNationalBasicDeductionRows,
   getNationalBasicDeductionHighlightIndex,
