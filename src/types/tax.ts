@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { AgeRange } from './ageRange';
-import type { Dependent, DependentDeductionResults } from './dependents';
+import type { Dependent, DependentDeductionResults, DisabilityLevel } from './dependents';
 import type { HealthInsuranceProviderId } from './healthInsurance';
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
@@ -166,6 +166,43 @@ export interface MedicalExpensesInput {
 }
 
 /**
+ * Whether the taxpayer is a 寡婦 or an ひとり親, and for an ひとり親 whether they are the mother or
+ * the father. One field carries both because the statute makes them mutually exclusive: a 寡婦 is
+ * defined as a woman who does not qualify as an ひとり親 (所法2①三十).
+ *
+ * The mother/father split changes no deduction amount — both are ¥350,000 income tax / ¥300,000
+ * residence tax. It selects the 人的控除額の差 that the residence-tax 調整控除 uses: 地方税法
+ * 第314条の6第1号イ(3) gives ¥10,000 and (4) gives ¥50,000, and 地方税法施行令 assigns (3) to
+ * ひとり親のうち父である者 and (4) to ひとり親のうち母である者.
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm — 寡婦控除
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm — ひとり親控除
+ */
+export type WidowOrSingleParentStatus =
+  | 'none'
+  | 'singleParentMother'
+  | 'singleParentFather'
+  | 'widow';
+
+/**
+ * The taxpayer's own circumstances that carry a 人的控除 of their own, as entered in the
+ * Additional Deductions & Credits modal. Every one of them is self-asserted: the calculator can
+ * check the 合計所得金額 ceilings it knows, but not 障害者手帳 status, marital history, or whether
+ * a 生計を一にする子 exists, so the modal states those requirements and applies what is selected.
+ */
+export interface PersonalCircumstancesInput {
+  /**
+   * 障害者控除 for the taxpayer themselves. There is no 同居特別障害者 option here: that higher
+   * amount exists only for a 同一生計配偶者 or 扶養親族 living with the taxpayer, never for the
+   * taxpayer (所法79).
+   * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm
+   */
+  disability: DisabilityLevel;
+  /** 寡婦控除 / ひとり親控除 — see {@link WidowOrSingleParentStatus}. */
+  widowOrSingleParent: WidowOrSingleParentStatus;
+}
+
+/**
  * Zero-value defaults for the additional-deduction inputs. The modal always shows these fields
  * (defaulting to 0), so "nothing entered" is all-zeros rather than absent — which is why these
  * inputs are required, not optional. Use these to seed form state, and spread
@@ -181,10 +218,15 @@ export const EMPTY_EARTHQUAKE_INSURANCE: EarthquakeInsuranceInput = {
   longTermOld: 0,
 };
 export const EMPTY_MEDICAL_EXPENSES: MedicalExpensesInput = { paid: 0, reimbursed: 0 };
+export const EMPTY_PERSONAL_CIRCUMSTANCES: PersonalCircumstancesInput = {
+  disability: 'none',
+  widowOrSingleParent: 'none',
+};
 export const EMPTY_ADDITIONAL_DEDUCTION_INPUTS = {
   lifeInsurance: EMPTY_LIFE_INSURANCE,
   earthquakeInsurance: EMPTY_EARTHQUAKE_INSURANCE,
   medicalExpenses: EMPTY_MEDICAL_EXPENSES,
+  personalCircumstances: EMPTY_PERSONAL_CIRCUMSTANCES,
 };
 
 /** One line in the additional-deductions breakdown, with its per-tax amounts (yen). */
@@ -209,6 +251,38 @@ export interface AdditionalDeductionsResult {
   residence: number;
   /** Per-item breakdown; only items contributing a positive amount are included. */
   items: AdditionalDeductionItem[];
+}
+
+/** One line in the personal-deduction breakdown, with its per-tax amounts (yen). */
+export interface PersonalDeductionItem {
+  /** 障害者控除 covers both 一般の障害者 and 特別障害者; the amounts distinguish them. */
+  key: 'disability' | 'widow' | 'singleParent';
+  /** Amount deductible against national income tax. */
+  national: number;
+  /** Amount deductible against residence tax. */
+  residence: number;
+  /** This item's 人的控除額の差 — see {@link PersonalDeductionsResult.statutoryDifference}. */
+  statutoryDifference: number;
+}
+
+/**
+ * The 人的控除 arising from the taxpayer's own circumstances (障害者控除・寡婦控除・ひとり親控除),
+ * shaped like {@link AdditionalDeductionsResult} with one extra member. Unlike the 物的控除 in that
+ * result, these are 人的控除 and so add to the residence-tax 調整控除's 人的控除額の差.
+ */
+export interface PersonalDeductionsResult {
+  /** Total deductible against national income tax (yen). */
+  national: number;
+  /** Total deductible against residence tax (yen). */
+  residence: number;
+  /**
+   * Combined 人的控除額の差 these deductions contribute to the residence-tax 調整控除
+   * (地方税法第314条の6第1号イ). A statutory figure, not the arithmetic difference between the
+   * national and residence amounts — the two disagree for an ひとり親（父）.
+   */
+  statutoryDifference: number;
+  /** Per-item breakdown; only items contributing a positive amount are included. */
+  items: PersonalDeductionItem[];
 }
 
 /**
@@ -254,6 +328,7 @@ export interface TakeHomeFormState {
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
+  personalCircumstances: PersonalCircumstancesInput;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -280,6 +355,7 @@ export interface TakeHomeInputs {
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
+  personalCircumstances: PersonalCircumstancesInput;
 }
 
 export interface CustomEmployeesHealthInsuranceRates {
@@ -354,6 +430,11 @@ export interface TakeHomeResults {
   homeLoanTaxCredit?: HomeLoanTaxCreditResult;
   additionalDeductions: AdditionalDeductionsResult;
   /**
+   * 障害者控除・寡婦控除・ひとり親控除 for the taxpayer themselves. Absent when none applies, so
+   * the display rows can key off its presence (as they do for {@link dependentDeductions}).
+   */
+  personalDeductions?: PersonalDeductionsResult;
+  /**
    * Residence tax income-based portion (所得割) BEFORE the home loan credit spillover, for
    * display. Not simply (post-credit 所得割 + appliedToResidenceTax): the city and prefectural
    * 所得割 are each floored to ¥100 after subtracting their share of the spillover, so the true
@@ -413,11 +494,17 @@ export interface ResidenceTaxDetails {
   forestEnvironmentTax: number; // 森林環境税
   totalResidenceTax: number;
   /**
-   * Set when the result is non-taxable because of the 未成年者 exemption, so the display can
-   * explain the zero rows without re-deriving the rule from the age range.
+   * Set when the result is non-taxable under 地方税法第295条第1項第2号, naming the status that
+   * applied, so the display can explain the zero rows without re-deriving the rule.
    */
-  nonTaxableMinor?: boolean;
+  nonTaxableStatus?: NonTaxableResidenceTaxStatus;
 }
+
+/**
+ * The statuses 地方税法第295条第1項第2号 exempts from residence tax entirely when 合計所得金額 is
+ * within the statutory limit: 障害者・未成年者・寡婦・ひとり親.
+ */
+export type NonTaxableResidenceTaxStatus = 'minor' | 'disability' | 'widow' | 'singleParent';
 
 export interface FurusatoNozeiDetails {
   limit: number;

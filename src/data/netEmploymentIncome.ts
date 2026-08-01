@@ -9,9 +9,10 @@
  *    {@link calculateNetEmploymentIncomeForPeriod}. Each period defines the flat-floor region, any
  *    fixed transition values, and the standard percentage-formula tiers for that income year.
  *  - 所得金額調整控除（子ども・特別障害者等）: {@link calculateIncomeAdjustmentDeductionAmount} computes the amount
- *    purely from 給与等の収入金額; whether the taxpayer qualifies (a dependent under 23, or a special-disability
- *    spouse/dependent) is checked separately by
- *    {@link import("../utils/dependentDeductions").hasIncomeAdjustmentDeductionDependent}, and the two are
+ *    purely from 給与等の収入金額; whether the taxpayer qualifies is checked separately — the taxpayer's own
+ *    特別障害者 status in `taxCalculations.ts`, and the dependent-side conditions (a dependent under 23, or a
+ *    special-disability spouse/dependent) by
+ *    {@link import("../utils/dependentDeductions").hasIncomeAdjustmentDeductionDependent} — and the two are
  *    combined in `taxCalculations.ts`.
  *
  * Sources:
@@ -216,9 +217,9 @@ const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
  *
  *   amount = ⌈{min(給与等の収入金額, ¥10,000,000) − ¥8,500,000} × 10%⌉   (max ¥150,000)
  *
- * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer having a
- * qualifying dependent or special-disability status) is checked separately by
- * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts`, with the two combined in
+ * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer being a
+ * 特別障害者, or having a qualifying dependent) is checked separately — see
+ * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts` — with the parts combined in
  * `taxCalculations.ts`.
  *
  * Why it affects residence tax too: this is an adjustment to 給与所得 itself, NOT an 所得控除. The

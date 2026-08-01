@@ -48,6 +48,7 @@ import {
 } from './healthInsuranceCalculator';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { calculatePensionBreakdown } from './pensionCalculator';
+import { calculatePersonalDeductions } from './personalDeductions';
 import {
   calculateFurusatoNozeiDetails,
   calculateResidenceTax,
@@ -75,24 +76,29 @@ export const roundSocialInsurancePremium = (
 };
 
 /**
- * Composes the 所得金額調整控除（子ども・特別障害者等）: the salary-based amount
- * ({@link calculateIncomeAdjustmentDeductionAmount}), gated on the taxpayer having a qualifying
- * dependent ({@link hasIncomeAdjustmentDeductionDependent}). Returns 0 when not eligible.
+ * Composes the 所得金額調整控除（子ども・特別障害者等を有する者等）: the salary-based amount
+ * ({@link calculateIncomeAdjustmentDeductionAmount}), gated on eligibility. The statute lists three
+ * qualifying conditions; イ is the taxpayer being a 特別障害者 themselves, and ロ and ハ are about
+ * their dependents ({@link hasIncomeAdjustmentDeductionDependent}). Any one of them suffices.
+ * Returns 0 when none applies.
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
  */
 const calculateIncomeAdjustmentDeduction = (
   grossEmploymentIncome: number,
   dependents: Dependent[],
   year: number,
+  taxpayerIsSpecialDisability: boolean,
 ): number =>
-  hasIncomeAdjustmentDeductionDependent(dependents, year)
+  taxpayerIsSpecialDisability || hasIncomeAdjustmentDeductionDependent(dependents, year)
     ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
     : 0;
 
 /**
  * Calculates net employment income (給与所得の金額) for the given income year: gross minus the
- * employment income deduction (給与所得控除) and — when a qualifying dependent makes the taxpayer
- * eligible — the income amount adjustment deduction (所得金額調整控除). Pass the taxpayer's
- * `dependents` to apply the adjustment; omit them (the default) where it can't apply, e.g. when
+ * employment income deduction (給与所得控除) and — when the taxpayer is eligible — the income
+ * amount adjustment deduction (所得金額調整控除). Pass the taxpayer's `dependents` and disability
+ * status to apply the adjustment; omit them (the defaults) where it can't apply, e.g. when
  * computing a dependent's own net income.
  *
  * Delegates to the year-indexed period data in `src/data/netEmploymentIncome.ts`.
@@ -100,16 +106,25 @@ const calculateIncomeAdjustmentDeduction = (
  * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
  * @param year                   Income year; defaults to the current calendar year
  * @param dependents             Taxpayer's dependents, for the 所得金額調整控除; defaults to none
+ * @param taxpayerIsSpecialDisability  Whether the taxpayer is a 特別障害者, which qualifies them
+ *                               for the 所得金額調整控除 on its own; defaults to false
  */
 export const calculateNetEmploymentIncome = (
   grossEmploymentIncome: number,
   year: number,
   dependents: Dependent[] = [],
+  taxpayerIsSpecialDisability: boolean = false,
 ): number =>
   calculateNetEmploymentIncomeForPeriod(
     grossEmploymentIncome,
     getEmploymentIncomeDeductionPeriod(year),
-  ) - calculateIncomeAdjustmentDeduction(grossEmploymentIncome, dependents, year);
+  ) -
+  calculateIncomeAdjustmentDeduction(
+    grossEmploymentIncome,
+    dependents,
+    year,
+    taxpayerIsSpecialDisability,
+  );
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -396,6 +411,7 @@ const calculateNetIncomeComponents = (
   year: number,
   dependents: Dependent[],
   taxpayerIs65OrOlder: boolean,
+  taxpayerIsSpecialDisability: boolean,
 ): NetIncomeComponents => {
   const {
     salaryIncome,
@@ -420,11 +436,13 @@ const calculateNetIncomeComponents = (
     grossEmploymentIncome,
     year,
     dependents,
+    taxpayerIsSpecialDisability,
   );
   const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(
     grossEmploymentIncome,
     dependents,
     year,
+    taxpayerIsSpecialDisability,
   );
 
   // The band of the 公的年金等控除 keys off the net income other than pension income. Statutorily
@@ -476,18 +494,22 @@ const calculateNetIncomeComponents = (
  * @param taxpayerIs65OrOlder Whether the taxpayer is 65 or older by the end of the income year
  *                      ({@link isAge65OrOlder}), selecting the 公的年金等控除 minimums. Defaults to
  *                      false; irrelevant without a public pension stream.
+ * @param taxpayerIsSpecialDisability Whether the taxpayer is a 特別障害者, which qualifies them for
+ *                      the 所得金額調整控除 without a qualifying dependent. Defaults to false.
  */
 export const calculateTotalNetIncome = (
   incomeStreams: IncomeStream[],
   year: number,
   dependents: Dependent[] = [],
   taxpayerIs65OrOlder: boolean = false,
+  taxpayerIsSpecialDisability: boolean = false,
 ): number =>
   calculateNetIncomeComponents(
     calculateIncomeBreakdown(incomeStreams),
     year,
     dependents,
     taxpayerIs65OrOlder,
+    taxpayerIsSpecialDisability,
   ).totalNetIncome;
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
@@ -535,6 +557,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeYear,
     inputs.dependents,
     isAge65OrOlder(inputs.ageRange),
+    inputs.personalCircumstances.disability === 'special',
   );
 
   let healthInsurance = 0;
@@ -678,6 +701,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // 人的控除, so none affect the residence-tax 調整控除. The medical floor needs 合計所得金額.
   const additionalDeductions = calculateAdditionalDeductions(inputs, netIncome);
 
+  // 障害者控除・寡婦控除・ひとり親控除 for the taxpayer themselves. These are 人的控除, so they also
+  // feed the residence-tax 調整控除 via their 人的控除額の差.
+  const personalDeductions = calculatePersonalDeductions(inputs.personalCircumstances, netIncome);
+
   const dependentDeductions = calculateDependentDeductions(
     inputs.dependents,
     incomeYear,
@@ -697,6 +724,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     socialInsuranceDeduction -
     idecoDeduction -
     additionalDeductions.national -
+    personalDeductions.national -
     nationalIncomeTaxBasicDeduction -
     dependentDeductions.nationalTax.total;
   const taxableIncomeForNationalIncomeTax = Math.max(
@@ -717,6 +745,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           socialInsuranceDeduction -
           idecoDeduction -
           additionalDeductions.residence -
+          personalDeductions.residence -
           residenceTaxBasicDeduction -
           dependentDeductions.residenceTax.total,
       ) / 1000,
@@ -733,6 +762,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     dependentDeductions,
     incomeYear,
     inputs.ageRange,
+    0,
+    inputs.personalCircumstances,
   );
 
   const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
@@ -764,6 +795,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           incomeYear,
           inputs.ageRange,
           homeLoanTaxCreditResult.appliedToResidenceTax,
+          inputs.personalCircumstances,
         )
       : preCreditResidenceTax;
 
@@ -817,6 +849,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     furusatoNozei: furusatoNozeiLimit,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
     additionalDeductions,
+    ...(personalDeductions.items.length > 0 && { personalDeductions }),
     // Residence income-based portion (所得割) BEFORE the home loan spillover, so the
     // Taxes tab can show the spillover as its own line and have the rows sum.
     ...(homeLoanTaxCreditResult &&

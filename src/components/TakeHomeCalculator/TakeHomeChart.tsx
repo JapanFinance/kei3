@@ -43,6 +43,7 @@ import type {
   LifeInsuranceInput,
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
+  PersonalCircumstancesInput,
   HomeLoanTaxCreditInput,
 } from '../../types/tax';
 import { detectCaps } from '../../utils/capDetection';
@@ -159,6 +160,7 @@ interface TakeHomeChartProps {
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
+  personalCircumstances: PersonalCircumstancesInput;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
 }
 
@@ -240,6 +242,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   lifeInsurance,
   earthquakeInsurance,
   medicalExpenses,
+  personalCircumstances,
   homeLoanTaxCredit,
 }) => {
   useLoadMilestone('chart-rendered');
@@ -341,6 +344,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         lifeInsurance,
         earthquakeInsurance,
         medicalExpenses,
+        personalCircumstances,
         homeLoanTaxCredit,
       }),
     [
@@ -361,6 +365,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       lifeInsurance,
       earthquakeInsurance,
       medicalExpenses,
+      personalCircumstances,
       homeLoanTaxCredit,
     ],
   );
@@ -418,6 +423,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   lifeInsurance,
                   earthquakeInsurance,
                   medicalExpenses,
+                  personalCircumstances,
                   homeLoanTaxCredit,
                 };
 
@@ -460,6 +466,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     lifeInsurance,
     earthquakeInsurance,
     medicalExpenses,
+    personalCircumstances,
     homeLoanTaxCredit,
     incomeStreams,
     distribution,
