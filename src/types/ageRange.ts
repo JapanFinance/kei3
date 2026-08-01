@@ -43,13 +43,3 @@ export function isSubjectToLongTermCarePremium(ageRange: AgeRange): boolean {
 export function isSubjectToNationalPension(ageRange: AgeRange): boolean {
   return ageRange === 'age20to39' || ageRange === 'age40to59';
 }
-
-/**
- * Whether the taxpayer is a minor (未成年者) for residence-tax purposes. Minors whose
- * 合計所得金額 is at or below the statutory limit are exempt from residence tax entirely;
- * the income test lives with the residence-tax calculation.
- * Source: https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
- */
-export function isResidenceTaxMinor(ageRange: AgeRange): boolean {
-  return ageRange === 'under18';
-}

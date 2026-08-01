@@ -1792,6 +1792,7 @@ describe('calculateTaxes age-range rules', () => {
       const result = calculateTaxes(minorInputs('under18', 1_350_000));
       expect(result.residenceTax.totalResidenceTax).toBe(0);
       expect(result.residenceTax.perCapitaTax).toBe(0);
+      expect(result.residenceTax.nonTaxableMinor).toBe(true);
       expect(result.furusatoNozei.limit).toBe(0);
     });
 

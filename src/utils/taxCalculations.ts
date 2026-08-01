@@ -12,7 +12,6 @@ import {
 } from '../data/netEmploymentIncome';
 import {
   DEFAULT_AGE_RANGE,
-  isResidenceTaxMinor,
   isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../types/ageRange';
@@ -495,7 +494,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     }
 
     // Calculate pension based on health insurance type
-    // People on National Health Insurance are in National Pension system
+    // People on National Health Insurance are in the National Pension system (contributions
+    // due only for ages 20-59)
     // People on employee health insurance are in Employee Pension system
     // People covered as dependents do not pay pension premiums
     const isInEmployeePensionSystem =
@@ -597,14 +597,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // then spilled over to residence tax up to the cap.
   // Calling residence tax with appliedToResidenceTax = 0 first gives us the
   // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
-  const nonTaxableMinor = isResidenceTaxMinor(inputs.ageRange);
   const preCreditResidenceTax = calculateResidenceTax(
     netIncome,
     socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
     dependentDeductions,
     incomeYear,
     0,
-    nonTaxableMinor,
+    inputs.ageRange,
   );
 
   const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
@@ -635,7 +634,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           dependentDeductions,
           incomeYear,
           homeLoanTaxCreditResult.appliedToResidenceTax,
-          nonTaxableMinor,
+          inputs.ageRange,
         )
       : preCreditResidenceTax;
 

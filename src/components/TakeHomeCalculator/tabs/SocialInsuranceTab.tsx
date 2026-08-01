@@ -13,11 +13,7 @@ import {
   isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../../../types/ageRange';
-import {
-  DEPENDENT_COVERAGE_ID,
-  NATIONAL_HEALTH_INSURANCE_ID,
-  CUSTOM_PROVIDER_ID,
-} from '../../../types/healthInsurance';
+import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
 import { detectCaps } from '../../../utils/capDetection';
@@ -94,12 +90,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Detect if any caps are applied
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
 
-  // Replaces the pension rows when the age range exempts contributions entirely. Dependent
-  // coverage pays nothing for a different reason and keeps its existing display.
+  // Replaces the pension rows when the age range exempts contributions entirely. Only the
+  // NHI path has an age exemption; dependent coverage (a non-NHI provider) pays nothing for
+  // a different reason and keeps its existing display.
   const pensionAgeNote =
-    inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID &&
-    isNationalHealthInsurance &&
-    !isSubjectToNationalPension(inputs.ageRange)
+    isNationalHealthInsurance && !isSubjectToNationalPension(inputs.ageRange)
       ? 'No contributions: National Pension (国民年金) enrollment covers ages 20-59.'
       : undefined;
 

@@ -8,26 +8,24 @@ import {
   AGE_RANGE_LABELS,
   DEFAULT_AGE_RANGE,
   type AgeRange,
-  isResidenceTaxMinor,
   isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../types/ageRange';
 
-// One row per age range: [ltc 40-64, national pension 20-59, minor <18]
-const EXPECTED: Record<AgeRange, [boolean, boolean, boolean]> = {
-  under18: [false, false, true],
-  age18to19: [false, false, false],
-  age20to39: [false, true, false],
-  age40to59: [true, true, false],
-  age60to64: [true, false, false],
+// One row per age range: [ltc 40-64, national pension 20-59]
+const EXPECTED: Record<AgeRange, [boolean, boolean]> = {
+  under18: [false, false],
+  age18to19: [false, false],
+  age20to39: [false, true],
+  age40to59: [true, true],
+  age60to64: [true, false],
 };
 
 describe('AgeRange predicates', () => {
   it.each(AGE_RANGES)('matches the expected rule set at %s', ageRange => {
-    const [ltc, nationalPension, minor] = EXPECTED[ageRange];
+    const [ltc, nationalPension] = EXPECTED[ageRange];
     expect(isSubjectToLongTermCarePremium(ageRange)).toBe(ltc);
     expect(isSubjectToNationalPension(ageRange)).toBe(nationalPension);
-    expect(isResidenceTaxMinor(ageRange)).toBe(minor);
   });
 
   it('defaults to 20-39 and labels every range', () => {
