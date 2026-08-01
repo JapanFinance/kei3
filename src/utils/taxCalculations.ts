@@ -602,7 +602,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
     dependentDeductions,
     incomeYear,
-    0,
     inputs.ageRange,
   );
 
@@ -633,8 +632,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
           dependentDeductions,
           incomeYear,
-          homeLoanTaxCreditResult.appliedToResidenceTax,
           inputs.ageRange,
+          homeLoanTaxCreditResult.appliedToResidenceTax,
         )
       : preCreditResidenceTax;
 
