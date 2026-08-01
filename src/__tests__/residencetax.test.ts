@@ -444,10 +444,17 @@ describe('calculateResidenceTax - Personal Deduction Difference', () => {
 });
 
 describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
-  it('returns the non-taxable detail at 合計所得金額 1,350,000 for a minor', () => {
+  it('returns the non-taxable detail, marked as the minor exemption, at 合計所得金額 1,350,000', () => {
     expect(
-      calculateResidenceTax(1_350_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 0, true),
-    ).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+      calculateResidenceTax(
+        1_350_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        0,
+        'under18',
+      ),
+    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableMinor: true });
     expect(MINOR_NON_TAXABLE_INCOME_LIMIT).toBe(1_350_000);
   });
 
@@ -458,22 +465,25 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
       0,
-      true,
+      'under18',
     );
     expect(result.totalResidenceTax).toBeGreaterThan(0);
   });
 
-  it('taxes a non-minor normally at the same income', () => {
-    const result = calculateResidenceTax(
-      1_350_000,
-      0,
-      EMPTY_DEPENDENT_DEDUCTIONS,
-      TEST_INCOME_YEAR,
-      0,
-      false,
-    );
-    expect(result.totalResidenceTax).toBeGreaterThan(0);
-  });
+  it.each(['age18to19', undefined] as const)(
+    'taxes a non-minor (%s) normally at the same income',
+    ageRange => {
+      const result = calculateResidenceTax(
+        1_350_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        0,
+        ageRange,
+      );
+      expect(result.totalResidenceTax).toBeGreaterThan(0);
+    },
+  );
 
   it('still applies the general non-taxable limits to a minor above the minor limit', () => {
     // A minor above 1.35M with enough dependents can still be non-taxable under the
@@ -497,7 +507,8 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
       },
     ];
     const deductions = calculateDependentDeductions(dependents, TEST_INCOME_YEAR, 1_355_000);
-    const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 0, true);
+    const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 0, 'under18');
+    // The plain detail (no nonTaxableMinor flag) proves the general path produced it.
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 });

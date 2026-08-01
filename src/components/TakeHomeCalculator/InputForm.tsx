@@ -490,8 +490,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.5 } }}>
                   <li>
                     <Typography variant="body2">
-                      Minors (未成年者) — under 18 as of the January 1 following the income year —
-                      with 合計所得金額 of ¥1,350,000 or less are exempt from residence tax.
+                      Minors (未成年者) with 合計所得金額 of ¥1,350,000 or less are exempt from
+                      residence tax (minor status is judged at the January 1 following the income
+                      year).
                     </Typography>
                   </li>
                   <li>

@@ -388,6 +388,11 @@ export interface ResidenceTaxDetails {
   perCapitaTax: number;
   forestEnvironmentTax: number; // 森林環境税
   totalResidenceTax: number;
+  /**
+   * Set when the result is non-taxable because of the 未成年者 exemption, so the display can
+   * explain the zero rows without re-deriving the rule from the age range.
+   */
+  nonTaxableMinor?: boolean;
 }
 
 export interface FurusatoNozeiDetails {
