@@ -18,7 +18,6 @@ import { useState, useEffect, type ReactNode } from 'react';
 import changelogContent from '../../CHANGELOG.md?raw';
 import {
   parseChangelog,
-  setLastViewedDate,
   formatChangelogDate,
   type ChangelogEntry,
   type ParsedChangelog,
@@ -27,6 +26,8 @@ import {
 interface ChangelogModalProps {
   open: boolean;
   onClose: () => void;
+  /** Called while open, to record the newest entry as read. */
+  onViewed: () => void;
 }
 
 const SectionIcon = ({ type }: { type: string }) => {
@@ -185,7 +186,7 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
   );
 };
 
-export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
+export default function ChangelogModal({ open, onClose, onViewed }: ChangelogModalProps) {
   // Parse changelog once using lazy initialization - it's static content
   const [{ changelog, error }] = useState<{
     changelog: ParsedChangelog | null;
@@ -201,12 +202,13 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
     }
   });
 
+  // Reporting from here rather than from the click keeps "read" tied to the
+  // entries having been rendered, and still covers #changelog deep links.
   useEffect(() => {
-    if (open && changelog?.latestDate) {
-      // Mark the latest date as viewed when the modal is opened
-      setLastViewedDate(changelog.latestDate);
+    if (open) {
+      onViewed();
     }
-  }, [open, changelog?.latestDate]);
+  }, [open, onViewed]);
 
   const handleClose = () => {
     onClose();
