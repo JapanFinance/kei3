@@ -11,6 +11,12 @@ export interface UseChangelogModalReturn {
   isOpen: boolean;
   openModal: () => void;
   closeModal: () => void;
+  /**
+   * Records the newest entry as read. The modal calls this once it is on
+   * screen, so a visitor who opens the changelog and leaves before its module
+   * arrives still sees the dot next time.
+   */
+  markViewed: () => void;
   /** True when the changelog has entries newer than the last viewed date. */
   hasNewFeatures: boolean;
 }
@@ -29,15 +35,12 @@ export function useChangelogModal(): UseChangelogModalReturn {
     () => __LATEST_CHANGELOG_DATE__ !== '' && getLastViewedDate() !== __LATEST_CHANGELOG_DATE__,
   );
 
-  // Marking the newest entry as read here rather than in the modal covers
-  // every way it opens, including a #changelog deep link, and does not wait
-  // for the modal's chunk to arrive.
-  useEffect(() => {
-    if (isOpen && __LATEST_CHANGELOG_DATE__ !== '') {
+  const markViewed = useCallback(() => {
+    if (__LATEST_CHANGELOG_DATE__ !== '') {
       setLastViewedDate(__LATEST_CHANGELOG_DATE__);
-      setHasNewFeatures(false);
     }
-  }, [isOpen]);
+    setHasNewFeatures(false);
+  }, []);
 
   // Check if the page loads with the changelog hash
   useEffect(() => {
@@ -61,6 +64,10 @@ export function useChangelogModal(): UseChangelogModalReturn {
 
   const openModal = useCallback(() => {
     setIsOpen(true);
+    // Hide the dot on the click itself so the button responds immediately.
+    // Only markViewed writes it down, so this is forgotten on a reload if the
+    // changelog never actually appeared.
+    setHasNewFeatures(false);
     // Update URL hash when opening modal
     if (window.location.hash !== CHANGELOG_HASH) {
       window.history.pushState(null, '', CHANGELOG_HASH);
@@ -80,6 +87,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
     isOpen,
     openModal,
     closeModal,
+    markViewed,
     hasNewFeatures,
   };
 }

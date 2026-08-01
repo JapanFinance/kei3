@@ -13,7 +13,7 @@ import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Typography from '@mui/material/Typography';
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 
 import changelogContent from '../../CHANGELOG.md?raw';
 import {
@@ -26,6 +26,8 @@ import {
 interface ChangelogModalProps {
   open: boolean;
   onClose: () => void;
+  /** Called while open, to record the newest entry as read. */
+  onViewed: () => void;
 }
 
 const SectionIcon = ({ type }: { type: string }) => {
@@ -184,7 +186,7 @@ const ChangelogEntryComponent = ({ entry }: { entry: ChangelogEntry }) => {
   );
 };
 
-export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
+export default function ChangelogModal({ open, onClose, onViewed }: ChangelogModalProps) {
   // Parse changelog once using lazy initialization - it's static content
   const [{ changelog, error }] = useState<{
     changelog: ParsedChangelog | null;
@@ -199,6 +201,14 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
       };
     }
   });
+
+  // Reporting from here rather than from the click keeps "read" tied to the
+  // entries having been rendered, and still covers #changelog deep links.
+  useEffect(() => {
+    if (open) {
+      onViewed();
+    }
+  }, [open, onViewed]);
 
   const handleClose = () => {
     onClose();

@@ -47,7 +47,7 @@ describe('useChangelogModal', () => {
     expect(result.current.hasNewFeatures).toBe(true);
   });
 
-  it('clears the badge when the modal is opened', () => {
+  it('clears the badge when the modal is opened, without recording it as read', () => {
     const { result } = renderHook(() => useChangelogModal());
     expect(result.current.hasNewFeatures).toBe(true);
 
@@ -57,5 +57,30 @@ describe('useChangelogModal', () => {
 
     expect(result.current.isOpen).toBe(true);
     expect(result.current.hasNewFeatures).toBe(false);
+    // Opening alone must not persist: the changelog module may never arrive.
+    expect(localStorage.getItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE)).toBeNull();
+  });
+
+  it('records the newest entry as read only once the modal reports it viewed', () => {
+    const { result } = renderHook(() => useChangelogModal());
+
+    act(() => {
+      result.current.markViewed();
+    });
+
+    expect(localStorage.getItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE)).toBe(LATEST);
+    expect(result.current.hasNewFeatures).toBe(false);
+  });
+
+  it('shows the badge again on the next visit when the modal never appeared', () => {
+    const first = renderHook(() => useChangelogModal());
+    act(() => {
+      first.result.current.openModal();
+    });
+    first.unmount();
+
+    // A fresh mount reads the stored date, which opening alone never wrote.
+    const second = renderHook(() => useChangelogModal());
+    expect(second.result.current.hasNewFeatures).toBe(true);
   });
 });
