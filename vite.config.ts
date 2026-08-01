@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { cloudflare } from '@cloudflare/vite-plugin';
@@ -26,6 +26,20 @@ const stripHtmlComments = (): PluginOption => ({
       html = html.replace(/[ \t]*<!--[\s\S]*?-->\n?/g, '');
     } while (html !== previous);
     return html;
+  },
+});
+
+// chunkImportMap emits the import map both inlined into index.html (which is
+// what browsers use) and as an importmap.json bundle asset intended for
+// backends that render their own HTML. Nothing here consumes the file, so it
+// is removed rather than deployed as a stray servable asset. Removal has to
+// wait until writeBundle: vite:build-import-analysis reads the asset's mapping
+// during generateBundle, so deleting it from the bundle there fails the build.
+const dropImportMapAsset = (): PluginOption => ({
+  name: 'drop-import-map-asset',
+  apply: 'build',
+  writeBundle(outputOptions) {
+    rmSync(resolve(outputOptions.dir ?? 'dist', 'importmap.json'), { force: true });
   },
 });
 
@@ -265,6 +279,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     cloudflare(),
     stripHtmlComments(),
+    dropImportMapAsset(),
     securityHeaders({ cspReportOnly: true, reportEndpoint: CSP_REPORT_ENDPOINT }),
     react(),
     Sitemap({
