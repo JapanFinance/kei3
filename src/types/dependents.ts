@@ -14,7 +14,18 @@ export interface DependentIncome {
   /** Gross employment income (給与収入) - we'll calculate the net using employment income deduction */
   grossEmploymentIncome: number;
 
-  /** Other net income (その他の所得) - business income, pension, capital gains, etc. */
+  /**
+   * Gross public pension income (公的年金等の収入金額), as shown on the 公的年金等の源泉徴収票 -
+   * we'll calculate the net using the public pension deduction (公的年金等控除), which depends on
+   * whether the recipient is 65 or older. Survivor and disability pensions (遺族年金・障害年金) are
+   * non-taxable and are not included.
+   */
+  grossPublicPensionIncome: number;
+
+  /**
+   * Other net income (その他の所得) - business income, capital gains, etc., excluding employment
+   * and public pension income, which are entered gross in their own fields
+   */
   otherNetIncome: number;
 }
 
@@ -36,20 +47,38 @@ export type DependentRelationship = 'spouse' | 'child' | 'parent' | 'other';
 
 /**
  * Age category for spouse
- * - under70: Under 70 years old
- * - 70plus: 70 years or older (elderly spouse)
+ * - under65: Under 65 years old
+ * - 65to69: Age 65-69
+ * - 70plus: 70 years or older (老人控除対象配偶者, higher spouse deduction)
+ *
+ * The 65 boundary changes a computed amount only through the public pension deduction
+ * (公的年金等控除) — see {@link is65OrOlder}.
  */
-export type SpouseAgeCategory = 'under70' | '70plus';
+export type SpouseAgeCategory = 'under65' | '65to69' | '70plus';
 
 /**
  * Age category for non-spouse dependents
  * - under16: Under 16 years old (not eligible for dependent deduction)
  * - 16to18: Age 16-18 (eligible for standard dependent deduction)
- * - 19to22: Age 19-22 (eligible for special dependent deduction if income ≤48万, or specific relative special deduction if income 48-133万)
- * - 23to69: Age 23-69 (eligible for standard dependent deduction if income ≤48万, or specific relative special deduction age 23 only if income 48-133万)
+ * - 19to22: Age 19-22 (eligible for special dependent deduction if income within the eligibility
+ *   threshold, or specific relative special deduction above it)
+ * - 23to64, 65to69: Age 23-69 (eligible for standard dependent deduction; the 65 boundary changes
+ *   a computed amount only through the public pension deduction — see {@link is65OrOlder})
  * - 70plus: 70 years or older (eligible for elderly dependent deduction)
  */
-export type DependentAgeCategory = 'under16' | '16to18' | '19to22' | '23to69' | '70plus';
+export type DependentAgeCategory = 'under16' | '16to18' | '19to22' | '23to64' | '65to69' | '70plus';
+
+/**
+ * Whether an age category means 65 or older on December 31 of the income year — the boundary at
+ * which the public pension deduction (公的年金等控除) switches to its higher minimum deduction
+ * (租税特別措置法第41条の15の3; the December 31 judgment date is 同条第4項).
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm
+ * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_15_3 — 租税特別措置法第41条の15の3
+ */
+export function is65OrOlder(ageCategory: SpouseAgeCategory | DependentAgeCategory): boolean {
+  return ageCategory === '65to69' || ageCategory === '70plus';
+}
 
 /**
  * Deduction amount for national and residence tax
@@ -167,8 +196,12 @@ export interface SpouseAgeCategoryInfo {
  */
 export const SPOUSE_AGE_CATEGORIES: SpouseAgeCategoryInfo[] = [
   {
-    value: 'under70',
-    label: 'Under 70',
+    value: 'under65',
+    label: 'Under 65',
+  },
+  {
+    value: '65to69',
+    label: '65 - 69',
   },
   {
     value: '70plus',
@@ -201,8 +234,12 @@ export const DEPENDENT_AGE_CATEGORIES: DependentAgeCategoryInfo[] = [
     label: '19 - 22',
   },
   {
-    value: '23to69',
-    label: '23 - 69',
+    value: '23to64',
+    label: '23 - 64',
+  },
+  {
+    value: '65to69',
+    label: '65 - 69',
   },
   {
     value: '70plus',

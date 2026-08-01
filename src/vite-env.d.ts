@@ -3,6 +3,16 @@
 
 /// <reference types="vite/client" />
 
+// This file has top-level imports, so it is a module: globals it declares need
+// the `declare global` wrapper to be visible to the rest of the app.
+declare global {
+  /**
+   * Newest date in CHANGELOG.md (yyyy-mm-dd), inlined by the build; empty when
+   * the changelog has no dated entries. Defined in changelogDate.ts.
+   */
+  const __LATEST_CHANGELOG_DATE__: string;
+}
+
 // Extend Chart.js types to include our custom plugin
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ChartType } from 'chart.js';

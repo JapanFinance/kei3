@@ -421,7 +421,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             {inputs.incomeMode !== 'advanced' && (
               <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 0.5 }}>
                 <Slider
-                  className="income-slider"
                   value={inputs.annualIncome}
                   onChange={handleSliderChange}
                   aria-label="Annual income"

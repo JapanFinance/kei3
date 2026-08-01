@@ -209,7 +209,7 @@ function countQualifiedDependents(
 
   let qualifiedDependentsCount = 0;
   uniqueDependents.forEach(dependent => {
-    const totalNetIncome = calculateDependentTotalNetIncome(dependent.income, year);
+    const totalNetIncome = calculateDependentTotalNetIncome(dependent, year);
     if (totalNetIncome <= getDependentEligibilityMax(year)) {
       qualifiedDependentsCount++;
     }
