@@ -1,71 +1,61 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { useChangelogModal } from '../hooks/useChangelogModal';
+import { CHANGELOG_STORAGE_KEYS } from '../utils/changelogStorage';
+
+// The same value the build inlines into the hook, so these tests exercise the
+// real comparison rather than a stand-in date.
+const LATEST = __LATEST_CHANGELOG_DATE__;
 
 describe('useChangelogModal', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   afterEach(() => {
     // openModal pushes #changelog; reset so tests stay independent.
     window.history.replaceState(null, '', window.location.pathname);
   });
 
-  it('starts with the badge hidden and lights it when the deferred check resolves true', async () => {
-    let resolve!: (hasUnread: boolean) => void;
-    const check = new Promise<boolean>(r => {
-      resolve = r;
-    });
-    const { result } = renderHook(() => useChangelogModal(check));
+  it('bakes in a changelog date to compare against', () => {
+    expect(LATEST).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
 
-    expect(result.current.hasNewFeatures).toBe(false);
+  it('shows the badge on a first visit, with nothing viewed yet', () => {
+    const { result } = renderHook(() => useChangelogModal());
 
-    await act(async () => {
-      resolve(true);
-      await check;
-    });
     expect(result.current.hasNewFeatures).toBe(true);
   });
 
-  it('keeps the badge hidden when the deferred check resolves false', async () => {
-    const check = Promise.resolve(false);
-    const { result } = renderHook(() => useChangelogModal(check));
+  it('hides the badge once the newest entry has been viewed', () => {
+    localStorage.setItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE, LATEST);
 
-    await act(async () => {
-      await check;
-    });
+    const { result } = renderHook(() => useChangelogModal());
+
     expect(result.current.hasNewFeatures).toBe(false);
   });
 
-  it('does not light the badge when the modal was opened before the check resolved', async () => {
-    let resolve!: (hasUnread: boolean) => void;
-    const check = new Promise<boolean>(r => {
-      resolve = r;
-    });
-    const { result } = renderHook(() => useChangelogModal(check));
+  it('shows the badge again when an older entry was the last one viewed', () => {
+    localStorage.setItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE, '2000-01-01');
+
+    const { result } = renderHook(() => useChangelogModal());
+
+    expect(result.current.hasNewFeatures).toBe(true);
+  });
+
+  it('clears the badge when the modal is opened', () => {
+    const { result } = renderHook(() => useChangelogModal());
+    expect(result.current.hasNewFeatures).toBe(true);
 
     act(() => {
       result.current.openModal();
     });
+
     expect(result.current.isOpen).toBe(true);
-
-    await act(async () => {
-      resolve(true);
-      await check;
-    });
-    expect(result.current.hasNewFeatures).toBe(false);
-  });
-
-  it('clears the badge when the modal is opened', async () => {
-    const { result } = renderHook(() => useChangelogModal(Promise.resolve(true)));
-    await waitFor(() => {
-      expect(result.current.hasNewFeatures).toBe(true);
-    });
-
-    act(() => {
-      result.current.openModal();
-    });
     expect(result.current.hasNewFeatures).toBe(false);
   });
 });

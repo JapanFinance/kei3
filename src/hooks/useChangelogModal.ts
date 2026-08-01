@@ -1,7 +1,9 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+import { getLastViewedDate, setLastViewedDate } from '../utils/changelogStorage';
 
 export const CHANGELOG_HASH = '#changelog';
 
@@ -17,29 +19,25 @@ export interface UseChangelogModalReturn {
  * Hook for managing changelog modal state with URL hash support
  * Enables deep linking to the changelog via #changelog
  *
- * @param hasUnreadEntries Result of the unread-entries check, resolving once
- *   the deferred changelog chunk has loaded (see the load sequencing in
- *   {@link import('../App')}). The badge starts hidden and lights up on a true
- *   resolution, so this hook needs no changelog-data imports of its own.
+ * Comparing the build-time changelog date against the stored one decides the
+ * unread dot without loading the changelog itself, which ships only with the
+ * lazily loaded modal.
  */
-export function useChangelogModal(hasUnreadEntries: Promise<boolean>): UseChangelogModalReturn {
+export function useChangelogModal(): UseChangelogModalReturn {
   const [isOpen, setIsOpen] = useState(false);
-  const [hasNewFeatures, setHasNewFeatures] = useState(false);
-  // A late resolution must not light the badge for entries the user has
-  // already seen by opening the modal before the check completed.
-  const viewedRef = useRef(false);
+  const [hasNewFeatures, setHasNewFeatures] = useState(
+    () => __LATEST_CHANGELOG_DATE__ !== '' && getLastViewedDate() !== __LATEST_CHANGELOG_DATE__,
+  );
 
+  // Marking the newest entry as read here rather than in the modal covers
+  // every way it opens, including a #changelog deep link, and does not wait
+  // for the modal's chunk to arrive.
   useEffect(() => {
-    let cancelled = false;
-    void hasUnreadEntries.then(hasUnread => {
-      if (!cancelled && !viewedRef.current) {
-        setHasNewFeatures(hasUnread);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [hasUnreadEntries]);
+    if (isOpen && __LATEST_CHANGELOG_DATE__ !== '') {
+      setLastViewedDate(__LATEST_CHANGELOG_DATE__);
+      setHasNewFeatures(false);
+    }
+  }, [isOpen]);
 
   // Check if the page loads with the changelog hash
   useEffect(() => {
@@ -63,8 +61,6 @@ export function useChangelogModal(hasUnreadEntries: Promise<boolean>): UseChange
 
   const openModal = useCallback(() => {
     setIsOpen(true);
-    viewedRef.current = true;
-    setHasNewFeatures(false); // Remove the unread dot once viewed
     // Update URL hash when opening modal
     if (window.location.hash !== CHANGELOG_HASH) {
       window.history.pushState(null, '', CHANGELOG_HASH);

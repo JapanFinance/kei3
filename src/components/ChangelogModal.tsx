@@ -13,12 +13,11 @@ import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Typography from '@mui/material/Typography';
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import { changelogContent } from '../utils/changelogData';
+import changelogContent from '../../CHANGELOG.md?raw';
 import {
   parseChangelog,
-  setLastViewedDate,
   formatChangelogDate,
   type ChangelogEntry,
   type ParsedChangelog,
@@ -200,13 +199,6 @@ export default function ChangelogModal({ open, onClose }: ChangelogModalProps) {
       };
     }
   });
-
-  useEffect(() => {
-    if (open && changelog?.latestDate) {
-      // Mark the latest date as viewed when the modal is opened
-      setLastViewedDate(changelog.latestDate);
-    }
-  }, [open, changelog?.latestDate]);
 
   const handleClose = () => {
     onClose();

@@ -42,25 +42,14 @@ const whenBrowserIdle = () =>
 // idle after the chart module — ready before anyone clicks the button without
 // competing with visible content at startup. Deep links to #changelog need the
 // modal immediately and skip the deferral.
-const changelogModulePromise =
+const ChangelogModal = lazy(() =>
   window.location.hash === CHANGELOG_HASH
     ? import('./components/ChangelogModal')
     : chartModulePromise
         .catch(() => undefined)
         .then(whenBrowserIdle)
-        .then(() => import('./components/ChangelogModal'));
-const ChangelogModal = lazy(() => changelogModulePromise);
-
-// The unread-badge check reads the changelog text and parser, which ship in
-// the modal's idle-loaded chunk; waiting for the modal keeps them off the
-// startup path (importing them here directly would pull them into the App
-// chunk's load wave). The badge appearing shortly after load is acceptable
-// for a notification, and if the modal failed to load there is nothing to
-// notify about.
-const hasUnreadChangelogPromise: Promise<boolean> = changelogModulePromise
-  .then(() => import('./utils/changelogData'))
-  .then(({ hasUnreadChangelogEntries }) => hasUnreadChangelogEntries())
-  .catch(() => false);
+        .then(() => import('./components/ChangelogModal')),
+);
 
 function App() {
   useLoadMilestone('app-rendered');
@@ -71,7 +60,7 @@ function App() {
     openModal: openChangelog,
     closeModal: closeChangelog,
     hasNewFeatures,
-  } = useChangelogModal(hasUnreadChangelogPromise);
+  } = useChangelogModal();
 
   // Default values for the form
   const defaultInputs: TakeHomeFormState = {

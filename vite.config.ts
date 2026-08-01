@@ -11,6 +11,8 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, type PluginOption } from 'vite';
 import Sitemap from 'vite-plugin-sitemap';
 
+import { changelogDefine } from './changelogDate';
+
 // Vite does not minify index.html, so HTML comments (e.g. the documentation
 // block for the inline stale-build probe) would ship to every visitor.
 // Removal is repeated until the output stabilizes because deleting a comment
@@ -262,6 +264,7 @@ const codeSplitting = {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: changelogDefine(),
   plugins: [
     cloudflare(),
     stripHtmlComments(),

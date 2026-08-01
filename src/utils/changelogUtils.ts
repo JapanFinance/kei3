@@ -1,6 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+// The build imports this module from Node to bake in the latest entry date, so
+// it must stay free of browser APIs; localStorage access lives in
+// {@link import('./changelogStorage')}.
+
 export interface ChangelogEntry {
   date: string; // ISO format (yyyy-mm-dd) for parsing, display format handled in UI
   sections: {
@@ -82,25 +86,6 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
 }
 
 /**
- * Get the date that should be considered "new" for notification purposes
- */
-export function getLatestReleaseDate(changelog: ParsedChangelog): string | undefined {
-  return changelog.latestDate;
-}
-
-/**
- * Check if there are new updates since the last viewed date
- */
-export function hasNewUpdates(changelog: ParsedChangelog, lastViewedDate?: string): boolean {
-  if (!lastViewedDate) return true;
-
-  const latestDate = getLatestReleaseDate(changelog);
-  if (!latestDate) return false;
-
-  return latestDate !== lastViewedDate;
-}
-
-/**
  * Format ISO date (yyyy-mm-dd) to human readable format
  */
 export function formatChangelogDate(isoDate: string): string {
@@ -113,34 +98,5 @@ export function formatChangelogDate(isoDate: string): string {
     });
   } catch {
     return isoDate; // Fallback to ISO format if parsing fails
-  }
-}
-
-/**
- * Local storage keys for changelog functionality
- */
-export const CHANGELOG_STORAGE_KEYS = {
-  LAST_VIEWED_DATE: 'changelog-last-viewed-date',
-} as const;
-
-/**
- * Get the last viewed date from localStorage
- */
-export function getLastViewedDate(): string | null {
-  try {
-    return localStorage.getItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Set the last viewed date in localStorage
- */
-export function setLastViewedDate(date: string): void {
-  try {
-    localStorage.setItem(CHANGELOG_STORAGE_KEYS.LAST_VIEWED_DATE, date);
-  } catch {
-    // Silently fail if localStorage is not available
   }
 }
