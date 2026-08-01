@@ -30,6 +30,7 @@ import { ResultRow } from '../ResultRow';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
+import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
 import {
   buildNationalBasicDeductionRows,
   getNationalBasicDeductionHighlightIndex,
@@ -185,6 +186,17 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
+  const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
+  // Backing the other net components out of the total keeps this row reconciled with it.
+  const netBusinessAndMiscIncome =
+    results.totalNetIncome -
+    (results.netEmploymentIncome ?? 0) -
+    (results.netPublicPensionIncome ?? 0);
+  const presentIncomeComponents = [
+    hasEmploymentIncome,
+    hasBusinessOrMiscIncome,
+    hasPublicPensionIncome,
+  ].filter(Boolean).length;
 
   // Residence income-based portion (所得割). When a home loan credit spills over to
   // residence tax, show the portion BEFORE the spillover and the spillover as its own
@@ -228,6 +240,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   grossEmploymentIncome={results.grossEmploymentIncome}
                   netEmploymentIncome={results.netEmploymentIncome}
                   incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
+                  pensionIncomeAdjustmentDeduction={results.pensionIncomeAdjustmentDeduction ?? 0}
                   year={incomeYear}
                 />
               </span>
@@ -280,9 +293,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                               Net Business/Misc Income:
                             </td>
                             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                              {formatJPY(
-                                results.totalNetIncome - (results.netEmploymentIncome ?? 0),
-                              )}
+                              {formatJPY(netBusinessAndMiscIncome)}
                             </td>
                           </Box>
                         </tbody>
@@ -310,14 +321,29 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 )}
               </span>
             }
-            // Value is Total Net - Net Employment (effectively Taxable Business/Misc)
-            value={formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+            value={formatJPY(netBusinessAndMiscIncome)}
+            type="default"
+          />
+        )}
+
+        {hasPublicPensionIncome && (
+          <ResultRow
+            label={
+              <span>
+                Net Public Pension Income
+                <NetPublicPensionIncomeTooltip
+                  grossPublicPensionIncome={results.grossPublicPensionIncome ?? 0}
+                  netPublicPensionIncome={results.netPublicPensionIncome ?? 0}
+                />
+              </span>
+            }
+            value={formatJPY(results.netPublicPensionIncome ?? 0)}
             type="default"
           />
         )}
 
         {/* Total Net Income Row */}
-        {hasEmploymentIncome && hasBusinessOrMiscIncome && (
+        {presentIncomeComponents >= 2 && (
           <ResultRow
             label="Total Net Income"
             value={formatJPY(results.totalNetIncome)}

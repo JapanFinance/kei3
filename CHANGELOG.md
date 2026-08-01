@@ -2,6 +2,13 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-08-01
+
+### New
+
+- Public pension income ([公的年金等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm)) — National Pension (国民年金), Employees' Pension (厚生年金保険), mutual-aid pensions, and pensions from past employment such as 確定給付企業年金 and 確定拠出年金 (including iDeCo) received as annuities — can now be entered as an income type in the Advanced income mode. The gross amount is reduced by the public pension deduction (公的年金等控除), with the Age input selecting the higher minimum deduction from age 65, and the result flows into income tax, residence tax, National Health Insurance, and 後期高齢者医療 premiums. Taxpayers with both employment income and pension income also get the [所得金額調整控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm) for 給与所得と年金所得の双方を有する者 (up to ¥100,000 off net employment income). Details are shown in the new Net Public Pension Income row's tooltip.
+- The dependents' income form likewise gained a gross public pension field: a spouse's or dependent relative's 合計所得金額 for the deduction eligibility tests is now computed with the 公的年金等控除, with age categories split around the 65 boundary that changes its minimum.
+
 ## 2026-07-22
 
 ### New

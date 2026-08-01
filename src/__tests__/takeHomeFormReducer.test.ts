@@ -564,6 +564,19 @@ describe('takeHomeFormReducer', () => {
       expect(result.annualIncome).toBe(300_000 * 12 + 1_200_000);
     });
 
+    it('counts public pension streams at face value in the annual income, and offers only NHI without employment streams', () => {
+      const state: TakeHomeFormState = { ...baseState, incomeMode: 'advanced' };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [{ id: 'p1', type: 'publicPension', amount: 2_400_000 }],
+      });
+
+      expect(result.annualIncome).toBe(2_400_000);
+      // Pension income is not employment income, so the employee provider is no longer offered.
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+    });
+
     it('auto-switches from dependent coverage to NHI when the new stream total crosses the eligibility threshold', () => {
       const state: TakeHomeFormState = {
         ...baseState,

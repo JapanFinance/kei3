@@ -1946,3 +1946,166 @@ describe('calculateTaxes at ages 65 and over', () => {
     });
   });
 });
+
+describe('calculateTaxes with public pension income', () => {
+  const pensionInputs = (ageRange: AgeRange) => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [{ type: 'publicPension' as const, amount: 2_400_000, id: 'p1' }],
+    ageRange,
+    healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+
+  it('applies the 65+ minimum deduction from the age range (公的年金等控除)', () => {
+    const result = calculateTaxes(pensionInputs('age65to69'));
+    // 2,400,000 gross − 1,100,000 minimum deduction (65+, band 1)
+    expect(result.grossPublicPensionIncome).toBe(2_400_000);
+    expect(result.netPublicPensionIncome).toBe(1_300_000);
+    expect(result.totalNetIncome).toBe(1_300_000);
+    expect(result.annualIncome).toBe(2_400_000);
+    // Pension income is not employment income.
+    expect(result.hasEmploymentIncome).toBe(false);
+    expect(result.grossEmploymentIncome).toBe(0);
+    expect(result.employmentInsurance).toBe(0);
+  });
+
+  it('applies the under-65 deduction below age 65', () => {
+    const result = calculateTaxes(pensionInputs('age60to64'));
+    // Deduction 400,000 + 25% × (2,400,000 − 500,000) = 875,000 (above the 600,000 minimum)
+    expect(result.netPublicPensionIncome).toBe(1_525_000);
+    expect(result.totalNetIncome).toBe(1_525_000);
+  });
+
+  it('applies the deduction once to the combined gross of multiple pension streams', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age65to69'),
+      incomeStreams: [
+        { type: 'publicPension' as const, amount: 1_200_000, id: 'p1' },
+        { type: 'publicPension' as const, amount: 1_200_000, id: 'p2' },
+      ],
+    });
+    expect(result.grossPublicPensionIncome).toBe(2_400_000);
+    expect(result.netPublicPensionIncome).toBe(1_300_000);
+  });
+
+  it('bases NHI premiums on the net pension income', () => {
+    const pension = calculateTaxes(pensionInputs('age65to69'));
+    const equivalentMisc = calculateTaxes({
+      ...pensionInputs('age65to69'),
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 1_300_000, id: 'm1' }],
+    });
+    expect(pension.healthInsurance).toBe(equivalentMisc.healthInsurance);
+    expect(pension.healthInsurance).toBeGreaterThan(0);
+    // No National Pension contributions at 65-69, and no employment insurance,
+    // so take-home is income minus taxes and the health premium exactly.
+    expect(pension.pensionPayments).toBe(0);
+    expect(pension.takeHomeIncome).toBe(
+      pension.annualIncome -
+        pension.nationalIncomeTax -
+        pension.residenceTax.totalResidenceTax -
+        pension.healthInsurance,
+    );
+  });
+
+  it('bases the 後期高齢者医療 premium on the net pension income at 75+', () => {
+    const pension = calculateTaxes({
+      ...pensionInputs('age75plus'),
+      healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+    });
+    const equivalentMisc = calculateTaxes({
+      ...pensionInputs('age75plus'),
+      healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 1_300_000, id: 'm1' }],
+    });
+    expect(pension.healthInsurance).toBe(equivalentMisc.healthInsurance);
+  });
+
+  it('reduces the deduction band when other net income exceeds ¥10,000,000', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age60to64'),
+      incomeStreams: [
+        { type: 'miscellaneous' as const, amount: 10_000_001, id: 'm1' },
+        { type: 'publicPension' as const, amount: 3_000_000, id: 'p1' },
+      ],
+    });
+    // Band 2 deduction: 300,000 + 25% × (3,000,000 − 500,000) = 925,000
+    expect(result.netPublicPensionIncome).toBe(2_075_000);
+    expect(result.totalNetIncome).toBe(12_075_001);
+  });
+
+  describe('所得金額調整控除（給与所得と年金所得の双方を有する者）', () => {
+    const salaryAndPensionInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+        { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+      ],
+      ageRange: 'age65to69' as const,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    it('deducts the full ¥100,000 from net employment income when both exceed the cap', () => {
+      const result = calculateTaxes(salaryAndPensionInputs);
+      expect(result.pensionIncomeAdjustmentDeduction).toBe(100_000);
+      // 給与所得 2,020,000 − 100,000 adjustment
+      expect(result.netEmploymentIncome).toBe(1_920_000);
+      expect(result.netPublicPensionIncome).toBe(1_300_000);
+      expect(result.totalNetIncome).toBe(3_220_000);
+    });
+
+    it('caps the adjustment at the net employment income when it is below ¥100,000', () => {
+      const result = calculateTaxes({
+        ...salaryAndPensionInputs,
+        incomeStreams: [
+          { type: 'salary' as const, amount: 800_000, frequency: 'annual' as const, id: 's1' },
+          { type: 'publicPension' as const, amount: 2_000_000, id: 'p1' },
+        ],
+      });
+      // 給与所得 60,000: adjustment = 60,000 + 100,000 − 100,000, zeroing employment income
+      expect(result.pensionIncomeAdjustmentDeduction).toBe(60_000);
+      expect(result.netEmploymentIncome).toBe(0);
+      expect(result.netPublicPensionIncome).toBe(900_000);
+      expect(result.totalNetIncome).toBe(900_000);
+    });
+
+    it('does not apply when the pension deduction already zeroes the pension income', () => {
+      const result = calculateTaxes({
+        ...salaryAndPensionInputs,
+        incomeStreams: [
+          { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+          { type: 'publicPension' as const, amount: 1_100_000, id: 'p1' },
+        ],
+      });
+      expect(result.pensionIncomeAdjustmentDeduction).toBeUndefined();
+      expect(result.grossPublicPensionIncome).toBe(1_100_000);
+      expect(result.netPublicPensionIncome).toBe(0);
+      expect(result.netEmploymentIncome).toBe(2_020_000);
+      expect(result.totalNetIncome).toBe(2_020_000);
+    });
+  });
+});
+
+describe('calculateTotalNetIncome with public pension income', () => {
+  const streams = [{ type: 'publicPension' as const, amount: 3_000_000, id: 'p1' }];
+
+  it('uses the 65+ minimum deduction when the taxpayer is 65 or older', () => {
+    expect(calculateTotalNetIncome(streams, 2026, [], true)).toBe(1_900_000);
+  });
+
+  it('uses the under-65 deduction otherwise, including by default', () => {
+    // Deduction 400,000 + 25% × (3,000,000 − 500,000) = 1,025,000
+    expect(calculateTotalNetIncome(streams, 2026, [], false)).toBe(1_975_000);
+    expect(calculateTotalNetIncome(streams, 2026)).toBe(1_975_000);
+  });
+});

@@ -84,6 +84,16 @@ export function isLatterStageElderly(ageRange: AgeRange): boolean {
 }
 
 /**
+ * Whether the selected range means the taxpayer is 65 or older by the end of the income year —
+ * the boundary the public pension deduction's higher minimums use (租税特別措置法第41条の15の3,
+ * judged as of December 31 of the income year, matching how the ranges are selected). A plain
+ * age fact rather than a rule of any one statute, so other year-end 65 tests may share it.
+ */
+export function isAge65OrOlder(ageRange: AgeRange): boolean {
+  return ageRange === 'age65to69' || ageRange === 'age70to74' || ageRange === 'age75plus';
+}
+
+/**
  * Whether the taxpayer is a minor (未成年者) for residence-tax purposes. Minors whose
  * 合計所得金額 is at or below the statutory limit are exempt from residence tax entirely;
  * the income test lives with the residence-tax calculation.

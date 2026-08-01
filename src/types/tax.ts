@@ -12,6 +12,7 @@ export type IncomeStreamType =
   | 'bonus'
   | 'business'
   | 'miscellaneous'
+  | 'publicPension'
   | 'commutingAllowance'
   | 'stockCompensation';
 
@@ -45,6 +46,15 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
   type: 'miscellaneous';
 }
 
+/**
+ * Public pension income (公的年金等): `amount` is the gross annual amount received
+ * (公的年金等の収入金額), before withholding. The public pension deduction (公的年金等控除)
+ * is applied by the calculation, using the taxpayer's age range for the 65 boundary.
+ */
+export interface PublicPensionIncomeStream extends BaseIncomeStream {
+  type: 'publicPension';
+}
+
 export interface StockCompensationIncomeStream extends BaseIncomeStream {
   type: 'stockCompensation';
   issuerDomicile: 'foreign' | 'domestic';
@@ -55,6 +65,7 @@ export type IncomeStream =
   | BonusIncomeStream
   | BusinessIncomeStream
   | MiscellaneousIncomeStream
+  | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
   | StockCompensationIncomeStream;
 
@@ -318,6 +329,19 @@ export interface TakeHomeResults {
    * is already net of this amount.
    */
   incomeAdjustmentDeduction?: number | undefined;
+  /**
+   * 所得金額調整控除（給与所得と年金所得の双方を有する者）: up to ¥100,000 subtracted from net
+   * employment income when the taxpayer has both 給与所得 and 公的年金等に係る雑所得.
+   * {@link netEmploymentIncome} is already net of this amount. Absent when not applicable.
+   */
+  pensionIncomeAdjustmentDeduction?: number | undefined;
+  /** Gross public pension income (公的年金等の収入金額). Absent when there is none. */
+  grossPublicPensionIncome?: number | undefined;
+  /**
+   * Net public pension income (公的年金等に係る雑所得): {@link grossPublicPensionIncome} minus the
+   * public pension deduction (公的年金等控除). Absent when there is no public pension income.
+   */
+  netPublicPensionIncome?: number | undefined;
   totalNetIncome: number;
   commutingAllowanceIncome?: number; // Total amount
   commutingAllowanceTaxable?: number;

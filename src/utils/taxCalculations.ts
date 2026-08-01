@@ -10,8 +10,10 @@ import {
   calculateNetEmploymentIncomeForPeriod,
   calculateIncomeAdjustmentDeductionAmount,
 } from '../data/netEmploymentIncome';
+import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import {
   DEFAULT_AGE_RANGE,
+  isAge65OrOlder,
   isLongTermCareCategory1Insured,
   isResidenceTaxMinor,
   isSubjectToEmployeesPension,
@@ -270,6 +272,7 @@ interface IncomeBreakdown {
   totalAnnualIncome: number;
   commutingAllowance: number;
   stockCompensationIncome: number;
+  grossPublicPensionIncome: number;
 }
 
 /**
@@ -284,6 +287,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   let blueFilerDeduction = 0;
   let commutingAllowance = 0;
   let stockCompensationIncome = 0;
+  let grossPublicPensionIncome = 0;
   let processedBusinessIncome = false;
 
   for (const income of incomeStreams) {
@@ -324,6 +328,9 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
         netBusinessAndMiscIncome += income.amount;
         break;
+      case 'publicPension':
+        grossPublicPensionIncome += income.amount;
+        break;
       default: {
         const unhandled: never = income;
         throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
@@ -335,7 +342,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     salaryIncome +
     bonusIncome.reduce((sum, b) => sum + b.amount, 0) +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
-    stockCompensationIncome;
+    stockCompensationIncome +
+    grossPublicPensionIncome;
 
   return {
     salaryIncome,
@@ -346,30 +354,58 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     totalAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
+    grossPublicPensionIncome,
   };
 };
 
 /**
- * Calculates just the total net income (合計所得金額).
- * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
- *
- * @param incomeStreams  Income streams to calculate net income for
- * @param year          Income year for the employment income deduction lookup; defaults to current year
- * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
- *                      dependent is present. Defaults to none (no adjustment).
+ * The ¥100,000 that caps both income terms of the
+ * 所得金額調整控除（給与所得と年金所得の双方を有する者）and is then subtracted from their sum.
  */
-export const calculateTotalNetIncome = (
-  incomeStreams: IncomeStream[],
+const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
+
+/** Per-category net incomes composing 合計所得金額, shared by the full and net-only calculations. */
+interface NetIncomeComponents {
+  /** Gross employment income (給与等の収入金額), incl. taxable commuting allowance. */
+  grossEmploymentIncome: number;
+  taxableCommutingAllowance: number;
+  /** 給与所得, net of the 給与所得控除 and both 所得金額調整控除 variants below. */
+  netEmploymentIncome: number;
+  /** 所得金額調整控除（子ども・特別障害者等を有する者等）, already reflected in {@link netEmploymentIncome}. */
+  incomeAdjustmentDeduction: number;
+  /** 所得金額調整控除（給与所得と年金所得の双方を有する者）, already reflected in {@link netEmploymentIncome}. */
+  pensionIncomeAdjustmentDeduction: number;
+  /** 公的年金等に係る雑所得. */
+  netPublicPensionIncome: number;
+  /** 合計所得金額: the sum of the net components. */
+  totalNetIncome: number;
+}
+
+/**
+ * Derives the net income (所得) components from the categorized gross amounts:
+ * 給与所得 via the 給与所得控除 and 所得金額調整控除（子ども・特別障害者等）, 公的年金等に係る雑所得
+ * via the 公的年金等控除 ({@link calculateNetPublicPensionIncome}), and — when the taxpayer has
+ * both — the 所得金額調整控除（給与所得と年金所得の双方を有する者）of up to ¥100,000 subtracted
+ * from 給与所得 (措法41の3の12):
+ *
+ *   min(給与所得控除後の給与等の金額, ¥100,000) + min(公的年金等に係る雑所得, ¥100,000) − ¥100,000
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
+ */
+const calculateNetIncomeComponents = (
+  breakdown: IncomeBreakdown,
   year: number,
-  dependents: Dependent[] = [],
-): number => {
+  dependents: Dependent[],
+  taxpayerIs65OrOlder: boolean,
+): NetIncomeComponents => {
   const {
     salaryIncome,
     bonusIncome,
     netBusinessAndMiscIncome,
     commutingAllowance,
     stockCompensationIncome,
-  } = calculateIncomeBreakdown(incomeStreams);
+    grossPublicPensionIncome,
+  } = breakdown;
 
   const taxableCommutingAllowance = Math.max(
     0,
@@ -381,21 +417,91 @@ export const calculateTotalNetIncome = (
     taxableCommutingAllowance +
     bonusIncome.reduce((sum, b) => sum + b.amount, 0) +
     stockCompensationIncome;
-  const netEmploymentIncome = calculateNetEmploymentIncome(grossEmploymentIncome, year, dependents);
+  const netEmploymentIncomeBeforePensionAdjustment = calculateNetEmploymentIncome(
+    grossEmploymentIncome,
+    year,
+    dependents,
+  );
+  const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(
+    grossEmploymentIncome,
+    dependents,
+    year,
+  );
 
-  return netEmploymentIncome + netBusinessAndMiscIncome;
+  // The band of the 公的年金等控除 keys off the net income other than pension income. Statutorily
+  // that is the final 合計所得金額 figure, but the 給与+年金 adjustment below needs the pension
+  // income as its input, so the band is judged before that adjustment; the two can only interact
+  // within ¥100,000 of the band boundaries (¥10M/¥20M).
+  const netPublicPensionIncome = calculateNetPublicPensionIncome(
+    grossPublicPensionIncome,
+    taxpayerIs65OrOlder,
+    netEmploymentIncomeBeforePensionAdjustment + netBusinessAndMiscIncome,
+    year,
+  );
+
+  // The statute's 給与所得 term is the amount before the 子ども等 variant, but that variant only
+  // applies above ¥8.5M gross where 給与所得 far exceeds the ¥100,000 cap, so the capped term is
+  // identical either way.
+  const pensionIncomeAdjustmentDeduction =
+    netEmploymentIncomeBeforePensionAdjustment > 0 && netPublicPensionIncome > 0
+      ? Math.max(
+          0,
+          Math.min(netEmploymentIncomeBeforePensionAdjustment, PENSION_INCOME_ADJUSTMENT_CAP) +
+            Math.min(netPublicPensionIncome, PENSION_INCOME_ADJUSTMENT_CAP) -
+            PENSION_INCOME_ADJUSTMENT_CAP,
+        )
+      : 0;
+
+  const netEmploymentIncome =
+    netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
+
+  return {
+    grossEmploymentIncome,
+    taxableCommutingAllowance,
+    netEmploymentIncome,
+    incomeAdjustmentDeduction,
+    pensionIncomeAdjustmentDeduction,
+    netPublicPensionIncome,
+    totalNetIncome: netEmploymentIncome + netBusinessAndMiscIncome + netPublicPensionIncome,
+  };
 };
 
+/**
+ * Calculates just the total net income (合計所得金額).
+ * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
+ *
+ * @param incomeStreams  Income streams to calculate net income for
+ * @param year          Income year for the employment income deduction lookup; defaults to current year
+ * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
+ *                      dependent is present. Defaults to none (no adjustment).
+ * @param taxpayerIs65OrOlder Whether the taxpayer is 65 or older by the end of the income year
+ *                      ({@link isAge65OrOlder}), selecting the 公的年金等控除 minimums. Defaults to
+ *                      false; irrelevant without a public pension stream.
+ */
+export const calculateTotalNetIncome = (
+  incomeStreams: IncomeStream[],
+  year: number,
+  dependents: Dependent[] = [],
+  taxpayerIs65OrOlder: boolean = false,
+): number =>
+  calculateNetIncomeComponents(
+    calculateIncomeBreakdown(incomeStreams),
+    year,
+    dependents,
+    taxpayerIs65OrOlder,
+  ).totalNetIncome;
+
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
+  const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
   const {
     salaryIncome,
     bonusIncome,
-    netBusinessAndMiscIncome,
     blueFilerDeduction,
     totalAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
-  } = calculateIncomeBreakdown(inputs.incomeStreams);
+    grossPublicPensionIncome,
+  } = incomeBreakdown;
 
   if (totalAnnualIncome <= 0) {
     return DEFAULT_TAKE_HOME_RESULTS;
@@ -415,30 +521,22 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     commutingAllowance,
     COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP,
   );
-  const taxableCommutingAllowance = Math.max(
-    0,
-    commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP,
-  );
-
-  const grossEmploymentIncome =
-    salaryIncome +
-    taxableCommutingAllowance +
-    bonusIncome.reduce((sum, b) => sum + b.amount, 0) +
-    stockCompensationIncome;
   const incomeYear = inputs.incomeYear;
 
-  const netEmploymentIncome = calculateNetEmploymentIncome(
+  const {
     grossEmploymentIncome,
+    taxableCommutingAllowance,
+    netEmploymentIncome,
+    incomeAdjustmentDeduction,
+    pensionIncomeAdjustmentDeduction,
+    netPublicPensionIncome,
+    totalNetIncome: netIncome,
+  } = calculateNetIncomeComponents(
+    incomeBreakdown,
     incomeYear,
     inputs.dependents,
+    isAge65OrOlder(inputs.ageRange),
   );
-  const incomeAdjustmentDeduction = calculateIncomeAdjustmentDeduction(
-    grossEmploymentIncome,
-    inputs.dependents,
-    incomeYear,
-  );
-
-  const netIncome = netEmploymentIncome + netBusinessAndMiscIncome;
 
   let healthInsurance = 0;
   let pensionPayments = 0;
@@ -708,6 +806,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     netEmploymentIncome: hasEmploymentIncome ? netEmploymentIncome : undefined,
     grossEmploymentIncome,
     incomeAdjustmentDeduction,
+    ...(pensionIncomeAdjustmentDeduction > 0 && { pensionIncomeAdjustmentDeduction }),
+    ...(grossPublicPensionIncome > 0 && {
+      grossPublicPensionIncome,
+      netPublicPensionIncome,
+    }),
     totalNetIncome: netIncome,
     nationalIncomeTaxBasicDeduction,
     taxableIncomeForNationalIncomeTax,
