@@ -596,6 +596,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeYear,
   );
 
+  // 所得割 levied before the credit — both the spillover's ceiling and the figure the Taxes tab
+  // shows as the pre-spillover income-based portion.
+  const preCreditResidenceIncomeBased =
+    preCreditResidenceTax.city.cityIncomeTax +
+    preCreditResidenceTax.prefecture.prefecturalIncomeTax;
+
   const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
     ? applyHomeLoanTaxCredit(
         inputs.homeLoanTaxCredit,
@@ -604,6 +610,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         // The spillover cap uses the INCOME-TAX taxable income (所得税の課税総所得金額等),
         // NOT the residence-tax taxable income.
         taxableIncomeForNationalIncomeTax,
+        preCreditResidenceIncomeBased,
       )
     : undefined;
 
@@ -676,9 +683,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // Taxes tab can show the spillover as its own line and have the rows sum.
     ...(homeLoanTaxCreditResult &&
       homeLoanTaxCreditResult.appliedToResidenceTax > 0 && {
-        residenceTaxIncomeBasedBeforeHomeLoanCredit:
-          preCreditResidenceTax.city.cityIncomeTax +
-          preCreditResidenceTax.prefecture.prefecturalIncomeTax,
+        residenceTaxIncomeBasedBeforeHomeLoanCredit: preCreditResidenceIncomeBased,
       }),
     dcPlanContributions: inputs.dcPlanContributions,
     // Income tax breakdown

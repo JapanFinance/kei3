@@ -43,6 +43,10 @@ describe('getHomeLoanTaxCreditCohort', () => {
   });
 });
 
+// A 所得割 comfortably above every cohort flat cap, so the statutory caps are what bind in tests
+// that are about the statutory caps. Cases where the 所得割 itself binds pass their own figure.
+const AMPLE_RESIDENCE_INCOME_BASED = 500_000;
+
 describe('applyHomeLoanTaxCredit', () => {
   it('applies the full credit to the base income tax when it is sufficient', () => {
     const result = applyHomeLoanTaxCredit(
@@ -50,6 +54,7 @@ describe('applyHomeLoanTaxCredit', () => {
       8_000_000,
       500_000,
       5_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.availableCredit).toBe(200_000);
     expect(result.appliedToIncomeTax).toBe(200_000);
@@ -66,6 +71,7 @@ describe('applyHomeLoanTaxCredit', () => {
       4_000_000,
       202_500,
       3_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToIncomeTax).toBe(202_500);
     expect(result.appliedToResidenceTax).toBe(97_500); // capped at the flat cap
@@ -81,6 +87,7 @@ describe('applyHomeLoanTaxCredit', () => {
       1_500_000,
       50_000,
       1_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToIncomeTax).toBe(50_000);
     expect(result.appliedToResidenceTax).toBe(50_000); // capped at 5% × 1,000,000
@@ -95,6 +102,7 @@ describe('applyHomeLoanTaxCredit', () => {
       4_000_000,
       202_500,
       3_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToIncomeTax).toBe(202_500);
     expect(result.appliedToResidenceTax).toBe(136_500); // capped at the ¥136,500 flat cap
@@ -109,6 +117,7 @@ describe('applyHomeLoanTaxCredit', () => {
       1_500_000,
       50_000,
       1_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToIncomeTax).toBe(50_000);
     expect(result.appliedToResidenceTax).toBe(70_000); // capped at 7% × 1,000,000
@@ -117,6 +126,7 @@ describe('applyHomeLoanTaxCredit', () => {
       applied: 70_000,
       flatCap: 136_500,
       incomeRateCap: 70_000,
+      residenceIncomeBasedCap: AMPLE_RESIDENCE_INCOME_BASED,
     });
   });
 
@@ -128,6 +138,7 @@ describe('applyHomeLoanTaxCredit', () => {
       4_000_000,
       202_500,
       3_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToIncomeTax).toBe(202_500);
     expect(result.appliedToResidenceTax).toBe(97_500); // non-特定取得 flat cap, not ¥136,500
@@ -143,12 +154,14 @@ describe('applyHomeLoanTaxCredit', () => {
       1_500_000,
       50_000,
       1_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToResidenceTax).toBe(50_000); // 5% × 1,000,000
     expect(result.residenceTaxSpilloverCap).toEqual({
       applied: 50_000,
       flatCap: 97_500,
       incomeRateCap: 50_000,
+      residenceIncomeBasedCap: AMPLE_RESIDENCE_INCOME_BASED,
     });
   });
 
@@ -159,8 +172,15 @@ describe('applyHomeLoanTaxCredit', () => {
       4_000_000,
       202_500,
       3_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
-    const defaulted = applyHomeLoanTaxCredit(base, 4_000_000, 202_500, 3_000_000);
+    const defaulted = applyHomeLoanTaxCredit(
+      base,
+      4_000_000,
+      202_500,
+      3_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
+    );
     expect(explicit.appliedToResidenceTax).toBe(136_500);
     expect(defaulted.appliedToResidenceTax).toBe(136_500);
   });
@@ -171,15 +191,69 @@ describe('applyHomeLoanTaxCredit', () => {
       4_000_000,
       202_500,
       3_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     const nonTokutei = applyHomeLoanTaxCredit(
       { moveInYear: 2024, creditAmount: 350_000, isTokuteiShutoku: false },
       4_000_000,
       202_500,
       3_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(tokutei.appliedToResidenceTax).toBe(97_500);
     expect(nonTokutei.appliedToResidenceTax).toBe(97_500); // flag has no effect here
+  });
+
+  it('applies no spillover when no 所得割 is levied, whatever the statutory cap allows', () => {
+    // 非課税, or a year that levies only 均等割: the spillover is deducted from the 所得割, so with
+    // no 所得割 there is nothing for it to reduce. The statutory cap (5% × 1,000,000 = 50,000)
+    // still has headroom, but none of it is usable and none of it is refunded.
+    const result = applyHomeLoanTaxCredit(
+      { moveInYear: 2024, creditAmount: 200_000 },
+      1_500_000,
+      50_000,
+      1_000_000,
+      0,
+    );
+    expect(result.appliedToIncomeTax).toBe(50_000);
+    expect(result.appliedToResidenceTax).toBe(0);
+    expect(result.unusedCredit).toBe(150_000); // 200,000 - 50,000, none absorbed by residence tax
+    expect(result.residenceTaxSpilloverCap).toEqual({
+      applied: 0,
+      flatCap: 97_500,
+      incomeRateCap: 50_000,
+      residenceIncomeBasedCap: 0,
+    });
+    expect(result.warnings[0]).toContain('所得割');
+  });
+
+  it('caps the spillover at the 所得割 when that is below the statutory cap', () => {
+    // 所得割 of 12,000 sits below both the ¥97,500 flat cap and the ¥50,000 rate cap, so it binds
+    // and the credit is exhausted against it rather than the statutory headroom.
+    const result = applyHomeLoanTaxCredit(
+      { moveInYear: 2024, creditAmount: 200_000 },
+      1_500_000,
+      50_000,
+      1_000_000,
+      12_000,
+    );
+    expect(result.appliedToResidenceTax).toBe(12_000);
+    expect(result.unusedCredit).toBe(138_000); // 200,000 - 50,000 - 12,000
+    expect(result.residenceTaxSpilloverCap?.applied).toBe(12_000);
+  });
+
+  it('lets the statutory cap bind when the 所得割 is the larger of the two', () => {
+    // Mirror of the test above with the ceilings swapped: a 所得割 above the ¥50,000 rate cap
+    // leaves the statutory cap binding, so the 所得割 clamp must not reduce the spillover.
+    const result = applyHomeLoanTaxCredit(
+      { moveInYear: 2024, creditAmount: 200_000 },
+      1_500_000,
+      50_000,
+      1_000_000,
+      80_000,
+    );
+    expect(result.appliedToResidenceTax).toBe(50_000);
+    expect(result.residenceTaxSpilloverCap?.applied).toBe(50_000);
   });
 
   it('rejects when net income exceeds the band eligibility limit', () => {
@@ -188,6 +262,7 @@ describe('applyHomeLoanTaxCredit', () => {
       20_000_001, // over the ¥20M limit for 2022+ band
       1_000_000,
       18_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.availableCredit).toBe(0);
     expect(result.appliedToIncomeTax).toBe(0);
@@ -200,6 +275,7 @@ describe('applyHomeLoanTaxCredit', () => {
       20_000_000,
       1_000_000,
       18_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToIncomeTax).toBe(200_000);
   });
@@ -210,6 +286,7 @@ describe('applyHomeLoanTaxCredit', () => {
       25_000_000, // over 20M but under the 30M limit for this band
       2_000_000,
       22_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.appliedToIncomeTax).toBe(100_000);
   });
@@ -220,6 +297,7 @@ describe('applyHomeLoanTaxCredit', () => {
       8_000_000,
       572_500,
       5_000_000,
+      AMPLE_RESIDENCE_INCOME_BASED,
     );
     expect(result.availableCredit).toBe(0);
     expect(result.warnings[0]).toContain('No home loan tax credit rules');
@@ -232,6 +310,7 @@ describe('applyHomeLoanTaxCredit', () => {
         8_000_000,
         500_000,
         5_000_000,
+        AMPLE_RESIDENCE_INCOME_BASED,
       );
       expect(result.availableCredit).toBe(0);
       expect(result.appliedToIncomeTax).toBe(0);
