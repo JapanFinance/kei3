@@ -112,6 +112,11 @@ const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
  *
  * is deducted from 給与所得.
  *
+ * The statute frames this as an adjustment made when computing 総所得金額, but what it reduces is
+ * 給与所得の金額 itself. Since 所法2条1項30号 defines 合計所得金額 as the same 22条 総所得金額 plus
+ * 退職所得金額 and 山林所得金額, the reduction carries into 合計所得金額 and so into the
+ * 同一生計配偶者 and 扶養親族 income tests.
+ *
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
  */
 export const calculatePensionIncomeAdjustmentDeduction = (
