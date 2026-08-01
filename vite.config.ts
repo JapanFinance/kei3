@@ -284,6 +284,15 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    // Chunk-to-chunk imports use stable ids that an import map inlined into
+    // index.html resolves to the hashed filenames, so a content change in one
+    // chunk no longer re-hashes every chunk that imports it (without this, a
+    // single tax-data edit re-hashed six chunks — 54 kB instead of 13 kB
+    // re-downloaded). Needs import.meta.resolve (Safari 16.4+), slightly above
+    // the default baseline-widely-available target (Safari 16.0). The
+    // security-headers plugin hashes the inline import map like any other
+    // inline script.
+    chunkImportMap: true,
     sourcemap: true,
     rolldownOptions: {
       output: {
