@@ -400,12 +400,6 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   };
 };
 
-/**
- * The ¥100,000 that caps both income terms of the
- * 所得金額調整控除（給与所得と年金所得の双方を有する者）and is then subtracted from their sum.
- */
-const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
-
 /** Per-category net incomes composing 合計所得金額, shared by the full and net-only calculations. */
 interface NetIncomeComponents {
   /** Gross employment income (給与等の収入金額), incl. taxable commuting allowance. */
@@ -481,18 +475,10 @@ const calculateNetIncomeComponents = (
     year,
   );
 
-  // The statute's 給与所得 term is the amount before the 子ども等 variant, but that variant only
-  // applies above ¥8.5M gross where 給与所得 far exceeds the ¥100,000 cap, so the capped term is
-  // identical either way.
-  const pensionIncomeAdjustmentDeduction =
-    netEmploymentIncomeBeforePensionAdjustment > 0 && netPublicPensionIncome > 0
-      ? Math.max(
-          0,
-          Math.min(netEmploymentIncomeBeforePensionAdjustment, PENSION_INCOME_ADJUSTMENT_CAP) +
-            Math.min(netPublicPensionIncome, PENSION_INCOME_ADJUSTMENT_CAP) -
-            PENSION_INCOME_ADJUSTMENT_CAP,
-        )
-      : 0;
+  const pensionIncomeAdjustmentDeduction = calculatePensionIncomeAdjustmentDeduction(
+    netEmploymentIncomeBeforePensionAdjustment,
+    netPublicPensionIncome,
+  );
 
   const netEmploymentIncome =
     netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
