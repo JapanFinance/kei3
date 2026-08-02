@@ -669,7 +669,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if income is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if gross annual income (年間収入) is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>
