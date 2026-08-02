@@ -117,6 +117,15 @@ const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
  * 退職所得金額 and 山林所得金額, the reduction carries into 合計所得金額 and so into the
  * 同一生計配偶者 and 扶養親族 income tests.
  *
+ * @param netEmploymentIncome     給与所得 with the 給与所得控除 already taken, and with the other
+ *                                variant — the 所得金額調整控除（子ども・特別障害者等を有する者等）,
+ *                                措法41の3の11 — already subtracted where it applies, since the
+ *                                statute deducts this one from the 給与所得 left after that. Strictly
+ *                                its own capped term is the 給与所得控除後の給与等の金額, i.e. the
+ *                                amount before that variant, but the variant only applies above
+ *                                ¥8,500,000 of gross salary, where 給与所得 far exceeds the
+ *                                ¥100,000 cap and the capped term is identical either way.
+ * @param netPublicPensionIncome  公的年金等に係る雑所得, with the 公的年金等控除 already taken.
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
  */
 export const calculatePensionIncomeAdjustmentDeduction = (
