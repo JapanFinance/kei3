@@ -237,7 +237,7 @@ export interface TakeHomeFormState {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  customLatterStageRates?: CustomLatterStageElderlyRates | undefined;
+  customLatterStageParams?: CustomLatterStageElderlyParams | undefined;
   savedIncomeStreams: IncomeStream[];
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   lifeInsurance: LifeInsuranceInput;
@@ -258,7 +258,7 @@ export interface TakeHomeInputs {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  customLatterStageRates?: CustomLatterStageElderlyRates | undefined;
+  customLatterStageParams?: CustomLatterStageElderlyParams | undefined;
   /**
    * Calendar year the income is taxed in. Required: every caller threads it through from
    * {@link TakeHomeFormState.incomeYear} (defaulted to {@link DEFAULT_INCOME_YEAR}), so the
@@ -277,11 +277,12 @@ export interface CustomEmployeesHealthInsuranceRates {
 }
 
 /**
- * User-entered 後期高齢者医療 rates for prefectures without shipped data: the annual
- * 均等割額 and the 所得割率, both printed on the annual 保険料額決定通知書 and published
- * by the prefecture's 広域連合. Entered as the combined medical + child-support figures.
+ * User-entered 後期高齢者医療 premium parameters for prefectures without shipped data: the
+ * flat annual 均等割額 and the 所得割率, both printed on the annual 保険料額決定通知書 and
+ * published by the prefecture's 広域連合. Entered as the combined medical + child-support
+ * figures.
  */
-export interface CustomLatterStageElderlyRates {
+export interface CustomLatterStageElderlyParams {
   perCapitaAmount: number;
   incomeRatePercent: number;
 }

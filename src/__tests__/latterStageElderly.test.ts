@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getLatterStageParamsForMonth,
   getLatterStageStatutoryCap,
-} from '../data/latterStageElderlyRates';
+} from '../data/latterStageElderlyParams';
 import { calculateLatterStageElderlyPremium } from '../utils/healthInsuranceCalculator';
 
 describe('getLatterStageParamsForMonth', () => {

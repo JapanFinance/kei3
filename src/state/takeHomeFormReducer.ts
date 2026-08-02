@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
-import { LATTER_STAGE_REGION_OPTIONS } from '../data/latterStageElderlyRates';
+import { LATTER_STAGE_REGION_OPTIONS } from '../data/latterStageElderlyParams';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../data/nationalHealthInsurance/nhiParamsData';
 import { isLatterStageElderly } from '../types/ageRange';
 import {

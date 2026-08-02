@@ -8,7 +8,7 @@ import {
 import {
   getLatterStageParamsForMonth,
   getLatterStageStatutoryCap,
-} from '../data/latterStageElderlyRates';
+} from '../data/latterStageElderlyParams';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   isSubjectToEmployeesPension,

@@ -806,14 +806,14 @@ describe('75+ provider forcing', () => {
       ageRange: 'age75plus',
       healthInsuranceProvider: CUSTOM_LATTER_STAGE_ID,
       region: DEFAULT_PROVIDER_REGION,
-      customLatterStageRates: { perCapitaAmount: 60_000, incomeRatePercent: 10 },
+      customLatterStageParams: { perCapitaAmount: 60_000, incomeRatePercent: 10 },
     };
 
     const toMisc = takeHomeFormReducer(state, { type: 'incomeModeChanged', mode: 'miscellaneous' });
     expect(toMisc.incomeMode).toBe('miscellaneous');
     expect(toMisc.healthInsuranceProvider).toBe(CUSTOM_LATTER_STAGE_ID);
     expect(toMisc.region).toBe(DEFAULT_PROVIDER_REGION);
-    expect(toMisc.customLatterStageRates).toEqual({
+    expect(toMisc.customLatterStageParams).toEqual({
       perCapitaAmount: 60_000,
       incomeRatePercent: 10,
     });
@@ -822,7 +822,7 @@ describe('75+ provider forcing', () => {
     expect(backToSalary.incomeMode).toBe('salary');
     expect(backToSalary.healthInsuranceProvider).toBe(CUSTOM_LATTER_STAGE_ID);
     expect(backToSalary.region).toBe(DEFAULT_PROVIDER_REGION);
-    expect(backToSalary.customLatterStageRates).toEqual({
+    expect(backToSalary.customLatterStageParams).toEqual({
       perCapitaAmount: 60_000,
       incomeRatePercent: 10,
     });

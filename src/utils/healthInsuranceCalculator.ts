@@ -9,7 +9,7 @@ import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import {
   getLatterStageParamsForMonth,
   getLatterStageStatutoryCap,
-} from '../data/latterStageElderlyRates';
+} from '../data/latterStageElderlyParams';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
 import type {
@@ -24,7 +24,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
-import type { BonusIncomeStream, CustomLatterStageElderlyRates } from '../types/tax';
+import type { BonusIncomeStream, CustomLatterStageElderlyParams } from '../types/tax';
 import { roundSocialInsurancePremium } from './taxCalculations';
 
 /**
@@ -540,7 +540,7 @@ function calculateLatterStagePremiumForParams(
  * When both fiscal years resolve to the same rate period the blend collapses to a single
  * calculation.
  *
- * With `customRates` (prefectures without shipped data), the entered 均等割額 and
+ * With `customParams` (prefectures without shipped data), the entered 均等割額 and
  * 所得割率 are treated as the combined medical + child-support parameters for the whole
  * year, capped at the nationwide statutory 賦課限度額.
  */
@@ -548,13 +548,13 @@ export function calculateLatterStageElderlyPremium(
   netIncome: number,
   year: number,
   region?: string,
-  customRates?: CustomLatterStageElderlyRates,
+  customParams?: CustomLatterStageElderlyParams,
 ): LatterStageElderlyBreakdown {
-  if (customRates) {
+  if (customParams) {
     const base = latterStagePremiumBase(netIncome);
     const raw = floorToHundred(
-      Math.max(0, customRates.perCapitaAmount) +
-        (base * Math.max(0, customRates.incomeRatePercent)) / 100,
+      Math.max(0, customParams.perCapitaAmount) +
+        (base * Math.max(0, customParams.incomeRatePercent)) / 100,
     );
     const total = Math.min(raw, getLatterStageStatutoryCap(year, 3));
     return { medicalPortion: total, childSupportPortion: 0, total };

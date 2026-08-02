@@ -7,10 +7,13 @@ import type {
 } from '../types/healthInsurance';
 
 /**
- * 後期高齢者医療制度 premium parameters by prefecture. Unlike NHI's municipal rates, these
- * are uniform across each prefecture (set by its 広域連合 on a two-year cycle), so Tokyo
- * alone covers every NHI municipality the calculator ships. Other prefectures use the
- * custom rate inputs ({@link CUSTOM_LATTER_STAGE_ID}).
+ * 後期高齢者医療制度 premium parameters by prefecture. Unlike NHI's municipal parameters,
+ * these are uniform across each prefecture (set by its 広域連合 on a two-year cycle), so
+ * the data here is far more bounded than the NHI tables: one entry per prefecture, revised
+ * every two years. Tokyo covers the 23 wards the NHI data ships; the NHI data also covers
+ * Osaka and Nara, whose 後期高齢者 parameters are not here yet. Prefectures without an
+ * entry use the custom parameter inputs ({@link CUSTOM_LATTER_STAGE_ID}), and adding them
+ * later is cheap.
  */
 const allLatterStageRegions: Record<string, LatterStageElderlyRegionDefinition> = {
   Tokyo: {
@@ -46,6 +49,22 @@ const allLatterStageRegions: Record<string, LatterStageElderlyRegionDefinition> 
     ],
   },
 };
+
+if (import.meta.env.DEV) {
+  // Validate that each prefecture's rate periods are sorted newest-first
+  for (const [regionKey, region] of Object.entries(allLatterStageRegions)) {
+    for (let i = 1; i < region.periods.length; i++) {
+      const prev = region.periods[i - 1]!.effectiveFrom;
+      const curr = region.periods[i]!.effectiveFrom;
+      if (prev.year < curr.year || (prev.year === curr.year && prev.month <= curr.month)) {
+        throw new Error(
+          `allLatterStageRegions["${regionKey}"].periods must be sorted newest-first, ` +
+            `but entry ${i - 1} (${prev.year}-${prev.month}) is not after entry ${i} (${curr.year}-${curr.month})`,
+        );
+      }
+    }
+  }
+}
 
 /**
  * Returns the 後期高齢者医療 parameters in effect for the given calendar month, or
@@ -97,6 +116,20 @@ const STATUTORY_CAP_PERIODS = [
   { effectiveFrom: { year: 2026, month: 3 }, cap: 871000 }, // 850,000 medical + 21,000 child
   { effectiveFrom: { year: 2024, month: 3 }, cap: 800000 },
 ] as const;
+
+if (import.meta.env.DEV) {
+  // Validate that the statutory caps are sorted newest-first
+  for (let i = 1; i < STATUTORY_CAP_PERIODS.length; i++) {
+    const prev = STATUTORY_CAP_PERIODS[i - 1]!.effectiveFrom;
+    const curr = STATUTORY_CAP_PERIODS[i]!.effectiveFrom;
+    if (prev.year < curr.year || (prev.year === curr.year && prev.month <= curr.month)) {
+      throw new Error(
+        `STATUTORY_CAP_PERIODS must be sorted newest-first, ` +
+          `but entry ${i - 1} (${prev.year}-${prev.month}) is not after entry ${i} (${curr.year}-${curr.month})`,
+      );
+    }
+  }
+}
 
 /** The combined statutory 賦課限度額 in effect for the given calendar month. */
 export function getLatterStageStatutoryCap(year: number, month: number): number {

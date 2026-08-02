@@ -513,7 +513,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         incomeYear,
         inputs.region,
         inputs.healthInsuranceProvider === CUSTOM_LATTER_STAGE_ID
-          ? (inputs.customLatterStageRates ?? { perCapitaAmount: 0, incomeRatePercent: 0 })
+          ? (inputs.customLatterStageParams ?? { perCapitaAmount: 0, incomeRatePercent: 0 })
           : undefined,
       );
       healthInsurance = latterStageBreakdown.total;

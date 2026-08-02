@@ -50,7 +50,7 @@ import type {
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
   AdditionalDeductionsResult,
-  CustomLatterStageElderlyRates,
+  CustomLatterStageElderlyParams,
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
@@ -174,18 +174,18 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     });
   };
 
-  const updateCustomLatterStageRate = (
-    field: keyof CustomLatterStageElderlyRates,
+  const updateCustomLatterStageParam = (
+    field: keyof CustomLatterStageElderlyParams,
     value: number,
   ) => {
-    const currentRates = inputs.customLatterStageRates || {
+    const currentParams = inputs.customLatterStageParams || {
       perCapitaAmount: 0,
       incomeRatePercent: 0,
     };
     dispatch({
       type: 'setField',
-      field: 'customLatterStageRates',
-      value: { ...currentRates, [field]: value },
+      field: 'customLatterStageParams',
+      value: { ...currentParams, [field]: value },
     });
   };
 
@@ -722,8 +722,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     <SpinnerNumberField
                       id="customLatterStagePerCapita"
                       name="customLatterStagePerCapita"
-                      value={inputs.customLatterStageRates?.perCapitaAmount ?? 0}
-                      onChange={value => updateCustomLatterStageRate('perCapitaAmount', value)}
+                      value={inputs.customLatterStageParams?.perCapitaAmount ?? 0}
+                      onChange={value => updateCustomLatterStageParam('perCapitaAmount', value)}
                       label="均等割額 (¥/year)"
                       step={100}
                       shiftStep={1000}
@@ -751,8 +751,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     <SpinnerNumberField
                       id="customLatterStageIncomeRate"
                       name="customLatterStageIncomeRate"
-                      value={inputs.customLatterStageRates?.incomeRatePercent ?? 0}
-                      onChange={value => updateCustomLatterStageRate('incomeRatePercent', value)}
+                      value={inputs.customLatterStageParams?.incomeRatePercent ?? 0}
+                      onChange={value => updateCustomLatterStageParam('incomeRatePercent', value)}
                       label="Rate (%)"
                       step={0.01}
                       shiftStep={0.1}

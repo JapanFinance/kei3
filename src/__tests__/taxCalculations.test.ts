@@ -1931,7 +1931,7 @@ describe('calculateTaxes at ages 65 and over', () => {
       const result = calculateTaxes({
         ...latterStageInputs,
         healthInsuranceProvider: CUSTOM_LATTER_STAGE_ID,
-        customLatterStageRates: { perCapitaAmount: 60_000, incomeRatePercent: 10 },
+        customLatterStageParams: { perCapitaAmount: 60_000, incomeRatePercent: 10 },
       });
       // Base 3,570,000 → floor100(60,000 + 357,000) = 417,000
       expect(result.healthInsurance).toBe(417_000);
