@@ -37,13 +37,14 @@ import {
 } from '../../../types/dependents';
 import {
   calculateDependentDeductions,
+  calculateDependentNetIncomeComponents,
   calculateDependentNetPublicPensionIncome,
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
-import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../../ui/Tooltips';
+import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
 
 interface DependentFormProps {
   dependent: OtherDependent | null;
@@ -97,6 +98,14 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   };
 
   const canSubmit = true; // All fields have defaults, always submittable
+
+  const incomeProfile = { income, ageCategory, disability };
+  const { netEmploymentIncome, incomeAdjustmentDeduction, pensionIncomeAdjustmentDeduction } =
+    calculateDependentNetIncomeComponents(incomeProfile, incomeYear);
+  const incomeAdjustmentNote = describeIncomeAdjustmentDeduction(
+    incomeAdjustmentDeduction,
+    pensionIncomeAdjustmentDeduction,
+  );
 
   return (
     <Box
@@ -189,9 +198,8 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   Net (所得)
                 </Typography>
                 <Typography variant="body2">
-                  {formatJPY(
-                    calculateNetEmploymentIncome(income.grossEmploymentIncome, incomeYear),
-                  )}
+                  {formatJPY(netEmploymentIncome)}
+                  {incomeAdjustmentNote && <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>}
                 </Typography>
               </Box>
             </Box>
@@ -233,9 +241,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   Net (所得)
                 </Typography>
                 <Typography variant="body2">
-                  {formatJPY(
-                    calculateDependentNetPublicPensionIncome({ income, ageCategory }, incomeYear),
-                  )}
+                  {formatJPY(calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear))}
                 </Typography>
               </Box>
             </Box>
@@ -276,7 +282,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   Total (合計所得金額)
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                  {formatJPY(calculateDependentTotalNetIncome({ income, ageCategory }, incomeYear))}
+                  {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
                 </Typography>
               </Box>
             </Box>
@@ -318,8 +324,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2">
-                      {formatJPY(
-                        calculateNetEmploymentIncome(income.grossEmploymentIncome, incomeYear),
+                      {formatJPY(netEmploymentIncome)}
+                      {incomeAdjustmentNote && (
+                        <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
                       )}
                     </Typography>
                   </TableCell>
@@ -351,10 +358,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   <TableCell align="right">
                     <Typography variant="body2">
                       {formatJPY(
-                        calculateDependentNetPublicPensionIncome(
-                          { income, ageCategory },
-                          incomeYear,
-                        ),
+                        calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear),
                       )}
                     </Typography>
                   </TableCell>
@@ -398,9 +402,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   <TableCell align="right"></TableCell>
                   <TableCell align="right">
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {formatJPY(
-                        calculateDependentTotalNetIncome({ income, ageCategory }, incomeYear),
-                      )}
+                      {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
                     </Typography>
                   </TableCell>
                 </TableRow>
