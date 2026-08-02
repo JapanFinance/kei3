@@ -42,7 +42,6 @@ import {
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
-import { calculateNetEmploymentIncome } from '../../../utils/taxCalculations';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../../ui/Tooltips';
 
@@ -99,10 +98,15 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   const canSubmit = true; // All fields have defaults, always submittable
 
-  const { pensionIncomeAdjustmentDeduction } = calculateDependentNetIncomeComponents(
-    { income, ageCategory },
-    incomeYear,
-  );
+  const { netEmploymentIncome, pensionIncomeAdjustmentDeduction } =
+    calculateDependentNetIncomeComponents({ income, ageCategory }, incomeYear);
+
+  const pensionIncomeAdjustmentNote =
+    `Net of a ${formatJPY(pensionIncomeAdjustmentDeduction)} income amount adjustment deduction ` +
+    `(所得金額調整控除). When both employment income and public pension income are present ` +
+    `(給与所得と年金所得の双方を有する者), net employment income (capped at ¥100,000) plus net ` +
+    `public pension income (capped at ¥100,000), less ¥100,000, is deducted from net employment ` +
+    `income.`;
 
   return (
     <Box
@@ -195,8 +199,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   Net (所得)
                 </Typography>
                 <Typography variant="body2">
-                  {formatJPY(
-                    calculateNetEmploymentIncome(income.grossEmploymentIncome, incomeYear),
+                  {formatJPY(netEmploymentIncome)}
+                  {pensionIncomeAdjustmentDeduction > 0 && (
+                    <SimpleTooltip>{pensionIncomeAdjustmentNote}</SimpleTooltip>
                   )}
                 </Typography>
               </Box>
@@ -245,36 +250,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 </Typography>
               </Box>
             </Box>
-
-            {pensionIncomeAdjustmentDeduction > 0 && (
-              <>
-                <Divider sx={{ my: 2 }} />
-
-                {/* Income Adjustment Deduction (給与+年金) */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                    Income Adjustment (所得金額調整控除)
-                    <SimpleTooltip>
-                      When both employment income and public pension income are present
-                      (給与所得と年金所得の双方を有する者), the income amount adjustment deduction
-                      (所得金額調整控除) applies: net employment income (capped at ¥100,000) plus
-                      net public pension income (capped at ¥100,000), less ¥100,000, is deducted
-                      from net employment income.
-                    </SimpleTooltip>
-                  </Typography>
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      Deduction
-                    </Typography>
-                    <Typography variant="body2" color="error.main">
-                      -{formatJPY(pensionIncomeAdjustmentDeduction)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </>
-            )}
 
             <Divider sx={{ my: 2 }} />
 
@@ -354,8 +329,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   </TableCell>
                   <TableCell align="right">
                     <Typography variant="body2">
-                      {formatJPY(
-                        calculateNetEmploymentIncome(income.grossEmploymentIncome, incomeYear),
+                      {formatJPY(netEmploymentIncome)}
+                      {pensionIncomeAdjustmentDeduction > 0 && (
+                        <SimpleTooltip>{pensionIncomeAdjustmentNote}</SimpleTooltip>
                       )}
                     </Typography>
                   </TableCell>
@@ -395,36 +371,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                     </Typography>
                   </TableCell>
                 </TableRow>
-
-                {/* Income Adjustment Deduction Row (給与+年金) */}
-                {pensionIncomeAdjustmentDeduction > 0 && (
-                  <TableRow>
-                    <TableCell>
-                      Income Adjustment
-                      <SimpleTooltip>
-                        When both employment income and public pension income are present
-                        (給与所得と年金所得の双方を有する者), the income amount adjustment deduction
-                        (所得金額調整控除) applies: net employment income (capped at ¥100,000) plus
-                        net public pension income (capped at ¥100,000), less ¥100,000, is deducted
-                        from net employment income.
-                      </SimpleTooltip>
-                      <br />
-                      <Typography variant="caption" color="text.secondary">
-                        所得金額調整控除
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" color="text.secondary">
-                        —
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" color="error.main">
-                        -{formatJPY(pensionIncomeAdjustmentDeduction)}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
 
                 {/* Other Income Row */}
                 <TableRow>
