@@ -90,11 +90,11 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
   }
 
   if (providerId === LATTER_STAGE_ELDERLY_ID) {
-    return 'Medical System for Ages 75+';
+    return 'Medical System for the Elderly (75+)';
   }
 
   if (providerId === CUSTOM_LATTER_STAGE_ID) {
-    return 'Medical System for Ages 75+ (custom rates)';
+    return 'Medical System for the Elderly (75+) (custom rates)';
   }
 
   const providerDef = getProviderDefinition(providerId);
