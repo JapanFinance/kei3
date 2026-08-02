@@ -32,6 +32,7 @@ import {
 import { formatJPY } from '../../../utils/formatters';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { SimpleTooltip } from '../../ui/Tooltips';
+import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
 
 interface SpouseSectionProps {
   spouse: Spouse | null;
@@ -73,16 +74,18 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
     onChange({ ...spouse, ...updates });
   };
 
-  const { netEmploymentIncome, pensionIncomeAdjustmentDeduction } = spouse
-    ? calculateDependentNetIncomeComponents(spouse, incomeYear)
-    : { netEmploymentIncome: 0, pensionIncomeAdjustmentDeduction: 0 };
-
-  const pensionIncomeAdjustmentNote =
-    `Net of a ${formatJPY(pensionIncomeAdjustmentDeduction)} income amount adjustment deduction ` +
-    `(所得金額調整控除). When both employment income and public pension income are present ` +
-    `(給与所得と年金所得の双方を有する者), net employment income (capped at ¥100,000) plus net ` +
-    `public pension income (capped at ¥100,000), less ¥100,000, is deducted from net employment ` +
-    `income.`;
+  const { netEmploymentIncome, incomeAdjustmentDeduction, pensionIncomeAdjustmentDeduction } =
+    spouse
+      ? calculateDependentNetIncomeComponents(spouse, incomeYear)
+      : {
+          netEmploymentIncome: 0,
+          incomeAdjustmentDeduction: 0,
+          pensionIncomeAdjustmentDeduction: 0,
+        };
+  const incomeAdjustmentNote = describeIncomeAdjustmentDeduction(
+    incomeAdjustmentDeduction,
+    pensionIncomeAdjustmentDeduction,
+  );
 
   return (
     <Box>
@@ -152,8 +155,8 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                     </Typography>
                     <Typography variant="body2">
                       {formatJPY(netEmploymentIncome)}
-                      {pensionIncomeAdjustmentDeduction > 0 && (
-                        <SimpleTooltip>{pensionIncomeAdjustmentNote}</SimpleTooltip>
+                      {incomeAdjustmentNote && (
+                        <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
                       )}
                     </Typography>
                   </Box>
@@ -292,8 +295,8 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       <TableCell align="right">
                         <Typography variant="body2">
                           {formatJPY(netEmploymentIncome)}
-                          {pensionIncomeAdjustmentDeduction > 0 && (
-                            <SimpleTooltip>{pensionIncomeAdjustmentNote}</SimpleTooltip>
+                          {incomeAdjustmentNote && (
+                            <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
                           )}
                         </Typography>
                       </TableCell>

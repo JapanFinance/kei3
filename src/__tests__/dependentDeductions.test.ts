@@ -933,7 +933,10 @@ describe('Total Net Income Calculation with Other Income', () => {
       otherNetIncome: 200_000,
     };
     expect(
-      calculateDependentTotalNetIncome({ income, ageCategory: '16to18' }, TEST_INCOME_YEAR),
+      calculateDependentTotalNetIncome(
+        { income, ageCategory: '16to18', disability: 'none' },
+        TEST_INCOME_YEAR,
+      ),
     ).toBe(460_000);
   });
 
@@ -2147,6 +2150,47 @@ describe('所得金額調整控除（給与所得と年金所得の双方を有�
     expect(components.netPublicPensionIncome).toBe(0);
     expect(components.netEmploymentIncome).toBe(2_020_000);
     expect(components.totalNetIncome).toBe(2_020_000);
+  });
+
+  it('applies the 子ども・特別障害者等 variant to a 特別障害者 dependent above ¥8.5M', () => {
+    const parent: Dependent = {
+      ...salaryAndPensionParent(9_000_000, 0),
+      disability: 'special',
+    };
+    const components = calculateDependentNetIncomeComponents(parent, TEST_INCOME_YEAR);
+    // 給与所得 9,000,000 − 1,950,000 = 7,050,000; adjustment (9,000,000 − 8,500,000) × 10%
+    expect(components.incomeAdjustmentDeduction).toBe(50_000);
+    expect(components.netEmploymentIncome).toBe(7_000_000);
+    expect(components.totalNetIncome).toBe(7_000_000);
+  });
+
+  it('does not apply it without special disability status, nor at or below ¥8.5M', () => {
+    const notSpecial = calculateDependentNetIncomeComponents(
+      salaryAndPensionParent(9_000_000, 0),
+      TEST_INCOME_YEAR,
+    );
+    expect(notSpecial.incomeAdjustmentDeduction).toBe(0);
+    expect(notSpecial.netEmploymentIncome).toBe(7_050_000);
+
+    const atThreshold = calculateDependentNetIncomeComponents(
+      { ...salaryAndPensionParent(8_500_000, 0), disability: 'special' },
+      TEST_INCOME_YEAR,
+    );
+    expect(atThreshold.incomeAdjustmentDeduction).toBe(0);
+  });
+
+  it('applies the 子ども・特別障害者等 variant before the 給与+年金 one', () => {
+    const parent: Dependent = {
+      ...salaryAndPensionParent(9_000_000, 2_400_000),
+      disability: 'special',
+    };
+    const components = calculateDependentNetIncomeComponents(parent, TEST_INCOME_YEAR);
+    expect(components.incomeAdjustmentDeduction).toBe(50_000);
+    expect(components.pensionIncomeAdjustmentDeduction).toBe(100_000);
+    // 7,050,000 − 50,000 (子ども等) − 100,000 (給与+年金)
+    expect(components.netEmploymentIncome).toBe(6_900_000);
+    expect(components.netPublicPensionIncome).toBe(1_300_000);
+    expect(components.totalNetIncome).toBe(8_200_000);
   });
 
   it('can bring a dependent within the 扶養控除 eligibility threshold', () => {
