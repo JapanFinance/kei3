@@ -40,27 +40,29 @@ describe('calculateLatterStageElderlyPremium (Tokyo)', () => {
     expect(result.total).toBe(392_500);
   });
 
-  it('blends 1/6 of FY2025 and 5/6 of FY2026 for calendar 2026', () => {
+  it('blends 1/3 of FY2025 and 2/3 of FY2026 for calendar 2026', () => {
     // FY2025: medical 392,500 (above); child 0.
     // FY2026: medical floor100(53,300 + 3,570,000 × 9.88%) = floor100(406,016) = 406,000
     //         child floor100(1,300 + 3,570,000 × 0.26%) = floor100(10,582) = 10,500
-    // Blend:  medical round(392,500/6 + 406,000×5/6) = 403,750
-    //         child   round(0/6 + 10,500×5/6) = 8,750
+    // Blend (仮徴収 April-August at the previous February's amount, trued up from October;
+    // identical under the 9-installment 普通徴収):
+    //         medical round(392,500/3 + 406,000×2/3) = 401,500
+    //         child   round(0/3 + 10,500×2/3) = 7,000
     const result = calculateLatterStageElderlyPremium(4_000_000, 2026, 'Tokyo');
-    expect(result.medicalPortion).toBe(403_750);
-    expect(result.childSupportPortion).toBe(8_750);
-    expect(result.total).toBe(412_500);
+    expect(result.medicalPortion).toBe(401_500);
+    expect(result.childSupportPortion).toBe(7_000);
+    expect(result.total).toBe(408_500);
   });
 
   it('applies the 賦課限度額 per portion at high income', () => {
     // 2025: medical would be ~1.94M → capped at 800,000.
     expect(calculateLatterStageElderlyPremium(20_000_000, 2025, 'Tokyo').total).toBe(800_000);
 
-    // 2026: blended caps — medical round(800,000/6 + 850,000×5/6) = 841,667;
-    // child round(0/6 + 21,000×5/6) = 17,500.
+    // 2026: blended caps — medical round(800,000/3 + 850,000×2/3) = 833,333;
+    // child round(0/3 + 21,000×2/3) = 14,000.
     const capped2026 = calculateLatterStageElderlyPremium(20_000_000, 2026, 'Tokyo');
-    expect(capped2026.medicalPortion).toBe(841_667);
-    expect(capped2026.childSupportPortion).toBe(17_500);
+    expect(capped2026.medicalPortion).toBe(833_333);
+    expect(capped2026.childSupportPortion).toBe(14_000);
   });
 
   it('charges only the per-capita amount at zero income', () => {
