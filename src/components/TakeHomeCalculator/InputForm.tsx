@@ -74,15 +74,15 @@ const AGE_RANGE_SOURCES: Source[] = [
     href: 'https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html',
   },
   {
-    label: '協会けんぽの介護保険料率について (long-term care premiums, ages 40-64)',
-    href: 'https://www.kyoukaikenpo.or.jp/g7/cat330/1995-298/',
-  },
-  {
     label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
     href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
   },
   {
-    label: '後期高齢者医療制度 (medical system for ages 75 and over)',
+    label: '介護保険制度について (long-term care insurance, ages 40-64)',
+    href: 'https://www.mhlw.go.jp/stf/newpage_10548.html',
+  },
+  {
+    label: '後期高齢者医療制度 (medical system for the elderly (75+))',
     href: 'https://www.gov-online.go.jp/article/202209/entry-10482.html',
   },
 ];
@@ -490,8 +490,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.5 } }}>
                   <li>
                     <Typography variant="body2">
-                      Minors (未成年者) with 合計所得金額 of ¥1,350,000 or less are exempt from
-                      residence tax (minor status is judged at the January 1 following the income
+                      Minors (未成年者) with total net income of ¥1,350,000 or less are exempt from
+                      residence tax (minor status is judged as of January 1 following the income
                       year).
                     </Typography>
                   </li>
@@ -516,17 +516,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      From age 75, health coverage moves to the medical system for people aged 75
-                      and over (後期高齢者医療制度), which replaces the health insurance provider
-                      options.
-                    </Typography>
-                  </li>
-                  <li>
-                    <Typography variant="body2">
-                      Premium obligations actually start or stop in the month the boundary age is
-                      reached, while the calculator applies the selected range to the whole year. In
-                      a year containing a boundary birthday, the actual annual amounts fall between
-                      the results for the two adjacent ranges.
+                      From age 75, health coverage moves to the Medical System for the Elderly (75+)
+                      (後期高齢者医療制度), which replaces the health insurance provider options.
                     </Typography>
                   </li>
                 </Box>
@@ -704,7 +695,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if gross annual income is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective gross annual income is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>

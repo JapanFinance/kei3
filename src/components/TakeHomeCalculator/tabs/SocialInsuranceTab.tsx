@@ -410,7 +410,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isLatterStage
-              ? 'Medical System for Ages 75+'
+              ? 'Medical System for the Elderly (75+)'
               : isNationalHealthInsurance
                 ? 'National Health Insurance'
                 : "Employees' Health Insurance"}

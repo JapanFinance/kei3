@@ -319,7 +319,7 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
   it('renders the latter-stage premium breakdown and no-pension note at 75+', () => {
     render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
 
-    expect(screen.getByText('Medical System for Ages 75+')).toBeInTheDocument();
+    expect(screen.getByText('Medical System for the Elderly (75+)')).toBeInTheDocument();
     expect(screen.getByText('Medical Portion')).toBeInTheDocument();
     expect(screen.getByText('Child Support Portion')).toBeInTheDocument();
     expect(screen.getAllByText('¥403,750').length).toBeGreaterThan(0);
