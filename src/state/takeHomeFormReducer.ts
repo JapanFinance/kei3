@@ -362,9 +362,14 @@ function reduceIncomeModeChanged(
   switch (action.mode) {
     case 'salary':
     case 'miscellaneous':
-      newState.healthInsuranceProvider =
-        action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
-      newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
+      // At 75+ the provider is age-determined (後期高齢者医療制度), not income-determined, so
+      // the mode-based provider defaulting must not overwrite the selection — it would send a
+      // custom-rates choice through applyProviderValidity's fallback and reset it.
+      if (!isLatterStageElderly(state.ageRange)) {
+        newState.healthInsuranceProvider =
+          action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
+        newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
+      }
       newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
       break;
     case 'advanced': {
