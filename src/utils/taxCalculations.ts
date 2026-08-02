@@ -104,6 +104,49 @@ export const calculateNetEmploymentIncome = (
   ) - calculateIncomeAdjustmentDeduction(grossEmploymentIncome, dependents, year);
 
 /**
+ * The ¥100,000 that caps both income terms of the
+ * 所得金額調整控除（給与所得と年金所得の双方を有する者）and is then subtracted from their sum.
+ */
+const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
+
+/**
+ * Calculates the 所得金額調整控除（給与所得と年金所得の双方を有する者）(措法41の3の12): when both
+ * 給与所得 and 公的年金等に係る雑所得 are positive,
+ *
+ *   min(給与所得控除後の給与等の金額, ¥100,000) + min(公的年金等に係る雑所得, ¥100,000) − ¥100,000
+ *
+ * is deducted from 給与所得.
+ *
+ * The statute frames this as an adjustment made when computing 総所得金額, but what it reduces is
+ * 給与所得の金額 itself. Since 所法2条1項30号 defines 合計所得金額 as the same 22条 総所得金額 plus
+ * 退職所得金額 and 山林所得金額, the reduction carries into 合計所得金額 and so into the
+ * 同一生計配偶者 and 扶養親族 income tests.
+ *
+ * @param netEmploymentIncome     給与所得 with the 給与所得控除 already taken, and with the other
+ *                                variant — the 所得金額調整控除（子ども・特別障害者等を有する者等）,
+ *                                措法41の3の11 — already subtracted where it applies, since the
+ *                                statute deducts this one from the 給与所得 left after that. Strictly
+ *                                its own capped term is the 給与所得控除後の給与等の金額, i.e. the
+ *                                amount before that variant, but the variant only applies above
+ *                                ¥8,500,000 of gross salary, where 給与所得 far exceeds the
+ *                                ¥100,000 cap and the capped term is identical either way.
+ * @param netPublicPensionIncome  公的年金等に係る雑所得, with the 公的年金等控除 already taken.
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
+ */
+export const calculatePensionIncomeAdjustmentDeduction = (
+  netEmploymentIncome: number,
+  netPublicPensionIncome: number,
+): number =>
+  netEmploymentIncome > 0 && netPublicPensionIncome > 0
+    ? Math.max(
+        0,
+        Math.min(netEmploymentIncome, PENSION_INCOME_ADJUSTMENT_CAP) +
+          Math.min(netPublicPensionIncome, PENSION_INCOME_ADJUSTMENT_CAP) -
+          PENSION_INCOME_ADJUSTMENT_CAP,
+      )
+    : 0;
+
+/**
  * Breakdown of Employment Insurance premium components
  */
 export interface EmploymentInsuranceBreakdown {
