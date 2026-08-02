@@ -266,7 +266,7 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
 
   const baseResults: TakeHomeResults = {
     annualIncome: 4_000_000,
-    healthInsurance: 412_500,
+    healthInsurance: 408_500,
     pensionPayments: 0,
     nationalIncomeTax: 100_000,
     residenceTax: {
@@ -311,8 +311,8 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     },
     salaryIncome: 0,
     additionalDeductions: { national: 0, residence: 0, items: [] },
-    latterStageMedicalPortion: 403_750,
-    latterStageChildSupportPortion: 8_750,
+    latterStageMedicalPortion: 401_500,
+    latterStageChildSupportPortion: 7_000,
     longTermCareCategory1Premium: 150_000,
   };
 
@@ -322,7 +322,7 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(screen.getByText('Medical System for the Elderly (75+)')).toBeInTheDocument();
     expect(screen.getByText('Medical Portion')).toBeInTheDocument();
     expect(screen.getByText('Child Support Portion')).toBeInTheDocument();
-    expect(screen.getAllByText('¥403,750').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('¥401,500').length).toBeGreaterThan(0);
     expect(screen.getByText(/enrollment ends at age 70 and National Pension/)).toBeInTheDocument();
     expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
   });
