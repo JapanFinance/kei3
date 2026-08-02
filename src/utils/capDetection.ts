@@ -132,10 +132,11 @@ function checkHealthInsuranceCap(
     if (!currFY) {
       return { capped: medical >= getLatterStageStatutoryCap(year, 3) };
     }
+    // Same 1/3 : 2/3 fiscal-year weights as calculateLatterStageElderlyPremium.
     const blendedMedicalCap =
       !prevFY || prevFY.medicalCap === currFY.medicalCap
         ? currFY.medicalCap
-        : Math.round((prevFY.medicalCap * 1) / 6 + (currFY.medicalCap * 5) / 6);
+        : Math.round((prevFY.medicalCap * 1) / 3 + (currFY.medicalCap * 2) / 3);
     return { capped: medical >= blendedMedicalCap };
   }
 

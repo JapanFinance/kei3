@@ -262,13 +262,13 @@ describe('detectCaps age-range gating', () => {
 describe('detectCaps for the 後期高齢者医療制度', () => {
   it('reports capped when the medical portion reaches the blended 賦課限度額', () => {
     // Calendar 2026 blends FY2025 (cap 800,000) and FY2026 (cap 850,000):
-    // round(800,000/6 + 850,000×5/6) = 841,667.
+    // round(800,000/3 + 850,000×2/3) = 833,333.
     const results = createMockResults({
       healthInsuranceProvider: 'LatterStageElderly',
       region: 'Tokyo',
       ageRange: 'age75plus' as const,
-      latterStageMedicalPortion: 841_667,
-      latterStageChildSupportPortion: 17_500,
+      latterStageMedicalPortion: 833_333,
+      latterStageChildSupportPortion: 14_000,
     });
 
     const caps = detectCaps(results, TEST_INCOME_YEAR);
@@ -281,8 +281,8 @@ describe('detectCaps for the 後期高齢者医療制度', () => {
       healthInsuranceProvider: 'LatterStageElderly',
       region: 'Tokyo',
       ageRange: 'age75plus' as const,
-      latterStageMedicalPortion: 403_750,
-      latterStageChildSupportPortion: 8_750,
+      latterStageMedicalPortion: 401_500,
+      latterStageChildSupportPortion: 7_000,
     });
 
     expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);

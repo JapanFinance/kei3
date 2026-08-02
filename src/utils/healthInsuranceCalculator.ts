@@ -520,11 +520,24 @@ function calculateLatterStagePremiumForParams(
 /**
  * Calculates the annual 後期高齢者医療制度 premium for a calendar year.
  *
- * Nearly all insured pay by 特別徴収: the premium is deducted from the six bimonthly
- * pension payments, April through February. A calendar year therefore contains the
- * previous fiscal year's February installment (1/6 of that annual premium) plus five of
- * the current fiscal year's six installments (5/6), and the two fiscal years are blended
- * accordingly. When both resolve to the same rate period the blend collapses to a single
+ * A calendar year straddles two fiscal years, and both collection routes weight them
+ * 1/3 previous FY : 2/3 current FY:
+ * - 特別徴収 (the default): six bimonthly pension deductions, April through February. The
+ *   April, June, and August payments are 仮徴収, each set to the same amount as the
+ *   previous February's deduction — the fiscal year's premium is only determined in July —
+ *   and the October/December/February 本徴収 payments absorb the entire true-up. Counting
+ *   the calendar year's own February payment, four payments sit at the previous fiscal
+ *   year's level and the two in-year 本徴収 payments over-correct toward the new annual
+ *   total, netting to 1/3 : 2/3.
+ * - 普通徴収: nine installments, July through March (Tokyo), so January-March pay 3/9 of
+ *   the previous fiscal year and July-December 6/9 of the current one — the same fraction.
+ * Municipalities may smooth the June/August 仮徴収 (平準化) when the gap is large; that
+ * shifts individual installments, not fiscal-year totals, and is not modeled.
+ * Sources:
+ * - https://www.city.tachikawa.lg.jp/kurashi/nenkin/1002477/1002485/1002501.html
+ * - https://www.city.koto.lg.jp/250107/fukushi/kokikoresha/hokenryo/209.html
+ *
+ * When both fiscal years resolve to the same rate period the blend collapses to a single
  * calculation.
  *
  * With `customRates` (prefectures without shipped data), the entered 均等割額 and
@@ -574,10 +587,10 @@ export function calculateLatterStageElderlyPremium(
 
   const prevFY = calculateLatterStagePremiumForParams(netIncome, prevFYParams);
   const medicalPortion = Math.round(
-    (prevFY.medicalPortion * 1) / 6 + (currFY.medicalPortion * 5) / 6,
+    (prevFY.medicalPortion * 1) / 3 + (currFY.medicalPortion * 2) / 3,
   );
   const childSupportPortion = Math.round(
-    (prevFY.childSupportPortion * 1) / 6 + (currFY.childSupportPortion * 5) / 6,
+    (prevFY.childSupportPortion * 1) / 3 + (currFY.childSupportPortion * 2) / 3,
   );
   return {
     medicalPortion,

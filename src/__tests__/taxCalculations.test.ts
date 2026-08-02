@@ -1908,10 +1908,10 @@ describe('calculateTaxes at ages 65 and over', () => {
     it('uses the Tokyo premium table and pays no pension', () => {
       const result = calculateTaxes(latterStageInputs);
       // Matches calculateLatterStageElderlyPremium(4,000,000, 2026, 'Tokyo'):
-      // blended medical 403,750 + child support 8,750.
-      expect(result.latterStageMedicalPortion).toBe(403_750);
-      expect(result.latterStageChildSupportPortion).toBe(8_750);
-      expect(result.healthInsurance).toBe(412_500);
+      // blended medical 401,500 + child support 7,000.
+      expect(result.latterStageMedicalPortion).toBe(401_500);
+      expect(result.latterStageChildSupportPortion).toBe(7_000);
+      expect(result.healthInsurance).toBe(408_500);
       expect(result.pensionPayments).toBe(0);
     });
 
@@ -1943,7 +1943,7 @@ describe('calculateTaxes at ages 65 and over', () => {
         longTermCareCategory1Premium: 150_000,
       });
       expect(result.longTermCareCategory1Premium).toBe(150_000);
-      expect(result.healthInsurance).toBe(412_500);
+      expect(result.healthInsurance).toBe(408_500);
     });
   });
 });
