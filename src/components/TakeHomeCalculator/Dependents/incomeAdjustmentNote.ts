@@ -21,7 +21,7 @@ export function describeIncomeAdjustmentDeduction(
     reasons.push({
       amount: incomeAdjustmentDeduction,
       clause:
-        `for special disability status (特別障害者) with employment income over ¥8,500,000 — ` +
+        `for 特別障害者 status with employment income over ¥8,500,000 — ` +
         `10% of the excess, up to ¥150,000`,
     });
   }

@@ -63,7 +63,7 @@ export const PERSONAL_DEDUCTION_INFO: Record<
   disability: {
     name: 'Disability',
     explanation:
-      'A flat ¥270,000 income tax / ¥260,000 residence tax for a 障害者, or ¥400,000 / ¥300,000 for a 特別障害者. There is no income limit. A 特別障害者 with employment income over ¥8,500,000 also qualifies for the 所得金額調整控除.',
+      'A flat ¥270,000 income tax / ¥260,000 residence tax under the 一般の障害者 category, or ¥400,000 / ¥300,000 under 特別障害者. There is no income limit. The 特別障害者 category with employment income over ¥8,500,000 also qualifies for the 所得金額調整控除.',
     sourceLabel: '障害者控除 (NTA No.1160)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm',
   },

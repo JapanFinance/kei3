@@ -40,7 +40,9 @@ const renderModal = (
 describe('Personal Circumstances card', () => {
   it('shows no deduction readout until a status is selected', () => {
     renderModal(EMPTY_PERSONAL_CIRCUMSTANCES, 3_000_000);
-    expect(screen.getByRole('combobox', { name: /Disability/ })).toHaveTextContent('Not Disabled');
+    expect(screen.getByRole('combobox', { name: /Disability/ })).toHaveTextContent(
+      'Not applicable',
+    );
     expect(screen.queryByText(/deduction: /i)).not.toBeInTheDocument();
   });
 
