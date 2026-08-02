@@ -29,7 +29,7 @@ export function describeIncomeAdjustmentDeduction(
     reasons.push({
       amount: pensionIncomeAdjustmentDeduction,
       clause:
-        `for having both employment and public pension income ` +
+        `for having both net employment and public pension income ` +
         `(給与所得と年金所得の双方を有する者) — each capped at ¥100,000, less ¥100,000`,
     });
   }
