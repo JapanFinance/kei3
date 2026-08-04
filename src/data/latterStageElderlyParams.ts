@@ -16,7 +16,7 @@ import type {
  * NHI data also covers Osaka and Nara, whose 後期高齢者 parameters are not here yet.
  * Prefectures without an entry use the custom parameter inputs
  * ({@link CUSTOM_LATTER_STAGE_ID}), and adding them later is cheap.
- * Source: https://laws.e-gov.go.jp/law/419CO0000000318
+ * Source: https://laws.e-gov.go.jp/law/419CO0000000318#Mp-Ch_3-Se_4-At_18
  */
 const allLatterStageRegions: Record<string, LatterStageElderlyRegionDefinition> = {
   Tokyo: {
@@ -115,7 +115,7 @@ export const LATTER_STAGE_REGION_OPTIONS = Object.entries(allLatterStageRegions)
  * only the 均等割額 and 所得割率. The FY2024-2025 entry is the same provision's amount
  * before the FY2026 increase (80万円, with no 子ども・子育て支援金分 yet).
  * Sources:
- * - https://laws.e-gov.go.jp/law/419CO0000000318 (高齢者の医療の確保に関する法律施行令第18条)
+ * - https://laws.e-gov.go.jp/law/419CO0000000318#Mp-Ch_3-Se_4-At_18 (高齢者の医療の確保に関する法律施行令第18条)
  * - https://www.city.koganei.lg.jp/kenkofukuhsi/koreishafukushi/koukikoureishairyou/hokenryoutb2024.html
  */
 const STATUTORY_CAP_PERIODS = [
