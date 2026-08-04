@@ -226,8 +226,10 @@ export interface TakeHomeFormState {
   ageRange: AgeRange;
   /**
    * Annual 介護保険料 billed directly to a 第1号被保険者 (ages 65 and over), from the
-   * June-July 介護保険料決定通知書. Ignored below age 65 and under manual social
-   * insurance entry.
+   * June-July 介護保険料決定通知書. 0 when nothing has been entered; ignored below age 65
+   * and under manual social insurance entry. Required (rather than optional) because it
+   * backs a controlled number field, matching {@link manualSocialInsuranceAmount}, which
+   * is likewise only meaningful when a sibling field says so.
    */
   longTermCareCategory1Premium: number;
   region: string;
