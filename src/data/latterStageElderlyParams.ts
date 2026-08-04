@@ -8,12 +8,15 @@ import type {
 
 /**
  * 後期高齢者医療制度 premium parameters by prefecture. Unlike NHI's municipal parameters,
- * these are uniform across each prefecture (set by its 広域連合 on a two-year cycle), so
- * the data here is far more bounded than the NHI tables: one entry per prefecture, revised
- * every two years. Tokyo covers the 23 wards the NHI data ships; the NHI data also covers
- * Osaka and Nara, whose 後期高齢者 parameters are not here yet. Prefectures without an
- * entry use the custom parameter inputs ({@link CUSTOM_LATTER_STAGE_ID}), and adding them
- * later is cheap.
+ * these are uniform across a whole prefecture by law — 高齢者の医療の確保に関する法律
+ * 施行令第18条第1項第6号・第12号 require the 所得割率 and 被保険者均等割額 to be 「当該後期
+ * 高齢者医療広域連合の全区域にわたって均一」 — and each 広域連合 sets them on a two-year
+ * cycle. The data here is therefore far more bounded than the NHI tables: one entry per
+ * prefecture, revised every two years. Tokyo covers the 23 wards the NHI data ships; the
+ * NHI data also covers Osaka and Nara, whose 後期高齢者 parameters are not here yet.
+ * Prefectures without an entry use the custom parameter inputs
+ * ({@link CUSTOM_LATTER_STAGE_ID}), and adding them later is cheap.
+ * Source: https://laws.e-gov.go.jp/law/419CO0000000318
  */
 const allLatterStageRegions: Record<string, LatterStageElderlyRegionDefinition> = {
   Tokyo: {
@@ -104,13 +107,16 @@ export const LATTER_STAGE_REGION_OPTIONS = Object.entries(allLatterStageRegions)
 );
 
 /**
- * Nationwide statutory 賦課限度額 (combined 医療分 + 子ども・子育て支援金分), set by
- * cabinet order and identical in every prefecture — e.g. FY2026 shows the same 85万/2.1万
- * caps in Tokyo and Osaka despite different rates. Used to cap the custom-rate path,
- * where the user enters only 均等割額 and 所得割率.
+ * Nationwide statutory 賦課限度額 (医療分 + 子ども・子育て支援金分 combined). The caps are
+ * fixed by cabinet order, not by each 広域連合: 施行令第18条第1項第7号 sets 「第一号イの
+ * 基礎賦課額は、八十五万円を超えることができない」 and 第13号 sets 「第一号ロの
+ * 子ども・子育て支援納付金賦課額は、二万千円を超えることができない」, so the pair is the
+ * same in every prefecture. Used to cap the custom-parameter path, where the user enters
+ * only the 均等割額 and 所得割率. The FY2024-2025 entry is the same provision's amount
+ * before the FY2026 increase (80万円, with no 子ども・子育て支援金分 yet).
  * Sources:
- * - https://www.tokyo-ikiiki.net/seido/1001968/1001975/index.html
- * - https://www.city.higashiosaka.lg.jp/0000003175.html
+ * - https://laws.e-gov.go.jp/law/419CO0000000318 (高齢者の医療の確保に関する法律施行令第18条)
+ * - https://www.city.koganei.lg.jp/kenkofukuhsi/koreishafukushi/koukikoureishairyou/hokenryoutb2024.html
  */
 const STATUTORY_CAP_PERIODS = [
   { effectiveFrom: { year: 2026, month: 3 }, cap: 871000 }, // 850,000 medical + 21,000 child
