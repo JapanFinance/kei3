@@ -18,8 +18,7 @@ import {
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
-  CUSTOM_LATTER_STAGE_ID,
-  isLatterStageProvider,
+  LATTER_STAGE_ELDERLY_ID,
 } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
@@ -80,7 +79,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
-  const isLatterStage = isLatterStageProvider(inputs.healthInsuranceProvider);
+  const isLatterStage = inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID;
   // NHI and the 後期高齢者医療制度 both assess premiums on net income rather than SMR.
   const isIncomeBasedProvider = isNationalHealthInsurance || isLatterStage;
   const includeLTC = isSubjectToLongTermCarePremium(inputs.ageRange);
@@ -430,12 +429,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   is rounded down to ¥100 and capped at its statutory maximum (賦課限度額). Rates
                   are uniform within each prefecture and revised every two years.
                 </Typography>
-                {inputs.healthInsuranceProvider === CUSTOM_LATTER_STAGE_ID && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    Calculated from the entered 均等割額 and 所得割率, capped at the nationwide
-                    statutory 賦課限度額.
-                  </Typography>
-                )}
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   The low-income per-capita reduction (均等割額の軽減) and the reduction for former
                   dependents (元被扶養者) are not applied.

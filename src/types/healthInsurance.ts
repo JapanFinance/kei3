@@ -11,7 +11,6 @@ export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
 export const CUSTOM_PROVIDER_ID = 'CustomProvider' as const;
 export const LATTER_STAGE_ELDERLY_ID = 'LatterStageElderly' as const;
-export const CUSTOM_LATTER_STAGE_ID = 'CustomLatterStageElderly' as const;
 export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 
 // Annual income thresholds for dependent coverage eligibility (被扶養者認定): under 1.3
@@ -48,13 +47,7 @@ export type HealthInsuranceProviderId =
   | typeof NATIONAL_HEALTH_INSURANCE_ID
   | typeof DEPENDENT_COVERAGE_ID
   | typeof CUSTOM_PROVIDER_ID
-  | typeof LATTER_STAGE_ELDERLY_ID
-  | typeof CUSTOM_LATTER_STAGE_ID;
-
-/** The two 後期高齢者医療制度 provider ids (prefecture table vs. user-entered rates). */
-export function isLatterStageProvider(providerId: HealthInsuranceProviderId): boolean {
-  return providerId === LATTER_STAGE_ELDERLY_ID || providerId === CUSTOM_LATTER_STAGE_ID;
-}
+  | typeof LATTER_STAGE_ELDERLY_ID;
 
 /**
  * Checks if dependent coverage is eligible against the age-dependent 年間収入 threshold
@@ -91,10 +84,6 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
 
   if (providerId === LATTER_STAGE_ELDERLY_ID) {
     return 'Medical System for the Elderly (75+)';
-  }
-
-  if (providerId === CUSTOM_LATTER_STAGE_ID) {
-    return 'Medical System for the Elderly (75+) (custom rates)';
   }
 
   const providerDef = getProviderDefinition(providerId);
@@ -175,7 +164,6 @@ export interface NHIRegionDefinition {
  */
 export interface LatterStageElderlyRegionParams {
   regionName: string;
-  source?: string;
   // Medical portion (医療分)
   medicalPerCapita: number; // 均等割額 (annual)
   medicalRate: number; // 所得割率 (e.g. 0.0988)

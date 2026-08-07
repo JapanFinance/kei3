@@ -201,7 +201,6 @@ function App() {
             longTermCareCategory1Premium={inputs.longTermCareCategory1Premium}
             healthInsuranceProvider={inputs.healthInsuranceProvider}
             region={inputs.region}
-            customLatterStageParams={inputs.customLatterStageParams}
             dcPlanContributions={inputs.dcPlanContributions}
             dependents={inputs.dependents}
             customEHIRates={inputs.customEHIRates}

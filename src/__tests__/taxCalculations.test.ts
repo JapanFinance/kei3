@@ -10,7 +10,6 @@ import {
   DEFAULT_PROVIDER,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
-  CUSTOM_LATTER_STAGE_ID,
   DEPENDENT_COVERAGE_ID,
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
@@ -1925,16 +1924,6 @@ describe('calculateTaxes at ages 65 and over', () => {
       expect(result.employmentInsurance).toBeGreaterThan(0);
       expect(result.pensionPayments).toBe(0);
       expect(result.healthInsurance).toBeGreaterThan(0);
-    });
-
-    it('uses entered custom rates for unlisted prefectures', () => {
-      const result = calculateTaxes({
-        ...latterStageInputs,
-        healthInsuranceProvider: CUSTOM_LATTER_STAGE_ID,
-        customLatterStageParams: { perCapitaAmount: 60_000, incomeRatePercent: 10 },
-      });
-      // Base 3,570,000 → floor100(60,000 + 357,000) = 417,000
-      expect(result.healthInsurance).toBe(417_000);
     });
 
     it('combines the latter-stage premium with the 第1号 amount', () => {

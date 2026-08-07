@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   getLatterStageParamsForMonth,
-  getLatterStageStatutoryCap,
+  LATTER_STAGE_REGIONS,
 } from '../data/latterStageElderlyParams';
 import { calculateLatterStageElderlyPremium } from '../utils/healthInsuranceCalculator';
 
@@ -17,16 +17,17 @@ describe('getLatterStageParamsForMonth', () => {
     expect(getLatterStageParamsForMonth('Tokyo', 2025, 3)?.medicalPerCapita).toBe(47300);
   });
 
-  it('returns undefined for an unknown prefecture', () => {
-    expect(getLatterStageParamsForMonth('Osaka', 2026, 3)).toBeUndefined();
+  it('covers every prefecture', () => {
+    expect(LATTER_STAGE_REGIONS).toHaveLength(47);
+    // Spot-checks against the MHLW FY2026 table. Osaka also matches 東大阪市's own page
+    // (64,931円 / 11.51%), an independent confirmation of the parsed figures.
+    expect(getLatterStageParamsForMonth('Osaka', 2026, 3)?.medicalPerCapita).toBe(64931);
+    expect(getLatterStageParamsForMonth('Osaka', 2026, 3)?.medicalRate).toBe(0.1151);
+    expect(getLatterStageParamsForMonth('Aomori', 2026, 3)?.medicalPerCapita).toBe(50500);
   });
-});
 
-describe('getLatterStageStatutoryCap', () => {
-  it('is 800,000 through FY2025 and 871,000 from FY2026', () => {
-    expect(getLatterStageStatutoryCap(2025, 3)).toBe(800_000);
-    expect(getLatterStageStatutoryCap(2026, 0)).toBe(800_000);
-    expect(getLatterStageStatutoryCap(2026, 3)).toBe(871_000);
+  it('returns undefined for an unknown region key', () => {
+    expect(getLatterStageParamsForMonth('Atlantis', 2026, 3)).toBeUndefined();
   });
 });
 
@@ -70,29 +71,7 @@ describe('calculateLatterStageElderlyPremium (Tokyo)', () => {
     expect(result.total).toBe(47_300);
   });
 
-  it('returns a zero breakdown for an unknown prefecture', () => {
-    expect(calculateLatterStageElderlyPremium(4_000_000, 2026, 'Hokkaido').total).toBe(0);
-  });
-});
-
-describe('calculateLatterStageElderlyPremium (custom rates)', () => {
-  it('computes from the entered per-capita amount and rate', () => {
-    // Base 3,570,000; floor100(60,000 + 3,570,000 × 10%) = 417,000
-    const result = calculateLatterStageElderlyPremium(4_000_000, 2025, undefined, {
-      perCapitaAmount: 60_000,
-      incomeRatePercent: 10,
-    });
-    expect(result.total).toBe(417_000);
-    expect(result.medicalPortion).toBe(417_000);
-  });
-
-  it('caps at the nationwide statutory 賦課限度額 for the year', () => {
-    const rates = { perCapitaAmount: 60_000, incomeRatePercent: 10 };
-    expect(calculateLatterStageElderlyPremium(20_000_000, 2025, undefined, rates).total).toBe(
-      800_000,
-    );
-    expect(calculateLatterStageElderlyPremium(20_000_000, 2026, undefined, rates).total).toBe(
-      871_000,
-    );
+  it('returns a zero breakdown for an unknown region key', () => {
+    expect(calculateLatterStageElderlyPremium(4_000_000, 2026, 'Atlantis').total).toBe(0);
   });
 });

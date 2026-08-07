@@ -19,11 +19,10 @@ import {
 } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
-  CUSTOM_LATTER_STAGE_ID,
   CUSTOM_PROVIDER_ID,
   DEFAULT_PROVIDER,
   DEPENDENT_COVERAGE_ID,
-  isLatterStageProvider,
+  LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
 import type {
@@ -504,17 +503,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const subjectToLongTermCarePremium = isSubjectToLongTermCarePremium(inputs.ageRange);
 
-    if (isLatterStageProvider(inputs.healthInsuranceProvider)) {
+    if (inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
       // 後期高齢者医療制度 (ages 75+): premiums are income-based like NHI, with no bonus
-      // portion of their own. The custom provider computes zero until rates are entered
-      // (matching the custom EHI fallback) rather than hitting the region-table path.
+      // portion of their own.
       latterStageBreakdown = calculateLatterStageElderlyPremium(
         netIncome,
         incomeYear,
         inputs.region,
-        inputs.healthInsuranceProvider === CUSTOM_LATTER_STAGE_ID
-          ? (inputs.customLatterStageParams ?? { perCapitaAmount: 0, incomeRatePercent: 0 })
-          : undefined,
       );
       healthInsurance = latterStageBreakdown.total;
     } else if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
@@ -565,7 +560,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const isInEmployeePensionSystem =
       inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID &&
       inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID &&
-      !isLatterStageProvider(inputs.healthInsuranceProvider);
+      inputs.healthInsuranceProvider !== LATTER_STAGE_ELDERLY_ID;
 
     if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
       pensionPayments = 0;

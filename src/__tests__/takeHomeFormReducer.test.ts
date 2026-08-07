@@ -15,7 +15,6 @@ import {
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
-  CUSTOM_LATTER_STAGE_ID,
   DEPENDENT_INCOME_THRESHOLD,
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
@@ -745,9 +744,9 @@ describe('takeHomeFormReducer', () => {
 });
 
 describe('75+ provider forcing', () => {
-  it('offers only the latter-stage providers at 75+', () => {
+  it('offers only the latter-stage provider at 75+', () => {
     const options = availableProvidersFor({ ...baseState, ageRange: 'age75plus' });
-    expect(options.map(o => o.id)).toEqual([LATTER_STAGE_ELDERLY_ID, CUSTOM_LATTER_STAGE_ID]);
+    expect(options.map(o => o.id)).toEqual([LATTER_STAGE_ELDERLY_ID]);
   });
 
   it('forces the latter-stage provider when the age changes to 75+', () => {
@@ -797,39 +796,10 @@ describe('75+ provider forcing', () => {
     expect(backToSalary.region).toBe('Tokyo');
   });
 
-  it('keeps the custom latter-stage provider and rates across income-mode changes at 75+', () => {
-    // The mode-based provider defaulting must not run at 75+: it would route the custom
-    // selection through applyProviderValidity's fallback and reset it to the non-custom
-    // provider.
-    const state: TakeHomeFormState = {
-      ...baseState,
-      ageRange: 'age75plus',
-      healthInsuranceProvider: CUSTOM_LATTER_STAGE_ID,
-      region: DEFAULT_PROVIDER_REGION,
-      customLatterStageParams: { perCapitaAmount: 60_000, incomeRatePercent: 10 },
-    };
-
-    const toMisc = takeHomeFormReducer(state, { type: 'incomeModeChanged', mode: 'miscellaneous' });
-    expect(toMisc.incomeMode).toBe('miscellaneous');
-    expect(toMisc.healthInsuranceProvider).toBe(CUSTOM_LATTER_STAGE_ID);
-    expect(toMisc.region).toBe(DEFAULT_PROVIDER_REGION);
-    expect(toMisc.customLatterStageParams).toEqual({
-      perCapitaAmount: 60_000,
-      incomeRatePercent: 10,
-    });
-
-    const backToSalary = takeHomeFormReducer(toMisc, { type: 'incomeModeChanged', mode: 'salary' });
-    expect(backToSalary.incomeMode).toBe('salary');
-    expect(backToSalary.healthInsuranceProvider).toBe(CUSTOM_LATTER_STAGE_ID);
-    expect(backToSalary.region).toBe(DEFAULT_PROVIDER_REGION);
-    expect(backToSalary.customLatterStageParams).toEqual({
-      perCapitaAmount: 60_000,
-      incomeRatePercent: 10,
-    });
-  });
-
-  it('lists Tokyo as the only shipped latter-stage region', () => {
-    expect(regionOptionsFor(LATTER_STAGE_ELDERLY_ID).map(o => o.id)).toEqual(['Tokyo']);
-    expect(regionOptionsFor(CUSTOM_LATTER_STAGE_ID)).toEqual([]);
+  it('lists every prefecture as a latter-stage region', () => {
+    const ids = regionOptionsFor(LATTER_STAGE_ELDERLY_ID).map(o => o.id);
+    expect(ids).toHaveLength(47);
+    expect(ids).toContain('Tokyo');
+    expect(ids).toContain('Okinawa');
   });
 });
