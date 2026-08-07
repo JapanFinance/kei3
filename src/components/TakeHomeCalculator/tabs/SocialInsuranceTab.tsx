@@ -9,6 +9,10 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import {
+  isSubjectToLongTermCarePremium,
+  isSubjectToNationalPension,
+} from '../../../types/ageRange';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
@@ -22,7 +26,7 @@ import {
 import CapIndicator from '../../ui/CapIndicator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
@@ -48,6 +52,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
+  const includeLTC = isSubjectToLongTermCarePremium(inputs.ageRange);
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
   // We need to determine the rates here to pass to the breakdown calculator
@@ -68,7 +73,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
         rates,
-        inputs.isSubjectToLongTermCarePremium,
+        includeLTC,
         inputs.incomeYear,
       );
     } else {
@@ -77,13 +82,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         provider,
         region,
         inputs.incomeYear,
-        inputs.isSubjectToLongTermCarePremium,
+        includeLTC,
       );
     }
   }
 
   // Detect if any caps are applied
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
+
+  const nationalPensionDue = isSubjectToNationalPension(inputs.ageRange);
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -575,9 +582,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           label="Annual Contribution"
           labelSuffix={
             isNationalHealthInsurance ? (
-              <DetailedTooltip title="Pension Contribution">
-                <NationalPensionTooltip year={inputs.incomeYear} />
-              </DetailedTooltip>
+              nationalPensionDue ? (
+                <DetailedTooltip title="Pension Contribution">
+                  <NationalPensionTooltip year={inputs.incomeYear} />
+                </DetailedTooltip>
+              ) : (
+                <SimpleTooltip>
+                  At the selected age there is no compulsory National Pension (国民年金)
+                  contribution: enrollment covers ages 20-59.
+                </SimpleTooltip>
+              )
             ) : undefined
           }
           value={formatJPY(results.pensionPayments)}

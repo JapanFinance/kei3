@@ -10,6 +10,11 @@ import {
   calculateNetEmploymentIncomeForPeriod,
   calculateIncomeAdjustmentDeductionAmount,
 } from '../data/netEmploymentIncome';
+import {
+  DEFAULT_AGE_RANGE,
+  isSubjectToLongTermCarePremium,
+  isSubjectToNationalPension,
+} from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
@@ -282,7 +287,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   salaryIncome: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
   region: 'Tokyo',
-  isSubjectToLongTermCarePremium: false,
+  ageRange: DEFAULT_AGE_RANGE,
   grossEmploymentIncome: 0,
   incomeAdjustmentDeduction: 0,
   totalNetIncome: 0,
@@ -489,10 +494,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // - Employee health insurance: based on standard monthly remuneration
     // - National Health Insurance: based on net income
 
+    const subjectToLongTermCarePremium = isSubjectToLongTermCarePremium(inputs.ageRange);
+
     if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
       const hiResult = calculateHealthInsuranceBreakdown(
         netIncome,
-        inputs.isSubjectToLongTermCarePremium,
+        subjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
         incomeYear,
         inputs.region,
@@ -503,7 +510,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       // For NHI breakdown, also use net income
       nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
         netIncome,
-        inputs.isSubjectToLongTermCarePremium,
+        subjectToLongTermCarePremium,
         incomeYear,
         inputs.region,
       );
@@ -513,7 +520,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       // which INCLUDES the full commuting allowance (taxable + non-taxable).
       const hiResult = calculateHealthInsuranceBreakdown(
         salaryIncome + commutingAllowance,
-        inputs.isSubjectToLongTermCarePremium,
+        subjectToLongTermCarePremium,
         inputs.healthInsuranceProvider,
         incomeYear,
         inputs.region,
@@ -530,7 +537,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     }
 
     // Calculate pension based on health insurance type
-    // People on National Health Insurance are in National Pension system
+    // People on National Health Insurance are in the National Pension system (contributions
+    // due only for ages 20-59)
     // People on employee health insurance are in Employee Pension system
     // People covered as dependents do not pay pension premiums
     const isInEmployeePensionSystem =
@@ -550,8 +558,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       );
       pensionPayments = pensionResult.total;
       pensionOnBonus = pensionResult.bonusPortion;
-    } else {
-      // National Pension
+    } else if (isSubjectToNationalPension(inputs.ageRange)) {
+      // National Pension: contributions are due only for ages 20-59.
       const pensionResult = calculatePensionBreakdown(
         isInEmployeePensionSystem,
         0,
@@ -637,6 +645,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
     dependentDeductions,
     incomeYear,
+    inputs.ageRange,
   );
 
   const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
@@ -666,6 +675,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
           dependentDeductions,
           incomeYear,
+          inputs.ageRange,
           homeLoanTaxCreditResult.appliedToResidenceTax,
         )
       : preCreditResidenceTax;
@@ -737,7 +747,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     salaryIncome,
     healthInsuranceProvider: inputs.healthInsuranceProvider,
     region: inputs.region,
-    isSubjectToLongTermCarePremium: inputs.isSubjectToLongTermCarePremium,
+    ageRange: inputs.ageRange,
     customEHIRates: inputs.customEHIRates,
     // Dependent deductions (always include, even if zero)
     ...(inputs.dependents.length > 0 && {

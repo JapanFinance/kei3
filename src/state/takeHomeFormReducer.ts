@@ -130,9 +130,9 @@ const employeeProviderOptions: HealthInsuranceProviderOption[] = (
  * ({@link applyProviderValidity}), rather than the two drifting apart.
  */
 export function availableProvidersFor(
-  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'annualIncome'>,
+  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'annualIncome' | 'ageRange'>,
 ): HealthInsuranceProviderOption[] {
-  const dependentEligible = isDependentCoverageEligible(state.annualIncome);
+  const dependentEligible = isDependentCoverageEligible(state.annualIncome, state.ageRange);
   if (hasEmploymentIncome(state)) {
     return dependentEligible
       ? [
@@ -192,6 +192,7 @@ type CascadeManagedField = AssertFormFields<
   | 'region'
   | 'incomeStreams'
   | 'savedIncomeStreams'
+  | 'ageRange'
 >;
 
 /**
@@ -240,6 +241,17 @@ interface RegionChangedAction {
 }
 
 /**
+ * Age range changed: re-checks the provider-validity invariant, because the
+ * dependent-coverage income threshold is age-dependent ({@link isDependentCoverageEligible})
+ * — e.g. moving from 60-64 to 40-59 at an income between the two thresholds strands
+ * dependent coverage.
+ */
+interface AgeRangeChangedAction {
+  type: 'ageRangeChanged';
+  ageRange: TakeHomeFormState['ageRange'];
+}
+
+/**
  * Annual income changed: in the simple (non-advanced) modes, syncs the single income stream
  * to the new amount and re-checks the provider-validity invariant — which, for an income
  * change, means switching dependent coverage to National Health Insurance once the income
@@ -266,6 +278,7 @@ export type FormAction =
   | IncomeModeChangedAction
   | ProviderChangedAction
   | RegionChangedAction
+  | AgeRangeChangedAction
   | AnnualIncomeChangedAction
   | IncomeStreamsChangedAction;
 
@@ -417,6 +430,9 @@ export function takeHomeFormReducer(
 
     case 'regionChanged':
       return reduceRegionChanged(state, action);
+
+    case 'ageRangeChanged':
+      return applyProviderValidity({ ...state, ageRange: action.ageRange });
 
     case 'annualIncomeChanged':
       return reduceAnnualIncomeChanged(state, action);

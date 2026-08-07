@@ -58,7 +58,7 @@ describe('calculateFurusatoNozeiLimit', () => {
     const fn = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       region: 'Tokyo',
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
@@ -81,7 +81,7 @@ describe('calculateFurusatoNozeiLimit', () => {
       incomeStreams: [
         { id: 'test', type: 'salary' as const, amount: 7_000_000, frequency: 'annual' as const },
       ],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       region: 'Tokyo',
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
@@ -177,7 +177,7 @@ describe('calculateFurusatoNozeiLimit', () => {
         incomeStreams: [
           { id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const },
         ],
-        isSubjectToLongTermCarePremium: false,
+        ageRange: 'age20to39' as const,
         region: 'Tokyo',
         healthInsuranceProvider: DEFAULT_PROVIDER,
         dependents: [],
@@ -225,7 +225,7 @@ describe('calculateFurusatoNozeiLimit', () => {
         incomeStreams: [
           { id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const },
         ],
-        isSubjectToLongTermCarePremium: false,
+        ageRange: 'age20to39' as const,
         region: 'Tokyo',
         healthInsuranceProvider: DEFAULT_PROVIDER,
         dependents: [],
@@ -271,7 +271,7 @@ describe('calculateFurusatoNozeiLimit', () => {
         incomeStreams: [
           { id: 'test', type: 'salary' as const, amount: 3_500_000, frequency: 'annual' as const },
         ],
-        isSubjectToLongTermCarePremium: false,
+        ageRange: 'age20to39' as const,
         region: 'Tokyo',
         healthInsuranceProvider: DEFAULT_PROVIDER,
         dependents: [],
@@ -425,7 +425,7 @@ describe('calculateFurusatoNozeiLimit', () => {
     const fnWithHighSocialInsurance = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       region: 'Tokyo',
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
@@ -441,7 +441,7 @@ describe('calculateFurusatoNozeiLimit', () => {
     const fnWithLowSocialInsurance = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
-      isSubjectToLongTermCarePremium: false,
+      ageRange: 'age20to39' as const,
       region: 'Tokyo',
       healthInsuranceProvider: DEFAULT_PROVIDER,
       dependents: [],
@@ -459,7 +459,7 @@ function calculateFNForIncome(income: number): FurusatoNozeiDetails {
   return calculateTaxes({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ id: 'test', type: 'salary', amount: income, frequency: 'annual' }],
-    isSubjectToLongTermCarePremium: false,
+    ageRange: 'age20to39' as const,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],

@@ -23,7 +23,9 @@ vi.mock('../components/ui/Tooltips', async () => {
         )}
       </>
     ),
-    SimpleTooltip: () => <div data-testid="info-tooltip" />,
+    SimpleTooltip: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="info-tooltip">{children}</div>
+    ),
   };
 });
 
@@ -39,7 +41,7 @@ describe('SocialInsuranceTab', () => {
       { id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }, // 6M annual
       { id: '2', type: 'commutingAllowance', amount: 20000, frequency: 'monthly' }, // 240k annual
     ],
-    isSubjectToLongTermCarePremium: true,
+    ageRange: 'age40to59' as const,
     region: 'Tokyo',
     healthInsuranceProvider: 'KyokaiKenpo',
     dependents: [],
@@ -78,7 +80,7 @@ describe('SocialInsuranceTab', () => {
     takeHomeIncome: 4870000,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
-    isSubjectToLongTermCarePremium: true,
+    ageRange: 'age40to59' as const,
     hasEmploymentIncome: true,
     totalNetIncome: 4200000,
     dcPlanContributions: 0,
@@ -175,6 +177,38 @@ describe('SocialInsuranceTab', () => {
     // Check for capped value
     expect(screen.getAllByText('¥650,000').length).toBeGreaterThan(0);
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
+  });
+
+  it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
+    const inputs = {
+      ...mockInputs,
+      ageRange: 'age60to64' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      incomeStreams: [{ id: 'm1', type: 'miscellaneous' as const, amount: 4_000_000 }],
+    };
+    const results = {
+      ...mockResults,
+      ageRange: 'age60to64' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      pensionPayments: 0,
+      nhiMedicalPortion: 300_000,
+      nhiElderlySupportPortion: 100_000,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText('National Pension')).toBeInTheDocument();
+    expect(screen.getByText('Annual Contribution')).toBeInTheDocument();
+    expect(screen.getByText('¥0')).toBeInTheDocument();
+    expect(
+      screen.getByText(/no compulsory National Pension .* enrollment covers ages 20-59/),
+    ).toBeInTheDocument();
+    // The contribution-table tooltip is not shown while nothing is due.
+    expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
   });
 
   it('hides Monthly Commuting Allowance row when 0', () => {
