@@ -82,3 +82,13 @@ export function isSubjectToEmployeesPension(ageRange: AgeRange): boolean {
 export function isLatterStageElderly(ageRange: AgeRange): boolean {
   return ageRange === 'age75plus';
 }
+
+/**
+ * Whether the selected range means the taxpayer is 65 or older by the end of the income year —
+ * the boundary the public pension deduction's higher minimums use (租税特別措置法第41条の15の3,
+ * judged as of December 31 of the income year, matching how the ranges are selected). A plain
+ * age fact rather than a rule of any one statute, so other year-end 65 tests may share it.
+ */
+export function isAge65OrOlder(ageRange: AgeRange): boolean {
+  return ageRange === 'age65to69' || ageRange === 'age70to74' || ageRange === 'age75plus';
+}

@@ -32,7 +32,12 @@ import {
   regionOptionsFor,
   type FormAction,
 } from '../../state/takeHomeFormReducer';
-import { AGE_RANGES, AGE_RANGE_LABELS, isLongTermCareCategory1Insured } from '../../types/ageRange';
+import {
+  AGE_RANGES,
+  AGE_RANGE_LABELS,
+  isAge65OrOlder,
+  isLongTermCareCategory1Insured,
+} from '../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
@@ -232,8 +237,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   // We only need the total net income for the dependents modal. Pass dependents so the
   // 所得金額調整控除 is reflected, keeping the modal's eligibility hints consistent with the results.
   const taxpayerNetIncome = React.useMemo(
-    () => calculateTotalNetIncome(inputs.incomeStreams, inputs.incomeYear, inputs.dependents),
-    [inputs.incomeStreams, inputs.incomeYear, inputs.dependents],
+    () =>
+      calculateTotalNetIncome(
+        inputs.incomeStreams,
+        inputs.incomeYear,
+        inputs.dependents,
+        isAge65OrOlder(inputs.ageRange),
+      ),
+    [inputs.incomeStreams, inputs.incomeYear, inputs.dependents, inputs.ageRange],
   );
 
   return (

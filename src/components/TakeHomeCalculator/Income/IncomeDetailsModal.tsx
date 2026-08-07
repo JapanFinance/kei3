@@ -101,6 +101,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return 'success';
       case 'miscellaneous':
         return 'warning';
+      case 'publicPension':
+        return 'secondary';
       default:
         return 'default';
     }
@@ -110,6 +112,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     let employmentIncome = 0;
     let businessIncome = 0;
     let miscellaneousIncome = 0;
+    let publicPensionIncome = 0;
     let commutingAllowance = 0;
 
     streams.forEach(s => {
@@ -128,6 +131,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         case 'miscellaneous':
           miscellaneousIncome += annualAmount;
           break;
+        case 'publicPension':
+          publicPensionIncome += annualAmount;
+          break;
         case 'commutingAllowance':
           commutingAllowance += getCommutingAllowanceAnnualAmount(s);
           break;
@@ -138,7 +144,13 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       }
     });
 
-    return { employmentIncome, businessIncome, miscellaneousIncome, commutingAllowance };
+    return {
+      employmentIncome,
+      businessIncome,
+      miscellaneousIncome,
+      publicPensionIncome,
+      commutingAllowance,
+    };
   };
 
   const groupStreams = () => {
@@ -151,8 +163,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     );
     const business = streams.filter(s => s.type === 'business');
     const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
+    const publicPension = streams.filter(s => s.type === 'publicPension');
 
-    return { employment, business, miscellaneous };
+    return { employment, business, miscellaneous, publicPension };
   };
 
   const subtotals = calculateSubtotals();
@@ -162,7 +175,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     title: string,
     groupStreams: IncomeStream[],
     subtotal: number,
-    chipColor: 'primary' | 'success' | 'warning',
+    chipColor: 'primary' | 'success' | 'warning' | 'secondary',
   ) => {
     if (groupStreams.length === 0) return null;
 
@@ -192,7 +205,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                           ? 'COMMUTING'
                           : stream.type === 'stockCompensation'
                             ? 'STOCK'
-                            : stream.type.toUpperCase()
+                            : stream.type === 'publicPension'
+                              ? 'PENSION'
+                              : stream.type.toUpperCase()
                       }
                       size="small"
                       color={getStreamColor(stream.type)}
@@ -330,6 +345,13 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               groupedStreams.miscellaneous,
               subtotals.miscellaneousIncome,
               'warning',
+            )}
+
+            {renderStreamGroup(
+              'Public Pension Income (公的年金等)',
+              groupedStreams.publicPension,
+              subtotals.publicPensionIncome,
+              'secondary',
             )}
 
             <Button

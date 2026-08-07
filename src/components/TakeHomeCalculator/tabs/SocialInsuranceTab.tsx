@@ -40,6 +40,7 @@ import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
 import NationalPensionTooltip from './NationalPensionTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
+import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
 
@@ -204,6 +205,17 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
+  const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
+  // Backing the other net components out of the total keeps this row reconciled with it.
+  const netBusinessAndMiscIncome =
+    results.totalNetIncome -
+    (results.netEmploymentIncome ?? 0) -
+    (results.netPublicPensionIncome ?? 0);
+  const presentIncomeComponents = [
+    hasEmploymentIncome,
+    hasBusinessOrMiscIncome,
+    hasPublicPensionIncome,
+  ].filter(Boolean).length;
 
   const monthlyCommutingAllowance = inputs.incomeStreams
     .filter(s => s.type === 'commutingAllowance')
@@ -257,6 +269,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     grossEmploymentIncome={results.grossEmploymentIncome}
                     netEmploymentIncome={results.netEmploymentIncome}
                     incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
+                    pensionIncomeAdjustmentDeduction={results.pensionIncomeAdjustmentDeduction ?? 0}
                     year={inputs.incomeYear}
                   />
                 </span>
@@ -305,9 +318,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                                 Net Business/Misc Income:
                               </td>
                               <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                                {formatJPY(
-                                  results.totalNetIncome - (results.netEmploymentIncome ?? 0),
-                                )}
+                                {formatJPY(netBusinessAndMiscIncome)}
                               </td>
                             </tr>
                           </tbody>
@@ -335,12 +346,27 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   )}
                 </span>
               }
-              value={formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
+              value={formatJPY(netBusinessAndMiscIncome)}
+              type="default"
+            />
+          )}
+          {hasPublicPensionIncome && (
+            <ResultRow
+              label={
+                <span>
+                  Net Public Pension Income
+                  <NetPublicPensionIncomeTooltip
+                    grossPublicPensionIncome={results.grossPublicPensionIncome ?? 0}
+                    netPublicPensionIncome={results.netPublicPensionIncome ?? 0}
+                  />
+                </span>
+              }
+              value={formatJPY(results.netPublicPensionIncome ?? 0)}
               type="default"
             />
           )}
           {/* Total Net Income Row */}
-          {hasEmploymentIncome && hasBusinessOrMiscIncome && (
+          {presentIncomeComponents >= 2 && (
             <ResultRow
               label="Total Net Income"
               value={formatJPY(results.totalNetIncome)}
