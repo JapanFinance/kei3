@@ -9,11 +9,18 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import { getLatterStageParamsForMonth } from '../../../data/latterStageElderlyParams';
 import {
+  isLongTermCareCategory1Insured,
+  isSubjectToEmployeesPension,
   isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../../../types/ageRange';
-import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
+import {
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  LATTER_STAGE_ELDERLY_ID,
+} from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
 import { detectCaps } from '../../../utils/capDetection';
@@ -25,7 +32,7 @@ import {
 } from '../../../utils/pensionCalculator';
 import CapIndicator from '../../ui/CapIndicator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
-import SourceLinks from '../../ui/SourceLinks';
+import SourceLinks, { type Source } from '../../ui/SourceLinks';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
@@ -35,6 +42,24 @@ import NationalPensionTooltip from './NationalPensionTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
+
+const LATTER_STAGE_STATIC_SOURCES: Source[] = [
+  {
+    label: '保険料試算用シート (per-portion rounding and caps)',
+    href: 'https://www.tokyo-ikiiki.net/seido/1001968/1002520.html',
+  },
+  {
+    label: '高齢者の医療の確保に関する法律施行令第18条 (uniform rates, 賦課限度額)',
+    href: 'https://laws.e-gov.go.jp/law/419CO0000000318#Mp-Ch_3-Se_4-At_18',
+  },
+];
+
+const LTC_CATEGORY1_SOURCES = [
+  {
+    label: '介護保険料の納め方 (第1号被保険者, billing and 特別徴収)',
+    href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
+  },
+];
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -48,10 +73,30 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const totalSocialInsurance =
     results.socialInsuranceOverride !== undefined
       ? results.socialInsuranceOverride
-      : results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+      : results.healthInsurance +
+        results.pensionPayments +
+        (results.employmentInsurance ?? 0) +
+        (results.longTermCareCategory1Premium ?? 0);
 
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
+  const isLatterStage = inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID;
+  // The rate-table publication is per two-year cycle, so read it from the applicable
+  // period (April = the income year's own cycle) rather than hardcoding one URL.
+  const latterStageParams = isLatterStage
+    ? getLatterStageParamsForMonth(inputs.region, inputs.incomeYear, 3)
+    : undefined;
+  const latterStageSources: Source[] = latterStageParams
+    ? [
+        {
+          label: `後期高齢者医療制度の保険料率について (${latterStageParams.regionName} and all prefectures)`,
+          href: latterStageParams.source,
+        },
+        ...LATTER_STAGE_STATIC_SOURCES,
+      ]
+    : LATTER_STAGE_STATIC_SOURCES;
+  // NHI and the 後期高齢者医療制度 both assess premiums on net income rather than SMR.
+  const isIncomeBasedProvider = isNationalHealthInsurance || isLatterStage;
   const includeLTC = isSubjectToLongTermCarePremium(inputs.ageRange);
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
@@ -61,7 +106,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   );
   let healthInsuranceBreakdown = undefined;
 
-  if (bonuses.length > 0 && !isNationalHealthInsurance) {
+  if (bonuses.length > 0 && !isIncomeBasedProvider) {
     const provider = inputs.healthInsuranceProvider;
     const region = inputs.region;
 
@@ -91,6 +136,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
 
   const nationalPensionDue = isSubjectToNationalPension(inputs.ageRange);
+  const employeesPensionDue = isSubjectToEmployeesPension(inputs.ageRange);
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -199,9 +245,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         Social Insurance Details
       </Typography>
 
-      {isNationalHealthInsurance ? (
+      {isIncomeBasedProvider ? (
         <>
-          {/* For NHI, show the income calculation details regardless of employment status */}
+          {/* For income-based providers, show the income calculation details regardless of employment status */}
           {hasEmploymentIncome && results.netEmploymentIncome !== undefined && (
             <ResultRow
               label={
@@ -307,7 +353,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             type="default"
           />
           <ResultRow
-            label="NHI Calculation Base"
+            label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
             value={formatJPY(
               Math.max(0, results.totalNetIncome - results.residenceTaxBasicDeduction!),
             )}
@@ -377,9 +423,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isNationalHealthInsurance
-              ? 'National Health Insurance'
-              : "Employees' Health Insurance"}
+            {isLatterStage
+              ? 'Medical System for the Elderly (75+)'
+              : isNationalHealthInsurance
+                ? 'National Health Insurance'
+                : "Employees' Health Insurance"}
             {isNationalHealthInsurance && (
               <DetailedTooltip title="Health Insurance Premium" icon={SIMPLE_TOOLTIP_ICON}>
                 <HealthInsurancePremiumTooltip
@@ -388,9 +436,55 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 />
               </DetailedTooltip>
             )}
+            {isLatterStage && (
+              <DetailedTooltip title="後期高齢者医療制度 Premium" icon={SIMPLE_TOOLTIP_ICON}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  The annual premium is a per-capita amount (均等割額) plus an income-based amount:
+                  the 所得割率 applied to total net income minus the basic deduction. Each portion
+                  is rounded down to ¥100 and capped at its statutory maximum (賦課限度額), which is
+                  set nationally. Rates are uniform across each prefecture by law and are revised
+                  every two years; the calculator ships every prefecture's published rates.
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  The low-income per-capita reduction (均等割額の軽減) and the reduction for former
+                  dependents (元被扶養者) are not applied.
+                </Typography>
+                <SourceLinks sources={latterStageSources} />
+              </DetailedTooltip>
+            )}
           </Typography>
         </Box>
-        {isNationalHealthInsurance ? (
+        {isLatterStage ? (
+          <>
+            <ResultRow
+              label="Medical Portion"
+              labelSuffix={
+                capStatus.healthInsuranceCapped ? (
+                  <CapIndicator
+                    capStatus={capStatus}
+                    contributionType="health insurance"
+                    iconOnly={isMobile}
+                  />
+                ) : undefined
+              }
+              value={formatJPY(results.latterStageMedicalPortion ?? 0)}
+              type="indented"
+            />
+            {results.latterStageChildSupportPortion !== undefined &&
+              results.latterStageChildSupportPortion > 0 && (
+                <ResultRow
+                  label="Child Support Portion"
+                  value={formatJPY(results.latterStageChildSupportPortion)}
+                  type="indented"
+                />
+              )}
+            <ResultRow
+              label="Annual Premium"
+              value={formatJPY(results.healthInsurance)}
+              type="subtotal"
+            />
+          </>
+        ) : isNationalHealthInsurance ? (
           <>
             <ResultRow
               label="Medical Portion"
@@ -540,25 +634,39 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isNationalHealthInsurance ? 'National Pension' : "Employees' Pension"}
+            {isLatterStage
+              ? 'Pension'
+              : isNationalHealthInsurance
+                ? 'National Pension'
+                : "Employees' Pension"}
           </Typography>
         </Box>
-        {!isNationalHealthInsurance && (
+        {!isIncomeBasedProvider && (
           <ResultRow
             label="Monthly Contribution"
             labelSuffix={
-              <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                <DetailedTooltip title="Pension Contribution">
-                  <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
-                </DetailedTooltip>
-                {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                  <CapIndicator
-                    capStatus={capStatus}
-                    contributionType="pension"
-                    iconOnly={isMobile}
-                  />
-                )}
-              </Box>
+              employeesPensionDue ? (
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <DetailedTooltip title="Pension Contribution">
+                    <PensionPremiumTooltip
+                      inputs={inputs}
+                      standardMonthlyRemuneration={pensionSMR}
+                    />
+                  </DetailedTooltip>
+                  {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                    <CapIndicator
+                      capStatus={capStatus}
+                      contributionType="pension"
+                      iconOnly={isMobile}
+                    />
+                  )}
+                </Box>
+              ) : (
+                <SimpleTooltip>
+                  At the selected age there is no compulsory Employees' Pension (厚生年金保険)
+                  contribution: enrollment ends at age 70.
+                </SimpleTooltip>
+              )
             }
             value={formatJPY(
               Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
@@ -581,7 +689,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <ResultRow
           label="Annual Contribution"
           labelSuffix={
-            isNationalHealthInsurance ? (
+            isLatterStage ? (
+              <SimpleTooltip>
+                At the selected age there are no compulsory pension contributions: Employees'
+                Pension (厚生年金保険) enrollment ends at age 70 and National Pension (国民年金)
+                enrollment at age 60.
+              </SimpleTooltip>
+            ) : isNationalHealthInsurance ? (
               nationalPensionDue ? (
                 <DetailedTooltip title="Pension Contribution">
                   <NationalPensionTooltip year={inputs.incomeYear} />
@@ -598,6 +712,34 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           type="subtotal"
         />
       </Box>
+
+      {/* Long-term Care Insurance (第1号被保険者, ages 65+) */}
+      {isLongTermCareCategory1Insured(inputs.ageRange) && (
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Long-term Care Insurance
+            <DetailedTooltip title="Long-term Care Insurance (第1号)" icon={SIMPLE_TOOLTIP_ICON}>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                From age 65 (介護保険第1号被保険者), long-term care premiums are set per
+                municipality on income brackets and billed directly — usually deducted from pension
+                payments (特別徴収). The calculator uses the annual amount entered in the form; the
+                June-July 介護保険料決定通知書 and pension payment statements show it. The premium
+                counts toward the social insurance deduction (社会保険料控除).
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                The billed amount is assessed on the previous year's income, so it does not change
+                with the income entered here.
+              </Typography>
+              <SourceLinks sources={LTC_CATEGORY1_SOURCES} />
+            </DetailedTooltip>
+          </Typography>
+          <ResultRow
+            label="Annual Premium (as entered)"
+            value={formatJPY(results.longTermCareCategory1Premium ?? 0)}
+            type="subtotal"
+          />
+        </Box>
+      )}
 
       {/* Employment Insurance */}
       {results.hasEmploymentIncome && (

@@ -211,6 +211,22 @@ describe('SocialInsuranceTab', () => {
     expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
   });
 
+  it('keeps the pension rows with zero values and an age tooltip for a 70-74 employee', () => {
+    const inputs = { ...mockInputs, ageRange: 'age70to74' as const };
+    const results = { ...mockResults, ageRange: 'age70to74' as const, pensionPayments: 0 };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText("Employees' Pension")).toBeInTheDocument();
+    expect(screen.getByText('Monthly Contribution')).toBeInTheDocument();
+    expect(screen.getByText('Annual Contribution')).toBeInTheDocument();
+    expect(
+      screen.getByText(/no compulsory Employees' Pension .* enrollment ends at age 70/),
+    ).toBeInTheDocument();
+    // The SMR-based contribution tooltip is not shown while nothing is due.
+    expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
+  });
+
   it('hides Monthly Commuting Allowance row when 0', () => {
     const noCommutingInputs = {
       ...mockInputs,
@@ -230,5 +246,91 @@ describe('SocialInsuranceTab', () => {
 
     // Total should still be present
     expect(screen.getByText('Total:')).toBeInTheDocument();
+  });
+});
+
+describe('SocialInsuranceTab at ages 65 and over', () => {
+  const baseInputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 4_000_000 }],
+    ageRange: 'age75plus',
+    region: 'Tokyo',
+    healthInsuranceProvider: 'LatterStageElderly',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    longTermCareCategory1Premium: 150_000,
+    incomeYear: 2026,
+  };
+
+  const baseResults: TakeHomeResults = {
+    annualIncome: 4_000_000,
+    healthInsurance: 408_500,
+    pensionPayments: 0,
+    nationalIncomeTax: 100_000,
+    residenceTax: {
+      taxableIncome: 0,
+      cityProportion: 0,
+      prefecturalProportion: 0,
+      residenceTaxRate: 0,
+      basicDeduction: 0,
+      personalDeductionDifference: 0,
+      city: {
+        cityTaxableIncome: 0,
+        cityAdjustmentCredit: 0,
+        cityIncomeTax: 0,
+        cityPerCapitaTax: 0,
+      },
+      prefecture: {
+        prefecturalTaxableIncome: 0,
+        prefecturalAdjustmentCredit: 0,
+        prefecturalIncomeTax: 0,
+        prefecturalPerCapitaTax: 0,
+      },
+      perCapitaTax: 0,
+      forestEnvironmentTax: 0,
+      totalResidenceTax: 200_000,
+    },
+    takeHomeIncome: 3_000_000,
+    healthInsuranceProvider: 'LatterStageElderly',
+    region: 'Tokyo',
+    ageRange: 'age75plus',
+    hasEmploymentIncome: false,
+    grossEmploymentIncome: 0,
+    totalNetIncome: 4_000_000,
+    residenceTaxBasicDeduction: 430_000,
+    dcPlanContributions: 0,
+    furusatoNozei: {
+      limit: 0,
+      incomeTaxReduction: 0,
+      residenceTaxDonationBasicDeduction: 0,
+      residenceTaxSpecialDeduction: 0,
+      outOfPocketCost: 0,
+      residenceTaxReduction: 0,
+    },
+    salaryIncome: 0,
+    additionalDeductions: { national: 0, residence: 0, items: [] },
+    latterStageMedicalPortion: 401_500,
+    latterStageChildSupportPortion: 7_000,
+    longTermCareCategory1Premium: 150_000,
+  };
+
+  it('renders the latter-stage premium breakdown and no-pension note at 75+', () => {
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    expect(screen.getByText('Medical System for the Elderly (75+)')).toBeInTheDocument();
+    expect(screen.getByText('Medical Portion')).toBeInTheDocument();
+    expect(screen.getByText('Child Support Portion')).toBeInTheDocument();
+    expect(screen.getAllByText('¥401,500').length).toBeGreaterThan(0);
+    expect(screen.getByText(/enrollment ends at age 70 and National Pension/)).toBeInTheDocument();
+    expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
+  });
+
+  it('renders the 第1号 long-term care premium row at 65+', () => {
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    expect(screen.getByText('Long-term Care Insurance')).toBeInTheDocument();
+    expect(screen.getAllByText('¥150,000').length).toBeGreaterThan(0);
   });
 });

@@ -11,6 +11,7 @@ import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
   DEPENDENT_COVERAGE_ID,
+  LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
@@ -1811,5 +1812,127 @@ describe('calculateTaxes age-range rules', () => {
 
   it('echoes the age range into the results for cap detection', () => {
     expect(calculateTaxes(employeeInputs('age60to64')).ageRange).toBe('age60to64');
+  });
+});
+
+describe('calculateTaxes at ages 65 and over', () => {
+  const employeeInputs65 = (ageRange: AgeRange) => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
+      { type: 'bonus' as const, amount: 1_000_000, month: 5, id: 'bonus' },
+    ],
+    ageRange,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+
+  describe("Employees' Pension enrollment ends at age 70", () => {
+    it('charges no employee pension at 70-74, including on bonuses', () => {
+      const result = calculateTaxes(employeeInputs65('age70to74'));
+      expect(result.pensionPayments).toBe(0);
+      expect(result.pensionOnBonus).toBe(0);
+      // Health and employment insurance still apply.
+      expect(result.healthInsurance).toBeGreaterThan(0);
+      expect(result.employmentInsurance).toBeGreaterThan(0);
+    });
+
+    it('charges the same employee pension at 65-69 as at 20-39', () => {
+      const at65to69 = calculateTaxes(employeeInputs65('age65to69'));
+      const at20to39 = calculateTaxes(employeeInputs65('age20to39'));
+      expect(at65to69.pensionPayments).toBe(at20to39.pensionPayments);
+      expect(at65to69.pensionPayments).toBeGreaterThan(0);
+      // No long-term care premium via health insurance at 65-69.
+      expect(at65to69.healthInsurance).toBe(at20to39.healthInsurance);
+    });
+  });
+
+  describe('介護保険第1号 premium input (ages 65+)', () => {
+    it('adds the entered annual amount to social insurance and the deduction', () => {
+      const without = calculateTaxes(employeeInputs65('age65to69'));
+      const withPremium = calculateTaxes({
+        ...employeeInputs65('age65to69'),
+        longTermCareCategory1Premium: 120_000,
+      });
+
+      expect(withPremium.longTermCareCategory1Premium).toBe(120_000);
+      // The premium lowers take-home by less than its face value because the
+      // 社会保険料控除 reduces income and residence tax.
+      const takeHomeDrop = without.takeHomeIncome - withPremium.takeHomeIncome;
+      expect(takeHomeDrop).toBeGreaterThan(0);
+      expect(takeHomeDrop).toBeLessThan(120_000);
+      // Health insurance itself is unchanged; the premium is its own component.
+      expect(withPremium.healthInsurance).toBe(without.healthInsurance);
+    });
+
+    it('ignores the entered amount below age 65', () => {
+      const result = calculateTaxes({
+        ...employeeInputs65('age40to59'),
+        longTermCareCategory1Premium: 120_000,
+      });
+      expect(result.longTermCareCategory1Premium).toBeUndefined();
+    });
+
+    it('ignores the entered amount under manual social insurance entry', () => {
+      const result = calculateTaxes({
+        ...employeeInputs65('age65to69'),
+        longTermCareCategory1Premium: 120_000,
+        manualSocialInsuranceEntry: true,
+        manualSocialInsuranceAmount: 500_000,
+      });
+      expect(result.longTermCareCategory1Premium).toBeUndefined();
+      expect(result.socialInsuranceOverride).toBe(500_000);
+    });
+  });
+
+  describe('後期高齢者医療制度 (ages 75+)', () => {
+    const latterStageInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
+      ageRange: 'age75plus' as const,
+      healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    it('uses the Tokyo premium table and pays no pension', () => {
+      const result = calculateTaxes(latterStageInputs);
+      // Matches calculateLatterStageElderlyPremium(4,000,000, 2026, 'Tokyo'):
+      // blended medical 401,500 + child support 7,000.
+      expect(result.latterStageMedicalPortion).toBe(401_500);
+      expect(result.latterStageChildSupportPortion).toBe(7_000);
+      expect(result.healthInsurance).toBe(408_500);
+      expect(result.pensionPayments).toBe(0);
+    });
+
+    it('still charges employment insurance on salary income at 75+', () => {
+      const result = calculateTaxes({
+        ...latterStageInputs,
+        incomeStreams: [
+          { type: 'salary' as const, amount: 4_000_000, frequency: 'annual' as const, id: 's' },
+        ],
+      });
+      expect(result.employmentInsurance).toBeGreaterThan(0);
+      expect(result.pensionPayments).toBe(0);
+      expect(result.healthInsurance).toBeGreaterThan(0);
+    });
+
+    it('combines the latter-stage premium with the 第1号 amount', () => {
+      const result = calculateTaxes({
+        ...latterStageInputs,
+        longTermCareCategory1Premium: 150_000,
+      });
+      expect(result.longTermCareCategory1Premium).toBe(150_000);
+      expect(result.healthInsurance).toBe(408_500);
+    });
   });
 });

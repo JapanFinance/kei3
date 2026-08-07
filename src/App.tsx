@@ -93,6 +93,7 @@ function App() {
     ],
     savedIncomeStreams: [],
     ageRange: DEFAULT_AGE_RANGE,
+    longTermCareCategory1Premium: 0,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
@@ -197,6 +198,7 @@ function App() {
               s => s.type === 'salary' || s.type === 'bonus',
             )}
             ageRange={inputs.ageRange}
+            longTermCareCategory1Premium={inputs.longTermCareCategory1Premium}
             healthInsuranceProvider={inputs.healthInsuranceProvider}
             region={inputs.region}
             dcPlanContributions={inputs.dcPlanContributions}

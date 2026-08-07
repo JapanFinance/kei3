@@ -31,6 +31,7 @@ const TestWrapper = ({ initialState }: { initialState?: Partial<TakeHomeFormStat
     incomeMode: 'salary',
     incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
+    longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,

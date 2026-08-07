@@ -224,6 +224,14 @@ export interface TakeHomeFormState {
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
   ageRange: AgeRange;
+  /**
+   * Annual 介護保険料 billed directly to a 第1号被保険者 (ages 65 and over), from the
+   * June-July 介護保険料決定通知書. 0 when nothing has been entered; ignored below age 65
+   * and under manual social insurance entry. Required (rather than optional) because it
+   * backs a controlled number field, matching {@link manualSocialInsuranceAmount}, which
+   * is likewise only meaningful when a sibling field says so.
+   */
+  longTermCareCategory1Premium: number;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
@@ -242,6 +250,8 @@ export interface TakeHomeFormState {
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
   ageRange: AgeRange;
+  /** See {@link TakeHomeFormState.longTermCareCategory1Premium}. Absent means 0. */
+  longTermCareCategory1Premium?: number | undefined;
   region: string;
   healthInsuranceProvider: HealthInsuranceProviderId;
   dependents: Dependent[];
@@ -328,6 +338,15 @@ export interface TakeHomeResults {
   nhiElderlySupportPortion?: number | undefined;
   nhiLongTermCarePortion?: number | undefined;
   nhiChildSupportPortion?: number | undefined;
+  // 後期高齢者医療制度 breakdown (only at ages 75+); the portions sum to healthInsurance
+  latterStageMedicalPortion?: number | undefined;
+  latterStageChildSupportPortion?: number | undefined;
+  /**
+   * Annual 介護保険料第1号 amount actually applied (ages 65+ outside manual entry; 0
+   * otherwise). Included in the social insurance deduction but not in
+   * {@link healthInsurance}.
+   */
+  longTermCareCategory1Premium?: number | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;

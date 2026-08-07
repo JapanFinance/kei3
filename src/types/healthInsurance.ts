@@ -10,6 +10,7 @@ import type { AgeRange } from './ageRange';
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
 export const CUSTOM_PROVIDER_ID = 'CustomProvider' as const;
+export const LATTER_STAGE_ELDERLY_ID = 'LatterStageElderly' as const;
 export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 
 // Annual income thresholds for dependent coverage eligibility (被扶養者認定): under 1.3
@@ -32,7 +33,10 @@ export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
 
 /** The dependent-coverage income threshold applicable to an {@link AgeRange}. */
 export function getDependentIncomeThreshold(ageRange: AgeRange): number {
-  return ageRange === 'age60to64'
+  return ageRange === 'age60to64' ||
+    ageRange === 'age65to69' ||
+    ageRange === 'age70to74' ||
+    ageRange === 'age75plus'
     ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
     : DEPENDENT_INCOME_THRESHOLD;
 }
@@ -42,7 +46,8 @@ export type HealthInsuranceProviderId =
   | keyof typeof PROVIDER_DEFINITIONS
   | typeof NATIONAL_HEALTH_INSURANCE_ID
   | typeof DEPENDENT_COVERAGE_ID
-  | typeof CUSTOM_PROVIDER_ID;
+  | typeof CUSTOM_PROVIDER_ID
+  | typeof LATTER_STAGE_ELDERLY_ID;
 
 /**
  * Checks if dependent coverage is eligible against the age-dependent 年間収入 threshold
@@ -75,6 +80,10 @@ export function getProviderDisplayName(providerId: HealthInsuranceProviderId): s
 
   if (providerId === CUSTOM_PROVIDER_ID) {
     return 'Custom Employee Health Insurance Provider';
+  }
+
+  if (providerId === LATTER_STAGE_ELDERLY_ID) {
+    return 'Medical System for the Elderly (75+)';
   }
 
   const providerDef = getProviderDefinition(providerId);
@@ -144,4 +153,39 @@ export interface NHIRegionDefinition {
   regionName: string;
   /** Rate periods sorted newest-first. Use getNHIParamsForMonth() for lookup. */
   periods: NHIRatePeriod[];
+}
+
+/**
+ * Parameters for calculating 後期高齢者医療制度 premiums. Rates are uniform across each
+ * prefecture (set by its 広域連合 on a two-year cycle). The premium is per-portion:
+ * 均等割額 + 所得割率 × (総所得金額等 − 基礎控除), each portion rounded down to ¥100 and
+ * capped at its 賦課限度額, then summed.
+ * Source: https://www.tokyo-ikiiki.net/seido/1001968/1002520.html (rounding/portions)
+ */
+export interface LatterStageElderlyRegionParams {
+  regionName: string;
+  /** The MHLW publication listing every 広域連合's rates for this period; shown in the UI. */
+  source: string;
+  // Medical portion (医療分)
+  medicalPerCapita: number; // 均等割額 (annual)
+  medicalRate: number; // 所得割率 (e.g. 0.0988)
+  medicalCap: number; // 賦課限度額
+  // Child/childcare support levy (子ども・子育て支援納付金分) — introduced FY2026
+  childSupportPerCapita?: number;
+  childSupportRate?: number;
+  childSupportCap?: number;
+}
+
+/** A rate period for the 後期高齢者医療制度, analogous to {@link NHIRatePeriod}. */
+export interface LatterStageElderlyRatePeriod {
+  /** Month is 0-indexed; rates change in April (month 3) on a two-year cycle. */
+  effectiveFrom: { year: number; month: number };
+  params: Omit<LatterStageElderlyRegionParams, 'regionName'>;
+}
+
+/** Prefecture definition with time-series rate periods, analogous to {@link NHIRegionDefinition}. */
+export interface LatterStageElderlyRegionDefinition {
+  regionName: string;
+  /** Rate periods sorted newest-first. Use getLatterStageParamsForMonth() for lookup. */
+  periods: LatterStageElderlyRatePeriod[];
 }
