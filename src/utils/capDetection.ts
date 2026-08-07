@@ -5,10 +5,7 @@ import {
   generateHealthInsurancePremiumTable,
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
-import {
-  getLatterStageParamsForMonth,
-  getLatterStageStatutoryCap,
-} from '../data/latterStageElderlyRates';
+import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   isSubjectToEmployeesPension,
@@ -18,7 +15,7 @@ import {
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
-  isLatterStageProvider,
+  LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
@@ -119,10 +116,8 @@ function checkHealthInsuranceCap(
     childSupportCapped?: boolean;
   };
 } {
-  if (isLatterStageProvider(results.healthInsuranceProvider)) {
-    // 後期高齢者医療: capped when the medical portion reaches its 賦課限度額. Custom-rate
-    // entries store the combined premium in the medical portion, capped at the nationwide
-    // statutory limit.
+  if (results.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
+    // 後期高齢者医療: capped when the medical portion reaches its 賦課限度額.
     const medical = results.latterStageMedicalPortion;
     if (medical === undefined) {
       return { capped: false };
@@ -130,7 +125,7 @@ function checkHealthInsuranceCap(
     const prevFY = getLatterStageParamsForMonth(results.region, year, 0);
     const currFY = getLatterStageParamsForMonth(results.region, year, 3);
     if (!currFY) {
-      return { capped: medical >= getLatterStageStatutoryCap(year, 3) };
+      return { capped: false };
     }
     // Same 1/3 : 2/3 fiscal-year weights as calculateLatterStageElderlyPremium.
     const blendedMedicalCap =

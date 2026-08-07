@@ -41,7 +41,6 @@ import {
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
-  CUSTOM_LATTER_STAGE_ID,
   isDependentCoverageEligible,
   getDependentIncomeThreshold,
 } from '../../types/healthInsurance';
@@ -55,7 +54,6 @@ import type {
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
   AdditionalDeductionsResult,
-  CustomLatterStageElderlyRates,
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
@@ -176,21 +174,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       type: 'setField',
       field: 'customEHIRates',
       value: { ...currentRates, [field]: rateValue },
-    });
-  };
-
-  const updateCustomLatterStageRate = (
-    field: keyof CustomLatterStageElderlyRates,
-    value: number,
-  ) => {
-    const currentRates = inputs.customLatterStageRates || {
-      perCapitaAmount: 0,
-      incomeRatePercent: 0,
-    };
-    dispatch({
-      type: 'setField',
-      field: 'customLatterStageRates',
-      value: { ...currentRates, [field]: value },
     });
   };
 
@@ -711,70 +694,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
               </FormControl>
 
-              {inputs.healthInsuranceProvider === CUSTOM_LATTER_STAGE_ID ? (
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <FormControl fullWidth>
-                    <Typography
-                      gutterBottom
-                      sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      Per-capita Amount
-                      <SimpleTooltip>
-                        Enter the annual 均等割額 published by the prefecture's
-                        後期高齢者医療広域連合 (also printed on the 保険料額決定通知書), combining
-                        the 医療分 and 子ども・子育て支援金分 amounts.
-                      </SimpleTooltip>
-                    </Typography>
-                    <SpinnerNumberField
-                      id="customLatterStagePerCapita"
-                      name="customLatterStagePerCapita"
-                      value={inputs.customLatterStageRates?.perCapitaAmount ?? 0}
-                      onChange={value => updateCustomLatterStageRate('perCapitaAmount', value)}
-                      label="均等割額 (¥/year)"
-                      step={100}
-                      shiftStep={1000}
-                      min={0}
-                      sx={sharedInputSx}
-                    />
-                  </FormControl>
-                  <FormControl fullWidth>
-                    <Typography
-                      gutterBottom
-                      sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      Income Rate
-                      <SimpleTooltip>
-                        Enter the 所得割率 published by the prefecture's 後期高齢者医療広域連合,
-                        combining the 医療分 and 子ども・子育て支援金分 rates. It is applied to
-                        total net income minus the basic deduction.
-                      </SimpleTooltip>
-                    </Typography>
-                    <SpinnerNumberField
-                      id="customLatterStageIncomeRate"
-                      name="customLatterStageIncomeRate"
-                      value={inputs.customLatterStageRates?.incomeRatePercent ?? 0}
-                      onChange={value => updateCustomLatterStageRate('incomeRatePercent', value)}
-                      label="Rate (%)"
-                      step={0.01}
-                      shiftStep={0.1}
-                      prefix=""
-                      suffix="%"
-                      max={100}
-                      sx={sharedInputSx}
-                    />
-                  </FormControl>
-                </Box>
-              ) : inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
+              {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <FormControl fullWidth>
                     <Typography
