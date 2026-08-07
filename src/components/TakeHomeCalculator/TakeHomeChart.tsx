@@ -38,7 +38,6 @@ import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type {
   ChartRange,
   CustomEmployeesHealthInsuranceRates,
-  CustomLatterStageElderlyRates,
   IncomeStream,
   LifeInsuranceInput,
   EarthquakeInsuranceInput,
@@ -152,7 +151,6 @@ interface TakeHomeChartProps {
   dcPlanContributions: number;
   dependents: Dependent[];
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  customLatterStageRates?: CustomLatterStageElderlyRates | undefined;
   className?: string;
   manualSocialInsuranceEntry?: boolean;
   manualSocialInsuranceAmount?: number;
@@ -229,7 +227,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   isEmploymentIncome,
   ageRange,
   longTermCareCategory1Premium,
-  customLatterStageRates,
   healthInsuranceProvider,
   region,
   dcPlanContributions,
@@ -332,7 +329,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         incomeYear,
         ageRange,
         longTermCareCategory1Premium,
-        customLatterStageRates,
         healthInsuranceProvider,
         region,
         dcPlanContributions,
@@ -353,7 +349,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       incomeYear,
       ageRange,
       longTermCareCategory1Premium,
-      customLatterStageRates,
       healthInsuranceProvider,
       region,
       dcPlanContributions,
@@ -411,7 +406,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   isEmploymentIncome,
                   ageRange,
                   longTermCareCategory1Premium,
-                  customLatterStageRates,
                   healthInsuranceProvider,
                   region,
                   dcPlanContributions,
@@ -455,7 +449,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     isEmploymentIncome,
     ageRange,
     longTermCareCategory1Premium,
-    customLatterStageRates,
     healthInsuranceProvider,
     region,
     dcPlanContributions,

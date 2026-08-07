@@ -311,8 +311,10 @@ export interface TakeHomeFormState {
   ageRange: AgeRange;
   /**
    * Annual 介護保険料 billed directly to a 第1号被保険者 (ages 65 and over), from the
-   * June-July 介護保険料決定通知書. Ignored below age 65 and under manual social
-   * insurance entry.
+   * June-July 介護保険料決定通知書. 0 when nothing has been entered; ignored below age 65
+   * and under manual social insurance entry. Required (rather than optional) because it
+   * backs a controlled number field, matching {@link manualSocialInsuranceAmount}, which
+   * is likewise only meaningful when a sibling field says so.
    */
   longTermCareCategory1Premium: number;
   region: string;
@@ -322,7 +324,6 @@ export interface TakeHomeFormState {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  customLatterStageRates?: CustomLatterStageElderlyRates | undefined;
   savedIncomeStreams: IncomeStream[];
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   lifeInsurance: LifeInsuranceInput;
@@ -344,7 +345,6 @@ export interface TakeHomeInputs {
   manualSocialInsuranceEntry: boolean;
   manualSocialInsuranceAmount: number;
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-  customLatterStageRates?: CustomLatterStageElderlyRates | undefined;
   /**
    * Calendar year the income is taxed in. Required: every caller threads it through from
    * {@link TakeHomeFormState.incomeYear} (defaulted to {@link DEFAULT_INCOME_YEAR}), so the
@@ -361,16 +361,6 @@ export interface TakeHomeInputs {
 export interface CustomEmployeesHealthInsuranceRates {
   healthInsuranceRate: number;
   longTermCareRate: number;
-}
-
-/**
- * User-entered 後期高齢者医療 rates for prefectures without shipped data: the annual
- * 均等割額 and the 所得割率, both printed on the annual 保険料額決定通知書 and published
- * by the prefecture's 広域連合. Entered as the combined medical + child-support figures.
- */
-export interface CustomLatterStageElderlyRates {
-  perCapitaAmount: number;
-  incomeRatePercent: number;
 }
 
 export interface TakeHomeResults {

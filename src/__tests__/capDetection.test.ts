@@ -287,15 +287,4 @@ describe('detectCaps for the 後期高齢者医療制度', () => {
 
     expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
   });
-
-  it('uses the statutory cap for custom-rate entries', () => {
-    const results = createMockResults({
-      healthInsuranceProvider: 'CustomLatterStageElderly',
-      region: 'DEFAULT',
-      ageRange: 'age75plus' as const,
-      latterStageMedicalPortion: 871_000,
-    });
-
-    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(true);
-  });
 });
