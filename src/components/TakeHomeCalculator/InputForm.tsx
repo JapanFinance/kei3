@@ -54,6 +54,8 @@ import type {
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
   AdditionalDeductionsResult,
+  PersonalCircumstancesInput,
+  PersonalDeductionsResult,
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
 import { calculateTotalNetIncome } from '../../utils/taxCalculations';
@@ -61,7 +63,7 @@ import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../ui/Tooltips';
-import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
+import { ADDITIONAL_DEDUCTION_INFO, PERSONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
@@ -104,6 +106,8 @@ interface TaxInputFormProps {
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
   /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
+  /** Computed 障害者・寡婦・ひとり親控除, passed through the same way; absent when none applies. */
+  personalDeductions?: PersonalDeductionsResult | undefined;
 }
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
@@ -111,6 +115,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   dispatch,
   homeLoanTaxCreditResult,
   additionalDeductions,
+  personalDeductions,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -153,6 +158,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   const handleMedicalExpensesChange = (newInput: MedicalExpensesInput) => {
     dispatch({ type: 'setField', field: 'medicalExpenses', value: newInput });
+  };
+
+  const handlePersonalCircumstancesChange = (newInput: PersonalCircumstancesInput) => {
+    dispatch({ type: 'setField', field: 'personalCircumstances', value: newInput });
   };
 
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
@@ -234,8 +243,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     },
   };
 
-  // We only need the total net income for the dependents modal. Pass dependents so the
-  // 所得金額調整控除 is reflected, keeping the modal's eligibility hints consistent with the results.
+  // We only need the total net income for the dependents modal. Pass the dependents and the
+  // taxpayer's disability status so the 所得金額調整控除 is reflected, keeping the modal's
+  // eligibility hints consistent with the results.
   const taxpayerNetIncome = React.useMemo(
     () =>
       calculateTotalNetIncome(
@@ -243,8 +253,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         inputs.incomeYear,
         inputs.dependents,
         isAge65OrOlder(inputs.ageRange),
+        inputs.personalCircumstances.disability === 'special',
       ),
-    [inputs.incomeStreams, inputs.incomeYear, inputs.dependents, inputs.ageRange],
+    [
+      inputs.incomeStreams,
+      inputs.incomeYear,
+      inputs.dependents,
+      inputs.ageRange,
+      inputs.personalCircumstances.disability,
+    ],
   );
 
   return (
@@ -889,6 +906,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
+              personalDeductions?.items.forEach(item => {
+                parts.push(`${PERSONAL_DEDUCTION_INFO[item.key].name} ${formatJPY(item.national)}`);
+              });
               additionalDeductions?.items.forEach(item => {
                 const name = ADDITIONAL_DEDUCTION_INFO[item.key].name;
                 parts.push(`${name} ${formatJPY(item.national)}`);
@@ -964,7 +984,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onEarthquakeInsuranceChange={handleEarthquakeInsuranceChange}
         medicalExpenses={inputs.medicalExpenses}
         onMedicalExpensesChange={handleMedicalExpensesChange}
+        personalCircumstances={inputs.personalCircumstances}
+        onPersonalCircumstancesChange={handlePersonalCircumstancesChange}
         additionalDeductions={additionalDeductions}
+        personalDeductions={personalDeductions}
         incomeYear={inputs.incomeYear}
       />
     </Box>

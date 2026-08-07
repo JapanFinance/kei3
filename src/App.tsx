@@ -155,6 +155,7 @@ function App() {
             dispatch={dispatch}
             homeLoanTaxCreditResult={results.homeLoanTaxCredit}
             additionalDeductions={results.additionalDeductions}
+            personalDeductions={results.personalDeductions}
           />
           <Suspense
             fallback={
@@ -210,6 +211,7 @@ function App() {
             lifeInsurance={inputs.lifeInsurance}
             earthquakeInsurance={inputs.earthquakeInsurance}
             medicalExpenses={inputs.medicalExpenses}
+            personalCircumstances={inputs.personalCircumstances}
             homeLoanTaxCredit={inputs.homeLoanTaxCredit}
           />
         </Suspense>

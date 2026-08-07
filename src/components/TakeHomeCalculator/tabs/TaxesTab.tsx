@@ -20,9 +20,13 @@ import React, { useState } from 'react';
 
 import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduction';
 import type { DependentDeductionResults } from '../../../types/dependents';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import type {
+  NonTaxableResidenceTaxStatus,
+  TakeHomeResults,
+  TakeHomeInputs,
+} from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { MINOR_NON_TAXABLE_INCOME_LIMIT } from '../../../utils/residenceTax';
+import { NON_TAXABLE_STATUS_INCOME_LIMIT } from '../../../utils/residenceTax';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import ReferenceTable from '../../ui/ReferenceTable';
 import SourceLinks from '../../ui/SourceLinks';
@@ -32,6 +36,7 @@ import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
+import PersonalDeductionsTooltip from './PersonalDeductionsTooltip';
 import {
   buildNationalBasicDeductionRows,
   getNationalBasicDeductionHighlightIndex,
@@ -45,6 +50,14 @@ interface TaxesTabProps {
   results: TakeHomeResults;
   inputs: TakeHomeInputs;
 }
+
+/** Plural subjects naming each 地方税法第295条第1項第2号 status in the non-taxable message. */
+const NON_TAXABLE_STATUS_LABELS: Record<NonTaxableResidenceTaxStatus, string> = {
+  minor: 'people under 18',
+  disability: 'people with a disability (障害者)',
+  widow: 'widowed or divorced women (寡婦)',
+  singleParent: 'single parents (ひとり親)',
+};
 
 interface DependentDeductionTooltipProps {
   deductions: DependentDeductionResults;
@@ -457,6 +470,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {results.personalDeductions && results.personalDeductions.national > 0 && (
+          <ResultRow
+            label={
+              <span>
+                Personal Deductions
+                <PersonalDeductionsTooltip
+                  deductions={results.personalDeductions}
+                  taxType="national"
+                />
+              </span>
+            }
+            value={formatJPY(-results.personalDeductions.national)}
+            type="detail"
+          />
+        )}
+
         {results.additionalDeductions.national > 0 && (
           <ResultRow
             label={
@@ -674,10 +703,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           Residence Tax Calculation
         </Typography>
 
-        {/* When the minor exemption zeroes the tax, the intermediate rows (deductions, taxable
+        {/* When a non-taxable status zeroes the tax, the intermediate rows (deductions, taxable
             income, portions) describe a calculation that is not being performed — show only the
             total, whose tooltip states the exemption. */}
-        {!results.residenceTax.nonTaxableMinor && (
+        {!results.residenceTax.nonTaxableStatus && (
           <>
             {/* Detailed breakdown toggle */}
             <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>
@@ -745,6 +774,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   </span>
                 }
                 value={formatJPY(-results.dependentDeductions.residenceTax.total)}
+                type="detail"
+              />
+            )}
+
+            {results.personalDeductions && results.personalDeductions.residence > 0 && (
+              <ResultRow
+                label={
+                  <span>
+                    Personal Deductions
+                    <PersonalDeductionsTooltip
+                      deductions={results.personalDeductions}
+                      taxType="residence"
+                    />
+                  </span>
+                }
+                value={formatJPY(-results.personalDeductions.residence)}
                 type="detail"
               />
             )}
@@ -1011,9 +1056,9 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
         <ResultRow
           label="Total Residence Tax"
           labelSuffix={
-            results.residenceTax.nonTaxableMinor ? (
+            results.residenceTax.nonTaxableStatus ? (
               <SimpleTooltip>
-                {`No residence tax is levied: people under 18 with total net income of ${formatJPY(MINOR_NON_TAXABLE_INCOME_LIMIT)} or less are exempt.`}
+                {`No residence tax is levied: ${NON_TAXABLE_STATUS_LABELS[results.residenceTax.nonTaxableStatus]} with total net income of ${formatJPY(NON_TAXABLE_STATUS_INCOME_LIMIT)} or less are exempt.`}
               </SimpleTooltip>
             ) : undefined
           }

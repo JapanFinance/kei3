@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { AdditionalDeductionItem } from '../../types/tax';
+import type { AdditionalDeductionItem, PersonalDeductionItem } from '../../types/tax';
 
 /**
  * Display + explanatory metadata for an additional income deduction, shared between the
@@ -48,5 +48,37 @@ export const ADDITIONAL_DEDUCTION_INFO: Record<
       'The deduction is the medical expenses minus any reimbursements, minus the lower of ¥100,000 and 5% of total net income, capped at ¥2,000,000.',
     sourceLabel: '医療費控除 (NTA No.1120)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1120.htm',
+  },
+};
+
+/**
+ * The same metadata for the taxpayer's own 人的控除. Kept separate from
+ * {@link ADDITIONAL_DEDUCTION_INFO} because the two are keyed by different item unions, and only
+ * these affect the residence-tax 調整控除.
+ */
+export const PERSONAL_DEDUCTION_INFO: Record<
+  PersonalDeductionItem['key'],
+  AdditionalDeductionInfo
+> = {
+  disability: {
+    name: 'Disability',
+    explanation:
+      'A flat ¥270,000 income tax / ¥260,000 residence tax under the 一般の障害者 category, or ¥400,000 / ¥300,000 under 特別障害者. There is no income limit. The 特別障害者 category with employment income over ¥8,500,000 also qualifies for the 所得金額調整控除.',
+    sourceLabel: '障害者控除 (NTA No.1160)',
+    sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm',
+  },
+  widow: {
+    name: 'Widow',
+    explanation:
+      'A flat ¥270,000 income tax / ¥260,000 residence tax, for a woman who has not remarried and whose total net income is ¥5,000,000 or less — either divorced with a dependent relative, or bereaved (no dependent needed). Not available to anyone who qualifies as a single parent, who gets the larger ひとり親控除 instead.',
+    sourceLabel: '寡婦控除 (NTA No.1170)',
+    sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm',
+  },
+  singleParent: {
+    name: 'Single parent',
+    explanation:
+      'A flat ¥350,000 income tax / ¥300,000 residence tax, regardless of marital history or gender, for an unmarried taxpayer with a 生計を一にする子 whose total income is within the threshold (¥580,000 from 2025) and whose own total net income is ¥5,000,000 or less. Whether the parent is the mother or the father changes no amount, but it does change the 人的控除額の差 behind the residence-tax adjustment credit.',
+    sourceLabel: 'ひとり親控除 (NTA No.1171)',
+    sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm',
   },
 };

@@ -177,16 +177,16 @@ export function calculateDependentTotalNetIncome(
 
 /**
  * Whether the taxpayer has a dependent that qualifies them for the
- * 所得金額調整控除（子ども・特別障害者等を有する者等）. Two of the three statutory conditions are
- * derivable from the dependent data this calculator models:
+ * 所得金額調整控除（子ども・特別障害者等を有する者等）— the two of the three statutory conditions
+ * that are about dependents:
  *
  *  - ロ 年齢23歳未満の扶養親族: a non-spouse dependent (扶養親族) under 23 whose 合計所得金額 is
  *    within the 扶養親族 threshold. Unlike 扶養控除, this includes children under 16.
  *  - ハ 特別障害者である同一生計配偶者または扶養親族: a spouse or non-spouse dependent with special
  *    disability whose 合計所得金額 is within the threshold (any age).
  *
- * The third condition — イ, the taxpayer being a 特別障害者 themselves — is NOT modeled, as the
- * calculator has no input for the taxpayer's own disability status.
+ * The third condition — イ, the taxpayer being a 特別障害者 themselves — is about the taxpayer, not
+ * a dependent, and is applied alongside this predicate in `taxCalculations.ts`.
  *
  * Note: a spouse is never a 扶養親族, so condition ロ cannot apply to a spouse; a spouse qualifies
  * only via ハ (a 特別障害者 同一生計配偶者).

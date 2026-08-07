@@ -30,13 +30,13 @@ export interface DependentIncome {
 }
 
 /**
- * Disability levels for dependent deductions
- * - none: No disability
- * - regular: Regular disability (一般の障害者)
- * - special: Special disability (特別障害者)
+ * Which 障害者控除 category applies, if any. These name the statutory brackets rather than
+ * describing a person, and the labels in {@link DISABILITY_LEVELS} follow suit.
+ * - none: the deduction does not apply
+ * - regular: 一般の障害者
+ * - special: 特別障害者
  *
- * Note: Special disability with cohabitation (同居特別障害者) is determined by
- * combining disability='special' with isCohabiting=true
+ * Note: 同居特別障害者 is determined by combining disability='special' with isCohabiting=true
  */
 export type DisabilityLevel = 'none' | 'regular' | 'special';
 
@@ -148,20 +148,22 @@ export interface DisabilityLevelInfo {
 }
 
 /**
- * Disability level definitions with labels
+ * Dropdown labels for the 障害者控除 categories. Each names the statutory bracket the deduction
+ * is claimed under, so that neither the wording nor the default asserts anything about the person
+ * — "Not applicable" rather than a "not disabled" label, and no adjective attached to someone.
  */
 export const DISABILITY_LEVELS: DisabilityLevelInfo[] = [
   {
     value: 'none',
-    label: 'Not Disabled',
+    label: 'Not applicable',
   },
   {
     value: 'regular',
-    label: 'Regular Disability (一般の障害者)',
+    label: 'Qualifying disability (一般の障害者)',
   },
   {
     value: 'special',
-    label: 'Special Disability (特別障害者)',
+    label: 'Special disability (特別障害者)',
   },
 ];
 
