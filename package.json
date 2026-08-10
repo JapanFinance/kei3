@@ -40,7 +40,7 @@
     "jsdom": "^30.0.1",
     "lighthouse": "13.4.1",
     "oxfmt": "0.61.0",
-    "oxlint": "^1.76.0",
+    "oxlint": "^1.77.0",
     "oxlint-tsgolint": "^7.0.2001",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "~7.0.2",
