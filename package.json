@@ -39,7 +39,7 @@
     "chrome-launcher": "^1.2.1",
     "jsdom": "^30.0.1",
     "lighthouse": "13.4.1",
-    "oxfmt": "0.61.0",
+    "oxfmt": "0.63.0",
     "oxlint": "^1.78.0",
     "oxlint-tsgolint": "^7.0.2001",
     "rollup-plugin-visualizer": "^7.0.1",
