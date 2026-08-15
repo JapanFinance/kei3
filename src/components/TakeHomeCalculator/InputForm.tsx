@@ -456,13 +456,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               <span id="ageRange-label">Age</span>
               <DetailedTooltip title="Age" icon={SIMPLE_TOOLTIP_ICON}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  Age determines which social insurance premiums and tax rules apply. Select the
-                  range for the age reached by the end of the income year.
+                  Age determines which social insurance and tax rules apply. Select the range for
+                  the age reached by the end of the income year.
                 </Typography>
                 <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.5 } }}>
                   <li>
                     <Typography variant="body2">
-                      Minors (未成年者) with total net income of ¥1,350,000 or less are exempt from
+                      Minors (under 18) with total net income of ¥1,350,000 or less are exempt from
                       residence tax (minor status is judged as of January 1 following the income
                       year).
                     </Typography>
@@ -475,15 +475,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   <li>
                     <Typography variant="body2">
                       Ages 40-64 pay long-term care insurance premiums (介護保険料) as part of
-                      health insurance (介護保険第2号被保険者).
+                      health insurance.
                     </Typography>
                   </li>
                   <li>
                     <Typography variant="body2">
                       Ages 65 and over are not supported: from age 65, long-term care premiums
                       switch to the separately billed 第1号被保険者 system, and from age 75 health
-                      coverage moves to the Medical System for the Elderly (75+)
-                      (後期高齢者医療制度).
+                      coverage moves to the Medical System for the Elderly (後期高齢者医療制度).
                     </Typography>
                   </li>
                 </Box>
