@@ -8,6 +8,13 @@
  * 税額控除: first against the base national income tax (所得税額, before the 2.1%
  * reconstruction surtax), then any remainder spills over to residence tax up to a
  * cohort-specific cap. The cohort is determined by the user's first move-in year.
+ *
+ * The spillover is deducted from the residence-tax income-based portion (所得割) alone, so it is
+ * bounded by the 所得割 levied as well as by the cohort cap: it never reduces the per-capita
+ * portion (均等割), and a remainder that no 所得割 can absorb is lost rather than refunded.
+ *
+ * @see https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/090929.html — 所得税から住宅ローン控除額を引ききれなかった方 (総務省)
+ * @see 地方税法附則第5条の4の2 — 住宅借入金等特別税額控除 (道府県民税・市町村民税の所得割の額からの控除)
  */
 
 import {
@@ -67,12 +74,14 @@ export function homeLoanCreditDistinguishesTokuteiShutoku(moveInYear: number): b
  * @param netIncome Net income (合計所得金額), checked against the cohort income-eligibility limit.
  * @param baseIncomeTax Base national income tax (所得税額) BEFORE the reconstruction surtax; the credit reduces this base and the caller recomputes the surtax on the reduced base.
  * @param taxableTotalIncome 所得税の課税総所得金額等 — the INCOME-TAX taxable total income (not the residence-tax taxable income); used for the spillover cap min(flatCap, floor(this × taxableIncomeRate)).
+ * @param preCreditResidenceTaxIncomeBased The residence-tax income-based portion (所得割), city plus prefectural, levied this year BEFORE this credit. The spillover is deducted from the 所得割 itself, so it caps the spillover on top of the statutory caps: pass 0 for a 非課税 year or one where only 均等割 is levied.
  */
 export function applyHomeLoanTaxCredit(
   input: HomeLoanTaxCreditInput,
   netIncome: number,
   baseIncomeTax: number,
   taxableTotalIncome: number,
+  preCreditResidenceTaxIncomeBased: number,
 ): HomeLoanTaxCreditResult {
   const cohort = getHomeLoanTaxCreditCohort(input.moveInYear);
   if (!cohort) {
@@ -116,14 +125,28 @@ export function applyHomeLoanTaxCredit(
 
   // Remainder spills over to residence tax, capped at min(定額限度 flatCap, 定率限度 課税総所得金額等 × rate).
   const incomeRateCap = Math.floor(Math.max(0, taxableTotalIncome) * spillover.taxableIncomeRate);
-  const residenceTaxCap = Math.min(spillover.flatCap, incomeRateCap);
+  const statutoryCap = Math.min(spillover.flatCap, incomeRateCap);
+
+  // The spillover is deducted from the 所得割, so it can never exceed the 所得割 actually levied:
+  // it does not reach the 均等割, and an unusable remainder is not refunded. A 非課税 year or one
+  // that levies only 均等割 therefore absorbs none of the credit, whatever the statutory caps allow.
+  // This uses the 100-yen-floored 所得割 the rest of the app reports, which can sit up to ~200 yen
+  // below the unrounded 所得割 the statute deducts from — smaller than the rounding step it is
+  // derived from, and it never overstates the amount applied.
+  const residenceIncomeBasedCap = Math.max(0, preCreditResidenceTaxIncomeBased);
+  const residenceTaxCap = Math.min(statutoryCap, residenceIncomeBasedCap);
   const appliedToResidenceTax = Math.min(spilloverEligible, residenceTaxCap);
   const unusedCredit = availableCredit - appliedToIncomeTax - appliedToResidenceTax;
 
   if (unusedCredit > 0) {
     warnings.push(
-      `${formatJPY(unusedCredit)} of the credit could not be applied: it exceeds the income tax ` +
-        `plus the ${formatJPY(residenceTaxCap)} spillover cap for residence tax this year.`,
+      residenceIncomeBasedCap < statutoryCap
+        ? `${formatJPY(unusedCredit)} of the credit could not be applied: the spillover can only ` +
+            `reduce the income-based portion (所得割) of residence tax, which is ` +
+            `${formatJPY(residenceIncomeBasedCap)} this year — below the ` +
+            `${formatJPY(statutoryCap)} spillover cap.`
+        : `${formatJPY(unusedCredit)} of the credit could not be applied: it exceeds the income tax ` +
+            `plus the ${formatJPY(residenceTaxCap)} spillover cap for residence tax this year.`,
     );
   }
 
@@ -136,6 +159,7 @@ export function applyHomeLoanTaxCredit(
       applied: residenceTaxCap,
       flatCap: spillover.flatCap,
       incomeRateCap,
+      residenceIncomeBasedCap,
     },
     warnings,
   };
