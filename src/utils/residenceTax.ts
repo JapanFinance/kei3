@@ -274,7 +274,7 @@ function countQualifiedDependents(
  * 1. Per Capita Exempt Limit (所得割・均等割とも非課税): Below this, no residence tax at all.
  * 2. Income Exempt Limit (所得割が非課税): Below this, no income-based residence tax but per capita residence tax applies.
  *
- * Unlike the statute-fixed {@link MINOR_NON_TAXABLE_INCOME_LIMIT}, the 均等割 limit's amounts are
+ * Unlike the statute-fixed {@link NON_TAXABLE_STATUS_INCOME_LIMIT}, the 均等割 limit's amounts are
  * set by each municipality's ordinance within nationally prescribed bands keyed to the
  * 生活保護基準の級地区分; the amounts here are the 級地1 values (which include the Tokyo 23
  * wards), so they can overstate the limits for municipalities in 級地2・3.
