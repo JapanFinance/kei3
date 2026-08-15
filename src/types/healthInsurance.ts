@@ -5,15 +5,37 @@ import {
   PROVIDER_DEFINITIONS,
   getProviderDefinition,
 } from '../data/employeesHealthInsurance/providerRateData';
+import type { AgeRange } from './ageRange';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
 export const CUSTOM_PROVIDER_ID = 'CustomProvider' as const;
 export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 
-// Income threshold for dependent coverage eligibility (1.3 million yen)
-// Source: https://www.mhlw.go.jp/stf/taiou_001_00002.html
+// Annual income thresholds for dependent coverage eligibility (被扶養者認定): under 1.3
+// million yen as a base, 1.8 million yen for dependents aged 60 or over (or with a
+// disability-pension-grade disability, which the calculator does not model).
+//
+// The statutory test is on 年間収入 — a social-insurance concept matching no tax figure: the
+// PROSPECTIVE annual amount expected from the certification date onward (monthly guide
+// 108,334円未満), counting gross pay including bonuses and 通勤手当 regardless of tax
+// non-taxability, plus receipts the tax system ignores (公的年金 including 障害・遺族年金,
+// 雇用保険の失業等給付, 傷病手当金・出産手当金). It is NOT the tax-side 合計所得金額.
+//
+// The 1.5 million yen band for ages 19-22 excluding spouses (effective 2025-10) is not
+// modeled: its 19/23 boundaries do not align with the age ranges the calculator collects.
+// Sources: https://www.nenkin.go.jp/service/kounen/tekiyo/hihokensha1/20141202.html
+//          https://www.mhlw.go.jp/stf/taiou_001_00002.html
+//          https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
+export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
+
+/** The dependent-coverage income threshold applicable to an {@link AgeRange}. */
+export function getDependentIncomeThreshold(ageRange: AgeRange): number {
+  return ageRange === 'age60to64'
+    ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
+    : DEPENDENT_INCOME_THRESHOLD;
+}
 
 // Exhaustive union type of all valid health insurance provider IDs
 export type HealthInsuranceProviderId =
@@ -23,12 +45,20 @@ export type HealthInsuranceProviderId =
   | typeof CUSTOM_PROVIDER_ID;
 
 /**
- * Checks if dependent coverage is eligible based on annual income.
- * Dependents must have income below 1.3 million yen to be covered.
- * Source: https://www.mhlw.go.jp/stf/taiou_001_00002.html
+ * Checks if dependent coverage is eligible against the age-dependent 年間収入 threshold
+ * ({@link getDependentIncomeThreshold}).
+ *
+ * @param grossAnnualIncome  Stands in for the statutory 年間収入 (see
+ *   {@link DEPENDENT_INCOME_THRESHOLD}). Callers pass the form's gross annual income —
+ *   annualized salary plus bonuses and face-value business/miscellaneous amounts — which
+ *   understates 年間収入 where commuting allowance exists (the form excludes it from annual
+ *   income) or where the person receives benefits the calculator does not model.
  */
-export function isDependentCoverageEligible(annualIncome: number): boolean {
-  return annualIncome < DEPENDENT_INCOME_THRESHOLD;
+export function isDependentCoverageEligible(
+  grossAnnualIncome: number,
+  ageRange: AgeRange,
+): boolean {
+  return grossAnnualIncome < getDependentIncomeThreshold(ageRange);
 }
 
 /**

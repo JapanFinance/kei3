@@ -22,10 +22,11 @@ import { getNationalBasicDeductionTiers } from '../../../data/nationalBasicDeduc
 import type { DependentDeductionResults } from '../../../types/dependents';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
+import { MINOR_NON_TAXABLE_INCOME_LIMIT } from '../../../utils/residenceTax';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import ReferenceTable from '../../ui/ReferenceTable';
 import SourceLinks from '../../ui/SourceLinks';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
@@ -644,325 +645,349 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           Residence Tax Calculation
         </Typography>
 
-        {/* Detailed breakdown toggle */}
-        <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={showDetailedBreakdown}
-                onChange={e => setShowDetailedBreakdown(e.target.checked)}
-                size="small"
-                color="primary"
+        {/* When the minor exemption zeroes the tax, the intermediate rows (deductions, taxable
+            income, portions) describe a calculation that is not being performed — show only the
+            total, whose tooltip states the exemption. */}
+        {!results.residenceTax.nonTaxableMinor && (
+          <>
+            {/* Detailed breakdown toggle */}
+            <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showDetailedBreakdown}
+                    onChange={e => setShowDetailedBreakdown(e.target.checked)}
+                    size="small"
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                    Show detailed breakdown
+                  </Typography>
+                }
+                sx={{
+                  '& .MuiFormControlLabel-label': {
+                    fontSize: '0.85rem',
+                  },
+                }}
               />
-            }
-            label={
-              <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                Show detailed breakdown
-              </Typography>
-            }
-            sx={{
-              '& .MuiFormControlLabel-label': {
-                fontSize: '0.85rem',
-              },
-            }}
-          />
-        </Box>
+            </Box>
 
-        <ResultRow
-          label={
-            <span>
-              Basic Deduction
-              <DetailedTooltip title="Residence Tax Basic Deduction">
-                <>
-                  <HighlightedRowValue label="Net income" value={results.totalNetIncome} />
-                  <ReferenceTable
-                    headers={['Net Income (¥)', 'Deduction Amount']}
-                    highlightedRow={residenceBasicDeductionHighlight}
-                    rows={buildResidenceBasicDeductionRows()}
-                  />
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: 'https://www.city.yokohama.lg.jp/kurashi/koseki-zei-hoken/zeikin/y-shizei/kojin-shiminzei-kenminzei/kaisei/R3zeiseikaisei.html#4',
-                        label: '令和3年度税制改正 (2021 Tax Reform - Yokohama City)',
-                      },
-                    ]}
-                  />
-                </>
-              </DetailedTooltip>
-            </span>
-          }
-          value={formatJPY(-(results.residenceTaxBasicDeduction ?? 0))}
-          type="detail"
-        />
+            <ResultRow
+              label={
+                <span>
+                  Basic Deduction
+                  <DetailedTooltip title="Residence Tax Basic Deduction">
+                    <>
+                      <HighlightedRowValue label="Net income" value={results.totalNetIncome} />
+                      <ReferenceTable
+                        headers={['Net Income (¥)', 'Deduction Amount']}
+                        highlightedRow={residenceBasicDeductionHighlight}
+                        rows={buildResidenceBasicDeductionRows()}
+                      />
+                      <SourceLinks
+                        sources={[
+                          {
+                            href: 'https://www.city.yokohama.lg.jp/kurashi/koseki-zei-hoken/zeikin/y-shizei/kojin-shiminzei-kenminzei/kaisei/R3zeiseikaisei.html#4',
+                            label: '令和3年度税制改正 (2021 Tax Reform - Yokohama City)',
+                          },
+                        ]}
+                      />
+                    </>
+                  </DetailedTooltip>
+                </span>
+              }
+              value={formatJPY(-(results.residenceTaxBasicDeduction ?? 0))}
+              type="detail"
+            />
 
-        {results.dependentDeductions && results.dependentDeductions.residenceTax.total > 0 && (
-          <ResultRow
-            label={
-              <span>
-                Dependent Deductions
-                <DetailedTooltip title="Dependent-Related Deductions (Residence Tax)">
-                  <DependentDeductionTooltip
-                    deductions={results.dependentDeductions}
-                    taxType="residence"
-                  />
-                </DetailedTooltip>
-              </span>
-            }
-            value={formatJPY(-results.dependentDeductions.residenceTax.total)}
-            type="detail"
-          />
-        )}
+            {results.dependentDeductions && results.dependentDeductions.residenceTax.total > 0 && (
+              <ResultRow
+                label={
+                  <span>
+                    Dependent Deductions
+                    <DetailedTooltip title="Dependent-Related Deductions (Residence Tax)">
+                      <DependentDeductionTooltip
+                        deductions={results.dependentDeductions}
+                        taxType="residence"
+                      />
+                    </DetailedTooltip>
+                  </span>
+                }
+                value={formatJPY(-results.dependentDeductions.residenceTax.total)}
+                type="detail"
+              />
+            )}
 
-        {results.additionalDeductions.residence > 0 && (
-          <ResultRow
-            label={
-              <span>
-                Other Deductions
-                <AdditionalDeductionsTooltip
-                  deductions={results.additionalDeductions}
-                  taxType="residence"
+            {results.additionalDeductions.residence > 0 && (
+              <ResultRow
+                label={
+                  <span>
+                    Other Deductions
+                    <AdditionalDeductionsTooltip
+                      deductions={results.additionalDeductions}
+                      taxType="residence"
+                    />
+                  </span>
+                }
+                value={formatJPY(-results.additionalDeductions.residence)}
+                type="detail"
+              />
+            )}
+
+            {results.taxableIncomeForResidenceTax !== undefined && (
+              <ResultRow
+                label={
+                  <span>
+                    Taxable Income
+                    <DetailedTooltip title="Taxable Income for Residence Tax">
+                      <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                          Taxable Income Calculation
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          Taxable income for residence tax is calculated by subtracting all
+                          applicable deductions from net income.
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Formula:</strong> Net Income - Applicable Deductions = Taxable
+                          Income
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>Rounding:</strong> The taxable income is rounded down to the
+                          nearest 1,000 yen before applying tax rates.
+                        </Typography>
+                        <SourceLinks
+                          sources={[
+                            {
+                              href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
+                              label: '個人住民税 (Tokyo Bureau of Taxation)',
+                            },
+                          ]}
+                        />
+                      </Box>
+                    </DetailedTooltip>
+                  </span>
+                }
+                value={formatJPY(results.taxableIncomeForResidenceTax)}
+                type="detail-subtotal"
+              />
+            )}
+
+            {/* Income-based portion breakdown */}
+            <ResultRow
+              label={
+                <span>
+                  Income-based Portion
+                  <DetailedTooltip title="Income-based Residence Tax">
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Income-based Portion (所得割): 10% of Taxable Income
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        This portion is calculated as a percentage of taxable income and split
+                        between municipal and prefectural governments.
+                      </Typography>
+                      <ReferenceTable
+                        headers={['Component', 'Rate']}
+                        rows={[
+                          ['Municipal Tax (市町村民税)', '6%'],
+                          ['Prefectural Tax (都道府県民税)', '4%'],
+                          [<strong>Total</strong>, <strong>10%</strong>],
+                        ]}
+                      />
+                      <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85em' }}>
+                        <strong>Rounding:</strong> The municipal and prefectural portions are each
+                        rounded down to the nearest 100 yen after applying any tax credits.
+                      </Typography>
+                      <SourceLinks
+                        sources={[
+                          {
+                            href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
+                            label: '個人住民税 (Tokyo Bureau of Taxation)',
+                          },
+                        ]}
+                      />
+                    </Box>
+                  </DetailedTooltip>
+                </span>
+              }
+              value={formatJPY(residenceIncomeBasedDisplayed)}
+              type="detail"
+            />
+
+            {/* Municipal/Prefectural breakdown for income-based portion */}
+            <Collapse in={showDetailedBreakdown}>
+              <Box sx={{ ml: 2, mb: 1 }}>
+                <ResultRow
+                  label="Municipal portion (6%)"
+                  value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.06))}
+                  type="detail"
                 />
-              </span>
-            }
-            value={formatJPY(-results.additionalDeductions.residence)}
-            type="detail"
-          />
-        )}
-
-        {results.taxableIncomeForResidenceTax !== undefined && (
-          <ResultRow
-            label={
-              <span>
-                Taxable Income
-                <DetailedTooltip title="Taxable Income for Residence Tax">
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Taxable Income Calculation
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Taxable income for residence tax is calculated by subtracting all applicable
-                      deductions from net income.
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Formula:</strong> Net Income - Applicable Deductions = Taxable Income
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Rounding:</strong> The taxable income is rounded down to the nearest
-                      1,000 yen before applying tax rates.
-                    </Typography>
-                    <SourceLinks
-                      sources={[
-                        {
-                          href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
-                          label: '個人住民税 (Tokyo Bureau of Taxation)',
-                        },
-                      ]}
-                    />
-                  </Box>
-                </DetailedTooltip>
-              </span>
-            }
-            value={formatJPY(results.taxableIncomeForResidenceTax)}
-            type="detail-subtotal"
-          />
-        )}
-
-        {/* Income-based portion breakdown */}
-        <ResultRow
-          label={
-            <span>
-              Income-based Portion
-              <DetailedTooltip title="Income-based Residence Tax">
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Income-based Portion (所得割): 10% of Taxable Income
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    This portion is calculated as a percentage of taxable income and split between
-                    municipal and prefectural governments.
-                  </Typography>
-                  <ReferenceTable
-                    headers={['Component', 'Rate']}
-                    rows={[
-                      ['Municipal Tax (市町村民税)', '6%'],
-                      ['Prefectural Tax (都道府県民税)', '4%'],
-                      [<strong>Total</strong>, <strong>10%</strong>],
-                    ]}
-                  />
-                  <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85em' }}>
-                    <strong>Rounding:</strong> The municipal and prefectural portions are each
-                    rounded down to the nearest 100 yen after applying any tax credits.
-                  </Typography>
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
-                        label: '個人住民税 (Tokyo Bureau of Taxation)',
-                      },
-                    ]}
-                  />
-                </Box>
-              </DetailedTooltip>
-            </span>
-          }
-          value={formatJPY(residenceIncomeBasedDisplayed)}
-          type="detail"
-        />
-
-        {/* Municipal/Prefectural breakdown for income-based portion */}
-        <Collapse in={showDetailedBreakdown}>
-          <Box sx={{ ml: 2, mb: 1 }}>
-            <ResultRow
-              label="Municipal portion (6%)"
-              value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.06))}
-              type="detail"
-            />
-            {results.residenceTax.city.cityAdjustmentCredit > 0 && (
-              <ResultRow
-                label={
-                  <span>
-                    Tax credit (municipal)
-                    <AdjustmentCreditTooltip
-                      level="municipal"
-                      adjustmentCredit={results.residenceTax.city.cityAdjustmentCredit}
-                      personalDeductionDifference={results.residenceTax.personalDeductionDifference}
-                    />
-                  </span>
-                }
-                value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)}
-                type="detail"
-              />
-            )}
-
-            <ResultRow
-              label="Prefectural portion (4%)"
-              value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.04))}
-              type="detail"
-            />
-            {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
-              <ResultRow
-                label={
-                  <span>
-                    Tax credit (prefectural)
-                    <AdjustmentCreditTooltip
-                      level="prefectural"
-                      adjustmentCredit={results.residenceTax.prefecture.prefecturalAdjustmentCredit}
-                      personalDeductionDifference={results.residenceTax.personalDeductionDifference}
-                    />
-                  </span>
-                }
-                value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)}
-                type="detail"
-              />
-            )}
-          </Box>
-        </Collapse>
-
-        {/* Home loan tax credit spillover (reduces the income-based portion above) */}
-        {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
-          <ResultRow
-            label={
-              <span>
-                Home Loan Tax Credit
-                {results.homeLoanTaxCredit.unusedCredit > 0 && (
-                  <WarningIcon
-                    fontSize="small"
-                    sx={{
-                      ml: 0.5,
-                      color: 'warning.main',
-                      fontSize: '1rem',
-                      verticalAlign: 'text-bottom',
-                    }}
+                {results.residenceTax.city.cityAdjustmentCredit > 0 && (
+                  <ResultRow
+                    label={
+                      <span>
+                        Tax credit (municipal)
+                        <AdjustmentCreditTooltip
+                          level="municipal"
+                          adjustmentCredit={results.residenceTax.city.cityAdjustmentCredit}
+                          personalDeductionDifference={
+                            results.residenceTax.personalDeductionDifference
+                          }
+                        />
+                      </span>
+                    }
+                    value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)}
+                    type="detail"
                   />
                 )}
-                <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      When the available credit amount exceeds the income tax, the remainder spills
-                      over to reduce residence tax. The cap is the lower of ¥97,500 (¥136,500 for
-                      2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of the{' '}
-                      <strong>income tax</strong> taxable total income (所得税の課税総所得金額等).
-                    </Typography>
-                    {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        <strong>Spillover cap:</strong>{' '}
-                        {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.applied)} (the
-                        lower of{' '}
-                        {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.flatCap)} and{' '}
-                        {formatJPY(
-                          results.homeLoanTaxCredit.residenceTaxSpilloverCap.incomeRateCap,
-                        )}
-                        ).
-                      </Typography>
-                    )}
-                    {results.homeLoanTaxCredit.unusedCredit > 0 && (
-                      <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
-                        The available credit amount (
-                        {formatJPY(results.homeLoanTaxCredit.availableCredit)}) is more than the
-                        income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)}) plus
-                        this cap ({formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)})
-                        combined, so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be
-                        applied and is lost.
-                      </Typography>
-                    )}
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      The home loan tax credit spillover is subtracted from the income-based portion
-                      (所得割) of residence tax.
-                    </Typography>
-                  </Box>
-                </DetailedTooltip>
-              </span>
-            }
-            value={formatJPY(-homeLoanResidenceReduction)}
-            type="detail"
-          />
-        )}
 
-        {/* Per capita portion */}
-        <ResultRow
-          label={
-            <span>
-              Per Capita Portion
-              <DetailedTooltip title="Per Capita Residence Tax">
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Per Capita Portion (均等割): Fixed Amount
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    A fixed amount paid by all non-exempt residents, split among the following.
-                  </Typography>
-                  <ReferenceTable
-                    headers={['Component', 'Amount']}
-                    rows={[
-                      ['Municipal Tax (市町村民税)', '¥3,000'],
-                      ['Prefectural Tax (都道府県民税)', '¥1,000'],
-                      ['Forest Environment Tax (森林環境税)', '¥1,000'],
-                      [<strong>Total</strong>, <strong>¥5,000</strong>],
-                    ]}
+                <ResultRow
+                  label="Prefectural portion (4%)"
+                  value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.04))}
+                  type="detail"
+                />
+                {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
+                  <ResultRow
+                    label={
+                      <span>
+                        Tax credit (prefectural)
+                        <AdjustmentCreditTooltip
+                          level="prefectural"
+                          adjustmentCredit={
+                            results.residenceTax.prefecture.prefecturalAdjustmentCredit
+                          }
+                          personalDeductionDifference={
+                            results.residenceTax.personalDeductionDifference
+                          }
+                        />
+                      </span>
+                    }
+                    value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)}
+                    type="detail"
                   />
-                  <Typography variant="body2" sx={{ mb: 1, mt: 1 }}>
-                    <strong>Purpose:</strong> Covers basic administrative costs and local services
-                    that benefit all residents equally.
-                  </Typography>
-                  <SourceLinks
-                    sources={[
-                      {
-                        href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
-                        label: '個人住民税 (Tokyo Bureau of Taxation)',
-                      },
-                    ]}
-                  />
-                </Box>
-              </DetailedTooltip>
-            </span>
-          }
-          value={formatJPY(results.residenceTax.perCapitaTax)}
-          type="detail"
-        />
+                )}
+              </Box>
+            </Collapse>
+
+            {/* Home loan tax credit spillover (reduces the income-based portion above) */}
+            {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToResidenceTax > 0 && (
+              <ResultRow
+                label={
+                  <span>
+                    Home Loan Tax Credit
+                    {results.homeLoanTaxCredit.unusedCredit > 0 && (
+                      <WarningIcon
+                        fontSize="small"
+                        sx={{
+                          ml: 0.5,
+                          color: 'warning.main',
+                          fontSize: '1rem',
+                          verticalAlign: 'text-bottom',
+                        }}
+                      />
+                    )}
+                    <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          When the available credit amount exceeds the income tax, the remainder
+                          spills over to reduce residence tax. The cap is the lower of ¥97,500
+                          (¥136,500 for 2014–2021 move-ins) and 5% (7% for 2014–2021 move-ins) of
+                          the <strong>income tax</strong> taxable total income
+                          (所得税の課税総所得金額等).
+                        </Typography>
+                        {results.homeLoanTaxCredit.residenceTaxSpilloverCap && (
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            <strong>Spillover cap:</strong>{' '}
+                            {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.applied)}{' '}
+                            (the lower of{' '}
+                            {formatJPY(results.homeLoanTaxCredit.residenceTaxSpilloverCap.flatCap)}{' '}
+                            and{' '}
+                            {formatJPY(
+                              results.homeLoanTaxCredit.residenceTaxSpilloverCap.incomeRateCap,
+                            )}
+                            ).
+                          </Typography>
+                        )}
+                        {results.homeLoanTaxCredit.unusedCredit > 0 && (
+                          <Typography variant="body2" sx={{ mb: 1, color: 'warning.main' }}>
+                            The available credit amount (
+                            {formatJPY(results.homeLoanTaxCredit.availableCredit)}) is more than the
+                            income tax ({formatJPY(results.homeLoanTaxCredit.appliedToIncomeTax)})
+                            plus this cap (
+                            {formatJPY(results.homeLoanTaxCredit.appliedToResidenceTax)}) combined,
+                            so {formatJPY(results.homeLoanTaxCredit.unusedCredit)} cannot be applied
+                            and is lost.
+                          </Typography>
+                        )}
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          The home loan tax credit spillover is subtracted from the income-based
+                          portion (所得割) of residence tax.
+                        </Typography>
+                      </Box>
+                    </DetailedTooltip>
+                  </span>
+                }
+                value={formatJPY(-homeLoanResidenceReduction)}
+                type="detail"
+              />
+            )}
+
+            {/* Per capita portion */}
+            <ResultRow
+              label={
+                <span>
+                  Per Capita Portion
+                  <DetailedTooltip title="Per Capita Residence Tax">
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Per Capita Portion (均等割): Fixed Amount
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        A fixed amount paid by all non-exempt residents, split among the following.
+                      </Typography>
+                      <ReferenceTable
+                        headers={['Component', 'Amount']}
+                        rows={[
+                          ['Municipal Tax (市町村民税)', '¥3,000'],
+                          ['Prefectural Tax (都道府県民税)', '¥1,000'],
+                          ['Forest Environment Tax (森林環境税)', '¥1,000'],
+                          [<strong>Total</strong>, <strong>¥5,000</strong>],
+                        ]}
+                      />
+                      <Typography variant="body2" sx={{ mb: 1, mt: 1 }}>
+                        <strong>Purpose:</strong> Covers basic administrative costs and local
+                        services that benefit all residents equally.
+                      </Typography>
+                      <SourceLinks
+                        sources={[
+                          {
+                            href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
+                            label: '個人住民税 (Tokyo Bureau of Taxation)',
+                          },
+                        ]}
+                      />
+                    </Box>
+                  </DetailedTooltip>
+                </span>
+              }
+              value={formatJPY(results.residenceTax.perCapitaTax)}
+              type="detail"
+            />
+          </>
+        )}
 
         <ResultRow
           label="Total Residence Tax"
+          labelSuffix={
+            results.residenceTax.nonTaxableMinor ? (
+              <SimpleTooltip>
+                {`People under 18 with total net income of ${formatJPY(MINOR_NON_TAXABLE_INCOME_LIMIT)} or less are exempt from residence tax.`}
+              </SimpleTooltip>
+            ) : undefined
+          }
           value={formatJPY(results.residenceTax.totalResidenceTax)}
           type="subtotal"
         />

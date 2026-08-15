@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
+import type { AgeRange } from '../types/ageRange';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
@@ -59,6 +60,34 @@ const forestEnvironmentTax = 1000; // 森林環境税
 const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironmentTax;
 
 /**
+ * 未成年者 (minors) with 前年中の合計所得金額 at or below this limit are exempt from residence
+ * tax entirely — both 所得割 and 均等割.
+ *
+ * Statutory basis: 地方税法第295条第1項第2号 (市町村民税) and 第24条の5第1項第2号 (道府県民税):
+ * 「障害者、未成年者、寡婦又はひとり親（これらの者の前年の合計所得金額が135万円を超える場合を
+ * 除く。）」, under the mandatory opening 「市町村は、次の各号のいずれかに該当する者に対しては
+ * 市町村民税を課することができない」. The 135万円 is written in the statute itself (125万円 until
+ * the 令和3年度 basic-deduction shift), so this limit is uniform nationwide with no municipal
+ * discretion — unlike the dependent-count limits in {@link getResidenceTaxExemptionLimits},
+ * whose amounts vary by the municipality's 級地区分.
+ * The same clause also covers 障害者・寡婦・ひとり親, which the calculator does not model.
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_1-At_295
+ * @see https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
+ */
+export const MINOR_NON_TAXABLE_INCOME_LIMIT = 1_350_000;
+
+/**
+ * Whether the taxpayer qualifies for the 未成年者 exemption: a minor — under 18 as of the
+ * January 1 (賦課期日) following the income year, which is what the under-18 age range
+ * selects — whose 合計所得金額 is at or below {@link MINOR_NON_TAXABLE_INCOME_LIMIT}.
+ * 未成年者 has no definition of its own in 地方税法; it borrows the 民法 age of majority,
+ * which is why the boundary moved from 20 to 18 (from 令和5年度) with no tax-law amendment.
+ */
+function isNonTaxableMinor(ageRange: AgeRange, netIncome: number): boolean {
+  return ageRange === 'under18' && netIncome <= MINOR_NON_TAXABLE_INCOME_LIMIT;
+}
+
+/**
  * Calculates residence tax (住民税) based on net income and deductions
  * Rate: 10% (6% municipal tax + 4% prefectural tax) of taxable income
  * Taxable income = net income - social insurance deductions - residence tax basic deduction
@@ -68,6 +97,8 @@ const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironm
  * @param netIncome - Net income
  * @param nonBasicDeductions - Social insurance + iDeCo deductions
  * @param dependentDeductions - Full dependent deduction results
+ * @param ageRange - Taxpayer age range; required because the 未成年者 exemption
+ *   ({@link isNonTaxableMinor}) is part of the statutory calculation
  * @param taxCredit - Tax credit amount
  */
 export const calculateResidenceTax = (
@@ -75,8 +106,13 @@ export const calculateResidenceTax = (
   nonBasicDeductions: number,
   dependentDeductions: DependentDeductionResults,
   year: number,
+  ageRange: AgeRange,
   taxCredit: number = 0,
 ): ResidenceTaxDetails => {
+  if (isNonTaxableMinor(ageRange, netIncome)) {
+    return { ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableMinor: true };
+  }
+
   const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions, year);
   const { perCapitaLimit, incomeBasedLimit } =
     getResidenceTaxExemptionLimits(qualifiedDependentsCount);
@@ -208,6 +244,11 @@ function countQualifiedDependents(
  * There are two limits:
  * 1. Per Capita Exempt Limit (所得割・均等割とも非課税): Below this, no residence tax at all.
  * 2. Income Exempt Limit (所得割が非課税): Below this, no income-based residence tax but per capita residence tax applies.
+ *
+ * Unlike the statute-fixed {@link MINOR_NON_TAXABLE_INCOME_LIMIT}, the 均等割 limit's amounts are
+ * set by each municipality's ordinance within nationally prescribed bands keyed to the
+ * 生活保護基準の級地区分; the amounts here are the 級地1 values (which include the Tokyo 23
+ * wards), so they can overstate the limits for municipalities in 級地2・3.
  *
  * @param qualifiedDependentsCount Number of {@link countQualifiedDependents qualified dependents}
  * @returns Object containing both net income limits

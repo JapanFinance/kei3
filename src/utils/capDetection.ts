@@ -6,6 +6,7 @@ import {
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+import { isSubjectToLongTermCarePremium, isSubjectToNationalPension } from '../types/ageRange';
 import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
@@ -58,7 +59,8 @@ export function detectCaps(
   return {
     healthInsuranceCapped: healthInsuranceCapInfo.capped,
     pensionCapped,
-    pensionFixed: isNationalPension,
+    // "Fixed amount" only applies while National Pension contributions are actually due.
+    pensionFixed: isNationalPension && isSubjectToNationalPension(results.ageRange),
     healthInsuranceBonusCapped,
     healthInsuranceCapDetails: healthInsuranceCapInfo.details,
   };
@@ -156,7 +158,7 @@ function checkHealthInsuranceCap(
     let ltcCapped = false;
     if (
       results.nhiLongTermCarePortion !== undefined &&
-      results.isSubjectToLongTermCarePremium &&
+      isSubjectToLongTermCarePremium(results.ageRange) &&
       currFYParams.ltcCapForEligible
     ) {
       ltcCapped = isCappedInBothFYs(

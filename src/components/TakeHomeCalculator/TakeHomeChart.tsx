@@ -32,6 +32,7 @@ import {
   DEFAULT_HOUSEHOLD_TYPE,
   type HouseholdType,
 } from '../../data/income';
+import type { AgeRange } from '../../types/ageRange';
 import type { Dependent } from '../../types/dependents';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type {
@@ -142,7 +143,7 @@ interface TakeHomeChartProps {
   currentIncome: number;
   incomeYear: number;
   isEmploymentIncome: boolean;
-  isSubjectToLongTermCarePremium: boolean;
+  ageRange: AgeRange;
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
   dcPlanContributions: number;
@@ -221,7 +222,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   currentIncome,
   incomeYear,
   isEmploymentIncome,
-  isSubjectToLongTermCarePremium,
+  ageRange,
   healthInsuranceProvider,
   region,
   dcPlanContributions,
@@ -321,7 +322,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       generateChartData(chartRange, {
         isEmploymentIncome,
         incomeYear,
-        isSubjectToLongTermCarePremium,
+        ageRange,
         healthInsuranceProvider,
         region,
         dcPlanContributions,
@@ -339,7 +340,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       chartRange,
       isEmploymentIncome,
       incomeYear,
-      isSubjectToLongTermCarePremium,
+      ageRange,
       healthInsuranceProvider,
       region,
       dcPlanContributions,
@@ -394,7 +395,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 const taxInputs = {
                   incomeYear,
                   isEmploymentIncome,
-                  isSubjectToLongTermCarePremium,
+                  ageRange,
                   healthInsuranceProvider,
                   region,
                   dcPlanContributions,
@@ -435,7 +436,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     incomeYear,
     useCompactLabelFormat,
     isEmploymentIncome,
-    isSubjectToLongTermCarePremium,
+    ageRange,
     healthInsuranceProvider,
     region,
     dcPlanContributions,
