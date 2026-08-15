@@ -2,12 +2,6 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-08-01
-
-### New
-
-- The age input now offers finer ranges, replacing the previous two-way toggle: Under 18, 18-19, 20-39, 40-59, and 60-64. Beyond the existing long-term care premium for ages 40-64 (介護保険第2号被保険者), the calculator now models: no [National Pension](https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html) (国民年金) contributions outside ages 20-59, the [residence-tax exemption for minors](https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06) (未成年者, non-taxable when 合計所得金額 is ¥1,350,000 or less), and the higher [dependent-coverage income threshold](https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html) of ¥1,800,000 for ages 60 and over. Details are in the Age tooltip.
-
 ## 2026-07-18
 
 ### New
