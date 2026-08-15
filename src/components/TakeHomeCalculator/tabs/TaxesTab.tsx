@@ -1013,7 +1013,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           labelSuffix={
             results.residenceTax.nonTaxableMinor ? (
               <SimpleTooltip>
-                {`No residence tax is levied: people under 18 with total net income of ${formatJPY(MINOR_NON_TAXABLE_INCOME_LIMIT)} or less are exempt.`}
+                {`People under 18 with total net income of ${formatJPY(MINOR_NON_TAXABLE_INCOME_LIMIT)} or less are exempt from residence tax.`}
               </SimpleTooltip>
             ) : undefined
           }
