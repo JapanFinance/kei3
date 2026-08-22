@@ -456,12 +456,19 @@ export interface LatterStageElderlyBreakdown {
   medicalPortion: number;
   childSupportPortion: number;
   total: number;
+  /**
+   * Whether the medical portion has stopped rising with income. For a calendar year that
+   * blends two fiscal years this needs both of them to be at their 賦課限度額: while only the
+   * current one is capped, the previous fiscal year's third still grows.
+   */
+  medicalCapped: boolean;
 }
 
 const ZERO_LATTER_STAGE_BREAKDOWN: LatterStageElderlyBreakdown = {
   medicalPortion: 0,
   childSupportPortion: 0,
   total: 0,
+  medicalCapped: false,
 };
 
 /**
@@ -516,6 +523,7 @@ function calculateLatterStagePremiumForParams(
     medicalPortion,
     childSupportPortion,
     total: medicalPortion + childSupportPortion,
+    medicalCapped: medicalPortion === params.medicalCap,
   };
 }
 
@@ -527,10 +535,10 @@ function calculateLatterStagePremiumForParams(
  * - 特別徴収 (the default): six bimonthly pension deductions, April through February. The
  *   April, June, and August payments are 仮徴収, each set to the same amount as the
  *   previous February's deduction — the fiscal year's premium is only determined in July —
- *   and the October/December/February 本徴収 payments absorb the entire true-up. Counting
- *   the calendar year's own February payment, four payments sit at the previous fiscal
- *   year's level and the two in-year 本徴収 payments over-correct toward the new annual
- *   total, netting to 1/3 : 2/3.
+ *   and the October, December, and February 本徴収 payments make up the difference. Counting
+ *   the calendar year's own February payment, four payments are at the previous fiscal
+ *   year's level and the two in-year 本徴収 payments are large enough to cover the rest of
+ *   the new annual total, which works out to 1/3 : 2/3.
  * - 普通徴収: nine installments, July through March (Tokyo), so January-March pay 3/9 of
  *   the previous fiscal year and July-December 6/9 of the current one — the same fraction.
  * Municipalities may smooth the June/August 仮徴収 (平準化) when the gap is large; that
@@ -559,15 +567,7 @@ export function calculateLatterStageElderlyPremium(
   }
 
   const currFY = calculateLatterStagePremiumForParams(netIncome, currFYParams);
-  if (
-    !prevFYParams ||
-    (prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
-      prevFYParams.medicalRate === currFYParams.medicalRate &&
-      prevFYParams.medicalCap === currFYParams.medicalCap &&
-      prevFYParams.childSupport?.perCapita === currFYParams.childSupport?.perCapita &&
-      prevFYParams.childSupport?.rate === currFYParams.childSupport?.rate &&
-      prevFYParams.childSupport?.cap === currFYParams.childSupport?.cap)
-  ) {
+  if (!prevFYParams || prevFYParams.periodId === currFYParams.periodId) {
     return currFY;
   }
 
@@ -580,5 +580,6 @@ export function calculateLatterStageElderlyPremium(
     medicalPortion,
     childSupportPortion,
     total: medicalPortion + childSupportPortion,
+    medicalCapped: prevFY.medicalCapped && currFY.medicalCapped,
   };
 }

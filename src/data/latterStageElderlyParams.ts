@@ -399,7 +399,8 @@ if (import.meta.env.DEV) {
 /**
  * Returns the 後期高齢者医療 parameters in effect for the given calendar month, or undefined
  * for an unknown prefecture. Composes the period's national caps with the prefecture's
- * own rates. Same newest-first lookup as {@link getNHIParamsForMonth}.
+ * own rates, and tags them with the period they came from. Same newest-first lookup as
+ * {@link getNHIParamsForMonth}.
  */
 export function getLatterStageParamsForMonth(
   region: string,
@@ -419,6 +420,7 @@ export function getLatterStageParamsForMonth(
 
   const medical = {
     regionName: PREFECTURE_NAMES[region],
+    periodId: `${period.effectiveFrom.year}-${period.effectiveFrom.month}`,
     medicalPerCapita: period.rates[region].medicalPerCapita,
     medicalRate: period.rates[region].medicalRate,
     medicalCap: period.medicalCap,
