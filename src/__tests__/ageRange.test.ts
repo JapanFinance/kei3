@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   AGE_RANGES,
+  coversAgeBand,
   AGE_RANGE_LABELS,
   DEFAULT_AGE_RANGE,
   type AgeRange,
@@ -90,6 +91,17 @@ describe('AgeRange predicates', () => {
     expect(isSubjectToNationalPension(ageRange)).toBe(nationalPension);
     expect(isSubjectToEmployeesPension(ageRange)).toBe(employeesPension);
     expect(isLatterStageElderly(ageRange)).toBe(latterStage);
+  });
+
+  it('covers a band only when every age in the range falls inside it', () => {
+    expect(coversAgeBand('age40to59', { minAgeInclusive: 40, maxAgeExclusive: 60 })).toBe(true);
+    expect(coversAgeBand('age40to59', { minAgeInclusive: 20 })).toBe(true);
+    // A band starting mid-range holds for the oldest in it but not the youngest.
+    expect(coversAgeBand('age40to59', { minAgeInclusive: 50 })).toBe(false);
+    expect(coversAgeBand('age40to59', { maxAgeExclusive: 50 })).toBe(false);
+    expect(coversAgeBand('age40to59', { minAgeInclusive: 60 })).toBe(false);
+    expect(coversAgeBand('age75plus', { minAgeInclusive: 75 })).toBe(true);
+    expect(coversAgeBand('age75plus', { maxAgeExclusive: 200 })).toBe(false);
   });
 
   it('defaults to 20-39 and labels every range', () => {
