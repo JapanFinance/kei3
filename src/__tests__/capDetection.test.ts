@@ -5,7 +5,10 @@ import { describe, it, expect } from 'vitest';
 
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import { detectCaps } from '../utils/capDetection';
-import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
+import {
+  calculateLatterStageElderlyPremium,
+  calculateNationalHealthInsurancePremiumWithBreakdown,
+} from '../utils/healthInsuranceCalculator';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../utils/healthInsuranceCalculator';
 import { makeTakeHomeResults } from './fixtures/takeHomeResults';
 
@@ -240,15 +243,21 @@ describe('detectCaps age-range gating', () => {
 });
 
 describe('detectCaps for the 後期高齢者医療制度', () => {
-  it('reports capped when the medical portion reaches the blended 賦課限度額', () => {
-    // Calendar 2026 blends FY2025 (cap 800,000) and FY2026 (cap 850,000):
-    // round(800,000/3 + 850,000×2/3) = 833,333.
+  const latterStageBase = {
+    healthInsuranceProvider: 'LatterStageElderly' as const,
+    region: 'Tokyo',
+    ageRange: 'age75plus' as const,
+  };
+
+  it('reports capped from the flag the premium calculation set', () => {
+    // Calendar 2026 blends FY2025 (cap 800,000) and FY2026 (cap 850,000), so the medical
+    // portion tops out at round(800,000/3 + 850,000×2/3) = 833,333 and both fiscal years
+    // are at their cap.
     const results = makeTakeHomeResults({
-      healthInsuranceProvider: 'LatterStageElderly',
-      region: 'Tokyo',
-      ageRange: 'age75plus' as const,
+      ...latterStageBase,
       latterStageMedicalPortion: 833_333,
       latterStageChildSupportPortion: 14_000,
+      latterStageMedicalCapped: true,
     });
 
     const caps = detectCaps(results, TEST_INCOME_YEAR);
@@ -258,40 +267,47 @@ describe('detectCaps for the 後期高齢者医療制度', () => {
 
   it('reports uncapped below the 賦課限度額', () => {
     const results = makeTakeHomeResults({
-      healthInsuranceProvider: 'LatterStageElderly',
-      region: 'Tokyo',
-      ageRange: 'age75plus' as const,
+      ...latterStageBase,
       latterStageMedicalPortion: 401_500,
       latterStageChildSupportPortion: 7_000,
+      latterStageMedicalCapped: false,
     });
 
     expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
-  });
-
-  it('uses the single 賦課限度額 when both fiscal years share a period', () => {
-    // Calendar 2025 resolves January and April to the 令和6・7年度 period (cap 800,000).
-    const base = {
-      healthInsuranceProvider: 'LatterStageElderly' as const,
-      region: 'Tokyo',
-      ageRange: 'age75plus' as const,
-    };
-    expect(
-      detectCaps(makeTakeHomeResults({ ...base, latterStageMedicalPortion: 800_000 }), 2025)
-        .healthInsuranceCapped,
-    ).toBe(true);
-    expect(
-      detectCaps(makeTakeHomeResults({ ...base, latterStageMedicalPortion: 799_900 }), 2025)
-        .healthInsuranceCapped,
-    ).toBe(false);
   });
 
   it('reports uncapped when no medical portion is present', () => {
-    const results = makeTakeHomeResults({
-      healthInsuranceProvider: 'LatterStageElderly',
-      region: 'Tokyo',
-      ageRange: 'age75plus' as const,
-    });
+    const results = makeTakeHomeResults(latterStageBase);
     expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
+  });
+
+  it('takes the flag from the premium calculation, blended and single-period alike', () => {
+    // Blended calendar 2026: capped only at the blended 833,333, not at the current fiscal
+    // year's own 850,000 cap. Single-period calendar 2025: capped at the 令和6・7年度 800,000.
+    const cappedIn2026 = calculateLatterStageElderlyPremium(20_000_000, 2026, 'Tokyo');
+    expect(cappedIn2026.medicalPortion).toBe(833_333);
+    expect(cappedIn2026.medicalCapped).toBe(true);
+
+    const cappedIn2025 = calculateLatterStageElderlyPremium(20_000_000, 2025, 'Tokyo');
+    expect(cappedIn2025.medicalPortion).toBe(800_000);
+    expect(cappedIn2025.medicalCapped).toBe(true);
+
+    for (const breakdown of [cappedIn2026, cappedIn2025]) {
+      expect(
+        detectCaps(
+          makeTakeHomeResults({
+            ...latterStageBase,
+            latterStageMedicalPortion: breakdown.medicalPortion,
+            latterStageMedicalCapped: breakdown.medicalCapped,
+          }),
+          TEST_INCOME_YEAR,
+        ).healthInsuranceCapped,
+      ).toBe(true);
+    }
+
+    // Just below the 令和6・7年度 cap, so the 2025 premium still rises with income.
+    const belowCap = calculateLatterStageElderlyPremium(4_000_000, 2025, 'Tokyo');
+    expect(belowCap.medicalCapped).toBe(false);
   });
 });
 

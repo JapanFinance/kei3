@@ -5,7 +5,6 @@ import {
   generateHealthInsurancePremiumTable,
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
-import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   isSubjectToEmployeesPension,
@@ -118,24 +117,11 @@ function checkHealthInsuranceCap(
 } {
   if (results.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
     // 後期高齢者医療: the calendar-year medical portion blends two fiscal years, so it stops
-    // rising with income only once both fiscal years' 賦課限度額 are reached — i.e. when it
-    // equals the blended cap. With only the current fiscal year capped, the previous fiscal
-    // year's third still grows with income, so no badge is shown.
-    const medical = results.latterStageMedicalPortion;
-    if (medical === undefined) {
-      return { capped: false };
-    }
-    const prevFY = getLatterStageParamsForMonth(results.region, year, 0);
-    const currFY = getLatterStageParamsForMonth(results.region, year, 3);
-    if (!currFY) {
-      return { capped: false };
-    }
-    // Same 1/3 : 2/3 fiscal-year weights as calculateLatterStageElderlyPremium.
-    const blendedMedicalCap =
-      !prevFY || prevFY.medicalCap === currFY.medicalCap
-        ? currFY.medicalCap
-        : Math.round(prevFY.medicalCap / 3 + (currFY.medicalCap * 2) / 3);
-    return { capped: medical >= blendedMedicalCap };
+    // rising with income only once both fiscal years' 賦課限度額 are reached. With only the
+    // current fiscal year capped, the previous fiscal year's third still grows with income,
+    // so no badge is shown. calculateLatterStageElderlyPremium decides this, where both
+    // fiscal years' caps are already at hand.
+    return { capped: results.latterStageMedicalCapped === true };
   }
 
   if (results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {

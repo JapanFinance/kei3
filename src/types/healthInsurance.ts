@@ -164,6 +164,11 @@ export interface NHIRegionDefinition {
  */
 export interface LatterStageElderlyRegionParams {
   regionName: string;
+  /**
+   * Identifies the rate period these parameters come from. Two lookups that return the same
+   * id carry the same rates, including any field a future rate cycle adds.
+   */
+  periodId: string;
   // Medical portion (医療分)
   medicalPerCapita: number; // 均等割額 (annual)
   medicalRate: number; // 所得割率 (e.g. 0.0988)
