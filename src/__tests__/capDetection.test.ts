@@ -258,3 +258,84 @@ describe('detectCaps age-range gating', () => {
     expect(at60to64.pensionFixed).toBe(false);
   });
 });
+
+describe('detectCaps for the 後期高齢者医療制度', () => {
+  it('reports capped when the medical portion reaches the blended 賦課限度額', () => {
+    // Calendar 2026 blends FY2025 (cap 800,000) and FY2026 (cap 850,000):
+    // round(800,000/3 + 850,000×2/3) = 833,333.
+    const results = createMockResults({
+      healthInsuranceProvider: 'LatterStageElderly',
+      region: 'Tokyo',
+      ageRange: 'age75plus' as const,
+      latterStageMedicalPortion: 833_333,
+      latterStageChildSupportPortion: 14_000,
+    });
+
+    const caps = detectCaps(results, TEST_INCOME_YEAR);
+    expect(caps.healthInsuranceCapped).toBe(true);
+    expect(caps.pensionCapped).toBe(false);
+  });
+
+  it('reports uncapped below the 賦課限度額', () => {
+    const results = createMockResults({
+      healthInsuranceProvider: 'LatterStageElderly',
+      region: 'Tokyo',
+      ageRange: 'age75plus' as const,
+      latterStageMedicalPortion: 401_500,
+      latterStageChildSupportPortion: 7_000,
+    });
+
+    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
+  });
+
+  it('uses the single 賦課限度額 when both fiscal years share a period', () => {
+    // Calendar 2025 resolves January and April to the 令和6・7年度 period (cap 800,000).
+    const base = {
+      healthInsuranceProvider: 'LatterStageElderly' as const,
+      region: 'Tokyo',
+      ageRange: 'age75plus' as const,
+    };
+    expect(
+      detectCaps(createMockResults({ ...base, latterStageMedicalPortion: 800_000 }), 2025)
+        .healthInsuranceCapped,
+    ).toBe(true);
+    expect(
+      detectCaps(createMockResults({ ...base, latterStageMedicalPortion: 799_900 }), 2025)
+        .healthInsuranceCapped,
+    ).toBe(false);
+  });
+
+  it('reports uncapped when no medical portion is present', () => {
+    const results = createMockResults({
+      healthInsuranceProvider: 'LatterStageElderly',
+      region: 'Tokyo',
+      ageRange: 'age75plus' as const,
+    });
+    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
+  });
+});
+
+describe("detectCaps pension badge around the Employees' Pension age limit", () => {
+  it('reports the pension cap at 65-69 but not at 70-74, where no premium is due', () => {
+    // 24,000,000 salary → 2,000,000 per month, above both the health insurance and the
+    // pension SMR caps.
+    const base = {
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      annualIncome: 24_000_000,
+      salaryIncome: 24_000_000,
+    };
+    const at65to69 = detectCaps(
+      createMockResults({ ...base, ageRange: 'age65to69' as const }),
+      TEST_INCOME_YEAR,
+    );
+    const at70to74 = detectCaps(
+      createMockResults({ ...base, ageRange: 'age70to74' as const }),
+      TEST_INCOME_YEAR,
+    );
+
+    expect(at65to69.pensionCapped).toBe(true);
+    expect(at70to74.pensionCapped).toBe(false);
+    expect(at65to69.healthInsuranceCapped).toBe(true);
+    expect(at70to74.healthInsuranceCapped).toBe(true);
+  });
+});

@@ -152,7 +152,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
   const totalSocialInsurance =
     results.socialInsuranceOverride ??
-    results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+    results.healthInsurance +
+      results.pensionPayments +
+      (results.employmentInsurance ?? 0) +
+      (results.longTermCareCategory1Premium ?? 0);
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome =
     results.totalNetIncome - totalSocialInsurance - results.dcPlanContributions;

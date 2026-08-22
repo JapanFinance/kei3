@@ -5,9 +5,18 @@ import {
   generateHealthInsurancePremiumTable,
   generatePremiumTableFromRates,
 } from '../data/employeesHealthInsurance/providerRates';
+import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
-import { isSubjectToLongTermCarePremium, isSubjectToNationalPension } from '../types/ageRange';
-import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
+import {
+  isSubjectToEmployeesPension,
+  isSubjectToLongTermCarePremium,
+  isSubjectToNationalPension,
+} from '../types/ageRange';
+import {
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  LATTER_STAGE_ELDERLY_ID,
+} from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
 import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
@@ -41,8 +50,10 @@ export function detectCaps(
   const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowanceIncome ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
-  // Check pension cap
-  const pensionCapped = checkPensionCap(isNationalPension, monthlyRemuneration);
+  // Check pension cap; a 70+ employee pays no premium at all, so nothing can be capped.
+  const pensionCapped = isSubjectToEmployeesPension(results.ageRange)
+    ? checkPensionCap(isNationalPension, monthlyRemuneration)
+    : false;
   // Check health insurance cap
   const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration, year);
 
@@ -105,6 +116,28 @@ function checkHealthInsuranceCap(
     childSupportCapped?: boolean;
   };
 } {
+  if (results.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
+    // 後期高齢者医療: the calendar-year medical portion blends two fiscal years, so it stops
+    // rising with income only once both fiscal years' 賦課限度額 are reached — i.e. when it
+    // equals the blended cap. With only the current fiscal year capped, the previous fiscal
+    // year's third still grows with income, so no badge is shown.
+    const medical = results.latterStageMedicalPortion;
+    if (medical === undefined) {
+      return { capped: false };
+    }
+    const prevFY = getLatterStageParamsForMonth(results.region, year, 0);
+    const currFY = getLatterStageParamsForMonth(results.region, year, 3);
+    if (!currFY) {
+      return { capped: false };
+    }
+    // Same 1/3 : 2/3 fiscal-year weights as calculateLatterStageElderlyPremium.
+    const blendedMedicalCap =
+      !prevFY || prevFY.medicalCap === currFY.medicalCap
+        ? currFY.medicalCap
+        : Math.round(prevFY.medicalCap / 3 + (currFY.medicalCap * 2) / 3);
+    return { capped: medical >= blendedMedicalCap };
+  }
+
   if (results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
     if (results.nhiMedicalPortion === undefined || results.nhiElderlySupportPortion === undefined) {
       // This shouldn't happen anymore since all context is in results

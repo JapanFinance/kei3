@@ -2,12 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import { LATTER_STAGE_REGION_OPTIONS } from '../data/latterStageElderlyParams';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../data/nationalHealthInsurance/nhiParamsData';
+import { isLatterStageElderly } from '../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
+  LATTER_STAGE_ELDERLY_ID,
   getProviderDisplayName,
   isDependentCoverageEligible,
   type HealthInsuranceProviderId,
@@ -40,6 +43,9 @@ export interface RegionOption {
 export function regionOptionsFor(provider: HealthInsuranceProviderId): RegionOption[] {
   if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
     return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
+  }
+  if (provider === LATTER_STAGE_ELDERLY_ID) {
+    return LATTER_STAGE_REGION_OPTIONS;
   }
   if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
     return [];
@@ -116,22 +122,32 @@ const customProviderOption: HealthInsuranceProviderOption = {
   displayName: getProviderDisplayName(CUSTOM_PROVIDER_ID),
 };
 
+const latterStageProviderOption: HealthInsuranceProviderOption = {
+  id: LATTER_STAGE_ELDERLY_ID,
+  displayName: getProviderDisplayName(LATTER_STAGE_ELDERLY_ID),
+};
+
 const employeeProviderOptions: HealthInsuranceProviderOption[] = (
   Object.keys(PROVIDER_DEFINITIONS) as (keyof typeof PROVIDER_DEFINITIONS)[]
 ).map(id => ({ id, displayName: getProviderDisplayName(id) }));
 
 /**
  * The health insurance providers selectable for a given form state, in dropdown order.
- * Employment income can use an employee provider, National Health Insurance, or a custom
- * provider; dependent coverage ("None") is offered only while income is under the
- * eligibility threshold; non-employment income is limited to NHI (plus dependent coverage
- * when eligible). Pure and colocated with the reducer so the same list drives both the
+ * From age 75 only the 後期高齢者医療制度 is offered. Below that, employment income can use
+ * an employee provider, National Health Insurance, or a custom provider; dependent coverage
+ * ("None") is offered only while income is under the eligibility threshold; non-employment
+ * income is limited to NHI (plus dependent coverage when eligible). Pure and colocated with the reducer so the same list drives both the
  * dropdown (via a `useMemo` in InputForm) and the reducer's provider-validity cascade
  * ({@link applyProviderValidity}), rather than the two drifting apart.
  */
 export function availableProvidersFor(
   state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'annualIncome' | 'ageRange'>,
 ): HealthInsuranceProviderOption[] {
+  // From age 75 everyone is in the 後期高齢者医療制度 regardless of employment, so it is
+  // the only coverage on offer.
+  if (isLatterStageElderly(state.ageRange)) {
+    return [latterStageProviderOption];
+  }
   const dependentEligible = isDependentCoverageEligible(state.annualIncome, state.ageRange);
   if (hasEmploymentIncome(state)) {
     return dependentEligible
@@ -291,8 +307,9 @@ export type FormAction =
  * provider's default (as `providerChanged` does). Every income/stream/mode change routes
  * through this one check against the same selector the dropdown renders, so the selected value
  * and the offered options can't disagree; it replaces a correcting effect that used to run a
- * render later in InputForm. `availableProvidersFor` always includes NHI, so a fallback always
- * exists; the empty-list guard only satisfies the type of `available[0]`.
+ * render later in InputForm. `availableProvidersFor` always offers NHI below age 75 and the
+ * 後期高齢者医療制度 at 75+, so a fallback always exists; the empty-list guard only satisfies
+ * the type of `available[0]`.
  */
 function applyProviderValidity(state: TakeHomeFormState): TakeHomeFormState {
   const available = availableProvidersFor(state);
@@ -336,9 +353,14 @@ function reduceIncomeModeChanged(
   switch (action.mode) {
     case 'salary':
     case 'miscellaneous':
-      newState.healthInsuranceProvider =
-        action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
-      newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
+      // At 75+ the provider is age-determined (後期高齢者医療制度), not income-determined. The
+      // mode-based default would be rejected by applyProviderValidity and replaced with the
+      // default region, discarding the selected prefecture.
+      if (!isLatterStageElderly(state.ageRange)) {
+        newState.healthInsuranceProvider =
+          action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
+        newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
+      }
       newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
       break;
     case 'advanced': {

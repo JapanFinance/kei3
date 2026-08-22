@@ -2,6 +2,14 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-08-22
+
+### New
+
+- The age input now covers every age. Age now determines National Pension (20-59) and Employees' Pension (under 70) contributions, the residence-tax exemption for minors, and the dependent-coverage income threshold. Details are in the Age tooltip.
+- From age 65, long-term care premiums are billed directly by the municipality. For ages 65 and over, enter the billed annual amount from the notice (介護保険料決定通知書) received around June-July.
+- From age 75, health insurance coverage moves to the Medical System for the Elderly ([後期高齢者医療制度](https://www.gov-online.go.jp/article/202209/entry-10482.html)). The calculator computes its premium based on the selected prefecture.
+
 ## 2026-07-18
 
 ### New

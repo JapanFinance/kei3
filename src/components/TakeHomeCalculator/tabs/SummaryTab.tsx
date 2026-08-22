@@ -43,7 +43,10 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
 
   const totalSocialInsurance =
     results.socialInsuranceOverride ??
-    results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+    results.healthInsurance +
+      results.pensionPayments +
+      (results.employmentInsurance ?? 0) +
+      (results.longTermCareCategory1Premium ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage =
@@ -115,6 +118,17 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
                   results.annualIncome,
                   !isMobile,
                   2,
+                )}
+                type="indented"
+              />
+            )}
+            {results.longTermCareCategory1Premium !== undefined && (
+              <ResultRow
+                label="Age 65+ Long-term Care Insurance"
+                value={formatAmountWithShare(
+                  results.longTermCareCategory1Premium,
+                  results.annualIncome,
+                  !isMobile,
                 )}
                 type="indented"
               />

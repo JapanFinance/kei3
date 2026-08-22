@@ -32,7 +32,7 @@ import {
   regionOptionsFor,
   type FormAction,
 } from '../../state/takeHomeFormReducer';
-import { AGE_RANGES, AGE_RANGE_LABELS } from '../../types/ageRange';
+import { AGE_RANGES, AGE_RANGE_LABELS, isLongTermCareCategory1Insured } from '../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
@@ -72,12 +72,23 @@ const AGE_RANGE_SOURCES: Source[] = [
     href: 'https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html',
   },
   {
+    label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
+    href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
+  },
+  {
     label: '介護保険制度について (long-term care insurance, ages 40-64)',
     href: 'https://www.mhlw.go.jp/stf/newpage_10548.html',
   },
   {
     label: '後期高齢者医療制度 (medical system for the elderly (75+))',
     href: 'https://www.gov-online.go.jp/article/202209/entry-10482.html',
+  },
+];
+
+const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
+  {
+    label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
+    href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
 
@@ -469,7 +480,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      National Pension (国民年金) contributions apply to ages 20-59.
+                      National Pension (国民年金) contributions apply to ages 20-59; Employees'
+                      Pension (厚生年金保険) enrollment ends at age 70.
                     </Typography>
                   </li>
                   <li>
@@ -480,9 +492,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      Ages 65 and over are not supported: from age 65, long-term care premiums
-                      switch to the separately billed 第1号被保険者 system, and from age 75 health
-                      coverage moves to the Medical System for the Elderly (後期高齢者医療制度).
+                      From age 65, long-term care premiums are billed directly by the municipality
+                      and are deducted from public pension payments when the annual pension is
+                      ¥180,000 or more.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      From age 75, health coverage moves to the Medical System for the Elderly
+                      (後期高齢者医療制度).
                     </Typography>
                   </li>
                 </Box>
@@ -765,6 +783,50 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     selectOnFocus
                     handleHomeEndKeys
                     sx={sharedInputSx}
+                  />
+                </FormControl>
+              )}
+
+              {isLongTermCareCategory1Insured(inputs.ageRange) && (
+                <FormControl fullWidth>
+                  <Typography
+                    gutterBottom
+                    sx={{
+                      fontSize: '0.97rem',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      mb: 0.2,
+                    }}
+                  >
+                    Age 65+ Long-term Care Insurance
+                    <DetailedTooltip
+                      title="Age 65+ Long-term Care Insurance"
+                      icon={SIMPLE_TOOLTIP_ICON}
+                    >
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        From age 65, long-term care premiums are billed by the municipality based on
+                        income brackets. Enter the annual amount from the June-July notice
+                        (介護保険料決定通知書); this amount is added to social insurance deduction.
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        The billed amount is assessed on the previous year's income.
+                      </Typography>
+                      <SourceLinks sources={LTC_CATEGORY1_INPUT_SOURCES} />
+                    </DetailedTooltip>
+                  </Typography>
+                  <SpinnerNumberField
+                    id="longTermCareCategory1Premium"
+                    name="longTermCareCategory1Premium"
+                    value={inputs.longTermCareCategory1Premium}
+                    onChange={value =>
+                      dispatch({ type: 'setField', field: 'longTermCareCategory1Premium', value })
+                    }
+                    label="Annual Premium"
+                    step={1000}
+                    shiftStep={10000}
+                    min={0}
+                    sx={{ ...sharedInputSx, width: '100%' }}
                   />
                 </FormControl>
               )}

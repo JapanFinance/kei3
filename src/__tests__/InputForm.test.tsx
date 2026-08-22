@@ -37,6 +37,7 @@ describe('TakeHomeInputForm Tests', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
@@ -297,6 +298,7 @@ describe('Dependent Coverage UI Behavior', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
@@ -497,6 +499,7 @@ describe('Age Selection', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
@@ -519,7 +522,7 @@ describe('Age Selection', () => {
 
     await user.click(ageSelect);
     const listbox = screen.getByRole('listbox');
-    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64']) {
+    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64', '65-69', '70-74', '75+']) {
       expect(within(listbox).getByRole('option', { name: label })).toBeInTheDocument();
     }
   });
@@ -536,6 +539,53 @@ describe('Age Selection', () => {
       ageRange: 'age40to59' as const,
     });
   });
+
+  it('shows the 第1号 premium field only from age 65', () => {
+    const { rerender } = render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age60to64' }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.queryByLabelText('Annual Premium')).not.toBeInTheDocument();
+
+    rerender(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
+    expect(screen.getByLabelText('Annual Premium')).toBeInTheDocument();
+
+    rerender(
+      <TakeHomeInputForm
+        inputs={{
+          ...baseInputs,
+          ageRange: 'age75plus',
+          healthInsuranceProvider: 'LatterStageElderly',
+        }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.getByLabelText('Annual Premium')).toBeInTheDocument();
+  });
+
+  it('dispatches setField for the 第1号 premium', async () => {
+    const user = userEvent.setup();
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        dispatch={mockDispatch}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Annual Premium'), '5');
+
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'setField', field: 'longTermCareCategory1Premium' }),
+    );
+  });
 });
 
 describe('TakeHomeInputForm Dependents Modal', () => {
@@ -546,6 +596,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     incomeMode: 'advanced',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,
@@ -590,6 +641,7 @@ describe('Commuting Allowance Integration', () => {
       incomeMode: 'advanced',
       incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
       savedIncomeStreams: [],
+      longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo',
       region: 'Tokyo',
@@ -651,6 +703,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
         { id: '2', type: 'business', amount: 4000000 },
       ],
       savedIncomeStreams: [],
+      longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo', // An employee provider
       region: 'Tokyo',
