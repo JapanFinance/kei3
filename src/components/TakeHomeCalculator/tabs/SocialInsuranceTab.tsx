@@ -9,9 +9,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
-import { LATTER_STAGE_RATE_TABLE_URL } from '../../../data/latterStageElderlyParams';
 import {
-  isLongTermCareCategory1Insured,
   isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
   isSubjectToNationalPension,
@@ -32,31 +30,41 @@ import {
 } from '../../../utils/pensionCalculator';
 import CapIndicator from '../../ui/CapIndicator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
-import SourceLinks, { type Source } from '../../ui/SourceLinks';
+import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
+import LatterStageElderlyPremiumTooltip from './LatterStageElderlyPremiumTooltip';
 import NationalPensionTooltip from './NationalPensionTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
 
-const LATTER_STAGE_SOURCES: Source[] = [
-  {
-    label: '後期高齢者医療制度の保険料率について (rates for all 47 prefectures)',
-    href: LATTER_STAGE_RATE_TABLE_URL,
+type PensionKind = 'latterStageElderly' | 'nationalPension' | 'employeesPension';
+
+interface PensionSectionCopy {
+  title: string;
+  /** Note for the annual row when no contribution is due at the selected age. */
+  noContributionNote?: string;
+}
+
+const PENSION_SECTION_COPY: Record<PensionKind, PensionSectionCopy> = {
+  latterStageElderly: {
+    title: 'Pension',
+    noContributionNote:
+      "At the selected age there are no compulsory pension contributions: Employees' Pension (厚生年金保険) enrollment ends at age 70 and National Pension (国民年金) enrollment at age 60.",
   },
-  {
-    label: '保険料試算用シート (per-portion rounding and caps)',
-    href: 'https://www.tokyo-ikiiki.net/seido/1001968/1002520.html',
+  nationalPension: {
+    title: 'National Pension',
+    noContributionNote:
+      'At the selected age there is no compulsory National Pension (国民年金) contribution: enrollment covers ages 20-59.',
   },
-  {
-    label: '高齢者の医療の確保に関する法律施行令第18条 (uniform rates, premium cap)',
-    href: 'https://laws.e-gov.go.jp/law/419CO0000000318#Mp-Ch_3-Se_4-At_18',
+  employeesPension: {
+    title: "Employees' Pension",
   },
-];
+};
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -120,6 +128,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   const nationalPensionDue = isSubjectToNationalPension(inputs.ageRange);
   const employeesPensionDue = isSubjectToEmployeesPension(inputs.ageRange);
+
+  const pensionCopy =
+    PENSION_SECTION_COPY[
+      isLatterStage
+        ? 'latterStageElderly'
+        : isNationalHealthInsurance
+          ? 'nationalPension'
+          : 'employeesPension'
+    ];
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -424,18 +441,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 title="Medical System for the Elderly Premium"
                 icon={SIMPLE_TOOLTIP_ICON}
               >
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  The annual premium is a per-capita amount (均等割額) plus an income-based amount:
-                  the rate applied to total net income minus the basic deduction. Each portion is
-                  rounded down to ¥100 and capped at its statutory maximum (賦課限度額), which is
-                  set nationally. Rates are uniform across each prefecture by law and are revised
-                  every two years.
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  The low-income per-capita reduction (均等割額の軽減) and the reduction for former
-                  dependents (元被扶養者) are not currently applied.
-                </Typography>
-                <SourceLinks sources={LATTER_STAGE_SOURCES} />
+                <LatterStageElderlyPremiumTooltip />
               </DetailedTooltip>
             )}
           </Typography>
@@ -620,11 +626,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isLatterStage
-              ? 'Pension'
-              : isNationalHealthInsurance
-                ? 'National Pension'
-                : "Employees' Pension"}
+            {pensionCopy.title}
           </Typography>
         </Box>
         {!isIncomeBasedProvider && (
@@ -675,23 +677,12 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <ResultRow
           label="Annual Contribution"
           labelSuffix={
-            isLatterStage ? (
-              <SimpleTooltip>
-                At the selected age there are no compulsory pension contributions: Employees'
-                Pension (厚生年金保険) enrollment ends at age 70 and National Pension (国民年金)
-                enrollment at age 60.
-              </SimpleTooltip>
-            ) : isNationalHealthInsurance ? (
-              nationalPensionDue ? (
-                <DetailedTooltip title="Pension Contribution">
-                  <NationalPensionTooltip year={inputs.incomeYear} />
-                </DetailedTooltip>
-              ) : (
-                <SimpleTooltip>
-                  At the selected age there is no compulsory National Pension (国民年金)
-                  contribution: enrollment covers ages 20-59.
-                </SimpleTooltip>
-              )
+            isNationalHealthInsurance && nationalPensionDue ? (
+              <DetailedTooltip title="Pension Contribution">
+                <NationalPensionTooltip year={inputs.incomeYear} />
+              </DetailedTooltip>
+            ) : pensionCopy.noContributionNote !== undefined ? (
+              <SimpleTooltip>{pensionCopy.noContributionNote}</SimpleTooltip>
             ) : undefined
           }
           value={formatJPY(results.pensionPayments)}
@@ -700,14 +691,14 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       </Box>
 
       {/* Long-term Care Insurance (第1号被保険者, ages 65+) */}
-      {isLongTermCareCategory1Insured(inputs.ageRange) && (
+      {results.longTermCareCategory1Premium !== undefined && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Age 65+ Long-term Care Insurance
           </Typography>
           <ResultRow
             label="Annual Premium"
-            value={formatJPY(results.longTermCareCategory1Premium ?? 0)}
+            value={formatJPY(results.longTermCareCategory1Premium)}
             type="subtotal"
           />
         </Box>
