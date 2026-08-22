@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { LATTER_STAGE_REGIONS } from '../latterStageElderlyParams';
+import type { Prefecture } from '../prefectures';
 
 /**
  * Regional rate variations for a provider
@@ -1437,24 +1437,15 @@ export const PROVIDER_DEFINITIONS = {
       ],
     },
   },
-} satisfies Record<string, ProviderDefinition>;
+} satisfies Record<string, ProviderDefinition> & {
+  // Kyokai Kenpo's rates vary by prefecture, and the region dropdown offers the same
+  // identifiers here as for 後期高齢者医療, so a key list that lost or renamed a prefecture
+  // would leave that prefecture unselectable under one provider. Requiring every
+  // Prefecture here ties the two lists together at compile time.
+  KyokaiKenpo: ProviderDefinition & { regions: Record<Prefecture, HealthInsuranceRatePeriod[]> };
+};
 
 if (import.meta.env.DEV) {
-  // Kyokai Kenpo is organized by prefecture and uses the same identifiers as the
-  // 後期高齢者医療広域連合 list, which the region dropdown and its tests rely on. Keep the two
-  // sets identical.
-  const kyokaiRegions = Object.keys(PROVIDER_DEFINITIONS.KyokaiKenpo.regions);
-  const latterStageRegions = new Set<string>(LATTER_STAGE_REGIONS);
-  const onlyKyokai = kyokaiRegions.filter(region => !latterStageRegions.has(region));
-  const onlyLatterStage = LATTER_STAGE_REGIONS.filter(region => !kyokaiRegions.includes(region));
-  if (onlyKyokai.length > 0 || onlyLatterStage.length > 0) {
-    throw new Error(
-      `KyokaiKenpo regions and LATTER_STAGE_REGIONS must be the same 47 prefectures, ` +
-        `but KyokaiKenpo alone has [${onlyKyokai.join(', ')}] ` +
-        `and 後期高齢者医療 alone has [${onlyLatterStage.join(', ')}]`,
-    );
-  }
-
   // Validate that each region's rate periods are sorted newest-first
   for (const [providerId, provider] of Object.entries(PROVIDER_DEFINITIONS)) {
     for (const [regionKey, periods] of Object.entries(provider.regions)) {
