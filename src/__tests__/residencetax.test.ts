@@ -3,11 +3,11 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { DependentDeductionResults, Dependent } from '../types/dependents';
 import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
   calculateResidenceTax,
-  calculateResidenceTaxBasicDeduction,
   MINOR_NON_TAXABLE_INCOME_LIMIT,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from '../utils/residenceTax';

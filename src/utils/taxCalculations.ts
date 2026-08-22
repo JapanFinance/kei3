@@ -11,6 +11,7 @@ import {
   calculateIncomeAdjustmentDeductionAmount,
 } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import {
   DEFAULT_AGE_RANGE,
   isAge65OrOlder,
@@ -50,7 +51,6 @@ import { calculatePensionBreakdown } from './pensionCalculator';
 import {
   calculateFurusatoNozeiDetails,
   calculateResidenceTax,
-  calculateResidenceTaxBasicDeduction,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from './residenceTax';
 
