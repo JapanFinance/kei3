@@ -1852,6 +1852,43 @@ describe('calculateTaxes at ages 65 and over', () => {
     });
   });
 
+  describe('no long-term care premium via health insurance from age 65', () => {
+    // From 65 the person is a 介護保険第1号被保険者 and the municipality bills the premium,
+    // so the employer-deducted premium and NHI no longer include the 介護保険料率 / 介護分.
+    it.each(['age65to69', 'age70to74'] as const)(
+      'charges the employee premium at %s without the 介護保険料率',
+      ageRange => {
+        const premium = calculateTaxes(employeeInputs65(ageRange)).healthInsurance;
+        expect(premium).toBe(calculateTaxes(employeeInputs65('age20to39')).healthInsurance);
+        expect(premium).toBeLessThan(calculateTaxes(employeeInputs65('age60to64')).healthInsurance);
+      },
+    );
+
+    it('matches the Kyokai Kenpo Tokyo health-only rates at 65-69', () => {
+      // Salary 5,000,000 → 416,667 per month → SMR 410,000. Employee rates in 2026:
+      // Jan-Mar 4.955% (FY2025), Apr 4.925%, May-Dec 5.04% (incl. 子ども・子育て支援金).
+      // Monthly premiums round 50銭以下切り捨て: 410,000 × 4.955% = 20,315.5 → 20,315;
+      // × 4.925% = 20,192.5 → 20,192; × 5.04% = 20,664.
+      // Salary: 20,315 × 3 + 20,192 + 20,664 × 8 = 246,449. Bonus 1,000,000 in June at
+      // 5.04% = 50,400. Total 296,849, with no 介護保険料率 applied in any month.
+      expect(calculateTaxes(employeeInputs65('age65to69')).healthInsurance).toBe(296_849);
+    });
+
+    it('charges NHI without the 介護分 at 65-69', () => {
+      const nhiInputs65 = (ageRange: AgeRange) => ({
+        ...employeeInputs65(ageRange),
+        incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo-Shinjuku',
+      });
+      const at65to69 = calculateTaxes(nhiInputs65('age65to69'));
+      expect(at65to69.nhiLongTermCarePortion ?? 0).toBe(0);
+      expect(at65to69.healthInsurance).toBeLessThan(
+        calculateTaxes(nhiInputs65('age60to64')).healthInsurance,
+      );
+    });
+  });
+
   describe('介護保険第1号 premium input (ages 65+)', () => {
     it('adds the entered annual amount to social insurance and the deduction', () => {
       const without = calculateTaxes(employeeInputs65('age65to69'));
