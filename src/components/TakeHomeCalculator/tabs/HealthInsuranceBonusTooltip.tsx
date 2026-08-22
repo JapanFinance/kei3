@@ -7,7 +7,7 @@ import React from 'react';
 
 import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
-import { isSubjectToLongTermCarePremium } from '../../../types/ageRange';
+import { isLongTermCareCategory2Insured } from '../../../types/ageRange';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
@@ -24,7 +24,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
 }) => {
   const provider = inputs.healthInsuranceProvider;
   const region = inputs.region;
-  const includeLTC = isSubjectToLongTermCarePremium(inputs.ageRange);
+  const includeLTC = isLongTermCareCategory2Insured(inputs.ageRange);
   const year = inputs.incomeYear;
 
   let providerLabel = '';

@@ -10,8 +10,8 @@ import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import {
+  isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
-  isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../../../types/ageRange';
 import {
@@ -88,7 +88,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const isLatterStage = inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID;
   // NHI and the 後期高齢者医療制度 both assess premiums on net income rather than SMR.
   const isIncomeBasedProvider = isNationalHealthInsurance || isLatterStage;
-  const includeLTC = isSubjectToLongTermCarePremium(inputs.ageRange);
+  const includeLTC = isLongTermCareCategory2Insured(inputs.ageRange);
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
   // We need to determine the rates here to pass to the breakdown calculator
