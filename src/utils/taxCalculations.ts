@@ -25,6 +25,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
+  isEmployeeHealthProvider,
 } from '../types/healthInsurance';
 import type {
   BonusIncomeStream,
@@ -504,8 +505,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const subjectToLongTermCarePremium = isLongTermCareCategory2Insured(inputs.ageRange);
 
     if (inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
-      // 後期高齢者医療制度 (ages 75+): premiums are income-based like NHI, with no bonus
-      // portion of their own.
       latterStageBreakdown = calculateLatterStageElderlyPremium(
         netIncome,
         incomeYear,
@@ -558,9 +557,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // People on employee health insurance are in Employee Pension system
     // People covered as dependents do not pay pension premiums
     const isInEmployeePensionSystem =
-      inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID &&
-      inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID &&
-      inputs.healthInsuranceProvider !== LATTER_STAGE_ELDERLY_ID;
+      isEmployeeHealthProvider(inputs.healthInsuranceProvider) ||
+      inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID;
 
     if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
       pensionPayments = 0;
@@ -600,8 +598,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     employmentInsurance = eiResult.total;
     employmentInsuranceOnBonus = eiResult.bonusPortion;
 
-    // 介護保険第1号 (ages 65+): the municipally billed annual amount entered by the user.
-    // Deductible as 社会保険料控除 like the other premiums.
     if (isLongTermCareCategory1Insured(inputs.ageRange)) {
       longTermCareCategory1Premium = Math.max(0, inputs.longTermCareCategory1Premium || 0);
     }
@@ -773,6 +769,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // 後期高齢者医療 breakdown fields (populated only at ages 75+)
     latterStageMedicalPortion: latterStageBreakdown?.medicalPortion,
     latterStageChildSupportPortion: latterStageBreakdown?.childSupportPortion,
+    latterStageMedicalCapped: latterStageBreakdown?.medicalCapped,
     longTermCareCategory1Premium:
       longTermCareCategory1Premium > 0 ? longTermCareCategory1Premium : undefined,
     // Context needed for cap detection
