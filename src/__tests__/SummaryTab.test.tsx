@@ -6,57 +6,22 @@ import { describe, it, expect } from 'vitest';
 
 import SummaryTab from '../components/TakeHomeCalculator/tabs/SummaryTab';
 import type { TakeHomeResults } from '../types/tax';
+import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
-const baseResults: TakeHomeResults = {
+const baseResults: TakeHomeResults = makeTakeHomeResults({
   annualIncome: 4_000_000,
   healthInsurance: 408_500,
-  pensionPayments: 0,
   nationalIncomeTax: 100_000,
-  residenceTax: {
-    taxableIncome: 0,
-    cityProportion: 0,
-    prefecturalProportion: 0,
-    residenceTaxRate: 0,
-    basicDeduction: 0,
-    personalDeductionDifference: 0,
-    city: {
-      cityTaxableIncome: 0,
-      cityAdjustmentCredit: 0,
-      cityIncomeTax: 0,
-      cityPerCapitaTax: 0,
-    },
-    prefecture: {
-      prefecturalTaxableIncome: 0,
-      prefecturalAdjustmentCredit: 0,
-      prefecturalIncomeTax: 0,
-      prefecturalPerCapitaTax: 0,
-    },
-    perCapitaTax: 0,
-    forestEnvironmentTax: 0,
-    totalResidenceTax: 200_000,
-  },
+  residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 200_000 }),
   takeHomeIncome: 3_000_000,
   healthInsuranceProvider: 'LatterStageElderly',
   region: 'Tokyo',
   ageRange: 'age75plus',
-  hasEmploymentIncome: false,
-  grossEmploymentIncome: 0,
   totalNetIncome: 4_000_000,
   residenceTaxBasicDeduction: 430_000,
-  dcPlanContributions: 0,
-  furusatoNozei: {
-    limit: 0,
-    incomeTaxReduction: 0,
-    residenceTaxDonationBasicDeduction: 0,
-    residenceTaxSpecialDeduction: 0,
-    outOfPocketCost: 0,
-    residenceTaxReduction: 0,
-  },
-  salaryIncome: 0,
-  additionalDeductions: { national: 0, residence: 0, items: [] },
   latterStageMedicalPortion: 401_500,
   latterStageChildSupportPortion: 7_000,
-};
+});
 
 describe('SummaryTab with the 介護保険第1号 premium', () => {
   it('shows the premium as its own row and includes it in the social insurance total', () => {
