@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { AgeRange } from '../types/ageRange';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
@@ -12,17 +12,7 @@ import {
 } from './dependentDeductions';
 import { calculateNationalIncomeTax } from './taxCalculations';
 
-/**
- * Calculates the basic deduction (基礎控除) for residence tax from net income, using the shared
- * {@link RESIDENCE_TAX_BASIC_DEDUCTION_TIERS} (net income above the last tier → 0). Keeping the
- * tiers as data lets the tooltip table and its row highlight reuse the exact same numbers.
- */
-export const calculateResidenceTaxBasicDeduction = (netIncome: number): number => {
-  for (const tier of RESIDENCE_TAX_BASIC_DEDUCTION_TIERS) {
-    if (netIncome <= tier.maxIncomeInclusive) return tier.deduction;
-  }
-  return 0;
-};
+export { calculateResidenceTaxBasicDeduction };
 
 const RESIDENCE_TAX_RATE = 0.1;
 const CITY_TAX_PROPORTION = 0.6;

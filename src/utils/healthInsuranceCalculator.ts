@@ -8,7 +8,7 @@ import {
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
-import { RESIDENCE_TAX_BASIC_DEDUCTION_TIERS } from '../data/residenceTaxBasicDeduction';
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type {
   ProviderRegion,
   NationalHealthInsuranceRegionParams,
@@ -465,22 +465,27 @@ const ZERO_LATTER_STAGE_BREAKDOWN: LatterStageElderlyBreakdown = {
 };
 
 /**
- * The 賦課のもととなる所得金額: 総所得金額等 minus the 地方税法 basic deduction (43万円,
- * stepping down above 合計所得金額 2,400万円 like the residence-tax basic deduction).
+ * The 賦課のもととなる所得金額: 総所得金額等 minus the 地方税法 basic deduction, which is the
+ * residence-tax basic deduction (43万円, stepping down above 合計所得金額 2,400万円).
  * Source: https://www.tokyo-ikiiki.net/seido/1001968/1001975/index.html
  */
 function latterStagePremiumBase(netIncome: number): number {
-  let deduction = 0;
-  for (const tier of RESIDENCE_TAX_BASIC_DEDUCTION_TIERS) {
-    if (netIncome <= tier.maxIncomeInclusive) {
-      deduction = tier.deduction;
-      break;
-    }
-  }
-  return Math.max(0, netIncome - deduction);
+  return Math.max(0, netIncome - calculateResidenceTaxBasicDeduction(netIncome));
 }
 
-const floorToHundred = (value: number): number => Math.floor(value / 100) * 100;
+/**
+ * Rates are published to 0.01% (e.g. 9.88%), so scaling by this factor turns every rate into
+ * an integer and keeps 均等割額 + 所得割率 × base in integer arithmetic. Multiplying by the
+ * decimal rate directly can land just below an exact ¥100 multiple (5,000,000 × 0.0928 =
+ * 463,999.99999999994 in binary floating point), and the statutory floor would then lose ¥100.
+ */
+const RATE_SCALE = 1_000_000;
+
+/** 均等割額 + 所得割率 × base, rounded down to ¥100 (100円未満切り捨て). */
+function portionFlooredToHundred(perCapita: number, base: number, rate: number): number {
+  const scaled = perCapita * RATE_SCALE + base * Math.round(rate * RATE_SCALE);
+  return Math.floor(scaled / (RATE_SCALE * 100)) * 100;
+}
 
 /**
  * Premium for one fiscal year's parameters: per portion, 均等割額 + 所得割率 × base,
@@ -495,14 +500,14 @@ function calculateLatterStagePremiumForParams(
   const base = latterStagePremiumBase(netIncome);
 
   const medicalPortion = Math.min(
-    floorToHundred(params.medicalPerCapita + base * params.medicalRate),
+    portionFlooredToHundred(params.medicalPerCapita, base, params.medicalRate),
     params.medicalCap,
   );
 
   let childSupportPortion = 0;
   if (params.childSupportRate !== undefined && params.childSupportCap !== undefined) {
     childSupportPortion = Math.min(
-      floorToHundred((params.childSupportPerCapita ?? 0) + base * params.childSupportRate),
+      portionFlooredToHundred(params.childSupportPerCapita ?? 0, base, params.childSupportRate),
       params.childSupportCap,
     );
   }
@@ -540,12 +545,11 @@ function calculateLatterStagePremiumForParams(
 export function calculateLatterStageElderlyPremium(
   netIncome: number,
   year: number,
-  region?: string,
+  region: string,
 ): LatterStageElderlyBreakdown {
-  const regionKey = region as string;
   // January resolves to the previous fiscal year's rates, April to the current ones.
-  const prevFYParams = getLatterStageParamsForMonth(regionKey, year, 0);
-  const currFYParams = getLatterStageParamsForMonth(regionKey, year, 3);
+  const prevFYParams = getLatterStageParamsForMonth(region, year, 0);
+  const currFYParams = getLatterStageParamsForMonth(region, year, 3);
 
   if (!currFYParams) {
     console.error(
@@ -568,11 +572,9 @@ export function calculateLatterStageElderlyPremium(
   }
 
   const prevFY = calculateLatterStagePremiumForParams(netIncome, prevFYParams);
-  const medicalPortion = Math.round(
-    (prevFY.medicalPortion * 1) / 3 + (currFY.medicalPortion * 2) / 3,
-  );
+  const medicalPortion = Math.round(prevFY.medicalPortion / 3 + (currFY.medicalPortion * 2) / 3);
   const childSupportPortion = Math.round(
-    (prevFY.childSupportPortion * 1) / 3 + (currFY.childSupportPortion * 2) / 3,
+    prevFY.childSupportPortion / 3 + (currFY.childSupportPortion * 2) / 3,
   );
   return {
     medicalPortion,
