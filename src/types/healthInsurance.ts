@@ -34,7 +34,7 @@ export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
 
 /** The dependent-coverage income threshold applicable to an {@link AgeRange}. */
 export function getDependentIncomeThreshold(ageRange: AgeRange): number {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.dependentIncomeThreshold)
+  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.elderlyDependentIncomeThreshold)
     ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
     : DEPENDENT_INCOME_THRESHOLD;
 }
