@@ -2,13 +2,13 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-08-01
+## 2026-08-22
 
 ### New
 
-- The age input now covers every age, replacing the previous two-way toggle: Under 18, 18-19, 20-39, 40-59, 60-64, 65-69, 70-74, and 75+. Beyond the existing long-term care premium for ages 40-64 (介護保険第2号被保険者), the calculator now models: no [National Pension](https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html) (国民年金) contributions outside ages 20-59, no [Employees' Pension](https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html) (厚生年金保険) contributions from age 70, the [residence-tax exemption for minors](https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06) (未成年者, non-taxable when 合計所得金額 is ¥1,350,000 or less), and the higher [dependent-coverage income threshold](https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html) of ¥1,800,000 for ages 60 and over. Details are in the Age tooltip.
-- From age 65 (介護保険第1号被保険者), long-term care premiums are set per municipality and billed directly, so the calculator cannot derive them; a new input accepts the billed annual amount from the June-July 介護保険料決定通知書 and includes it in social insurance and the 社会保険料控除.
-- At ages 75 and over, health coverage automatically moves to the [後期高齢者医療制度](https://www.gov-online.go.jp/article/202209/entry-10482.html), and the calculator now computes its premium (均等割額 + 所得割率, per-portion caps and rounding) for [all 47 prefectures](https://www.mhlw.go.jp/content/12403500/001689077.pdf) — just pick the prefecture. The low-income 均等割 reduction (軽減) and the former-dependent (元被扶養者) reduction are not applied.
+- The age input now covers every age. Age now determines National Pension (20-59) and Employees' Pension (under 70) contributions, the residence-tax exemption for minors, and the dependent-coverage income threshold. Details are in the Age tooltip.
+- From age 65, long-term care premiums are billed directly by the municipality. For ages 65 and over, enter the billed annual amount from the notice (介護保険料決定通知書) received around June-July.
+- From age 75, health insurance coverage moves to the Medical System for the Elderly ([後期高齢者医療制度](https://www.gov-online.go.jp/article/202209/entry-10482.html)). The calculator computes its premium based on the selected prefecture.
 
 ## 2026-07-18
 
