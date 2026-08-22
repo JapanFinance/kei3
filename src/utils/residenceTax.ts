@@ -12,8 +12,6 @@ import {
 } from './dependentDeductions';
 import { calculateNationalIncomeTax } from './taxCalculations';
 
-export { calculateResidenceTaxBasicDeduction };
-
 const RESIDENCE_TAX_RATE = 0.1;
 const CITY_TAX_PROPORTION = 0.6;
 const PREFECTURAL_TAX_PROPORTION = 0.4;
