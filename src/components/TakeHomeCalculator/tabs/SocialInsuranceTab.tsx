@@ -9,7 +9,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
-import { getLatterStageParamsForMonth } from '../../../data/latterStageElderlyParams';
+import { LATTER_STAGE_RATE_TABLE_URL } from '../../../data/latterStageElderlyParams';
 import {
   isLongTermCareCategory1Insured,
   isSubjectToEmployeesPension,
@@ -43,21 +43,18 @@ import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
 
-const LATTER_STAGE_STATIC_SOURCES: Source[] = [
+const LATTER_STAGE_SOURCES: Source[] = [
+  {
+    label: '後期高齢者医療制度の保険料率について (rates for all 47 prefectures)',
+    href: LATTER_STAGE_RATE_TABLE_URL,
+  },
   {
     label: '保険料試算用シート (per-portion rounding and caps)',
     href: 'https://www.tokyo-ikiiki.net/seido/1001968/1002520.html',
   },
   {
-    label: '高齢者の医療の確保に関する法律施行令第18条 (uniform rates, 賦課限度額)',
+    label: '高齢者の医療の確保に関する法律施行令第18条 (uniform rates, premium cap)',
     href: 'https://laws.e-gov.go.jp/law/419CO0000000318#Mp-Ch_3-Se_4-At_18',
-  },
-];
-
-const LTC_CATEGORY1_SOURCES = [
-  {
-    label: '介護保険料の納め方 (第1号被保険者, billing and 特別徴収)',
-    href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
 
@@ -81,20 +78,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
   const isLatterStage = inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID;
-  // The rate-table publication is per two-year cycle, so read it from the applicable
-  // period (April = the income year's own cycle) rather than hardcoding one URL.
-  const latterStageParams = isLatterStage
-    ? getLatterStageParamsForMonth(inputs.region, inputs.incomeYear, 3)
-    : undefined;
-  const latterStageSources: Source[] = latterStageParams
-    ? [
-        {
-          label: `後期高齢者医療制度の保険料率について (${latterStageParams.regionName} and all prefectures)`,
-          href: latterStageParams.source,
-        },
-        ...LATTER_STAGE_STATIC_SOURCES,
-      ]
-    : LATTER_STAGE_STATIC_SOURCES;
   // NHI and the 後期高齢者医療制度 both assess premiums on net income rather than SMR.
   const isIncomeBasedProvider = isNationalHealthInsurance || isLatterStage;
   const includeLTC = isSubjectToLongTermCarePremium(inputs.ageRange);
@@ -437,19 +420,22 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               </DetailedTooltip>
             )}
             {isLatterStage && (
-              <DetailedTooltip title="後期高齢者医療制度 Premium" icon={SIMPLE_TOOLTIP_ICON}>
+              <DetailedTooltip
+                title="Medical System for the Elderly Premium"
+                icon={SIMPLE_TOOLTIP_ICON}
+              >
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   The annual premium is a per-capita amount (均等割額) plus an income-based amount:
-                  the 所得割率 applied to total net income minus the basic deduction. Each portion
-                  is rounded down to ¥100 and capped at its statutory maximum (賦課限度額), which is
+                  the rate applied to total net income minus the basic deduction. Each portion is
+                  rounded down to ¥100 and capped at its statutory maximum (賦課限度額), which is
                   set nationally. Rates are uniform across each prefecture by law and are revised
-                  every two years; the calculator ships every prefecture's published rates.
+                  every two years.
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   The low-income per-capita reduction (均等割額の軽減) and the reduction for former
-                  dependents (元被扶養者) are not applied.
+                  dependents (元被扶養者) are not currently applied.
                 </Typography>
-                <SourceLinks sources={latterStageSources} />
+                <SourceLinks sources={LATTER_STAGE_SOURCES} />
               </DetailedTooltip>
             )}
           </Typography>
@@ -717,24 +703,10 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {isLongTermCareCategory1Insured(inputs.ageRange) && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            Long-term Care Insurance
-            <DetailedTooltip title="Long-term Care Insurance (第1号)" icon={SIMPLE_TOOLTIP_ICON}>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                From age 65 (介護保険第1号被保険者), long-term care premiums are set per
-                municipality on income brackets and billed directly — usually deducted from pension
-                payments (特別徴収). The calculator uses the annual amount entered in the form; the
-                June-July 介護保険料決定通知書 and pension payment statements show it. The premium
-                counts toward the social insurance deduction (社会保険料控除).
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 1 }}>
-                The billed amount is assessed on the previous year's income, so it does not change
-                with the income entered here.
-              </Typography>
-              <SourceLinks sources={LTC_CATEGORY1_SOURCES} />
-            </DetailedTooltip>
+            Age 65+ Long-term Care Insurance
           </Typography>
           <ResultRow
-            label="Annual Premium (as entered)"
+            label="Annual Premium"
             value={formatJPY(results.longTermCareCategory1Premium ?? 0)}
             type="subtotal"
           />

@@ -330,7 +330,7 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
   it('renders the 第1号 long-term care premium row at 65+', () => {
     render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
 
-    expect(screen.getByText('Long-term Care Insurance')).toBeInTheDocument();
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
     expect(screen.getAllByText('¥150,000').length).toBeGreaterThan(0);
   });
 });

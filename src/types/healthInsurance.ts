@@ -164,8 +164,6 @@ export interface NHIRegionDefinition {
  */
 export interface LatterStageElderlyRegionParams {
   regionName: string;
-  /** The MHLW publication listing every 広域連合's rates for this period; shown in the UI. */
-  source: string;
   // Medical portion (医療分)
   medicalPerCapita: number; // 均等割額 (annual)
   medicalRate: number; // 所得割率 (e.g. 0.0988)

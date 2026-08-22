@@ -87,7 +87,7 @@ const AGE_RANGE_SOURCES: Source[] = [
 
 const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
   {
-    label: '介護保険料の納め方 (第1号被保険者, billing and 特別徴収)',
+    label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
     href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
@@ -492,15 +492,15 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </li>
                   <li>
                     <Typography variant="body2">
-                      From age 65 (第1号被保険者), long-term care premiums are billed directly by
-                      the municipality; enter the billed annual amount in the field that appears for
-                      these ranges.
+                      From age 65, long-term care premiums are billed directly by the municipality
+                      and are deducted from public pension payments when the annual pension is
+                      ¥180,000 or more.
                     </Typography>
                   </li>
                   <li>
                     <Typography variant="body2">
-                      From age 75, health coverage moves to the Medical System for the Elderly (75+)
-                      (後期高齢者医療制度), which replaces the health insurance provider options.
+                      From age 75, health coverage moves to the Medical System for the Elderly
+                      (後期高齢者医療制度).
                     </Typography>
                   </li>
                 </Box>
@@ -799,21 +799,18 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       mb: 0.2,
                     }}
                   >
-                    Long-term Care Insurance (第1号)
+                    Age 65+ Long-term Care Insurance
                     <DetailedTooltip
-                      title="Long-term Care Insurance (第1号)"
+                      title="Age 65+ Long-term Care Insurance"
                       icon={SIMPLE_TOOLTIP_ICON}
                     >
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        From age 65 (介護保険第1号被保険者), long-term care premiums are set per
-                        municipality on income brackets and billed directly — usually deducted from
-                        pension payments (特別徴収). Enter the annual amount from the June-July
-                        介護保険料決定通知書 or pension payment statements; it is added to social
-                        insurance and the 社会保険料控除.
+                        From age 65, long-term care premiums are billed by the municipality based on
+                        income brackets. Enter the annual amount from the June-July notice
+                        (介護保険料決定通知書); this amount is added to social insurance deduction.
                       </Typography>
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        The billed amount is assessed on the previous year's income, so it does not
-                        change with the income entered in the calculator.
+                        The billed amount is assessed on the previous year's income.
                       </Typography>
                       <SourceLinks sources={LTC_CATEGORY1_INPUT_SOURCES} />
                     </DetailedTooltip>
