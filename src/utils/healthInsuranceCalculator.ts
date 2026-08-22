@@ -13,7 +13,7 @@ import type {
   ProviderRegion,
   NationalHealthInsuranceRegionParams,
   LatterStageElderlyRegionParams,
-  HealthInsuranceProviderId,
+  NonLatterStageProviderId,
 } from '../types/healthInsurance';
 import {
   DEFAULT_PROVIDER_REGION,
@@ -49,7 +49,7 @@ export interface HealthInsuranceBreakdown {
 export function calculateHealthInsuranceBreakdown(
   annualIncome: number,
   isSubjectToLongTermCarePremium: boolean,
-  provider: HealthInsuranceProviderId,
+  provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
   customRates?: { healthRate: number; ltcRate: number },
@@ -258,7 +258,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
 export function calculateHealthInsurancePremium(
   annualIncome: number,
   isSubjectToLongTermCarePremium: boolean,
-  provider: HealthInsuranceProviderId,
+  provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
   customRates?: { healthRate: number; ltcRate: number },

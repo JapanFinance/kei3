@@ -51,6 +51,17 @@ export type HealthInsuranceProviderId =
   | typeof LATTER_STAGE_ELDERLY_ID;
 
 /**
+ * Every provider id other than the 後期高齢者医療制度, whose premium is assessed on income by
+ * its own module rather than by the shared health insurance calculation. Narrowing a
+ * parameter to this makes handing 後期高齢者医療 to that calculation a compile error, where it
+ * would otherwise find no rates for any month and quietly total zero.
+ */
+export type NonLatterStageProviderId = Exclude<
+  HealthInsuranceProviderId,
+  typeof LATTER_STAGE_ELDERLY_ID
+>;
+
+/**
  * Whether the id names one of the employee health insurance providers in
  * {@link PROVIDER_DEFINITIONS}, as opposed to one of the ids standing for a coverage type of
  * its own ({@link NATIONAL_HEALTH_INSURANCE_ID}, {@link DEPENDENT_COVERAGE_ID},
