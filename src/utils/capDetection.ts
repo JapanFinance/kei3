@@ -117,7 +117,10 @@ function checkHealthInsuranceCap(
   };
 } {
   if (results.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
-    // 後期高齢者医療: capped when the medical portion reaches its 賦課限度額.
+    // 後期高齢者医療: the calendar-year medical portion blends two fiscal years, so it stops
+    // rising with income only once both fiscal years' 賦課限度額 are reached — i.e. when it
+    // equals the blended cap. With only the current fiscal year capped, the previous fiscal
+    // year's third still grows with income, so no badge is shown.
     const medical = results.latterStageMedicalPortion;
     if (medical === undefined) {
       return { capped: false };
@@ -131,7 +134,7 @@ function checkHealthInsuranceCap(
     const blendedMedicalCap =
       !prevFY || prevFY.medicalCap === currFY.medicalCap
         ? currFY.medicalCap
-        : Math.round((prevFY.medicalCap * 1) / 3 + (currFY.medicalCap * 2) / 3);
+        : Math.round(prevFY.medicalCap / 3 + (currFY.medicalCap * 2) / 3);
     return { capped: medical >= blendedMedicalCap };
   }
 

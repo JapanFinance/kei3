@@ -522,7 +522,7 @@ describe('Age Selection', () => {
 
     await user.click(ageSelect);
     const listbox = screen.getByRole('listbox');
-    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64']) {
+    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64', '65-69', '70-74', '75+']) {
       expect(within(listbox).getByRole('option', { name: label })).toBeInTheDocument();
     }
   });
@@ -538,6 +538,53 @@ describe('Age Selection', () => {
       type: 'ageRangeChanged',
       ageRange: 'age40to59' as const,
     });
+  });
+
+  it('shows the 第1号 premium field only from age 65', () => {
+    const { rerender } = render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age60to64' }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.queryByLabelText('Annual Premium')).not.toBeInTheDocument();
+
+    rerender(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
+    expect(screen.getByLabelText('Annual Premium')).toBeInTheDocument();
+
+    rerender(
+      <TakeHomeInputForm
+        inputs={{
+          ...baseInputs,
+          ageRange: 'age75plus',
+          healthInsuranceProvider: 'LatterStageElderly',
+        }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.getByLabelText('Annual Premium')).toBeInTheDocument();
+  });
+
+  it('dispatches setField for the 第1号 premium', async () => {
+    const user = userEvent.setup();
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        dispatch={mockDispatch}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Annual Premium'), '5');
+
+    expect(mockDispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'setField', field: 'longTermCareCategory1Premium' }),
+    );
   });
 });
 

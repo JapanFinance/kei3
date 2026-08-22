@@ -772,7 +772,7 @@ describe('75+ provider forcing', () => {
     expect(result.region).toBe('Tokyo');
   });
 
-  it('restores a regular provider when leaving 75+', () => {
+  it('falls back to National Health Insurance when leaving 75+', () => {
     const state: TakeHomeFormState = {
       ...baseState,
       ageRange: 'age75plus',
@@ -790,23 +790,53 @@ describe('75+ provider forcing', () => {
     expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
   });
 
-  it('keeps the latter-stage provider across income-mode changes at 75+', () => {
+  it('keeps the latter-stage provider and prefecture across income-mode changes at 75+', () => {
+    // A non-default prefecture, so a reset to the provider default (Tokyo) would be visible.
     const state: TakeHomeFormState = {
       ...baseState,
       ageRange: 'age75plus',
       healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
-      region: 'Tokyo',
+      region: 'Osaka',
     };
 
     const toMisc = takeHomeFormReducer(state, { type: 'incomeModeChanged', mode: 'miscellaneous' });
     expect(toMisc.incomeMode).toBe('miscellaneous');
     expect(toMisc.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
-    expect(toMisc.region).toBe('Tokyo');
+    expect(toMisc.region).toBe('Osaka');
 
     const backToSalary = takeHomeFormReducer(toMisc, { type: 'incomeModeChanged', mode: 'salary' });
     expect(backToSalary.incomeMode).toBe('salary');
     expect(backToSalary.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
-    expect(backToSalary.region).toBe('Tokyo');
+    expect(backToSalary.region).toBe('Osaka');
+
+    const toAdvanced = takeHomeFormReducer(backToSalary, {
+      type: 'incomeModeChanged',
+      mode: 'advanced',
+    });
+    expect(toAdvanced.incomeMode).toBe('advanced');
+    expect(toAdvanced.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(toAdvanced.region).toBe('Osaka');
+  });
+
+  it('resets an NHI municipality to a prefecture when forcing 75+', () => {
+    // An NHI region key that is not a prefecture key: if the cascade left it in place, the
+    // latter-stage lookup would find no parameters and silently return a ¥0 premium.
+    const state: TakeHomeFormState = {
+      ...baseState,
+      incomeMode: 'miscellaneous',
+      incomeStreams: [{ id: 'm', type: 'miscellaneous', amount: 5_000_000 }],
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo-Chiyoda',
+    };
+
+    const result = takeHomeFormReducer(state, {
+      type: 'ageRangeChanged',
+      ageRange: 'age75plus',
+    });
+
+    expect(result.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(regionOptionsFor(LATTER_STAGE_ELDERLY_ID).map(o => o.id)).toContain(result.region);
+    expect(result.region).toBe('Tokyo');
   });
 
   it('lists every prefecture as a latter-stage region', () => {

@@ -71,10 +71,10 @@ const PREFECTURE_NAMES: Record<string, string> = {
  * instead of being repeated for every prefecture.
  * https://laws.e-gov.go.jp/law/419CO0000000318#Mp-Ch_3-Se_4-At_18
  *
- * `source` is likewise a per-cycle fact: MHLW publishes one table covering every 広域連合 when
- * the rates are set. The FY2026 publication tabulates both cycles shipped here — the 令和8・9年度
- * rates and the 令和6・7年度 comparison column — so both periods cite it; a future cycle adds a
- * period with its own URL.
+ * MHLW publishes one table covering every 広域連合 when the rates are set. The FY2026
+ * publication tabulates both cycles shipped here — the 令和8・9年度 rates and the 令和6・7年度
+ * comparison column — so it is the single source the UI cites ({@link LATTER_STAGE_RATE_TABLE_URL});
+ * a future cycle's publication replaces it.
  *
  * Rates are the uniform prefecture-wide ones. A few 広域連合 also set reduced rates for
  * designated remote areas (特定地域, 施行令第18条第2項); those are not modeled.
@@ -86,8 +86,6 @@ interface LatterStagePeriod {
   medicalCap: number;
   /** 子ども・子育て支援納付金分賦課限度額 — national; absent before FY2026. */
   childSupportCap?: number;
-  /** The MHLW publication listing every 広域連合's rates for this cycle. */
-  source: string;
   /** 均等割額 and 所得割率 by prefecture: 医療分, plus 子ども分 where the levy exists. */
   rates: Record<
     string,
@@ -95,8 +93,11 @@ interface LatterStagePeriod {
   >;
 }
 
-/** 「後期高齢者医療制度の令和8・9年度の保険料率について」(令和8年4月10日) — all 47 広域連合. */
-const MHLW_FY2026_RATE_TABLE = 'https://www.mhlw.go.jp/content/12403500/001689077.pdf';
+/**
+ * 「後期高齢者医療制度の令和8・9年度の保険料率について」(令和8年4月10日) — the MHLW table of
+ * every 広域連合's rates, the source for both periods in {@link LATTER_STAGE_PERIODS}.
+ */
+export const LATTER_STAGE_RATE_TABLE_URL = 'https://www.mhlw.go.jp/content/12403500/001689077.pdf';
 
 /** Rate periods, newest first. */
 const LATTER_STAGE_PERIODS: LatterStagePeriod[] = [
@@ -105,7 +106,6 @@ const LATTER_STAGE_PERIODS: LatterStagePeriod[] = [
     effectiveFrom: { year: 2026, month: 3 },
     medicalCap: 850_000,
     childSupportCap: 21_000,
-    source: MHLW_FY2026_RATE_TABLE,
     rates: {
       Hokkaido: { perCapita: 59963, rate: 0.1161, childPerCapita: 1364, childRate: 0.0028 },
       Aomori: { perCapita: 50500, rate: 0.09, childPerCapita: 1300, childRate: 0.002 },
@@ -163,7 +163,6 @@ const LATTER_STAGE_PERIODS: LatterStagePeriod[] = [
     // they would affect only the January-March slice of calendar 2025.
     effectiveFrom: { year: 2024, month: 3 },
     medicalCap: 800_000,
-    source: MHLW_FY2026_RATE_TABLE,
     rates: {
       Hokkaido: { perCapita: 52953, rate: 0.1179 },
       Aomori: { perCapita: 46800, rate: 0.099 },
@@ -238,8 +237,8 @@ if (import.meta.env.DEV) {
 
 /**
  * Returns the 後期高齢者医療 parameters in effect for the given calendar month, or undefined
- * for an unknown prefecture. Composes the period's national caps and source with the
- * prefecture's own rates. Same newest-first lookup as getNHIParamsForMonth.
+ * for an unknown prefecture. Composes the period's national caps with the prefecture's
+ * own rates. Same newest-first lookup as getNHIParamsForMonth.
  */
 export function getLatterStageParamsForMonth(
   region: string,
@@ -261,7 +260,6 @@ export function getLatterStageParamsForMonth(
   const rates = period.rates[region]!;
   return {
     regionName,
-    source: period.source,
     medicalPerCapita: rates.perCapita,
     medicalRate: rates.rate,
     medicalCap: period.medicalCap,

@@ -133,10 +133,10 @@ const employeeProviderOptions: HealthInsuranceProviderOption[] = (
 
 /**
  * The health insurance providers selectable for a given form state, in dropdown order.
- * Employment income can use an employee provider, National Health Insurance, or a custom
- * provider; dependent coverage ("None") is offered only while income is under the
- * eligibility threshold; non-employment income is limited to NHI (plus dependent coverage
- * when eligible). Pure and colocated with the reducer so the same list drives both the
+ * From age 75 only the 後期高齢者医療制度 is offered. Below that, employment income can use
+ * an employee provider, National Health Insurance, or a custom provider; dependent coverage
+ * ("None") is offered only while income is under the eligibility threshold; non-employment
+ * income is limited to NHI (plus dependent coverage when eligible). Pure and colocated with the reducer so the same list drives both the
  * dropdown (via a `useMemo` in InputForm) and the reducer's provider-validity cascade
  * ({@link applyProviderValidity}), rather than the two drifting apart.
  */
@@ -307,8 +307,9 @@ export type FormAction =
  * provider's default (as `providerChanged` does). Every income/stream/mode change routes
  * through this one check against the same selector the dropdown renders, so the selected value
  * and the offered options can't disagree; it replaces a correcting effect that used to run a
- * render later in InputForm. `availableProvidersFor` always includes NHI, so a fallback always
- * exists; the empty-list guard only satisfies the type of `available[0]`.
+ * render later in InputForm. `availableProvidersFor` always offers NHI below age 75 and the
+ * 後期高齢者医療制度 at 75+, so a fallback always exists; the empty-list guard only satisfies
+ * the type of `available[0]`.
  */
 function applyProviderValidity(state: TakeHomeFormState): TakeHomeFormState {
   const available = availableProvidersFor(state);
@@ -352,9 +353,9 @@ function reduceIncomeModeChanged(
   switch (action.mode) {
     case 'salary':
     case 'miscellaneous':
-      // At 75+ the provider is age-determined (後期高齢者医療制度), not income-determined, so
-      // the mode-based provider defaulting must not overwrite the selection — it would send a
-      // custom-rates choice through applyProviderValidity's fallback and reset it.
+      // At 75+ the provider is age-determined (後期高齢者医療制度), not income-determined. The
+      // mode-based default would be rejected by applyProviderValidity and replaced with the
+      // default region, discarding the selected prefecture.
       if (!isLatterStageElderly(state.ageRange)) {
         newState.healthInsuranceProvider =
           action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
