@@ -4,6 +4,7 @@
 import {
   PROVIDER_DEFINITIONS,
   getProviderDefinition,
+  type EmployeeProviderId,
 } from '../data/employeesHealthInsurance/providerRateData';
 import type { AgeRange } from './ageRange';
 
@@ -43,11 +44,37 @@ export function getDependentIncomeThreshold(ageRange: AgeRange): number {
 
 // Exhaustive union type of all valid health insurance provider IDs
 export type HealthInsuranceProviderId =
-  | keyof typeof PROVIDER_DEFINITIONS
+  | EmployeeProviderId
   | typeof NATIONAL_HEALTH_INSURANCE_ID
   | typeof DEPENDENT_COVERAGE_ID
   | typeof CUSTOM_PROVIDER_ID
   | typeof LATTER_STAGE_ELDERLY_ID;
+
+/**
+ * Every provider id other than the 後期高齢者医療制度, whose premium is assessed on income by
+ * its own module rather than by the shared health insurance calculation. Narrowing a
+ * parameter to this makes handing 後期高齢者医療 to that calculation a compile error, where it
+ * would otherwise find no rates for any month and quietly total zero.
+ */
+export type NonLatterStageProviderId = Exclude<
+  HealthInsuranceProviderId,
+  typeof LATTER_STAGE_ELDERLY_ID
+>;
+
+/**
+ * Whether the id names one of the employee health insurance providers in
+ * {@link PROVIDER_DEFINITIONS}, as opposed to one of the ids standing for a coverage type of
+ * its own ({@link NATIONAL_HEALTH_INSURANCE_ID}, {@link DEPENDENT_COVERAGE_ID},
+ * {@link CUSTOM_PROVIDER_ID}, {@link LATTER_STAGE_ELDERLY_ID}).
+ *
+ * The test is membership in {@link PROVIDER_DEFINITIONS} rather than a list of the other ids,
+ * so a further coverage type added to {@link HealthInsuranceProviderId} is excluded here
+ * without any edit, and the call sites that pair this guard with a switch over the remaining
+ * ids stop compiling until they handle it.
+ */
+export function isEmployeeHealthProvider(id: HealthInsuranceProviderId): id is EmployeeProviderId {
+  return getProviderDefinition(id) !== undefined;
+}
 
 /**
  * Checks if dependent coverage is eligible against the age-dependent 年間収入 threshold
@@ -70,28 +97,24 @@ export function isDependentCoverageEligible(
  * Get the display name for any health insurance provider ID
  */
 export function getProviderDisplayName(providerId: HealthInsuranceProviderId): string {
-  if (providerId === NATIONAL_HEALTH_INSURANCE_ID) {
-    return 'National Health Insurance';
+  if (isEmployeeHealthProvider(providerId)) {
+    return PROVIDER_DEFINITIONS[providerId].providerName;
   }
 
-  if (providerId === DEPENDENT_COVERAGE_ID) {
-    return 'None (dependent of insured employee)';
+  switch (providerId) {
+    case NATIONAL_HEALTH_INSURANCE_ID:
+      return 'National Health Insurance';
+    case DEPENDENT_COVERAGE_ID:
+      return 'None (dependent of insured employee)';
+    case CUSTOM_PROVIDER_ID:
+      return 'Custom Employee Health Insurance Provider';
+    case LATTER_STAGE_ELDERLY_ID:
+      return 'Medical System for the Elderly (75+)';
+    default: {
+      const unhandledProvider: never = providerId;
+      throw new Error(`Unknown provider ID: ${JSON.stringify(unhandledProvider)}`);
+    }
   }
-
-  if (providerId === CUSTOM_PROVIDER_ID) {
-    return 'Custom Employee Health Insurance Provider';
-  }
-
-  if (providerId === LATTER_STAGE_ELDERLY_ID) {
-    return 'Medical System for the Elderly (75+)';
-  }
-
-  const providerDef = getProviderDefinition(providerId);
-  if (!providerDef) {
-    throw new Error(`Unknown provider ID: ${providerId}`);
-  }
-
-  return providerDef.providerName;
 }
 
 // A generic type for region. Can be a specific enum or a string for flexibility.
@@ -164,12 +187,22 @@ export interface NHIRegionDefinition {
  */
 export interface LatterStageElderlyRegionParams {
   regionName: string;
+  /**
+   * Identifies the rate period these parameters come from. Two lookups that return the same
+   * id carry the same rates, including any field a future rate cycle adds.
+   */
+  periodId: string;
   // Medical portion (医療分)
   medicalPerCapita: number; // 均等割額 (annual)
   medicalRate: number; // 所得割率 (e.g. 0.0988)
   medicalCap: number; // 賦課限度額
-  // Child/childcare support levy (子ども・子育て支援納付金分) — introduced FY2026
-  childSupportPerCapita?: number;
-  childSupportRate?: number;
-  childSupportCap?: number;
+  /**
+   * Child/childcare support levy (子ども・子育て支援納付金分), introduced FY2026 and so
+   * absent for earlier rate periods. Its three numbers always arrive together.
+   */
+  childSupport?: {
+    perCapita: number; // 均等割額 (annual)
+    rate: number; // 所得割率
+    cap: number; // 賦課限度額
+  };
 }
