@@ -11,7 +11,7 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, type PluginOption } from 'vite';
 import Sitemap from 'vite-plugin-sitemap';
 
-import { changelogDefine } from './changelogDate';
+import { changelogDefine } from './changelogDate.ts';
 
 // Vite does not minify index.html, so HTML comments (e.g. the documentation
 // block for the inline stale-build probe) would ship to every visitor.

@@ -13,7 +13,7 @@
 
 import { readFileSync } from 'node:fs';
 
-import { parseChangelog } from './src/utils/changelogUtils';
+import { parseChangelog } from './src/utils/changelogUtils.ts';
 
 /** Empty when the changelog has no dated entries, which hides the dot. */
 export function latestChangelogDate(): string {

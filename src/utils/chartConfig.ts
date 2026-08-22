@@ -217,6 +217,25 @@ export const generateChartData = (
           },
         ]
       : []),
+    // The 介護保険第1号 amount is entered, not derived from income, so the calculator applies
+    // the same figure at every income point; without this bar the stack would fall short of
+    // the income by that amount.
+    ...(resultsAndCaps.some(({ result }) => result.longTermCareCategory1Premium !== undefined)
+      ? [
+          {
+            label: 'Long-term Care Insurance',
+            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+              x: incomePoints[i]!,
+              y: result.longTermCareCategory1Premium ?? 0,
+              breakdown,
+            })),
+            backgroundColor: 'rgba(0, 139, 139, 0.7)',
+            yAxisID: 'y',
+            type: 'bar' as const,
+            stack: 'stack0',
+          },
+        ]
+      : []),
   ];
 
   const datasets = [

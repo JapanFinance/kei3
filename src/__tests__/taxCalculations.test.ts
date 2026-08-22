@@ -1852,6 +1852,43 @@ describe('calculateTaxes at ages 65 and over', () => {
     });
   });
 
+  describe('no long-term care premium via health insurance from age 65', () => {
+    // From 65 the person is a 介護保険第1号被保険者 and the municipality bills the premium,
+    // so the employer-deducted premium and NHI no longer include the 介護保険料率 / 介護分.
+    it.each(['age65to69', 'age70to74'] as const)(
+      'charges the employee premium at %s without the 介護保険料率',
+      ageRange => {
+        const premium = calculateTaxes(employeeInputs65(ageRange)).healthInsurance;
+        expect(premium).toBe(calculateTaxes(employeeInputs65('age20to39')).healthInsurance);
+        expect(premium).toBeLessThan(calculateTaxes(employeeInputs65('age60to64')).healthInsurance);
+      },
+    );
+
+    it('matches the Kyokai Kenpo Tokyo health-only rates at 65-69', () => {
+      // Salary 5,000,000 → 416,667 per month → SMR 410,000. Employee rates in 2026:
+      // Jan-Mar 4.955% (FY2025), Apr 4.925%, May-Dec 5.04% (incl. 子ども・子育て支援金).
+      // Monthly premiums round 50銭以下切り捨て: 410,000 × 4.955% = 20,315.5 → 20,315;
+      // × 4.925% = 20,192.5 → 20,192; × 5.04% = 20,664.
+      // Salary: 20,315 × 3 + 20,192 + 20,664 × 8 = 246,449. Bonus 1,000,000 in June at
+      // 5.04% = 50,400. Total 296,849, with no 介護保険料率 applied in any month.
+      expect(calculateTaxes(employeeInputs65('age65to69')).healthInsurance).toBe(296_849);
+    });
+
+    it('charges NHI without the 介護分 at 65-69', () => {
+      const nhiInputs65 = (ageRange: AgeRange) => ({
+        ...employeeInputs65(ageRange),
+        incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo-Shinjuku',
+      });
+      const at65to69 = calculateTaxes(nhiInputs65('age65to69'));
+      expect(at65to69.nhiLongTermCarePortion ?? 0).toBe(0);
+      expect(at65to69.healthInsurance).toBeLessThan(
+        calculateTaxes(nhiInputs65('age60to64')).healthInsurance,
+      );
+    });
+  });
+
   describe('介護保険第1号 premium input (ages 65+)', () => {
     it('adds the entered annual amount to social insurance and the deduction', () => {
       const without = calculateTaxes(employeeInputs65('age65to69'));
@@ -1861,21 +1898,41 @@ describe('calculateTaxes at ages 65 and over', () => {
       });
 
       expect(withPremium.longTermCareCategory1Premium).toBe(120_000);
-      // The premium lowers take-home by less than its face value because the
-      // 社会保険料控除 reduces income and residence tax.
-      const takeHomeDrop = without.takeHomeIncome - withPremium.takeHomeIncome;
-      expect(takeHomeDrop).toBeGreaterThan(0);
-      expect(takeHomeDrop).toBeLessThan(120_000);
+      // The 社会保険料控除 grows by exactly the premium, so taxable income falls by exactly
+      // that amount (a multiple of 1,000, so the 課税所得 rounding does not interfere).
+      expect(
+        without.taxableIncomeForNationalIncomeTax! - withPremium.taxableIncomeForNationalIncomeTax!,
+      ).toBe(120_000);
+      // Both taxable incomes (2,450,000 → 2,330,000) sit in the 10% national bracket:
+      // income tax falls by 12,000 × 1.021 = 12,252 → 12,200 after rounding to ¥100, and
+      // residence tax by 10% = 12,000, so take-home falls by 120,000 − 12,200 − 12,000.
+      expect(without.nationalIncomeTax - withPremium.nationalIncomeTax).toBe(12_200);
+      expect(
+        without.residenceTax.totalResidenceTax - withPremium.residenceTax.totalResidenceTax,
+      ).toBe(12_000);
+      expect(without.takeHomeIncome - withPremium.takeHomeIncome).toBe(95_800);
       // Health insurance itself is unchanged; the premium is its own component.
       expect(withPremium.healthInsurance).toBe(without.healthInsurance);
     });
 
     it('ignores the entered amount below age 65', () => {
-      const result = calculateTaxes({
-        ...employeeInputs65('age40to59'),
-        longTermCareCategory1Premium: 120_000,
+      for (const ageRange of ['age40to59', 'age60to64'] as const) {
+        const result = calculateTaxes({
+          ...employeeInputs65(ageRange),
+          longTermCareCategory1Premium: 120_000,
+        });
+        expect(result.longTermCareCategory1Premium, ageRange).toBeUndefined();
+      }
+    });
+
+    it('treats a negative entered amount as nothing entered', () => {
+      const without = calculateTaxes(employeeInputs65('age65to69'));
+      const negative = calculateTaxes({
+        ...employeeInputs65('age65to69'),
+        longTermCareCategory1Premium: -5_000,
       });
-      expect(result.longTermCareCategory1Premium).toBeUndefined();
+      expect(negative.longTermCareCategory1Premium).toBeUndefined();
+      expect(negative.takeHomeIncome).toBe(without.takeHomeIncome);
     });
 
     it('ignores the entered amount under manual social insurance entry', () => {
@@ -1924,6 +1981,29 @@ describe('calculateTaxes at ages 65 and over', () => {
       expect(result.employmentInsurance).toBeGreaterThan(0);
       expect(result.pensionPayments).toBe(0);
       expect(result.healthInsurance).toBeGreaterThan(0);
+    });
+
+    it('charges employment insurance but no health or pension premium on a bonus at 75+', () => {
+      const result = calculateTaxes({
+        ...latterStageInputs,
+        incomeStreams: [
+          { type: 'salary' as const, amount: 4_000_000, frequency: 'annual' as const, id: 's' },
+          { type: 'bonus' as const, amount: 1_000_000, month: 5, id: 'b' },
+        ],
+      });
+      // Gross employment income 5,000,000 → net 3,560,000 → base 3,130,000.
+      // FY2025: floor100(47,300 + 3,130,000 × 9.67%) = 349,900
+      // FY2026: floor100(53,300 + 3,130,000 × 9.88%) = 362,500; child floor100(1,300 +
+      //         3,130,000 × 0.26%) = 9,400
+      // Blend:  medical round(349,900/3 + 362,500×2/3) = 358,300; child round(9,400×2/3) = 6,267
+      expect(result.latterStageMedicalPortion).toBe(358_300);
+      expect(result.latterStageChildSupportPortion).toBe(6_267);
+      expect(result.healthInsurance).toBe(364_567);
+      expect(result.healthInsuranceOnBonus ?? 0).toBe(0);
+      // Employment insurance at the 0.5% rate in force from April 2026.
+      expect(result.employmentInsuranceOnBonus).toBe(5_000);
+      expect(result.pensionOnBonus ?? 0).toBe(0);
+      expect(result.pensionPayments).toBe(0);
     });
 
     it('combines the latter-stage premium with the 第1号 amount', () => {

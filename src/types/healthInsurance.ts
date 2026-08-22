@@ -164,8 +164,6 @@ export interface NHIRegionDefinition {
  */
 export interface LatterStageElderlyRegionParams {
   regionName: string;
-  /** The MHLW publication listing every 広域連合's rates for this period; shown in the UI. */
-  source: string;
   // Medical portion (医療分)
   medicalPerCapita: number; // 均等割額 (annual)
   medicalRate: number; // 所得割率 (e.g. 0.0988)
@@ -174,18 +172,4 @@ export interface LatterStageElderlyRegionParams {
   childSupportPerCapita?: number;
   childSupportRate?: number;
   childSupportCap?: number;
-}
-
-/** A rate period for the 後期高齢者医療制度, analogous to {@link NHIRatePeriod}. */
-export interface LatterStageElderlyRatePeriod {
-  /** Month is 0-indexed; rates change in April (month 3) on a two-year cycle. */
-  effectiveFrom: { year: number; month: number };
-  params: Omit<LatterStageElderlyRegionParams, 'regionName'>;
-}
-
-/** Prefecture definition with time-series rate periods, analogous to {@link NHIRegionDefinition}. */
-export interface LatterStageElderlyRegionDefinition {
-  regionName: string;
-  /** Rate periods sorted newest-first. Use getLatterStageParamsForMonth() for lookup. */
-  periods: LatterStageElderlyRatePeriod[];
 }

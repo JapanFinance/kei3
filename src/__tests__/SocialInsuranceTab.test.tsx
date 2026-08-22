@@ -320,6 +320,7 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
 
     expect(screen.getByText('Medical System for the Elderly (75+)')).toBeInTheDocument();
+    expect(screen.getByText('Premium Calculation Base')).toBeInTheDocument();
     expect(screen.getByText('Medical Portion')).toBeInTheDocument();
     expect(screen.getByText('Child Support Portion')).toBeInTheDocument();
     expect(screen.getAllByText('¥401,500').length).toBeGreaterThan(0);
@@ -327,10 +328,43 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
   });
 
-  it('renders the 第1号 long-term care premium row at 65+', () => {
+  it('renders the 第1号 long-term care premium row and includes it in the total at 75+', () => {
     render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
 
-    expect(screen.getByText('Long-term Care Insurance')).toBeInTheDocument();
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
     expect(screen.getAllByText('¥150,000').length).toBeGreaterThan(0);
+    // 408,500 health insurance + 0 pension + 150,000 第1号.
+    expect(screen.getByText('Annual Social Insurance')).toBeInTheDocument();
+    expect(screen.getByText('¥558,500')).toBeInTheDocument();
+  });
+
+  it('renders the 第1号 section alongside employee health insurance at 65-69', () => {
+    const inputs: TakeHomeInputs = {
+      ...baseInputs,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 300_000, frequency: 'monthly' }],
+      ageRange: 'age65to69',
+      healthInsuranceProvider: 'KyokaiKenpo',
+    };
+    const results: TakeHomeResults = {
+      ...baseResults,
+      ageRange: 'age65to69',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      hasEmploymentIncome: true,
+      grossEmploymentIncome: 3_600_000,
+      salaryIncome: 3_600_000,
+      healthInsurance: 200_000,
+      pensionPayments: 300_000,
+      employmentInsurance: 18_000,
+      latterStageMedicalPortion: undefined,
+      latterStageChildSupportPortion: undefined,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText("Employees' Health Insurance")).toBeInTheDocument();
+    expect(screen.queryByText('Medical System for the Elderly (75+)')).not.toBeInTheDocument();
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
+    // 200,000 + 300,000 + 18,000 + 150,000.
+    expect(screen.getByText('¥668,000')).toBeInTheDocument();
   });
 });
