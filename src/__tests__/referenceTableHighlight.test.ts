@@ -14,7 +14,7 @@ import {
   buildNationalIncomeTaxBracketRows,
 } from '../components/TakeHomeCalculator/tabs/referenceTableHighlight';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
-import { calculateResidenceTaxBasicDeduction } from '../utils/residenceTax';
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 
 describe('getDedupedNationalBasicDeductionTiers', () => {
   it('keeps every tier when no consecutive deductions match (2025)', () => {
