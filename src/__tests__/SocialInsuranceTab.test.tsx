@@ -274,6 +274,19 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(screen.getByText('¥558,500')).toBeInTheDocument();
   });
 
+  it('omits the 第1号 section when no premium applies at 75+', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={{ ...baseInputs, longTermCareCategory1Premium: 0 }}
+        results={{ ...baseResults, longTermCareCategory1Premium: undefined }}
+      />,
+    );
+
+    expect(screen.queryByText('Age 65+ Long-term Care Insurance')).not.toBeInTheDocument();
+    // The annual premium and the social insurance total are both 408,500 with nothing else due.
+    expect(screen.getAllByText('¥408,500')).toHaveLength(2);
+  });
+
   it('renders the 第1号 section alongside employee health insurance at 65-69', () => {
     const inputs: TakeHomeInputs = {
       ...baseInputs,
