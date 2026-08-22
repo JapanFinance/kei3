@@ -14,8 +14,8 @@ import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDe
 import {
   DEFAULT_AGE_RANGE,
   isLongTermCareCategory1Insured,
+  isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
-  isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
@@ -501,7 +501,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // - Employee health insurance: based on standard monthly remuneration
     // - National Health Insurance: based on net income
 
-    const subjectToLongTermCarePremium = isSubjectToLongTermCarePremium(inputs.ageRange);
+    const subjectToLongTermCarePremium = isLongTermCareCategory2Insured(inputs.ageRange);
 
     if (inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
       // 後期高齢者医療制度 (ages 75+): premiums are income-based like NHI, with no bonus

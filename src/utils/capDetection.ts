@@ -8,8 +8,8 @@ import {
 import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
+  isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
-  isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../types/ageRange';
 import {
@@ -191,7 +191,7 @@ function checkHealthInsuranceCap(
     let ltcCapped = false;
     if (
       results.nhiLongTermCarePortion !== undefined &&
-      isSubjectToLongTermCarePremium(results.ageRange) &&
+      isLongTermCareCategory2Insured(results.ageRange) &&
       currFYParams.ltcCapForEligible
     ) {
       ltcCapped = isCappedInBothFYs(

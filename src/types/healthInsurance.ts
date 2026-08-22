@@ -5,7 +5,7 @@ import {
   PROVIDER_DEFINITIONS,
   getProviderDefinition,
 } from '../data/employeesHealthInsurance/providerRateData';
-import type { AgeRange } from './ageRange';
+import { AGE_RANGE_LOWER_BOUND, type AgeRange } from './ageRange';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
@@ -33,10 +33,7 @@ export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
 
 /** The dependent-coverage income threshold applicable to an {@link AgeRange}. */
 export function getDependentIncomeThreshold(ageRange: AgeRange): number {
-  return ageRange === 'age60to64' ||
-    ageRange === 'age65to69' ||
-    ageRange === 'age70to74' ||
-    ageRange === 'age75plus'
+  return AGE_RANGE_LOWER_BOUND[ageRange] >= 60
     ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
     : DEPENDENT_INCOME_THRESHOLD;
 }
