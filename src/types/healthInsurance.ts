@@ -173,17 +173,3 @@ export interface LatterStageElderlyRegionParams {
   childSupportRate?: number;
   childSupportCap?: number;
 }
-
-/** A rate period for the 後期高齢者医療制度, analogous to {@link NHIRatePeriod}. */
-export interface LatterStageElderlyRatePeriod {
-  /** Month is 0-indexed; rates change in April (month 3) on a two-year cycle. */
-  effectiveFrom: { year: number; month: number };
-  params: Omit<LatterStageElderlyRegionParams, 'regionName'>;
-}
-
-/** Prefecture definition with time-series rate periods, analogous to {@link NHIRegionDefinition}. */
-export interface LatterStageElderlyRegionDefinition {
-  regionName: string;
-  /** Rate periods sorted newest-first. Use getLatterStageParamsForMonth() for lookup. */
-  periods: LatterStageElderlyRatePeriod[];
-}
