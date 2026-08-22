@@ -168,8 +168,13 @@ export interface LatterStageElderlyRegionParams {
   medicalPerCapita: number; // 均等割額 (annual)
   medicalRate: number; // 所得割率 (e.g. 0.0988)
   medicalCap: number; // 賦課限度額
-  // Child/childcare support levy (子ども・子育て支援納付金分) — introduced FY2026
-  childSupportPerCapita?: number;
-  childSupportRate?: number;
-  childSupportCap?: number;
+  /**
+   * Child/childcare support levy (子ども・子育て支援納付金分), introduced FY2026 and so
+   * absent for earlier rate periods. Its three numbers always arrive together.
+   */
+  childSupport?: {
+    perCapita: number; // 均等割額 (annual)
+    rate: number; // 所得割率
+    cap: number; // 賦課限度額
+  };
 }

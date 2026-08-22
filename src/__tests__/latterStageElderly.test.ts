@@ -32,8 +32,8 @@ describe('getLatterStageParamsForMonth', () => {
   });
 
   it('carries complete, plausible parameters for every prefecture in both periods', () => {
-    // A missing 子ども・子育て支援金分 field would silently yield a ¥0 portion for that
-    // prefecture, so every FY2026 row must carry both child fields; no FY2024 row may.
+    // A missing 子ども・子育て支援金分 entry would silently yield a ¥0 portion for that
+    // prefecture, so every FY2026 row must carry one; no FY2024 row may.
     for (const region of LATTER_STAGE_REGIONS) {
       const fy2026 = getLatterStageParamsForMonth(region, 2026, 3)!;
       expect(fy2026.medicalPerCapita, region).toBeGreaterThanOrEqual(40_000);
@@ -41,11 +41,11 @@ describe('getLatterStageParamsForMonth', () => {
       expect(fy2026.medicalRate, region).toBeGreaterThanOrEqual(0.08);
       expect(fy2026.medicalRate, region).toBeLessThanOrEqual(0.125);
       expect(fy2026.medicalCap, region).toBe(850_000);
-      expect(fy2026.childSupportPerCapita, region).toBeGreaterThanOrEqual(1_200);
-      expect(fy2026.childSupportPerCapita, region).toBeLessThanOrEqual(1_500);
-      expect(fy2026.childSupportRate, region).toBeGreaterThanOrEqual(0.0019);
-      expect(fy2026.childSupportRate, region).toBeLessThanOrEqual(0.003);
-      expect(fy2026.childSupportCap, region).toBe(21_000);
+      expect(fy2026.childSupport?.perCapita, region).toBeGreaterThanOrEqual(1_200);
+      expect(fy2026.childSupport?.perCapita, region).toBeLessThanOrEqual(1_500);
+      expect(fy2026.childSupport?.rate, region).toBeGreaterThanOrEqual(0.0019);
+      expect(fy2026.childSupport?.rate, region).toBeLessThanOrEqual(0.003);
+      expect(fy2026.childSupport?.cap, region).toBe(21_000);
 
       const fy2025 = getLatterStageParamsForMonth(region, 2025, 3)!;
       expect(fy2025.medicalPerCapita, region).toBeGreaterThanOrEqual(40_000);
@@ -53,9 +53,7 @@ describe('getLatterStageParamsForMonth', () => {
       expect(fy2025.medicalRate, region).toBeGreaterThanOrEqual(0.08);
       expect(fy2025.medicalRate, region).toBeLessThanOrEqual(0.125);
       expect(fy2025.medicalCap, region).toBe(800_000);
-      expect(fy2025.childSupportPerCapita, region).toBeUndefined();
-      expect(fy2025.childSupportRate, region).toBeUndefined();
-      expect(fy2025.childSupportCap, region).toBeUndefined();
+      expect(fy2025.childSupport, region).toBeUndefined();
     }
   });
 

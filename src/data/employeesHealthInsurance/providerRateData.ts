@@ -1,6 +1,8 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { LATTER_STAGE_REGIONS } from '../latterStageElderlyParams';
+
 /**
  * Regional rate variations for a provider
  * Contains only the data that varies by region: rates and region-specific metadata
@@ -1438,6 +1440,21 @@ export const PROVIDER_DEFINITIONS = {
 } satisfies Record<string, ProviderDefinition>;
 
 if (import.meta.env.DEV) {
+  // Kyokai Kenpo is organized by prefecture and uses the same identifiers as the
+  // 後期高齢者医療広域連合 list, which the region dropdown and its tests rely on. Keep the two
+  // sets identical.
+  const kyokaiRegions = Object.keys(PROVIDER_DEFINITIONS.KyokaiKenpo.regions);
+  const latterStageRegions = new Set<string>(LATTER_STAGE_REGIONS);
+  const onlyKyokai = kyokaiRegions.filter(region => !latterStageRegions.has(region));
+  const onlyLatterStage = LATTER_STAGE_REGIONS.filter(region => !kyokaiRegions.includes(region));
+  if (onlyKyokai.length > 0 || onlyLatterStage.length > 0) {
+    throw new Error(
+      `KyokaiKenpo regions and LATTER_STAGE_REGIONS must be the same 47 prefectures, ` +
+        `but KyokaiKenpo alone has [${onlyKyokai.join(', ')}] ` +
+        `and 後期高齢者医療 alone has [${onlyLatterStage.join(', ')}]`,
+    );
+  }
+
   // Validate that each region's rate periods are sorted newest-first
   for (const [providerId, provider] of Object.entries(PROVIDER_DEFINITIONS)) {
     for (const [regionKey, periods] of Object.entries(provider.regions)) {

@@ -504,13 +504,13 @@ function calculateLatterStagePremiumForParams(
     params.medicalCap,
   );
 
-  let childSupportPortion = 0;
-  if (params.childSupportRate !== undefined && params.childSupportCap !== undefined) {
-    childSupportPortion = Math.min(
-      portionFlooredToHundred(params.childSupportPerCapita ?? 0, base, params.childSupportRate),
-      params.childSupportCap,
-    );
-  }
+  const { childSupport } = params;
+  const childSupportPortion = childSupport
+    ? Math.min(
+        portionFlooredToHundred(childSupport.perCapita, base, childSupport.rate),
+        childSupport.cap,
+      )
+    : 0;
 
   return {
     medicalPortion,
@@ -564,9 +564,9 @@ export function calculateLatterStageElderlyPremium(
     (prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
       prevFYParams.medicalRate === currFYParams.medicalRate &&
       prevFYParams.medicalCap === currFYParams.medicalCap &&
-      prevFYParams.childSupportPerCapita === currFYParams.childSupportPerCapita &&
-      prevFYParams.childSupportRate === currFYParams.childSupportRate &&
-      prevFYParams.childSupportCap === currFYParams.childSupportCap)
+      prevFYParams.childSupport?.perCapita === currFYParams.childSupport?.perCapita &&
+      prevFYParams.childSupport?.rate === currFYParams.childSupport?.rate &&
+      prevFYParams.childSupport?.cap === currFYParams.childSupport?.cap)
   ) {
     return currFY;
   }
