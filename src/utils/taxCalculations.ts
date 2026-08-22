@@ -769,6 +769,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // 後期高齢者医療 breakdown fields (populated only at ages 75+)
     latterStageMedicalPortion: latterStageBreakdown?.medicalPortion,
     latterStageChildSupportPortion: latterStageBreakdown?.childSupportPortion,
+    latterStageMedicalCapped: latterStageBreakdown?.medicalCapped,
     longTermCareCategory1Premium:
       longTermCareCategory1Premium > 0 ? longTermCareCategory1Premium : undefined,
     // Context needed for cap detection

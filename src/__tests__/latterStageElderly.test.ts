@@ -32,8 +32,8 @@ describe('getLatterStageParamsForMonth', () => {
   });
 
   it('carries complete, plausible parameters for every prefecture in both periods', () => {
-    // A missing 子ども・子育て支援金分 field would silently yield a ¥0 portion for that
-    // prefecture, so every FY2026 row must carry both child fields; no FY2024 row may.
+    // A missing 子ども・子育て支援金分 entry would silently yield a ¥0 portion for that
+    // prefecture, so every FY2026 row must carry one; no FY2024 row may.
     for (const region of LATTER_STAGE_REGIONS) {
       const fy2026 = getLatterStageParamsForMonth(region, 2026, 3)!;
       expect(fy2026.medicalPerCapita, region).toBeGreaterThanOrEqual(40_000);
@@ -41,11 +41,11 @@ describe('getLatterStageParamsForMonth', () => {
       expect(fy2026.medicalRate, region).toBeGreaterThanOrEqual(0.08);
       expect(fy2026.medicalRate, region).toBeLessThanOrEqual(0.125);
       expect(fy2026.medicalCap, region).toBe(850_000);
-      expect(fy2026.childSupportPerCapita, region).toBeGreaterThanOrEqual(1_200);
-      expect(fy2026.childSupportPerCapita, region).toBeLessThanOrEqual(1_500);
-      expect(fy2026.childSupportRate, region).toBeGreaterThanOrEqual(0.0019);
-      expect(fy2026.childSupportRate, region).toBeLessThanOrEqual(0.003);
-      expect(fy2026.childSupportCap, region).toBe(21_000);
+      expect(fy2026.childSupport?.perCapita, region).toBeGreaterThanOrEqual(1_200);
+      expect(fy2026.childSupport?.perCapita, region).toBeLessThanOrEqual(1_500);
+      expect(fy2026.childSupport?.rate, region).toBeGreaterThanOrEqual(0.0019);
+      expect(fy2026.childSupport?.rate, region).toBeLessThanOrEqual(0.003);
+      expect(fy2026.childSupport?.cap, region).toBe(21_000);
 
       const fy2025 = getLatterStageParamsForMonth(region, 2025, 3)!;
       expect(fy2025.medicalPerCapita, region).toBeGreaterThanOrEqual(40_000);
@@ -53,14 +53,25 @@ describe('getLatterStageParamsForMonth', () => {
       expect(fy2025.medicalRate, region).toBeGreaterThanOrEqual(0.08);
       expect(fy2025.medicalRate, region).toBeLessThanOrEqual(0.125);
       expect(fy2025.medicalCap, region).toBe(800_000);
-      expect(fy2025.childSupportPerCapita, region).toBeUndefined();
-      expect(fy2025.childSupportRate, region).toBeUndefined();
-      expect(fy2025.childSupportCap, region).toBeUndefined();
+      expect(fy2025.childSupport, region).toBeUndefined();
     }
   });
 
   it('falls back to the oldest period before April 2024', () => {
     expect(getLatterStageParamsForMonth('Tokyo', 2024, 0)?.medicalPerCapita).toBe(47300);
+  });
+
+  it('tags each lookup with the period it resolved to', () => {
+    // The premium calculation decides whether to blend by comparing these ids, so months in
+    // one rate cycle must share an id and months in different cycles must not.
+    const januaryOf2026 = getLatterStageParamsForMonth('Tokyo', 2026, 0)!.periodId;
+    const aprilOf2026 = getLatterStageParamsForMonth('Tokyo', 2026, 3)!.periodId;
+    expect(januaryOf2026).not.toBe(aprilOf2026);
+    expect(getLatterStageParamsForMonth('Tokyo', 2025, 3)!.periodId).toBe(januaryOf2026);
+    expect(getLatterStageParamsForMonth('Tokyo', 2024, 0)!.periodId).toBe(januaryOf2026);
+    expect(getLatterStageParamsForMonth('Tokyo', 2027, 3)!.periodId).toBe(aprilOf2026);
+    // Prefectures share the national rate cycle, so the id does not vary by region.
+    expect(getLatterStageParamsForMonth('Osaka', 2026, 3)!.periodId).toBe(aprilOf2026);
   });
 });
 
@@ -90,13 +101,28 @@ describe('calculateLatterStageElderlyPremium (Tokyo)', () => {
 
   it('applies the 賦課限度額 per portion at high income', () => {
     // 2025: medical would be ~1.94M → capped at 800,000.
-    expect(calculateLatterStageElderlyPremium(20_000_000, 2025, 'Tokyo').total).toBe(800_000);
+    const capped2025 = calculateLatterStageElderlyPremium(20_000_000, 2025, 'Tokyo');
+    expect(capped2025.total).toBe(800_000);
+    expect(capped2025.medicalCapped).toBe(true);
 
     // 2026: blended caps — medical round(800,000/3 + 850,000×2/3) = 833,333;
     // child round(0/3 + 21,000×2/3) = 14,000.
     const capped2026 = calculateLatterStageElderlyPremium(20_000_000, 2026, 'Tokyo');
     expect(capped2026.medicalPortion).toBe(833_333);
     expect(capped2026.childSupportPortion).toBe(14_000);
+    expect(capped2026.medicalCapped).toBe(true);
+  });
+
+  it('reports the medical portion uncapped while one fiscal year is still below its cap', () => {
+    // Base: 8,300,000 − 430,000 = 7,870,000.
+    // FY2025: floor100(47,300 + 7,870,000 × 9.67%) = floor100(808,329) = 808,300 → capped
+    //         at 800,000.
+    // FY2026: floor100(53,300 + 7,870,000 × 9.88%) = floor100(830,856) = 830,800, below the
+    //         850,000 cap, so it still rises with income.
+    // Blend:  round(800,000/3 + 830,800×2/3) = 820,533 — short of the blended 833,333.
+    const result = calculateLatterStageElderlyPremium(8_300_000, 2026, 'Tokyo');
+    expect(result.medicalPortion).toBe(820_533);
+    expect(result.medicalCapped).toBe(false);
   });
 
   it('charges only the per-capita amount at zero income', () => {
@@ -117,6 +143,15 @@ describe('calculateLatterStageElderlyPremium (Tokyo)', () => {
   it('collapses to the oldest period for a calendar year before April 2024', () => {
     // Both January and April 2024 resolve to the 令和6・7年度 period, so no blend.
     expect(calculateLatterStageElderlyPremium(4_000_000, 2024, 'Tokyo').total).toBe(392_500);
+  });
+
+  it('collapses within a rate cycle for calendar 2027', () => {
+    // 令和8・9年度 covers both fiscal years of calendar 2027, so the premium equals the
+    // single-fiscal-year FY2026 amounts: medical 406,000 and child 10,500.
+    const result = calculateLatterStageElderlyPremium(4_000_000, 2027, 'Tokyo');
+    expect(result.medicalPortion).toBe(406_000);
+    expect(result.childSupportPortion).toBe(10_500);
+    expect(result.total).toBe(416_500);
   });
 
   it('returns a zero breakdown for an unknown region key', () => {
