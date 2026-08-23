@@ -35,7 +35,9 @@ import { ageRangeCoversBand, type AgeBand, type AgeRange } from '../types/age';
  * replaces its {@link PublicPensionDeductionBand.minimumDeduction}: those aged 65 or older on
  * December 31 of the income year (租税特別措置法第41条の15の3、判定日は同条第4項). Every part of
  * the calculator that asks whether a person gets the higher minimum reads this band, so the
- * taxpayer and the dependents are judged on the same boundary.
+ * taxpayer and the dependents are judged on the same boundary. Each module that offers age
+ * choices also lists this band among the bands it holds those choices to, so no choice on
+ * either side can straddle 65.
  *
  * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_15_3
  */

@@ -75,11 +75,6 @@ export const STATUTORY_AGE_BANDS = {
   nationalPension: { minAgeInclusive: 20, maxAgeExclusive: 60 },
   employeesPension: { maxAgeExclusive: 70 },
   latterStageElderly: { minAgeInclusive: 75 },
-  /**
-   * The higher 公的年金等控除 minimums. The rule is answered by the module that owns the
-   * deduction table, for the taxpayer and the dependents alike, so this entry exists only to
-   * hold the taxpayer's age choices to the band's 65 boundary in the DEV block below.
-   */
   publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   elderlyDependentIncomeThreshold: { minAgeInclusive: 60 },
 } satisfies Record<string, AgeBand>;

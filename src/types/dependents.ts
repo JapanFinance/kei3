@@ -97,11 +97,7 @@ const AGE_RANGE_BOUNDS = {
  * @see https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_2-Di_1-At_34 — 地方税法第34条第1項第10号イ
  */
 export const SPOUSE_AGE_BANDS = {
-  /**
-   * The higher 公的年金等控除 minimums, on the band exported by the module that owns the
-   * deduction table and answers the rule. This entry holds the spouse's age choices to that
-   * band's 65 boundary in the DEV block below.
-   */
+  /** The higher 公的年金等控除 minimum, on the band exported by the module that owns the table. */
   publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   /**
    * 老人控除対象配偶者 for national tax: a 控除対象配偶者 aged 70 or older, who draws the higher
@@ -131,11 +127,7 @@ export const SPOUSE_AGE_BANDS = {
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
  */
 export const DEPENDENT_AGE_BANDS = {
-  /**
-   * The higher 公的年金等控除 minimums, on the band exported by the module that owns the
-   * deduction table and answers the rule. This entry holds the dependent's age choices to that
-   * band's 65 boundary in the DEV block below.
-   */
+  /** The higher 公的年金等控除 minimum, on the band exported by the module that owns the table. */
   publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   /**
    * 控除対象扶養親族: a 扶養親族 aged 16 or older, the ages the 扶養控除 is available for
