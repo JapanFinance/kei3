@@ -4,7 +4,6 @@
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
 import { LATTER_STAGE_REGION_OPTIONS } from '../data/latterStageElderlyParams';
 import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../data/nationalHealthInsurance/nhiParamsData';
-import { isLatterStageElderly } from '../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -17,6 +16,7 @@ import {
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
 import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
+import { isLatterStageElderly } from '../types/taxpayerAge';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
   return regions.includes('Tokyo')

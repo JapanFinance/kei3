@@ -6,7 +6,7 @@ import {
   getProviderDefinition,
   type EmployeeProviderId,
 } from '../data/employeesHealthInsurance/providerRateData';
-import { STATUTORY_AGE_BANDS, type AgeRange, coversAgeBand } from './ageRange';
+import { STATUTORY_AGE_BANDS, type TaxpayerAgeRange, taxpayerAgeCoversBand } from './taxpayerAge';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
@@ -32,9 +32,9 @@ export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
 export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
 
-/** The dependent-coverage income threshold applicable to an {@link AgeRange}. */
-export function getDependentIncomeThreshold(ageRange: AgeRange): number {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.elderlyDependentIncomeThreshold)
+/** The dependent-coverage income threshold applicable to an {@link TaxpayerAgeRange}. */
+export function getDependentIncomeThreshold(ageRange: TaxpayerAgeRange): number {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.elderlyDependentIncomeThreshold)
     ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
     : DEPENDENT_INCOME_THRESHOLD;
 }
@@ -85,7 +85,7 @@ export function isEmployeeHealthProvider(id: HealthInsuranceProviderId): id is E
  */
 export function isDependentCoverageEligible(
   grossAnnualIncome: number,
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
 ): boolean {
   return grossAnnualIncome < getDependentIncomeThreshold(ageRange);
 }

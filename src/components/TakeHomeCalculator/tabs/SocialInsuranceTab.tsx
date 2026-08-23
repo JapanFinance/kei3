@@ -10,17 +10,17 @@ import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import {
-  isLongTermCareCategory2Insured,
-  isSubjectToEmployeesPension,
-  isSubjectToNationalPension,
-} from '../../../types/ageRange';
-import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
   LATTER_STAGE_ELDERLY_ID,
 } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
+import {
+  isLongTermCareCategory2Insured,
+  isSubjectToEmployeesPension,
+  isSubjectToNationalPension,
+} from '../../../types/taxpayerAge';
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';

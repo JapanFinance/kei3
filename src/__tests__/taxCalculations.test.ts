@@ -4,7 +4,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
-import type { AgeRange } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
   DEFAULT_PROVIDER,
@@ -14,6 +13,7 @@ import {
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateTaxes,
   calculateNetEmploymentIncome,
@@ -1739,7 +1739,7 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
 });
 
 describe('calculateTaxes age-range rules', () => {
-  const employeeInputs = (ageRange: AgeRange) => ({
+  const employeeInputs = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [
       { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
@@ -1755,7 +1755,7 @@ describe('calculateTaxes age-range rules', () => {
     incomeYear: 2026,
   });
 
-  const nhiInputs = (ageRange: AgeRange) => ({
+  const nhiInputs = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
     ageRange,
@@ -1801,7 +1801,7 @@ describe('calculateTaxes age-range rules', () => {
   });
 
   describe('minor (未成年者) residence-tax non-taxation', () => {
-    const minorInputs = (ageRange: AgeRange, amount: number) => ({
+    const minorInputs = (ageRange: TaxpayerAgeRange, amount: number) => ({
       ...nhiInputs(ageRange),
       incomeStreams: [{ type: 'miscellaneous' as const, amount, id: 'test' }],
     });
@@ -1834,7 +1834,7 @@ describe('calculateTaxes age-range rules', () => {
 });
 
 describe('calculateTaxes at ages 65 and over', () => {
-  const employeeInputs65 = (ageRange: AgeRange) => ({
+  const employeeInputs65 = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [
       { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
@@ -1893,7 +1893,7 @@ describe('calculateTaxes at ages 65 and over', () => {
     });
 
     it('charges NHI without the 介護分 at 65-69', () => {
-      const nhiInputs65 = (ageRange: AgeRange) => ({
+      const nhiInputs65 = (ageRange: TaxpayerAgeRange) => ({
         ...employeeInputs65(ageRange),
         incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
@@ -2036,7 +2036,7 @@ describe('calculateTaxes at ages 65 and over', () => {
 });
 
 describe('calculateTaxes with public pension income', () => {
-  const pensionInputs = (ageRange: AgeRange) => ({
+  const pensionInputs = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ type: 'publicPension' as const, amount: 2_400_000, id: 'p1' }],
     ageRange,

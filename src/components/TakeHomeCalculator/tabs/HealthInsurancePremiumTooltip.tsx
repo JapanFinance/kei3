@@ -13,7 +13,6 @@ import {
   type StandardMonthlyRemunerationBracket,
 } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
-import { isLongTermCareCategory2Insured } from '../../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -21,6 +20,7 @@ import {
   type NationalHealthInsuranceRegionParams,
 } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 import SMRTableTooltip from './SMRTableTooltip';

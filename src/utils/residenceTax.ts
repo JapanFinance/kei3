@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
-import type { AgeRange } from '../types/ageRange';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import { DEDUCTION_TYPES } from '../types/dependents';
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
+import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateDependentTotalNetIncome,
   getDependentEligibilityMax,
@@ -71,7 +71,7 @@ export const MINOR_NON_TAXABLE_INCOME_LIMIT = 1_350_000;
  * 未成年者 has no definition of its own in 地方税法; it borrows the 民法 age of majority,
  * which is why the boundary moved from 20 to 18 (from 令和5年度) with no tax-law amendment.
  */
-function isNonTaxableMinor(ageRange: AgeRange, netIncome: number): boolean {
+function isNonTaxableMinor(ageRange: TaxpayerAgeRange, netIncome: number): boolean {
   return ageRange === 'under18' && netIncome <= MINOR_NON_TAXABLE_INCOME_LIMIT;
 }
 
@@ -94,7 +94,7 @@ export const calculateResidenceTax = (
   nonBasicDeductions: number,
   dependentDeductions: DependentDeductionResults,
   year: number,
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
   taxCredit: number = 0,
 ): ResidenceTaxDetails => {
   if (isNonTaxableMinor(ageRange, netIncome)) {

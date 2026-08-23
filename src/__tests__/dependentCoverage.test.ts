@@ -3,13 +3,13 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { AGE_RANGES } from '../types/ageRange';
 import {
   isDependentCoverageEligible,
   getDependentIncomeThreshold,
   DEPENDENT_INCOME_THRESHOLD,
   DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS,
 } from '../types/healthInsurance';
+import { TAXPAYER_AGE_RANGES } from '../types/taxpayerAge';
 
 const UNDER_60_RANGES = ['under18', 'age18to19', 'age20to39', 'age40to59'] as const;
 // 75+ is included for the threshold function's completeness even though dependent coverage
@@ -29,7 +29,7 @@ describe('getDependentIncomeThreshold', () => {
   });
 
   it('covers every age range', () => {
-    expect([...UNDER_60_RANGES, ...AGE_60_PLUS_RANGES]).toEqual([...AGE_RANGES]);
+    expect([...UNDER_60_RANGES, ...AGE_60_PLUS_RANGES]).toEqual([...TAXPAYER_AGE_RANGES]);
   });
 });
 

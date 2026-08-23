@@ -10,13 +10,20 @@ import {
 } from './ageBand';
 
 /**
+ * The taxpayer's age. The form offers one age range per {@link TAXPAYER_AGE_RANGES} entry, and
+ * every age-keyed rule about the taxpayer is answered by asking whether the chosen range falls
+ * inside the rule's {@link AgeBand}. The dependents' age categories in `./dependents` are the
+ * equivalent choices on that side, and read their own bands the same way.
+ */
+
+/**
  * Taxpayer age ranges, in ascending order. Each boundary changes at least one calculation:
  * 18 (未成年者 residence-tax non-taxation), 20 and 60 (国民年金 enrollment), 40 and 65
  * (介護保険 premium collection: 第2号 via health insurance, 第1号 billed directly), 70
  * (厚生年金保険 enrollment), 75 (health coverage moves to the 後期高齢者医療制度).
  * Source: https://www.gov-online.go.jp/article/202209/entry-10482.html
  */
-export const AGE_RANGES = [
+export const TAXPAYER_AGE_RANGES = [
   'under18',
   'age18to19',
   'age20to39',
@@ -27,12 +34,12 @@ export const AGE_RANGES = [
   'age75plus',
 ] as const;
 
-export type AgeRange = (typeof AGE_RANGES)[number];
+export type TaxpayerAgeRange = (typeof TAXPAYER_AGE_RANGES)[number];
 
-export const DEFAULT_AGE_RANGE: AgeRange = 'age20to39';
+export const DEFAULT_TAXPAYER_AGE_RANGE: TaxpayerAgeRange = 'age20to39';
 
-/** Dropdown labels for each {@link AgeRange}. */
-export const AGE_RANGE_LABELS: Record<AgeRange, string> = {
+/** Dropdown labels for each {@link TaxpayerAgeRange}. */
+export const TAXPAYER_AGE_RANGE_LABELS: Record<TaxpayerAgeRange, string> = {
   under18: 'Under 18',
   age18to19: '18-19',
   age20to39: '20-39',
@@ -43,8 +50,8 @@ export const AGE_RANGE_LABELS: Record<AgeRange, string> = {
   age75plus: '75+',
 };
 
-/** The ages each {@link AgeRange} spans. */
-const AGE_RANGE_BOUNDS: Record<AgeRange, AgeInterval> = {
+/** The ages each {@link TaxpayerAgeRange} spans. */
+const TAXPAYER_AGE_RANGE_BOUNDS: Record<TaxpayerAgeRange, AgeInterval> = {
   under18: { minAgeInclusive: 0, maxAgeExclusive: 18 },
   age18to19: { minAgeInclusive: 18, maxAgeExclusive: 20 },
   age20to39: { minAgeInclusive: 20, maxAgeExclusive: 40 },
@@ -56,10 +63,11 @@ const AGE_RANGE_BOUNDS: Record<AgeRange, AgeInterval> = {
 };
 
 /**
- * The age bands the taxpayer's rules are written on, each transcribing its source's
- * 以上/未満 wording, except where the module that owns the rule exports the band itself.
- * The DEV block at the end of this module rejects any {@link AgeRange} that only partly falls
- * inside one of these, since no single answer would hold for everyone in such a range.
+ * The bands the taxpayer's age-keyed rules are written on, each transcribing its source's
+ * 以上/未満 wording, except where the module that owns the rule exports the band itself. These
+ * are the rules' own boundaries, not choices anyone selects: the DEV block at the end of this
+ * module rejects any {@link TaxpayerAgeRange} that only partly falls inside one of them, since no
+ * single answer would hold for everyone who picked that range.
  */
 export const STATUTORY_AGE_BANDS = {
   longTermCareCategory2: { minAgeInclusive: 40, maxAgeExclusive: 65 },
@@ -71,9 +79,9 @@ export const STATUTORY_AGE_BANDS = {
   elderlyDependentIncomeThreshold: { minAgeInclusive: 60 },
 } satisfies Record<string, AgeBand>;
 
-/** Whether every age in {@link ageRange} falls inside {@link band}. */
-export function coversAgeBand(ageRange: AgeRange, band: AgeBand): boolean {
-  return intervalCoversAgeBand(AGE_RANGE_BOUNDS[ageRange], band);
+/** Whether every age the taxpayer's chosen {@link ageRange} spans falls inside {@link band}. */
+export function taxpayerAgeCoversBand(ageRange: TaxpayerAgeRange, band: AgeBand): boolean {
+  return intervalCoversAgeBand(TAXPAYER_AGE_RANGE_BOUNDS[ageRange], band);
 }
 
 /**
@@ -82,8 +90,8 @@ export function coversAgeBand(ageRange: AgeRange, band: AgeBand): boolean {
  * directly by the municipality instead (see {@link isLongTermCareCategory1Insured}).
  * Source: https://www.kyoukaikenpo.or.jp/g7/cat330/1995-298/
  */
-export function isLongTermCareCategory2Insured(ageRange: AgeRange): boolean {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.longTermCareCategory2);
+export function isLongTermCareCategory2Insured(ageRange: TaxpayerAgeRange): boolean {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.longTermCareCategory2);
 }
 
 /**
@@ -93,8 +101,8 @@ export function isLongTermCareCategory2Insured(ageRange: AgeRange): boolean {
  * annual amount as an input.
  * Source: https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html
  */
-export function isLongTermCareCategory1Insured(ageRange: AgeRange): boolean {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.longTermCareCategory1);
+export function isLongTermCareCategory1Insured(ageRange: TaxpayerAgeRange): boolean {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.longTermCareCategory1);
 }
 
 /**
@@ -102,8 +110,8 @@ export function isLongTermCareCategory1Insured(ageRange: AgeRange): boolean {
  * pension system.
  * Source: https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html
  */
-export function isSubjectToNationalPension(ageRange: AgeRange): boolean {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.nationalPension);
+export function isSubjectToNationalPension(ageRange: TaxpayerAgeRange): boolean {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.nationalPension);
 }
 
 /**
@@ -111,8 +119,8 @@ export function isSubjectToNationalPension(ageRange: AgeRange): boolean {
  * enrollment.
  * Source: https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html
  */
-export function isSubjectToEmployeesPension(ageRange: AgeRange): boolean {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.employeesPension);
+export function isSubjectToEmployeesPension(ageRange: TaxpayerAgeRange): boolean {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.employeesPension);
 }
 
 /**
@@ -120,8 +128,8 @@ export function isSubjectToEmployeesPension(ageRange: AgeRange): boolean {
  * regardless of employment, so no other health insurance provider applies.
  * Source: https://www.gov-online.go.jp/article/202209/entry-10482.html
  */
-export function isLatterStageElderly(ageRange: AgeRange): boolean {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.latterStageElderly);
+export function isLatterStageElderly(ageRange: TaxpayerAgeRange): boolean {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.latterStageElderly);
 }
 
 /**
@@ -130,10 +138,10 @@ export function isLatterStageElderly(ageRange: AgeRange): boolean {
  * itself is {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}, exported next to the deduction
  * table it governs.
  */
-export function isPublicPensionDeductionElderly(ageRange: AgeRange): boolean {
-  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.publicPensionDeductionElderly);
+export function isPublicPensionDeductionElderly(ageRange: TaxpayerAgeRange): boolean {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.publicPensionDeductionElderly);
 }
 
 if (import.meta.env.DEV) {
-  assertIntervalsDoNotCrossBands('Age range', AGE_RANGE_BOUNDS, STATUTORY_AGE_BANDS);
+  assertIntervalsDoNotCrossBands('Age range', TAXPAYER_AGE_RANGE_BOUNDS, STATUTORY_AGE_BANDS);
 }

@@ -8,9 +8,9 @@ import {
   calculateNetPublicPensionIncome,
 } from '../data/publicPensionDeduction';
 import { assertIntervalsDoNotCrossBands, intervalCoversAgeBand } from '../types/ageBand';
-import { STATUTORY_AGE_BANDS } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, coversDependentAgeBand } from '../types/dependents';
+import { STATUTORY_AGE_BANDS } from '../types/taxpayerAge';
 import { calculateDependentNetPublicPensionIncome } from '../utils/dependentDeductions';
 import { calculateNetIncomeComponents } from '../utils/taxCalculations';
 

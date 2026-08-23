@@ -1,9 +1,9 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { AgeRange } from './ageRange';
 import type { Dependent, DependentDeductionResults } from './dependents';
 import type { HealthInsuranceProviderId } from './healthInsurance';
+import type { TaxpayerAgeRange } from './taxpayerAge';
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
 
@@ -234,7 +234,7 @@ export interface TakeHomeFormState {
   incomeYear: number;
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
-  ageRange: AgeRange;
+  ageRange: TaxpayerAgeRange;
   /**
    * Annual 介護保険料 billed directly to a 第1号被保険者 (ages 65 and over), from the
    * June-July 介護保険料決定通知書. 0 when nothing has been entered; ignored below age 65
@@ -260,7 +260,7 @@ export interface TakeHomeFormState {
 /** Interface for Calculation Logic (clean, normalized inputs) */
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
-  ageRange: AgeRange;
+  ageRange: TaxpayerAgeRange;
   /** See {@link TakeHomeFormState.longTermCareCategory1Premium}. Absent means 0. */
   longTermCareCategory1Premium?: number | undefined;
   region: string;
@@ -380,7 +380,7 @@ export interface TakeHomeResults {
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
-  ageRange: AgeRange;
+  ageRange: TaxpayerAgeRange;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
 }

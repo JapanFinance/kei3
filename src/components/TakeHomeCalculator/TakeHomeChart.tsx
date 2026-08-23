@@ -32,7 +32,6 @@ import {
   DEFAULT_HOUSEHOLD_TYPE,
   type HouseholdType,
 } from '../../data/income';
-import type { AgeRange } from '../../types/ageRange';
 import type { Dependent } from '../../types/dependents';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
 import type {
@@ -44,6 +43,7 @@ import type {
   MedicalExpensesInput,
   HomeLoanTaxCreditInput,
 } from '../../types/tax';
+import type { TaxpayerAgeRange } from '../../types/taxpayerAge';
 import { detectCaps } from '../../utils/capDetection';
 import {
   generateChartData,
@@ -143,7 +143,7 @@ interface TakeHomeChartProps {
   currentIncome: number;
   incomeYear: number;
   isEmploymentIncome: boolean;
-  ageRange: AgeRange;
+  ageRange: TaxpayerAgeRange;
   longTermCareCategory1Premium: number;
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;

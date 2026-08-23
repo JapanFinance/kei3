@@ -2,14 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * The age intervals the calculator's rules are written on, shared by every set of age choices it
- * collects: the taxpayer's age range and the dependents' spouse and non-spouse age categories.
- * Each of those enumerations maps its values to an {@link AgeInterval}, so one predicate
- * ({@link intervalCoversAgeBand}) answers whether a chosen value falls inside a rule's
- * {@link AgeBand}.
+ * The age boundaries the calculator's rules are written on, and the predicate that reads them.
+ *
+ * A rule applies to an {@link AgeBand}. A person is described instead by an age choice the form
+ * collects — the taxpayer's age range, or a dependent's age category — and each of those
+ * enumerations maps its values to the {@link AgeInterval} of ages the value spans. Answering a
+ * rule for a person is therefore always the same question, asked by
+ * {@link intervalCoversAgeBand}: does the interval the chosen value spans fall inside the rule's
+ * band?
  */
 
-/** A range of ages, as the half-open interval the statutes are written in. */
+/**
+ * The ages a rule applies to, as the half-open interval the statutes are written in. A band
+ * belongs to a rule, never to a person: for the ages a person's choice spans see
+ * {@link AgeInterval}.
+ */
 export interface AgeBand {
   /** 以上: the youngest age in the band. Omitted where the rule has no lower bound. */
   minAgeInclusive?: number;
@@ -17,7 +24,10 @@ export interface AgeBand {
   maxAgeExclusive?: number;
 }
 
-/** The ages one value of an age enumeration spans, with both ends stated. */
+/**
+ * The ages one age choice spans — one taxpayer age range or one dependent age category — with
+ * both ends stated, since a choice offered to someone always has a youngest and an oldest age.
+ */
 export type AgeInterval = Required<AgeBand>;
 
 /**
