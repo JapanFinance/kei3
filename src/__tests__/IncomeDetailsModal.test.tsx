@@ -366,7 +366,10 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
     // The gross-amount guidance and non-taxable pension warning are shown
     expect(screen.getByText(/What Counts as Public Pension/i)).toBeInTheDocument();
-    expect(screen.getByText(/No.1600/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /公的年金等の課税関係/ })).toHaveAttribute(
+      'href',
+      'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm',
+    );
 
     const amountInput = screen.getByRole('textbox', { name: /annual gross pension income/i });
     await user.clear(amountInput);

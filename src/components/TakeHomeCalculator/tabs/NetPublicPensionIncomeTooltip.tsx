@@ -67,11 +67,8 @@ const NetPublicPensionIncomeTooltip: React.FC<NetPublicPensionIncomeTooltipProps
         Public Pension Deduction (公的年金等控除)
       </Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        Public pension income is miscellaneous income (雑所得), computed from the gross amount with
-        its own deduction instead of the employment income deduction. The deduction grows with the
-        gross pension amount, with a guaranteed minimum — ¥1,100,000 from age 65 (reached by the end
-        of the income year, per the Age input), ¥600,000 below — and is reduced when total net
-        income other than public pensions exceeds ¥10,000,000.
+        Public pension income is Miscellaneous income (雑所得), computed from the gross amount with
+        its own deduction.
       </Typography>
       <SourceLinks
         sources={[
