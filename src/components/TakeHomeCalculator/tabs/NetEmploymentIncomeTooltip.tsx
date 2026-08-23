@@ -194,12 +194,12 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
           )}
           {pensionIncomeAdjustmentDeduction > 0 && (
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Taxpayers with both employment income and public pension income may deduct up to
-              ¥100,000 from net employment income — less than ¥100,000 when net employment income or
-              net public pension income is itself below ¥100,000, in which case the smaller of the
-              two applies. This offsets the ¥100,000 reductions made to both the employment income
-              deduction (給与所得控除) and the public pension deduction (公的年金等控除) when the
-              basic deduction was raised by the same amount.
+              Taxpayers with both employment income and public pension income deduct net employment
+              income and net public pension income, each counted up to ¥100,000, less ¥100,000. The
+              deduction is therefore the full ¥100,000 only when both amounts reach ¥100,000. This
+              offsets the ¥100,000 reductions made to both the employment income deduction
+              (給与所得控除) and the public pension deduction (公的年金等控除) when the basic
+              deduction was raised by the same amount.
             </Typography>
           )}
           <SourceLinks
