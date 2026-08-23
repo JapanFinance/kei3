@@ -14,7 +14,7 @@ import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction'
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import {
   DEFAULT_AGE_RANGE,
-  isAge65OrOlder,
+  isPublicPensionDeductionElderly,
   isLongTermCareCategory1Insured,
   isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
@@ -428,7 +428,7 @@ export interface NetIncomeComponents {
  *
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
  */
-const calculateNetIncomeComponents = (
+const composeNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
   dependents: Dependent[],
@@ -495,39 +495,26 @@ const calculateNetIncomeComponents = (
 };
 
 /**
- * Calculates just the total net income (合計所得金額).
- * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
+ * The net income (所得) components of {@link calculateTaxes} on their own, without the rest of the
+ * calculation — the input form previews 公的年金等に係る雑所得 from this so the 公的年金等控除 is
+ * visible while entering the gross amount, and uses {@link NetIncomeComponents.totalNetIncome}
+ * for the dependent eligibility checks.
  *
  * @param incomeStreams  Income streams to calculate net income for
- * @param year          Income year for the employment income deduction lookup; defaults to current year
+ * @param year          Income year for the employment income deduction lookup
  * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
  *                      dependent is present. Defaults to none (no adjustment).
  * @param taxpayerIs65OrOlder Whether the taxpayer is 65 or older by the end of the income year
- *                      ({@link isAge65OrOlder}), selecting the 公的年金等控除 minimums. Defaults to
- *                      false; irrelevant without a public pension stream.
+ *                      ({@link isPublicPensionDeductionElderly}), selecting the 公的年金等控除
+ *                      minimums. Defaults to false; irrelevant without a public pension stream.
  */
-export const calculateTotalNetIncome = (
-  incomeStreams: IncomeStream[],
-  year: number,
-  dependents: Dependent[] = [],
-  taxpayerIs65OrOlder: boolean = false,
-): number =>
-  calculateNetIncomeComponentsForStreams(incomeStreams, year, dependents, taxpayerIs65OrOlder)
-    .totalNetIncome;
-
-/**
- * The individual net income (所得) components behind {@link calculateTotalNetIncome}, for callers
- * that need one of them on its own — the input form previews 公的年金等に係る雑所得 from this so the
- * 公的年金等控除 is visible while entering the gross amount, without running the full
- * {@link calculateTaxes}. Parameters are as {@link calculateTotalNetIncome}.
- */
-export const calculateNetIncomeComponentsForStreams = (
+export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
   dependents: Dependent[] = [],
   taxpayerIs65OrOlder: boolean = false,
 ): NetIncomeComponents =>
-  calculateNetIncomeComponents(
+  composeNetIncomeComponents(
     calculateIncomeBreakdown(incomeStreams),
     year,
     dependents,
@@ -574,11 +561,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     pensionIncomeAdjustmentDeduction,
     netPublicPensionIncome,
     totalNetIncome: netIncome,
-  } = calculateNetIncomeComponents(
+  } = composeNetIncomeComponents(
     incomeBreakdown,
     incomeYear,
     inputs.dependents,
-    isAge65OrOlder(inputs.ageRange),
+    isPublicPensionDeductionElderly(inputs.ageRange),
   );
 
   let healthInsurance = 0;

@@ -18,9 +18,9 @@ interface NetPublicPensionIncomeTooltipProps {
 
 /**
  * Tooltip for the "Net Public Pension Income" row: shows how gross public pension income becomes
- * net pension income via the public pension deduction (公的年金等控除), with a note on what drives
- * the deduction amount. Renders its own DetailedTooltip trigger, so callers place it directly
- * after the row label. Shared by the Taxes and Social Insurance tabs.
+ * net pension income via the public pension deduction (公的年金等控除). Renders its own
+ * DetailedTooltip trigger, so callers place it directly after the row label. Shared by the Taxes
+ * and Social Insurance tabs.
  */
 const NetPublicPensionIncomeTooltip: React.FC<NetPublicPensionIncomeTooltipProps> = ({
   grossPublicPensionIncome,

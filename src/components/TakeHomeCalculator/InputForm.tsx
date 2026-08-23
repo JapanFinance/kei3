@@ -35,7 +35,7 @@ import {
 import {
   AGE_RANGES,
   AGE_RANGE_LABELS,
-  isAge65OrOlder,
+  isPublicPensionDeductionElderly,
   isLongTermCareCategory1Insured,
 } from '../../types/ageRange';
 import {
@@ -56,7 +56,7 @@ import type {
   AdditionalDeductionsResult,
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
-import { calculateNetIncomeComponentsForStreams } from '../../utils/taxCalculations';
+import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
@@ -246,11 +246,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   // consistent with the results.
   const netIncomeComponents = React.useMemo(
     () =>
-      calculateNetIncomeComponentsForStreams(
+      calculateNetIncomeComponents(
         inputs.incomeStreams,
         inputs.incomeYear,
         inputs.dependents,
-        isAge65OrOlder(inputs.ageRange),
+        isPublicPensionDeductionElderly(inputs.ageRange),
       ),
     [inputs.incomeStreams, inputs.incomeYear, inputs.dependents, inputs.ageRange],
   );
