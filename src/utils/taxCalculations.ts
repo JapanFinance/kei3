@@ -14,10 +14,10 @@ import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction'
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import {
   DEFAULT_AGE_RANGE,
-  isAge65OrOlder,
+  isPublicPensionDeductionElderly,
   isLongTermCareCategory1Insured,
+  isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
-  isSubjectToLongTermCarePremium,
   isSubjectToNationalPension,
 } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
@@ -27,6 +27,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
+  isEmployeeHealthProvider,
 } from '../types/healthInsurance';
 import type {
   BonusIncomeStream,
@@ -132,7 +133,7 @@ export const calculateNetEmploymentIncome = (
 const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
 
 /**
- * Calculates the 所得金額調整控除（給与所得と年金所得の双方を有する者）(措法41の3の12): when both
+ * Calculates the 所得金額調整控除（給与所得と年金所得の双方を有する者）(措法41の3の11第2項): when both
  * 給与所得 and 公的年金等に係る雑所得 are positive,
  *
  *   min(給与所得控除後の給与等の金額, ¥100,000) + min(公的年金等に係る雑所得, ¥100,000) − ¥100,000
@@ -415,7 +416,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
 };
 
 /** Per-category net incomes composing 合計所得金額, shared by the full and net-only calculations. */
-interface NetIncomeComponents {
+export interface NetIncomeComponents {
   /** Gross employment income (給与等の収入金額), incl. taxable commuting allowance. */
   grossEmploymentIncome: number;
   taxableCommutingAllowance: number;
@@ -436,13 +437,13 @@ interface NetIncomeComponents {
  * 給与所得 via the 給与所得控除 and 所得金額調整控除（子ども・特別障害者等）, 公的年金等に係る雑所得
  * via the 公的年金等控除 ({@link calculateNetPublicPensionIncome}), and — when the taxpayer has
  * both — the 所得金額調整控除（給与所得と年金所得の双方を有する者）of up to ¥100,000 subtracted
- * from 給与所得 (措法41の3の12):
+ * from 給与所得 (措法41の3の11第2項):
  *
  *   min(給与所得控除後の給与等の金額, ¥100,000) + min(公的年金等に係る雑所得, ¥100,000) − ¥100,000
  *
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
  */
-const calculateNetIncomeComponents = (
+const composeNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
   dependents: Dependent[],
@@ -481,10 +482,10 @@ const calculateNetIncomeComponents = (
     taxpayerIsSpecialDisability,
   );
 
-  // The band of the 公的年金等控除 keys off the net income other than pension income. Statutorily
-  // that is the final 合計所得金額 figure, but the 給与+年金 adjustment below needs the pension
-  // income as its input, so the band is judged before that adjustment; the two can only interact
-  // within ¥100,000 of the band boundaries (¥10M/¥20M).
+  // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
+  // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額).
+  // Without pension income the 給与+年金 adjustment below cannot apply, so 給与所得 enters the band
+  // test before that adjustment but after the 子ども・特別障害者等 variant.
   const netPublicPensionIncome = calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
     taxpayerIs65OrOlder,
@@ -512,33 +513,35 @@ const calculateNetIncomeComponents = (
 };
 
 /**
- * Calculates just the total net income (合計所得金額).
- * This is lighter weight than the full tax calculation and used for dependent eligibility checks.
+ * The net income (所得) components of {@link calculateTaxes} on their own, without the rest of the
+ * calculation — the input form previews 公的年金等に係る雑所得 from this so the 公的年金等控除 is
+ * visible while entering the gross amount, and uses {@link NetIncomeComponents.totalNetIncome}
+ * for the dependent eligibility checks.
  *
  * @param incomeStreams  Income streams to calculate net income for
- * @param year          Income year for the employment income deduction lookup; defaults to current year
+ * @param year          Income year for the employment income deduction lookup
  * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
  *                      dependent is present. Defaults to none (no adjustment).
  * @param taxpayerIs65OrOlder Whether the taxpayer is 65 or older by the end of the income year
- *                      ({@link isAge65OrOlder}), selecting the 公的年金等控除 minimums. Defaults to
- *                      false; irrelevant without a public pension stream.
+ *                      ({@link isPublicPensionDeductionElderly}), selecting the 公的年金等控除
+ *                      minimums. Defaults to false; irrelevant without a public pension stream.
  * @param taxpayerIsSpecialDisability Whether the taxpayer is a 特別障害者, which qualifies them for
  *                      the 所得金額調整控除 without a qualifying dependent. Defaults to false.
  */
-export const calculateTotalNetIncome = (
+export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
   dependents: Dependent[] = [],
   taxpayerIs65OrOlder: boolean = false,
   taxpayerIsSpecialDisability: boolean = false,
-): number =>
-  calculateNetIncomeComponents(
+): NetIncomeComponents =>
+  composeNetIncomeComponents(
     calculateIncomeBreakdown(incomeStreams),
     year,
     dependents,
     taxpayerIs65OrOlder,
     taxpayerIsSpecialDisability,
-  ).totalNetIncome;
+  );
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
@@ -580,11 +583,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     pensionIncomeAdjustmentDeduction,
     netPublicPensionIncome,
     totalNetIncome: netIncome,
-  } = calculateNetIncomeComponents(
+  } = composeNetIncomeComponents(
     incomeBreakdown,
     incomeYear,
     inputs.dependents,
-    isAge65OrOlder(inputs.ageRange),
+    isPublicPensionDeductionElderly(inputs.ageRange),
     inputs.personalCircumstances.disability === 'special',
   );
 
@@ -608,11 +611,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // - Employee health insurance: based on standard monthly remuneration
     // - National Health Insurance: based on net income
 
-    const subjectToLongTermCarePremium = isSubjectToLongTermCarePremium(inputs.ageRange);
+    const subjectToLongTermCarePremium = isLongTermCareCategory2Insured(inputs.ageRange);
 
     if (inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
-      // 後期高齢者医療制度 (ages 75+): premiums are income-based like NHI, with no bonus
-      // portion of their own.
       latterStageBreakdown = calculateLatterStageElderlyPremium(
         netIncome,
         incomeYear,
@@ -665,9 +666,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // People on employee health insurance are in Employee Pension system
     // People covered as dependents do not pay pension premiums
     const isInEmployeePensionSystem =
-      inputs.healthInsuranceProvider !== NATIONAL_HEALTH_INSURANCE_ID &&
-      inputs.healthInsuranceProvider !== DEPENDENT_COVERAGE_ID &&
-      inputs.healthInsuranceProvider !== LATTER_STAGE_ELDERLY_ID;
+      isEmployeeHealthProvider(inputs.healthInsuranceProvider) ||
+      inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID;
 
     if (inputs.healthInsuranceProvider === DEPENDENT_COVERAGE_ID) {
       pensionPayments = 0;
@@ -707,8 +707,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     employmentInsurance = eiResult.total;
     employmentInsuranceOnBonus = eiResult.bonusPortion;
 
-    // 介護保険第1号 (ages 65+): the municipally billed annual amount entered by the user.
-    // Deductible as 社会保険料控除 like the other premiums.
     if (isLongTermCareCategory1Insured(inputs.ageRange)) {
       longTermCareCategory1Premium = Math.max(0, inputs.longTermCareCategory1Premium || 0);
     }
@@ -895,6 +893,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // 後期高齢者医療 breakdown fields (populated only at ages 75+)
     latterStageMedicalPortion: latterStageBreakdown?.medicalPortion,
     latterStageChildSupportPortion: latterStageBreakdown?.childSupportPortion,
+    latterStageMedicalCapped: latterStageBreakdown?.medicalCapped,
     longTermCareCategory1Premium:
       longTermCareCategory1Premium > 0 ? longTermCareCategory1Premium : undefined,
     // Context needed for cap detection

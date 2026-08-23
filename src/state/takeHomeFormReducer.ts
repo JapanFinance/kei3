@@ -13,6 +13,7 @@ import {
   LATTER_STAGE_ELDERLY_ID,
   getProviderDisplayName,
   isDependentCoverageEligible,
+  isEmployeeHealthProvider,
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
 import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
@@ -34,28 +35,32 @@ export interface RegionOption {
 /**
  * The regions selectable for a given health insurance provider, in dropdown order. NHI
  * regions carry official display names; employee providers use the region key as its own
- * label. Dependent coverage and the custom provider are region-less by design (empty list),
- * as is an unrecognized id. Pure and colocated with the reducer so the same list drives both
- * the region dropdown (via a `useMemo` in InputForm) and the reducer's region defaulting
- * ({@link defaultRegionForProvider}) and validation ({@link reduceRegionChanged}), rather
- * than the two drifting apart.
+ * label. Dependent coverage and the custom provider are region-less by design (empty list).
+ * Pure and colocated with the reducer so the same list drives both the region dropdown (via a
+ * `useMemo` in InputForm) and the reducer's region defaulting ({@link defaultRegionForProvider})
+ * and validation ({@link reduceRegionChanged}), rather than the two drifting apart.
  */
 export function regionOptionsFor(provider: HealthInsuranceProviderId): RegionOption[] {
-  if (provider === NATIONAL_HEALTH_INSURANCE_ID) {
-    return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
+  if (isEmployeeHealthProvider(provider)) {
+    return Object.keys(PROVIDER_DEFINITIONS[provider].regions).map(regionKey => ({
+      id: regionKey,
+      displayName: regionKey,
+    }));
   }
-  if (provider === LATTER_STAGE_ELDERLY_ID) {
-    return LATTER_STAGE_REGION_OPTIONS;
+
+  switch (provider) {
+    case NATIONAL_HEALTH_INSURANCE_ID:
+      return NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS;
+    case LATTER_STAGE_ELDERLY_ID:
+      return LATTER_STAGE_REGION_OPTIONS;
+    case DEPENDENT_COVERAGE_ID:
+    case CUSTOM_PROVIDER_ID:
+      return [];
+    default: {
+      const unhandledProvider: never = provider;
+      throw new Error(`Unhandled health insurance provider: ${JSON.stringify(unhandledProvider)}`);
+    }
   }
-  if (provider === DEPENDENT_COVERAGE_ID || provider === CUSTOM_PROVIDER_ID) {
-    return [];
-  }
-  // `provider` has narrowed to an employee-provider id (the region-less ids returned above),
-  // so it is a known key of PROVIDER_DEFINITIONS.
-  return Object.keys(PROVIDER_DEFINITIONS[provider].regions).map(regionKey => ({
-    id: regionKey,
-    displayName: regionKey,
-  }));
 }
 
 /**

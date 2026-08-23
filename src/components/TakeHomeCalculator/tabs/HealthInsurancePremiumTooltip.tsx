@@ -13,7 +13,7 @@ import {
   type StandardMonthlyRemunerationBracket,
 } from '../../../data/employeesHealthInsurance/smrBrackets';
 import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
-import { isSubjectToLongTermCarePremium } from '../../../types/ageRange';
+import { isLongTermCareCategory2Insured } from '../../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -475,7 +475,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       }
     }
 
-    const includeLTC: boolean = isSubjectToLongTermCarePremium(inputs.ageRange);
+    const includeLTC: boolean = isLongTermCareCategory2Insured(inputs.ageRange);
     const finalRate = employeeRate + (includeLTC ? employeeLtcRate : 0);
     const totalPremium = roundSocialInsurancePremium(standardMonthlyRemuneration * finalRate);
 

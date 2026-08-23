@@ -35,7 +35,7 @@ import {
 import {
   AGE_RANGES,
   AGE_RANGE_LABELS,
-  isAge65OrOlder,
+  isPublicPensionDeductionElderly,
   isLongTermCareCategory1Insured,
 } from '../../types/ageRange';
 import {
@@ -58,7 +58,7 @@ import type {
   PersonalDeductionsResult,
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
-import { calculateTotalNetIncome } from '../../utils/taxCalculations';
+import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
@@ -98,6 +98,13 @@ const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
     href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
+
+const fieldLabelSx = {
+  fontSize: '0.97rem',
+  fontWeight: 500,
+  display: 'flex',
+  alignItems: 'center',
+} as const;
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
@@ -243,16 +250,16 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     },
   };
 
-  // We only need the total net income for the dependents modal. Pass the dependents and the
-  // taxpayer's disability status so the 所得金額調整控除 is reflected, keeping the modal's
-  // eligibility hints consistent with the results.
-  const taxpayerNetIncome = React.useMemo(
+  // 合計所得金額 for the dependents modal's eligibility hints, and 公的年金等に係る雑所得 for the
+  // income modal's pension group. Pass dependents and the taxpayer's disability status so the
+  // 所得金額調整控除 is reflected, keeping both consistent with the results.
+  const netIncomeComponents = React.useMemo(
     () =>
-      calculateTotalNetIncome(
+      calculateNetIncomeComponents(
         inputs.incomeStreams,
         inputs.incomeYear,
         inputs.dependents,
-        isAge65OrOlder(inputs.ageRange),
+        isPublicPensionDeductionElderly(inputs.ageRange),
         inputs.personalCircumstances.disability === 'special',
       ),
     [
@@ -483,15 +490,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               mb: { xs: 1, sm: 0 },
             }}
           >
-            <Typography
-              sx={{
-                mb: 0.2,
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '0.97rem',
-                fontWeight: 500,
-              }}
-            >
+            <Typography sx={{ ...fieldLabelSx, mb: 0.2 }}>
               <span id="ageRange-label">Age</span>
               <DetailedTooltip title="Age" icon={SIMPLE_TOOLTIP_ICON}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
@@ -563,16 +562,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               maxWidth: 200,
             }}
           >
-            <Typography
-              sx={{
-                mb: 0.5,
-                fontSize: '0.97rem',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}
-            >
+            <Typography sx={{ ...fieldLabelSx, mb: 0.5, gap: 0.5 }}>
               Dependents
               <SimpleTooltip>
                 Add spouse and dependents to calculate applicable tax deductions.
@@ -659,16 +649,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1 }}>
               <FormControl fullWidth>
-                <Typography
-                  gutterBottom
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.97rem',
-                    fontWeight: 500,
-                    mb: 0.2,
-                  }}
-                >
+                <Typography gutterBottom sx={{ ...fieldLabelSx, mb: 0.2 }}>
                   <span id="healthInsuranceProvider-label">Health Insurance Provider</span>
                   <SimpleTooltip>
                     The health insurance provider affects premium calculations. Employment income
@@ -714,15 +695,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <FormControl fullWidth>
-                    <Typography
-                      gutterBottom
-                      sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <Typography gutterBottom sx={fieldLabelSx}>
                       Health Insurance
                       <SimpleTooltip>
                         Enter the employee's share of the health insurance premium rate (usually
@@ -746,15 +719,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     />
                   </FormControl>
                   <FormControl fullWidth>
-                    <Typography
-                      gutterBottom
-                      sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <Typography gutterBottom sx={fieldLabelSx}>
                       Long-term Care
                       <SimpleTooltip>
                         Enter the employee's share of the Long-term Care premium rate (usually half
@@ -817,16 +782,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
               {isLongTermCareCategory1Insured(inputs.ageRange) && (
                 <FormControl fullWidth>
-                  <Typography
-                    gutterBottom
-                    sx={{
-                      fontSize: '0.97rem',
-                      fontWeight: 500,
-                      display: 'flex',
-                      alignItems: 'center',
-                      mb: 0.2,
-                    }}
-                  >
+                  <Typography gutterBottom sx={{ ...fieldLabelSx, mb: 0.2 }}>
                     Age 65+ Long-term Care Insurance
                     <DetailedTooltip
                       title="Age 65+ Long-term Care Insurance"
@@ -871,16 +827,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             alignItems: 'stretch',
           }}
         >
-          <Typography
-            sx={{
-              mb: 0.5,
-              fontSize: '0.97rem',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-            }}
-          >
+          <Typography sx={{ ...fieldLabelSx, mb: 0.5, gap: 0.5 }}>
             Additional Deductions &amp; Credits
             <SimpleTooltip>
               Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax
@@ -956,7 +903,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={handleCloseDependentsModal}
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
-        taxpayerNetIncome={taxpayerNetIncome}
+        taxpayerNetIncome={netIncomeComponents.totalNetIncome}
         incomeYear={inputs.incomeYear}
       />
 
@@ -965,6 +912,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+        netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
       />
 
       <AdditionalDeductionsModal

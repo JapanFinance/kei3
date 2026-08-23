@@ -187,16 +187,18 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
                 by 10% of gross employment income less ¥8,500,000, up to ¥150,000.
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                <strong>Rounding:</strong> Fractional yen amounts are rounded up.
+                <strong>Rounding:</strong> Fractional yen amounts from the 10% calculation are
+                rounded up.
               </Typography>
             </>
           )}
           {pensionIncomeAdjustmentDeduction > 0 && (
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Taxpayers with both employment income and public pension income
-              (給与所得と年金所得の双方を有する者) receive a further adjustment: net employment
-              income (capped at ¥100,000) plus net public pension income (capped at ¥100,000), less
-              ¥100,000, is deducted from net employment income.
+              The employment income deduction and the public pension deduction were each reduced by
+              ¥100,000 when the basic deduction rose by the same amount, so taxpayers with both
+              kinds of income lost ¥100,000 twice and got it back once. This adjustment returns the
+              difference: ¥100,000 off net employment income, or less if net employment income or
+              net public pension income is itself below ¥100,000.
             </Typography>
           )}
           <SourceLinks

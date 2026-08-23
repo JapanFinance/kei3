@@ -33,6 +33,13 @@ interface IncomeDetailsModalProps {
   onClose: () => void;
   streams: IncomeStream[];
   onStreamsChange: (streams: IncomeStream[]) => void;
+  /**
+   * Net public pension income (公的年金等に係る雑所得) for {@link streams}, so the group can show
+   * what the 公的年金等控除 takes off the gross. Depends on the taxpayer's age and other income as
+   * well as the pension streams, so it is computed by the caller rather than derived here. When
+   * omitted, the group shows only its gross subtotal.
+   */
+  netPublicPensionIncome?: number | undefined;
 }
 
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
@@ -40,6 +47,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   onClose,
   streams,
   onStreamsChange,
+  netPublicPensionIncome,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -171,11 +179,27 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const subtotals = calculateSubtotals();
   const groupedStreams = groupStreams();
 
+  // The 公的年金等控除 applies to the combined gross of every pension stream, so it belongs on the
+  // group subtotal rather than on any one entry.
+  const publicPensionSubtotalFooter =
+    netPublicPensionIncome === undefined ? null : (
+      <>
+        <Typography variant="caption" color="text.secondary">
+          Public Pension Deduction (公的年金等控除): -
+          {formatJPY(subtotals.publicPensionIncome - netPublicPensionIncome)}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Net Public Pension Income: {formatJPY(netPublicPensionIncome)}
+        </Typography>
+      </>
+    );
+
   const renderStreamGroup = (
     title: string,
     groupStreams: IncomeStream[],
     subtotal: number,
     chipColor: 'primary' | 'success' | 'warning' | 'secondary',
+    subtotalFooter?: React.ReactNode,
   ) => {
     if (groupStreams.length === 0) return null;
 
@@ -275,13 +299,23 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               </CardContent>
             </Card>
           ))}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, mr: 1 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: 0.25,
+              mt: 1,
+              mr: 1,
+            }}
+          >
             <Chip
               label={`Subtotal: ${formatJPY(subtotal)}`}
               size="small"
               color={chipColor}
               variant="outlined"
             />
+            {subtotalFooter}
           </Box>
         </Stack>
       </Box>
@@ -352,6 +386,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               groupedStreams.publicPension,
               subtotals.publicPensionIncome,
               'secondary',
+              publicPensionSubtotalFooter,
             )}
 
             <Button

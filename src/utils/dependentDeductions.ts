@@ -69,8 +69,8 @@ function calculateDependentIncomeAdjustmentDeduction(dependent: DependentIncomeP
 /**
  * 給与所得 net of the 給与所得控除 and the 所得金額調整控除（子ども・特別障害者等）, but before the
  * 給与所得と年金所得の双方 variant. Both the 公的年金等控除 band and that variant key off this
- * figure, and the statute applies the 子ども・特別障害者等 variant first (措法41の3の12 subtracts
- * from the 給与所得 left after 措法41の3の11).
+ * figure, and the statute applies the 子ども・特別障害者等 variant first (措法41の3の11第2項 subtracts
+ * from the 給与所得 left after 第1項).
  */
 function calculateDependentNetEmploymentIncome(
   dependent: DependentIncomeProfile,
