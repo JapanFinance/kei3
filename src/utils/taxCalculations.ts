@@ -401,7 +401,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
 };
 
 /** Per-category net incomes composing 合計所得金額, shared by the full and net-only calculations. */
-interface NetIncomeComponents {
+export interface NetIncomeComponents {
   /** Gross employment income (給与等の収入金額), incl. taxable commuting allowance. */
   grossEmploymentIncome: number;
   taxableCommutingAllowance: number;
@@ -512,12 +512,27 @@ export const calculateTotalNetIncome = (
   dependents: Dependent[] = [],
   taxpayerIs65OrOlder: boolean = false,
 ): number =>
+  calculateNetIncomeComponentsForStreams(incomeStreams, year, dependents, taxpayerIs65OrOlder)
+    .totalNetIncome;
+
+/**
+ * The individual net income (所得) components behind {@link calculateTotalNetIncome}, for callers
+ * that need one of them on its own — the input form previews 公的年金等に係る雑所得 from this so the
+ * 公的年金等控除 is visible while entering the gross amount, without running the full
+ * {@link calculateTaxes}. Parameters are as {@link calculateTotalNetIncome}.
+ */
+export const calculateNetIncomeComponentsForStreams = (
+  incomeStreams: IncomeStream[],
+  year: number,
+  dependents: Dependent[] = [],
+  taxpayerIs65OrOlder: boolean = false,
+): NetIncomeComponents =>
   calculateNetIncomeComponents(
     calculateIncomeBreakdown(incomeStreams),
     year,
     dependents,
     taxpayerIs65OrOlder,
-  ).totalNetIncome;
+  );
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
