@@ -3,7 +3,13 @@
 
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
-import { DEDUCTION_TYPES, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
+import {
+  DEDUCTION_TYPES,
+  SPOUSE_AGE_BANDS,
+  type DependentAgeRange,
+  type SpouseAgeRange,
+  dependentAgeCoversBand,
+} from '../types/dependents';
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
@@ -309,14 +315,9 @@ function calculateStatutoryPersonalDeductionDifference(
     const dep = breakdown.dependent;
 
     switch (breakdown.deductionType) {
-      case DEDUCTION_TYPES.SPOUSE: {
-        const isElderly = dependentAgeCoversBand(
-          dep.ageRange,
-          SPOUSE_AGE_BANDS.residenceTaxElderlySpouse,
-        );
-        totalDifference += getSpouseDeductionDifference(isElderly, taxpayerNetIncome);
+      case DEDUCTION_TYPES.SPOUSE:
+        totalDifference += getSpouseDeductionDifference(dep.ageRange, taxpayerNetIncome);
         break;
-      }
 
       case DEDUCTION_TYPES.SPECIAL_DEPENDENT:
         // Special dependent (19-22)
@@ -385,11 +386,20 @@ function calculateStatutoryPersonalDeductionDifference(
  * Reference: 地方税法第314条の6第6号 (6) in the statutory table.
  * Reference: https://www.town.hinode.tokyo.jp/0000000519.html
  *
- * @param isElderly - Whether spouse is 70+ years old
+ * @param spouseAgeRange - The spouse's age range, judged here against
+ *   {@link SPOUSE_AGE_BANDS.residenceTaxElderlySpouse}, the 老人控除対象配偶者 band 地方税法
+ *   defines for itself
  * @param taxpayerNetIncome - Taxpayer's net income (納税義務者の前年の合計所得金額)
  * @returns Statutory deduction difference amount
  */
-function getSpouseDeductionDifference(isElderly: boolean, taxpayerNetIncome: number): number {
+function getSpouseDeductionDifference(
+  spouseAgeRange: SpouseAgeRange | DependentAgeRange,
+  taxpayerNetIncome: number,
+): number {
+  const isElderly = dependentAgeCoversBand(
+    spouseAgeRange,
+    SPOUSE_AGE_BANDS.residenceTaxElderlySpouse,
+  );
   if (taxpayerNetIncome <= 9_000_000) {
     return isElderly ? 100_000 : 50_000;
   } else if (taxpayerNetIncome <= 9_500_000) {
