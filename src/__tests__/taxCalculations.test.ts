@@ -986,6 +986,37 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       2_120_000,
     );
   });
+
+  it('reports net business and miscellaneous income separately from the other components', () => {
+    // Business 2M, Deduction 100k -> 1.9M; Misc 100k; pension stays in its own component.
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+      { type: 'business' as const, amount: 2_000_000, blueFilerDeduction: 100_000, id: 'b1' },
+      { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' },
+      { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+    ];
+    const components = calculateNetIncomeComponents(incomeStreams, 2026, 'age65to69', []);
+    expect(components.netBusinessAndMiscIncome).toBe(2_000_000);
+    expect(components.totalNetIncome).toBe(
+      components.netEmploymentIncome +
+        components.netBusinessAndMiscIncome +
+        components.netPublicPensionIncome,
+    );
+    expect(
+      calculateTaxes({
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams,
+        ageRange: 'age65to69',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        region: 'Tokyo',
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      }).netBusinessAndMiscIncome,
+    ).toBe(2_000_000);
+  });
 });
 
 describe('Commuting Allowance', () => {

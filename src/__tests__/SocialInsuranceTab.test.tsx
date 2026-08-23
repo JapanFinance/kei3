@@ -166,6 +166,8 @@ describe('SocialInsuranceTab', () => {
       region: 'Tokyo-Shinjuku',
       hasEmploymentIncome: false,
       grossEmploymentIncome: 0,
+      netBusinessAndMiscIncome: 4_000_000,
+      totalNetIncome: 4_000_000,
       pensionPayments: 0,
       nhiMedicalPortion: 300_000,
       nhiElderlySupportPortion: 100_000,

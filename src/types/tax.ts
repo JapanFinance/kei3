@@ -325,6 +325,11 @@ export interface TakeHomeResults {
    * {@link netEmploymentIncome} is already net of this amount. Absent when not applicable.
    */
   pensionIncomeAdjustmentDeduction?: number | undefined;
+  /**
+   * 事業所得 and 雑所得 other than public pensions, net of the 青色申告特別控除
+   * ({@link blueFilerDeduction}). 0 when there is no business or miscellaneous income.
+   */
+  netBusinessAndMiscIncome: number;
   /** Gross public pension income (公的年金等の収入金額). Absent when there is none. */
   grossPublicPensionIncome?: number | undefined;
   /**
