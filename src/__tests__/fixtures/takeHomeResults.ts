@@ -58,6 +58,7 @@ export const makeTakeHomeResults = (overrides: Partial<TakeHomeResults> = {}): T
   pensionPayments: 0,
   takeHomeIncome: 0,
   grossEmploymentIncome: 0,
+  netBusinessAndMiscIncome: 0,
   totalNetIncome: 0,
   furusatoNozei: makeFurusatoNozeiDetails(),
   additionalDeductions: { national: 0, residence: 0, items: [] },

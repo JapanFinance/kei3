@@ -48,6 +48,7 @@ const mockResults: TakeHomeResults = {
   region: 'Tokyo',
   ageRange: 'age20to39' as const,
   residenceTaxBasicDeduction: 430_000,
+  netBusinessAndMiscIncome: 4_350_000,
   totalNetIncome: 4_350_000,
   nhiMedicalPortion: 150_000,
   nhiElderlySupportPortion: 50_000,

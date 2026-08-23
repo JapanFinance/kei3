@@ -299,6 +299,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   ageRange: DEFAULT_AGE_RANGE,
   grossEmploymentIncome: 0,
   incomeAdjustmentDeduction: 0,
+  netBusinessAndMiscIncome: 0,
   totalNetIncome: 0,
   additionalDeductions: { national: 0, residence: 0, items: [] },
 };
@@ -412,6 +413,8 @@ export interface NetIncomeComponents {
   incomeAdjustmentDeduction: number;
   /** 所得金額調整控除（給与所得と年金所得の双方を有する者）, already reflected in {@link netEmploymentIncome}. */
   pensionIncomeAdjustmentDeduction: number;
+  /** 事業所得 and 雑所得 (other than public pensions), net of the 青色申告特別控除. */
+  netBusinessAndMiscIncome: number;
   /** 公的年金等に係る雑所得. */
   netPublicPensionIncome: number;
   /** 合計所得金額: the sum of the net components. */
@@ -490,6 +493,7 @@ const composeNetIncomeComponents = (
     netEmploymentIncome,
     incomeAdjustmentDeduction,
     pensionIncomeAdjustmentDeduction,
+    netBusinessAndMiscIncome,
     netPublicPensionIncome,
     totalNetIncome: netEmploymentIncome + netBusinessAndMiscIncome + netPublicPensionIncome,
   };
@@ -555,6 +559,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     netEmploymentIncome,
     incomeAdjustmentDeduction,
     pensionIncomeAdjustmentDeduction,
+    netBusinessAndMiscIncome,
     netPublicPensionIncome,
     totalNetIncome: netIncome,
   } = composeNetIncomeComponents(incomeBreakdown, incomeYear, inputs.ageRange, inputs.dependents);
@@ -818,6 +823,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     grossEmploymentIncome,
     incomeAdjustmentDeduction,
     ...(pensionIncomeAdjustmentDeduction > 0 && { pensionIncomeAdjustmentDeduction }),
+    netBusinessAndMiscIncome,
     ...(grossPublicPensionIncome > 0 && {
       grossPublicPensionIncome,
       netPublicPensionIncome,
