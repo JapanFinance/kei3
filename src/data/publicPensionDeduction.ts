@@ -24,6 +24,8 @@
  * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_2-Se_2-Ss_1-At_35 — 所得税法第35条第4項
  * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_15_3 — 租税特別措置法第41条の15の3
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm — the precomputed 速算表
+ * @see https://www.nta.go.jp/taxes/shiraberu/shinkoku/tebiki/2025/03/order2/3-2_07.htm — the
+ *   確定申告の手引き worksheet, which states the 1円未満切り捨て of the resulting 雑所得
  */
 
 /**
@@ -161,5 +163,7 @@ export function calculateNetPublicPensionIncome(
   const minimumDeduction = is65OrOlder ? band.minimumDeduction65Plus : band.minimumDeduction;
   const deduction = Math.max(band.fixedAmount + variableComponent, minimumDeduction);
 
-  return Math.max(0, grossPublicPension - deduction);
+  // The 確定申告の手引き worksheet drops any fraction of a yen from the resulting 雑所得
+  // (1円未満の端数があるときは、その端数を切り捨てます).
+  return Math.max(0, Math.floor(grossPublicPension - deduction));
 }

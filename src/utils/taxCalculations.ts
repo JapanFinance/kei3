@@ -118,7 +118,7 @@ export const calculateNetEmploymentIncome = (
 const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
 
 /**
- * Calculates the 所得金額調整控除（給与所得と年金所得の双方を有する者）(措法41の3の12): when both
+ * Calculates the 所得金額調整控除（給与所得と年金所得の双方を有する者）(措法41の3の11第2項): when both
  * 給与所得 and 公的年金等に係る雑所得 are positive,
  *
  *   min(給与所得控除後の給与等の金額, ¥100,000) + min(公的年金等に係る雑所得, ¥100,000) − ¥100,000
@@ -422,7 +422,7 @@ export interface NetIncomeComponents {
  * 給与所得 via the 給与所得控除 and 所得金額調整控除（子ども・特別障害者等）, 公的年金等に係る雑所得
  * via the 公的年金等控除 ({@link calculateNetPublicPensionIncome}), and — when the taxpayer has
  * both — the 所得金額調整控除（給与所得と年金所得の双方を有する者）of up to ¥100,000 subtracted
- * from 給与所得 (措法41の3の12):
+ * from 給与所得 (措法41の3の11第2項):
  *
  *   min(給与所得控除後の給与等の金額, ¥100,000) + min(公的年金等に係る雑所得, ¥100,000) − ¥100,000
  *
@@ -464,10 +464,10 @@ const composeNetIncomeComponents = (
     year,
   );
 
-  // The band of the 公的年金等控除 keys off the net income other than pension income. Statutorily
-  // that is the final 合計所得金額 figure, but the 給与+年金 adjustment below needs the pension
-  // income as its input, so the band is judged before that adjustment; the two can only interact
-  // within ¥100,000 of the band boundaries (¥10M/¥20M).
+  // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
+  // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額).
+  // Without pension income the 給与+年金 adjustment below cannot apply, so 給与所得 enters the band
+  // test before that adjustment but after the 子ども・特別障害者等 variant.
   const netPublicPensionIncome = calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
     taxpayerIs65OrOlder,
