@@ -30,12 +30,12 @@ export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 //          https://www.mhlw.go.jp/stf/taiou_001_00002.html
 //          https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
-export const DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS = 1_800_000;
+export const DEPENDENT_INCOME_THRESHOLD_ELDERLY = 1_800_000;
 
-/** The dependent-coverage income threshold applicable to an {@link TaxpayerAgeRange}. */
+/** The dependent-coverage income threshold applicable to a {@link TaxpayerAgeRange}. */
 export function getDependentIncomeThreshold(ageRange: TaxpayerAgeRange): number {
   return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.elderlyDependentIncomeThreshold)
-    ? DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS
+    ? DEPENDENT_INCOME_THRESHOLD_ELDERLY
     : DEPENDENT_INCOME_THRESHOLD;
 }
 
