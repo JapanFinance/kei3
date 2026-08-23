@@ -32,12 +32,7 @@ import {
   regionOptionsFor,
   type FormAction,
 } from '../../state/takeHomeFormReducer';
-import {
-  AGE_RANGES,
-  AGE_RANGE_LABELS,
-  isPublicPensionDeductionElderly,
-  isLongTermCareCategory1Insured,
-} from '../../types/ageRange';
+import { AGE_RANGES, AGE_RANGE_LABELS, isLongTermCareCategory1Insured } from '../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
@@ -250,7 +245,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         inputs.incomeStreams,
         inputs.incomeYear,
         inputs.dependents,
-        isPublicPensionDeductionElderly(inputs.ageRange),
+        inputs.ageRange,
       ),
     [inputs.incomeStreams, inputs.incomeYear, inputs.dependents, inputs.ageRange],
   );
