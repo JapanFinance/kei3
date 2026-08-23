@@ -1,6 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND } from '../data/publicPensionDeduction';
+import {
+  assertIntervalsDoNotCrossBands,
+  intervalCoversAgeBand,
+  type AgeBand,
+  type AgeInterval,
+} from './ageBand';
+
 /**
  * Taxpayer age ranges, in ascending order. Each boundary changes at least one calculation:
  * 18 (未成年者 residence-tax non-taxation), 20 and 60 (国民年金 enrollment), 40 and 65
@@ -35,15 +43,8 @@ export const AGE_RANGE_LABELS: Record<AgeRange, string> = {
   age75plus: '75+',
 };
 
-/** The ages an {@link AgeRange} spans, as the half-open interval the statutes use. */
-interface AgeBand {
-  /** 以上: the youngest age in the band. Omitted where the rule has no lower bound. */
-  minAgeInclusive?: number;
-  /** 未満: the first age outside the band. Omitted where the rule has no upper bound. */
-  maxAgeExclusive?: number;
-}
-
-const AGE_RANGE_BOUNDS: Record<AgeRange, Required<AgeBand>> = {
+/** The ages each {@link AgeRange} spans. */
+const AGE_RANGE_BOUNDS: Record<AgeRange, AgeInterval> = {
   under18: { minAgeInclusive: 0, maxAgeExclusive: 18 },
   age18to19: { minAgeInclusive: 18, maxAgeExclusive: 20 },
   age20to39: { minAgeInclusive: 20, maxAgeExclusive: 40 },
@@ -55,10 +56,10 @@ const AGE_RANGE_BOUNDS: Record<AgeRange, Required<AgeBand>> = {
 };
 
 /**
- * The age bands the calculator's rules are written on, each transcribing its source's
- * 以上/未満 wording. The DEV block at the end of this module rejects any {@link AgeRange}
- * that only partly falls inside one of these, since no single answer would hold for
- * everyone in such a range.
+ * The age bands the taxpayer's rules are written on, each transcribing its source's
+ * 以上/未満 wording, except where the module that owns the rule exports the band itself.
+ * The DEV block at the end of this module rejects any {@link AgeRange} that only partly falls
+ * inside one of these, since no single answer would hold for everyone in such a range.
  */
 export const STATUTORY_AGE_BANDS = {
   longTermCareCategory2: { minAgeInclusive: 40, maxAgeExclusive: 65 },
@@ -66,21 +67,13 @@ export const STATUTORY_AGE_BANDS = {
   nationalPension: { minAgeInclusive: 20, maxAgeExclusive: 60 },
   employeesPension: { maxAgeExclusive: 70 },
   latterStageElderly: { minAgeInclusive: 75 },
-  publicPensionDeductionElderly: { minAgeInclusive: 65 },
+  publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   elderlyDependentIncomeThreshold: { minAgeInclusive: 60 },
 } satisfies Record<string, AgeBand>;
 
-/**
- * Whether every age in {@link ageRange} falls inside {@link band}. A range that only
- * partly overlaps the band is not covered, so a rule is never answered for a range on the
- * strength of its youngest or oldest member alone.
- */
+/** Whether every age in {@link ageRange} falls inside {@link band}. */
 export function coversAgeBand(ageRange: AgeRange, band: AgeBand): boolean {
-  const { minAgeInclusive, maxAgeExclusive } = AGE_RANGE_BOUNDS[ageRange];
-  return (
-    minAgeInclusive >= (band.minAgeInclusive ?? 0) &&
-    maxAgeExclusive <= (band.maxAgeExclusive ?? Infinity)
-  );
+  return intervalCoversAgeBand(AGE_RANGE_BOUNDS[ageRange], band);
 }
 
 /**
@@ -132,27 +125,15 @@ export function isLatterStageElderly(ageRange: AgeRange): boolean {
 }
 
 /**
- * Whether the public pension deduction (公的年金等控除) uses its higher minimums for
- * recipients aged 65 or older, judged as of December 31 of the income year — the same
- * year-end age the ranges are selected by.
- * Source: 租税特別措置法第41条の15の3 https://laws.e-gov.go.jp/law/332AC0000000026#Mp-At_41_15_3
+ * Whether the public pension deduction (公的年金等控除) uses its higher minimums, judged as of
+ * December 31 of the income year — the same year-end age the ranges are selected by. The band
+ * itself is {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}, exported next to the deduction
+ * table it governs.
  */
 export function isPublicPensionDeductionElderly(ageRange: AgeRange): boolean {
   return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.publicPensionDeductionElderly);
 }
 
 if (import.meta.env.DEV) {
-  for (const [bandName, band] of Object.entries<AgeBand>(STATUTORY_AGE_BANDS)) {
-    const bandMin = band.minAgeInclusive ?? 0;
-    const bandMax = band.maxAgeExclusive ?? Infinity;
-    for (const ageRange of AGE_RANGES) {
-      const { minAgeInclusive, maxAgeExclusive } = AGE_RANGE_BOUNDS[ageRange];
-      const overlapsBand = minAgeInclusive < bandMax && bandMin < maxAgeExclusive;
-      if (overlapsBand && !coversAgeBand(ageRange, band)) {
-        throw new Error(
-          `Age range ${ageRange} (${minAgeInclusive}-${maxAgeExclusive}) crosses the ${bandName} band (${bandMin}-${bandMax}), so the rule has no single answer for it. Split the range at the boundary.`,
-        );
-      }
-    }
-  }
+  assertIntervalsDoNotCrossBands('Age range', AGE_RANGE_BOUNDS, STATUTORY_AGE_BANDS);
 }

@@ -5,6 +5,14 @@
  * Types for dependent-related deductions in Japanese tax system
  */
 
+import { PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND } from '../data/publicPensionDeduction';
+import {
+  assertIntervalsDoNotCrossBands,
+  intervalCoversAgeBand,
+  type AgeBand,
+  type AgeInterval,
+} from './ageBand';
+
 /**
  * Income input for dependents
  * We ask for gross employment income and other net income separately to calculate
@@ -52,7 +60,7 @@ export type DependentRelationship = 'spouse' | 'child' | 'parent' | 'other';
  * - 70plus: 70 years or older (老人控除対象配偶者, higher spouse deduction)
  *
  * The 65 boundary changes a computed amount only through the public pension deduction
- * (公的年金等控除) — see {@link is65OrOlder}.
+ * (公的年金等控除) — see {@link DEPENDENT_AGE_BANDS}.
  */
 export type SpouseAgeCategory = 'under65' | '65to69' | '70plus';
 
@@ -63,21 +71,66 @@ export type SpouseAgeCategory = 'under65' | '65to69' | '70plus';
  * - 19to22: Age 19-22 (eligible for special dependent deduction if income within the eligibility
  *   threshold, or specific relative special deduction above it)
  * - 23to64, 65to69: Age 23-69 (eligible for standard dependent deduction; the 65 boundary changes
- *   a computed amount only through the public pension deduction — see {@link is65OrOlder})
+ *   a computed amount only through the public pension deduction — see {@link DEPENDENT_AGE_BANDS})
  * - 70plus: 70 years or older (eligible for elderly dependent deduction)
  */
 export type DependentAgeCategory = 'under16' | '16to18' | '19to22' | '23to64' | '65to69' | '70plus';
 
+/** The ages each {@link SpouseAgeCategory} and {@link DependentAgeCategory} spans. */
+const AGE_CATEGORY_BOUNDS = {
+  under16: { minAgeInclusive: 0, maxAgeExclusive: 16 },
+  '16to18': { minAgeInclusive: 16, maxAgeExclusive: 19 },
+  '19to22': { minAgeInclusive: 19, maxAgeExclusive: 23 },
+  '23to64': { minAgeInclusive: 23, maxAgeExclusive: 65 },
+  under65: { minAgeInclusive: 0, maxAgeExclusive: 65 },
+  '65to69': { minAgeInclusive: 65, maxAgeExclusive: 70 },
+  '70plus': { minAgeInclusive: 70, maxAgeExclusive: Infinity },
+} satisfies Record<SpouseAgeCategory | DependentAgeCategory, AgeInterval>;
+
 /**
- * Whether an age category means 65 or older on December 31 of the income year — the boundary at
- * which the public pension deduction (公的年金等控除) switches to its higher minimum deduction
- * (租税特別措置法第41条の15の3; the December 31 judgment date is 同条第4項).
+ * The age bands a spouse's rules are written on. The DEV block at the end of this module rejects
+ * any {@link SpouseAgeCategory} that only partly falls inside one of these, since no single answer
+ * would hold for everyone in such a category.
  *
- * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm
- * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_15_3 — 租税特別措置法第41条の15の3
+ * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_1-At_2 — 所得税法第2条第1項第33号の4
  */
-export function is65OrOlder(ageCategory: SpouseAgeCategory | DependentAgeCategory): boolean {
-  return ageCategory === '65to69' || ageCategory === '70plus';
+export const SPOUSE_AGE_BANDS = {
+  /** The higher 公的年金等控除 minimum, on the band exported by the module that owns the table. */
+  publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
+  /** 老人控除対象配偶者: a 控除対象配偶者 aged 70 or older, who draws the higher 配偶者控除. */
+  elderlySpouse: { minAgeInclusive: 70 },
+} satisfies Record<string, AgeBand>;
+
+/**
+ * The age bands a non-spouse dependent's rules are written on, checked the same way as
+ * {@link SPOUSE_AGE_BANDS}.
+ *
+ * {@link DEPENDENT_AGE_BANDS.elderlyDependent} and {@link SPOUSE_AGE_BANDS.elderlySpouse} are both
+ * drawn at 70 but stay separate: 老人扶養親族 and 老人控除対象配偶者 are defined in different
+ * provisions.
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm — 扶養控除
+ * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_1-At_2 — 所得税法第2条第1項第34号の4
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
+ */
+export const DEPENDENT_AGE_BANDS = {
+  /** The higher 公的年金等控除 minimum, on the band exported by the module that owns the table. */
+  publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
+  /** 老人扶養親族: a 控除対象扶養親族 aged 70 or older. */
+  elderlyDependent: { minAgeInclusive: 70 },
+  /** 年齢23歳未満の扶養親族, condition ロ of the 所得金額調整控除（子ども・特別障害者等）. */
+  dependentUnder23: { maxAgeExclusive: 23 },
+} satisfies Record<string, AgeBand>;
+
+/**
+ * Whether every age in {@link ageCategory} falls inside {@link band}. Spouse and non-spouse
+ * categories are answered by the same predicate, so a rule shared by both reads one band.
+ */
+export function coversDependentAgeBand(
+  ageCategory: SpouseAgeCategory | DependentAgeCategory,
+  band: AgeBand,
+): boolean {
+  return intervalCoversAgeBand(AGE_CATEGORY_BOUNDS[ageCategory], band);
 }
 
 /**
@@ -312,4 +365,24 @@ export interface DependentDeductionResults {
 
   // Breakdown by dependent
   breakdown: DependentDeductionBreakdown[];
+}
+
+if (import.meta.env.DEV) {
+  const boundsOf = <Category extends SpouseAgeCategory | DependentAgeCategory>(
+    categories: ReadonlyArray<{ value: Category }>,
+  ): Record<Category, AgeInterval> =>
+    Object.fromEntries(
+      categories.map(({ value }) => [value, AGE_CATEGORY_BOUNDS[value]]),
+    ) as Record<Category, AgeInterval>;
+
+  assertIntervalsDoNotCrossBands(
+    'Spouse age category',
+    boundsOf(SPOUSE_AGE_CATEGORIES),
+    SPOUSE_AGE_BANDS,
+  );
+  assertIntervalsDoNotCrossBands(
+    'Dependent age category',
+    boundsOf(DEPENDENT_AGE_CATEGORIES),
+    DEPENDENT_AGE_BANDS,
+  );
 }

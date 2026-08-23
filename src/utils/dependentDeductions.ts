@@ -18,7 +18,10 @@
 
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
+import {
+  PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
+  calculateNetPublicPensionIncome,
+} from '../data/publicPensionDeduction';
 import type {
   Dependent,
   DisabilityLevel,
@@ -27,7 +30,12 @@ import type {
   DeductionAmount,
   DeductionType,
 } from '../types/dependents';
-import { DEDUCTION_TYPES, is65OrOlder } from '../types/dependents';
+import {
+  DEDUCTION_TYPES,
+  DEPENDENT_AGE_BANDS,
+  SPOUSE_AGE_BANDS,
+  coversDependentAgeBand,
+} from '../types/dependents';
 import {
   calculateNetEmploymentIncome,
   calculatePensionIncomeAdjustmentDeduction,
@@ -98,7 +106,7 @@ export function calculateDependentNetPublicPensionIncome(
     calculateDependentNetEmploymentIncome(dependent, year) + otherNetIncome;
   return calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
-    is65OrOlder(dependent.ageCategory),
+    coversDependentAgeBand(dependent.ageCategory, PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND),
     otherTotalNetIncome,
     year,
   );
@@ -207,10 +215,11 @@ export function hasIncomeAdjustmentDeductionDependent(
     if (dependent.relationship === 'spouse') {
       return isSpecialDisability;
     }
-    const isUnder23 =
-      dependent.ageCategory === 'under16' ||
-      dependent.ageCategory === '16to18' ||
-      dependent.ageCategory === '19to22'; // ロ
+    // ロ
+    const isUnder23 = coversDependentAgeBand(
+      dependent.ageCategory,
+      DEPENDENT_AGE_BANDS.dependentUnder23,
+    );
     return isUnder23 || isSpecialDisability;
   });
 }
@@ -226,8 +235,7 @@ export function hasDependentRelativeUnder23(dependents: Dependent[], year: numbe
   return dependents.some(dependent => {
     if (dependent.relationship === 'spouse') return false; // a spouse is never a 扶養親族
     if (calculateDependentTotalNetIncome(dependent, year) > eligibilityMax) return false;
-    const age = dependent.ageCategory;
-    return age === 'under16' || age === '16to18' || age === '19to22';
+    return coversDependentAgeBand(dependent.ageCategory, DEPENDENT_AGE_BANDS.dependentUnder23);
   });
 }
 
@@ -276,7 +284,7 @@ function isSpecialDependent(dependent: Dependent, year: number): boolean {
 function isElderlyDependent(dependent: Dependent, year: number): boolean {
   return (
     isEligibleForDependentDeduction(dependent, year) &&
-    (dependent as OtherDependent).ageCategory === '70plus'
+    coversDependentAgeBand(dependent.ageCategory, DEPENDENT_AGE_BANDS.elderlyDependent)
   );
 }
 
@@ -785,7 +793,7 @@ function calculateSpouseDeduction(
     return { national: 0, residence: 0 };
   }
 
-  const isElderly = dependent.ageCategory === '70plus';
+  const isElderly = coversDependentAgeBand(dependent.ageCategory, SPOUSE_AGE_BANDS.elderlySpouse);
 
   const getAmount = (
     taxTypeTable:
