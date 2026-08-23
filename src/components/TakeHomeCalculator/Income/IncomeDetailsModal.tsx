@@ -8,6 +8,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
+import type { ChipProps } from '@mui/material/Chip';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -20,13 +21,23 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useState } from 'react';
 
-import type { IncomeStream } from '../../../types/tax';
+import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import {
   formatJPY,
   formatMonthLong,
   getCommutingAllowanceAnnualAmount,
 } from '../../../utils/formatters';
 import { IncomeStreamForm } from './IncomeStreamForm';
+
+const STREAM_CHIPS: Record<IncomeStreamType, { label: string; color: ChipProps['color'] }> = {
+  salary: { label: 'SALARY', color: 'primary' },
+  bonus: { label: 'BONUS', color: 'primary' },
+  business: { label: 'BUSINESS', color: 'success' },
+  miscellaneous: { label: 'MISCELLANEOUS', color: 'warning' },
+  publicPension: { label: 'PENSION', color: 'secondary' },
+  commutingAllowance: { label: 'COMMUTING', color: 'primary' },
+  stockCompensation: { label: 'STOCK', color: 'primary' },
+};
 
 interface IncomeDetailsModalProps {
   open: boolean;
@@ -93,26 +104,6 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return stream.issuerDomicile === 'foreign' ? 'Foreign' : 'Domestic';
       default:
         return null;
-    }
-  };
-
-  const getStreamColor = (
-    type: string,
-  ): 'primary' | 'secondary' | 'success' | 'warning' | 'default' => {
-    switch (type) {
-      case 'salary':
-      case 'bonus':
-      case 'commutingAllowance':
-      case 'stockCompensation':
-        return 'primary';
-      case 'business':
-        return 'success';
-      case 'miscellaneous':
-        return 'warning';
-      case 'publicPension':
-        return 'secondary';
-      default:
-        return 'default';
     }
   };
 
@@ -224,17 +215,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
-                      label={
-                        stream.type === 'commutingAllowance'
-                          ? 'COMMUTING'
-                          : stream.type === 'stockCompensation'
-                            ? 'STOCK'
-                            : stream.type === 'publicPension'
-                              ? 'PENSION'
-                              : stream.type.toUpperCase()
-                      }
+                      label={STREAM_CHIPS[stream.type].label}
                       size="small"
-                      color={getStreamColor(stream.type)}
+                      color={STREAM_CHIPS[stream.type].color}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>

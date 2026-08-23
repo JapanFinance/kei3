@@ -148,11 +148,32 @@ export const generateChartData = (
       const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0, publicPension: 0 };
       calcStreams.forEach(s => {
         const val = s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
-        if (s.type === 'salary') groups.salary += val;
-        else if (s.type === 'bonus') groups.bonus += val;
-        else if (s.type === 'business') groups.business += val;
-        else if (s.type === 'miscellaneous') groups.miscellaneous += val;
-        else if (s.type === 'publicPension') groups.publicPension += val;
+        switch (s.type) {
+          case 'salary':
+            groups.salary += val;
+            break;
+          case 'bonus':
+            groups.bonus += val;
+            break;
+          case 'business':
+            groups.business += val;
+            break;
+          case 'miscellaneous':
+            groups.miscellaneous += val;
+            break;
+          case 'publicPension':
+            groups.publicPension += val;
+            break;
+          // Not shown as breakdown rows: commuting allowance is excluded from income, and
+          // stock compensation has no row of its own.
+          case 'commutingAllowance':
+          case 'stockCompensation':
+            break;
+          default: {
+            const unhandled: never = s;
+            throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
+          }
+        }
       });
 
       breakdown = [];
@@ -162,7 +183,7 @@ export const generateChartData = (
       if (groups.miscellaneous > 0)
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
       if (groups.publicPension > 0)
-        breakdown.push({ label: 'Public Pension', amount: groups.publicPension });
+        breakdown.push({ label: 'Public Pension Income', amount: groups.publicPension });
     }
 
     const result = calculateTaxes(inputsForCalc);

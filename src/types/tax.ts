@@ -7,15 +7,6 @@ import type { TaxpayerAgeRange } from './taxpayerAge';
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
 
-export type IncomeStreamType =
-  | 'salary'
-  | 'bonus'
-  | 'business'
-  | 'miscellaneous'
-  | 'publicPension'
-  | 'commutingAllowance'
-  | 'stockCompensation';
-
 export interface BaseIncomeStream {
   id: string;
   type: IncomeStreamType;
@@ -47,8 +38,8 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
 }
 
 /**
- * Public pension income (公的年金等): `amount` is the gross annual amount received
- * (公的年金等の収入金額), before withholding. The public pension deduction (公的年金等控除)
+ * Public pension income (公的年金等): {@link BaseIncomeStream.amount} is the gross annual
+ * amount received (公的年金等の収入金額), before withholding. The public pension deduction (公的年金等控除)
  * is applied by the calculation, using the taxpayer's age range for the 65 boundary.
  */
 export interface PublicPensionIncomeStream extends BaseIncomeStream {
@@ -68,6 +59,8 @@ export type IncomeStream =
   | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
   | StockCompensationIncomeStream;
+
+export type IncomeStreamType = IncomeStream['type'];
 
 /**
  * User input for the home loan tax credit (住宅ローン控除).
