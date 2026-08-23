@@ -3,17 +3,17 @@
 
 import { PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND } from '../data/publicPensionDeduction';
 import {
-  assertIntervalsDoNotCrossBands,
-  intervalCoversAgeBand,
+  assertAgeRangesDoNotCrossBands,
+  ageRangeCoversBand,
   type AgeBand,
-  type AgeInterval,
-} from './ageBand';
+  type AgeRange,
+} from './age';
 
 /**
  * The taxpayer's age. The form offers one age range per {@link TAXPAYER_AGE_RANGES} entry, and
  * every age-keyed rule about the taxpayer is answered by asking whether the chosen range falls
- * inside the rule's {@link AgeBand}. The dependents' age categories in `./dependents` are the
- * equivalent choices on that side, and read their own bands the same way.
+ * inside the rule's {@link AgeBand}. The spouse and dependent age ranges in `./dependents` are
+ * the equivalent choices on that side, and read their own bands the same way.
  */
 
 /**
@@ -51,7 +51,7 @@ export const TAXPAYER_AGE_RANGE_LABELS: Record<TaxpayerAgeRange, string> = {
 };
 
 /** The ages each {@link TaxpayerAgeRange} spans. */
-const TAXPAYER_AGE_RANGE_BOUNDS: Record<TaxpayerAgeRange, AgeInterval> = {
+const TAXPAYER_AGE_RANGE_BOUNDS: Record<TaxpayerAgeRange, AgeRange> = {
   under18: { minAgeInclusive: 0, maxAgeExclusive: 18 },
   age18to19: { minAgeInclusive: 18, maxAgeExclusive: 20 },
   age20to39: { minAgeInclusive: 20, maxAgeExclusive: 40 },
@@ -81,7 +81,7 @@ export const STATUTORY_AGE_BANDS = {
 
 /** Whether every age the taxpayer's chosen {@link ageRange} spans falls inside {@link band}. */
 export function taxpayerAgeCoversBand(ageRange: TaxpayerAgeRange, band: AgeBand): boolean {
-  return intervalCoversAgeBand(TAXPAYER_AGE_RANGE_BOUNDS[ageRange], band);
+  return ageRangeCoversBand(TAXPAYER_AGE_RANGE_BOUNDS[ageRange], band);
 }
 
 /**
@@ -143,5 +143,5 @@ export function isPublicPensionDeductionElderly(ageRange: TaxpayerAgeRange): boo
 }
 
 if (import.meta.env.DEV) {
-  assertIntervalsDoNotCrossBands('Age range', TAXPAYER_AGE_RANGE_BOUNDS, STATUTORY_AGE_BANDS);
+  assertAgeRangesDoNotCrossBands('Age range', TAXPAYER_AGE_RANGE_BOUNDS, STATUTORY_AGE_BANDS);
 }

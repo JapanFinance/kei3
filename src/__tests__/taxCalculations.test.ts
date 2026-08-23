@@ -125,7 +125,7 @@ describe('calculateNetEmploymentIncome', () => {
     const childUnder23: Dependent = {
       id: 'c',
       relationship: 'child',
-      ageCategory: '19to22',
+      ageRange: '19to22',
       isCohabiting: false,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -1266,7 +1266,7 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
         {
           id: 'c1',
           relationship: 'child' as const,
-          ageCategory: '19to22' as const,
+          ageRange: '19to22' as const,
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           disability: 'none' as const,
           isCohabiting: true,
@@ -1574,7 +1574,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
   const childUnder23: Dependent = {
     id: 'c1',
     relationship: 'child',
-    ageCategory: '19to22',
+    ageRange: '19to22',
     isCohabiting: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -1582,7 +1582,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
   const adultChild: Dependent = {
     id: 'c2',
     relationship: 'child',
-    ageCategory: '23to64',
+    ageRange: '23to64',
     isCohabiting: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },

@@ -7,9 +7,9 @@ import {
   PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   calculateNetPublicPensionIncome,
 } from '../data/publicPensionDeduction';
-import { assertIntervalsDoNotCrossBands, intervalCoversAgeBand } from '../types/ageBand';
+import { assertAgeRangesDoNotCrossBands, ageRangeCoversBand } from '../types/age';
 import type { Dependent } from '../types/dependents';
-import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, coversDependentAgeBand } from '../types/dependents';
+import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
 import { STATUTORY_AGE_BANDS } from '../types/taxpayerAge';
 import { calculateDependentNetPublicPensionIncome } from '../utils/dependentDeductions';
 import { calculateNetIncomeComponents } from '../utils/taxCalculations';
@@ -17,22 +17,22 @@ import { calculateNetIncomeComponents } from '../utils/taxCalculations';
 const YEAR = 2026;
 const GROSS_PENSION = 1_300_000;
 
-describe('intervalCoversAgeBand', () => {
+describe('ageRangeCoversBand', () => {
   it('covers a band only when every age in the interval falls inside it', () => {
     const forties = { minAgeInclusive: 40, maxAgeExclusive: 50 };
-    expect(intervalCoversAgeBand(forties, { minAgeInclusive: 40, maxAgeExclusive: 50 })).toBe(true);
-    expect(intervalCoversAgeBand(forties, { minAgeInclusive: 20 })).toBe(true);
-    expect(intervalCoversAgeBand(forties, {})).toBe(true);
+    expect(ageRangeCoversBand(forties, { minAgeInclusive: 40, maxAgeExclusive: 50 })).toBe(true);
+    expect(ageRangeCoversBand(forties, { minAgeInclusive: 20 })).toBe(true);
+    expect(ageRangeCoversBand(forties, {})).toBe(true);
     // A band starting mid-interval holds for the oldest in it but not the youngest.
-    expect(intervalCoversAgeBand(forties, { minAgeInclusive: 45 })).toBe(false);
-    expect(intervalCoversAgeBand(forties, { maxAgeExclusive: 45 })).toBe(false);
+    expect(ageRangeCoversBand(forties, { minAgeInclusive: 45 })).toBe(false);
+    expect(ageRangeCoversBand(forties, { maxAgeExclusive: 45 })).toBe(false);
   });
 });
 
-describe('assertIntervalsDoNotCrossBands', () => {
+describe('assertAgeRangesDoNotCrossBands', () => {
   it('rejects an interval that spans a band boundary', () => {
     expect(() =>
-      assertIntervalsDoNotCrossBands(
+      assertAgeRangesDoNotCrossBands(
         'Test category',
         { age60to69: { minAgeInclusive: 60, maxAgeExclusive: 70 } },
         { elderly: { minAgeInclusive: 65 } },
@@ -42,7 +42,7 @@ describe('assertIntervalsDoNotCrossBands', () => {
 
   it('accepts intervals that stop at every band boundary', () => {
     expect(() =>
-      assertIntervalsDoNotCrossBands(
+      assertAgeRangesDoNotCrossBands(
         'Test category',
         {
           age60to64: { minAgeInclusive: 60, maxAgeExclusive: 65 },
@@ -67,8 +67,8 @@ describe('the 65 boundary of the public pension deduction', () => {
     );
   });
 
-  const pensionOnly = (ageCategory: Dependent['ageCategory']) => ({
-    ageCategory,
+  const pensionOnly = (ageRange: Dependent['ageRange']) => ({
+    ageRange,
     income: {
       grossEmploymentIncome: 0,
       grossPublicPensionIncome: GROSS_PENSION,
@@ -111,33 +111,33 @@ describe('the 65 boundary of the public pension deduction', () => {
   });
 });
 
-describe('coversDependentAgeBand', () => {
+describe('dependentAgeCoversBand', () => {
   it('answers spouse and non-spouse categories on the same bands', () => {
     expect(
-      coversDependentAgeBand('under65', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
+      dependentAgeCoversBand('under65', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(false);
     expect(
-      coversDependentAgeBand('23to64', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
+      dependentAgeCoversBand('23to64', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(false);
     expect(
-      coversDependentAgeBand('65to69', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
+      dependentAgeCoversBand('65to69', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(true);
-    expect(coversDependentAgeBand('70plus', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
+    expect(dependentAgeCoversBand('70plus', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
       true,
     );
   });
 
   it('reads the 70 boundary of the elderly bands', () => {
-    expect(coversDependentAgeBand('65to69', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(false);
-    expect(coversDependentAgeBand('70plus', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(true);
-    expect(coversDependentAgeBand('65to69', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(false);
-    expect(coversDependentAgeBand('70plus', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(true);
+    expect(dependentAgeCoversBand('65to69', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(false);
+    expect(dependentAgeCoversBand('70plus', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(true);
+    expect(dependentAgeCoversBand('65to69', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(false);
+    expect(dependentAgeCoversBand('70plus', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(true);
   });
 
   it('reads the 23 boundary of the 所得金額調整控除 dependent condition', () => {
-    expect(coversDependentAgeBand('under16', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
-    expect(coversDependentAgeBand('16to18', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
-    expect(coversDependentAgeBand('19to22', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
-    expect(coversDependentAgeBand('23to64', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(false);
+    expect(dependentAgeCoversBand('under16', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
+    expect(dependentAgeCoversBand('16to18', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
+    expect(dependentAgeCoversBand('19to22', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
+    expect(dependentAgeCoversBand('23to64', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(false);
   });
 });

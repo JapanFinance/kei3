@@ -7,11 +7,11 @@
 
 import { PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND } from '../data/publicPensionDeduction';
 import {
-  assertIntervalsDoNotCrossBands,
-  intervalCoversAgeBand,
+  assertAgeRangesDoNotCrossBands,
+  ageRangeCoversBand,
   type AgeBand,
-  type AgeInterval,
-} from './ageBand';
+  type AgeRange,
+} from './age';
 
 /**
  * Income input for dependents
@@ -54,7 +54,7 @@ export type DisabilityLevel = 'none' | 'regular' | 'special';
 export type DependentRelationship = 'spouse' | 'child' | 'parent' | 'other';
 
 /**
- * Age category for spouse
+ * Age range for spouse
  * - under65: Under 65 years old
  * - 65to69: Age 65-69
  * - 70plus: 70 years or older (老人控除対象配偶者, higher spouse deduction)
@@ -62,10 +62,10 @@ export type DependentRelationship = 'spouse' | 'child' | 'parent' | 'other';
  * The 65 boundary changes a computed amount only through the public pension deduction
  * (公的年金等控除) — see {@link DEPENDENT_AGE_BANDS}.
  */
-export type SpouseAgeCategory = 'under65' | '65to69' | '70plus';
+export type SpouseAgeRange = 'under65' | '65to69' | '70plus';
 
 /**
- * Age category for non-spouse dependents
+ * Age range for non-spouse dependents
  * - under16: Under 16 years old (not eligible for dependent deduction)
  * - 16to18: Age 16-18 (eligible for standard dependent deduction)
  * - 19to22: Age 19-22 (eligible for special dependent deduction if income within the eligibility
@@ -74,10 +74,10 @@ export type SpouseAgeCategory = 'under65' | '65to69' | '70plus';
  *   a computed amount only through the public pension deduction — see {@link DEPENDENT_AGE_BANDS})
  * - 70plus: 70 years or older (eligible for elderly dependent deduction)
  */
-export type DependentAgeCategory = 'under16' | '16to18' | '19to22' | '23to64' | '65to69' | '70plus';
+export type DependentAgeRange = 'under16' | '16to18' | '19to22' | '23to64' | '65to69' | '70plus';
 
-/** The ages each {@link SpouseAgeCategory} and {@link DependentAgeCategory} spans. */
-const AGE_CATEGORY_BOUNDS = {
+/** The ages each {@link SpouseAgeRange} and {@link DependentAgeRange} spans. */
+const AGE_RANGE_BOUNDS = {
   under16: { minAgeInclusive: 0, maxAgeExclusive: 16 },
   '16to18': { minAgeInclusive: 16, maxAgeExclusive: 19 },
   '19to22': { minAgeInclusive: 19, maxAgeExclusive: 23 },
@@ -85,12 +85,12 @@ const AGE_CATEGORY_BOUNDS = {
   under65: { minAgeInclusive: 0, maxAgeExclusive: 65 },
   '65to69': { minAgeInclusive: 65, maxAgeExclusive: 70 },
   '70plus': { minAgeInclusive: 70, maxAgeExclusive: Infinity },
-} satisfies Record<SpouseAgeCategory | DependentAgeCategory, AgeInterval>;
+} satisfies Record<SpouseAgeRange | DependentAgeRange, AgeRange>;
 
 /**
  * The age bands a spouse's rules are written on. The DEV block at the end of this module rejects
- * any {@link SpouseAgeCategory} that only partly falls inside one of these, since no single answer
- * would hold for everyone in such a category.
+ * any {@link SpouseAgeRange} that only partly falls inside one of these, since no single answer
+ * would hold for everyone in such a range.
  *
  * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_1-At_2 — 所得税法第2条第1項第33号の4
  */
@@ -123,14 +123,14 @@ export const DEPENDENT_AGE_BANDS = {
 } satisfies Record<string, AgeBand>;
 
 /**
- * Whether every age in {@link ageCategory} falls inside {@link band}. Spouse and non-spouse
- * categories are answered by the same predicate, so a rule shared by both reads one band.
+ * Whether every age in {@link ageRange} falls inside {@link band}. Spouse and non-spouse
+ * ranges are answered by the same predicate, so a rule shared by both reads one band.
  */
-export function coversDependentAgeBand(
-  ageCategory: SpouseAgeCategory | DependentAgeCategory,
+export function dependentAgeCoversBand(
+  ageRange: SpouseAgeRange | DependentAgeRange,
   band: AgeBand,
 ): boolean {
-  return intervalCoversAgeBand(AGE_CATEGORY_BOUNDS[ageCategory], band);
+  return ageRangeCoversBand(AGE_RANGE_BOUNDS[ageRange], band);
 }
 
 /**
@@ -151,8 +151,8 @@ export interface Spouse {
   /** Relationship - always 'spouse' */
   relationship: 'spouse';
 
-  /** Age category of the spouse */
-  ageCategory: SpouseAgeCategory;
+  /** Age range of the spouse */
+  ageRange: SpouseAgeRange;
 
   /** Income details for calculating total net income */
   income: DependentIncome;
@@ -174,8 +174,8 @@ export interface OtherDependent {
   /** Relationship to the taxpayer (not spouse) */
   relationship: Exclude<DependentRelationship, 'spouse'>;
 
-  /** Age category of the dependent */
-  ageCategory: DependentAgeCategory;
+  /** Age range of the dependent */
+  ageRange: DependentAgeRange;
 
   /** Income details for calculating total net income */
   income: DependentIncome;
@@ -237,17 +237,17 @@ export const RELATIONSHIPS: RelationshipInfo[] = [
 ];
 
 /**
- * Spouse age category display information
+ * Spouse age range display information
  */
-export interface SpouseAgeCategoryInfo {
-  value: SpouseAgeCategory;
+export interface SpouseAgeRangeInfo {
+  value: SpouseAgeRange;
   label: string;
 }
 
 /**
- * Spouse age category definitions
+ * Spouse age range definitions
  */
-export const SPOUSE_AGE_CATEGORIES: SpouseAgeCategoryInfo[] = [
+export const SPOUSE_AGE_RANGES: SpouseAgeRangeInfo[] = [
   {
     value: 'under65',
     label: 'Under 65',
@@ -263,17 +263,17 @@ export const SPOUSE_AGE_CATEGORIES: SpouseAgeCategoryInfo[] = [
 ];
 
 /**
- * Dependent age category display information
+ * Dependent age range display information
  */
-export interface DependentAgeCategoryInfo {
-  value: DependentAgeCategory;
+export interface DependentAgeRangeInfo {
+  value: DependentAgeRange;
   label: string;
 }
 
 /**
- * Dependent age category definitions
+ * Dependent age range definitions
  */
-export const DEPENDENT_AGE_CATEGORIES: DependentAgeCategoryInfo[] = [
+export const DEPENDENT_AGE_RANGES: DependentAgeRangeInfo[] = [
   {
     value: 'under16',
     label: 'Under 16',
@@ -368,21 +368,18 @@ export interface DependentDeductionResults {
 }
 
 if (import.meta.env.DEV) {
-  const boundsOf = <Category extends SpouseAgeCategory | DependentAgeCategory>(
-    categories: ReadonlyArray<{ value: Category }>,
-  ): Record<Category, AgeInterval> =>
-    Object.fromEntries(
-      categories.map(({ value }) => [value, AGE_CATEGORY_BOUNDS[value]]),
-    ) as Record<Category, AgeInterval>;
+  const boundsOf = <Choice extends SpouseAgeRange | DependentAgeRange>(
+    choices: ReadonlyArray<{ value: Choice }>,
+  ): Record<Choice, AgeRange> =>
+    Object.fromEntries(choices.map(({ value }) => [value, AGE_RANGE_BOUNDS[value]])) as Record<
+      Choice,
+      AgeRange
+    >;
 
-  assertIntervalsDoNotCrossBands(
-    'Spouse age category',
-    boundsOf(SPOUSE_AGE_CATEGORIES),
-    SPOUSE_AGE_BANDS,
-  );
-  assertIntervalsDoNotCrossBands(
-    'Dependent age category',
-    boundsOf(DEPENDENT_AGE_CATEGORIES),
+  assertAgeRangesDoNotCrossBands('Spouse age range', boundsOf(SPOUSE_AGE_RANGES), SPOUSE_AGE_BANDS);
+  assertAgeRangesDoNotCrossBands(
+    'Dependent age range',
+    boundsOf(DEPENDENT_AGE_RANGES),
     DEPENDENT_AGE_BANDS,
   );
 }

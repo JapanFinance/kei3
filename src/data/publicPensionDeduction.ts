@@ -28,7 +28,7 @@
  *   確定申告の手引き worksheet, which states the 1円未満切り捨て of the resulting 雑所得
  */
 
-import type { AgeBand } from '../types/ageBand';
+import type { AgeBand } from '../types/age';
 
 /**
  * The recipients for whom each band's {@link PublicPensionDeductionBand.minimumDeduction65Plus}

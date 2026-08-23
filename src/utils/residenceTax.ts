@@ -310,7 +310,7 @@ function calculateStatutoryPersonalDeductionDifference(
 
     switch (breakdown.deductionType) {
       case DEDUCTION_TYPES.SPOUSE: {
-        const isElderly = dep.ageCategory === '70plus';
+        const isElderly = dep.ageRange === '70plus';
         totalDifference += getSpouseDeductionDifference(isElderly, taxpayerNetIncome);
         break;
       }
