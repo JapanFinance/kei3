@@ -134,6 +134,33 @@ describe('dependentAgeCoversBand', () => {
     expect(dependentAgeCoversBand('70plus', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(true);
   });
 
+  it('reads the 16 boundary of the 扶養控除 and the 19-23 band of the 特定 rules', () => {
+    expect(dependentAgeCoversBand('under16', DEPENDENT_AGE_BANDS.dependentDeduction)).toBe(false);
+    expect(dependentAgeCoversBand('16to18', DEPENDENT_AGE_BANDS.dependentDeduction)).toBe(true);
+
+    for (const band of [
+      DEPENDENT_AGE_BANDS.specialDependent,
+      DEPENDENT_AGE_BANDS.specificRelative,
+    ]) {
+      expect(dependentAgeCoversBand('16to18', band)).toBe(false);
+      expect(dependentAgeCoversBand('19to22', band)).toBe(true);
+      expect(dependentAgeCoversBand('23to64', band)).toBe(false);
+    }
+  });
+
+  it('keeps the bands that coincide at 70 separate from one another', () => {
+    const seventy = [
+      DEPENDENT_AGE_BANDS.elderlyDependent,
+      SPOUSE_AGE_BANDS.elderlySpouse,
+      SPOUSE_AGE_BANDS.residenceTaxElderlySpouse,
+    ];
+    for (const band of seventy) {
+      expect(band).toEqual({ minAgeInclusive: 70 });
+    }
+    // Each states its own provision, so amending one cannot silently move the others.
+    expect(new Set(seventy).size).toBe(seventy.length);
+  });
+
   it('reads the 23 boundary of the 所得金額調整控除 dependent condition', () => {
     expect(dependentAgeCoversBand('under16', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
     expect(dependentAgeCoversBand('16to18', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);

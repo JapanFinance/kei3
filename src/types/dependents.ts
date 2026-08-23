@@ -92,31 +92,54 @@ const AGE_RANGE_BOUNDS = {
  * any {@link SpouseAgeRange} that only partly falls inside one of these, since no single answer
  * would hold for everyone in such a range.
  *
- * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_1-At_2 — 所得税法第2条第1項第33号の4
+ * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_1-Ch_1-At_2 — 所得税法第2条第1項第33号の3
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_2 — 地方税法第314条の2第1項第10号イ
+ * @see https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_2-Di_1-At_34 — 地方税法第34条第1項第10号イ
  */
 export const SPOUSE_AGE_BANDS = {
   /** The higher 公的年金等控除 minimum, on the band exported by the module that owns the table. */
   publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
-  /** 老人控除対象配偶者: a 控除対象配偶者 aged 70 or older, who draws the higher 配偶者控除. */
+  /**
+   * 老人控除対象配偶者 for national tax: a 控除対象配偶者 aged 70 or older, who draws the higher
+   * 配偶者控除 (所得税法第2条第1項第33号の3).
+   */
   elderlySpouse: { minAgeInclusive: 70 },
+  /**
+   * 老人控除対象配偶者 for residence tax, which 地方税法 defines for itself rather than by
+   * reference to 所得税法 (第314条の2第1項第10号イ, 道府県民税は第34条第1項第10号イ). It sets both
+   * the 配偶者控除 amount and the 調整控除 statutory difference.
+   */
+  residenceTaxElderlySpouse: { minAgeInclusive: 70 },
 } satisfies Record<string, AgeBand>;
 
 /**
  * The age bands a non-spouse dependent's rules are written on, checked the same way as
  * {@link SPOUSE_AGE_BANDS}.
  *
- * {@link DEPENDENT_AGE_BANDS.elderlyDependent} and {@link SPOUSE_AGE_BANDS.elderlySpouse} are both
- * drawn at 70 but stay separate: 老人扶養親族 and 老人控除対象配偶者 are defined in different
- * provisions.
+ * Bands that coincide today stay separate when their definitions are separate, since one can be
+ * amended without the other: 老人扶養親族 and the two 老人控除対象配偶者 bands in
+ * {@link SPOUSE_AGE_BANDS} are all drawn at 70, and 特定扶養親族 and 特定親族 both at 19 and 23,
+ * but each is defined in its own provision.
  *
+ * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_1-Ch_1-At_2 — 所得税法第2条第1項（各定義）
+ * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_2-Se_4-At_84_2 — 所得税法第84条の2第1項（特定親族）
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm — 扶養控除
- * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_1-At_2 — 所得税法第2条第1項第34号の4
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
  */
 export const DEPENDENT_AGE_BANDS = {
   /** The higher 公的年金等控除 minimum, on the band exported by the module that owns the table. */
   publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
-  /** 老人扶養親族: a 控除対象扶養親族 aged 70 or older. */
+  /**
+   * 控除対象扶養親族: a 扶養親族 aged 16 or older, the ages the 扶養控除 is available for
+   * (所得税法第2条第1項第34号の2イ). The 非居住者 form of the definition (同号ロ) is bounded
+   * differently and is not modeled.
+   */
+  dependentDeduction: { minAgeInclusive: 16 },
+  /** 特定扶養親族: a 控除対象扶養親族 aged 19 or older and under 23 (所得税法第2条第1項第34号の3). */
+  specialDependent: { minAgeInclusive: 19, maxAgeExclusive: 23 },
+  /** 特定親族: a relative aged 19 or older and under 23, for the 特定親族特別控除 (所得税法第84条の2第1項). */
+  specificRelative: { minAgeInclusive: 19, maxAgeExclusive: 23 },
+  /** 老人扶養親族: a 控除対象扶養親族 aged 70 or older (所得税法第2条第1項第34号の4). */
   elderlyDependent: { minAgeInclusive: 70 },
   /** 年齢23歳未満の扶養親族, condition ロ of the 所得金額調整控除（子ども・特別障害者等）. */
   dependentUnder23: { maxAgeExclusive: 23 },

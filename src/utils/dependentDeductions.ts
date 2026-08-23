@@ -25,7 +25,6 @@ import {
 import type {
   Dependent,
   DisabilityLevel,
-  OtherDependent,
   DependentDeductionResults,
   DeductionAmount,
   DeductionType,
@@ -252,7 +251,7 @@ function isEligibleForDependentDeduction(dependent: Dependent, year: number): bo
   // Dependents under 16 are not eligible for the dependent deduction (扶養控除)
   // They are eligible for disability deduction if applicable, but that is handled separately.
   // Note: Child Allowance (児童手当) replaces the tax deduction for this age group.
-  if (dependent.ageRange === 'under16') {
+  if (!dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.dependentDeduction)) {
     return false;
   }
 
@@ -270,7 +269,7 @@ function isEligibleForDependentDeduction(dependent: Dependent, year: number): bo
 function isSpecialDependent(dependent: Dependent, year: number): boolean {
   return (
     isEligibleForDependentDeduction(dependent, year) &&
-    (dependent as OtherDependent).ageRange === '19to22'
+    dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.specialDependent)
   );
 }
 
@@ -349,11 +348,8 @@ function isEligibleForSpecificRelativeSpecialDeduction(
   if (dependent.relationship === 'spouse') {
     return false;
   }
-  const otherDependent = dependent;
-  const ageRange = otherDependent.ageRange;
-
   // Only age 19-22 are eligible (19歳以上23歳未満)
-  if (ageRange !== '19to22') {
+  if (!dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.specificRelative)) {
     return false;
   }
 

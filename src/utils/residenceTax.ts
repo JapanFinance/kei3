@@ -3,7 +3,7 @@
 
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
-import { DEDUCTION_TYPES } from '../types/dependents';
+import { DEDUCTION_TYPES, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
 import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
@@ -310,7 +310,10 @@ function calculateStatutoryPersonalDeductionDifference(
 
     switch (breakdown.deductionType) {
       case DEDUCTION_TYPES.SPOUSE: {
-        const isElderly = dep.ageRange === '70plus';
+        const isElderly = dependentAgeCoversBand(
+          dep.ageRange,
+          SPOUSE_AGE_BANDS.residenceTaxElderlySpouse,
+        );
         totalDifference += getSpouseDeductionDifference(isElderly, taxpayerNetIncome);
         break;
       }
