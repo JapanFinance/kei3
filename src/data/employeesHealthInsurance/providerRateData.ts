@@ -1,6 +1,8 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { Prefecture } from '../prefectures';
+
 /**
  * Regional rate variations for a provider
  * Contains only the data that varies by region: rates and region-specific metadata
@@ -1435,7 +1437,13 @@ export const PROVIDER_DEFINITIONS = {
       ],
     },
   },
-} satisfies Record<string, ProviderDefinition>;
+} satisfies Record<string, ProviderDefinition> & {
+  // Kyokai Kenpo's rates vary by prefecture, and the region dropdown offers the same
+  // identifiers here as for 後期高齢者医療, so a key list that lost or renamed a prefecture
+  // would leave that prefecture unselectable under one provider. Requiring every
+  // Prefecture here ties the two lists together at compile time.
+  KyokaiKenpo: ProviderDefinition & { regions: Record<Prefecture, HealthInsuranceRatePeriod[]> };
+};
 
 if (import.meta.env.DEV) {
   // Validate that each region's rate periods are sorted newest-first

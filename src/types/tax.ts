@@ -366,6 +366,11 @@ export interface TakeHomeResults {
   latterStageMedicalPortion?: number | undefined;
   latterStageChildSupportPortion?: number | undefined;
   /**
+   * Whether {@link latterStageMedicalPortion} has stopped rising with income, which for a
+   * calendar year that blends two fiscal years needs both of them at their 賦課限度額.
+   */
+  latterStageMedicalCapped?: boolean | undefined;
+  /**
    * Annual 介護保険料第1号 amount actually applied: ages 65+ outside manual entry, and only
    * when a positive amount was entered; absent otherwise. Included in the social insurance
    * deduction but not in {@link healthInsurance}.

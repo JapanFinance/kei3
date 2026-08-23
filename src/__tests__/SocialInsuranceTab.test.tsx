@@ -5,8 +5,9 @@ import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
-import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails } from '../types/tax';
+import type { TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 // Mock DetailedTooltip to render children directly for easier testing
 vi.mock('../components/ui/Tooltips', async () => {
@@ -51,52 +52,23 @@ describe('SocialInsuranceTab', () => {
     incomeYear: 2025, // this fixture models income year 2025 (FY2025 rates); drives all tooltips via inputs
   };
 
-  const mockResidenceTax: ResidenceTaxDetails = {
-    taxableIncome: 0,
-    cityProportion: 0,
-    prefecturalProportion: 0,
-    residenceTaxRate: 0,
-    basicDeduction: 0,
-    personalDeductionDifference: 0,
-    city: { cityTaxableIncome: 0, cityAdjustmentCredit: 0, cityIncomeTax: 0, cityPerCapitaTax: 0 },
-    prefecture: {
-      prefecturalTaxableIncome: 0,
-      prefecturalAdjustmentCredit: 0,
-      prefecturalIncomeTax: 0,
-      prefecturalPerCapitaTax: 0,
-    },
-    perCapitaTax: 0,
-    forestEnvironmentTax: 0,
-    totalResidenceTax: 200000,
-  };
-
-  const mockResults: TakeHomeResults = {
+  const mockResults: TakeHomeResults = makeTakeHomeResults({
     annualIncome: 6000000,
     healthInsurance: 300000,
     pensionPayments: 500000,
     employmentInsurance: 30000,
     nationalIncomeTax: 100000,
-    residenceTax: mockResidenceTax,
+    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 200000 }),
     takeHomeIncome: 4870000,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
-    ageRange: 'age40to59' as const,
+    ageRange: 'age40to59',
     hasEmploymentIncome: true,
     totalNetIncome: 4200000,
-    dcPlanContributions: 0,
-    furusatoNozei: {
-      limit: 0,
-      incomeTaxReduction: 0,
-      residenceTaxDonationBasicDeduction: 0,
-      residenceTaxSpecialDeduction: 0,
-      outOfPocketCost: 0,
-      residenceTaxReduction: 0,
-    },
     residenceTaxBasicDeduction: 430000,
     salaryIncome: 6000000,
     grossEmploymentIncome: 6000000,
-    additionalDeductions: { national: 0, residence: 0, items: [] },
-  };
+  });
 
   it('displays Monthly Remuneration label', () => {
     render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
@@ -264,57 +236,21 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     incomeYear: 2026,
   };
 
-  const baseResults: TakeHomeResults = {
+  const baseResults: TakeHomeResults = makeTakeHomeResults({
     annualIncome: 4_000_000,
     healthInsurance: 408_500,
-    pensionPayments: 0,
     nationalIncomeTax: 100_000,
-    residenceTax: {
-      taxableIncome: 0,
-      cityProportion: 0,
-      prefecturalProportion: 0,
-      residenceTaxRate: 0,
-      basicDeduction: 0,
-      personalDeductionDifference: 0,
-      city: {
-        cityTaxableIncome: 0,
-        cityAdjustmentCredit: 0,
-        cityIncomeTax: 0,
-        cityPerCapitaTax: 0,
-      },
-      prefecture: {
-        prefecturalTaxableIncome: 0,
-        prefecturalAdjustmentCredit: 0,
-        prefecturalIncomeTax: 0,
-        prefecturalPerCapitaTax: 0,
-      },
-      perCapitaTax: 0,
-      forestEnvironmentTax: 0,
-      totalResidenceTax: 200_000,
-    },
+    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 200_000 }),
     takeHomeIncome: 3_000_000,
     healthInsuranceProvider: 'LatterStageElderly',
     region: 'Tokyo',
     ageRange: 'age75plus',
-    hasEmploymentIncome: false,
-    grossEmploymentIncome: 0,
     totalNetIncome: 4_000_000,
     residenceTaxBasicDeduction: 430_000,
-    dcPlanContributions: 0,
-    furusatoNozei: {
-      limit: 0,
-      incomeTaxReduction: 0,
-      residenceTaxDonationBasicDeduction: 0,
-      residenceTaxSpecialDeduction: 0,
-      outOfPocketCost: 0,
-      residenceTaxReduction: 0,
-    },
-    salaryIncome: 0,
-    additionalDeductions: { national: 0, residence: 0, items: [] },
     latterStageMedicalPortion: 401_500,
     latterStageChildSupportPortion: 7_000,
     longTermCareCategory1Premium: 150_000,
-  };
+  });
 
   it('renders the latter-stage premium breakdown and no-pension note at 75+', () => {
     render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
@@ -336,6 +272,19 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     // 408,500 health insurance + 0 pension + 150,000 第1号.
     expect(screen.getByText('Annual Social Insurance')).toBeInTheDocument();
     expect(screen.getByText('¥558,500')).toBeInTheDocument();
+  });
+
+  it('omits the 第1号 section when no premium applies at 75+', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={{ ...baseInputs, longTermCareCategory1Premium: 0 }}
+        results={{ ...baseResults, longTermCareCategory1Premium: undefined }}
+      />,
+    );
+
+    expect(screen.queryByText('Age 65+ Long-term Care Insurance')).not.toBeInTheDocument();
+    // The annual premium and the social insurance total are both 408,500 with nothing else due.
+    expect(screen.getAllByText('¥408,500')).toHaveLength(2);
   });
 
   it('renders the 第1号 section alongside employee health insurance at 65-69', () => {
