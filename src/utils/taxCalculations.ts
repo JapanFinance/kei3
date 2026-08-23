@@ -13,6 +13,7 @@ import {
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import {
+  type AgeRange,
   DEFAULT_AGE_RANGE,
   isPublicPensionDeductionElderly,
   isLongTermCareCategory1Insured,
@@ -431,8 +432,8 @@ export interface NetIncomeComponents {
 const composeNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
+  ageRange: AgeRange,
   dependents: Dependent[],
-  taxpayerIs65OrOlder: boolean,
 ): NetIncomeComponents => {
   const {
     salaryIncome,
@@ -470,7 +471,7 @@ const composeNetIncomeComponents = (
   // test before that adjustment but after the 子ども・特別障害者等 variant.
   const netPublicPensionIncome = calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
-    taxpayerIs65OrOlder,
+    isPublicPensionDeductionElderly(ageRange),
     netEmploymentIncomeBeforePensionAdjustment + netBusinessAndMiscIncome,
     year,
   );
@@ -502,24 +503,19 @@ const composeNetIncomeComponents = (
  *
  * @param incomeStreams  Income streams to calculate net income for
  * @param year          Income year for the employment income deduction lookup
+ * @param ageRange      The taxpayer's age range, from which the age-keyed net income rules are
+ *                      resolved (currently the 公的年金等控除 minimums via
+ *                      {@link isPublicPensionDeductionElderly})
  * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
- *                      dependent is present. Defaults to none (no adjustment).
- * @param taxpayerIs65OrOlder Whether the taxpayer is 65 or older by the end of the income year
- *                      ({@link isPublicPensionDeductionElderly}), selecting the 公的年金等控除
- *                      minimums. Defaults to false; irrelevant without a public pension stream.
+ *                      dependent is present
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
-  dependents: Dependent[] = [],
-  taxpayerIs65OrOlder: boolean = false,
+  ageRange: AgeRange,
+  dependents: Dependent[],
 ): NetIncomeComponents =>
-  composeNetIncomeComponents(
-    calculateIncomeBreakdown(incomeStreams),
-    year,
-    dependents,
-    taxpayerIs65OrOlder,
-  );
+  composeNetIncomeComponents(calculateIncomeBreakdown(incomeStreams), year, ageRange, dependents);
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
@@ -561,12 +557,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     pensionIncomeAdjustmentDeduction,
     netPublicPensionIncome,
     totalNetIncome: netIncome,
-  } = composeNetIncomeComponents(
-    incomeBreakdown,
-    incomeYear,
-    inputs.dependents,
-    isPublicPensionDeductionElderly(inputs.ageRange),
-  );
+  } = composeNetIncomeComponents(incomeBreakdown, incomeYear, inputs.ageRange, inputs.dependents);
 
   let healthInsurance = 0;
   let pensionPayments = 0;
