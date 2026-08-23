@@ -73,14 +73,14 @@ describe('generateChartData with public pension income', () => {
     expect(withBreakdown.length).toBeGreaterThan(0);
 
     // The sweep scales the lone pension stream to each income point, so every point's breakdown
-    // is the whole income under the 'Public Pension' label.
+    // is the whole income under the 'Public Pension Income' label.
     withBreakdown.forEach(dataset => {
       const points = dataset.data as (Point & {
         breakdown?: { label: string; amount: number }[];
       })[];
       expect(points).toHaveLength(5);
       points.forEach(point => {
-        expect(point.breakdown).toEqual([{ label: 'Public Pension', amount: point.x }]);
+        expect(point.breakdown).toEqual([{ label: 'Public Pension Income', amount: point.x }]);
       });
     });
   });
