@@ -2120,6 +2120,15 @@ describe('calculateTaxes with public pension income', () => {
     });
     expect(pension.healthInsurance).toBe(equivalentMisc.healthInsurance);
     expect(pension.healthInsurance).toBeGreaterThan(0);
+    // 所法22② and 地法32①: both taxes are levied on the 合計所得金額, which the 公的年金等控除
+    // brings to the same 1,300,000 either way, and the social insurance deduction (所法74) is the
+    // same premium, so every downstream figure matches.
+    expect(pension.nationalIncomeTax).toBe(equivalentMisc.nationalIncomeTax);
+    expect(pension.residenceTax.totalResidenceTax).toBe(
+      equivalentMisc.residenceTax.totalResidenceTax,
+    );
+    expect(pension.furusatoNozei.limit).toBe(equivalentMisc.furusatoNozei.limit);
+    expect(pension.nationalIncomeTax).toBeGreaterThan(0);
     // No National Pension contributions at 65-69, and no employment insurance,
     // so take-home is income minus taxes and the health premium exactly.
     expect(pension.pensionPayments).toBe(0);
@@ -2142,6 +2151,12 @@ describe('calculateTaxes with public pension income', () => {
       incomeStreams: [{ type: 'miscellaneous' as const, amount: 1_300_000, id: 'm1' }],
     });
     expect(pension.healthInsurance).toBe(equivalentMisc.healthInsurance);
+    // Same 合計所得金額 and same premium, so the taxes computed on them agree too.
+    expect(pension.nationalIncomeTax).toBe(equivalentMisc.nationalIncomeTax);
+    expect(pension.residenceTax.totalResidenceTax).toBe(
+      equivalentMisc.residenceTax.totalResidenceTax,
+    );
+    expect(pension.furusatoNozei.limit).toBe(equivalentMisc.furusatoNozei.limit);
   });
 
   it('reduces the deduction band when other net income exceeds ¥10,000,000', () => {
@@ -2155,6 +2170,52 @@ describe('calculateTaxes with public pension income', () => {
     // Band 2 deduction: 300,000 + 25% × (3,000,000 − 500,000) = 925,000
     expect(result.netPublicPensionIncome).toBe(2_075_000);
     expect(result.totalNetIncome).toBe(12_075_001);
+  });
+
+  it('applies the 65+ band-2 minimum when other net income exceeds ¥10,000,000', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age65to69'),
+      incomeStreams: [
+        { type: 'miscellaneous' as const, amount: 10_000_001, id: 'm1' },
+        { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+      ],
+    });
+    // 所法35④二: band 2 gives 300,000 + 25% × (2,400,000 − 500,000) = 775,000, but 措法41の15の3
+    // guarantees 1,000,000 for a recipient 65 or older, so the minimum governs.
+    expect(result.netPublicPensionIncome).toBe(1_400_000);
+    expect(result.totalNetIncome).toBe(11_400_001);
+  });
+
+  it('applies the band-3 deduction when other net income exceeds ¥20,000,000', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age60to64'),
+      incomeStreams: [
+        { type: 'miscellaneous' as const, amount: 20_000_001, id: 'm1' },
+        { type: 'publicPension' as const, amount: 3_000_000, id: 'p1' },
+      ],
+    });
+    // 所法35④三: band 3 gives 200,000 + 25% × (3,000,000 − 500,000) = 825,000, above the band's
+    // 400,000 under-65 minimum, so the computed amount governs.
+    expect(result.netPublicPensionIncome).toBe(2_175_000);
+    expect(result.totalNetIncome).toBe(22_175_001);
+  });
+
+  it('omits the pension fields entirely when there is no pension stream', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age65to69'),
+      incomeStreams: [
+        { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      ],
+    });
+    expect(result.grossPublicPensionIncome).toBeUndefined();
+    expect(result.netPublicPensionIncome).toBeUndefined();
+    expect(result.pensionIncomeAdjustmentDeduction).toBeUndefined();
+  });
+
+  it('omits the 双方 adjustment for pension-only income', () => {
+    // 措法41の3の11①一 requires both 給与所得 and 年金雑所得, so pension alone never qualifies.
+    const result = calculateTaxes(pensionInputs('age65to69'));
+    expect(result.pensionIncomeAdjustmentDeduction).toBeUndefined();
   });
 
   it('judges the deduction band on net employment income, not the gross salary', () => {

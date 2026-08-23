@@ -59,3 +59,40 @@ describe('generateChartData with the 介護保険第1号 premium', () => {
     expect(nothingEntered.datasets.some(d => d.label === 'Long-term Care Insurance')).toBe(false);
   });
 });
+
+describe('generateChartData with public pension income', () => {
+  const pensionContext: ChartCalculationContext = {
+    ...context,
+    incomeStreams: [{ id: 'p', type: 'publicPension', amount: 2_400_000 }],
+    isEmploymentIncome: false,
+  };
+
+  it('labels the pension in the breakdown at every point of the sweep', () => {
+    const { datasets } = generateChartData(range, pensionContext);
+    const withBreakdown = datasets.filter(d => d.type === 'bar');
+    expect(withBreakdown.length).toBeGreaterThan(0);
+
+    // The sweep scales the lone pension stream to each income point, so every point's breakdown
+    // is the whole income under the 'Public Pension' label.
+    withBreakdown.forEach(dataset => {
+      const points = dataset.data as (Point & {
+        breakdown?: { label: string; amount: number }[];
+      })[];
+      expect(points).toHaveLength(5);
+      points.forEach(point => {
+        expect(point.breakdown).toEqual([{ label: 'Public Pension', amount: point.x }]);
+      });
+    });
+  });
+
+  it('stacks to the income at every point of a pension sweep', () => {
+    const { datasets } = generateChartData(range, pensionContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
+  });
+});
