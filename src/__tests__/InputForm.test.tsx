@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitForElementToBeRemoved, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useReducer } from 'react';
 
@@ -628,6 +628,52 @@ describe('TakeHomeInputForm Dependents Modal', () => {
 
     expect(netIncomePassed).toBe(expectedTotalNet);
   });
+});
+
+describe('TakeHomeInputForm Income Details Modal', () => {
+  // Real reducer so switching the age range flows through the app's own state update.
+  const TestWrapper = ({ ageRange }: { ageRange: 'age60to64' | 'age65to69' }) => {
+    const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      annualIncome: 2_400_000,
+      incomeYear: 2026,
+      incomeMode: 'advanced' as const,
+      incomeStreams: [{ id: 'p1', type: 'publicPension' as const, amount: 2_400_000 }],
+      savedIncomeStreams: [],
+      longTermCareCategory1Premium: 0,
+      ageRange,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dcPlanContributions: 0,
+      dependents: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    });
+
+    return <TakeHomeInputForm inputs={inputs} dispatch={dispatch} />;
+  };
+
+  it('shows the age-appropriate 公的年金等控除 on the pension group', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper ageRange="age65to69" />);
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    // 措法41の15の3: at 65 or older the band-1 minimum deduction is 1,100,000, above the
+    // 400,000 + 25% × (2,400,000 − 500,000) = 875,000 the 所法35④一 formula gives.
+    expect(screen.getByText(/Public Pension Deduction.*-¥1,100,000/)).toBeInTheDocument();
+    expect(screen.getByText('Net Public Pension Income: ¥1,300,000')).toBeInTheDocument();
+
+    // Under 65 the formula governs instead, so the same gross nets a smaller deduction.
+    await user.click(screen.getByRole('button', { name: /close/i }));
+    await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
+    await user.click(screen.getByRole('combobox', { name: 'Age' }));
+    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: '60-64' }));
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    expect(screen.getByText(/Public Pension Deduction.*-¥875,000/)).toBeInTheDocument();
+    expect(screen.getByText('Net Public Pension Income: ¥1,525,000')).toBeInTheDocument();
+  }, 10_000);
 });
 
 describe('Commuting Allowance Integration', () => {

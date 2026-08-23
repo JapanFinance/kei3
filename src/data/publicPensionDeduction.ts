@@ -28,14 +28,16 @@
  *   確定申告の手引き worksheet, which states the 1円未満切り捨て of the resulting 雑所得
  */
 
-import type { AgeBand } from '../types/age';
+import { ageRangeCoversBand, type AgeBand, type AgeRange } from '../types/age';
 
 /**
  * The recipients for whom each band's {@link PublicPensionDeductionBand.elderlyMinimumDeduction}
  * replaces its {@link PublicPensionDeductionBand.minimumDeduction}: those aged 65 or older on
  * December 31 of the income year (租税特別措置法第41条の15の3、判定日は同条第4項). Every part of
  * the calculator that asks whether a person gets the higher minimum reads this band, so the
- * taxpayer and the dependents are judged on the same boundary.
+ * taxpayer and the dependents are judged on the same boundary. Each module that offers age
+ * choices also lists this band among the bands it holds those choices to, so no choice on
+ * either side can straddle 65.
  *
  * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_15_3
  */
@@ -143,16 +145,21 @@ const getPublicPensionDeductionPeriod = (year: number): PublicPensionDeductionPe
 /**
  * Calculate net public pension income (公的年金等に係る雑所得) from the gross amount.
  *
+ * The recipient's ages are taken rather than a caller's reading of them, so the taxpayer and
+ * every dependent are judged here against
+ * {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND} and no caller can apply another band.
+ *
  * @param grossPublicPension   Gross public pension income (公的年金等の収入金額), in yen
- * @param isElderlyRecipient   Whether the recipient falls in
- *                             {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}
+ * @param recipientAgeRange    The ages the recipient's chosen age range spans, on December 31 of
+ *                             the income year — the year-end age both the taxpayer's and the
+ *                             dependents' age choices are selected by
  * @param otherTotalNetIncome  The recipient's total net income excluding public pension income
  *                             (公的年金等に係る雑所得以外の合計所得金額), in yen
  * @param year                 Income year for the parameter lookup
  */
 export function calculateNetPublicPensionIncome(
   grossPublicPension: number,
-  isElderlyRecipient: boolean,
+  recipientAgeRange: AgeRange,
   otherTotalNetIncome: number,
   year: number,
 ): number {
@@ -174,7 +181,10 @@ export function calculateNetPublicPensionIncome(
   }
 
   // Fixed amount plus variable component, no lower than the band's minimum deduction
-  const minimumDeduction = isElderlyRecipient
+  const minimumDeduction = ageRangeCoversBand(
+    recipientAgeRange,
+    PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
+  )
     ? band.elderlyMinimumDeduction
     : band.minimumDeduction;
   const deduction = Math.max(band.fixedAmount + variableComponent, minimumDeduction);

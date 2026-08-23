@@ -29,7 +29,7 @@ import type {
 import {
   type TaxpayerAgeRange,
   DEFAULT_TAXPAYER_AGE_RANGE,
-  isPublicPensionDeductionElderly,
+  taxpayerAgeRangeBounds,
   isLongTermCareCategory1Insured,
   isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
@@ -418,7 +418,7 @@ const composeTaxpayerNetIncomeComponents = (
         year,
       ),
       grossPublicPensionIncome,
-      is65OrOlder: isPublicPensionDeductionElderly(ageRange),
+      recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
       otherNetIncome: netBusinessAndMiscIncome,
       year,
     }),
@@ -434,9 +434,9 @@ const composeTaxpayerNetIncomeComponents = (
  *
  * @param incomeStreams  Income streams to calculate net income for
  * @param year          Income year for the employment income deduction lookup
- * @param ageRange      The taxpayer's age range, from which the age-keyed net income rules are
- *                      resolved (currently the 公的年金等控除 minimums via
- *                      {@link isPublicPensionDeductionElderly})
+ * @param ageRange      The taxpayer's age range, passed on to the age-keyed net income rules for
+ *                      them to read (currently only the 公的年金等控除 minimums, decided by
+ *                      {@link calculateNetPublicPensionIncome})
  * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
  *                      dependent is present
  */

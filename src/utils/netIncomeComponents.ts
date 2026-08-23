@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
+import type { AgeRange } from '../types/age';
 
 /**
  * The ¥100,000 that caps both income terms of the
@@ -77,8 +78,12 @@ export interface NetIncomeComposition {
   incomeAdjustmentDeduction: number;
   /** 公的年金等の収入金額, before the 公的年金等控除. */
   grossPublicPensionIncome: number;
-  /** Whether the recipient is 65 or older by the end of the income year, selecting the 控除 minimums. */
-  is65OrOlder: boolean;
+  /**
+   * The ages the pension recipient's chosen age range spans, for
+   * {@link calculateNetPublicPensionIncome} to read its own band from. An {@link AgeRange} because
+   * the one rule serves both the taxpayer and a dependent.
+   */
+  recipientAgeRange: AgeRange;
   /** Net income of every other category (事業所得, 公的年金等以外の雑所得, and so on). */
   otherNetIncome: number;
   /** Income year for the deduction table lookups. */
@@ -95,7 +100,7 @@ export const composeNetIncomeComponents = ({
   netEmploymentIncomeBeforePensionAdjustment,
   incomeAdjustmentDeduction,
   grossPublicPensionIncome,
-  is65OrOlder,
+  recipientAgeRange,
   otherNetIncome,
   year,
 }: NetIncomeComposition): NetIncomeComponents => {
@@ -105,7 +110,7 @@ export const composeNetIncomeComponents = ({
   // test before that adjustment but after the 子ども・特別障害者等 variant.
   const netPublicPensionIncome = calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
-    is65OrOlder,
+    recipientAgeRange,
     netEmploymentIncomeBeforePensionAdjustment + otherNetIncome,
     year,
   );

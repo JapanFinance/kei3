@@ -2142,6 +2142,19 @@ describe('所得金額調整控除（給与所得と年金所得の双方を有�
     expect(components.totalNetIncome).toBe(900_000);
   });
 
+  it('caps the adjustment at the net pension income when it is below ¥100,000', () => {
+    const components = calculateDependentNetIncomeComponents(
+      salaryAndPensionParent(3_000_000, 1_150_000),
+      TEST_INCOME_YEAR,
+    );
+    // 措法41の15の3: 年金雑所得 1,150,000 − 1,100,000 = 50,000, so 措法41の3の11①一 gives
+    // min(2,020,000, 100,000) + min(50,000, 100,000) − 100,000 = 50,000.
+    expect(components.netPublicPensionIncome).toBe(50_000);
+    expect(components.pensionIncomeAdjustmentDeduction).toBe(50_000);
+    expect(components.netEmploymentIncome).toBe(1_970_000);
+    expect(components.totalNetIncome).toBe(2_020_000);
+  });
+
   it('does not apply when the pension deduction already zeroes the pension income', () => {
     const components = calculateDependentNetIncomeComponents(
       salaryAndPensionParent(3_000_000, 1_100_000),

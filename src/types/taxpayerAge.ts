@@ -79,9 +79,17 @@ export const STATUTORY_AGE_BANDS = {
   elderlyDependentIncomeThreshold: { minAgeInclusive: 60 },
 } satisfies Record<string, AgeBand>;
 
+/**
+ * The ages the taxpayer's chosen {@link ageRange} spans, for the rules that take an
+ * {@link AgeRange} because they serve the taxpayer and the dependents alike.
+ */
+export function taxpayerAgeRangeBounds(ageRange: TaxpayerAgeRange): AgeRange {
+  return TAXPAYER_AGE_RANGE_BOUNDS[ageRange];
+}
+
 /** Whether every age the taxpayer's chosen {@link ageRange} spans falls inside {@link band}. */
 export function taxpayerAgeCoversBand(ageRange: TaxpayerAgeRange, band: AgeBand): boolean {
-  return ageRangeCoversBand(TAXPAYER_AGE_RANGE_BOUNDS[ageRange], band);
+  return ageRangeCoversBand(taxpayerAgeRangeBounds(ageRange), band);
 }
 
 /**
@@ -130,16 +138,6 @@ export function isSubjectToEmployeesPension(ageRange: TaxpayerAgeRange): boolean
  */
 export function isLatterStageElderly(ageRange: TaxpayerAgeRange): boolean {
   return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.latterStageElderly);
-}
-
-/**
- * Whether the public pension deduction (公的年金等控除) uses its higher minimums, judged as of
- * December 31 of the income year — the same year-end age the ranges are selected by. The band
- * itself is {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}, exported next to the deduction
- * table it governs.
- */
-export function isPublicPensionDeductionElderly(ageRange: TaxpayerAgeRange): boolean {
-  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.publicPensionDeductionElderly);
 }
 
 if (import.meta.env.DEV) {

@@ -9,6 +9,18 @@
  * offers, whether for the taxpayer or for a dependent. Answering any age-keyed rule for any
  * person is therefore the same question, asked by {@link ageRangeCoversBand} — does the range
  * fall inside the band?
+ *
+ * One convention follows from that, and every age-keyed rule in the calculator keeps it: the
+ * module that owns a rule owns the rule's band and applies it itself. Such a rule takes the
+ * person's age, never a decision a caller has already made about that age, so no call site can
+ * answer a rule on a band that is not the rule's own. How the age is spelled follows from who
+ * the rule is asked about — the owning module's own union of age choices where a rule concerns
+ * only the taxpayer or only a dependent, and an {@link AgeRange} where one rule serves both,
+ * which the age-choice modules produce from their choices for that purpose.
+ *
+ * A boolean parameter is still the right shape for a fact about a household rather than about
+ * one person's age, such as whether any dependent at all is 23歳未満; the band there has already
+ * been applied, per dependent, by the module that owns it.
  */
 
 /**

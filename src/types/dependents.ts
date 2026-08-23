@@ -146,6 +146,14 @@ export const DEPENDENT_AGE_BANDS = {
 } satisfies Record<string, AgeBand>;
 
 /**
+ * The ages a spouse's or a dependent's chosen {@link ageRange} spans, for the rules that take an
+ * {@link AgeRange} because they serve the taxpayer and the dependents alike.
+ */
+export function dependentAgeRangeBounds(ageRange: SpouseAgeRange | DependentAgeRange): AgeRange {
+  return AGE_RANGE_BOUNDS[ageRange];
+}
+
+/**
  * Whether every age in {@link ageRange} falls inside {@link band}. Spouse and non-spouse
  * ranges are answered by the same predicate, so a rule shared by both reads one band.
  */
@@ -153,7 +161,7 @@ export function dependentAgeCoversBand(
   ageRange: SpouseAgeRange | DependentAgeRange,
   band: AgeBand,
 ): boolean {
-  return ageRangeCoversBand(AGE_RANGE_BOUNDS[ageRange], band);
+  return ageRangeCoversBand(dependentAgeRangeBounds(ageRange), band);
 }
 
 /**

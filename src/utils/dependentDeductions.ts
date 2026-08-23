@@ -18,7 +18,6 @@
 
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import { PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND } from '../data/publicPensionDeduction';
 import type {
   Dependent,
   DisabilityLevel,
@@ -31,6 +30,7 @@ import {
   DEPENDENT_AGE_BANDS,
   SPOUSE_AGE_BANDS,
   dependentAgeCoversBand,
+  dependentAgeRangeBounds,
 } from '../types/dependents';
 import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
 import { calculateNetEmploymentIncome } from './taxCalculations';
@@ -83,10 +83,9 @@ function calculateDependentNetEmploymentIncome(
 }
 
 /**
- * Calculate net public pension income (公的年金等に係る雑所得) for a dependent.
- *
- * The public pension deduction (公的年金等控除) depends on the age range (65 boundary) and on
- * the dependent's total net income other than public pension income.
+ * Calculate net public pension income (公的年金等に係る雑所得) for a dependent, as
+ * {@link calculateDependentNetIncomeComponents} composes it — the 公的年金等控除 is decided there
+ * from the dependent's age and their total net income other than public pension income.
  */
 export function calculateDependentNetPublicPensionIncome(
   dependent: DependentIncomeProfile,
@@ -114,10 +113,7 @@ export function calculateDependentNetIncomeComponents(
     ),
     incomeAdjustmentDeduction: calculateDependentIncomeAdjustmentDeduction(dependent),
     grossPublicPensionIncome,
-    is65OrOlder: dependentAgeCoversBand(
-      dependent.ageRange,
-      PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
-    ),
+    recipientAgeRange: dependentAgeRangeBounds(dependent.ageRange),
     otherNetIncome,
     year,
   });
