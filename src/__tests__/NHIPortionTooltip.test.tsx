@@ -50,6 +50,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     region,
     ageRange: includeLTC ? ('age40to59' as const) : ('age20to39' as const),
     residenceTaxBasicDeduction: 430_000,
+    netBusinessAndMiscIncome: annualIncome,
     totalNetIncome: annualIncome,
     nhiMedicalPortion: breakdown.medicalPortion,
     nhiElderlySupportPortion: breakdown.elderlySupportPortion,

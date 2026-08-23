@@ -110,18 +110,18 @@ describe.each(tabs)('%s public pension income rows', (_name, Tab) => {
     expect(screen.getAllByText('¥3,220,000').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('backs the pension out of the Net Business / Misc Income row', () => {
+  it('shows the business income and the pension as separate rows with their subtotal', () => {
     render(
       <Tab
         results={pensionResults({
           annualIncome: 4_400_000,
+          netBusinessAndMiscIncome: 2_000_000,
           totalNetIncome: 3_300_000,
         })}
         inputs={makeInputs([{ id: 'b1', type: 'business', amount: 2_000_000 }, pensionStream])}
       />,
     );
 
-    // 3,300,000 total − 1,300,000 net pension: the business row must not absorb the pension.
     expect(screen.getByText(/Net Business.*Misc Income/)).toBeInTheDocument();
     expect(screen.getAllByText('¥2,000,000').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
