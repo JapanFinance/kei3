@@ -307,7 +307,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -322,7 +322,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -338,7 +338,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '1',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -354,7 +354,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -362,7 +362,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '2',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -377,7 +377,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -385,7 +385,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '2',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -403,7 +403,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_000_000 },
@@ -423,7 +423,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '1',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -446,7 +446,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -533,7 +533,7 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
       {
         id: 'd1',
         relationship: 'child',
-        ageCategory: 'under16',
+        ageRange: 'under16',
         isCohabiting: true,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -541,7 +541,7 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
       {
         id: 'd2',
         relationship: 'child',
-        ageCategory: 'under16',
+        ageRange: 'under16',
         isCohabiting: true,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },

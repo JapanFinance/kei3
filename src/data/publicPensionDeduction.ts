@@ -18,8 +18,8 @@
  *    own minimum deduction.
  *  - 租税特別措置法第41条の15の3 replaces each band's
  *    {@link PublicPensionDeductionBand.minimumDeduction} with its
- *    {@link PublicPensionDeductionBand.minimumDeduction65Plus} for recipients aged 65 or older on
- *    December 31 of the income year (同条第4項).
+ *    {@link PublicPensionDeductionBand.elderlyMinimumDeduction} for the recipients in
+ *    {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}.
  *
  * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_2-Se_2-Ss_1-At_35 — 所得税法第35条第4項
  * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_15_3 — 租税特別措置法第41条の15の3
@@ -27,6 +27,19 @@
  * @see https://www.nta.go.jp/taxes/shiraberu/shinkoku/tebiki/2025/03/order2/3-2_07.htm — the
  *   確定申告の手引き worksheet, which states the 1円未満切り捨て of the resulting 雑所得
  */
+
+import type { AgeBand } from '../types/age';
+
+/**
+ * The recipients for whom each band's {@link PublicPensionDeductionBand.elderlyMinimumDeduction}
+ * replaces its {@link PublicPensionDeductionBand.minimumDeduction}: those aged 65 or older on
+ * December 31 of the income year (租税特別措置法第41条の15の3、判定日は同条第4項). Every part of
+ * the calculator that asks whether a person gets the higher minimum reads this band, so the
+ * taxpayer and the dependents are judged on the same boundary.
+ *
+ * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_15_3
+ */
+export const PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND: AgeBand = { minAgeInclusive: 65 };
 
 /**
  * One bracket (第1号ロ(1)〜(4)) of the variable component of the deduction. The statute writes
@@ -51,10 +64,10 @@ export interface PublicPensionDeductionBand {
   /** The band's minimum deduction (各号柱書の最低保障), in yen */
   minimumDeduction: number;
   /**
-   * Replaces {@link minimumDeduction} for recipients 65 or older on December 31 of the income
-   * year (租税特別措置法第41条の15の3), in yen
+   * Replaces {@link minimumDeduction} for the recipients in
+   * {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}, in yen
    */
-  minimumDeduction65Plus: number;
+  elderlyMinimumDeduction: number;
 }
 
 /** The complete deduction parameter set effective from a given income year. */
@@ -87,19 +100,19 @@ export const PUBLIC_PENSION_DEDUCTION_PERIODS: ReadonlyArray<PublicPensionDeduct
         nonPensionNetIncomeMaxInclusive: 10_000_000,
         fixedAmount: 400_000,
         minimumDeduction: 600_000,
-        minimumDeduction65Plus: 1_100_000,
+        elderlyMinimumDeduction: 1_100_000,
       },
       {
         nonPensionNetIncomeMaxInclusive: 20_000_000,
         fixedAmount: 300_000,
         minimumDeduction: 500_000,
-        minimumDeduction65Plus: 1_000_000,
+        elderlyMinimumDeduction: 1_000_000,
       },
       {
         nonPensionNetIncomeMaxInclusive: Number.POSITIVE_INFINITY,
         fixedAmount: 200_000,
         minimumDeduction: 400_000,
-        minimumDeduction65Plus: 900_000,
+        elderlyMinimumDeduction: 900_000,
       },
     ],
   },
@@ -130,15 +143,16 @@ const getPublicPensionDeductionPeriod = (year: number): PublicPensionDeductionPe
 /**
  * Calculate net public pension income (公的年金等に係る雑所得) from the gross amount.
  *
- * @param grossPublicPension  Gross public pension income (公的年金等の収入金額), in yen
- * @param is65OrOlder         Whether the recipient is 65 or older on December 31 of the income year
- * @param otherTotalNetIncome The recipient's total net income excluding public pension income
- *                            (公的年金等に係る雑所得以外の合計所得金額), in yen
- * @param year                Income year for the parameter lookup
+ * @param grossPublicPension   Gross public pension income (公的年金等の収入金額), in yen
+ * @param isElderlyRecipient   Whether the recipient falls in
+ *                             {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}
+ * @param otherTotalNetIncome  The recipient's total net income excluding public pension income
+ *                             (公的年金等に係る雑所得以外の合計所得金額), in yen
+ * @param year                 Income year for the parameter lookup
  */
 export function calculateNetPublicPensionIncome(
   grossPublicPension: number,
-  is65OrOlder: boolean,
+  isElderlyRecipient: boolean,
   otherTotalNetIncome: number,
   year: number,
 ): number {
@@ -160,7 +174,9 @@ export function calculateNetPublicPensionIncome(
   }
 
   // Fixed amount plus variable component, no lower than the band's minimum deduction
-  const minimumDeduction = is65OrOlder ? band.minimumDeduction65Plus : band.minimumDeduction;
+  const minimumDeduction = isElderlyRecipient
+    ? band.elderlyMinimumDeduction
+    : band.minimumDeduction;
   const deduction = Math.max(band.fixedAmount + variableComponent, minimumDeduction);
 
   // The 確定申告の手引き worksheet drops any fraction of a yen from the resulting 雑所得

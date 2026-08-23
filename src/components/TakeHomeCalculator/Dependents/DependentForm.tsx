@@ -26,15 +26,11 @@ import React, { useState } from 'react';
 import type {
   OtherDependent,
   DependentRelationship,
-  DependentAgeCategory,
+  DependentAgeRange,
   DisabilityLevel,
   DependentIncome,
 } from '../../../types/dependents';
-import {
-  RELATIONSHIPS,
-  DISABILITY_LEVELS,
-  DEPENDENT_AGE_CATEGORIES,
-} from '../../../types/dependents';
+import { RELATIONSHIPS, DISABILITY_LEVELS, DEPENDENT_AGE_RANGES } from '../../../types/dependents';
 import {
   calculateDependentDeductions,
   calculateDependentNetIncomeComponents,
@@ -71,9 +67,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   const [relationship, setRelationship] = useState<Exclude<DependentRelationship, 'spouse'>>(
     dependent?.relationship ?? 'child',
   );
-  const [ageCategory, setAgeCategory] = useState<DependentAgeCategory>(
-    dependent?.ageCategory ?? '16to18',
-  );
+  const [ageRange, setAgeRange] = useState<DependentAgeRange>(dependent?.ageRange ?? '16to18');
   const [income, setIncome] = useState<DependentIncome>(
     dependent?.income ?? {
       grossEmploymentIncome: 0,
@@ -88,7 +82,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
     const newDependent: OtherDependent = {
       id: dependent?.id ?? `dep-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
       relationship,
-      ageCategory,
+      ageRange,
       income,
       disability,
       isCohabiting,
@@ -99,7 +93,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   const canSubmit = true; // All fields have defaults, always submittable
 
-  const incomeProfile = { income, ageCategory, disability };
+  const incomeProfile = { income, ageRange, disability };
   const { netEmploymentIncome, incomeAdjustmentDeduction, pensionIncomeAdjustmentDeduction } =
     calculateDependentNetIncomeComponents(incomeProfile, incomeYear);
   const incomeAdjustmentNote = describeIncomeAdjustmentDeduction(
@@ -419,10 +413,10 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           <Select
             labelId="age-label"
             label="Age"
-            value={ageCategory}
-            onChange={e => setAgeCategory(e.target.value)}
+            value={ageRange}
+            onChange={e => setAgeRange(e.target.value)}
           >
-            {DEPENDENT_AGE_CATEGORIES.map(cat => (
+            {DEPENDENT_AGE_RANGES.map(cat => (
               <MenuItem key={cat.value} value={cat.value}>
                 {cat.label}
               </MenuItem>
@@ -493,7 +487,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 const tempDependent: OtherDependent = {
                   id: 'temp',
                   relationship,
-                  ageCategory,
+                  ageRange,
                   income,
                   disability,
                   isCohabiting,

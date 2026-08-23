@@ -12,15 +12,6 @@ import {
 } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
-import {
-  type AgeRange,
-  DEFAULT_AGE_RANGE,
-  isPublicPensionDeductionElderly,
-  isLongTermCareCategory1Insured,
-  isLongTermCareCategory2Insured,
-  isSubjectToEmployeesPension,
-  isSubjectToNationalPension,
-} from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
@@ -36,6 +27,15 @@ import type {
   TakeHomeInputs,
   TakeHomeResults,
 } from '../types/tax';
+import {
+  type TaxpayerAgeRange,
+  DEFAULT_TAXPAYER_AGE_RANGE,
+  isPublicPensionDeductionElderly,
+  isLongTermCareCategory1Insured,
+  isLongTermCareCategory2Insured,
+  isSubjectToEmployeesPension,
+  isSubjectToNationalPension,
+} from '../types/taxpayerAge';
 import { calculateAdditionalDeductions } from './additionalDeductions';
 import {
   calculateDependentDeductions,
@@ -296,7 +296,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   salaryIncome: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
   region: 'Tokyo',
-  ageRange: DEFAULT_AGE_RANGE,
+  ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
   grossEmploymentIncome: 0,
   incomeAdjustmentDeduction: 0,
   netBusinessAndMiscIncome: 0,
@@ -435,7 +435,7 @@ export interface NetIncomeComponents {
 const composeNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
 ): NetIncomeComponents => {
   const {
@@ -516,7 +516,7 @@ const composeNetIncomeComponents = (
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
 ): NetIncomeComponents =>
   composeNetIncomeComponents(calculateIncomeBreakdown(incomeStreams), year, ageRange, dependents);

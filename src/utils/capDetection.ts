@@ -7,11 +7,6 @@ import {
 } from '../data/employeesHealthInsurance/providerRates';
 import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
-  isLongTermCareCategory2Insured,
-  isSubjectToEmployeesPension,
-  isSubjectToNationalPension,
-} from '../types/ageRange';
-import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
   DEPENDENT_COVERAGE_ID,
@@ -19,6 +14,11 @@ import {
   isEmployeeHealthProvider,
 } from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
+import {
+  isLongTermCareCategory2Insured,
+  isSubjectToEmployeesPension,
+  isSubjectToNationalPension,
+} from '../types/taxpayerAge';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
 import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
 

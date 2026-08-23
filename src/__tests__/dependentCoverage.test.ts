@@ -3,13 +3,13 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { AGE_RANGES } from '../types/ageRange';
 import {
   isDependentCoverageEligible,
   getDependentIncomeThreshold,
   DEPENDENT_INCOME_THRESHOLD,
-  DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS,
+  DEPENDENT_INCOME_THRESHOLD_ELDERLY,
 } from '../types/healthInsurance';
+import { TAXPAYER_AGE_RANGES } from '../types/taxpayerAge';
 
 const UNDER_60_RANGES = ['under18', 'age18to19', 'age20to39', 'age40to59'] as const;
 // 75+ is included for the threshold function's completeness even though dependent coverage
@@ -19,17 +19,17 @@ const AGE_60_PLUS_RANGES = ['age60to64', 'age65to69', 'age70to74', 'age75plus'] 
 describe('getDependentIncomeThreshold', () => {
   it('is 1.3 million yen below age 60 and 1.8 million yen from age 60', () => {
     expect(DEPENDENT_INCOME_THRESHOLD).toBe(1_300_000);
-    expect(DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS).toBe(1_800_000);
+    expect(DEPENDENT_INCOME_THRESHOLD_ELDERLY).toBe(1_800_000);
     for (const ageRange of UNDER_60_RANGES) {
       expect(getDependentIncomeThreshold(ageRange)).toBe(DEPENDENT_INCOME_THRESHOLD);
     }
     for (const ageRange of AGE_60_PLUS_RANGES) {
-      expect(getDependentIncomeThreshold(ageRange)).toBe(DEPENDENT_INCOME_THRESHOLD_AGE60_PLUS);
+      expect(getDependentIncomeThreshold(ageRange)).toBe(DEPENDENT_INCOME_THRESHOLD_ELDERLY);
     }
   });
 
   it('covers every age range', () => {
-    expect([...UNDER_60_RANGES, ...AGE_60_PLUS_RANGES]).toEqual([...AGE_RANGES]);
+    expect([...UNDER_60_RANGES, ...AGE_60_PLUS_RANGES]).toEqual([...TAXPAYER_AGE_RANGES]);
   });
 });
 

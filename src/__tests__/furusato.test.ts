@@ -393,7 +393,7 @@ describe('calculateFurusatoNozeiLimit', () => {
           {
             id: 'spouse',
             relationship: 'spouse',
-            ageCategory: 'under65',
+            ageRange: 'under65',
             income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
             disability: 'none',
             isCohabiting: true,
@@ -401,7 +401,7 @@ describe('calculateFurusatoNozeiLimit', () => {
           {
             id: 'child',
             relationship: 'child',
-            ageCategory: '16to18',
+            ageRange: '16to18',
             income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
             disability: 'none',
             isCohabiting: true,
