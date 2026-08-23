@@ -9,8 +9,17 @@ import {
 } from '../data/publicPensionDeduction';
 import { assertAgeRangesDoNotCrossBands, ageRangeCoversBand } from '../types/age';
 import type { Dependent } from '../types/dependents';
-import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
-import { STATUTORY_AGE_BANDS } from '../types/taxpayerAge';
+import {
+  DEPENDENT_AGE_BANDS,
+  SPOUSE_AGE_BANDS,
+  dependentAgeCoversBand,
+  dependentAgeRangeBounds,
+} from '../types/dependents';
+import {
+  STATUTORY_AGE_BANDS,
+  TAXPAYER_AGE_RANGES,
+  taxpayerAgeRangeBounds,
+} from '../types/taxpayerAge';
 import { calculateDependentNetPublicPensionIncome } from '../utils/dependentDeductions';
 import { calculateNetIncomeComponents } from '../utils/taxCalculations';
 
@@ -26,6 +35,30 @@ describe('ageRangeCoversBand', () => {
     // A band starting mid-interval holds for the oldest in it but not the youngest.
     expect(ageRangeCoversBand(forties, { minAgeInclusive: 45 })).toBe(false);
     expect(ageRangeCoversBand(forties, { maxAgeExclusive: 45 })).toBe(false);
+  });
+});
+
+describe('age-range bounds', () => {
+  it('gives every taxpayer choice a contiguous interval, together covering every age', () => {
+    let expectedMinAge = 0;
+    for (const ageRange of TAXPAYER_AGE_RANGES) {
+      const { minAgeInclusive, maxAgeExclusive } = taxpayerAgeRangeBounds(ageRange);
+      expect(minAgeInclusive).toBe(expectedMinAge);
+      expect(maxAgeExclusive).toBeGreaterThan(minAgeInclusive);
+      expectedMinAge = maxAgeExclusive;
+    }
+    expect(expectedMinAge).toBe(Infinity);
+  });
+
+  it('gives each dependent choice the interval its label states', () => {
+    expect(dependentAgeRangeBounds('under16')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 16 });
+    expect(dependentAgeRangeBounds('19to22')).toEqual({ minAgeInclusive: 19, maxAgeExclusive: 23 });
+    // A spouse's ranges overlap a non-spouse dependent's rather than continuing them.
+    expect(dependentAgeRangeBounds('under65')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 65 });
+    expect(dependentAgeRangeBounds('70plus')).toEqual({
+      minAgeInclusive: 70,
+      maxAgeExclusive: Infinity,
+    });
   });
 });
 
@@ -106,8 +139,22 @@ describe('the 65 boundary of the public pension deduction', () => {
   });
 
   it('matches the deduction the calculation applies for the same gross amount', () => {
-    expect(calculateNetPublicPensionIncome(GROSS_PENSION, false, 0, YEAR)).toBe(NET_UNDER_65);
-    expect(calculateNetPublicPensionIncome(GROSS_PENSION, true, 0, YEAR)).toBe(NET_65_PLUS);
+    expect(
+      calculateNetPublicPensionIncome(
+        GROSS_PENSION,
+        { minAgeInclusive: 64, maxAgeExclusive: 65 },
+        0,
+        YEAR,
+      ),
+    ).toBe(NET_UNDER_65);
+    expect(
+      calculateNetPublicPensionIncome(
+        GROSS_PENSION,
+        { minAgeInclusive: 65, maxAgeExclusive: 66 },
+        0,
+        YEAR,
+      ),
+    ).toBe(NET_65_PLUS);
   });
 });
 

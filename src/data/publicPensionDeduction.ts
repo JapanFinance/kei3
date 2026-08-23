@@ -28,7 +28,7 @@
  *   確定申告の手引き worksheet, which states the 1円未満切り捨て of the resulting 雑所得
  */
 
-import type { AgeBand } from '../types/age';
+import { ageRangeCoversBand, type AgeBand, type AgeRange } from '../types/age';
 
 /**
  * The recipients for whom each band's {@link PublicPensionDeductionBand.elderlyMinimumDeduction}
@@ -143,16 +143,21 @@ const getPublicPensionDeductionPeriod = (year: number): PublicPensionDeductionPe
 /**
  * Calculate net public pension income (公的年金等に係る雑所得) from the gross amount.
  *
+ * The recipient's ages are taken rather than a caller's reading of them, so the taxpayer and
+ * every dependent are judged here against
+ * {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND} and no caller can apply another band.
+ *
  * @param grossPublicPension   Gross public pension income (公的年金等の収入金額), in yen
- * @param isElderlyRecipient   Whether the recipient falls in
- *                             {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}
+ * @param recipientAgeRange    The ages the recipient's chosen age range spans, on December 31 of
+ *                             the income year — the year-end age both the taxpayer's and the
+ *                             dependents' age choices are selected by
  * @param otherTotalNetIncome  The recipient's total net income excluding public pension income
  *                             (公的年金等に係る雑所得以外の合計所得金額), in yen
  * @param year                 Income year for the parameter lookup
  */
 export function calculateNetPublicPensionIncome(
   grossPublicPension: number,
-  isElderlyRecipient: boolean,
+  recipientAgeRange: AgeRange,
   otherTotalNetIncome: number,
   year: number,
 ): number {
@@ -174,7 +179,10 @@ export function calculateNetPublicPensionIncome(
   }
 
   // Fixed amount plus variable component, no lower than the band's minimum deduction
-  const minimumDeduction = isElderlyRecipient
+  const minimumDeduction = ageRangeCoversBand(
+    recipientAgeRange,
+    PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
+  )
     ? band.elderlyMinimumDeduction
     : band.minimumDeduction;
   const deduction = Math.max(band.fixedAmount + variableComponent, minimumDeduction);

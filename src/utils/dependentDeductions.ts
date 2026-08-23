@@ -18,10 +18,7 @@
 
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import {
-  PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
-  calculateNetPublicPensionIncome,
-} from '../data/publicPensionDeduction';
+import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import type {
   Dependent,
   DisabilityLevel,
@@ -34,6 +31,7 @@ import {
   DEPENDENT_AGE_BANDS,
   SPOUSE_AGE_BANDS,
   dependentAgeCoversBand,
+  dependentAgeRangeBounds,
 } from '../types/dependents';
 import {
   calculateNetEmploymentIncome,
@@ -105,7 +103,7 @@ export function calculateDependentNetPublicPensionIncome(
     calculateDependentNetEmploymentIncome(dependent, year) + otherNetIncome;
   return calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
-    dependentAgeCoversBand(dependent.ageRange, PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND),
+    dependentAgeRangeBounds(dependent.ageRange),
     otherTotalNetIncome,
     year,
   );

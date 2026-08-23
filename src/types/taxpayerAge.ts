@@ -75,13 +75,26 @@ export const STATUTORY_AGE_BANDS = {
   nationalPension: { minAgeInclusive: 20, maxAgeExclusive: 60 },
   employeesPension: { maxAgeExclusive: 70 },
   latterStageElderly: { minAgeInclusive: 75 },
+  /**
+   * The higher 公的年金等控除 minimums. The rule is answered by the module that owns the
+   * deduction table, for the taxpayer and the dependents alike, so this entry exists only to
+   * hold the taxpayer's age choices to the band's 65 boundary in the DEV block below.
+   */
   publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   elderlyDependentIncomeThreshold: { minAgeInclusive: 60 },
 } satisfies Record<string, AgeBand>;
 
+/**
+ * The ages the taxpayer's chosen {@link ageRange} spans, for the rules that take an
+ * {@link AgeRange} because they serve the taxpayer and the dependents alike.
+ */
+export function taxpayerAgeRangeBounds(ageRange: TaxpayerAgeRange): AgeRange {
+  return TAXPAYER_AGE_RANGE_BOUNDS[ageRange];
+}
+
 /** Whether every age the taxpayer's chosen {@link ageRange} spans falls inside {@link band}. */
 export function taxpayerAgeCoversBand(ageRange: TaxpayerAgeRange, band: AgeBand): boolean {
-  return ageRangeCoversBand(TAXPAYER_AGE_RANGE_BOUNDS[ageRange], band);
+  return ageRangeCoversBand(taxpayerAgeRangeBounds(ageRange), band);
 }
 
 /**
@@ -130,16 +143,6 @@ export function isSubjectToEmployeesPension(ageRange: TaxpayerAgeRange): boolean
  */
 export function isLatterStageElderly(ageRange: TaxpayerAgeRange): boolean {
   return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.latterStageElderly);
-}
-
-/**
- * Whether the public pension deduction (公的年金等控除) uses its higher minimums, judged as of
- * December 31 of the income year — the same year-end age the ranges are selected by. The band
- * itself is {@link PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND}, exported next to the deduction
- * table it governs.
- */
-export function isPublicPensionDeductionElderly(ageRange: TaxpayerAgeRange): boolean {
-  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.publicPensionDeductionElderly);
 }
 
 if (import.meta.env.DEV) {
