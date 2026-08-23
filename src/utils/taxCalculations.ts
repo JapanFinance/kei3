@@ -432,8 +432,8 @@ export interface NetIncomeComponents {
 const composeNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
-  dependents: Dependent[],
   ageRange: AgeRange,
+  dependents: Dependent[],
 ): NetIncomeComponents => {
   const {
     salaryIncome,
@@ -503,19 +503,19 @@ const composeNetIncomeComponents = (
  *
  * @param incomeStreams  Income streams to calculate net income for
  * @param year          Income year for the employment income deduction lookup
- * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
- *                      dependent is present
  * @param ageRange      The taxpayer's age range, from which the age-keyed net income rules are
  *                      resolved (currently the 公的年金等控除 minimums via
  *                      {@link isPublicPensionDeductionElderly})
+ * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
+ *                      dependent is present
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
-  dependents: Dependent[],
   ageRange: AgeRange,
+  dependents: Dependent[],
 ): NetIncomeComponents =>
-  composeNetIncomeComponents(calculateIncomeBreakdown(incomeStreams), year, dependents, ageRange);
+  composeNetIncomeComponents(calculateIncomeBreakdown(incomeStreams), year, ageRange, dependents);
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
@@ -557,7 +557,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     pensionIncomeAdjustmentDeduction,
     netPublicPensionIncome,
     totalNetIncome: netIncome,
-  } = composeNetIncomeComponents(incomeBreakdown, incomeYear, inputs.dependents, inputs.ageRange);
+  } = composeNetIncomeComponents(incomeBreakdown, incomeYear, inputs.ageRange, inputs.dependents);
 
   let healthInsurance = 0;
   let pensionPayments = 0;

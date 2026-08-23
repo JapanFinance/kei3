@@ -244,8 +244,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       calculateNetIncomeComponents(
         inputs.incomeStreams,
         inputs.incomeYear,
-        inputs.dependents,
         inputs.ageRange,
+        inputs.dependents,
       ),
     [inputs.incomeStreams, inputs.incomeYear, inputs.dependents, inputs.ageRange],
   );
