@@ -145,13 +145,14 @@ export const generateChartData = (
     // Calculate breakdown for display
     let breakdown: { label: string; amount: number }[] | undefined;
     if (calcStreams.length > 0) {
-      const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0 };
+      const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0, publicPension: 0 };
       calcStreams.forEach(s => {
         const val = s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
         if (s.type === 'salary') groups.salary += val;
         else if (s.type === 'bonus') groups.bonus += val;
         else if (s.type === 'business') groups.business += val;
         else if (s.type === 'miscellaneous') groups.miscellaneous += val;
+        else if (s.type === 'publicPension') groups.publicPension += val;
       });
 
       breakdown = [];
@@ -160,6 +161,8 @@ export const generateChartData = (
       if (groups.business > 0) breakdown.push({ label: 'Business', amount: groups.business });
       if (groups.miscellaneous > 0)
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
+      if (groups.publicPension > 0)
+        breakdown.push({ label: 'Public Pension', amount: groups.publicPension });
     }
 
     const result = calculateTaxes(inputsForCalc);

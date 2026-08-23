@@ -12,6 +12,7 @@ import {
   isLatterStageElderly,
   isLongTermCareCategory1Insured,
   isLongTermCareCategory2Insured,
+  isPublicPensionDeductionElderly,
   isSubjectToEmployeesPension,
   isSubjectToNationalPension,
 } from '../types/ageRange';
@@ -22,6 +23,7 @@ interface PredicateExpectations {
   nationalPension: boolean;
   employeesPension: boolean;
   latterStage: boolean;
+  pensionDeductionElderly: boolean;
 }
 
 const EXPECTED: Record<AgeRange, PredicateExpectations> = {
@@ -31,6 +33,7 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: false,
     employeesPension: true,
     latterStage: false,
+    pensionDeductionElderly: false,
   },
   age18to19: {
     ltc2: false,
@@ -38,6 +41,7 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: false,
     employeesPension: true,
     latterStage: false,
+    pensionDeductionElderly: false,
   },
   age20to39: {
     ltc2: false,
@@ -45,6 +49,7 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: true,
     employeesPension: true,
     latterStage: false,
+    pensionDeductionElderly: false,
   },
   age40to59: {
     ltc2: true,
@@ -52,6 +57,7 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: true,
     employeesPension: true,
     latterStage: false,
+    pensionDeductionElderly: false,
   },
   age60to64: {
     ltc2: true,
@@ -59,6 +65,7 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: false,
     employeesPension: true,
     latterStage: false,
+    pensionDeductionElderly: false,
   },
   age65to69: {
     ltc2: false,
@@ -66,6 +73,7 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: false,
     employeesPension: true,
     latterStage: false,
+    pensionDeductionElderly: true,
   },
   age70to74: {
     ltc2: false,
@@ -73,6 +81,7 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: false,
     employeesPension: false,
     latterStage: false,
+    pensionDeductionElderly: true,
   },
   age75plus: {
     ltc2: false,
@@ -80,17 +89,20 @@ const EXPECTED: Record<AgeRange, PredicateExpectations> = {
     nationalPension: false,
     employeesPension: false,
     latterStage: true,
+    pensionDeductionElderly: true,
   },
 };
 
 describe('AgeRange predicates', () => {
   it.each(AGE_RANGES)('matches the expected rule set at %s', ageRange => {
-    const { ltc2, ltc1, nationalPension, employeesPension, latterStage } = EXPECTED[ageRange];
+    const { ltc2, ltc1, nationalPension, employeesPension, latterStage, pensionDeductionElderly } =
+      EXPECTED[ageRange];
     expect(isLongTermCareCategory2Insured(ageRange)).toBe(ltc2);
     expect(isLongTermCareCategory1Insured(ageRange)).toBe(ltc1);
     expect(isSubjectToNationalPension(ageRange)).toBe(nationalPension);
     expect(isSubjectToEmployeesPension(ageRange)).toBe(employeesPension);
     expect(isLatterStageElderly(ageRange)).toBe(latterStage);
+    expect(isPublicPensionDeductionElderly(ageRange)).toBe(pensionDeductionElderly);
   });
 
   it('covers a band only when every age in the range falls inside it', () => {

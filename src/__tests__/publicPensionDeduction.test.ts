@@ -41,6 +41,13 @@ describe('calculateNetPublicPensionIncome', () => {
       expect(calculateNetPublicPensionIncome(7_700_000, is65OrOlder, 0, YEAR)).toBe(5_860_000);
     });
 
+    it('drops any fraction of a yen from the 雑所得', () => {
+      // 2,500,001 × 75% − 275,000 = 1,600,000.75 → 1,600,000 (手引き: 1円未満の端数切り捨て)
+      expect(calculateNetPublicPensionIncome(2_500_001, is65OrOlder, 0, YEAR)).toBe(1_600_000);
+      // 2,500,003 × 75% − 275,000 = 1,600,002.25 → 1,600,002
+      expect(calculateNetPublicPensionIncome(2_500_003, is65OrOlder, 0, YEAR)).toBe(1_600_002);
+    });
+
     it('caps the deduction at ¥1,955,000 above ¥10,000,000', () => {
       // 10,000,000 × 95% − 1,455,000 = 8,045,000 = 10,000,000 − 1,955,000
       expect(calculateNetPublicPensionIncome(10_000_000, is65OrOlder, 0, YEAR)).toBe(8_045_000);

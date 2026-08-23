@@ -66,6 +66,7 @@ export const STATUTORY_AGE_BANDS = {
   nationalPension: { minAgeInclusive: 20, maxAgeExclusive: 60 },
   employeesPension: { maxAgeExclusive: 70 },
   latterStageElderly: { minAgeInclusive: 75 },
+  publicPensionDeductionElderly: { minAgeInclusive: 65 },
   elderlyDependentIncomeThreshold: { minAgeInclusive: 60 },
 } satisfies Record<string, AgeBand>;
 
@@ -128,6 +129,16 @@ export function isSubjectToEmployeesPension(ageRange: AgeRange): boolean {
  */
 export function isLatterStageElderly(ageRange: AgeRange): boolean {
   return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.latterStageElderly);
+}
+
+/**
+ * Whether the public pension deduction (公的年金等控除) uses its higher minimums for
+ * recipients aged 65 or older, judged as of December 31 of the income year — the same
+ * year-end age the ranges are selected by.
+ * Source: 租税特別措置法第41条の15の3 https://laws.e-gov.go.jp/law/332AC0000000026#Mp-At_41_15_3
+ */
+export function isPublicPensionDeductionElderly(ageRange: AgeRange): boolean {
+  return coversAgeBand(ageRange, STATUTORY_AGE_BANDS.publicPensionDeductionElderly);
 }
 
 if (import.meta.env.DEV) {

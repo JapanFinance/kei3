@@ -342,3 +342,145 @@ describe('IncomeDetailsModal - Stock Compensation', () => {
     ]);
   });
 });
+
+describe('IncomeDetailsModal - Public Pension', () => {
+  it('allows adding public pension income', async () => {
+    const user = userEvent.setup();
+    const handleStreamsChange = vi.fn();
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[]}
+        onStreamsChange={handleStreamsChange}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+
+    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
+    await user.click(typeSelect);
+    const listbox = screen.getByRole('listbox');
+    await user.click(within(listbox).getByRole('option', { name: /public pension/i }));
+
+    // The gross-amount guidance and non-taxable pension warning are shown
+    expect(screen.getByText(/What Counts as Public Pension/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /公的年金等の課税関係/ })).toHaveAttribute(
+      'href',
+      'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm',
+    );
+
+    const amountInput = screen.getByRole('textbox', { name: /annual gross pension income/i });
+    await user.clear(amountInput);
+    await user.type(amountInput, '2400000');
+
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(handleStreamsChange).toHaveBeenCalledWith([
+      expect.objectContaining({
+        type: 'publicPension',
+        amount: 2400000,
+      }),
+    ]);
+  });
+
+  it('displays public pension streams in their own section with a PENSION chip and subtotal', () => {
+    const streams: IncomeStream[] = [
+      { id: 'p1', type: 'publicPension', amount: 1_800_000 },
+      { id: 'p2', type: 'publicPension', amount: 600_000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Public Pension Income (公的年金等)')).toBeInTheDocument();
+    expect(screen.getAllByText('PENSION')).toHaveLength(2);
+    expect(screen.getByText('Subtotal: ¥2,400,000')).toBeInTheDocument();
+    // The header total counts pension income at face value.
+    expect(screen.getByText('Total: ¥2,400,000')).toBeInTheDocument();
+  });
+
+  it('keeps the Public Pension option enabled when a pension stream already exists', async () => {
+    const user = userEvent.setup();
+    const streams: IncomeStream[] = [{ id: 'p1', type: 'publicPension', amount: 1_800_000 }];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+
+    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
+    await user.click(typeSelect);
+    const listbox = screen.getByRole('listbox');
+    const pensionOption = within(listbox).getByRole('option', { name: /public pension/i });
+    expect(pensionOption).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('shows the deduction and net alongside the group subtotal, over the combined gross', () => {
+    const streams: IncomeStream[] = [
+      { id: 'p1', type: 'publicPension', amount: 1_800_000 },
+      { id: 'p2', type: 'publicPension', amount: 600_000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        netPublicPensionIncome={1_300_000}
+      />,
+    );
+
+    // ¥2,400,000 combined gross − the ¥1,100,000 deduction the caller's net implies.
+    expect(screen.getByText('Subtotal: ¥2,400,000')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Public Pension Deduction \(公的年金等控除\): -¥1,100,000/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Net Public Pension Income: ¥1,300,000/)).toBeInTheDocument();
+  });
+
+  it('still shows the breakdown when the deduction covers the whole pension', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[{ id: 'p1', type: 'publicPension', amount: 1_100_000 }]}
+        onStreamsChange={() => {}}
+        netPublicPensionIncome={0}
+      />,
+    );
+
+    expect(
+      screen.getByText(/Public Pension Deduction \(公的年金等控除\): -¥1,100,000/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Net Public Pension Income: ¥0/)).toBeInTheDocument();
+  });
+
+  it('shows only the gross subtotal when no net pension income is supplied', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[{ id: 'p1', type: 'publicPension', amount: 2_400_000 }]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Subtotal: ¥2,400,000')).toBeInTheDocument();
+    expect(screen.queryByText(/公的年金等控除/)).not.toBeInTheDocument();
+  });
+});

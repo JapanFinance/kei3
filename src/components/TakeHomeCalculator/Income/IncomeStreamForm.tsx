@@ -27,6 +27,7 @@ import {
   getFrequencyAnnualMultiplier,
 } from '../../../utils/formatters';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
@@ -93,6 +94,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       stream = { id, type: 'commutingAllowance', amount, frequency };
     } else if (type === 'stockCompensation') {
       stream = { id, type: 'stockCompensation', amount, issuerDomicile };
+    } else if (type === 'publicPension') {
+      stream = { id, type: 'publicPension', amount };
     } else {
       stream = { id, type: 'miscellaneous', amount };
     }
@@ -105,6 +108,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       case 'business':
       case 'miscellaneous':
         return 'Annual Net Income';
+      case 'publicPension':
+        return 'Annual Gross Pension Income';
       case 'commutingAllowance':
         return 'Allowance Amount';
       default:
@@ -124,6 +129,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         return 'Gross bonus amount before taxes and deductions';
       case 'commutingAllowance':
         return 'Commuting allowance up to 150,000 yen per month is non-taxable for income tax, but the full amount affects social insurance premiums.';
+      case 'publicPension':
+        return 'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.';
       case 'stockCompensation':
         return undefined;
       default:
@@ -173,6 +180,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             </MenuItem>
             <MenuItem value="miscellaneous" disabled={disabledTypes.includes('miscellaneous')}>
               Miscellaneous
+            </MenuItem>
+            <MenuItem value="publicPension" disabled={disabledTypes.includes('publicPension')}>
+              Public Pension
             </MenuItem>
           </Select>
         </FormControl>
@@ -475,6 +485,45 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                         : amount,
                 )}
               </Typography>
+            </Box>
+          )}
+
+          {type === 'publicPension' && (
+            <Box
+              sx={{
+                p: 1.5,
+                backgroundColor: 'background.default',
+                borderRadius: 1,
+                mt: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                What Counts as Public Pension (公的年金等)
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                National Pension (国民年金), Employees' Pension (厚生年金保険), mutual-aid pensions
+                (共済組合の年金), and pensions from past employment, including annuities received
+                from defined benefit plans (確定給付企業年金) and defined contribution plans
+                (確定拠出年金, such as iDeCo). Pensions from a foreign social insurance or mutual
+                aid system comparable to the National Pension or Employees' Pension are also
+                included.
+              </Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                Disability pensions (障害年金) and survivors' pensions (遺族年金) are non-taxable
+                and should not be included. Payments from private individual annuity insurance
+                (個人年金保険) are not considered public pension income. For private pensions,
+                instead enter the amount net of the premiums paid as Miscellaneous income.
+              </Typography>
+              <SourceLinks
+                sources={[
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm',
+                    label: '公的年金等の課税関係 - NTA',
+                  },
+                ]}
+              />
             </Box>
           )}
 

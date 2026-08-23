@@ -18,10 +18,16 @@ interface NetEmploymentIncomeTooltipProps {
   /** Net employment income (給与所得), already net of the 給与所得控除 and 所得金額調整控除. */
   netEmploymentIncome: number;
   /**
-   * 所得金額調整控除 applied to this taxpayer (yen). When greater than 0, it is shown as its own
-   * breakdown line and an explanatory note is added below the 給与所得控除 table.
+   * 所得金額調整控除（子ども・特別障害者等）applied to this taxpayer (yen). When greater than 0,
+   * it is shown as its own breakdown line and an explanatory note is added below the 給与所得控除
+   * table.
    */
   incomeAdjustmentDeduction?: number;
+  /**
+   * 所得金額調整控除（給与所得と年金所得の双方を有する者）applied to this taxpayer (yen). When
+   * greater than 0, it is shown as its own breakdown line with an explanatory note.
+   */
+  pensionIncomeAdjustmentDeduction?: number;
   /** Income year, for the 給与所得控除 table lookup. */
   year: number;
 }
@@ -36,14 +42,18 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
   grossEmploymentIncome,
   netEmploymentIncome,
   incomeAdjustmentDeduction = 0,
+  pensionIncomeAdjustmentDeduction = 0,
   year,
 }) => {
   const period = getEmploymentIncomeDeductionPeriod(year);
 
-  // The 給与所得控除 portion is whatever remains after backing out the income adjustment, so the
+  // The 給与所得控除 portion is whatever remains after backing out the income adjustments, so the
   // displayed rows always reconcile to net employment income regardless of which gross is passed.
   const employmentIncomeDeduction =
-    grossEmploymentIncome - netEmploymentIncome - incomeAdjustmentDeduction;
+    grossEmploymentIncome -
+    netEmploymentIncome -
+    incomeAdjustmentDeduction -
+    pensionIncomeAdjustmentDeduction;
 
   // The effective upper boundary of the flat-floor region (including transition values).
   // For R8: transitions end at 2,199,999 → standard starts at 2,200,000.
@@ -119,6 +129,17 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
               </Box>
             </tr>
           )}
+          {pensionIncomeAdjustmentDeduction > 0 && (
+            <tr>
+              <td style={{ padding: '2px 0' }}>Income Adjustment Deduction (Pension):</td>
+              <Box
+                component="td"
+                sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
+              >
+                -{formatJPY(pensionIncomeAdjustmentDeduction)}
+              </Box>
+            </tr>
+          )}
           <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
             <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Employment Income:</td>
             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
@@ -152,20 +173,34 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
         ]}
       />
 
-      {incomeAdjustmentDeduction > 0 && (
+      {(incomeAdjustmentDeduction > 0 || pensionIncomeAdjustmentDeduction > 0) && (
         <Box sx={{ mt: 1.5 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
             Income Amount Adjustment Deduction (所得金額調整控除)
           </Typography>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Taxpayers with employment income exceeding ¥8,500,000 and who have a qualifying
-            dependent (a dependent relative under 23, or a spouse/dependent with special disability
-            status) are eligible for this deduction. It reduces net employment income by 10% of
-            gross employment income less ¥8,500,000, up to ¥150,000.
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            <strong>Rounding:</strong> Fractional yen amounts are rounded up.
-          </Typography>
+          {incomeAdjustmentDeduction > 0 && (
+            <>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Taxpayers with employment income exceeding ¥8,500,000 and who have a qualifying
+                dependent (a dependent relative under 23, or a spouse/dependent with special
+                disability status) are eligible for this deduction. It reduces net employment income
+                by 10% of gross employment income less ¥8,500,000, up to ¥150,000.
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                <strong>Rounding:</strong> Fractional yen amounts from the 10% calculation are
+                rounded up.
+              </Typography>
+            </>
+          )}
+          {pensionIncomeAdjustmentDeduction > 0 && (
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              The employment income deduction and the public pension deduction were each reduced by
+              ¥100,000 when the basic deduction rose by the same amount, so taxpayers with both
+              kinds of income lost ¥100,000 twice and got it back once. This adjustment returns the
+              difference: ¥100,000 off net employment income, or less if net employment income or
+              net public pension income is itself below ¥100,000.
+            </Typography>
+          )}
           <SourceLinks
             sources={[
               {

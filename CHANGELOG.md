@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-08-23
+
+### New
+
+- Public pension income ([公的年金等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm)) is now available as an income type in the Advanced income mode and the Dependents modal. This covers annuities received from National Pension, Employees' Pension (厚生年金保険), foreign public pension, mutual-aid pensions, and pensions from past employment such as DB and DC plans (including iDeCo).
+
 ## 2026-08-22
 
 ### New

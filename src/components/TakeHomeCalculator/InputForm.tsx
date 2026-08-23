@@ -32,7 +32,12 @@ import {
   regionOptionsFor,
   type FormAction,
 } from '../../state/takeHomeFormReducer';
-import { AGE_RANGES, AGE_RANGE_LABELS, isLongTermCareCategory1Insured } from '../../types/ageRange';
+import {
+  AGE_RANGES,
+  AGE_RANGE_LABELS,
+  isPublicPensionDeductionElderly,
+  isLongTermCareCategory1Insured,
+} from '../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
@@ -51,7 +56,7 @@ import type {
   AdditionalDeductionsResult,
 } from '../../types/tax';
 import { formatJPY } from '../../utils/formatters';
-import { calculateTotalNetIncome } from '../../utils/taxCalculations';
+import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
@@ -236,11 +241,18 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     },
   };
 
-  // We only need the total net income for the dependents modal. Pass dependents so the
-  // 所得金額調整控除 is reflected, keeping the modal's eligibility hints consistent with the results.
-  const taxpayerNetIncome = React.useMemo(
-    () => calculateTotalNetIncome(inputs.incomeStreams, inputs.incomeYear, inputs.dependents),
-    [inputs.incomeStreams, inputs.incomeYear, inputs.dependents],
+  // 合計所得金額 for the dependents modal's eligibility hints, and 公的年金等に係る雑所得 for the
+  // income modal's pension group. Pass dependents so the 所得金額調整控除 is reflected, keeping both
+  // consistent with the results.
+  const netIncomeComponents = React.useMemo(
+    () =>
+      calculateNetIncomeComponents(
+        inputs.incomeStreams,
+        inputs.incomeYear,
+        inputs.dependents,
+        isPublicPensionDeductionElderly(inputs.ageRange),
+      ),
+    [inputs.incomeStreams, inputs.incomeYear, inputs.dependents, inputs.ageRange],
   );
 
   return (
@@ -872,7 +884,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={handleCloseDependentsModal}
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
-        taxpayerNetIncome={taxpayerNetIncome}
+        taxpayerNetIncome={netIncomeComponents.totalNetIncome}
         incomeYear={inputs.incomeYear}
       />
 
@@ -881,6 +893,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+        netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
       />
 
       <AdditionalDeductionsModal
