@@ -25,6 +25,7 @@ import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import {
   formatJPY,
   formatMonthLong,
+  formatNumber,
   getFrequencyAnnualMultiplier,
 } from '../../../utils/formatters';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
@@ -80,7 +81,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
       if (monthlyAmount > COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP) {
         setError(
-          'Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of the salary.',
+          `Commuting allowance cannot exceed ${formatNumber(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)} JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of the salary.`,
         );
         return false;
       }

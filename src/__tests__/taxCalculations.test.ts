@@ -1045,7 +1045,7 @@ describe('Commuting Allowance', () => {
     // 社会保険料控除, so the tax is lower.
     expect(result.nationalIncomeTax).toBeLessThan(resultTaxableEquivalent.nationalIncomeTax);
 
-    expect(result.commutingAllowanceIncome).toBe(150_000 * 12);
+    expect(result.commutingAllowance).toBe(150_000 * 12);
   });
 
   it('rejects an allowance above the non-taxable cap, which belongs in salary', () => {
@@ -1100,7 +1100,7 @@ describe('Commuting Allowance', () => {
     const result = calculateTaxes(inputs);
 
     // Annual Commuting: 120,000 * 2 = 240,000, wholly non-taxable at 20k/month
-    expect(result.commutingAllowanceIncome).toBe(240_000);
+    expect(result.commutingAllowance).toBe(240_000);
   });
 });
 

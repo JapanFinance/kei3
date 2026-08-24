@@ -690,8 +690,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     socialInsuranceOverride: inputs.manualSocialInsuranceEntry
       ? inputs.manualSocialInsuranceAmount
       : undefined,
-    // Commuting Allowance details
-    commutingAllowanceIncome: commutingAllowance,
+    commutingAllowance,
     // Bonus breakdown
     healthInsuranceOnBonus,
     pensionOnBonus,
