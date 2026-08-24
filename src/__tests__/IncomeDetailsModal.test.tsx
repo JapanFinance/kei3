@@ -245,7 +245,7 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     const amountInput = screen.getByLabelText('Allowance Amount');
 
     // Verify initial helper text is present
-    expect(screen.getByText(/Commuting allowance up to 150,000 yen/i)).toBeInTheDocument();
+    expect(screen.getByText(/Commuting allowance up to ¥150,000 per month/i)).toBeInTheDocument();
 
     await user.clear(amountInput);
     await user.type(amountInput, '200000');
@@ -255,7 +255,7 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
 
     // Check for error message
     await waitFor(() => {
-      expect(screen.getByText(/exceed 150,000 JPY\/month/i)).toBeInTheDocument();
+      expect(screen.getByText(/exceed ¥150,000\/month/i)).toBeInTheDocument();
     });
     expect(handleStreamsChange).not.toHaveBeenCalled();
   });
