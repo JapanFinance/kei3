@@ -208,6 +208,20 @@ const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
 const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
 
 /**
+ * Calculates net employment income (給与所得の金額) for the given income year: gross minus the
+ * 給与所得控除. The 所得金額調整控除 is not applied here — both variants of it are subtracted by the
+ * caller that knows whether the earner qualifies.
+ *
+ * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
+ * @param year                   Income year (calendar year the income was earned)
+ */
+export const calculateNetEmploymentIncome = (grossEmploymentIncome: number, year: number): number =>
+  calculateNetEmploymentIncomeForPeriod(
+    grossEmploymentIncome,
+    getEmploymentIncomeDeductionPeriod(year),
+  );
+
+/**
  * 所得金額調整控除（子ども・特別障害者等を有する者等）— the income amount adjustment deduction.
  *
  * For taxpayers whose gross employment income (給与等の収入金額) exceeds ¥8,500,000, this amount

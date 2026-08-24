@@ -33,7 +33,6 @@ import {
   dependentAgeRangeBounds,
 } from '../types/dependents';
 import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
-import { calculateNetEmploymentIncome } from './taxCalculations';
 
 export { getDependentEligibilityMax };
 
@@ -69,20 +68,6 @@ function calculateDependentIncomeAdjustmentDeduction(dependent: DependentIncomeP
 }
 
 /**
- * 給与所得 net of the 給与所得控除 and the 所得金額調整控除（子ども・特別障害者等）, but before the
- * 給与所得と年金所得の双方 variant, which {@link composeNetIncomeComponents} applies.
- */
-function calculateDependentNetEmploymentIncome(
-  dependent: DependentIncomeProfile,
-  year: number,
-): number {
-  return (
-    calculateNetEmploymentIncome(dependent.income.grossEmploymentIncome, year) -
-    calculateDependentIncomeAdjustmentDeduction(dependent)
-  );
-}
-
-/**
  * Calculate net public pension income (公的年金等に係る雑所得) for a dependent, as
  * {@link calculateDependentNetIncomeComponents} composes it — the 公的年金等控除 is decided there
  * from the dependent's age and their total net income other than public pension income.
@@ -95,22 +80,19 @@ export function calculateDependentNetPublicPensionIncome(
 }
 
 /**
- * Derive the net income (所得) components of a dependent's 合計所得金額: 給与所得 via the
- * 給与所得控除 and the 所得金額調整控除（子ども・特別障害者等）
- * ({@link calculateDependentIncomeAdjustmentDeduction}), then
- * {@link composeNetIncomeComponents} for the pension side.
+ * Derive the net income (所得) components of a dependent's 合計所得金額. A dependent is governed by
+ * the same rules as the taxpayer, so only the 所得金額調整控除（子ども・特別障害者等）the dependent
+ * qualifies for in their own right ({@link calculateDependentIncomeAdjustmentDeduction}) is
+ * decided here; {@link composeNetIncomeComponents} applies the rest.
  */
 export function calculateDependentNetIncomeComponents(
   dependent: DependentIncomeProfile,
   year: number,
 ): NetIncomeComponents {
-  const { grossPublicPensionIncome, otherNetIncome } = dependent.income;
+  const { grossEmploymentIncome, grossPublicPensionIncome, otherNetIncome } = dependent.income;
 
   return composeNetIncomeComponents({
-    netEmploymentIncomeBeforePensionAdjustment: calculateDependentNetEmploymentIncome(
-      dependent,
-      year,
-    ),
+    grossEmploymentIncome,
     incomeAdjustmentDeduction: calculateDependentIncomeAdjustmentDeduction(dependent),
     grossPublicPensionIncome,
     recipientAgeRange: dependentAgeRangeBounds(dependent.ageRange),

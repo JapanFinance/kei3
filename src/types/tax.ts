@@ -331,9 +331,8 @@ export interface TakeHomeResults {
    */
   netPublicPensionIncome?: number | undefined;
   totalNetIncome: number;
-  commutingAllowanceIncome?: number; // Total amount
-  commutingAllowanceTaxable?: number;
-  commutingAllowanceNonTaxable?: number;
+  /** 通勤手当 paid over the year, wholly non-taxable and so not part of 給与等の収入金額. */
+  commutingAllowanceIncome?: number;
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;

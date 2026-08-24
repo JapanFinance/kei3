@@ -20,6 +20,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import React, { useState } from 'react';
 
+import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import {
   formatJPY,
@@ -77,7 +78,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     if (type === 'commutingAllowance') {
       const monthlyAmount = (amount * getFrequencyAnnualMultiplier(frequency)) / 12;
 
-      if (monthlyAmount > 150000) {
+      if (monthlyAmount > COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP) {
         setError(
           'Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of the salary.',
         );

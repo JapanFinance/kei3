@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import type { AgeRange } from '../types/age';
 
@@ -69,12 +70,14 @@ export interface NetIncomeComponents {
 
 /** Inputs to {@link composeNetIncomeComponents}. */
 export interface NetIncomeComposition {
+  /** 給与等の収入金額, before the 給与所得控除. */
+  grossEmploymentIncome: number;
   /**
-   * 給与所得 net of the 給与所得控除 and of the 所得金額調整控除（子ども・特別障害者等）, but before the
-   * 給与所得と年金所得の双方 variant, which {@link composeNetIncomeComponents} applies.
+   * The 所得金額調整控除（子ども・特別障害者等を有する者等）the earner qualifies for. Which of the
+   * statute's three conditions can be tested differs by earner, so each caller decides its own;
+   * the statute subtracts this variant from 給与所得 before the 給与所得と年金所得の双方 one below
+   * (措法41の3の11第2項 deducts from the 給与所得 left after 第1項).
    */
-  netEmploymentIncomeBeforePensionAdjustment: number;
-  /** The 所得金額調整控除（子ども・特別障害者等を有する者等）already taken above, for reporting. */
   incomeAdjustmentDeduction: number;
   /** 公的年金等の収入金額, before the 公的年金等控除. */
   grossPublicPensionIncome: number;
@@ -92,18 +95,22 @@ export interface NetIncomeComposition {
 
 /**
  * Composes a 合計所得金額 out of 給与所得, 公的年金等に係る雑所得 and the remaining net income,
- * applying the 公的年金等控除 and the 所得金額調整控除（給与所得と年金所得の双方を有する者）
+ * applying the 給与所得控除, the 公的年金等控除 and both variants of the 所得金額調整控除
  * ({@link calculatePensionIncomeAdjustmentDeduction}) in statutory order. The taxpayer and each
- * dependent differ only in how their 給与所得 is derived, so both feed this.
+ * dependent are governed by the same rules from here on, so both feed this; they differ only in
+ * how the amounts below are gathered, and in which 所得金額調整控除 conditions their data can test.
  */
 export const composeNetIncomeComponents = ({
-  netEmploymentIncomeBeforePensionAdjustment,
+  grossEmploymentIncome,
   incomeAdjustmentDeduction,
   grossPublicPensionIncome,
   recipientAgeRange,
   otherNetIncome,
   year,
 }: NetIncomeComposition): NetIncomeComponents => {
+  const netEmploymentIncomeBeforePensionAdjustment =
+    calculateNetEmploymentIncome(grossEmploymentIncome, year) - incomeAdjustmentDeduction;
+
   // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
   // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額).
   // Without pension income the 給与+年金 adjustment below cannot apply, so 給与所得 enters the band

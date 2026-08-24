@@ -1,15 +1,11 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP } from '../constants/taxThresholds';
+import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../constants/taxThresholds';
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
-import {
-  getEmploymentIncomeDeductionPeriod,
-  calculateNetEmploymentIncomeForPeriod,
-  calculateIncomeAdjustmentDeductionAmount,
-} from '../data/netEmploymentIncome';
+import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent } from '../types/dependents';
 import {
@@ -88,29 +84,6 @@ const calculateIncomeAdjustmentDeduction = (
   hasIncomeAdjustmentDeductionDependent(dependents, year)
     ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
     : 0;
-
-/**
- * Calculates net employment income (給与所得の金額) for the given income year: gross minus the
- * employment income deduction (給与所得控除) and — when a qualifying dependent makes the taxpayer
- * eligible — the income amount adjustment deduction (所得金額調整控除). Pass the taxpayer's
- * `dependents` to apply the adjustment; omit them (the default) where it can't apply, e.g. when
- * computing a dependent's own net income.
- *
- * Delegates to the year-indexed period data in `src/data/netEmploymentIncome.ts`.
- *
- * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
- * @param year                   Income year; defaults to the current calendar year
- * @param dependents             Taxpayer's dependents, for the 所得金額調整控除; defaults to none
- */
-export const calculateNetEmploymentIncome = (
-  grossEmploymentIncome: number,
-  year: number,
-  dependents: Dependent[] = [],
-): number =>
-  calculateNetEmploymentIncomeForPeriod(
-    grossEmploymentIncome,
-    getEmploymentIncomeDeductionPeriod(year),
-  ) - calculateIncomeAdjustmentDeduction(grossEmploymentIncome, dependents, year);
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -267,6 +240,12 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
 interface IncomeBreakdown {
   salaryIncome: number;
   bonusIncome: BonusIncomeStream[];
+  /**
+   * 給与等の収入金額: salary, bonuses and stock compensation. A commuting allowance is wholly
+   * non-taxable up to {@link COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP}, which is the most this
+   * calculator accepts, so none of it is employment income.
+   */
+  grossEmploymentIncome: number;
   netBusinessAndMiscIncomeBeforeBlueFilerDeduction: number;
   netBusinessAndMiscIncome: number;
   blueFilerDeduction: number;
@@ -300,9 +279,16 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
           salaryIncome += income.amount;
         }
         break;
-      case 'commutingAllowance':
-        commutingAllowance += getCommutingAllowanceAnnualAmount(income);
+      case 'commutingAllowance': {
+        const annualAmount = getCommutingAllowanceAnnualAmount(income);
+        if (annualAmount / 12 > COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP) {
+          throw new Error(
+            'A commuting allowance above the non-taxable cap is not supported. Enter the excess as salary.',
+          );
+        }
+        commutingAllowance += annualAmount;
         break;
+      }
       case 'bonus':
         bonusIncome.push(income);
         break;
@@ -339,16 +325,17 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     }
   }
 
+  const grossEmploymentIncome =
+    salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
   const totalAnnualIncome =
-    salaryIncome +
-    bonusIncome.reduce((sum, b) => sum + b.amount, 0) +
+    grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
-    stockCompensationIncome +
     grossPublicPensionIncome;
 
   return {
     salaryIncome,
     bonusIncome,
+    grossEmploymentIncome,
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
     netBusinessAndMiscIncome,
     blueFilerDeduction,
@@ -360,92 +347,51 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
 };
 
 /**
- * The taxpayer's {@link NetIncomeComponents}, plus the gross employment figures and the
- * 事業所得・雑所得 total the results panel reports alongside them.
- */
-export interface TaxpayerNetIncomeComponents extends NetIncomeComponents {
-  /** Gross employment income (給与等の収入金額), incl. taxable commuting allowance. */
-  grossEmploymentIncome: number;
-  taxableCommutingAllowance: number;
-  /** 事業所得 and 雑所得 (other than public pensions), net of the 青色申告特別控除. */
-  netBusinessAndMiscIncome: number;
-}
-
-/**
- * Derives the net income (所得) components from the categorized gross amounts: 給与所得 via the
- * 給与所得控除 and the 所得金額調整控除（子ども・特別障害者等）, then
- * {@link composeNetIncomeComponents} for the pension side.
+ * The taxpayer's net income (所得) components, from the categorized gross amounts. Everything the
+ * 合計所得金額 is composed of is the same for the taxpayer as for a dependent, so only the
+ * taxpayer's own 所得金額調整控除（子ども・特別障害者等）is decided here.
  */
 const composeTaxpayerNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
-): TaxpayerNetIncomeComponents => {
-  const {
-    salaryIncome,
-    bonusIncome,
-    netBusinessAndMiscIncome,
-    commutingAllowance,
-    stockCompensationIncome,
-    grossPublicPensionIncome,
-  } = breakdown;
+): NetIncomeComponents => {
+  const { grossEmploymentIncome, netBusinessAndMiscIncome, grossPublicPensionIncome } = breakdown;
 
-  const taxableCommutingAllowance = Math.max(
-    0,
-    commutingAllowance - COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP,
-  );
-
-  const grossEmploymentIncome =
-    salaryIncome +
-    taxableCommutingAllowance +
-    bonusIncome.reduce((sum, b) => sum + b.amount, 0) +
-    stockCompensationIncome;
-
-  return {
+  return composeNetIncomeComponents({
     grossEmploymentIncome,
-    taxableCommutingAllowance,
-    netBusinessAndMiscIncome,
-    ...composeNetIncomeComponents({
-      netEmploymentIncomeBeforePensionAdjustment: calculateNetEmploymentIncome(
-        grossEmploymentIncome,
-        year,
-        dependents,
-      ),
-      incomeAdjustmentDeduction: calculateIncomeAdjustmentDeduction(
-        grossEmploymentIncome,
-        dependents,
-        year,
-      ),
-      grossPublicPensionIncome,
-      recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
-      otherNetIncome: netBusinessAndMiscIncome,
+    incomeAdjustmentDeduction: calculateIncomeAdjustmentDeduction(
+      grossEmploymentIncome,
+      dependents,
       year,
-    }),
-  };
+    ),
+    grossPublicPensionIncome,
+    recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
+    otherNetIncome: netBusinessAndMiscIncome,
+    year,
+  });
 };
 
 /**
  * The net income (所得) components of {@link calculateTaxes} on their own, without the rest of the
  * calculation — the input form previews 公的年金等に係る雑所得 from this so the 公的年金等控除 is
- * visible while entering the gross amount, and uses
- * {@link NetIncomeComponents.totalNetIncome}
- * for the dependent eligibility checks.
+ * visible while entering the gross amount, and uses {@link NetIncomeComponents.totalNetIncome} for
+ * the dependent eligibility checks.
  *
  * @param incomeStreams  Income streams to calculate net income for
- * @param year          Income year for the employment income deduction lookup
- * @param ageRange      The taxpayer's age range, passed on to the age-keyed net income rules for
- *                      them to read (currently only the 公的年金等控除 minimums, decided by
- *                      {@link calculateNetPublicPensionIncome})
- * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
- *                      dependent is present
+ * @param year           Income year for the deduction table lookups
+ * @param ageRange       The taxpayer's age range, passed on to the age-keyed net income rules for
+ *                       them to read
+ * @param dependents     The taxpayer's dependents, for the 所得金額調整控除 they may qualify the
+ *                       taxpayer for
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
-): TaxpayerNetIncomeComponents =>
+): NetIncomeComponents =>
   composeTaxpayerNetIncomeComponents(
     calculateIncomeBreakdown(incomeStreams),
     year,
@@ -458,6 +404,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const {
     salaryIncome,
     bonusIncome,
+    grossEmploymentIncome,
+    netBusinessAndMiscIncome,
     blueFilerDeduction,
     totalAnnualIncome,
     commutingAllowance,
@@ -472,26 +420,20 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // Use the calculated total annual income instead of inputs.annualIncome for consistency
   const annualIncome = totalAnnualIncome;
 
-  // Determine if there is any employment income (salary, bonus, or taxable commuting allowance)
+  // Whether the person is employed at all, which a commuting allowance alone attests to even
+  // though none of it is 給与等の収入金額 — social insurance is charged on it either way.
   const hasEmploymentIncome =
     salaryIncome > 0 ||
     bonusIncome.some(b => b.amount > 0) ||
     commutingAllowance > 0 ||
     stockCompensationIncome > 0;
 
-  const nonTaxableCommutingAllowance = Math.min(
-    commutingAllowance,
-    COMMUTING_ALLOWANCE_NONTAXABLE_ANNUAL_CAP,
-  );
   const incomeYear = inputs.incomeYear;
 
   const {
-    grossEmploymentIncome,
-    taxableCommutingAllowance,
     netEmploymentIncome,
     incomeAdjustmentDeduction,
     pensionIncomeAdjustmentDeduction,
-    netBusinessAndMiscIncome,
     netPublicPensionIncome,
     totalNetIncome: netIncome,
   } = composeTaxpayerNetIncomeComponents(
@@ -750,8 +692,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       : undefined,
     // Commuting Allowance details
     commutingAllowanceIncome: commutingAllowance,
-    commutingAllowanceTaxable: taxableCommutingAllowance,
-    commutingAllowanceNonTaxable: nonTaxableCommutingAllowance,
     // Bonus breakdown
     healthInsuranceOnBonus,
     pensionOnBonus,
