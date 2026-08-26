@@ -1,20 +1,11 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { AgeRange } from './ageRange';
 import type { Dependent, DependentDeductionResults, DisabilityLevel } from './dependents';
 import type { HealthInsuranceProviderId } from './healthInsurance';
+import type { TaxpayerAgeRange } from './taxpayerAge';
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
-
-export type IncomeStreamType =
-  | 'salary'
-  | 'bonus'
-  | 'business'
-  | 'miscellaneous'
-  | 'publicPension'
-  | 'commutingAllowance'
-  | 'stockCompensation';
 
 export interface BaseIncomeStream {
   id: string;
@@ -47,8 +38,8 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
 }
 
 /**
- * Public pension income (公的年金等): `amount` is the gross annual amount received
- * (公的年金等の収入金額), before withholding. The public pension deduction (公的年金等控除)
+ * Public pension income (公的年金等): {@link BaseIncomeStream.amount} is the gross annual
+ * amount received (公的年金等の収入金額), before withholding. The public pension deduction (公的年金等控除)
  * is applied by the calculation, using the taxpayer's age range for the 65 boundary.
  */
 export interface PublicPensionIncomeStream extends BaseIncomeStream {
@@ -68,6 +59,8 @@ export type IncomeStream =
   | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
   | StockCompensationIncomeStream;
+
+export type IncomeStreamType = IncomeStream['type'];
 
 /**
  * User input for the home loan tax credit (住宅ローン控除).
@@ -308,7 +301,7 @@ export interface TakeHomeFormState {
   incomeYear: number;
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
-  ageRange: AgeRange;
+  ageRange: TaxpayerAgeRange;
   /**
    * Annual 介護保険料 billed directly to a 第1号被保険者 (ages 65 and over), from the
    * June-July 介護保険料決定通知書. 0 when nothing has been entered; ignored below age 65
@@ -335,7 +328,7 @@ export interface TakeHomeFormState {
 /** Interface for Calculation Logic (clean, normalized inputs) */
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
-  ageRange: AgeRange;
+  ageRange: TaxpayerAgeRange;
   /** See {@link TakeHomeFormState.longTermCareCategory1Premium}. Absent means 0. */
   longTermCareCategory1Premium?: number | undefined;
   region: string;
@@ -401,6 +394,11 @@ export interface TakeHomeResults {
    * {@link netEmploymentIncome} is already net of this amount. Absent when not applicable.
    */
   pensionIncomeAdjustmentDeduction?: number | undefined;
+  /**
+   * 事業所得 and 雑所得 other than public pensions, net of the 青色申告特別控除
+   * ({@link blueFilerDeduction}). 0 when there is no business or miscellaneous income.
+   */
+  netBusinessAndMiscIncome: number;
   /** Gross public pension income (公的年金等の収入金額). Absent when there is none. */
   grossPublicPensionIncome?: number | undefined;
   /**
@@ -461,7 +459,7 @@ export interface TakeHomeResults {
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
-  ageRange: AgeRange;
+  ageRange: TaxpayerAgeRange;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
 }

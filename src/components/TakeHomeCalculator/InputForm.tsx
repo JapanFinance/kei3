@@ -32,7 +32,6 @@ import {
   regionOptionsFor,
   type FormAction,
 } from '../../state/takeHomeFormReducer';
-import { AGE_RANGES, AGE_RANGE_LABELS, isLongTermCareCategory1Insured } from '../../types/ageRange';
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
@@ -52,6 +51,11 @@ import type {
   PersonalCircumstancesInput,
   PersonalDeductionsResult,
 } from '../../types/tax';
+import {
+  TAXPAYER_AGE_RANGES,
+  TAXPAYER_AGE_RANGE_LABELS,
+  isLongTermCareCategory1Insured,
+} from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
@@ -538,9 +542,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               size="small"
               sx={{ ...sharedInputSx, minWidth: 120 }}
             >
-              {AGE_RANGES.map(range => (
+              {TAXPAYER_AGE_RANGES.map(range => (
                 <MenuItem key={range} value={range}>
-                  {AGE_RANGE_LABELS[range]}
+                  {TAXPAYER_AGE_RANGE_LABELS[range]}
                 </MenuItem>
               ))}
             </Select>

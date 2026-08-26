@@ -40,6 +40,15 @@ interface IncomeStreamFormProps {
 
 const validSalaryFrequencies = ['monthly', 'annual'];
 
+const guidanceBoxSx = {
+  p: 1.5,
+  backgroundColor: 'background.default',
+  borderRadius: 1,
+  mt: 2,
+  border: '1px solid',
+  borderColor: 'divider',
+};
+
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   initialData,
   onSave,
@@ -489,16 +498,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
 
           {type === 'publicPension' && (
-            <Box
-              sx={{
-                p: 1.5,
-                backgroundColor: 'background.default',
-                borderRadius: 1,
-                mt: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
+            <Box sx={guidanceBoxSx}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 What Counts as Public Pension (公的年金等)
               </Typography>
@@ -528,16 +528,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
 
           {type === 'stockCompensation' && (
-            <Box
-              sx={{
-                p: 1.5,
-                backgroundColor: 'background.default',
-                borderRadius: 1,
-                mt: 2,
-                border: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
+            <Box sx={guidanceBoxSx}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
                 How to Calculate Stock-Based Compensation Income
               </Typography>

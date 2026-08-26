@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
-import type { AgeRange } from '../types/ageRange';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
-import { DEDUCTION_TYPES } from '../types/dependents';
+import {
+  DEDUCTION_TYPES,
+  SPOUSE_AGE_BANDS,
+  type DependentAgeRange,
+  type SpouseAgeRange,
+  dependentAgeCoversBand,
+} from '../types/dependents';
 import type {
   FurusatoNozeiDetails,
   NonTaxableResidenceTaxStatus,
@@ -12,6 +17,7 @@ import type {
   ResidenceTaxDetails,
 } from '../types/tax';
 import { EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
+import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateDependentTotalNetIncome,
   getDependentEligibilityMax,
@@ -74,14 +80,14 @@ export const NON_TAXABLE_STATUS_INCOME_LIMIT = 1_350_000;
  * Which of the 地方税法第295条第1項第2号 statuses exempts the taxpayer, if any, given a
  * 合計所得金額 at or below {@link NON_TAXABLE_STATUS_INCOME_LIMIT}. Minor status is judged as of
  * the January 1 (賦課期日) following the income year, which is what the under-18 age range selects;
- * 未成年者 has no definition of its own in 地方税法; it borrows the 民法 age of majority, which is
+ * 未成年者 has no definition of its own in 地方税法, borrowing the 民法 age of majority, which is
  * why the boundary moved from 20 to 18 (from 令和5年度) with no tax-law amendment.
  *
  * Any one status is enough, so when several apply the first is reported; the choice only affects
  * which reason the display names.
  */
 function nonTaxableStatusFor(
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
   circumstances: PersonalCircumstancesInput,
   netIncome: number,
 ): NonTaxableResidenceTaxStatus | undefined {
@@ -116,7 +122,7 @@ export const calculateResidenceTax = (
   nonBasicDeductions: number,
   dependentDeductions: DependentDeductionResults,
   year: number,
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
   taxCredit: number = 0,
   personalCircumstances: PersonalCircumstancesInput = EMPTY_PERSONAL_CIRCUMSTANCES,
 ): ResidenceTaxDetails => {
@@ -342,11 +348,9 @@ function calculateStatutoryPersonalDeductionDifference(
     const dep = breakdown.dependent;
 
     switch (breakdown.deductionType) {
-      case DEDUCTION_TYPES.SPOUSE: {
-        const isElderly = dep.ageCategory === '70plus';
-        totalDifference += getSpouseDeductionDifference(isElderly, taxpayerNetIncome);
+      case DEDUCTION_TYPES.SPOUSE:
+        totalDifference += getSpouseDeductionDifference(dep.ageRange, taxpayerNetIncome);
         break;
-      }
 
       case DEDUCTION_TYPES.SPECIAL_DEPENDENT:
         // Special dependent (19-22)
@@ -415,11 +419,20 @@ function calculateStatutoryPersonalDeductionDifference(
  * Reference: 地方税法第314条の6第6号 (6) in the statutory table.
  * Reference: https://www.town.hinode.tokyo.jp/0000000519.html
  *
- * @param isElderly - Whether spouse is 70+ years old
+ * @param spouseAgeRange - The spouse's age range, judged here against
+ *   {@link SPOUSE_AGE_BANDS.residenceTaxElderlySpouse}, the 老人控除対象配偶者 band 地方税法
+ *   defines for itself
  * @param taxpayerNetIncome - Taxpayer's net income (納税義務者の前年の合計所得金額)
  * @returns Statutory deduction difference amount
  */
-function getSpouseDeductionDifference(isElderly: boolean, taxpayerNetIncome: number): number {
+function getSpouseDeductionDifference(
+  spouseAgeRange: SpouseAgeRange | DependentAgeRange,
+  taxpayerNetIncome: number,
+): number {
+  const isElderly = dependentAgeCoversBand(
+    spouseAgeRange,
+    SPOUSE_AGE_BANDS.residenceTaxElderlySpouse,
+  );
   if (taxpayerNetIncome <= 9_000_000) {
     return isElderly ? 100_000 : 50_000;
   } else if (taxpayerNetIncome <= 9_500_000) {

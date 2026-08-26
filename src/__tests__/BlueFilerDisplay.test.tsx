@@ -48,6 +48,7 @@ const mockResults: TakeHomeResults = {
   region: 'Tokyo',
   ageRange: 'age20to39' as const,
   residenceTaxBasicDeduction: 430_000,
+  netBusinessAndMiscIncome: 4_350_000,
   totalNetIncome: 4_350_000,
   nhiMedicalPortion: 150_000,
   nhiElderlySupportPortion: 50_000,
@@ -122,6 +123,7 @@ describe('Blue-Filer Deduction Display', () => {
       // Mocking other necessary values
       netEmploymentIncome: 2_000_000, // Dummy
       grossEmploymentIncome: 3_000_000, // Dummy (salary 3M)
+      netBusinessAndMiscIncome: 1_900_000, // 2M − 100k blue-filer deduction
       totalNetIncome: 3_900_000, // Dummy total
       salaryIncome: 3_000_000,
     };
@@ -193,6 +195,8 @@ describe('Blue-Filer Deduction Display', () => {
     const noBlueFilerResults: TakeHomeResults = {
       ...mockResults,
       blueFilerDeduction: 0,
+      netBusinessAndMiscIncome: 5_000_000,
+      totalNetIncome: 5_000_000,
     };
     const noBlueFilerInputs: TakeHomeInputs = {
       ...mockInputs,

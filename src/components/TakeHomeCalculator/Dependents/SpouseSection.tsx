@@ -23,7 +23,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useState } from 'react';
 
 import type { Spouse } from '../../../types/dependents';
-import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
+import { DISABILITY_LEVELS, SPOUSE_AGE_RANGES } from '../../../types/dependents';
 import {
   calculateDependentNetIncomeComponents,
   calculateDependentNetPublicPensionIncome,
@@ -53,7 +53,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
       const newSpouse: Spouse = {
         id: crypto.randomUUID(),
         relationship: 'spouse',
-        ageCategory: 'under65',
+        ageRange: 'under65',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -384,20 +384,20 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
             )}
           </Box>
 
-          {/* Age Category and Living Together on same row */}
+          {/* Age Range and Living Together on same row */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <FormControl sx={{ flex: 1 }}>
               <InputLabel>Age</InputLabel>
               <Select
-                value={spouse.ageCategory}
+                value={spouse.ageRange}
                 label="Age"
                 onChange={e =>
                   handleSpouseChange({
-                    ageCategory: e.target.value,
+                    ageRange: e.target.value,
                   })
                 }
               >
-                {SPOUSE_AGE_CATEGORIES.map(cat => (
+                {SPOUSE_AGE_RANGES.map(cat => (
                   <MenuItem key={cat.value} value={cat.value}>
                     {cat.label}
                   </MenuItem>

@@ -34,8 +34,7 @@ import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
-import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
-import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
+import IncomeOverviewRows from './IncomeOverviewRows';
 import PersonalDeductionsTooltip from './PersonalDeductionsTooltip';
 import {
   buildNationalBasicDeductionRows,
@@ -194,24 +193,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
       ? getNationalIncomeTaxBracketHighlightIndex(results.taxableIncomeForNationalIncomeTax)
       : undefined;
 
-  const businessAndMiscIncome = inputs.incomeStreams
-    .filter(s => s.type === 'business' || s.type === 'miscellaneous')
-    .reduce((sum, s) => sum + s.amount, 0);
-
-  const hasEmploymentIncome = results.grossEmploymentIncome > 0;
-  const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
-  const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
-  // Backing the other net components out of the total keeps this row reconciled with it.
-  const netBusinessAndMiscIncome =
-    results.totalNetIncome -
-    (results.netEmploymentIncome ?? 0) -
-    (results.netPublicPensionIncome ?? 0);
-  const presentIncomeComponents = [
-    hasEmploymentIncome,
-    hasBusinessOrMiscIncome,
-    hasPublicPensionIncome,
-  ].filter(Boolean).length;
-
   // Residence income-based portion (所得割). When a home loan credit spills over to
   // residence tax, show the portion BEFORE the spillover and the spillover as its own
   // row so the line items sum to the total (otherwise the portion is already net of it).
@@ -245,125 +226,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
       {/* Income Overview */}
       <Box sx={{ mb: 1 }}>
-        {hasEmploymentIncome && results.netEmploymentIncome !== undefined && (
-          <ResultRow
-            label={
-              <span>
-                Net Employment Income
-                <NetEmploymentIncomeTooltip
-                  grossEmploymentIncome={results.grossEmploymentIncome}
-                  netEmploymentIncome={results.netEmploymentIncome}
-                  incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
-                  pensionIncomeAdjustmentDeduction={results.pensionIncomeAdjustmentDeduction ?? 0}
-                  year={incomeYear}
-                />
-              </span>
-            }
-            value={formatJPY(results.netEmploymentIncome)}
-            type="default"
-          />
-        )}
-
-        {hasBusinessOrMiscIncome && (
-          <ResultRow
-            label={
-              <span>
-                Net Business / Misc Income
-                {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
-                  <DetailedTooltip title="Business & Miscellaneous Income">
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        Calculation Breakdown
-                      </Typography>
-                      <table
-                        style={{
-                          width: '100%',
-                          borderCollapse: 'collapse',
-                          fontSize: '0.9rem',
-                          marginBottom: '8px',
-                        }}
-                      >
-                        <tbody>
-                          <tr>
-                            <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
-                            <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                              {formatJPY(businessAndMiscIncome)}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
-                            <Box
-                              component="td"
-                              sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
-                            >
-                              -{formatJPY(results.blueFilerDeduction)}
-                            </Box>
-                          </tr>
-                          <Box
-                            component="tr"
-                            sx={{ borderTop: '1px solid', borderColor: 'divider' }}
-                          >
-                            <td style={{ padding: '4px 0', fontWeight: 600 }}>
-                              Net Business/Misc Income:
-                            </td>
-                            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                              {formatJPY(netBusinessAndMiscIncome)}
-                            </td>
-                          </Box>
-                        </tbody>
-                      </table>
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          Blue-Filer Special Deduction
-                        </Typography>
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          A special deduction for business operators with permission to file a Blue
-                          Return. This amount is deducted from business income after expenses before
-                          calculating taxable income.
-                        </Typography>
-                        <SourceLinks
-                          sources={[
-                            {
-                              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm',
-                              label: '青色申告特別控除 - NTA',
-                            },
-                          ]}
-                        />
-                      </Box>
-                    </Box>
-                  </DetailedTooltip>
-                )}
-              </span>
-            }
-            value={formatJPY(netBusinessAndMiscIncome)}
-            type="default"
-          />
-        )}
-
-        {hasPublicPensionIncome && (
-          <ResultRow
-            label={
-              <span>
-                Net Public Pension Income
-                <NetPublicPensionIncomeTooltip
-                  grossPublicPensionIncome={results.grossPublicPensionIncome ?? 0}
-                  netPublicPensionIncome={results.netPublicPensionIncome ?? 0}
-                />
-              </span>
-            }
-            value={formatJPY(results.netPublicPensionIncome ?? 0)}
-            type="default"
-          />
-        )}
-
-        {/* Total Net Income Row */}
-        {presentIncomeComponents >= 2 && (
-          <ResultRow
-            label="Total Net Income"
-            value={formatJPY(results.totalNetIncome)}
-            type="subtotal"
-          />
-        )}
+        <IncomeOverviewRows results={results} inputs={inputs} />
 
         {results.dcPlanContributions > 0 && (
           <ResultRow

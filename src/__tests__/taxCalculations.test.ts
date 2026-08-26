@@ -4,7 +4,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
-import type { AgeRange } from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
   DEFAULT_PROVIDER,
@@ -14,6 +13,7 @@ import {
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateTaxes,
   calculateNetEmploymentIncome,
@@ -125,7 +125,7 @@ describe('calculateNetEmploymentIncome', () => {
     const childUnder23: Dependent = {
       id: 'c',
       relationship: 'child',
-      ageCategory: '19to22',
+      ageRange: '19to22',
       isCohabiting: false,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -986,6 +986,37 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       2_120_000,
     );
   });
+
+  it('reports net business and miscellaneous income separately from the other components', () => {
+    // Business 2M, Deduction 100k -> 1.9M; Misc 100k; pension stays in its own component.
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+      { type: 'business' as const, amount: 2_000_000, blueFilerDeduction: 100_000, id: 'b1' },
+      { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' },
+      { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+    ];
+    const components = calculateNetIncomeComponents(incomeStreams, 2026, 'age65to69', []);
+    expect(components.netBusinessAndMiscIncome).toBe(2_000_000);
+    expect(components.totalNetIncome).toBe(
+      components.netEmploymentIncome +
+        components.netBusinessAndMiscIncome +
+        components.netPublicPensionIncome,
+    );
+    expect(
+      calculateTaxes({
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams,
+        ageRange: 'age65to69',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        region: 'Tokyo',
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      }).netBusinessAndMiscIncome,
+    ).toBe(2_000_000);
+  });
 });
 
 describe('Commuting Allowance', () => {
@@ -1266,7 +1297,7 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
         {
           id: 'c1',
           relationship: 'child' as const,
-          ageCategory: '19to22' as const,
+          ageRange: '19to22' as const,
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           disability: 'none' as const,
           isCohabiting: true,
@@ -1574,7 +1605,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
   const childUnder23: Dependent = {
     id: 'c1',
     relationship: 'child',
-    ageCategory: '19to22',
+    ageRange: '19to22',
     isCohabiting: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -1582,7 +1613,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
   const adultChild: Dependent = {
     id: 'c2',
     relationship: 'child',
-    ageCategory: '23to64',
+    ageRange: '23to64',
     isCohabiting: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -1739,7 +1770,7 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
 });
 
 describe('calculateTaxes age-range rules', () => {
-  const employeeInputs = (ageRange: AgeRange) => ({
+  const employeeInputs = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [
       { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
@@ -1755,7 +1786,7 @@ describe('calculateTaxes age-range rules', () => {
     incomeYear: 2026,
   });
 
-  const nhiInputs = (ageRange: AgeRange) => ({
+  const nhiInputs = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
     ageRange,
@@ -1801,7 +1832,7 @@ describe('calculateTaxes age-range rules', () => {
   });
 
   describe('minor (未成年者) residence-tax non-taxation', () => {
-    const minorInputs = (ageRange: AgeRange, amount: number) => ({
+    const minorInputs = (ageRange: TaxpayerAgeRange, amount: number) => ({
       ...nhiInputs(ageRange),
       incomeStreams: [{ type: 'miscellaneous' as const, amount, id: 'test' }],
     });
@@ -1834,7 +1865,7 @@ describe('calculateTaxes age-range rules', () => {
 });
 
 describe('calculateTaxes at ages 65 and over', () => {
-  const employeeInputs65 = (ageRange: AgeRange) => ({
+  const employeeInputs65 = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [
       { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
@@ -1893,7 +1924,7 @@ describe('calculateTaxes at ages 65 and over', () => {
     });
 
     it('charges NHI without the 介護分 at 65-69', () => {
-      const nhiInputs65 = (ageRange: AgeRange) => ({
+      const nhiInputs65 = (ageRange: TaxpayerAgeRange) => ({
         ...employeeInputs65(ageRange),
         incomeStreams: [{ type: 'miscellaneous' as const, amount: 4_000_000, id: 'test' }],
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
@@ -2036,7 +2067,7 @@ describe('calculateTaxes at ages 65 and over', () => {
 });
 
 describe('calculateTaxes with public pension income', () => {
-  const pensionInputs = (ageRange: AgeRange) => ({
+  const pensionInputs = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [{ type: 'publicPension' as const, amount: 2_400_000, id: 'p1' }],
     ageRange,
@@ -2089,6 +2120,15 @@ describe('calculateTaxes with public pension income', () => {
     });
     expect(pension.healthInsurance).toBe(equivalentMisc.healthInsurance);
     expect(pension.healthInsurance).toBeGreaterThan(0);
+    // 所法22② and 地法32①: both taxes are levied on the 合計所得金額, which the 公的年金等控除
+    // brings to the same 1,300,000 either way, and the social insurance deduction (所法74) is the
+    // same premium, so every downstream figure matches.
+    expect(pension.nationalIncomeTax).toBe(equivalentMisc.nationalIncomeTax);
+    expect(pension.residenceTax.totalResidenceTax).toBe(
+      equivalentMisc.residenceTax.totalResidenceTax,
+    );
+    expect(pension.furusatoNozei.limit).toBe(equivalentMisc.furusatoNozei.limit);
+    expect(pension.nationalIncomeTax).toBeGreaterThan(0);
     // No National Pension contributions at 65-69, and no employment insurance,
     // so take-home is income minus taxes and the health premium exactly.
     expect(pension.pensionPayments).toBe(0);
@@ -2111,6 +2151,12 @@ describe('calculateTaxes with public pension income', () => {
       incomeStreams: [{ type: 'miscellaneous' as const, amount: 1_300_000, id: 'm1' }],
     });
     expect(pension.healthInsurance).toBe(equivalentMisc.healthInsurance);
+    // Same 合計所得金額 and same premium, so the taxes computed on them agree too.
+    expect(pension.nationalIncomeTax).toBe(equivalentMisc.nationalIncomeTax);
+    expect(pension.residenceTax.totalResidenceTax).toBe(
+      equivalentMisc.residenceTax.totalResidenceTax,
+    );
+    expect(pension.furusatoNozei.limit).toBe(equivalentMisc.furusatoNozei.limit);
   });
 
   it('reduces the deduction band when other net income exceeds ¥10,000,000', () => {
@@ -2124,6 +2170,52 @@ describe('calculateTaxes with public pension income', () => {
     // Band 2 deduction: 300,000 + 25% × (3,000,000 − 500,000) = 925,000
     expect(result.netPublicPensionIncome).toBe(2_075_000);
     expect(result.totalNetIncome).toBe(12_075_001);
+  });
+
+  it('applies the 65+ band-2 minimum when other net income exceeds ¥10,000,000', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age65to69'),
+      incomeStreams: [
+        { type: 'miscellaneous' as const, amount: 10_000_001, id: 'm1' },
+        { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+      ],
+    });
+    // 所法35④二: band 2 gives 300,000 + 25% × (2,400,000 − 500,000) = 775,000, but 措法41の15の3
+    // guarantees 1,000,000 for a recipient 65 or older, so the minimum governs.
+    expect(result.netPublicPensionIncome).toBe(1_400_000);
+    expect(result.totalNetIncome).toBe(11_400_001);
+  });
+
+  it('applies the band-3 deduction when other net income exceeds ¥20,000,000', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age60to64'),
+      incomeStreams: [
+        { type: 'miscellaneous' as const, amount: 20_000_001, id: 'm1' },
+        { type: 'publicPension' as const, amount: 3_000_000, id: 'p1' },
+      ],
+    });
+    // 所法35④三: band 3 gives 200,000 + 25% × (3,000,000 − 500,000) = 825,000, above the band's
+    // 400,000 under-65 minimum, so the computed amount governs.
+    expect(result.netPublicPensionIncome).toBe(2_175_000);
+    expect(result.totalNetIncome).toBe(22_175_001);
+  });
+
+  it('omits the pension fields entirely when there is no pension stream', () => {
+    const result = calculateTaxes({
+      ...pensionInputs('age65to69'),
+      incomeStreams: [
+        { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      ],
+    });
+    expect(result.grossPublicPensionIncome).toBeUndefined();
+    expect(result.netPublicPensionIncome).toBeUndefined();
+    expect(result.pensionIncomeAdjustmentDeduction).toBeUndefined();
+  });
+
+  it('omits the 双方 adjustment for pension-only income', () => {
+    // 措法41の3の11①一 requires both 給与所得 and 年金雑所得, so pension alone never qualifies.
+    const result = calculateTaxes(pensionInputs('age65to69'));
+    expect(result.pensionIncomeAdjustmentDeduction).toBeUndefined();
   });
 
   it('judges the deduction band on net employment income, not the gross salary', () => {

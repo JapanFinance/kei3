@@ -7,9 +7,9 @@ import React from 'react';
 
 import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
 import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
-import { isLongTermCareCategory2Insured } from '../../../types/ageRange';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
+import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 

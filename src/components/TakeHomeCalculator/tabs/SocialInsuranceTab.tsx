@@ -10,17 +10,17 @@ import React from 'react';
 
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import {
-  isLongTermCareCategory2Insured,
-  isSubjectToEmployeesPension,
-  isSubjectToNationalPension,
-} from '../../../types/ageRange';
-import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
   LATTER_STAGE_ELDERLY_ID,
 } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
+import {
+  isLongTermCareCategory2Insured,
+  isSubjectToEmployeesPension,
+  isSubjectToNationalPension,
+} from '../../../types/taxpayerAge';
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
@@ -36,10 +36,9 @@ import { ResultRow } from '../ResultRow';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
+import IncomeOverviewRows from './IncomeOverviewRows';
 import LatterStageElderlyPremiumTooltip from './LatterStageElderlyPremiumTooltip';
 import NationalPensionTooltip from './NationalPensionTooltip';
-import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
-import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
 
@@ -199,24 +198,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     .filter(s => s.type === 'bonus')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  const businessAndMiscIncome = inputs.incomeStreams
-    .filter(s => s.type === 'business' || s.type === 'miscellaneous')
-    .reduce((sum, s) => sum + s.amount, 0);
-
-  const hasEmploymentIncome = results.grossEmploymentIncome > 0;
-  const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
-  const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
-  // Backing the other net components out of the total keeps this row reconciled with it.
-  const netBusinessAndMiscIncome =
-    results.totalNetIncome -
-    (results.netEmploymentIncome ?? 0) -
-    (results.netPublicPensionIncome ?? 0);
-  const presentIncomeComponents = [
-    hasEmploymentIncome,
-    hasBusinessOrMiscIncome,
-    hasPublicPensionIncome,
-  ].filter(Boolean).length;
-
   const monthlyCommutingAllowance = inputs.incomeStreams
     .filter(s => s.type === 'commutingAllowance')
     .reduce((sum, s) => {
@@ -260,119 +241,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {isIncomeBasedProvider ? (
         <>
           {/* For income-based providers, show the income calculation details regardless of employment status */}
-          {hasEmploymentIncome && results.netEmploymentIncome !== undefined && (
-            <ResultRow
-              label={
-                <span>
-                  Net Employment Income
-                  <NetEmploymentIncomeTooltip
-                    grossEmploymentIncome={results.grossEmploymentIncome}
-                    netEmploymentIncome={results.netEmploymentIncome}
-                    incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
-                    pensionIncomeAdjustmentDeduction={results.pensionIncomeAdjustmentDeduction ?? 0}
-                    year={inputs.incomeYear}
-                  />
-                </span>
-              }
-              value={formatJPY(results.netEmploymentIncome)}
-              type="default"
-            />
-          )}
-          {hasBusinessOrMiscIncome && (
-            <ResultRow
-              label={
-                <span>
-                  Net Business / Misc Income
-                  {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
-                    <DetailedTooltip title="Business & Miscellaneous Income">
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          Calculation Breakdown
-                        </Typography>
-                        <table
-                          style={{
-                            width: '100%',
-                            borderCollapse: 'collapse',
-                            fontSize: '0.9rem',
-                            marginBottom: '8px',
-                          }}
-                        >
-                          <tbody>
-                            <tr>
-                              <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
-                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                                {formatJPY(businessAndMiscIncome)}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
-                              <Box
-                                component="td"
-                                sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
-                              >
-                                -{formatJPY(results.blueFilerDeduction)}
-                              </Box>
-                            </tr>
-                            <tr style={{ borderTop: '1px solid #ddd' }}>
-                              <td style={{ padding: '4px 0', fontWeight: 600 }}>
-                                Net Business/Misc Income:
-                              </td>
-                              <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                                {formatJPY(netBusinessAndMiscIncome)}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                            Blue-Filer Special Deduction
-                          </Typography>
-                          <Typography variant="body2" sx={{ mb: 1 }}>
-                            A special deduction for business operators with permission to file a
-                            Blue Return. This amount is deducted from business income after expenses
-                            before calculating taxable income.
-                          </Typography>
-                          <SourceLinks
-                            sources={[
-                              {
-                                href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm',
-                                label: '青色申告特別控除 - NTA',
-                              },
-                            ]}
-                          />
-                        </Box>
-                      </Box>
-                    </DetailedTooltip>
-                  )}
-                </span>
-              }
-              value={formatJPY(netBusinessAndMiscIncome)}
-              type="default"
-            />
-          )}
-          {hasPublicPensionIncome && (
-            <ResultRow
-              label={
-                <span>
-                  Net Public Pension Income
-                  <NetPublicPensionIncomeTooltip
-                    grossPublicPensionIncome={results.grossPublicPensionIncome ?? 0}
-                    netPublicPensionIncome={results.netPublicPensionIncome ?? 0}
-                  />
-                </span>
-              }
-              value={formatJPY(results.netPublicPensionIncome ?? 0)}
-              type="default"
-            />
-          )}
-          {/* Total Net Income Row */}
-          {presentIncomeComponents >= 2 && (
-            <ResultRow
-              label="Total Net Income"
-              value={formatJPY(results.totalNetIncome)}
-              type="subtotal"
-            />
-          )}
+          <IncomeOverviewRows results={results} inputs={inputs} />
           <ResultRow
             label="Basic Deduction"
             value={formatJPY(-results.residenceTaxBasicDeduction!)}

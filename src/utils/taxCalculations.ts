@@ -12,15 +12,6 @@ import {
 } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
-import {
-  type AgeRange,
-  DEFAULT_AGE_RANGE,
-  isPublicPensionDeductionElderly,
-  isLongTermCareCategory1Insured,
-  isLongTermCareCategory2Insured,
-  isSubjectToEmployeesPension,
-  isSubjectToNationalPension,
-} from '../types/ageRange';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
@@ -36,6 +27,15 @@ import type {
   TakeHomeInputs,
   TakeHomeResults,
 } from '../types/tax';
+import {
+  type TaxpayerAgeRange,
+  DEFAULT_TAXPAYER_AGE_RANGE,
+  taxpayerAgeRangeBounds,
+  isLongTermCareCategory1Insured,
+  isLongTermCareCategory2Insured,
+  isSubjectToEmployeesPension,
+  isSubjectToNationalPension,
+} from '../types/taxpayerAge';
 import { calculateAdditionalDeductions } from './additionalDeductions';
 import {
   calculateDependentDeductions,
@@ -311,9 +311,10 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   salaryIncome: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
   region: 'Tokyo',
-  ageRange: DEFAULT_AGE_RANGE,
+  ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
   grossEmploymentIncome: 0,
   incomeAdjustmentDeduction: 0,
+  netBusinessAndMiscIncome: 0,
   totalNetIncome: 0,
   additionalDeductions: { national: 0, residence: 0, items: [] },
 };
@@ -427,6 +428,8 @@ export interface NetIncomeComponents {
   incomeAdjustmentDeduction: number;
   /** 所得金額調整控除（給与所得と年金所得の双方を有する者）, already reflected in {@link netEmploymentIncome}. */
   pensionIncomeAdjustmentDeduction: number;
+  /** 事業所得 and 雑所得 (other than public pensions), net of the 青色申告特別控除. */
+  netBusinessAndMiscIncome: number;
   /** 公的年金等に係る雑所得. */
   netPublicPensionIncome: number;
   /** 合計所得金額: the sum of the net components. */
@@ -447,7 +450,7 @@ export interface NetIncomeComponents {
 const composeNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
   taxpayerIsSpecialDisability: boolean,
 ): NetIncomeComponents => {
@@ -489,7 +492,7 @@ const composeNetIncomeComponents = (
   // test before that adjustment but after the 子ども・特別障害者等 variant.
   const netPublicPensionIncome = calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
-    isPublicPensionDeductionElderly(ageRange),
+    taxpayerAgeRangeBounds(ageRange),
     netEmploymentIncomeBeforePensionAdjustment + netBusinessAndMiscIncome,
     year,
   );
@@ -508,6 +511,7 @@ const composeNetIncomeComponents = (
     netEmploymentIncome,
     incomeAdjustmentDeduction,
     pensionIncomeAdjustmentDeduction,
+    netBusinessAndMiscIncome,
     netPublicPensionIncome,
     totalNetIncome: netEmploymentIncome + netBusinessAndMiscIncome + netPublicPensionIncome,
   };
@@ -521,9 +525,9 @@ const composeNetIncomeComponents = (
  *
  * @param incomeStreams  Income streams to calculate net income for
  * @param year          Income year for the employment income deduction lookup
- * @param ageRange      The taxpayer's age range, from which the age-keyed net income rules are
- *                      resolved (currently the 公的年金等控除 minimums via
- *                      {@link isPublicPensionDeductionElderly})
+ * @param ageRange      The taxpayer's age range, passed on to the age-keyed net income rules for
+ *                      them to read (currently only the 公的年金等控除 minimums, decided by
+ *                      {@link calculateNetPublicPensionIncome})
  * @param dependents    The taxpayer's dependents, used to apply the 所得金額調整控除 when a qualifying
  *                      dependent is present
  * @param taxpayerIsSpecialDisability Whether the taxpayer is a 特別障害者, which qualifies them for
@@ -532,7 +536,7 @@ const composeNetIncomeComponents = (
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
-  ageRange: AgeRange,
+  ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
   taxpayerIsSpecialDisability: boolean = false,
 ): NetIncomeComponents =>
@@ -582,6 +586,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     netEmploymentIncome,
     incomeAdjustmentDeduction,
     pensionIncomeAdjustmentDeduction,
+    netBusinessAndMiscIncome,
     netPublicPensionIncome,
     totalNetIncome: netIncome,
   } = composeNetIncomeComponents(
@@ -860,6 +865,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     grossEmploymentIncome,
     incomeAdjustmentDeduction,
     ...(pensionIncomeAdjustmentDeduction > 0 && { pensionIncomeAdjustmentDeduction }),
+    netBusinessAndMiscIncome,
     ...(grossPublicPensionIncome > 0 && {
       grossPublicPensionIncome,
       netPublicPensionIncome,

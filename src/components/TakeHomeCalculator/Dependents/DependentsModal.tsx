@@ -35,11 +35,7 @@ import type {
   OtherDependent,
   Spouse,
 } from '../../../types/dependents';
-import {
-  RELATIONSHIPS,
-  DEPENDENT_AGE_CATEGORIES,
-  DEDUCTION_TYPES,
-} from '../../../types/dependents';
+import { RELATIONSHIPS, DEPENDENT_AGE_RANGES, DEDUCTION_TYPES } from '../../../types/dependents';
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
@@ -121,7 +117,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
     const relationship =
       RELATIONSHIPS.find(r => r.value === dependent.relationship)?.label ?? 'Unknown';
     const ageLabel =
-      DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label ?? 'Unknown';
+      DEPENDENT_AGE_RANGES.find(a => a.value === dependent.ageRange)?.label ?? 'Unknown';
     const totalNetIncome = calculateDependentTotalNetIncome(dependent, incomeYear);
     const incomeLabel =
       totalNetIncome === 0 ? 'No income' : `Net income: ${formatJPY(totalNetIncome)}`;
