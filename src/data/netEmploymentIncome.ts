@@ -6,13 +6,12 @@
  *
  * Gross employment income (給与等の収入金額) is reduced to 給与所得 by two things, both modelled here:
  *  - 給与所得控除 (employment income deduction): the year-indexed tables below, applied by
- *    {@link calculateNetEmploymentIncomeForPeriod}. Each period defines the flat-floor region, any
- *    fixed transition values, and the standard percentage-formula tiers for that income year.
+ *    {@link calculateNetEmploymentIncome}. Each period defines the flat-floor region, any fixed
+ *    transition values, and the standard percentage-formula tiers for that income year.
  *  - 所得金額調整控除（子ども・特別障害者等）: {@link calculateIncomeAdjustmentDeductionAmount} computes the amount
- *    purely from 給与等の収入金額; whether the taxpayer qualifies (a dependent under 23, or a special-disability
- *    spouse/dependent) is checked separately by
- *    {@link import("../utils/dependentDeductions").hasIncomeAdjustmentDeductionDependent}, and the two are
- *    combined in `taxCalculations.ts`.
+ *    purely from 給与等の収入金額; who qualifies for it differs between the taxpayer and a dependent, so each
+ *    decides its own, and
+ *    {@link import("../utils/netIncomeComponents").composeNetIncomeComponents} subtracts it.
  *
  * Sources:
  *  - 給与所得控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
@@ -176,7 +175,7 @@ export const getEmploymentIncomeDeductionPeriod = (
  * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
  * @param period                 The deduction period parameters to apply
  */
-export const calculateNetEmploymentIncomeForPeriod = (
+const calculateNetEmploymentIncomeForPeriod = (
   grossEmploymentIncome: number,
   period: EmploymentIncomeDeductionPeriod,
 ): number => {
