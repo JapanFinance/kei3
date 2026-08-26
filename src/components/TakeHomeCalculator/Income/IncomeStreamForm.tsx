@@ -20,6 +20,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import React, { useState } from 'react';
 
+import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import {
   formatJPY,
@@ -77,9 +78,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     if (type === 'commutingAllowance') {
       const monthlyAmount = (amount * getFrequencyAnnualMultiplier(frequency)) / 12;
 
-      if (monthlyAmount > 150000) {
+      if (monthlyAmount > COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP) {
         setError(
-          'Commuting allowance cannot exceed 150,000 JPY/month (non-taxable limit). For amounts exceeding this, please include the excess as part of the salary.',
+          `Commuting allowance cannot exceed ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)}/month (non-taxable limit). For amounts exceeding this, please include the excess as part of the salary.`,
         );
         return false;
       }
@@ -137,7 +138,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       case 'bonus':
         return 'Gross bonus amount before taxes and deductions';
       case 'commutingAllowance':
-        return 'Commuting allowance up to 150,000 yen per month is non-taxable for income tax, but the full amount affects social insurance premiums.';
+        return `Commuting allowance up to ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)} per month is non-taxable for income tax, but the full amount affects social insurance premiums.`;
       case 'publicPension':
         return 'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.';
       case 'stockCompensation':

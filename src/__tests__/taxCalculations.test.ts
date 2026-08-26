@@ -16,137 +16,11 @@ import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateTaxes,
-  calculateNetEmploymentIncome,
   calculateEmploymentInsurance,
   calculateNationalIncomeTaxBasicDeduction,
   calculateNationalIncomeTax,
   calculateNetIncomeComponents,
 } from '../utils/taxCalculations';
-
-describe('calculateNetEmploymentIncome', () => {
-  describe('2026 tiers (R8)', () => {
-    it('deduction of 740,000 yen for income up to 2,200,000 yen (R8 temporary provision)', () => {
-      expect(calculateNetEmploymentIncome(1_500_000, 2026)).toBe(760_000);
-      expect(calculateNetEmploymentIncome(1_899_999, 2026)).toBe(1_159_999);
-    });
-
-    it('between 2,200,000 and 6,600,000 yen, income is rounded down to the nearest 4000 yen', () => {
-      expect(calculateNetEmploymentIncome(2_200_000, 2026)).toBe(1_460_000);
-      expect(calculateNetEmploymentIncome(2_201_123, 2026)).toBe(1_460_000);
-      expect(calculateNetEmploymentIncome(2_203_333, 2026)).toBe(1_460_000);
-      expect(calculateNetEmploymentIncome(2_204_000, 2026)).toBe(1_462_800);
-
-      expect(calculateNetEmploymentIncome(3_600_000, 2026)).toBe(2_440_000);
-      expect(calculateNetEmploymentIncome(3_603_999, 2026)).toBe(2_440_000);
-      expect(calculateNetEmploymentIncome(3_604_000, 2026)).toBe(2_443_200);
-    });
-
-    it('calculates deduction correctly for income between 2,200,000 and 3,600,000 yen', () => {
-      expect(calculateNetEmploymentIncome(2_500_000, 2026)).toBe(
-        2_500_000 - (2_500_000 * 0.3 + 80_000),
-      );
-    });
-
-    it('calculates deduction correctly for income between 3,600,001 and 6,600,000 yen', () => {
-      expect(calculateNetEmploymentIncome(5_000_000, 2026)).toBe(
-        5_000_000 - (5_000_000 * 0.2 + 440_000),
-      );
-    });
-
-    it('calculates deduction correctly for income between 6,600,001 and 8,500,000 yen', () => {
-      expect(calculateNetEmploymentIncome(7_500_000, 2026)).toBe(
-        7_500_000 - (7_500_000 * 0.1 + 1_100_000),
-      );
-    });
-
-    it('From 6.6 million yen, income is not rounded down to the nearest 4000 yen', () => {
-      expect(calculateNetEmploymentIncome(6_600_100, 2026)).toBe(
-        Math.floor(6_600_100 * 0.9) - 1_100_000,
-      );
-      expect(calculateNetEmploymentIncome(6_600_123, 2026)).toBe(
-        Math.floor(6_600_123 * 0.9) - 1_100_000,
-      );
-      expect(calculateNetEmploymentIncome(6_601_000, 2026)).not.toBe(
-        calculateNetEmploymentIncome(6_600_100, 2026),
-      );
-    });
-
-    it('returns maximum deduction of 1,950,000 yen for income above 8,500,000 yen', () => {
-      expect(calculateNetEmploymentIncome(9_000_000, 2026)).toBe(9_000_000 - 1_950_000);
-      expect(calculateNetEmploymentIncome(10_000_000, 2026)).toBe(10_000_000 - 1_950_000);
-    });
-  });
-
-  describe('2025 tiers (R7)', () => {
-    it('returns 0 for income at or below 650,000 yen', () => {
-      expect(calculateNetEmploymentIncome(0, 2025)).toBe(0);
-      expect(calculateNetEmploymentIncome(650_000, 2025)).toBe(0);
-    });
-
-    it('deduction of 650,000 yen for income up to 1,900,000 yen', () => {
-      expect(calculateNetEmploymentIncome(650_001, 2025)).toBe(1);
-      expect(calculateNetEmploymentIncome(1_500_000, 2025)).toBe(850_000);
-      expect(calculateNetEmploymentIncome(1_900_000, 2025)).toBe(1_250_000);
-    });
-
-    it('smooth join at 1,900,000 yen: flat floor and standard formula give same result', () => {
-      // Floor formula: 1,900,000 - 650,000 = 1,250,000
-      // Standard formula: floor(1,900,000 / 4000) * 4000 * 0.7 - 80,000 = 1,900,000 * 0.7 - 80,000 = 1,250,000
-      expect(calculateNetEmploymentIncome(1_900_000, 2025)).toBe(1_250_000);
-      expect(calculateNetEmploymentIncome(1_900_001, 2025)).toBe(1_250_000); // rounds down to 1,900,000
-    });
-
-    it('calculates deduction correctly for income between 1,900,001 and 3,600,000 yen', () => {
-      expect(calculateNetEmploymentIncome(2_200_000, 2025)).toBe(1_460_000); // 2,200,000 * 0.7 - 80,000
-      expect(calculateNetEmploymentIncome(2_500_000, 2025)).toBe(
-        2_500_000 - (2_500_000 * 0.3 + 80_000),
-      );
-    });
-
-    it('calculates deduction correctly for income between 3,600,001 and 6,600,000 yen', () => {
-      expect(calculateNetEmploymentIncome(5_000_000, 2025)).toBe(
-        5_000_000 - (5_000_000 * 0.2 + 440_000),
-      );
-    });
-
-    it('calculates deduction correctly for income between 6,600,001 and 8,500,000 yen', () => {
-      expect(calculateNetEmploymentIncome(7_500_000, 2025)).toBe(
-        7_500_000 - (7_500_000 * 0.1 + 1_100_000),
-      );
-    });
-
-    it('returns maximum deduction of 1,950,000 yen for income above 8,500,000 yen', () => {
-      expect(calculateNetEmploymentIncome(9_000_000, 2025)).toBe(9_000_000 - 1_950_000);
-      expect(calculateNetEmploymentIncome(10_000_000, 2025)).toBe(10_000_000 - 1_950_000);
-    });
-  });
-
-  describe('income amount adjustment (所得金額調整控除)', () => {
-    const childUnder23: Dependent = {
-      id: 'c',
-      relationship: 'child',
-      ageRange: '19to22',
-      isCohabiting: false,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
-
-    it('subtracts the 所得金額調整控除 when a qualifying dependent is passed and salary exceeds ¥8.5M', () => {
-      // 22M (R8): 給与所得控除 → 20,050,000; 所得金額調整控除 → 150,000; net = 19,900,000
-      expect(calculateNetEmploymentIncome(22_000_000, 2026, [childUnder23])).toBe(19_900_000);
-    });
-
-    it('applies no adjustment without dependents (the default)', () => {
-      expect(calculateNetEmploymentIncome(22_000_000, 2026)).toBe(20_050_000);
-    });
-
-    it('applies no adjustment at or below ¥8.5M even with a qualifying dependent', () => {
-      expect(calculateNetEmploymentIncome(8_400_000, 2026, [childUnder23])).toBe(
-        calculateNetEmploymentIncome(8_400_000, 2026),
-      );
-    });
-  });
-});
 
 describe('calculateTaxes', () => {
   // Test cases for different income brackets
@@ -996,11 +870,8 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
     ];
     const components = calculateNetIncomeComponents(incomeStreams, 2026, 'age65to69', []);
-    expect(components.netBusinessAndMiscIncome).toBe(2_000_000);
     expect(components.totalNetIncome).toBe(
-      components.netEmploymentIncome +
-        components.netBusinessAndMiscIncome +
-        components.netPublicPensionIncome,
+      components.netEmploymentIncome + 2_000_000 + components.netPublicPensionIncome,
     );
     expect(
       calculateTaxes({
@@ -1027,7 +898,64 @@ describe('Commuting Allowance', () => {
         { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
         {
           type: 'commutingAllowance' as const,
-          amount: 20_000,
+          amount: 150_000,
+          frequency: 'monthly' as const,
+          id: 'c1',
+        }, // at the cap: wholly non-taxable
+      ],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    const result = calculateTaxes(inputs);
+
+    // 1. Social Insurance Base
+    // Salary 300k + Commuting 150k = 450k
+    // Compare with 450k salary
+    const inputsComparison = {
+      ...inputs,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 450_000, frequency: 'monthly' as const, id: 's2' },
+      ],
+    };
+    const resultComparison = calculateTaxes(inputsComparison);
+
+    expect(result.healthInsurance).toBe(resultComparison.healthInsurance);
+    expect(result.pensionPayments).toBe(resultComparison.pensionPayments);
+
+    // 2. Income Tax Base
+    // 給与等の収入金額 is the 300k salary alone, so 給与所得 matches a salary-only filer's
+    const inputsTaxableEquivalent = {
+      ...inputs,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's3' },
+      ],
+    };
+    const resultTaxableEquivalent = calculateTaxes(inputsTaxableEquivalent);
+
+    expect(result.netEmploymentIncome).toBe(resultTaxableEquivalent.netEmploymentIncome);
+
+    // Same 給与所得 as that filer, but social insurance on the 450k base gives a larger
+    // 社会保険料控除, so the tax is lower.
+    expect(result.nationalIncomeTax).toBeLessThan(resultTaxableEquivalent.nationalIncomeTax);
+
+    expect(result.commutingAllowance).toBe(150_000 * 12);
+  });
+
+  it('rejects an allowance above the non-taxable cap, which belongs in salary', () => {
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
+        {
+          type: 'commutingAllowance' as const,
+          amount: 200_000,
           frequency: 'monthly' as const,
           id: 'c1',
         },
@@ -1042,111 +970,7 @@ describe('Commuting Allowance', () => {
       incomeYear: 2026,
     };
 
-    const result = calculateTaxes(inputs);
-
-    // 1. Social Insurance Base
-    // Salary 300k + Commuting 20k = 320k
-    // SMR for 320k is 320k (Bracket 23: 310k-330k -> 320k)
-    // Health Insurance (Tokyo, Kyokai Kenpo ~9.98% split? No, total rate. Employee pays half.)
-    // Let's verify against standard calculation without commuting but with higher salary
-    const inputsComparison = {
-      ...inputs,
-      incomeStreams: [
-        { type: 'salary' as const, amount: 320_000, frequency: 'monthly' as const, id: 's2' },
-      ],
-    };
-    const resultComparison = calculateTaxes(inputsComparison);
-
-    expect(result.healthInsurance).toBe(resultComparison.healthInsurance);
-    expect(result.pensionPayments).toBe(resultComparison.pensionPayments);
-    expect(result.employmentInsurance).toBe(resultComparison.employmentInsurance);
-
-    // 2. Income Tax Base
-    // CommutingAllowance (20k) is fully non-taxable (<= 150k)
-    // Tax Base should be based on 300k salary only (3.6M annual)
-    // Compare with 300k salary case
-    const inputsSalaryOnly = {
-      ...inputs,
-      incomeStreams: [
-        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's3' },
-      ],
-    };
-    const resultSalaryOnly = calculateTaxes(inputsSalaryOnly);
-
-    // Tax should be identical to salary-only case
-    // expect(result.nationalIncomeTax).toBe(resultSalaryOnly.nationalIncomeTax);
-    // ^ INCORRECT: Higher social insurance (from commuting) means larger deduction -> lower tax.
-
-    // Instead, verify that the Net Employment Income (base for tax) is identical
-    // This confirms that the Commuting Allowance was excluded from the tax base.
-    expect(result.netEmploymentIncome).toBe(resultSalaryOnly.netEmploymentIncome);
-
-    // And verify Tax is LOWER than salary-only case due to higher Social Insurance deduction
-    expect(result.nationalIncomeTax).toBeLessThan(resultSalaryOnly.nationalIncomeTax);
-
-    // And different from the 320k salary case (which has higher tax due to higher income)
-    expect(result.nationalIncomeTax).toBeLessThan(resultComparison.nationalIncomeTax);
-  });
-
-  it('excess over 150,000 JPY/month is taxable', () => {
-    const inputs = {
-      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-      incomeStreams: [
-        { type: 'salary' as const, amount: 300_000, frequency: 'monthly' as const, id: 's1' },
-        {
-          type: 'commutingAllowance' as const,
-          amount: 200_000,
-          frequency: 'monthly' as const,
-          id: 'c1',
-        }, // 50k taxable excess
-      ],
-      ageRange: 'age20to39' as const,
-      healthInsuranceProvider: DEFAULT_PROVIDER,
-      region: 'Tokyo',
-      dependents: [],
-      dcPlanContributions: 0,
-      manualSocialInsuranceEntry: false,
-      manualSocialInsuranceAmount: 0,
-      incomeYear: 2026,
-    };
-
-    const result = calculateTaxes(inputs);
-
-    // 1. Social Insurance Base
-    // Salary 300k + Commuting 200k = 500k
-    // Compare with 500k salary
-    const inputsComparison = {
-      ...inputs,
-      incomeStreams: [
-        { type: 'salary' as const, amount: 500_000, frequency: 'monthly' as const, id: 's2' },
-      ],
-    };
-    const resultComparison = calculateTaxes(inputsComparison);
-
-    expect(result.healthInsurance).toBe(resultComparison.healthInsurance);
-    expect(result.pensionPayments).toBe(resultComparison.pensionPayments);
-
-    // 2. Income Tax Base
-    // Taxable Income = Salary 300k + (Commuting 200k - 150k) = 350k
-    // Compare with 350k salary
-    const inputsTaxableEquivalent = {
-      ...inputs,
-      incomeStreams: [
-        { type: 'salary' as const, amount: 350_000, frequency: 'monthly' as const, id: 's3' },
-      ],
-    };
-    const resultTaxableEquivalent = calculateTaxes(inputsTaxableEquivalent);
-
-    // Verify Net Employment Income is identical
-    expect(result.netEmploymentIncome).toBe(resultTaxableEquivalent.netEmploymentIncome);
-
-    // Tax will be lower because Social Insurance on 500k base > Social Insurance on 350k base
-    expect(result.nationalIncomeTax).toBeLessThan(resultTaxableEquivalent.nationalIncomeTax);
-
-    // Verify breakdown fields
-    expect(result.commutingAllowanceIncome).toBe(200_000 * 12);
-    expect(result.commutingAllowanceTaxable).toBe(50_000 * 12);
-    expect(result.commutingAllowanceNonTaxable).toBe(150_000 * 12);
+    expect(() => calculateTaxes(inputs)).toThrow(/non-taxable cap/);
   });
 
   it('handles 6-month pass correctly', () => {
@@ -1175,11 +999,8 @@ describe('Commuting Allowance', () => {
 
     const result = calculateTaxes(inputs);
 
-    // Annual Commuting: 120,000 * 2 = 240,000
-    // Taxable part: 0 (20k/month < 150k/month)
-    expect(result.commutingAllowanceIncome).toBe(240_000);
-    expect(result.commutingAllowanceTaxable).toBe(0);
-    expect(result.commutingAllowanceNonTaxable).toBe(240_000);
+    // Annual Commuting: 120,000 * 2 = 240,000, wholly non-taxable at 20k/month
+    expect(result.commutingAllowance).toBe(240_000);
   });
 });
 
@@ -1642,6 +1463,17 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     expect(result.totalNetIncome).toBe(19_900_000);
   });
 
+  it('does NOT apply at or below ¥8,500,000 of salary even with a qualifying dependent', () => {
+    const inputs = baseInputs([childUnder23]);
+    const result = calculateTaxes({
+      ...inputs,
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 8_400_000, frequency: 'annual' as const },
+      ],
+    });
+    expect(result.incomeAdjustmentDeduction).toBe(0);
+  });
+
   it('does NOT apply when the only dependent is 23 or older without special disability', () => {
     const result = calculateTaxes(baseInputs([adultChild]));
     expect(result.incomeAdjustmentDeduction).toBe(0);
@@ -1701,17 +1533,17 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
     incomeYear: 2026,
   };
 
-  it('sums salary, taxable commuting allowance, bonus, and stock compensation', () => {
+  it('sums salary, bonus and stock compensation, leaving out the commuting allowance', () => {
     const result = calculateTaxes({
       ...baseInputs,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       incomeStreams: [
         { id: 's1', type: 'salary' as const, amount: 6_000_000, frequency: 'annual' as const },
-        // 200k/mo commuting = 2.4M/yr; non-taxable cap is 1.8M/yr → 600k taxable
+        // At the non-taxable cap, so none of it is 給与等の収入金額
         {
           id: 'c1',
           type: 'commutingAllowance' as const,
-          amount: 200_000,
+          amount: 150_000,
           frequency: 'monthly' as const,
         },
         { id: 'b1', type: 'bonus' as const, amount: 1_000_000, month: 5 },
@@ -1724,8 +1556,8 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
       ],
     });
 
-    // 6,000,000 + (2,400,000 − 1,800,000) + 1,000,000 + 4,000,000 = 11,600,000
-    expect(result.grossEmploymentIncome).toBe(11_600_000);
+    // 6,000,000 + 1,000,000 + 4,000,000 = 11,000,000
+    expect(result.grossEmploymentIncome).toBe(11_000_000);
 
     // The tooltip derives 給与所得控除 as gross − net − adjustment. With the canonical gross this is
     // the real (capped) deduction and is never negative.
