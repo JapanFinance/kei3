@@ -7,6 +7,7 @@ import { useReducer } from 'react';
 
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
 import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
 import {
   getProviderDisplayName,
@@ -17,7 +18,6 @@ import {
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
-import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
 
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (

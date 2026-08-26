@@ -259,14 +259,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         inputs.incomeYear,
         inputs.ageRange,
         inputs.dependents,
-        inputs.personalCircumstances.disability === 'special',
+        inputs.personalCircumstances,
       ),
     [
       inputs.incomeStreams,
       inputs.incomeYear,
       inputs.dependents,
       inputs.ageRange,
-      inputs.personalCircumstances.disability,
+      inputs.personalCircumstances,
     ],
   );
 

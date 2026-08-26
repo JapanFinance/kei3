@@ -15,6 +15,7 @@ import {
   dependentAgeCoversBand,
   dependentAgeRangeBounds,
 } from '../types/dependents';
+import { EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
 import {
   STATUTORY_AGE_BANDS,
   TAXPAYER_AGE_RANGES,
@@ -121,6 +122,7 @@ describe('the 65 boundary of the public pension deduction', () => {
         YEAR,
         ageRange,
         [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
       ).netPublicPensionIncome;
 
     expect(taxpayerNetPension('age60to64')).toBe(NET_UNDER_65);
