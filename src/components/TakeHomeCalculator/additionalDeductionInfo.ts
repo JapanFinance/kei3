@@ -4,9 +4,10 @@
 import type { AdditionalDeductionItem, PersonalDeductionItem } from '../../types/tax';
 
 /**
- * Display + explanatory metadata for an additional income deduction, shared between the
- * Additional Deductions modal (the tooltip next to each computed readout) and the Taxes-tab
- * breakdown tooltip, so the "how was this computed" explanation can't drift between the two.
+ * Display + explanatory metadata for a deduction entered in the Additional Deductions & Credits
+ * modal — the additional income deductions and the taxpayer's own 人的控除 alike — shared between
+ * the modal (the tooltip next to each computed readout) and the Taxes-tab breakdown tooltip, so
+ * the "how was this computed" explanation can't drift between the two.
  *
  * These deductions are computed for the user from amounts they already know, so the explanation
  * belongs next to the *result* — unlike the home loan credit, whose accordion explains how to

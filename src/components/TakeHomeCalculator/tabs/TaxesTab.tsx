@@ -35,7 +35,6 @@ import { ResultRow } from '../ResultRow';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
-import PersonalDeductionsTooltip from './PersonalDeductionsTooltip';
 import {
   buildNationalBasicDeductionRows,
   getNationalBasicDeductionHighlightIndex,
@@ -333,34 +332,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
-        {results.personalDeductions && results.personalDeductions.national > 0 && (
-          <ResultRow
-            label={
-              <span>
-                Personal Deductions
-                <PersonalDeductionsTooltip
-                  deductions={results.personalDeductions}
-                  taxType="national"
-                />
-              </span>
-            }
-            value={formatJPY(-results.personalDeductions.national)}
-            type="detail"
-          />
-        )}
-
-        {results.additionalDeductions.national > 0 && (
+        {results.additionalDeductions.national + (results.personalDeductions?.national ?? 0) >
+          0 && (
           <ResultRow
             label={
               <span>
                 Other Deductions
                 <AdditionalDeductionsTooltip
                   deductions={results.additionalDeductions}
+                  personalDeductions={results.personalDeductions}
                   taxType="national"
                 />
               </span>
             }
-            value={formatJPY(-results.additionalDeductions.national)}
+            value={formatJPY(
+              -(
+                results.additionalDeductions.national + (results.personalDeductions?.national ?? 0)
+              ),
+            )}
             type="detail"
           />
         )}
@@ -641,34 +630,25 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               />
             )}
 
-            {results.personalDeductions && results.personalDeductions.residence > 0 && (
-              <ResultRow
-                label={
-                  <span>
-                    Personal Deductions
-                    <PersonalDeductionsTooltip
-                      deductions={results.personalDeductions}
-                      taxType="residence"
-                    />
-                  </span>
-                }
-                value={formatJPY(-results.personalDeductions.residence)}
-                type="detail"
-              />
-            )}
-
-            {results.additionalDeductions.residence > 0 && (
+            {results.additionalDeductions.residence + (results.personalDeductions?.residence ?? 0) >
+              0 && (
               <ResultRow
                 label={
                   <span>
                     Other Deductions
                     <AdditionalDeductionsTooltip
                       deductions={results.additionalDeductions}
+                      personalDeductions={results.personalDeductions}
                       taxType="residence"
                     />
                   </span>
                 }
-                value={formatJPY(-results.additionalDeductions.residence)}
+                value={formatJPY(
+                  -(
+                    results.additionalDeductions.residence +
+                    (results.personalDeductions?.residence ?? 0)
+                  ),
+                )}
                 type="detail"
               />
             )}
