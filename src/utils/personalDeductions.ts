@@ -42,6 +42,12 @@ export const WIDOW_SINGLE_PARENT_INCOME_LIMIT = 5_000_000;
  * arithmetic `national - residence`. The two coincide everywhere here except ひとり親（父）, where
  * the statute says ¥10,000 though the amounts differ by ¥50,000 — the table in the law predates
  * the 2020 merge of 寡夫控除 into ひとり親控除 and was carried over unchanged for fathers.
+ *
+ * The two disability rows apply the same statutory rows as the dependent-side 障害者控除 — the
+ * amounts in `dependentDeductions.ts` (NATIONAL_TAX_DEDUCTIONS / RESIDENCE_TAX_DEDUCTIONS) and
+ * the differences in `residenceTax.ts` (STATUTORY_DEDUCTION_DIFFERENCES) — because 所法79 and
+ * 314条の6 make no taxpayer/dependent distinction. An amendment must change both sides together;
+ * only 同居特別障害者 is dependent-side-only, which is why it has no row here.
  */
 const PERSONAL_DEDUCTIONS = {
   /** 障害者控除（一般の障害者）— 314条の6第1号イ(1)(i) */

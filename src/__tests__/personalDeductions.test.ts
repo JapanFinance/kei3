@@ -164,6 +164,8 @@ describe('personal deductions in the full calculation', () => {
     expect(withDisability.residenceTax.totalResidenceTax).toBeLessThan(
       base.residenceTax.totalResidenceTax,
     );
+    // The lower 所得割 carries into the furusato nozei limit.
+    expect(withDisability.furusatoNozei.limit).toBeLessThan(base.furusatoNozei.limit);
   });
 
   it('gives a single mother and a single father the same deduction but different 調整控除', () => {
@@ -223,6 +225,47 @@ describe('personal deductions in the full calculation', () => {
     expect(withoutStatus.residenceTax.totalResidenceTax).toBeGreaterThan(0);
     expect(withStatus.residenceTax.totalResidenceTax).toBe(0);
     expect(withStatus.residenceTax.nonTaxableStatus).toBe('disability');
+    expect(withStatus.furusatoNozei.limit).toBe(0);
+  });
+
+  it('keeps the personal deduction in the post-home-loan-credit residence tax', () => {
+    // A credit large enough to spill over to residence tax makes calculateTaxes call
+    // calculateResidenceTax a second time; the status must reach that call too.
+    const withCredit = calculateTaxes({
+      ...baseInputs,
+      homeLoanTaxCredit: { creditAmount: 800_000, moveInYear: 2024 },
+    });
+    const withBoth = calculateTaxes({
+      ...baseInputs,
+      homeLoanTaxCredit: { creditAmount: 800_000, moveInYear: 2024 },
+      personalCircumstances: circumstances({ disability: 'special' }),
+    });
+
+    expect(withCredit.homeLoanTaxCredit!.appliedToResidenceTax).toBeGreaterThan(0);
+    expect(withBoth.homeLoanTaxCredit!.appliedToResidenceTax).toBeGreaterThan(0);
+    // The displayed residence result comes from the post-credit call when the credit spills, so
+    // these two fields prove that call received the circumstances: the ¥300,000 deduction and the
+    // ¥100,000 人的控除額の差. (totalResidenceTax alone cannot distinguish — the deduction also
+    // shifts how much credit spills over from income tax.)
+    expect(withCredit.residenceTax.taxableIncome - withBoth.residenceTax.taxableIncome).toBe(
+      300_000,
+    );
+    expect(withBoth.residenceTax.personalDeductionDifference).toBe(
+      withCredit.residenceTax.personalDeductionDifference + 100_000,
+    );
+    // The pre-credit leg feeds the furusato cap, so the status must lower it as well.
+    expect(withBoth.furusatoNozei.limit).toBeLessThan(withCredit.furusatoNozei.limit);
+  });
+
+  it('tests the 寡婦/ひとり親 ceiling against 合計所得金額, not gross income', () => {
+    // Gross ¥6,400,000 salary → 給与所得 ¥4,680,000: over the ceiling in gross terms only.
+    const result = calculateTaxes({
+      ...baseInputs,
+      incomeStreams: [{ type: 'salary', amount: 6_400_000, frequency: 'annual', id: 's1' }],
+      personalCircumstances: circumstances({ widowOrSingleParent: 'widow' }),
+    });
+    expect(result.totalNetIncome).toBeLessThanOrEqual(WIDOW_SINGLE_PARENT_INCOME_LIMIT);
+    expect(result.personalDeductions!.items.map(item => item.key)).toEqual(['widow']);
   });
 
   it('gives a 特別障害者 the 所得金額調整控除 without any qualifying dependent', () => {

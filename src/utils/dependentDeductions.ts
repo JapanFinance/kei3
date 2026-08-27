@@ -337,6 +337,8 @@ const NATIONAL_TAX_DEDUCTIONS = {
   SPECIFIC_RELATIVE_120TO123: 30_000,
 
   // 障害者控除 (Disability Deduction) https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm
+  // The 一般/特別 rows mirror the taxpayer's own table in personalDeductions.ts (所法79 makes no
+  // taxpayer/dependent distinction); an amendment must change both files together.
   DISABILITY_REGULAR: 270_000, // 一般の障害者
   DISABILITY_SPECIAL: 400_000, // 特別障害者
   DISABILITY_SPECIAL_COHABITING: 750_000, // 同居特別障害者
@@ -365,6 +367,7 @@ const RESIDENCE_TAX_DEDUCTIONS = {
   SPECIFIC_RELATIVE_120TO123: 30_000,
 
   // 障害者控除 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html
+  // The 一般/特別 rows mirror personalDeductions.ts, as in NATIONAL_TAX_DEDUCTIONS above.
   DISABILITY_REGULAR: 260_000,
   DISABILITY_SPECIAL: 300_000,
   DISABILITY_SPECIAL_COHABITING: 530_000,

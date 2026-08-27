@@ -653,7 +653,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     dependentDeductions,
     incomeYear,
     inputs.ageRange,
-    0,
     inputs.personalCircumstances,
   );
 
@@ -685,8 +684,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           dependentDeductions,
           incomeYear,
           inputs.ageRange,
-          homeLoanTaxCreditResult.appliedToResidenceTax,
           inputs.personalCircumstances,
+          homeLoanTaxCreditResult.appliedToResidenceTax,
         )
       : preCreditResidenceTax;
 

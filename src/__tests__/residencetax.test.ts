@@ -506,7 +506,6 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
         EMPTY_DEPENDENT_DEDUCTIONS,
         TEST_INCOME_YEAR,
         'age20to39',
-        0,
         circumstances,
       ),
     ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: status });
@@ -519,10 +518,22 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
       'under18',
-      0,
       { disability: 'special', widowOrSingleParent: 'widow' },
     );
     expect(result.nonTaxableStatus).toBe('minor');
+  });
+
+  it('reports disability first when a 寡婦 status also applies', () => {
+    // Any one status exempts; the order only picks which reason the display names.
+    const result = calculateResidenceTax(
+      1_350_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      { disability: 'regular', widowOrSingleParent: 'widow' },
+    );
+    expect(result.nonTaxableStatus).toBe('disability');
   });
 
   it('taxes a 寡婦 normally above the limit', () => {
@@ -532,7 +543,6 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
       'age20to39',
-      0,
       { disability: 'none', widowOrSingleParent: 'widow' },
     );
     expect(result.totalResidenceTax).toBeGreaterThan(0);
@@ -541,14 +551,7 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
 
 describe('calculateResidenceTax personal deductions (人的控除)', () => {
   it('deducts the 人的控除 and adds its statutory difference to the 調整控除 base', () => {
-    const args = [
-      3_000_000,
-      0,
-      EMPTY_DEPENDENT_DEDUCTIONS,
-      TEST_INCOME_YEAR,
-      'age20to39',
-      0,
-    ] as const;
+    const args = [3_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39'] as const;
     const base = calculateResidenceTax(...args);
     const withDeduction = calculateResidenceTax(...args, {
       disability: 'special',
@@ -563,14 +566,7 @@ describe('calculateResidenceTax personal deductions (人的控除)', () => {
   });
 
   it('ignores a 寡婦/ひとり親 selection above the ¥5,000,000 ceiling', () => {
-    const args = [
-      6_000_000,
-      0,
-      EMPTY_DEPENDENT_DEDUCTIONS,
-      TEST_INCOME_YEAR,
-      'age20to39',
-      0,
-    ] as const;
+    const args = [6_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39'] as const;
     expect(
       calculateResidenceTax(...args, { disability: 'none', widowOrSingleParent: 'widow' }),
     ).toEqual(calculateResidenceTax(...args));

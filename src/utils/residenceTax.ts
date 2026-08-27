@@ -112,10 +112,10 @@ function nonTaxableStatusFor(
  * @param dependentDeductions - Full dependent deduction results
  * @param ageRange - Taxpayer age range; required because the 未成年者 exemption
  *   ({@link nonTaxableStatusFor}) is part of the statutory calculation
- * @param taxCredit - Tax credit amount
  * @param personalCircumstances - The taxpayer's own 障害者・寡婦・ひとり親 status. Drives both the
  *   remaining {@link nonTaxableStatusFor} exemptions and the 人的控除 this function deducts and
  *   feeds into the 調整控除
+ * @param taxCredit - Tax credit amount
  */
 export const calculateResidenceTax = (
   netIncome: number,
@@ -123,8 +123,8 @@ export const calculateResidenceTax = (
   dependentDeductions: DependentDeductionResults,
   year: number,
   ageRange: TaxpayerAgeRange,
-  taxCredit: number = 0,
   personalCircumstances: PersonalCircumstancesInput = EMPTY_PERSONAL_CIRCUMSTANCES,
+  taxCredit: number = 0,
 ): ResidenceTaxDetails => {
   const nonTaxableStatus = nonTaxableStatusFor(ageRange, personalCircumstances, netIncome);
   if (nonTaxableStatus) {
@@ -313,7 +313,9 @@ const STATUTORY_DEDUCTION_DIFFERENCES = {
   DEPENDENT_ELDERLY: 100_000, // Elderly dependent (70+)
   DEPENDENT_ELDERLY_COHABITING: 130_000, // Elderly cohabiting parent/grandparent (70+)
 
-  // 障害者控除 (Disability Deduction) (1) and (2) in the statutory table.
+  // 障害者控除 (Disability Deduction) (1) and (2) in the statutory table. The 一般/特別 rows
+  // mirror the taxpayer's own statutoryDifference values in personalDeductions.ts (314条の6
+  // makes no taxpayer/dependent distinction); an amendment must change both files together.
   DISABILITY_REGULAR: 10_000, // Regular disability
   DISABILITY_SPECIAL: 100_000, // Special disability
   DISABILITY_SPECIAL_COHABITING: 220_000, // Special disability with cohabitation

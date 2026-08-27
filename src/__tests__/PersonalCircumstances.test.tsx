@@ -59,6 +59,22 @@ describe('Personal Circumstances card', () => {
     });
   });
 
+  it('preserves the other field when one select changes', async () => {
+    const user = userEvent.setup();
+    const { onPersonalCircumstancesChange } = renderModal(
+      { disability: 'special', widowOrSingleParent: 'none' },
+      3_000_000,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Widow / single parent' }));
+    await user.click(screen.getByRole('option', { name: /Widowed or divorced woman/ }));
+
+    expect(onPersonalCircumstancesChange).toHaveBeenCalledWith({
+      disability: 'special',
+      widowOrSingleParent: 'widow',
+    });
+  });
+
   it('reads out each applied deduction with its per-tax amounts', () => {
     renderModal({ disability: 'special', widowOrSingleParent: 'widow' }, 3_000_000);
     expect(screen.getByText(/Disability deduction:/)).toHaveTextContent(
@@ -73,5 +89,14 @@ describe('Personal Circumstances card', () => {
     renderModal({ disability: 'none', widowOrSingleParent: 'widow' }, 6_000_000);
     expect(screen.queryByText(/Widow deduction:/)).not.toBeInTheDocument();
     expect(screen.getByText(/Not applied/)).toHaveTextContent('¥5,000,000 or less');
+  });
+
+  it('shows the over-ceiling note even while the disability deduction applies', () => {
+    // 障害者控除 has no income limit, so it must read out while the 寡婦 selection reports
+    // not-applied — the note keys off the missing widow/singleParent item, not an empty result.
+    renderModal({ disability: 'special', widowOrSingleParent: 'widow' }, 6_000_000);
+    expect(screen.getByText(/Disability deduction:/)).toBeInTheDocument();
+    expect(screen.queryByText(/Widow deduction:/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Not applied/)).toBeInTheDocument();
   });
 });
