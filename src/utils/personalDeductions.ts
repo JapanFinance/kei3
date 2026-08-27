@@ -36,6 +36,35 @@ import type {
 export const WIDOW_SINGLE_PARENT_INCOME_LIMIT = 5_000_000;
 
 /**
+ * The ひとり親's qualifying child: 総所得金額等 limits by income year, newest-first
+ * (所令11条の2第2項, delegated from 所法2条1項31号イ). Its values have tracked the 扶養親族
+ * eligibility threshold's history (¥480,000 → ¥580,000 for 2025 → ¥620,000 for 2026), but the
+ * provision sets its own figure — model it separately rather than borrowing
+ * {@link import("../data/dependentDeductionThresholds").getDependentEligibilityMax}.
+ * The same provision also requires the child not to be another person's 同一生計配偶者 or
+ * 扶養親族, and sets no age limit.
+ */
+const SINGLE_PARENT_CHILD_INCOME_LIMIT_PERIODS: ReadonlyArray<{
+  effectiveYear: number;
+  limit: number;
+}> = [
+  // R8 (2026): raised from 58万 to 62万 per 令和8年度税制改正
+  { effectiveYear: 2026, limit: 620_000 },
+  // R7 (2025): raised from 48万 to 58万 per 令和7年度税制改正
+  { effectiveYear: 2025, limit: 580_000 },
+];
+
+/** The ひとり親 qualifying child's 総所得金額等 limit for the given income year. */
+export const getSingleParentChildIncomeLimit = (year: number): number => {
+  for (const period of SINGLE_PARENT_CHILD_INCOME_LIMIT_PERIODS) {
+    if (year >= period.effectiveYear) return period.limit;
+  }
+  return SINGLE_PARENT_CHILD_INCOME_LIMIT_PERIODS[
+    SINGLE_PARENT_CHILD_INCOME_LIMIT_PERIODS.length - 1
+  ]!.limit;
+};
+
+/**
  * Deduction amounts and their statutory 人的控除額の差, by category.
  *
  * `statutoryDifference` is the figure 地方税法第314条の6第1号イ names for the 調整控除, NOT the

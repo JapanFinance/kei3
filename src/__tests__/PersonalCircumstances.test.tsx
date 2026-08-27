@@ -46,6 +46,14 @@ describe('Personal Circumstances card', () => {
     expect(screen.queryByText(/deduction: /i)).not.toBeInTheDocument();
   });
 
+  it('attaches the eligibility note to the select as helper text with the child income limit', () => {
+    renderModal(EMPTY_PERSONAL_CIRCUMSTANCES, 3_000_000);
+    // The modal renders with incomeYear 2026, whose 所令11条の2 child limit is ¥620,000.
+    expect(
+      screen.getByRole('combobox', { name: /^Widow \/ single parent/ }),
+    ).toHaveAccessibleDescription(/¥620,000 or less/);
+  });
+
   it('reports the selected status to the caller', async () => {
     const user = userEvent.setup();
     const { onPersonalCircumstancesChange } = renderModal(EMPTY_PERSONAL_CIRCUMSTANCES, 3_000_000);

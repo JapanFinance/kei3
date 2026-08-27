@@ -8,6 +8,7 @@ import type { PersonalCircumstancesInput, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   calculatePersonalDeductions,
+  getSingleParentChildIncomeLimit,
   WIDOW_SINGLE_PARENT_INCOME_LIMIT,
 } from '../utils/personalDeductions';
 import { calculateTaxes } from '../utils/taxCalculations';
@@ -120,6 +121,17 @@ describe('calculatePersonalDeductions', () => {
     expect(result.national).toBe(750_000);
     expect(result.residence).toBe(600_000);
     expect(result.statutoryDifference).toBe(150_000);
+  });
+});
+
+describe('getSingleParentChildIncomeLimit', () => {
+  it('returns the year-indexed 総所得金額等 limit for the qualifying child', () => {
+    // 所令11条の2第2項: raised to ¥580,000 for 2025 (令和7年度改正) and ¥620,000 for 2026
+    // (令和8年度改正), each enforced that December but applying to the whole income year.
+    expect(getSingleParentChildIncomeLimit(2025)).toBe(580_000);
+    expect(getSingleParentChildIncomeLimit(2026)).toBe(620_000);
+    // Later years reuse the newest authored period until the data gains a newer one.
+    expect(getSingleParentChildIncomeLimit(2027)).toBe(620_000);
   });
 });
 

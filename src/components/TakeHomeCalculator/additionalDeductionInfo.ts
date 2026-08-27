@@ -78,7 +78,7 @@ export const PERSONAL_DEDUCTION_INFO: Record<
   singleParent: {
     name: 'Single parent',
     explanation:
-      'A flat ¥350,000 income tax / ¥300,000 residence tax, regardless of marital history or gender, for an unmarried taxpayer with a 生計を一にする子 whose total income is within the threshold (¥580,000 from 2025) and whose own total net income is ¥5,000,000 or less. Whether the parent is the mother or the father changes no amount, but it does change the 人的控除額の差 behind the residence-tax adjustment credit.',
+      "A flat ¥350,000 income tax / ¥300,000 residence tax, regardless of marital history or gender, for an unmarried taxpayer supporting a child on the same household budget (生計を一にする子) — any age, with total income within the year's limit (¥620,000 for 2026) — whose own total net income is ¥5,000,000 or less. Whether the parent is the mother or the father changes no amount, but it does change the 人的控除額の差 behind the residence-tax adjustment credit.",
     sourceLabel: 'ひとり親控除 (NTA No.1171)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm',
   },

@@ -20,6 +20,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
@@ -47,7 +48,10 @@ import {
   earliestEligibleMoveInYear,
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../../utils/homeLoanTaxCredit';
-import { WIDOW_SINGLE_PARENT_INCOME_LIMIT } from '../../utils/personalDeductions';
+import {
+  getSingleParentChildIncomeLimit,
+  WIDOW_SINGLE_PARENT_INCOME_LIMIT,
+} from '../../utils/personalDeductions';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip, DetailedTooltip } from '../ui/Tooltips';
@@ -344,6 +348,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     label="Widow / single parent (寡婦控除 / ひとり親控除)"
                     value={personalCircumstances.widowOrSingleParent}
                     onChange={e => updatePersonal({ widowOrSingleParent: e.target.value })}
+                    // FormControl wires helper text to a TextField automatically but not to a bare
+                    // Select, so the description is attached by hand.
+                    SelectDisplayProps={{ 'aria-describedby': 'widowOrSingleParentHelper' }}
                   >
                     {WIDOW_OR_SINGLE_PARENT_OPTIONS.map(option => (
                       <MenuItem key={option.value} value={option.value}>
@@ -351,17 +358,15 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                       </MenuItem>
                     ))}
                   </Select>
+                  <FormHelperText id="widowOrSingleParentHelper">
+                    These deductions require not being married (including a common-law marriage).
+                    The single parent deduction requires a child supported on the same household
+                    budget (生計を一にする) whose total income is{' '}
+                    {formatJPY(getSingleParentChildIncomeLimit(incomeYear))} or less; there is no
+                    age limit on the child.
+                  </FormHelperText>
                 </FormControl>
               </Box>
-              <Typography
-                variant="body2"
-                sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1.5 }}
-              >
-                These deductions require not having remarried and having no 事実婚 partner, and the
-                ひとり親控除 requires a 生計を一にする子 whose total income is within the threshold.
-                The calculator applies what is selected and checks only the{' '}
-                {formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} total net income ceiling.
-              </Typography>
 
               {personalItems.map(item => {
                 const info = PERSONAL_DEDUCTION_INFO[item.key];
