@@ -243,7 +243,7 @@ export const DISABILITY_LEVELS: DisabilityLevelInfo[] = [
   },
   {
     value: 'regular',
-    label: 'Qualifying disability (一般の障害者)',
+    label: 'General disability (一般の障害者)',
   },
   {
     value: 'special',

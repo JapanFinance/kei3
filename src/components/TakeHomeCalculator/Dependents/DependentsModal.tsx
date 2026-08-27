@@ -131,7 +131,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       // Names the 障害者控除 bracket claimed, matching DISABILITY_LEVELS, rather than labelling
       // the dependent; the chip drops the Japanese term the dropdown carries, for width.
       let disabilityLabel =
-        dependent.disability === 'regular' ? 'Qualifying disability' : 'Special disability';
+        dependent.disability === 'regular' ? 'General disability' : 'Special disability';
       // Add cohabiting info to special disability chip
       if (dependent.disability === 'special' && dependent.isCohabiting) {
         disabilityLabel += ' (Cohabiting)';
