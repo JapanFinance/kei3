@@ -64,8 +64,8 @@ import {
  */
 const WIDOW_OR_SINGLE_PARENT_OPTIONS: { value: WidowOrSingleParentStatus; label: string }[] = [
   { value: 'none', label: 'Neither' },
-  { value: 'singleParentMother', label: 'Single parent, mother (ひとり親)' },
-  { value: 'singleParentFather', label: 'Single parent, father (ひとり親)' },
+  { value: 'singleParentMother', label: 'Single mother (ひとり親)' },
+  { value: 'singleParentFather', label: 'Single father (ひとり親)' },
   { value: 'widow', label: 'Widowed or divorced woman (寡婦)' },
 ];
 
@@ -308,7 +308,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   alignItems: 'center',
                 }}
               >
-                Personal Circumstances
+                Personal Circumstances (人的控除)
                 <SimpleTooltip>
                   Deductions for the taxpayer&apos;s own status: disability (障害者控除), widowhood
                   (寡婦控除), and single parenthood (ひとり親控除). A spouse&apos;s or dependent
@@ -335,11 +335,13 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Select>
                 </FormControl>
                 <FormControl fullWidth>
-                  <InputLabel id="widowOrSingleParentLabel">Widow / single parent</InputLabel>
+                  <InputLabel id="widowOrSingleParentLabel">
+                    Widow / single parent (寡婦控除 / ひとり親控除)
+                  </InputLabel>
                   <Select
                     labelId="widowOrSingleParentLabel"
                     id="widowOrSingleParent"
-                    label="Widow / single parent"
+                    label="Widow / single parent (寡婦控除 / ひとり親控除)"
                     value={personalCircumstances.widowOrSingleParent}
                     onChange={e => updatePersonal({ widowOrSingleParent: e.target.value })}
                   >
@@ -355,9 +357,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 variant="body2"
                 sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1.5 }}
               >
-                The 寡婦控除 and ひとり親控除 also require not having remarried and having no 事実婚
-                partner, and the ひとり親控除 requires a 生計を一にする子 whose total income is
-                within the threshold. The calculator applies what is selected and checks only the{' '}
+                These deductions require not having remarried and having no 事実婚 partner, and the
+                ひとり親控除 requires a 生計を一にする子 whose total income is within the threshold.
+                The calculator applies what is selected and checks only the{' '}
                 {formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} total net income ceiling.
               </Typography>
 

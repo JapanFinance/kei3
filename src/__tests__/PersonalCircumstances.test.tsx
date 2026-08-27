@@ -50,8 +50,8 @@ describe('Personal Circumstances card', () => {
     const user = userEvent.setup();
     const { onPersonalCircumstancesChange } = renderModal(EMPTY_PERSONAL_CIRCUMSTANCES, 3_000_000);
 
-    await user.click(screen.getByRole('combobox', { name: 'Widow / single parent' }));
-    await user.click(screen.getByRole('option', { name: /Single parent, mother/ }));
+    await user.click(screen.getByRole('combobox', { name: /^Widow \/ single parent/ }));
+    await user.click(screen.getByRole('option', { name: /Single mother/ }));
 
     expect(onPersonalCircumstancesChange).toHaveBeenCalledWith({
       disability: 'none',
@@ -66,7 +66,7 @@ describe('Personal Circumstances card', () => {
       3_000_000,
     );
 
-    await user.click(screen.getByRole('combobox', { name: 'Widow / single parent' }));
+    await user.click(screen.getByRole('combobox', { name: /^Widow \/ single parent/ }));
     await user.click(screen.getByRole('option', { name: /Widowed or divorced woman/ }));
 
     expect(onPersonalCircumstancesChange).toHaveBeenCalledWith({
