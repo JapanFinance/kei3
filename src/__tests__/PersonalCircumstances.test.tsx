@@ -5,6 +5,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { AdditionalDeductionsModal } from '../components/TakeHomeCalculator/AdditionalDeductionsModal';
+import type { Dependent } from '../types/dependents';
 import type { PersonalCircumstancesInput } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
 import { calculatePersonalDeductions } from '../utils/personalDeductions';
@@ -13,6 +14,7 @@ const renderModal = (
   personalCircumstances: PersonalCircumstancesInput,
   netIncome: number,
   onPersonalCircumstancesChange = vi.fn(),
+  dependents: Dependent[] = [],
 ) => {
   const personalDeductions = calculatePersonalDeductions(personalCircumstances, netIncome);
   render(
@@ -30,6 +32,7 @@ const renderModal = (
       onMedicalExpensesChange={vi.fn()}
       personalCircumstances={personalCircumstances}
       onPersonalCircumstancesChange={onPersonalCircumstancesChange}
+      dependents={dependents}
       personalDeductions={personalDeductions}
       incomeYear={2026}
     />,
@@ -75,16 +78,16 @@ describe('Personal Circumstances card', () => {
     );
 
     await user.click(screen.getByRole('combobox', { name: /^Widow \/ single parent/ }));
-    await user.click(screen.getByRole('option', { name: /Widowed or divorced woman/ }));
+    await user.click(screen.getByRole('option', { name: /Widowed woman/ }));
 
     expect(onPersonalCircumstancesChange).toHaveBeenCalledWith({
       disability: 'special',
-      widowOrSingleParent: 'widow',
+      widowOrSingleParent: 'widowBereaved',
     });
   });
 
   it('reads out each applied deduction with its per-tax amounts', () => {
-    renderModal({ disability: 'special', widowOrSingleParent: 'widow' }, 3_000_000);
+    renderModal({ disability: 'special', widowOrSingleParent: 'widowBereaved' }, 3_000_000);
     expect(screen.getByText(/Disability deduction:/)).toHaveTextContent(
       'Disability deduction: ¥400,000 income tax, ¥300,000 residence tax',
     );
@@ -94,15 +97,47 @@ describe('Personal Circumstances card', () => {
   });
 
   it('explains why a 寡婦/ひとり親 selection was not applied above the income ceiling', () => {
-    renderModal({ disability: 'none', widowOrSingleParent: 'widow' }, 6_000_000);
+    renderModal({ disability: 'none', widowOrSingleParent: 'widowBereaved' }, 6_000_000);
     expect(screen.queryByText(/Widow deduction:/)).not.toBeInTheDocument();
     expect(screen.getByText(/Not applied/)).toHaveTextContent('¥5,000,000 or less');
+  });
+
+  it('warns when a single parent selection has no qualifying child in Dependents', () => {
+    renderModal({ disability: 'none', widowOrSingleParent: 'singleParentMother' }, 3_000_000);
+    expect(screen.getByText(/No qualifying child is entered under Dependents/)).toHaveTextContent(
+      '¥620,000 or less',
+    );
+  });
+
+  it('does not warn once a qualifying child is entered', () => {
+    renderModal(
+      { disability: 'none', widowOrSingleParent: 'singleParentMother' },
+      3_000_000,
+      vi.fn(),
+      [
+        {
+          id: 'c1',
+          relationship: 'child',
+          ageRange: 'under16',
+          isCohabiting: true,
+          disability: 'none',
+          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+        },
+      ],
+    );
+    expect(screen.queryByText(/No qualifying child/)).not.toBeInTheDocument();
+  });
+
+  it('suppresses dependents warnings while the over-ceiling note shows', () => {
+    renderModal({ disability: 'none', widowOrSingleParent: 'singleParentMother' }, 6_000_000);
+    expect(screen.getByText(/Not applied/)).toBeInTheDocument();
+    expect(screen.queryByText(/No qualifying child/)).not.toBeInTheDocument();
   });
 
   it('shows the over-ceiling note even while the disability deduction applies', () => {
     // 障害者控除 has no income limit, so it must read out while the 寡婦 selection reports
     // not-applied — the note keys off the missing widow/singleParent item, not an empty result.
-    renderModal({ disability: 'special', widowOrSingleParent: 'widow' }, 6_000_000);
+    renderModal({ disability: 'special', widowOrSingleParent: 'widowBereaved' }, 6_000_000);
     expect(screen.getByText(/Disability deduction:/)).toBeInTheDocument();
     expect(screen.queryByText(/Widow deduction:/)).not.toBeInTheDocument();
     expect(screen.getByText(/Not applied/)).toBeInTheDocument();

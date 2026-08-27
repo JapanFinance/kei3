@@ -21,11 +21,16 @@
  * - 人的控除額の差: https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_2-At_314_6
  */
 
+import type { Dependent } from '../types/dependents';
 import type {
   PersonalCircumstancesInput,
   PersonalDeductionItem,
   PersonalDeductionsResult,
 } from '../types/tax';
+import {
+  calculateDependentTotalNetIncome,
+  getDependentEligibilityMax,
+} from './dependentDeductions';
 
 /**
  * Maximum 合計所得金額 for both 寡婦控除 and ひとり親控除 (所法2①三十・三十一). The other
@@ -38,9 +43,7 @@ export const WIDOW_SINGLE_PARENT_INCOME_LIMIT = 5_000_000;
 /**
  * The ひとり親's qualifying child: 総所得金額等 limits by income year, newest-first
  * (所令11条の2第2項, delegated from 所法2条1項31号イ). Its values have tracked the 扶養親族
- * eligibility threshold's history (¥480,000 → ¥580,000 for 2025 → ¥620,000 for 2026), but the
- * provision sets its own figure — model it separately rather than borrowing
- * {@link import("../data/dependentDeductionThresholds").getDependentEligibilityMax}.
+ * eligibility threshold's history, but the provision sets its own figure.
  * The same provision also requires the child not to be another person's 同一生計配偶者 or
  * 扶養親族, and sets no age limit.
  */
@@ -118,7 +121,8 @@ export const calculatePersonalDeductions = (
 
   if (netIncome <= WIDOW_SINGLE_PARENT_INCOME_LIMIT) {
     switch (circumstances.widowOrSingleParent) {
-      case 'widow':
+      case 'widowDivorced':
+      case 'widowBereaved':
         items.push({ key: 'widow', ...PERSONAL_DEDUCTIONS.widow });
         break;
       case 'singleParentMother':
@@ -142,4 +146,60 @@ export const calculatePersonalDeductions = (
     statutoryDifference: items.reduce((sum, item) => sum + item.statutoryDifference, 0),
     items,
   };
+};
+
+/**
+ * Mismatches between the 寡婦/ひとり親 selection and the Dependents list. Advisory, not gates:
+ * a spouse entry can be legitimate alongside the deduction in the year the spouse died
+ * (配偶者控除 is judged at the time of death, this deduction at December 31), a qualifying child
+ * or relative may simply not have been entered yet, and facts the list cannot hold — 事実婚, or
+ * the child being claimed by the other parent — stay the user's to assert.
+ */
+export type PersonalCircumstanceWarning =
+  | 'spouseEntered'
+  | 'singleParentNoQualifyingChild'
+  | 'widowDivorcedNoDependentRelative';
+
+/**
+ * Cross-checks the 寡婦/ひとり親 selection against the Dependents list — see
+ * {@link PersonalCircumstanceWarning} for why the results are advisory. The checks:
+ *
+ *  - Any selection conflicts with an entered spouse (現に婚姻をしていない, 所法2①三十・三十一).
+ *  - ひとり親 requires a 生計を一にする子 with 総所得金額等 within
+ *    {@link getSingleParentChildIncomeLimit} (所令11条の2②) — matched against entered children.
+ *  - A divorced 寡婦 (所法2①三十イ) requires a 扶養親族: any entered non-spouse relative with
+ *    合計所得金額 within {@link getDependentEligibilityMax}.
+ */
+export const getPersonalCircumstanceWarnings = (
+  circumstances: PersonalCircumstancesInput,
+  dependents: Dependent[],
+  year: number,
+): PersonalCircumstanceWarning[] => {
+  const selection = circumstances.widowOrSingleParent;
+  if (selection === 'none') return [];
+
+  const warnings: PersonalCircumstanceWarning[] = [];
+  if (dependents.some(dependent => dependent.relationship === 'spouse')) {
+    warnings.push('spouseEntered');
+  }
+
+  if (selection === 'singleParentMother' || selection === 'singleParentFather') {
+    const hasQualifyingChild = dependents.some(
+      dependent =>
+        dependent.relationship === 'child' &&
+        calculateDependentTotalNetIncome(dependent, year) <= getSingleParentChildIncomeLimit(year),
+    );
+    if (!hasQualifyingChild) warnings.push('singleParentNoQualifyingChild');
+  }
+
+  if (selection === 'widowDivorced') {
+    const hasDependentRelative = dependents.some(
+      dependent =>
+        dependent.relationship !== 'spouse' &&
+        calculateDependentTotalNetIncome(dependent, year) <= getDependentEligibilityMax(year),
+    );
+    if (!hasDependentRelative) warnings.push('widowDivorcedNoDependentRelative');
+  }
+
+  return warnings;
 };

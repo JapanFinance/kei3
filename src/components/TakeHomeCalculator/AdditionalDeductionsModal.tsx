@@ -31,6 +31,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
+import type { Dependent } from '../../types/dependents';
 import { DISABILITY_LEVELS } from '../../types/dependents';
 import type {
   HomeLoanTaxCreditInput,
@@ -43,12 +44,14 @@ import type {
   PersonalDeductionsResult,
   WidowOrSingleParentStatus,
 } from '../../types/tax';
+import { getDependentEligibilityMax } from '../../utils/dependentDeductions';
 import { formatJPY } from '../../utils/formatters';
 import {
   earliestEligibleMoveInYear,
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../../utils/homeLoanTaxCredit';
 import {
+  getPersonalCircumstanceWarnings,
   getSingleParentChildIncomeLimit,
   WIDOW_SINGLE_PARENT_INCOME_LIMIT,
 } from '../../utils/personalDeductions';
@@ -67,10 +70,11 @@ import {
  * 調整控除 differs between a mother and a father.
  */
 const WIDOW_OR_SINGLE_PARENT_OPTIONS: { value: WidowOrSingleParentStatus; label: string }[] = [
-  { value: 'none', label: 'Neither' },
+  { value: 'none', label: 'Not applicable' },
   { value: 'singleParentMother', label: 'Single mother (ひとり親)' },
   { value: 'singleParentFather', label: 'Single father (ひとり親)' },
-  { value: 'widow', label: 'Widowed or divorced woman (寡婦)' },
+  { value: 'widowDivorced', label: 'Divorced woman (寡婦)' },
+  { value: 'widowBereaved', label: 'Widowed woman (寡婦)' },
 ];
 
 interface AdditionalDeductionsModalProps {
@@ -89,6 +93,8 @@ interface AdditionalDeductionsModalProps {
   onMedicalExpensesChange: (input: MedicalExpensesInput) => void;
   personalCircumstances: PersonalCircumstancesInput;
   onPersonalCircumstancesChange: (input: PersonalCircumstancesInput) => void;
+  /** The Dependents-modal entries, cross-checked against the 寡婦/ひとり親 selection. */
+  dependents: Dependent[];
   /** Computed additional deductions, used for the live per-card readouts. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Computed 障害者・寡婦・ひとり親控除; absent when none applies. */
@@ -170,6 +176,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   onMedicalExpensesChange,
   personalCircumstances,
   onPersonalCircumstancesChange,
+  dependents,
   additionalDeductions,
   personalDeductions,
   incomeYear,
@@ -242,6 +249,27 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const widowOrSingleParentOverIncomeLimit =
     personalCircumstances.widowOrSingleParent !== 'none' &&
     !personalItems.some(item => item.key === 'widow' || item.key === 'singleParent');
+  // Suppressed while the ceiling note shows: a dependents mismatch is moot for a deduction that
+  // is not applied anyway.
+  const circumstanceWarnings = widowOrSingleParentOverIncomeLimit
+    ? []
+    : getPersonalCircumstanceWarnings(personalCircumstances, dependents, incomeYear);
+  const CIRCUMSTANCE_WARNING_TEXT: Record<(typeof circumstanceWarnings)[number], string> = {
+    spouseEntered:
+      'A spouse is entered under Dependents, but this deduction requires not being married at ' +
+      'the end of the year. The combination is valid only for a year in which the spouse died — ' +
+      'the spouse deduction is then judged at the time of death and this deduction at December 31.',
+    singleParentNoQualifyingChild:
+      'No qualifying child is entered under Dependents: the single parent deduction requires a ' +
+      `child supported on the same household budget with total income of ${formatJPY(
+        getSingleParentChildIncomeLimit(incomeYear),
+      )} or less. If such a child exists, add them under Dependents.`,
+    widowDivorcedNoDependentRelative:
+      'No dependent relative (扶養親族) is entered under Dependents: for a divorced woman, the ' +
+      `widow deduction requires one with total income of ${formatJPY(
+        getDependentEligibilityMax(incomeYear),
+      )} or less. If such a relative exists, add them under Dependents.`,
+  };
 
   return (
     <Dialog
@@ -314,9 +342,9 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               >
                 Personal Circumstances (人的控除)
                 <SimpleTooltip>
-                  Deductions for the taxpayer&apos;s own status: disability (障害者控除), widowhood
-                  (寡婦控除), and single parenthood (ひとり親控除). A spouse&apos;s or dependent
-                  relative&apos;s disability is entered under Dependents instead.
+                  Deductions for the taxpayer's own status: disability (障害者控除), widowhood
+                  (寡婦控除), and single parenthood (ひとり親控除). A spouse's or dependent
+                  relative's disability is entered under Dependents instead.
                 </SimpleTooltip>
               </Typography>
               {/* Stacked rather than side by side: the longest option labels are wider than half
@@ -361,9 +389,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   <FormHelperText id="widowOrSingleParentHelper">
                     These deductions require not being married (including a common-law marriage).
                     The single parent deduction requires a child supported on the same household
-                    budget (生計を一にする) whose total income is{' '}
-                    {formatJPY(getSingleParentChildIncomeLimit(incomeYear))} or less; there is no
-                    age limit on the child.
+                    budget (生計を一にする) whose net income is{' '}
+                    {formatJPY(getSingleParentChildIncomeLimit(incomeYear))} or less.
                   </FormHelperText>
                 </FormControl>
               </Box>
@@ -384,6 +411,26 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   (合計所得金額) of {formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.
                 </Typography>
               )}
+              {circumstanceWarnings.map(warning => (
+                <Box
+                  key={warning}
+                  sx={{
+                    p: 1.5,
+                    bgcolor: 'warning.light',
+                    color: 'warning.contrastText',
+                    borderRadius: 1,
+                    mt: 2,
+                    display: 'flex',
+                    gap: 1,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    {CIRCUMSTANCE_WARNING_TEXT[warning]}
+                  </Typography>
+                </Box>
+              ))}
             </CardContent>
           </Card>
 

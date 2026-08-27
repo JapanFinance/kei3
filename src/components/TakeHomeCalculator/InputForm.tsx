@@ -930,6 +930,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onMedicalExpensesChange={handleMedicalExpensesChange}
         personalCircumstances={inputs.personalCircumstances}
         onPersonalCircumstancesChange={handlePersonalCircumstancesChange}
+        dependents={inputs.dependents}
         additionalDeductions={additionalDeductions}
         personalDeductions={personalDeductions}
         incomeYear={inputs.incomeYear}

@@ -159,14 +159,20 @@ export interface MedicalExpensesInput {
 }
 
 /**
- * Whether the taxpayer is a 寡婦 or an ひとり親, and for an ひとり親 whether they are the mother or
- * the father. One field carries both because the statute makes them mutually exclusive: a 寡婦 is
- * defined as a woman who does not qualify as an ひとり親 (所法2①三十).
+ * Whether the taxpayer is a 寡婦 or an ひとり親, and which statutory sub-case. One field carries
+ * all of them because they are mutually exclusive: a 寡婦 is defined as a woman who does not
+ * qualify as an ひとり親 (所法2①三十), and its two branches partition the ways of not being
+ * married.
  *
  * The mother/father split changes no deduction amount — both are ¥350,000 income tax / ¥300,000
  * residence tax. It selects the 人的控除額の差 that the residence-tax 調整控除 uses: 地方税法
  * 第314条の6第1号イ(3) gives ¥10,000 and (4) gives ¥50,000, and 地方税法施行令 assigns (3) to
  * ひとり親のうち父である者 and (4) to ひとり親のうち母である者.
+ *
+ * The 寡婦 split changes no amount either — it distinguishes the branches of 所法2①三十イ/ロ so
+ * the calculator can check the one requirement that differs: a divorced 寡婦 (イ) must have a
+ * dependent relative (扶養親族), while a bereaved one — 死別, or the husband's survival unknown
+ * (ロ) — needs none.
  *
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm — 寡婦控除
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm — ひとり親控除
@@ -175,13 +181,16 @@ export type WidowOrSingleParentStatus =
   | 'none'
   | 'singleParentMother'
   | 'singleParentFather'
-  | 'widow';
+  | 'widowDivorced'
+  | 'widowBereaved';
 
 /**
  * The taxpayer's own circumstances that carry a 人的控除 of their own, as entered in the
  * Additional Deductions & Credits modal. Every one of them is self-asserted: the calculator can
- * check the 合計所得金額 ceilings it knows, but not 障害者手帳 status, marital history, or whether
- * a 生計を一にする子 exists, so the modal states those requirements and applies what is selected.
+ * check the 合計所得金額 ceilings it knows and cross-check the Dependents list
+ * ({@link import("../utils/personalDeductions").getPersonalCircumstanceWarnings}), but not
+ * 障害者手帳 status, marital history, or 事実婚, so the modal states those requirements and
+ * applies what is selected.
  */
 export interface PersonalCircumstancesInput {
   /**

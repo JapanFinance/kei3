@@ -496,7 +496,7 @@ describe('calculateResidenceTax - Personal Deduction Difference', () => {
 describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation', () => {
   it.each([
     [{ disability: 'regular', widowOrSingleParent: 'none' }, 'disability'],
-    [{ disability: 'none', widowOrSingleParent: 'widow' }, 'widow'],
+    [{ disability: 'none', widowOrSingleParent: 'widowBereaved' }, 'widow'],
     [{ disability: 'none', widowOrSingleParent: 'singleParentFather' }, 'singleParent'],
   ] as const)('exempts %o at 合計所得金額 1,350,000', (circumstances, status) => {
     expect(
@@ -518,7 +518,7 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
       'under18',
-      { disability: 'special', widowOrSingleParent: 'widow' },
+      { disability: 'special', widowOrSingleParent: 'widowBereaved' },
     );
     expect(result.nonTaxableStatus).toBe('minor');
   });
@@ -531,7 +531,7 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
       'age20to39',
-      { disability: 'regular', widowOrSingleParent: 'widow' },
+      { disability: 'regular', widowOrSingleParent: 'widowBereaved' },
     );
     expect(result.nonTaxableStatus).toBe('disability');
   });
@@ -543,7 +543,7 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
       'age20to39',
-      { disability: 'none', widowOrSingleParent: 'widow' },
+      { disability: 'none', widowOrSingleParent: 'widowBereaved' },
     );
     expect(result.totalResidenceTax).toBeGreaterThan(0);
   });
@@ -568,7 +568,7 @@ describe('calculateResidenceTax personal deductions (人的控除)', () => {
   it('ignores a 寡婦/ひとり親 selection above the ¥5,000,000 ceiling', () => {
     const args = [6_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39'] as const;
     expect(
-      calculateResidenceTax(...args, { disability: 'none', widowOrSingleParent: 'widow' }),
+      calculateResidenceTax(...args, { disability: 'none', widowOrSingleParent: 'widowBereaved' }),
     ).toEqual(calculateResidenceTax(...args));
   });
 });

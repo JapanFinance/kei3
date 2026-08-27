@@ -74,7 +74,7 @@ describe('TaxesTab personal deductions display', () => {
   it('shows the Other Deductions row when only a personal deduction applies', () => {
     const results = calculateTaxes({
       ...baseInputs,
-      personalCircumstances: { disability: 'none', widowOrSingleParent: 'widow' },
+      personalCircumstances: { disability: 'none', widowOrSingleParent: 'widowBereaved' },
     });
     render(<TaxesTab results={results} inputs={baseInputs} />);
 
@@ -88,7 +88,7 @@ describe('TaxesTab personal deductions display', () => {
     const results = calculateTaxes({
       ...baseInputs,
       incomeStreams: [{ type: 'salary', amount: 2_090_000, frequency: 'annual', id: 's1' }],
-      personalCircumstances: { disability: 'none', widowOrSingleParent: 'widow' },
+      personalCircumstances: { disability: 'none', widowOrSingleParent: 'widowBereaved' },
     });
     render(<TaxesTab results={results} inputs={baseInputs} />);
 

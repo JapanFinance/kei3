@@ -3,11 +3,13 @@
 
 import { describe, it, expect } from 'vitest';
 
+import type { Dependent } from '../types/dependents';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { PersonalCircumstancesInput, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   calculatePersonalDeductions,
+  getPersonalCircumstanceWarnings,
   getSingleParentChildIncomeLimit,
   WIDOW_SINGLE_PARENT_INCOME_LIMIT,
 } from '../utils/personalDeductions';
@@ -66,7 +68,7 @@ describe('calculatePersonalDeductions', () => {
 
   it('applies 寡婦控除', () => {
     const result = calculatePersonalDeductions(
-      circumstances({ widowOrSingleParent: 'widow' }),
+      circumstances({ widowOrSingleParent: 'widowBereaved' }),
       UNDER_LIMIT,
     );
     expect(result.items).toEqual([
@@ -98,7 +100,7 @@ describe('calculatePersonalDeductions', () => {
 
   it('allows 寡婦/ひとり親控除 exactly at the income ceiling', () => {
     const result = calculatePersonalDeductions(
-      circumstances({ widowOrSingleParent: 'widow' }),
+      circumstances({ widowOrSingleParent: 'widowBereaved' }),
       WIDOW_SINGLE_PARENT_INCOME_LIMIT,
     );
     expect(result.national).toBe(270_000);
@@ -121,6 +123,96 @@ describe('calculatePersonalDeductions', () => {
     expect(result.national).toBe(750_000);
     expect(result.residence).toBe(600_000);
     expect(result.statutoryDifference).toBe(150_000);
+  });
+});
+
+describe('getPersonalCircumstanceWarnings', () => {
+  const YEAR = 2026;
+  const member = (patch: Partial<Dependent>): Dependent =>
+    ({
+      id: 'd1',
+      relationship: 'child',
+      ageRange: 'under16',
+      isCohabiting: true,
+      disability: 'none',
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      ...patch,
+    }) as Dependent;
+
+  it('returns nothing when no 寡婦/ひとり親 status is selected', () => {
+    expect(
+      getPersonalCircumstanceWarnings(circumstances({ disability: 'special' }), [], YEAR),
+    ).toEqual([]);
+  });
+
+  it('flags an entered spouse against any selection', () => {
+    const spouse = member({ relationship: 'spouse', ageRange: 'under65' } as Partial<Dependent>);
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'widowBereaved' }),
+        [spouse],
+        YEAR,
+      ),
+    ).toEqual(['spouseEntered']);
+  });
+
+  it('flags a single parent without a qualifying child, keyed to the year limit', () => {
+    const noChildren = getPersonalCircumstanceWarnings(
+      circumstances({ widowOrSingleParent: 'singleParentMother' }),
+      [member({ relationship: 'parent' })],
+      YEAR,
+    );
+    expect(noChildren).toEqual(['singleParentNoQualifyingChild']);
+
+    // otherNetIncome counts at face value, so the 2026 limit of ¥620,000 is testable exactly.
+    const childAtLimit = member({
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 },
+    });
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'singleParentMother' }),
+        [childAtLimit],
+        YEAR,
+      ),
+    ).toEqual([]);
+
+    const childOverLimit = member({
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 },
+    });
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'singleParentFather' }),
+        [childOverLimit],
+        YEAR,
+      ),
+    ).toEqual(['singleParentNoQualifyingChild']);
+  });
+
+  it('requires a dependent relative for a divorced 寡婦 but not a bereaved one', () => {
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'widowDivorced' }),
+        [],
+        YEAR,
+      ),
+    ).toEqual(['widowDivorcedNoDependentRelative']);
+
+    // Any non-spouse relative within the eligibility threshold satisfies 所法2①三十イ.
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'widowDivorced' }),
+        [member({ relationship: 'parent', ageRange: '70plus' } as Partial<Dependent>)],
+        YEAR,
+      ),
+    ).toEqual([]);
+
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'widowBereaved' }),
+        [],
+        YEAR,
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -215,7 +307,7 @@ describe('personal deductions in the full calculation', () => {
     const overLimit = calculateTaxes({
       ...baseInputs,
       incomeStreams: [{ type: 'salary', amount: 7_000_000, frequency: 'annual', id: 's1' }],
-      personalCircumstances: circumstances({ widowOrSingleParent: 'widow' }),
+      personalCircumstances: circumstances({ widowOrSingleParent: 'widowBereaved' }),
     });
     expect(overLimit.totalNetIncome).toBeGreaterThan(WIDOW_SINGLE_PARENT_INCOME_LIMIT);
     expect(overLimit.personalDeductions).toBeUndefined();
@@ -274,7 +366,7 @@ describe('personal deductions in the full calculation', () => {
     const result = calculateTaxes({
       ...baseInputs,
       incomeStreams: [{ type: 'salary', amount: 6_400_000, frequency: 'annual', id: 's1' }],
-      personalCircumstances: circumstances({ widowOrSingleParent: 'widow' }),
+      personalCircumstances: circumstances({ widowOrSingleParent: 'widowBereaved' }),
     });
     expect(result.totalNetIncome).toBeLessThanOrEqual(WIDOW_SINGLE_PARENT_INCOME_LIMIT);
     expect(result.personalDeductions!.items.map(item => item.key)).toEqual(['widow']);

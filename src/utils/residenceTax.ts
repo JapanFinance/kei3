@@ -94,7 +94,12 @@ function nonTaxableStatusFor(
   if (netIncome > NON_TAXABLE_STATUS_INCOME_LIMIT) return undefined;
   if (ageRange === 'under18') return 'minor';
   if (circumstances.disability !== 'none') return 'disability';
-  if (circumstances.widowOrSingleParent === 'widow') return 'widow';
+  if (
+    circumstances.widowOrSingleParent === 'widowDivorced' ||
+    circumstances.widowOrSingleParent === 'widowBereaved'
+  ) {
+    return 'widow';
+  }
   if (circumstances.widowOrSingleParent !== 'none') return 'singleParent';
   return undefined;
 }
