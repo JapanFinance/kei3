@@ -2,13 +2,18 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-08-28
+
+### New
+
+- A new "Personal Circumstances" card in "Additional Deductions & Credits" covers the taxpayer's own personal deductions (人的控除): disability ([障害者控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm)), widow ([寡婦控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm)), and single parent ([ひとり親控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm)). Deduction amounts are included in the Taxes tab's "Other Deductions" line, with a per-item breakdown in its tooltip. These deductions also affect the personal deduction difference used in the residence tax adjustment credit (調整控除).
+- Two consequences of the taxpayer's status are now modelled: someone qualifying for special disability (特別障害者) with employment income over ¥8,500,000 gets the [所得金額調整控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm) (up to ¥150,000 off employment income) without needing a qualifying dependent, and anyone who qualifies for any of the added deductions whose total net income is ¥1,350,000 or less is [exempt from residence tax](https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06). Residence tax exemption previously applied only to minors (未成年者).
+
 ## 2026-08-23
 
 ### New
 
 - Public pension income ([公的年金等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm)) is now available as an income type in the Advanced income mode and the Dependents modal. This covers annuities received from National Pension, Employees' Pension (厚生年金保険), foreign public pension, mutual-aid pensions, and pensions from past employment such as DB and DC plans (including iDeCo).
-- A new "Personal Circumstances" card in "Additional Deductions & Credits" covers the taxpayer's own personal deductions (人的控除): [障害者控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm) (¥270,000 income tax / ¥260,000 residence tax, or ¥400,000 / ¥300,000 for a 特別障害者), [寡婦控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm) (¥270,000 / ¥260,000), and [ひとり親控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm) (¥350,000 / ¥300,000). The 寡婦控除 and ひとり親控除 stop above a 合計所得金額 of ¥5,000,000, which the calculator checks, and the selection is cross-checked against the Dependents list — a missing qualifying child (ひとり親), a missing dependent relative (divorced 寡婦), or an entered spouse is flagged with an advisory note; conditions the calculator cannot observe are stated next to the input. Amounts are included in the Taxes tab's "Other Deductions" line, with a per-item breakdown in its tooltip. Because these are 人的控除, they also raise the 人的控除額の差 behind the residence-tax adjustment credit (調整控除) — for an ひとり親 that figure differs between a mother (¥50,000) and a father (¥10,000), which is why the selector distinguishes the two.
-- Two consequences of the taxpayer's status are now modelled as well: a 特別障害者 with employment income over ¥8,500,000 gets the [所得金額調整控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm) (up to ¥150,000 off employment income) without needing a qualifying dependent, and a 障害者, 寡婦 or ひとり親 whose 合計所得金額 is ¥1,350,000 or less is [exempt from residence tax entirely](https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06), the limit that previously applied only to minors (未成年者).
 
 ## 2026-08-22
 
