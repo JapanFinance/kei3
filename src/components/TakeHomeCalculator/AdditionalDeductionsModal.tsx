@@ -60,7 +60,7 @@ import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip, DetailedTooltip } from '../ui/Tooltips';
 import {
   ADDITIONAL_DEDUCTION_INFO,
-  PERSONAL_DEDUCTION_INFO,
+  getPersonalDeductionInfo,
   type AdditionalDeductionInfo,
 } from './additionalDeductionInfo';
 
@@ -254,6 +254,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const circumstanceWarnings = widowOrSingleParentOverIncomeLimit
     ? []
     : getPersonalCircumstanceWarnings(personalCircumstances, dependents, incomeYear);
+  const personalDeductionInfo = getPersonalDeductionInfo(incomeYear);
   const CIRCUMSTANCE_WARNING_TEXT: Record<(typeof circumstanceWarnings)[number], string> = {
     spouseEntered:
       'A spouse is entered under Dependents, but this deduction requires not being married at ' +
@@ -388,15 +389,12 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Select>
                   <FormHelperText id="widowOrSingleParentHelper">
                     These deductions require not being married (including a common-law marriage).
-                    The single parent deduction requires a child supported on the same household
-                    budget (生計を一にする) whose net income is{' '}
-                    {formatJPY(getSingleParentChildIncomeLimit(incomeYear))} or less.
                   </FormHelperText>
                 </FormControl>
               </Box>
 
               {personalItems.map(item => {
-                const info = PERSONAL_DEDUCTION_INFO[item.key];
+                const info = personalDeductionInfo[item.key];
                 return (
                   <Typography key={item.key} variant="body2" sx={readoutSx}>
                     {info.name} deduction: <strong>{formatJPY(item.national)}</strong> income tax,{' '}
@@ -405,13 +403,12 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Typography>
                 );
               })}
-              {widowOrSingleParentOverIncomeLimit && (
-                <Typography variant="body2" sx={readoutSx}>
-                  Not applied: the 寡婦控除 and ひとり親控除 require a total net income
-                  (合計所得金額) of {formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.
-                </Typography>
-              )}
-              {circumstanceWarnings.map(warning => (
+              {(widowOrSingleParentOverIncomeLimit
+                ? [
+                    `Not applied: the widow / single parent deductions require a total net income of ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.`,
+                  ]
+                : circumstanceWarnings.map(warning => CIRCUMSTANCE_WARNING_TEXT[warning])
+              ).map(warning => (
                 <Box
                   key={warning}
                   sx={{
@@ -427,7 +424,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 >
                   <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
                   <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                    {CIRCUMSTANCE_WARNING_TEXT[warning]}
+                    {warning}
                   </Typography>
                 </Box>
               ))}

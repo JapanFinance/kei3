@@ -14,12 +14,14 @@ import React from 'react';
 import type { AdditionalDeductionsResult, PersonalDeductionsResult } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
-import { ADDITIONAL_DEDUCTION_INFO, PERSONAL_DEDUCTION_INFO } from '../additionalDeductionInfo';
+import { ADDITIONAL_DEDUCTION_INFO, getPersonalDeductionInfo } from '../additionalDeductionInfo';
 
 interface AdditionalDeductionsTooltipProps {
   deductions: AdditionalDeductionsResult;
   /** The taxpayer's own 人的控除, shown in the same breakdown; absent when none applies. */
   personalDeductions?: PersonalDeductionsResult | undefined;
+  /** Income year, for the year-dependent figures in the personal-deduction explanations. */
+  incomeYear: number;
   taxType: 'national' | 'residence';
 }
 
@@ -35,6 +37,7 @@ interface AdditionalDeductionsTooltipProps {
 const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = ({
   deductions,
   personalDeductions,
+  incomeYear,
   taxType,
 }) => {
   const isNational = taxType === 'national';
@@ -46,7 +49,7 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
     ...deductions.items.map(item => ({ item, info: ADDITIONAL_DEDUCTION_INFO[item.key] })),
     ...(personalDeductions?.items ?? []).map(item => ({
       item,
-      info: PERSONAL_DEDUCTION_INFO[item.key],
+      info: getPersonalDeductionInfo(incomeYear)[item.key],
     })),
   ].filter(({ item }) => getAmount(item) > 0);
   const total = getAmount(deductions) + (personalDeductions ? getAmount(personalDeductions) : 0);

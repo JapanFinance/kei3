@@ -1,7 +1,13 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD } from '../../data/netEmploymentIncome';
 import type { AdditionalDeductionItem, PersonalDeductionItem } from '../../types/tax';
+import { formatJPY } from '../../utils/formatters';
+import {
+  getSingleParentChildIncomeLimit,
+  WIDOW_SINGLE_PARENT_INCOME_LIMIT,
+} from '../../utils/personalDeductions';
 
 /**
  * Display + explanatory metadata for a deduction entered in the Additional Deductions & Credits
@@ -53,33 +59,32 @@ export const ADDITIONAL_DEDUCTION_INFO: Record<
 };
 
 /**
- * The same metadata for the taxpayer's own 人的控除. Kept separate from
+ * The same metadata for the taxpayer's own 人的控除, keyed by income year so every figure in the
+ * copy is derived from the statutory tables ({@link WIDOW_SINGLE_PARENT_INCOME_LIMIT},
+ * {@link getSingleParentChildIncomeLimit}, {@link INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD})
+ * rather than repeated as literals that could drift. Kept separate from
  * {@link ADDITIONAL_DEDUCTION_INFO} because the two are keyed by different item unions, and only
  * these affect the residence-tax 調整控除.
  */
-export const PERSONAL_DEDUCTION_INFO: Record<
-  PersonalDeductionItem['key'],
-  AdditionalDeductionInfo
-> = {
+export const getPersonalDeductionInfo = (
+  incomeYear: number,
+): Record<PersonalDeductionItem['key'], AdditionalDeductionInfo> => ({
   disability: {
     name: 'Disability',
-    explanation:
-      'A flat ¥270,000 income tax / ¥260,000 residence tax under the 一般の障害者 category, or ¥400,000 / ¥300,000 under 特別障害者. There is no income limit. The 特別障害者 category with employment income over ¥8,500,000 also qualifies for the 所得金額調整控除.',
+    explanation: `There is no income limit. Those who qualify for the special category with employment income over ${formatJPY(INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD)} also receive an additional deduction to employment income.`,
     sourceLabel: '障害者控除 (NTA No.1160)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm',
   },
   widow: {
     name: 'Widow',
-    explanation:
-      'A flat ¥270,000 income tax / ¥260,000 residence tax, for a woman who has not remarried and whose total net income is ¥5,000,000 or less — either divorced with a dependent relative, or bereaved (no dependent needed). Not available to anyone who qualifies as a single parent, who gets the larger ひとり親控除 instead.',
+    explanation: `Divorced women with a dependent relative or bereaved women (no dependent required) who have not remarried and whose total net income is ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less qualify. Not available to anyone who qualifies for the larger single parent deduction.`,
     sourceLabel: '寡婦控除 (NTA No.1170)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm',
   },
   singleParent: {
     name: 'Single parent',
-    explanation:
-      "A flat ¥350,000 income tax / ¥300,000 residence tax, regardless of marital history or gender, for an unmarried taxpayer supporting a child on the same household budget (生計を一にする子) — any age, with total income within the year's limit (¥620,000 for 2026) — whose own total net income is ¥5,000,000 or less. Whether the parent is the mother or the father changes no amount, but it does change the 人的控除額の差 behind the residence-tax adjustment credit.",
+    explanation: `An unmarried taxpayer, whose total net income is ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less, supporting a child on the same household budget (生計を一にする子). The child's total income must be ${formatJPY(getSingleParentChildIncomeLimit(incomeYear))} or less. Whether the parent is the mother or the father changes no amount, but it does change the 人的控除額の差 behind the residence-tax adjustment credit.`,
     sourceLabel: 'ひとり親控除 (NTA No.1171)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm',
   },
-};
+});

@@ -341,6 +341,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 <AdditionalDeductionsTooltip
                   deductions={results.additionalDeductions}
                   personalDeductions={results.personalDeductions}
+                  incomeYear={inputs.incomeYear}
                   taxType="national"
                 />
               </span>
@@ -639,6 +640,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     <AdditionalDeductionsTooltip
                       deductions={results.additionalDeductions}
                       personalDeductions={results.personalDeductions}
+                      incomeYear={inputs.incomeYear}
                       taxType="residence"
                     />
                   </span>

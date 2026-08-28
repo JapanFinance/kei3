@@ -4,6 +4,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { getPersonalDeductionInfo } from '../components/TakeHomeCalculator/additionalDeductionInfo';
 import { AdditionalDeductionsModal } from '../components/TakeHomeCalculator/AdditionalDeductionsModal';
 import type { Dependent } from '../types/dependents';
 import type { PersonalCircumstancesInput } from '../types/tax';
@@ -40,6 +41,13 @@ const renderModal = (
   return { onPersonalCircumstancesChange };
 };
 
+describe('getPersonalDeductionInfo', () => {
+  it('derives the year-dependent child limit instead of hard-coding it', () => {
+    expect(getPersonalDeductionInfo(2025).singleParent.explanation).toContain('¥580,000');
+    expect(getPersonalDeductionInfo(2026).singleParent.explanation).toContain('¥620,000');
+  });
+});
+
 describe('Personal Circumstances card', () => {
   it('shows no deduction readout until a status is selected', () => {
     renderModal(EMPTY_PERSONAL_CIRCUMSTANCES, 3_000_000);
@@ -49,12 +57,13 @@ describe('Personal Circumstances card', () => {
     expect(screen.queryByText(/deduction: /i)).not.toBeInTheDocument();
   });
 
-  it('attaches the eligibility note to the select as helper text with the child income limit', () => {
+  it('attaches the eligibility note to the select as helper text', () => {
     renderModal(EMPTY_PERSONAL_CIRCUMSTANCES, 3_000_000);
-    // The modal renders with incomeYear 2026, whose 所令11条の2 child limit is ¥620,000.
+    // The child and dependent-relative requirements live in the warnings and the tooltip, so the
+    // static helper text carries only the condition that never varies.
     expect(
       screen.getByRole('combobox', { name: /^Widow \/ single parent/ }),
-    ).toHaveAccessibleDescription(/¥620,000 or less/);
+    ).toHaveAccessibleDescription(/not being married/);
   });
 
   it('reports the selected status to the caller', async () => {

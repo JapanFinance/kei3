@@ -62,7 +62,7 @@ import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../ui/Tooltips';
-import { ADDITIONAL_DEDUCTION_INFO, PERSONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
+import { ADDITIONAL_DEDUCTION_INFO, getPersonalDeductionInfo } from './additionalDeductionInfo';
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
@@ -850,7 +850,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
               personalDeductions?.items.forEach(item => {
-                parts.push(`${PERSONAL_DEDUCTION_INFO[item.key].name} ${formatJPY(item.national)}`);
+                parts.push(
+                  `${getPersonalDeductionInfo(inputs.incomeYear)[item.key].name} ${formatJPY(item.national)}`,
+                );
               });
               additionalDeductions?.items.forEach(item => {
                 const name = ADDITIONAL_DEDUCTION_INFO[item.key].name;

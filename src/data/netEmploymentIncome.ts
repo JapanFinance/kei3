@@ -201,8 +201,9 @@ const calculateNetEmploymentIncomeForPeriod = (
   return 0; // unreachable: final tier has grossMaxInclusive = Infinity
 };
 
-/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). */
-const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
+/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). Exported for
+ * display copy that names the threshold. */
+export const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
 /** 給与等の収入金額 is capped here in the formula, yielding a maximum deduction of ¥150,000. */
 const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
 
