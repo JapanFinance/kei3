@@ -19,6 +19,7 @@ import {
 import type {
   BonusIncomeStream,
   IncomeStream,
+  PersonalCircumstancesInput,
   TakeHomeInputs,
   TakeHomeResults,
 } from '../types/tax';
@@ -46,6 +47,7 @@ import {
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
 import { calculatePensionBreakdown } from './pensionCalculator';
+import { calculatePersonalDeductions } from './personalDeductions';
 import {
   calculateFurusatoNozeiDetails,
   calculateResidenceTax,
@@ -72,15 +74,21 @@ export const roundSocialInsurancePremium = (
 };
 
 /**
- * Composes the 所得金額調整控除（子ども・特別障害者等）: the salary-based amount
- * ({@link calculateIncomeAdjustmentDeductionAmount}), gated on the taxpayer having a qualifying
- * dependent ({@link hasIncomeAdjustmentDeductionDependent}). Returns 0 when not eligible.
+ * Composes the taxpayer's 所得金額調整控除（子ども・特別障害者等を有する者等）: the salary-based
+ * amount ({@link calculateIncomeAdjustmentDeductionAmount}), gated on eligibility. The statute
+ * lists three qualifying conditions; イ is the taxpayer being a 特別障害者 themselves, and ロ and
+ * ハ are about their dependents ({@link hasIncomeAdjustmentDeductionDependent}). Any one of them
+ * suffices. Returns 0 when none applies.
+ *
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm
  */
 const calculateIncomeAdjustmentDeduction = (
   grossEmploymentIncome: number,
   dependents: Dependent[],
   year: number,
+  personalCircumstances: PersonalCircumstancesInput,
 ): number =>
+  personalCircumstances.disability === 'special' ||
   hasIncomeAdjustmentDeductionDependent(dependents, year)
     ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
     : 0;
@@ -349,13 +357,15 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
 /**
  * The taxpayer's net income (所得) components, from the categorized gross amounts. Everything the
  * 合計所得金額 is composed of is the same for the taxpayer as for a dependent, so only the
- * taxpayer's own 所得金額調整控除（子ども・特別障害者等）is decided here.
+ * taxpayer's own 所得金額調整控除（子ども・特別障害者等）is decided here — which is why the
+ * taxpayer's own 特別障害者 status (condition イ) is read here and not in the shared composition.
  */
 const composeTaxpayerNetIncomeComponents = (
   breakdown: IncomeBreakdown,
   year: number,
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
+  personalCircumstances: PersonalCircumstancesInput,
 ): NetIncomeComponents => {
   const { grossEmploymentIncome, netBusinessAndMiscIncome, grossPublicPensionIncome } = breakdown;
 
@@ -365,6 +375,7 @@ const composeTaxpayerNetIncomeComponents = (
       grossEmploymentIncome,
       dependents,
       year,
+      personalCircumstances,
     ),
     grossPublicPensionIncome,
     recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
@@ -385,18 +396,22 @@ const composeTaxpayerNetIncomeComponents = (
  *                       them to read
  * @param dependents     The taxpayer's dependents, for the 所得金額調整控除 they may qualify the
  *                       taxpayer for
+ * @param personalCircumstances  The taxpayer's own status, for the 特別障害者 condition of that
+ *                       same deduction
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
   year: number,
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
+  personalCircumstances: PersonalCircumstancesInput,
 ): NetIncomeComponents =>
   composeTaxpayerNetIncomeComponents(
     calculateIncomeBreakdown(incomeStreams),
     year,
     ageRange,
     dependents,
+    personalCircumstances,
   );
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
@@ -441,6 +456,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeYear,
     inputs.ageRange,
     inputs.dependents,
+    inputs.personalCircumstances,
   );
 
   let healthInsurance = 0;
@@ -575,6 +591,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // 人的控除, so none affect the residence-tax 調整控除. The medical floor needs 合計所得金額.
   const additionalDeductions = calculateAdditionalDeductions(inputs, netIncome);
 
+  // 障害者控除・寡婦控除・ひとり親控除 for the taxpayer themselves. These are 人的控除, so they also
+  // feed the residence-tax 調整控除 via their 人的控除額の差 — which calculateResidenceTax reads
+  // from inputs.personalCircumstances itself, so only the national side is taken from here.
+  const personalDeductions = calculatePersonalDeductions(inputs.personalCircumstances, netIncome);
+
   const dependentDeductions = calculateDependentDeductions(
     inputs.dependents,
     incomeYear,
@@ -594,6 +615,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     socialInsuranceDeduction -
     idecoDeduction -
     additionalDeductions.national -
+    personalDeductions.national -
     nationalIncomeTaxBasicDeduction -
     dependentDeductions.nationalTax.total;
   const taxableIncomeForNationalIncomeTax = Math.max(
@@ -614,6 +636,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           socialInsuranceDeduction -
           idecoDeduction -
           additionalDeductions.residence -
+          personalDeductions.residence -
           residenceTaxBasicDeduction -
           dependentDeductions.residenceTax.total,
       ) / 1000,
@@ -630,6 +653,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     dependentDeductions,
     incomeYear,
     inputs.ageRange,
+    inputs.personalCircumstances,
   );
 
   const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
@@ -660,6 +684,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           dependentDeductions,
           incomeYear,
           inputs.ageRange,
+          inputs.personalCircumstances,
           homeLoanTaxCreditResult.appliedToResidenceTax,
         )
       : preCreditResidenceTax;
@@ -712,6 +737,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     furusatoNozei: furusatoNozeiLimit,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
     additionalDeductions,
+    ...(personalDeductions.items.length > 0 && { personalDeductions }),
     // Residence income-based portion (所得割) BEFORE the home loan spillover, so the
     // Taxes tab can show the spillover as its own line and have the rows sum.
     ...(homeLoanTaxCreditResult &&

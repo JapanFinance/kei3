@@ -8,7 +8,7 @@ import type { DependentDeductionResults, Dependent } from '../types/dependents';
 import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
   calculateResidenceTax,
-  MINOR_NON_TAXABLE_INCOME_LIMIT,
+  NON_TAXABLE_STATUS_INCOME_LIMIT,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from '../utils/residenceTax';
 
@@ -493,12 +493,92 @@ describe('calculateResidenceTax - Personal Deduction Difference', () => {
   });
 });
 
+describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation', () => {
+  it.each([
+    [{ disability: 'regular', widowOrSingleParent: 'none' }, 'disability'],
+    [{ disability: 'none', widowOrSingleParent: 'widowBereaved' }, 'widow'],
+    [{ disability: 'none', widowOrSingleParent: 'singleParentFather' }, 'singleParent'],
+  ] as const)('exempts %o at 合計所得金額 1,350,000', (circumstances, status) => {
+    expect(
+      calculateResidenceTax(
+        1_350_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+        circumstances,
+      ),
+    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: status });
+  });
+
+  it('reports the minor exemption first when a status also applies', () => {
+    const result = calculateResidenceTax(
+      1_350_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'under18',
+      { disability: 'special', widowOrSingleParent: 'widowBereaved' },
+    );
+    expect(result.nonTaxableStatus).toBe('minor');
+  });
+
+  it('reports disability first when a 寡婦 status also applies', () => {
+    // Any one status exempts; the order only picks which reason the display names.
+    const result = calculateResidenceTax(
+      1_350_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      { disability: 'regular', widowOrSingleParent: 'widowBereaved' },
+    );
+    expect(result.nonTaxableStatus).toBe('disability');
+  });
+
+  it('taxes a 寡婦 normally above the limit', () => {
+    const result = calculateResidenceTax(
+      1_350_001,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      { disability: 'none', widowOrSingleParent: 'widowBereaved' },
+    );
+    expect(result.totalResidenceTax).toBeGreaterThan(0);
+  });
+});
+
+describe('calculateResidenceTax personal deductions (人的控除)', () => {
+  it('deducts the 人的控除 and adds its statutory difference to the 調整控除 base', () => {
+    const args = [3_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39'] as const;
+    const base = calculateResidenceTax(...args);
+    const withDeduction = calculateResidenceTax(...args, {
+      disability: 'special',
+      widowOrSingleParent: 'none',
+    });
+
+    expect(base.taxableIncome - withDeduction.taxableIncome).toBe(300_000);
+    expect(withDeduction.personalDeductionDifference).toBe(
+      base.personalDeductionDifference + 100_000,
+    );
+    expect(withDeduction.totalResidenceTax).toBeLessThan(base.totalResidenceTax);
+  });
+
+  it('ignores a 寡婦/ひとり親 selection above the ¥5,000,000 ceiling', () => {
+    const args = [6_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39'] as const;
+    expect(
+      calculateResidenceTax(...args, { disability: 'none', widowOrSingleParent: 'widowBereaved' }),
+    ).toEqual(calculateResidenceTax(...args));
+  });
+});
+
 describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
   it('returns the non-taxable detail, marked as the minor exemption, at 合計所得金額 1,350,000', () => {
     expect(
       calculateResidenceTax(1_350_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'under18'),
-    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableMinor: true });
-    expect(MINOR_NON_TAXABLE_INCOME_LIMIT).toBe(1_350_000);
+    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: 'minor' });
+    expect(NON_TAXABLE_STATUS_INCOME_LIMIT).toBe(1_350_000);
   });
 
   it('taxes a minor normally above the limit', () => {
@@ -549,7 +629,7 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
     ];
     const deductions = calculateDependentDeductions(dependents, TEST_INCOME_YEAR, 1_355_000);
     const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 'under18');
-    // The plain detail (no nonTaxableMinor flag) proves the general path produced it.
+    // The plain detail (no nonTaxableStatus flag) proves the general path produced it.
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 });

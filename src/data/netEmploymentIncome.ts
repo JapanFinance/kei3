@@ -201,8 +201,9 @@ const calculateNetEmploymentIncomeForPeriod = (
   return 0; // unreachable: final tier has grossMaxInclusive = Infinity
 };
 
-/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). */
-const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
+/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). Exported for
+ * display copy that names the threshold. */
+export const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
 /** 給与等の収入金額 is capped here in the formula, yielding a maximum deduction of ¥150,000. */
 const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
 
@@ -229,9 +230,9 @@ export const calculateNetEmploymentIncome = (grossEmploymentIncome: number, year
  *
  *   amount = ⌈{min(給与等の収入金額, ¥10,000,000) − ¥8,500,000} × 10%⌉   (max ¥150,000)
  *
- * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer having a
- * qualifying dependent or special-disability status) is checked separately by
- * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts`, with the two combined in
+ * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer being a
+ * 特別障害者, or having a qualifying dependent) is checked separately — see
+ * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts` — with the parts combined in
  * `taxCalculations.ts`.
  *
  * Why it affects residence tax too: this is an adjustment to 給与所得 itself, NOT an 所得控除. The

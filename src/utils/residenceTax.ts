@@ -10,12 +10,19 @@ import {
   type SpouseAgeRange,
   dependentAgeCoversBand,
 } from '../types/dependents';
-import type { FurusatoNozeiDetails, ResidenceTaxDetails } from '../types/tax';
+import type {
+  FurusatoNozeiDetails,
+  NonTaxableResidenceTaxStatus,
+  PersonalCircumstancesInput,
+  ResidenceTaxDetails,
+} from '../types/tax';
+import { EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateDependentTotalNetIncome,
   getDependentEligibilityMax,
 } from './dependentDeductions';
+import { calculatePersonalDeductions } from './personalDeductions';
 import { calculateNationalIncomeTax } from './taxCalculations';
 
 const RESIDENCE_TAX_RATE = 0.1;
@@ -54,8 +61,8 @@ const forestEnvironmentTax = 1000; // 森林環境税
 const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironmentTax;
 
 /**
- * 未成年者 (minors) with 前年中の合計所得金額 at or below this limit are exempt from residence
- * tax entirely — both 所得割 and 均等割.
+ * 障害者・未成年者・寡婦・ひとり親 with 前年中の合計所得金額 at or below this limit are exempt from
+ * residence tax entirely — both 所得割 and 均等割.
  *
  * Statutory basis: 地方税法第295条第1項第2号 (市町村民税) and 第24条の5第1項第2号 (道府県民税):
  * 「障害者、未成年者、寡婦又はひとり親（これらの者の前年の合計所得金額が135万円を超える場合を
@@ -64,21 +71,37 @@ const perCapitaTax = cityPerCapitaTax + prefecturalPerCapitaTax + forestEnvironm
  * the 令和3年度 basic-deduction shift), so this limit is uniform nationwide with no municipal
  * discretion — unlike the dependent-count limits in {@link getResidenceTaxExemptionLimits},
  * whose amounts vary by the municipality's 級地区分.
- * The same clause also covers 障害者・寡婦・ひとり親, which the calculator does not model.
  * @see https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_3-Se_1-Ss_1-At_295
  * @see https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
  */
-export const MINOR_NON_TAXABLE_INCOME_LIMIT = 1_350_000;
+export const NON_TAXABLE_STATUS_INCOME_LIMIT = 1_350_000;
 
 /**
- * Whether the taxpayer qualifies for the 未成年者 exemption: a minor — under 18 as of the
- * January 1 (賦課期日) following the income year, which is what the under-18 age range
- * selects — whose 合計所得金額 is at or below {@link MINOR_NON_TAXABLE_INCOME_LIMIT}.
- * 未成年者 has no definition of its own in 地方税法; it borrows the 民法 age of majority,
- * which is why the boundary moved from 20 to 18 (from 令和5年度) with no tax-law amendment.
+ * Which of the 地方税法第295条第1項第2号 statuses exempts the taxpayer, if any, given a
+ * 合計所得金額 at or below {@link NON_TAXABLE_STATUS_INCOME_LIMIT}. Minor status is judged as of
+ * the January 1 (賦課期日) following the income year, which is what the under-18 age range selects;
+ * 未成年者 has no definition of its own in 地方税法, borrowing the 民法 age of majority, which is
+ * why the boundary moved from 20 to 18 (from 令和5年度) with no tax-law amendment.
+ *
+ * Any one status is enough, so when several apply the first is reported; the choice only affects
+ * which reason the display names.
  */
-function isNonTaxableMinor(ageRange: TaxpayerAgeRange, netIncome: number): boolean {
-  return ageRange === 'under18' && netIncome <= MINOR_NON_TAXABLE_INCOME_LIMIT;
+function nonTaxableStatusFor(
+  ageRange: TaxpayerAgeRange,
+  circumstances: PersonalCircumstancesInput,
+  netIncome: number,
+): NonTaxableResidenceTaxStatus | undefined {
+  if (netIncome > NON_TAXABLE_STATUS_INCOME_LIMIT) return undefined;
+  if (ageRange === 'under18') return 'minor';
+  if (circumstances.disability !== 'none') return 'disability';
+  if (
+    circumstances.widowOrSingleParent === 'widowDivorced' ||
+    circumstances.widowOrSingleParent === 'widowBereaved'
+  ) {
+    return 'widow';
+  }
+  if (circumstances.widowOrSingleParent !== 'none') return 'singleParent';
+  return undefined;
 }
 
 /**
@@ -89,10 +112,14 @@ function isNonTaxableMinor(ageRange: TaxpayerAgeRange, netIncome: number): boole
  * https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju
  *
  * @param netIncome - Net income
- * @param nonBasicDeductions - Social insurance + iDeCo deductions
+ * @param nonBasicDeductions - The 物的控除: social insurance, iDeCo, and the additional income
+ *   deductions (life/earthquake insurance, medical expenses) at their residence-tax amounts
  * @param dependentDeductions - Full dependent deduction results
  * @param ageRange - Taxpayer age range; required because the 未成年者 exemption
- *   ({@link isNonTaxableMinor}) is part of the statutory calculation
+ *   ({@link nonTaxableStatusFor}) is part of the statutory calculation
+ * @param personalCircumstances - The taxpayer's own 障害者・寡婦・ひとり親 status. Drives both the
+ *   remaining {@link nonTaxableStatusFor} exemptions and the 人的控除 this function deducts and
+ *   feeds into the 調整控除
  * @param taxCredit - Tax credit amount
  */
 export const calculateResidenceTax = (
@@ -101,11 +128,15 @@ export const calculateResidenceTax = (
   dependentDeductions: DependentDeductionResults,
   year: number,
   ageRange: TaxpayerAgeRange,
+  personalCircumstances: PersonalCircumstancesInput = EMPTY_PERSONAL_CIRCUMSTANCES,
   taxCredit: number = 0,
 ): ResidenceTaxDetails => {
-  if (isNonTaxableMinor(ageRange, netIncome)) {
-    return { ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableMinor: true };
+  const nonTaxableStatus = nonTaxableStatusFor(ageRange, personalCircumstances, netIncome);
+  if (nonTaxableStatus) {
+    return { ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus };
   }
+
+  const personalDeductions = calculatePersonalDeductions(personalCircumstances, netIncome);
 
   const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions, year);
   const { perCapitaLimit, incomeBasedLimit } =
@@ -150,14 +181,17 @@ export const calculateResidenceTax = (
     Math.floor(
       Math.max(
         0,
-        netIncome - nonBasicDeductions - basicDeduction - dependentDeductionsResidenceTaxTotal,
+        netIncome -
+          nonBasicDeductions -
+          basicDeduction -
+          dependentDeductionsResidenceTaxTotal -
+          personalDeductions.residence,
       ) / 1000,
     ) * 1000;
 
-  const personalDeductionDifference = calculateStatutoryPersonalDeductionDifference(
-    dependentDeductions,
-    netIncome,
-  );
+  const personalDeductionDifference =
+    calculateStatutoryPersonalDeductionDifference(dependentDeductions, netIncome) +
+    personalDeductions.statutoryDifference;
 
   // 調整控除額 (adjustment credit)
   const adjustmentCredit = calculateAdjustmentCredit(
@@ -239,7 +273,7 @@ function countQualifiedDependents(
  * 1. Per Capita Exempt Limit (所得割・均等割とも非課税): Below this, no residence tax at all.
  * 2. Income Exempt Limit (所得割が非課税): Below this, no income-based residence tax but per capita residence tax applies.
  *
- * Unlike the statute-fixed {@link MINOR_NON_TAXABLE_INCOME_LIMIT}, the 均等割 limit's amounts are
+ * Unlike the statute-fixed {@link NON_TAXABLE_STATUS_INCOME_LIMIT}, the 均等割 limit's amounts are
  * set by each municipality's ordinance within nationally prescribed bands keyed to the
  * 生活保護基準の級地区分; the amounts here are the 級地1 values (which include the Tokyo 23
  * wards), so they can overstate the limits for municipalities in 級地2・3.
@@ -284,7 +318,9 @@ const STATUTORY_DEDUCTION_DIFFERENCES = {
   DEPENDENT_ELDERLY: 100_000, // Elderly dependent (70+)
   DEPENDENT_ELDERLY_COHABITING: 130_000, // Elderly cohabiting parent/grandparent (70+)
 
-  // 障害者控除 (Disability Deduction) (1) and (2) in the statutory table.
+  // 障害者控除 (Disability Deduction) (1) and (2) in the statutory table. The 一般/特別 rows
+  // mirror the taxpayer's own statutoryDifference values in personalDeductions.ts (314条の6
+  // makes no taxpayer/dependent distinction); an amendment must change both files together.
   DISABILITY_REGULAR: 10_000, // Regular disability
   DISABILITY_SPECIAL: 100_000, // Special disability
   DISABILITY_SPECIAL_COHABITING: 220_000, // Special disability with cohabitation
@@ -295,6 +331,10 @@ const STATUTORY_DEDUCTION_DIFFERENCES = {
  *
  * IMPORTANT: These are NOT the actual arithmetic differences between national and residence tax deductions.
  * They are specific statutory amounts defined in law for the adjustment credit calculation.
+ *
+ * Covers the basic deduction and the dependent-related ones. The taxpayer's own
+ * 障害者控除・寡婦控除・ひとり親控除 carry their difference alongside their amount, in
+ * `personalDeductions.ts`, and the caller adds it to this total.
  *
  * @param deductions - The dependent deduction results containing breakdown by deduction
  * @param taxpayerNetIncome - Taxpayer's total net income (納税義務者の前年の合計所得金額)

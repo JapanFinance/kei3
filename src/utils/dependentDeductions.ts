@@ -118,16 +118,16 @@ export function calculateDependentTotalNetIncome(
 
 /**
  * Whether the taxpayer has a dependent that qualifies them for the
- * 所得金額調整控除（子ども・特別障害者等を有する者等）. Two of the three statutory conditions are
- * derivable from the dependent data this calculator models:
+ * 所得金額調整控除（子ども・特別障害者等を有する者等）— the two of the three statutory conditions
+ * that are about dependents:
  *
  *  - ロ 年齢23歳未満の扶養親族: a non-spouse dependent (扶養親族) under 23 whose 合計所得金額 is
  *    within the 扶養親族 threshold. Unlike 扶養控除, this includes children under 16.
  *  - ハ 特別障害者である同一生計配偶者または扶養親族: a spouse or non-spouse dependent with special
  *    disability whose 合計所得金額 is within the threshold (any age).
  *
- * The third condition — イ, the taxpayer being a 特別障害者 themselves — is NOT modeled, as the
- * calculator has no input for the taxpayer's own disability status.
+ * The third condition — イ, the taxpayer being a 特別障害者 themselves — is about the taxpayer, not
+ * a dependent, and is applied alongside this predicate in `taxCalculations.ts`.
  *
  * Note: a spouse is never a 扶養親族, so condition ロ cannot apply to a spouse; a spouse qualifies
  * only via ハ (a 特別障害者 同一生計配偶者).
@@ -337,6 +337,8 @@ const NATIONAL_TAX_DEDUCTIONS = {
   SPECIFIC_RELATIVE_120TO123: 30_000,
 
   // 障害者控除 (Disability Deduction) https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm
+  // The 一般/特別 rows mirror the taxpayer's own table in personalDeductions.ts (所法79 makes no
+  // taxpayer/dependent distinction); an amendment must change both files together.
   DISABILITY_REGULAR: 270_000, // 一般の障害者
   DISABILITY_SPECIAL: 400_000, // 特別障害者
   DISABILITY_SPECIAL_COHABITING: 750_000, // 同居特別障害者
@@ -365,6 +367,7 @@ const RESIDENCE_TAX_DEDUCTIONS = {
   SPECIFIC_RELATIVE_120TO123: 30_000,
 
   // 障害者控除 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html
+  // The 一般/特別 rows mirror personalDeductions.ts, as in NATIONAL_TAX_DEDUCTIONS above.
   DISABILITY_REGULAR: 260_000,
   DISABILITY_SPECIAL: 300_000,
   DISABILITY_SPECIAL_COHABITING: 530_000,

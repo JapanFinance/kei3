@@ -20,14 +20,19 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
+import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
+import type { Dependent } from '../../types/dependents';
+import { DISABILITY_LEVELS } from '../../types/dependents';
 import type {
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
@@ -35,16 +40,42 @@ import type {
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
   AdditionalDeductionsResult,
+  PersonalCircumstancesInput,
+  PersonalDeductionsResult,
+  WidowOrSingleParentStatus,
 } from '../../types/tax';
+import { getDependentEligibilityMax } from '../../utils/dependentDeductions';
 import { formatJPY } from '../../utils/formatters';
 import {
   earliestEligibleMoveInYear,
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../../utils/homeLoanTaxCredit';
+import {
+  getPersonalCircumstanceWarnings,
+  getSingleParentChildIncomeLimit,
+  WIDOW_SINGLE_PARENT_INCOME_LIMIT,
+} from '../../utils/personalDeductions';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { SimpleTooltip, DetailedTooltip } from '../ui/Tooltips';
-import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
+import {
+  ADDITIONAL_DEDUCTION_INFO,
+  getPersonalDeductionInfo,
+  type AdditionalDeductionInfo,
+} from './additionalDeductionInfo';
+
+/**
+ * Dropdown options for {@link WidowOrSingleParentStatus}. The two ひとり親 entries carry the same
+ * deduction; they are separate options because the 人的控除額の差 behind the residence-tax
+ * 調整控除 differs between a mother and a father.
+ */
+const WIDOW_OR_SINGLE_PARENT_OPTIONS: { value: WidowOrSingleParentStatus; label: string }[] = [
+  { value: 'none', label: 'Not applicable' },
+  { value: 'singleParentMother', label: 'Single mother (ひとり親)' },
+  { value: 'singleParentFather', label: 'Single father (ひとり親)' },
+  { value: 'widowDivorced', label: 'Divorced woman (寡婦)' },
+  { value: 'widowBereaved', label: 'Widowed woman (寡婦)' },
+];
 
 interface AdditionalDeductionsModalProps {
   open: boolean;
@@ -60,8 +91,14 @@ interface AdditionalDeductionsModalProps {
   onEarthquakeInsuranceChange: (input: EarthquakeInsuranceInput) => void;
   medicalExpenses: MedicalExpensesInput;
   onMedicalExpensesChange: (input: MedicalExpensesInput) => void;
+  personalCircumstances: PersonalCircumstancesInput;
+  onPersonalCircumstancesChange: (input: PersonalCircumstancesInput) => void;
+  /** The Dependents-modal entries, cross-checked against the 寡婦/ひとり親 selection. */
+  dependents: Dependent[];
   /** Computed additional deductions, used for the live per-card readouts. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
+  /** Computed 障害者・寡婦・ひとり親控除; absent when none applies. */
+  personalDeductions?: PersonalDeductionsResult | undefined;
   /** Income year being modeled; upper bound for the home-loan move-in-year dropdown. */
   incomeYear: number;
 }
@@ -103,10 +140,7 @@ const SectionHeader: React.FC<{ children: React.ReactNode; tooltip?: string }> =
  * explanation lives next to the result (not in a "how to calculate" accordion like the home loan
  * credit, whose accordion explains how to derive the figure the user must enter).
  */
-const DeductionCalcTooltip: React.FC<{ infoKey: keyof typeof ADDITIONAL_DEDUCTION_INFO }> = ({
-  infoKey,
-}) => {
-  const info = ADDITIONAL_DEDUCTION_INFO[infoKey];
+const DeductionCalcTooltip: React.FC<{ info: AdditionalDeductionInfo }> = ({ info }) => {
   return (
     <DetailedTooltip title={info.name} icon={SIMPLE_TOOLTIP_ICON}>
       <Box>
@@ -140,7 +174,11 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   onEarthquakeInsuranceChange,
   medicalExpenses,
   onMedicalExpensesChange,
+  personalCircumstances,
+  onPersonalCircumstancesChange,
+  dependents,
   additionalDeductions,
+  personalDeductions,
   incomeYear,
 }) => {
   const theme = useTheme();
@@ -198,9 +236,41 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
     onMedicalExpensesChange({ ...medicalInput, ...patch });
   };
 
+  const updatePersonal = (patch: Partial<PersonalCircumstancesInput>) => {
+    onPersonalCircumstancesChange({ ...personalCircumstances, ...patch });
+  };
+
   const lifeItem = additionalDeductions?.items.find(i => i.key === 'lifeInsurance');
   const earthquakeItem = additionalDeductions?.items.find(i => i.key === 'earthquakeInsurance');
   const medicalItem = additionalDeductions?.items.find(i => i.key === 'medical');
+  const personalItems = personalDeductions?.items ?? [];
+  // The 寡婦/ひとり親 selection produces no item when 合計所得金額 is over the statutory ceiling;
+  // say so rather than leaving the selection looking as if it had been applied.
+  const widowOrSingleParentOverIncomeLimit =
+    personalCircumstances.widowOrSingleParent !== 'none' &&
+    !personalItems.some(item => item.key === 'widow' || item.key === 'singleParent');
+  // Suppressed while the ceiling note shows: a dependents mismatch is moot for a deduction that
+  // is not applied anyway.
+  const circumstanceWarnings = widowOrSingleParentOverIncomeLimit
+    ? []
+    : getPersonalCircumstanceWarnings(personalCircumstances, dependents, incomeYear);
+  const personalDeductionInfo = getPersonalDeductionInfo(incomeYear);
+  const CIRCUMSTANCE_WARNING_TEXT: Record<(typeof circumstanceWarnings)[number], string> = {
+    spouseEntered:
+      'A spouse is entered under Dependents, but this deduction requires not being married at ' +
+      'the end of the year. The combination is valid only for a year in which the spouse died because ' +
+      'the spouse deduction is then judged at the time of death and this deduction at December 31.',
+    singleParentNoQualifyingChild:
+      'No qualifying child is entered under Dependents: the single parent deduction requires a ' +
+      `child supported on the same household budget with net income of ${formatJPY(
+        getSingleParentChildIncomeLimit(incomeYear),
+      )} or less. If such a child exists, add them under Dependents.`,
+    widowDivorcedNoDependentRelative:
+      'No dependent relative (扶養親族) is entered under Dependents: for a divorced woman, the ' +
+      `widow deduction requires one with net income of ${formatJPY(
+        getDependentEligibilityMax(incomeYear),
+      )} or less. If such a relative exists, add them under Dependents.`,
+  };
 
   return (
     <Dialog
@@ -259,7 +329,109 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           <SectionHeader tooltip="Deductions (所得控除) reduce taxable income before tax is calculated.">
             Income Deductions (所得控除)
           </SectionHeader>
+          {/* Personal Circumstances (障害者控除・寡婦控除・ひとり親控除) */}
           <Card variant="outlined">
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                Personal Circumstances (人的控除)
+                <SimpleTooltip>
+                  Deductions for the taxpayer's own status: disability (障害者控除), widowhood
+                  (寡婦控除), and single parenthood (ひとり親控除). A spouse's or dependent
+                  relative's disability is entered under Dependents instead.
+                </SimpleTooltip>
+              </Typography>
+              {/* Stacked rather than side by side: the longest option labels are wider than half
+                  the dialog, so a two-up row would ellipsize the selected value. */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="taxpayerDisabilityLabel">Disability (障害者控除)</InputLabel>
+                  <Select
+                    labelId="taxpayerDisabilityLabel"
+                    id="taxpayerDisability"
+                    label="Disability (障害者控除)"
+                    value={personalCircumstances.disability}
+                    onChange={e => updatePersonal({ disability: e.target.value })}
+                  >
+                    {DISABILITY_LEVELS.map(level => (
+                      <MenuItem key={level.value} value={level.value}>
+                        {level.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel id="widowOrSingleParentLabel">
+                    Widow / single parent (寡婦控除 / ひとり親控除)
+                  </InputLabel>
+                  <Select
+                    labelId="widowOrSingleParentLabel"
+                    id="widowOrSingleParent"
+                    label="Widow / single parent (寡婦控除 / ひとり親控除)"
+                    value={personalCircumstances.widowOrSingleParent}
+                    onChange={e => updatePersonal({ widowOrSingleParent: e.target.value })}
+                    // FormControl wires helper text to a TextField automatically but not to a bare
+                    // Select, so the description is attached by hand.
+                    SelectDisplayProps={{ 'aria-describedby': 'widowOrSingleParentHelper' }}
+                  >
+                    {WIDOW_OR_SINGLE_PARENT_OPTIONS.map(option => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText id="widowOrSingleParentHelper">
+                    These deductions require not being married (including a common-law marriage).
+                  </FormHelperText>
+                </FormControl>
+              </Box>
+
+              {personalItems.map(item => {
+                const info = personalDeductionInfo[item.key];
+                return (
+                  <Typography key={item.key} variant="body2" sx={readoutSx}>
+                    {info.name} deduction: <strong>{formatJPY(item.national)}</strong> income tax,{' '}
+                    <strong>{formatJPY(item.residence)}</strong> residence tax
+                    <DeductionCalcTooltip info={info} />
+                  </Typography>
+                );
+              })}
+              {(widowOrSingleParentOverIncomeLimit
+                ? [
+                    `The widow / single parent deductions require a total net income of ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.`,
+                  ]
+                : circumstanceWarnings.map(warning => CIRCUMSTANCE_WARNING_TEXT[warning])
+              ).map(warning => (
+                <Box
+                  key={warning}
+                  sx={{
+                    p: 1.5,
+                    bgcolor: 'warning.light',
+                    color: 'warning.contrastText',
+                    borderRadius: 1,
+                    mt: 2,
+                    display: 'flex',
+                    gap: 1,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    {warning}
+                  </Typography>
+                </Box>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card variant="outlined" sx={{ mt: 2 }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <FormControl fullWidth>
                 <Typography
@@ -412,7 +584,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 <Typography variant="body2" sx={readoutSx}>
                   Deduction: <strong>{formatJPY(lifeItem.national)}</strong> income tax,{' '}
                   <strong>{formatJPY(lifeItem.residence)}</strong> residence tax
-                  <DeductionCalcTooltip infoKey="lifeInsurance" />
+                  <DeductionCalcTooltip info={ADDITIONAL_DEDUCTION_INFO.lifeInsurance} />
                 </Typography>
               )}
             </CardContent>
@@ -467,7 +639,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 <Typography variant="body2" sx={readoutSx}>
                   Deduction: <strong>{formatJPY(earthquakeItem.national)}</strong> income tax,{' '}
                   <strong>{formatJPY(earthquakeItem.residence)}</strong> residence tax
-                  <DeductionCalcTooltip infoKey="earthquakeInsurance" />
+                  <DeductionCalcTooltip info={ADDITIONAL_DEDUCTION_INFO.earthquakeInsurance} />
                 </Typography>
               )}
             </CardContent>
@@ -524,7 +696,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               {medicalItem ? (
                 <Typography variant="body2" sx={readoutSx}>
                   Deduction: <strong>{formatJPY(medicalItem.national)}</strong>
-                  <DeductionCalcTooltip infoKey="medical" />
+                  <DeductionCalcTooltip info={ADDITIONAL_DEDUCTION_INFO.medical} />
                 </Typography>
               ) : (
                 medicalInput.paid > 0 && (

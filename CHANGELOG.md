@@ -2,6 +2,13 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-08-28
+
+### New
+
+- A new "Personal Circumstances" card in "Additional Deductions & Credits" covers the taxpayer's own personal deductions (人的控除): disability ([障害者控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm)), widow ([寡婦控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm)), and single parent ([ひとり親控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm)). Deduction amounts are included in the Taxes tab's "Other Deductions" line, with a per-item breakdown in its tooltip. These deductions also affect the personal deduction difference used in the residence tax adjustment credit (調整控除).
+- Two consequences of the taxpayer's status are now modelled: someone qualifying for special disability (特別障害者) with employment income over ¥8,500,000 gets the [所得金額調整控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm) (up to ¥150,000 off employment income) without needing a qualifying dependent, and anyone who qualifies for any of the added deductions whose total net income is ¥1,350,000 or less is [exempt from residence tax](https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06). Residence tax exemption previously applied only to minors (未成年者).
+
 ## 2026-08-23
 
 ### New

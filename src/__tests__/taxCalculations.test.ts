@@ -12,7 +12,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateTaxes,
@@ -818,9 +818,15 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
     const incomeStreams = [
       { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'test' },
     ];
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      3_560_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(3_560_000);
   });
 
   it('calculates total net income correctly for business only', () => {
@@ -828,9 +834,15 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
     const incomeStreams = [
       { type: 'business' as const, amount: 5_000_000, blueFilerDeduction: 650_000, id: 'test' },
     ];
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      4_350_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(4_350_000);
   });
 
   it('calculates total net income correctly for mixed income', () => {
@@ -841,9 +853,15 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
       { type: 'business' as const, amount: 1_000_000, blueFilerDeduction: 0, id: 'b1' },
     ];
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      3_020_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(3_020_000);
   });
 
   it('handles business income less than blue-filer deduction and misc income', () => {
@@ -856,9 +874,15 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       { type: 'business' as const, amount: 200_000, blueFilerDeduction: 650_000, id: 'b1' },
       { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' },
     ];
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      2_120_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(2_120_000);
   });
 
   it('reports net business and miscellaneous income separately from the other components', () => {
@@ -869,7 +893,13 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' },
       { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
     ];
-    const components = calculateNetIncomeComponents(incomeStreams, 2026, 'age65to69', []);
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age65to69',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+    );
     expect(components.totalNetIncome).toBe(
       components.netEmploymentIncome + 2_000_000 + components.netPublicPensionIncome,
     );
@@ -1334,9 +1364,15 @@ describe('RSU (Restricted Stock Unit) income', () => {
         id: 'rsu1',
       },
     ];
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      1_260_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(1_260_000);
   });
 
   it('calculateNetIncomeComponents includes RSU with salary correctly', () => {
@@ -1351,9 +1387,15 @@ describe('RSU (Restricted Stock Unit) income', () => {
         id: 'rsu1',
       },
     ];
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      3_560_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(3_560_000);
   });
 
   it('supports multiple stock compensation streams and sums them in tax calculations', () => {
@@ -1416,9 +1458,15 @@ describe('RSU (Restricted Stock Unit) income', () => {
     ];
 
     // Combined 2M below 2.2M: net = 2M - 740k = 1.26M
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      1_260_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(1_260_000);
   });
 });
 
@@ -1512,12 +1560,24 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
       { id: 's1', type: 'salary' as const, amount: 22_000_000, frequency: 'annual' as const },
     ];
     expect(
-      calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', [childUnder23]).totalNetIncome,
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [childUnder23],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
     ).toBe(19_900_000);
     // No dependents argument → no adjustment (backward compatible).
-    expect(calculateNetIncomeComponents(incomeStreams, 2026, 'age20to39', []).totalNetIncome).toBe(
-      20_050_000,
-    );
+    expect(
+      calculateNetIncomeComponents(
+        incomeStreams,
+        2026,
+        'age20to39',
+        [],
+        EMPTY_PERSONAL_CIRCUMSTANCES,
+      ).totalNetIncome,
+    ).toBe(20_050_000);
   });
 });
 
@@ -1674,7 +1734,7 @@ describe('calculateTaxes age-range rules', () => {
       const result = calculateTaxes(minorInputs('under18', 1_350_000));
       expect(result.residenceTax.totalResidenceTax).toBe(0);
       expect(result.residenceTax.perCapitaTax).toBe(0);
-      expect(result.residenceTax.nonTaxableMinor).toBe(true);
+      expect(result.residenceTax.nonTaxableStatus).toBe('minor');
       expect(result.furusatoNozei.limit).toBe(0);
     });
 
@@ -2158,15 +2218,17 @@ describe('calculateNetIncomeComponents with public pension income', () => {
   const streams = [{ type: 'publicPension' as const, amount: 3_000_000, id: 'p1' }];
 
   it('uses the 65+ minimum deduction when the taxpayer is 65 or older', () => {
-    expect(calculateNetIncomeComponents(streams, 2026, 'age65to69', []).totalNetIncome).toBe(
-      1_900_000,
-    );
+    expect(
+      calculateNetIncomeComponents(streams, 2026, 'age65to69', [], EMPTY_PERSONAL_CIRCUMSTANCES)
+        .totalNetIncome,
+    ).toBe(1_900_000);
   });
 
   it('uses the under-65 deduction otherwise', () => {
     // Deduction 400,000 + 25% × (3,000,000 − 500,000) = 1,025,000
-    expect(calculateNetIncomeComponents(streams, 2026, 'age60to64', []).totalNetIncome).toBe(
-      1_975_000,
-    );
+    expect(
+      calculateNetIncomeComponents(streams, 2026, 'age60to64', [], EMPTY_PERSONAL_CIRCUMSTANCES)
+        .totalNetIncome,
+    ).toBe(1_975_000);
   });
 });
