@@ -108,7 +108,7 @@ describe('Personal Circumstances card', () => {
   it('explains why a 寡婦/ひとり親 selection was not applied above the income ceiling', () => {
     renderModal({ disability: 'none', widowOrSingleParent: 'widowBereaved' }, 6_000_000);
     expect(screen.queryByText(/Widow deduction:/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Not applied/)).toHaveTextContent('¥5,000,000 or less');
+    expect(screen.getByText(/require a total net income/)).toHaveTextContent('¥5,000,000 or less');
   });
 
   it('warns when a single parent selection has no qualifying child in Dependents', () => {
@@ -139,7 +139,7 @@ describe('Personal Circumstances card', () => {
 
   it('suppresses dependents warnings while the over-ceiling note shows', () => {
     renderModal({ disability: 'none', widowOrSingleParent: 'singleParentMother' }, 6_000_000);
-    expect(screen.getByText(/Not applied/)).toBeInTheDocument();
+    expect(screen.getByText(/require a total net income/)).toBeInTheDocument();
     expect(screen.queryByText(/No qualifying child/)).not.toBeInTheDocument();
   });
 
@@ -149,6 +149,6 @@ describe('Personal Circumstances card', () => {
     renderModal({ disability: 'special', widowOrSingleParent: 'widowBereaved' }, 6_000_000);
     expect(screen.getByText(/Disability deduction:/)).toBeInTheDocument();
     expect(screen.queryByText(/Widow deduction:/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Not applied/)).toBeInTheDocument();
+    expect(screen.getByText(/require a total net income/)).toBeInTheDocument();
   });
 });

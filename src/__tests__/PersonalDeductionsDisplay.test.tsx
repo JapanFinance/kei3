@@ -94,7 +94,7 @@ describe('TaxesTab personal deductions display', () => {
 
     expect(results.residenceTax.nonTaxableStatus).toBe('widow');
     expect(
-      screen.getByText(/No residence tax is levied: widowed or divorced women \(寡婦\)/),
+      screen.getByText(/No residence tax is levied on widowed or divorced women \(寡婦\)/),
     ).toBeInTheDocument();
   });
 });

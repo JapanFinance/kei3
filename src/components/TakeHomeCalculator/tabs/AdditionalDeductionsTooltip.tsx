@@ -98,8 +98,8 @@ const AdditionalDeductionsTooltip: React.FC<AdditionalDeductionsTooltipProps> = 
         {!isNational && hasPersonal && (
           <Typography variant="body2" sx={{ fontSize: '0.85em', color: 'text.secondary', mb: 1 }}>
             The disability, widow, and single parent deductions are personal deductions (人的控除),
-            so they also raise the 人的控除額の差 behind the adjustment credit (調整控除), which
-            offsets part of the gap between the two taxes.
+            so they also raise the personal deduction difference used in the adjustment credit
+            (調整控除).
           </Typography>
         )}
         {rows.map(({ item, info }) => (

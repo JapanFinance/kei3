@@ -51,7 +51,7 @@ interface TaxesTabProps {
 
 /** Plural subjects naming each 地方税法第295条第1項第2号 status in the non-taxable message. */
 const NON_TAXABLE_STATUS_LABELS: Record<NonTaxableResidenceTaxStatus, string> = {
-  minor: 'people under 18',
+  minor: 'people under 18 (未成年者)',
   disability: 'people with a disability (障害者)',
   widow: 'widowed or divorced women (寡婦)',
   singleParent: 'single parents (ひとり親)',
@@ -903,7 +903,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           labelSuffix={
             results.residenceTax.nonTaxableStatus ? (
               <SimpleTooltip>
-                {`No residence tax is levied: ${NON_TAXABLE_STATUS_LABELS[results.residenceTax.nonTaxableStatus]} with total net income of ${formatJPY(NON_TAXABLE_STATUS_INCOME_LIMIT)} or less are exempt.`}
+                {`No residence tax is levied on ${NON_TAXABLE_STATUS_LABELS[results.residenceTax.nonTaxableStatus]} with total net income of ${formatJPY(NON_TAXABLE_STATUS_INCOME_LIMIT)} or less.`}
               </SimpleTooltip>
             ) : undefined
           }

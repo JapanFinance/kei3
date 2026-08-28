@@ -434,7 +434,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               Living Together
               <SimpleTooltip>
                 Check this if the dependent lives with the taxpayer. This may affect the deduction
-                amounts for an elderly parent, or where the dependent is a 特別障害者.
+                amounts for an elderly parent, or where the dependent qualifies with a special disability (特別障害者).
               </SimpleTooltip>
             </Box>
           }
