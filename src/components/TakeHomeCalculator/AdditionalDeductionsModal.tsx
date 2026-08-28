@@ -258,16 +258,16 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const CIRCUMSTANCE_WARNING_TEXT: Record<(typeof circumstanceWarnings)[number], string> = {
     spouseEntered:
       'A spouse is entered under Dependents, but this deduction requires not being married at ' +
-      'the end of the year. The combination is valid only for a year in which the spouse died — ' +
+      'the end of the year. The combination is valid only for a year in which the spouse died because ' +
       'the spouse deduction is then judged at the time of death and this deduction at December 31.',
     singleParentNoQualifyingChild:
       'No qualifying child is entered under Dependents: the single parent deduction requires a ' +
-      `child supported on the same household budget with total income of ${formatJPY(
+      `child supported on the same household budget with net income of ${formatJPY(
         getSingleParentChildIncomeLimit(incomeYear),
       )} or less. If such a child exists, add them under Dependents.`,
     widowDivorcedNoDependentRelative:
       'No dependent relative (扶養親族) is entered under Dependents: for a divorced woman, the ' +
-      `widow deduction requires one with total income of ${formatJPY(
+      `widow deduction requires one with net income of ${formatJPY(
         getDependentEligibilityMax(incomeYear),
       )} or less. If such a relative exists, add them under Dependents.`,
   };
@@ -405,7 +405,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               })}
               {(widowOrSingleParentOverIncomeLimit
                 ? [
-                    `Not applied: the widow / single parent deductions require a total net income of ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.`,
+                    `The widow / single parent deductions require a total net income of ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.`,
                   ]
                 : circumstanceWarnings.map(warning => CIRCUMSTANCE_WARNING_TEXT[warning])
               ).map(warning => (

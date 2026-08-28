@@ -83,7 +83,7 @@ export const getPersonalDeductionInfo = (
   },
   singleParent: {
     name: 'Single parent',
-    explanation: `An unmarried taxpayer, whose total net income is ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less, supporting a child on the same household budget (生計を一にする子). The child's total income must be ${formatJPY(getSingleParentChildIncomeLimit(incomeYear))} or less. Whether the parent is the mother or the father changes no amount, but it does change the 人的控除額の差 behind the residence-tax adjustment credit.`,
+    explanation: `The unmarried taxpayer must support a child on the same household budget (生計を一にする子) and have a total net income of ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less. The child's total income must be ${formatJPY(getSingleParentChildIncomeLimit(incomeYear))} or less. Whether the parent is the mother or the father changes the personal deduction difference used in the residence tax adjustment credit.`,
     sourceLabel: 'ひとり親控除 (NTA No.1171)',
     sourceUrl: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm',
   },
