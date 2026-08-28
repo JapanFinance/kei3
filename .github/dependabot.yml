@@ -20,6 +20,14 @@ updates:
       mui:
         patterns:
           - '@mui*'
+      # oxlint and oxfmt are published from the oxc monorepo on a single weekly
+      # release, always within minutes of each other, on separate version lines.
+      # oxlint-tsgolint follows the TypeScript Go compiler instead, so it is not
+      # part of this group.
+      oxc:
+        patterns:
+          - 'oxlint'
+          - 'oxfmt'
       react:
         patterns:
           - 'react'
