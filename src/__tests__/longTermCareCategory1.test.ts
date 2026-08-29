@@ -191,7 +191,10 @@ describe('estimateLongTermCareCategory1Premium', () => {
   });
 
   it('estimates a positive premium even at zero income', () => {
-    // Tier 1 is 0.285 × the 基準額, never zero: 74,700 × 0.285 = 21,289.5 → 21,200.
+    // Everyone 65 and over with an address in the municipality is a 第1号被保険者 (法第9条第1項
+    // 第1号), and the schedule has no zero band: tier 1 is its floor and covers 被保護者 as well,
+    // so 74,700 × 0.285 = 21,289.5 → 21,200. A premium of zero comes only from a municipality's
+    // own 減免 for 特別の理由 (法第142条), which is discretionary and not modeled.
     const result = estimateLongTermCareCategory1Premium(tierInputs({}), 2027, 'DEFAULT');
     expect(result.total).toBe(21_200);
   });
