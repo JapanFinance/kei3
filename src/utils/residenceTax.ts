@@ -105,6 +105,45 @@ function nonTaxableStatusFor(
 }
 
 /**
+ * Whether the taxpayer owes no residence tax at all — 均等割・所得割とも非課税. Composes the same
+ * two gates {@link calculateResidenceTax} applies, in the same order: a 地方税法295条1項2号 status
+ * ({@link nonTaxableStatusFor}), or 合計所得金額 within the 均等割 limit of
+ * {@link getResidenceTaxExemptionLimits}. Someone above those but below the 所得割 limit still
+ * pays 均等割 and so is a 住民税課税者 here.
+ *
+ * This is the 「市町村民税が課されていない者」 test the 介護保険 第1号 income-tier judgment
+ * (介護保険法施行令第38条第1項) applies to the insured person and to each 世帯 member.
+ */
+export function isResidenceTaxExempt(
+  netIncome: number,
+  qualifiedDependentsCount: number,
+  ageRange: TaxpayerAgeRange,
+  personalCircumstances: PersonalCircumstancesInput,
+): boolean {
+  return (
+    nonTaxableStatusFor(ageRange, personalCircumstances, netIncome) !== undefined ||
+    netIncome <= getResidenceTaxExemptionLimits(qualifiedDependentsCount).perCapitaLimit
+  );
+}
+
+/**
+ * Whether an entered dependent would themselves owe residence tax, for the
+ * 世帯に課税者がいるかどうか half of the 介護保険 第1号 tier judgment. A dependent's own
+ * dependents are not modeled, so the 0-dependent 均等割 limit applies; of the
+ * 地方税法295条1項2号 statuses, 障害者 comes from the dependent's own field and 未成年者 from
+ * the under-16 age range (fully inside the minor band — the 16-18 range straddles the age-18
+ * boundary and is not treated as one).
+ */
+export function isDependentResidenceTaxable(dependent: Dependent, year: number): boolean {
+  const netIncome = calculateDependentTotalNetIncome(dependent, year);
+  if (netIncome <= getResidenceTaxExemptionLimits(0).perCapitaLimit) return false;
+  const hasExemptStatus =
+    dependent.disability !== 'none' ||
+    (dependent.relationship !== 'spouse' && dependent.ageRange === 'under16');
+  return !(hasExemptStatus && netIncome <= NON_TAXABLE_STATUS_INCOME_LIMIT);
+}
+
+/**
  * Calculates residence tax (住民税) based on net income and deductions
  * Rate: 10% (6% municipal tax + 4% prefectural tax) of taxable income
  * Taxable income = net income - social insurance deductions - residence tax basic deduction
@@ -256,14 +295,23 @@ function countQualifiedDependents(
     uniqueDependents.set(b.dependent.id, b.dependent);
   });
 
-  let qualifiedDependentsCount = 0;
-  uniqueDependents.forEach(dependent => {
-    const totalNetIncome = calculateDependentTotalNetIncome(dependent, year);
-    if (totalNetIncome <= getDependentEligibilityMax(year)) {
-      qualifiedDependentsCount++;
-    }
-  });
-  return qualifiedDependentsCount;
+  return countResidenceTaxQualifiedDependents([...uniqueDependents.values()], year);
+}
+
+/**
+ * The same qualified-dependent count as {@link countQualifiedDependents}, taken from the
+ * dependent list directly — for callers that need the {@link getResidenceTaxExemptionLimits}
+ * dependent count before any deduction breakdown exists, such as the 介護保険 第1号
+ * tier judgment inside the social-insurance stage.
+ */
+export function countResidenceTaxQualifiedDependents(
+  dependents: readonly Dependent[],
+  year: number,
+): number {
+  return dependents.filter(
+    dependent =>
+      calculateDependentTotalNetIncome(dependent, year) <= getDependentEligibilityMax(year),
+  ).length;
 }
 
 /**
@@ -278,11 +326,14 @@ function countQualifiedDependents(
  * 生活保護基準の級地区分; the amounts here are the 級地1 values (which include the Tokyo 23
  * wards), so they can overstate the limits for municipalities in 級地2・3.
  *
+ * Exported for the 介護保険 第1号 tier judgment ({@link isResidenceTaxExempt},
+ * {@link isDependentResidenceTaxable}), which shares the 級地1 simplification.
+ *
  * @param qualifiedDependentsCount Number of {@link countQualifiedDependents qualified dependents}
  * @returns Object containing both net income limits
  * @see https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/hikazeikijun/juuminzei-hikazei.html
  */
-function getResidenceTaxExemptionLimits(qualifiedDependentsCount: number): {
+export function getResidenceTaxExemptionLimits(qualifiedDependentsCount: number): {
   perCapitaLimit: number;
   incomeBasedLimit: number;
 } {

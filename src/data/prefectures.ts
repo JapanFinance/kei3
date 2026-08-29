@@ -67,3 +67,16 @@ export type Prefecture = keyof typeof PREFECTURE_NAMES;
 export function isPrefecture(region: string): region is Prefecture {
   return Object.hasOwn(PREFECTURE_NAMES, region);
 }
+
+/**
+ * The prefecture a stored region key belongs to, or undefined when none can be read from it.
+ * Region keys come in two shapes: a {@link Prefecture} itself (Kyokai Kenpo branches,
+ * 後期高齢者医療, and the prefecture-level NHI keys), or `Prefecture-Municipality`
+ * ('Tokyo-Chiyoda') for municipal NHI keys. Keys with no prefecture in them ('DEFAULT' for
+ * nationwide employer plans) return undefined.
+ */
+export function prefectureForRegion(region: string): Prefecture | undefined {
+  if (isPrefecture(region)) return region;
+  const prefix = region.split('-', 1)[0];
+  return prefix !== undefined && isPrefecture(prefix) ? prefix : undefined;
+}

@@ -6,6 +6,7 @@ import {
   getProviderDefinition,
   type EmployeeProviderId,
 } from '../data/employeesHealthInsurance/providerRateData';
+import type { Prefecture } from '../data/prefectures';
 import { STATUTORY_AGE_BANDS, type TaxpayerAgeRange, taxpayerAgeCoversBand } from './taxpayerAge';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
@@ -202,4 +203,27 @@ export interface LatterStageElderlyRegionParams {
     rate: number; // 所得割率
     cap: number; // 賦課限度額
   };
+}
+
+/**
+ * The estimated 介護保険 第1号被保険者 premium (`estimateLongTermCareCategory1Premium` in
+ * longTermCareCategory1.ts) and the parameters behind it, for display alongside the figure.
+ */
+export interface LongTermCareCategory1Estimate {
+  /**
+   * The 所得段階 under the national standard, 1-13. Judged with the fiscal year starting in the
+   * modeled calendar year, as are {@link multiplier}, {@link annualBase}, {@link baseScope},
+   * and {@link prefecture}; {@link total} additionally blends in the previous fiscal year, so
+   * around a boundary that moved a tier it can differ from 基準額 × 乗率.
+   */
+  tier: number;
+  multiplier: number;
+  /** Annual 基準額 the estimate scaled (average monthly 基準額 × 12). */
+  annualBase: number;
+  /** Whether {@link annualBase} is the selected prefecture's average or the national one. */
+  baseScope: 'prefecture' | 'national';
+  /** The prefecture the region key resolved to, when {@link baseScope} is 'prefecture'. */
+  prefecture: Prefecture | undefined;
+  /** Estimated annual premium for the calendar year. Always positive. */
+  total: number;
 }
