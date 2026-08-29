@@ -10,8 +10,7 @@ import { prefectureForRegion, type Prefecture } from './prefectures';
  * Unlike the 後期高齢者医療 rates, which are prefecture-uniform by law, each of the ~1,573
  * insurers (市町村・広域連合) sets its own monthly 基準額 for a three-year 計画期間 and may
  * depart from the standard tier schedule (施行令第39条 lets it change tier counts, multipliers,
- * and 合計所得金額 boundaries). The 第9期 基準額 spread is 3,374円〜9,249円 against a national
- * weighted average of 6,225円, so this module can only power an explicitly-labeled estimate —
+ * and 合計所得金額 boundaries). This module can only power an explicitly-labeled estimate —
  * the weighted-average 基準額 of the selected prefecture (or the national one when the region
  * carries no prefecture) times the national-standard multiplier.
  *
@@ -26,20 +25,12 @@ import { prefectureForRegion, type Prefecture } from './prefectures';
  *   tier-8 amount, giving 420万 / 520万 / 620万 / 720万.
  *
  * The 年金収入等 boundary of tiers 1 and 4 tracks the full 老齢基礎年金 and now moves within a
- * 計画期間, which is why the periods here are per fiscal year: 80万円 (FY2024, the level set with
- * the 平成17年度 schedule), 80万9千円 (FY2025), 82万6千500円 (FY2026). Each value was read from
+ * 計画期間, which is why the periods here are per fiscal year. Each value was read from
  * the point-in-time e-Gov text of 第38条第1項第1号ハ・第4号イ for that fiscal year.
  *
- * 基準額 figures come from the MHLW 第9期 publication ({@link LONG_TERM_CARE_BASE_SOURCES}),
- * attachment 「（第9期）各都道府県平均保険料基準額一覧」: one row per prefecture with the
- * 第9期保険料基準額（月額）in its fourth column, here rounded to whole yen — matching how the
- * accompanying 集計結果 PDF prints the same table (its page 2 lists 北海道 5,738円, 青森 6,715円,
- * …). The national 6,225円 is the same file's 全国1,573保険者 weighted average. Osaka (7,486円,
- * the highest) and Yamaguchi (5,568円, the lowest) were cross-checked against a second publisher
- * (gemmed.ghc-j.com) to confirm the column was read correctly.
+ * 基準額 figures come from the MHLW publication ({@link LONG_TERM_CARE_BASE_SOURCES}).
  *
- * For whoever adds the 第10期 period in April 2027: MHLW publishes the next
- * 各都道府県平均保険料基準額一覧 around May 2027 (the 第9期 one appeared 2024-05-14), and the
+ * When adding new data: MHLW publishes the 各都道府県平均保険料基準額一覧 around May, and the
  * 年金収入等 boundary should be re-read from 施行令第38条第1項第1号ハ each April — it is now
  * revised with pension indexation, announced in 社会保障審議会介護保険部会 materials ahead of
  * promulgation.
@@ -80,7 +71,7 @@ interface LongTermCareMonthlyBases {
 }
 
 /** 第9期 (FY2024-2026) weighted-average monthly 基準額, rounded to whole yen. */
-const DAI9KI_MONTHLY_BASES: LongTermCareMonthlyBases = {
+const FY2024_2026_MONTHLY_BASES: LongTermCareMonthlyBases = {
   national: 6_225,
   prefecture: {
     Hokkaido: 5_738,
@@ -148,7 +139,7 @@ const LONG_TERM_CARE_PERIODS: LongTermCareCategory1Period[] = [
   {
     // FY2026 (令和8年度): 年金収入等 boundary raised to 82.65万 (令和7年中の満額 826,464円).
     effectiveFrom: { year: 2026, month: 3 },
-    monthlyBases: DAI9KI_MONTHLY_BASES,
+    monthlyBases: FY2024_2026_MONTHLY_BASES,
     tiers: {
       tier1PensionIncomeEtcMax: 826_500,
       tier2PensionIncomeEtcMax: 1_200_000,
@@ -159,7 +150,7 @@ const LONG_TERM_CARE_PERIODS: LongTermCareCategory1Period[] = [
   {
     // FY2025 (令和7年度): boundary raised to 80.9万 (令和6年中の満額 809,000円).
     effectiveFrom: { year: 2025, month: 3 },
-    monthlyBases: DAI9KI_MONTHLY_BASES,
+    monthlyBases: FY2024_2026_MONTHLY_BASES,
     tiers: {
       tier1PensionIncomeEtcMax: 809_000,
       tier2PensionIncomeEtcMax: 1_200_000,
@@ -170,7 +161,7 @@ const LONG_TERM_CARE_PERIODS: LongTermCareCategory1Period[] = [
   {
     // FY2024 (令和6年度), the 第9期 start: 13-tier standard introduced, boundary still 80万.
     effectiveFrom: { year: 2024, month: 3 },
-    monthlyBases: DAI9KI_MONTHLY_BASES,
+    monthlyBases: FY2024_2026_MONTHLY_BASES,
     tiers: {
       tier1PensionIncomeEtcMax: 800_000,
       tier2PensionIncomeEtcMax: 1_200_000,

@@ -18,7 +18,11 @@ export interface LongTermCareCategory1TierInputs {
   totalNetIncome: number;
   /** 公的年金等の収入金額 (taxable public pension revenue). */
   grossPublicPensionIncome: number;
-  /** 公的年金等に係る雑所得, removed from {@link totalNetIncome} for the 年金収入等 tests. */
+  /**
+   * 公的年金等に係る雑所得, removed from {@link totalNetIncome} for the 年金収入等 tests. This is
+   * {@link grossPublicPensionIncome} after the 公的年金等控除, so it never exceeds it and is zero
+   * whenever the deduction covers the whole revenue.
+   */
   netPublicPensionIncome: number;
   /** Whether the person themselves is 住民税課税 (tiers 6-13 when true). */
   taxpayerIsTaxable: boolean;

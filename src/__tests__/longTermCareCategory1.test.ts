@@ -51,17 +51,35 @@ describe('judgeLongTermCareCategory1Tier', () => {
     expect(judge(826_501)).toEqual({ tier: 5, multiplier: 1.0 });
   });
 
-  it('counts non-pension income into 年金収入等 but not the 公的年金等雑所得', () => {
-    // 課税年金収入 500,000 + (合計所得金額 1,000,000 − 年金雑所得 900,000) = 600,000 → tier 1.
+  // Both cases are the same 65+ pensioner: 課税年金収入 1,150,000 less the 1,100,000 minimum
+  // 公的年金等控除 leaves a 年金雑所得 of 50,000, and the rest of 合計所得金額 is other income.
+  it('subtracts only the 公的年金等雑所得 from 合計所得金額, not the whole amount', () => {
+    // Other income 40,000, so 合計所得金額 is 90,000 and 年金収入等 is
+    // 1,150,000 + (90,000 − 50,000) = 1,190,000, inside the 1,200,000 bound.
+    // Adding 合計所得金額 whole would give 1,240,000 and wrongly land tier 3.
     const result = judgeLongTermCareCategory1Tier(
       tierInputs({
-        totalNetIncome: 1_000_000,
-        netPublicPensionIncome: 900_000,
-        grossPublicPensionIncome: 500_000,
+        grossPublicPensionIncome: 1_150_000,
+        netPublicPensionIncome: 50_000,
+        totalNetIncome: 90_000,
       }),
       FY2026_TIERS,
     );
-    expect(result.tier).toBe(1);
+    expect(result.tier).toBe(2);
+  });
+
+  it('adds non-pension income on top of the 課税年金収入', () => {
+    // Other income 60,000 instead, so 年金収入等 is 1,150,000 + 60,000 = 1,210,000 and crosses
+    // into tier 3. Counting the pension revenue alone would leave 1,150,000 and stay at tier 2.
+    const result = judgeLongTermCareCategory1Tier(
+      tierInputs({
+        grossPublicPensionIncome: 1_150_000,
+        netPublicPensionIncome: 50_000,
+        totalNetIncome: 110_000,
+      }),
+      FY2026_TIERS,
+    );
+    expect(result.tier).toBe(3);
   });
 
   it('walks the 合計所得金額 brackets for a 本人課税 person (未満 semantics)', () => {
