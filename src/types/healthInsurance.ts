@@ -212,18 +212,20 @@ export interface LatterStageElderlyRegionParams {
 export interface LongTermCareCategory1Estimate {
   /**
    * The 所得段階 under the national standard, 1-13. Judged with the fiscal year starting in the
-   * modeled calendar year, as are {@link multiplier}, {@link annualBase}, {@link baseScope},
-   * and {@link prefecture}; {@link total} additionally blends in the previous fiscal year, so
+   * modeled calendar year, as are {@link multiplier}, {@link annualBase}, and
+   * {@link baseScope}; {@link total} additionally blends in the previous fiscal year, so
    * around a boundary that moved a tier it can differ from 基準額 × 乗率.
    */
   tier: number;
   multiplier: number;
   /** Annual 基準額 the estimate scaled (average monthly 基準額 × 12). */
   annualBase: number;
-  /** Whether {@link annualBase} is the selected prefecture's average or the national one. */
-  baseScope: 'prefecture' | 'national';
-  /** The prefecture the region key resolved to, when {@link baseScope} is 'prefecture'. */
-  prefecture: Prefecture | undefined;
+  /**
+   * Whose average {@link annualBase} is: the prefecture the selected region resolved to, or
+   * 'national' when it carries none. No prefecture is keyed 'national', so comparing against
+   * it narrows the other branch to a {@link Prefecture}.
+   */
+  baseScope: Prefecture | 'national';
   /** Estimated annual premium for the calendar year. Always positive. */
   total: number;
 }

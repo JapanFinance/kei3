@@ -110,7 +110,6 @@ export function estimateLongTermCareCategory1Premium(
     multiplier,
     annualBase: currFYParams.annualBase,
     baseScope: currFYParams.baseScope,
-    prefecture: currFYParams.prefecture,
     total,
   };
 }

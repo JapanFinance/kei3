@@ -112,8 +112,7 @@ describe('estimateLongTermCareCategory1Premium', () => {
       tier: 8,
       multiplier: 1.5,
       annualBase: 75_840,
-      baseScope: 'prefecture',
-      prefecture: 'Tokyo',
+      baseScope: 'Tokyo',
       total: 113_700,
     });
   });
@@ -158,7 +157,6 @@ describe('estimateLongTermCareCategory1Premium', () => {
       multiplier: 1.0,
       annualBase: 74_700,
       baseScope: 'national',
-      prefecture: undefined,
       total: 74_700,
     });
   });

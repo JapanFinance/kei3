@@ -220,10 +220,12 @@ export interface LongTermCareCategory1Params {
   periodId: string;
   /** Annual 基準額 the estimate scales: the resolved monthly average × 12. */
   annualBase: number;
-  /** Whether {@link annualBase} is the selected prefecture's average or the national one. */
-  baseScope: 'prefecture' | 'national';
-  /** The prefecture the region key resolved to, when {@link baseScope} is 'prefecture'. */
-  prefecture: Prefecture | undefined;
+  /**
+   * Whose average {@link annualBase} is: the prefecture the region key resolved to, or
+   * 'national' when it carries none. No prefecture is keyed 'national', so comparing against
+   * it narrows the other branch to a {@link Prefecture}.
+   */
+  baseScope: Prefecture | 'national';
   tiers: LongTermCareStandardTierTable;
 }
 
@@ -245,17 +247,16 @@ export function getLongTermCareCategory1ParamsForMonth(
         (year === p.effectiveFrom.year && month >= p.effectiveFrom.month),
     ) ?? LONG_TERM_CARE_PERIODS[LONG_TERM_CARE_PERIODS.length - 1]!;
 
-  const prefecture = prefectureForRegion(region);
+  const baseScope = prefectureForRegion(region) ?? 'national';
   const monthlyBase =
-    prefecture === undefined
+    baseScope === 'national'
       ? period.monthlyBases.national
-      : period.monthlyBases.prefecture[prefecture];
+      : period.monthlyBases.prefecture[baseScope];
 
   return {
     periodId: `${period.effectiveFrom.year}-${period.effectiveFrom.month}`,
     annualBase: monthlyBase * 12,
-    baseScope: prefecture === undefined ? 'national' : 'prefecture',
-    prefecture,
+    baseScope,
     tiers: period.tiers,
   };
 }

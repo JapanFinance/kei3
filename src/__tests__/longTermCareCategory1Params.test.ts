@@ -45,8 +45,7 @@ describe('getLongTermCareCategory1ParamsForMonth', () => {
     // 7,486円) prefecture averages.
     for (const region of PREFECTURES) {
       const params = getLongTermCareCategory1ParamsForMonth(region, 2026, 3);
-      expect(params.baseScope, region).toBe('prefecture');
-      expect(params.prefecture, region).toBe(region);
+      expect(params.baseScope, region).toBe(region);
       expect(params.annualBase, region).toBeGreaterThanOrEqual(5_568 * 12);
       expect(params.annualBase, region).toBeLessThanOrEqual(7_486 * 12);
       expect(params.annualBase % 12, region).toBe(0);
@@ -57,15 +56,13 @@ describe('getLongTermCareCategory1ParamsForMonth', () => {
     for (const region of ['DEFAULT', 'Atlantis', '']) {
       const params = getLongTermCareCategory1ParamsForMonth(region, 2026, 3);
       expect(params.baseScope, region).toBe('national');
-      expect(params.prefecture, region).toBeUndefined();
       expect(params.annualBase, region).toBe(6_225 * 12);
     }
   });
 
   it('resolves municipal NHI region keys to their prefecture', () => {
     const params = getLongTermCareCategory1ParamsForMonth('Tokyo-Chiyoda', 2026, 3);
-    expect(params.baseScope).toBe('prefecture');
-    expect(params.prefecture).toBe('Tokyo');
+    expect(params.baseScope).toBe('Tokyo');
     expect(params.annualBase).toBe(6_320 * 12);
   });
 
