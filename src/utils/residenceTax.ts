@@ -105,6 +105,52 @@ function nonTaxableStatusFor(
 }
 
 /**
+ * Whether the taxpayer owes no residence tax at all — 均等割・所得割とも非課税. Composes the same
+ * two gates {@link calculateResidenceTax} applies, in the same order: a 地方税法295条1項2号 status
+ * ({@link nonTaxableStatusFor}), or 合計所得金額 within the 均等割 limit of
+ * {@link getResidenceTaxExemptionLimits}. Someone above those but below the 所得割 limit still
+ * pays 均等割 and so is a 住民税課税者 here.
+ *
+ * This is the 「市町村民税が課されていない者」 test the 介護保険 第1号 income-tier judgment
+ * (介護保険法施行令第38条第1項) applies to the insured person and to each 世帯 member.
+ */
+export function isResidenceTaxExempt(
+  netIncome: number,
+  qualifiedDependentsCount: number,
+  ageRange: TaxpayerAgeRange,
+  personalCircumstances: PersonalCircumstancesInput,
+): boolean {
+  return (
+    nonTaxableStatusFor(ageRange, personalCircumstances, netIncome) !== undefined ||
+    netIncome <= getResidenceTaxExemptionLimits(qualifiedDependentsCount).perCapitaLimit
+  );
+}
+
+/**
+ * Whether an entered dependent would themselves owe residence tax, for the
+ * 世帯に課税者がいるかどうか half of the 介護保険 第1号 tier judgment. A dependent's own
+ * dependents are not modeled, so the 0-dependent 均等割 limit applies; of the
+ * 地方税法295条1項2号 statuses, 障害者 comes from the dependent's own field and 未成年者 from
+ * the age range.
+ *
+ * The age ranges cannot always answer that second one. They are cut on the 扶養控除 boundaries
+ * of 16 and 19 rather than the age of majority, so 'under16' is safely inside the 未成年者 band
+ * but '16to18' spans ages 16 to 18 and holds minors and adults alike. It is resolved as an
+ * adult, so a 16- or 17-year-old whose 合計所得金額 falls between the 均等割 limit and
+ * {@link NON_TAXABLE_STATUS_INCOME_LIMIT} is reported as 課税 when they are in fact exempt,
+ * which moves the taxpayer from tiers 1-3 to tiers 4-5 and overstates the premium. The
+ * taxpayer's own ranges split exactly at 18, so only dependents are affected.
+ */
+export function isDependentResidenceTaxable(dependent: Dependent, year: number): boolean {
+  const netIncome = calculateDependentTotalNetIncome(dependent, year);
+  if (netIncome <= getResidenceTaxExemptionLimits(0).perCapitaLimit) return false;
+  const hasExemptStatus =
+    dependent.disability !== 'none' ||
+    (dependent.relationship !== 'spouse' && dependent.ageRange === 'under16');
+  return !(hasExemptStatus && netIncome <= NON_TAXABLE_STATUS_INCOME_LIMIT);
+}
+
+/**
  * Calculates residence tax (住民税) based on net income and deductions
  * Rate: 10% (6% municipal tax + 4% prefectural tax) of taxable income
  * Taxable income = net income - social insurance deductions - residence tax basic deduction
@@ -138,7 +184,7 @@ export const calculateResidenceTax = (
 
   const personalDeductions = calculatePersonalDeductions(personalCircumstances, netIncome);
 
-  const qualifiedDependentsCount = countQualifiedDependents(dependentDeductions, year);
+  const qualifiedDependentsCount = countQualifiedDependentsFromBreakdown(dependentDeductions, year);
   const { perCapitaLimit, incomeBasedLimit } =
     getResidenceTaxExemptionLimits(qualifiedDependentsCount);
 
@@ -241,13 +287,35 @@ export const calculateResidenceTax = (
 };
 
 /**
- * Counts the number of qualified dependents for residence tax non-taxable limit calculations.
- * Includes spouse and other dependents with total net income <= threshold.
- * Note: Includes dependents under 16.
- * 扶養親族は、年齢16歳未満の者及び地方税法第314条の2第1項第11号に規定する控除対象扶養親族に限ります。
+ * Counts the 同一生計配偶者及び扶養親族 that raise the residence-tax non-taxable limits
+ * ({@link getResidenceTaxExemptionLimits}).
+ *
+ * 地方税法施行令第47条の3第1号 limits the count to 「年齢十六歳未満の者及び法第三百十四条の二
+ * 第一項第十一号に規定する控除対象扶養親族」. Those two categories together are just the
+ * 扶養親族 whose 合計所得金額 is within the threshold at any age — 控除対象扶養親族 is the 16+
+ * half of that set — so a single income test with no age condition implements both. The
+ * 同一生計配偶者 is subject to the same income threshold, so the spouse needs no separate case.
+ *
+ * @see https://laws.e-gov.go.jp/law/325CO0000000245#Mp-Ch_3-Se_1-At_47_3
  * @see https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
  */
-function countQualifiedDependents(
+export function countResidenceTaxQualifiedDependents(
+  dependents: readonly Dependent[],
+  year: number,
+): number {
+  return dependents.filter(
+    dependent =>
+      calculateDependentTotalNetIncome(dependent, year) <= getDependentEligibilityMax(year),
+  ).length;
+}
+
+/**
+ * {@link countResidenceTaxQualifiedDependents} for callers holding computed deductions rather
+ * than the dependent list, which is what {@link calculateResidenceTax} is given. Deduplicates
+ * because one dependent can contribute two breakdown rows (a 障害者控除 row alongside the main
+ * deduction); every dependent contributes at least one, so this recovers the whole list.
+ */
+function countQualifiedDependentsFromBreakdown(
   dependentDeductions: DependentDeductionResults,
   year: number,
 ): number {
@@ -256,14 +324,7 @@ function countQualifiedDependents(
     uniqueDependents.set(b.dependent.id, b.dependent);
   });
 
-  let qualifiedDependentsCount = 0;
-  uniqueDependents.forEach(dependent => {
-    const totalNetIncome = calculateDependentTotalNetIncome(dependent, year);
-    if (totalNetIncome <= getDependentEligibilityMax(year)) {
-      qualifiedDependentsCount++;
-    }
-  });
-  return qualifiedDependentsCount;
+  return countResidenceTaxQualifiedDependents([...uniqueDependents.values()], year);
 }
 
 /**
@@ -278,11 +339,15 @@ function countQualifiedDependents(
  * 生活保護基準の級地区分; the amounts here are the 級地1 values (which include the Tokyo 23
  * wards), so they can overstate the limits for municipalities in 級地2・3.
  *
- * @param qualifiedDependentsCount Number of {@link countQualifiedDependents qualified dependents}
+ * Exported for the 介護保険 第1号 tier judgment ({@link isResidenceTaxExempt},
+ * {@link isDependentResidenceTaxable}), which shares the 級地1 simplification.
+ *
+ * @param qualifiedDependentsCount Number of
+ *   {@link countResidenceTaxQualifiedDependents qualified dependents}
  * @returns Object containing both net income limits
  * @see https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/hikazeikijun/juuminzei-hikazei.html
  */
-function getResidenceTaxExemptionLimits(qualifiedDependentsCount: number): {
+export function getResidenceTaxExemptionLimits(qualifiedDependentsCount: number): {
   perCapitaLimit: number;
   incomeBasedLimit: number;
 } {
