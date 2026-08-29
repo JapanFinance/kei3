@@ -276,7 +276,11 @@ describe('isDependentResidenceTaxable', () => {
     expect(isDependentResidenceTaxable(child(1_350_001), 2026)).toBe(true);
   });
 
-  it('does not extend 未成年者 status to the 16-18 range', () => {
+  it('resolves the 16-18 range as an adult, which it cannot always be', () => {
+    // Pins a limitation rather than a rule: the range spans ages 16 to 18, so it holds
+    // 未成年者 and adults alike and cannot decide the 地方税法295条1項2号 exemption. Resolving it
+    // as an adult errs toward overstating the premium — at this income a 16- or 17-year-old is
+    // really exempt, which would leave the household untaxed and the taxpayer in tiers 1-3.
     expect(
       isDependentResidenceTaxable(otherDependent({ income: withOtherNetIncome(500_000) }), 2026),
     ).toBe(true);

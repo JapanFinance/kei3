@@ -131,8 +131,15 @@ export function isResidenceTaxExempt(
  * 世帯に課税者がいるかどうか half of the 介護保険 第1号 tier judgment. A dependent's own
  * dependents are not modeled, so the 0-dependent 均等割 limit applies; of the
  * 地方税法295条1項2号 statuses, 障害者 comes from the dependent's own field and 未成年者 from
- * the under-16 age range (fully inside the minor band — the 16-18 range straddles the age-18
- * boundary and is not treated as one).
+ * the age range.
+ *
+ * The age ranges cannot always answer that second one. They are cut on the 扶養控除 boundaries
+ * of 16 and 19 rather than the age of majority, so 'under16' is safely inside the 未成年者 band
+ * but '16to18' spans ages 16 to 18 and holds minors and adults alike. It is resolved as an
+ * adult, so a 16- or 17-year-old whose 合計所得金額 falls between the 均等割 limit and
+ * {@link NON_TAXABLE_STATUS_INCOME_LIMIT} is reported as 課税 when they are in fact exempt,
+ * which moves the taxpayer from tiers 1-3 to tiers 4-5 and overstates the premium. The
+ * taxpayer's own ranges split exactly at 18, so only dependents are affected.
  */
 export function isDependentResidenceTaxable(dependent: Dependent, year: number): boolean {
   const netIncome = calculateDependentTotalNetIncome(dependent, year);
