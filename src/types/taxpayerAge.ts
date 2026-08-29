@@ -104,9 +104,10 @@ export function isLongTermCareCategory2Insured(ageRange: TaxpayerAgeRange): bool
 
 /**
  * Whether the person is a 介護保険第1号被保険者, whose long-term care premiums are set per
- * municipality on income brackets and billed directly — usually deducted from pension
- * payments (特別徴収). The calculator cannot derive the amount, so it accepts the billed
- * annual amount as an input.
+ * municipality on income tiers and billed directly — usually deducted from pension
+ * payments (特別徴収). The calculator estimates the amount from the national-standard tier
+ * schedule and the prefecture-average 基準額 (`estimateLongTermCareCategory1Premium` in
+ * longTermCareCategory1.ts), overridable with the billed annual amount.
  * Source: https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html
  */
 export function isLongTermCareCategory1Insured(ageRange: TaxpayerAgeRange): boolean {

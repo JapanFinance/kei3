@@ -18,7 +18,8 @@ const context: ChartCalculationContext = {
   manualSocialInsuranceEntry: false,
   manualSocialInsuranceAmount: 0,
   incomeYear: 2026,
-  longTermCareCategory1Premium: 120_000,
+  longTermCareCategory1ManualEntry: false,
+  longTermCareCategory1Premium: 0,
   isEmploymentIncome: true,
 };
 
@@ -29,8 +30,27 @@ type Point = { x: number; y: number };
 const pointsOf = (dataset: { data: unknown }) => dataset.data as Point[];
 
 describe('generateChartData with the 介護保険第1号 premium', () => {
-  it('plots the entered amount as a constant bar across the income sweep', () => {
+  it('plots the estimate as a step function of income at 65+', () => {
+    // Tokyo annual 基準額 75,840円; single-person 世帯; 給与所得 at each sweep point decides the
+    // 所得段階 (both fiscal years of calendar 2026 give the same figure at these incomes):
+    //   1M: 給与所得 350,000 → 均等割非課税, 年金収入等 350,000 → tier 1 → ×0.285 → 21,600
+    //   2M: 給与所得 1,320,000 → 課税, tier 7 (120万-210万) → ×1.3 → 98,500
+    //   3M: 給与所得 2,020,000 → tier 7 → 98,500
+    //   4M: 給与所得 2,760,000 → tier 8 (210万-320万) → ×1.5 → 113,700
+    //   5M: 給与所得 3,560,000 → tier 9 (320万-420万) → ×1.7 → 128,900
     const { datasets } = generateChartData(range, context);
+    const ltc = datasets.find(d => d.label === 'Long-term Care Insurance');
+
+    expect(ltc).toBeDefined();
+    expect(pointsOf(ltc!).map(p => p.y)).toEqual([21_600, 98_500, 98_500, 113_700, 128_900]);
+  });
+
+  it('plots the entered amount as a constant bar under manual entry', () => {
+    const { datasets } = generateChartData(range, {
+      ...context,
+      longTermCareCategory1ManualEntry: true,
+      longTermCareCategory1Premium: 120_000,
+    });
     const ltc = datasets.find(d => d.label === 'Long-term Care Insurance');
 
     expect(ltc).toBeDefined();
@@ -48,12 +68,13 @@ describe('generateChartData with the 介護保険第1号 premium', () => {
     });
   });
 
-  it('omits the bar below age 65 and when nothing is entered', () => {
+  it('omits the bar below age 65 and under manual entry with nothing entered', () => {
     const below65 = generateChartData(range, { ...context, ageRange: 'age60to64' });
     expect(below65.datasets.some(d => d.label === 'Long-term Care Insurance')).toBe(false);
 
     const nothingEntered = generateChartData(range, {
       ...context,
+      longTermCareCategory1ManualEntry: true,
       longTermCareCategory1Premium: 0,
     });
     expect(nothingEntered.datasets.some(d => d.label === 'Long-term Care Insurance')).toBe(false);

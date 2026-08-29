@@ -276,6 +276,35 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(screen.getByText('¥558,500')).toBeInTheDocument();
   });
 
+  it('renders the tier and 基準額 rows with the ≈ prefix when the premium is estimated', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 128_900,
+          longTermCareCategory1Estimate: {
+            tier: 9,
+            multiplier: 1.7,
+            annualBase: 75_840,
+            baseScope: 'prefecture',
+            prefecture: 'Tokyo',
+            total: 128_900,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Income Tier (所得段階)')).toBeInTheDocument();
+    expect(screen.getByText('9 of 13 (× 1.7)')).toBeInTheDocument();
+    expect(screen.getByText('Base Amount (基準額, prefecture average)')).toBeInTheDocument();
+    expect(screen.getByText('¥75,840')).toBeInTheDocument();
+    expect(screen.getByText('Estimated Annual Premium')).toBeInTheDocument();
+    expect(screen.getByText('≈ ¥128,900')).toBeInTheDocument();
+    // 408,500 health insurance + 0 pension + the 128,900 estimate.
+    expect(screen.getByText('¥537,400')).toBeInTheDocument();
+  });
+
   it('omits the 第1号 section when no premium applies at 75+', () => {
     render(
       <SocialInsuranceTab

@@ -238,9 +238,11 @@ export const generateChartData = (
           },
         ]
       : []),
-    // The 介護保険第1号 amount is entered, not derived from income, so the calculator applies
-    // the same figure at every income point; without this bar the stack would fall short of
-    // the income by that amount.
+    // The 介護保険第1号 amount comes out of each point's own calculation: in estimate mode it
+    // is a step function of income (the 所得段階 is re-judged from the scaled streams, while
+    // the dependents driving the 世帯 branch stay constant across the sweep), and under manual
+    // entry it is the entered figure, flat at every income point. Without this bar the stack
+    // would fall short of the income by that amount.
     ...(resultsAndCaps.some(({ result }) => result.longTermCareCategory1Premium !== undefined)
       ? [
           {

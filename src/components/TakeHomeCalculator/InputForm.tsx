@@ -28,6 +28,10 @@ import React, { useState } from 'react';
 import type { Dispatch } from 'react';
 
 import {
+  LONG_TERM_CARE_BASE_SOURCES,
+  LONG_TERM_CARE_TIER_SOURCES,
+} from '../../data/longTermCareCategory1Params';
+import {
   availableProvidersFor,
   regionOptionsFor,
   type FormAction,
@@ -37,6 +41,7 @@ import {
   CUSTOM_PROVIDER_ID,
   isDependentCoverageEligible,
   getDependentIncomeThreshold,
+  type LongTermCareCategory1Estimate,
 } from '../../types/healthInsurance';
 import type {
   TakeHomeFormState,
@@ -93,6 +98,14 @@ const AGE_RANGE_SOURCES: Source[] = [
 
 const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
   {
+    label: '第９期計画期間における介護保険の第１号保険料について (average 基準額 by prefecture)',
+    href: LONG_TERM_CARE_BASE_SOURCES.page,
+  },
+  {
+    label: '介護保険法施行令第38条 (standard income tiers and multipliers)',
+    href: LONG_TERM_CARE_TIER_SOURCES.statute,
+  },
+  {
     label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
     href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
@@ -114,6 +127,8 @@ interface TaxInputFormProps {
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Computed 障害者・寡婦・ひとり親控除, passed through the same way; absent when none applies. */
   personalDeductions?: PersonalDeductionsResult | undefined;
+  /** Computed 介護保険料第1号 estimate, shown next to the estimate switch; absent below 65. */
+  longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
 }
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
@@ -122,6 +137,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   homeLoanTaxCreditResult,
   additionalDeductions,
   personalDeductions,
+  longTermCareCategory1Estimate,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -788,29 +804,66 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       icon={SIMPLE_TOOLTIP_ICON}
                     >
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        From age 65, long-term care premiums are billed by the municipality based on
-                        income brackets. Enter the annual amount from the June-July notice
-                        (介護保険料決定通知書); this amount is added to social insurance deduction.
+                        From age 65, long-term care premiums (介護保険料, 第1号被保険者) are billed
+                        by the municipality through income tiers (所得段階) assessed on the previous
+                        year's income, usually deducted from pension payments (特別徴収). The amount
+                        is added to the social insurance deduction.
                       </Typography>
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        The billed amount is assessed on the previous year's income.
+                        The estimate multiplies the selected prefecture's average base amount
+                        (基準額) for FY2024-2026 — the national average is ¥6,225/month — by the
+                        national-standard 13-tier multiplier (介護保険法施行令). Each municipality
+                        sets its own 基準額 (¥3,374 to ¥9,249/month in FY2024-2026) and may modify
+                        the tier schedule, so the billed amount can differ substantially. The tier
+                        judgment treats the household (世帯) as the taxpayer plus the entered
+                        dependents.
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        The exact amount appears on the June-July notice (介護保険料決定通知書);
+                        switch off the estimate to enter it.
                       </Typography>
                       <SourceLinks sources={LTC_CATEGORY1_INPUT_SOURCES} />
                     </DetailedTooltip>
                   </Typography>
-                  <SpinnerNumberField
-                    id="longTermCareCategory1Premium"
-                    name="longTermCareCategory1Premium"
-                    value={inputs.longTermCareCategory1Premium}
-                    onChange={value =>
-                      dispatch({ type: 'setField', field: 'longTermCareCategory1Premium', value })
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={!inputs.longTermCareCategory1ManualEntry}
+                        onChange={e =>
+                          dispatch({
+                            type: 'setField',
+                            field: 'longTermCareCategory1ManualEntry',
+                            value: !e.target.checked,
+                          })
+                        }
+                        name="longTermCareCategory1UseEstimate"
+                        color="primary"
+                        size="small"
+                      />
                     }
-                    label="Annual Premium"
-                    step={1000}
-                    shiftStep={10000}
-                    min={0}
-                    sx={{ ...sharedInputSx, width: '100%' }}
+                    label={
+                      <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                        {!inputs.longTermCareCategory1ManualEntry && longTermCareCategory1Estimate
+                          ? `Use estimated premium (≈ ${formatJPY(longTermCareCategory1Estimate.total)})`
+                          : 'Use estimated premium'}
+                      </Typography>
+                    }
                   />
+                  {inputs.longTermCareCategory1ManualEntry && (
+                    <SpinnerNumberField
+                      id="longTermCareCategory1Premium"
+                      name="longTermCareCategory1Premium"
+                      value={inputs.longTermCareCategory1Premium}
+                      onChange={value =>
+                        dispatch({ type: 'setField', field: 'longTermCareCategory1Premium', value })
+                      }
+                      label="Annual Premium (billed amount)"
+                      step={1000}
+                      shiftStep={10000}
+                      min={0}
+                      sx={{ ...sharedInputSx, width: '100%' }}
+                    />
+                  )}
                 </FormControl>
               )}
             </Box>

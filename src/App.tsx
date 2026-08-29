@@ -93,6 +93,7 @@ function App() {
     ],
     savedIncomeStreams: [],
     ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
+    longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
@@ -156,6 +157,7 @@ function App() {
             homeLoanTaxCreditResult={results.homeLoanTaxCredit}
             additionalDeductions={results.additionalDeductions}
             personalDeductions={results.personalDeductions}
+            longTermCareCategory1Estimate={results.longTermCareCategory1Estimate}
           />
           <Suspense
             fallback={
@@ -199,6 +201,7 @@ function App() {
               s => s.type === 'salary' || s.type === 'bonus',
             )}
             ageRange={inputs.ageRange}
+            longTermCareCategory1ManualEntry={inputs.longTermCareCategory1ManualEntry}
             longTermCareCategory1Premium={inputs.longTermCareCategory1Premium}
             healthInsuranceProvider={inputs.healthInsuranceProvider}
             region={inputs.region}

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Dependent, DependentDeductionResults, DisabilityLevel } from './dependents';
-import type { HealthInsuranceProviderId } from './healthInsurance';
+import type { HealthInsuranceProviderId, LongTermCareCategory1Estimate } from './healthInsurance';
 import type { TaxpayerAgeRange } from './taxpayerAge';
 
 export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
@@ -312,9 +312,16 @@ export interface TakeHomeFormState {
   incomeStreams: IncomeStream[];
   ageRange: TaxpayerAgeRange;
   /**
+   * True when the user has switched off the calculated 介護保険料 estimate to enter the billed
+   * annual amount into {@link longTermCareCategory1Premium}. Named for the manual side so that
+   * the false default means "estimate", matching {@link manualSocialInsuranceEntry}'s
+   * convention. Ignored below age 65 and under manual social insurance entry.
+   */
+  longTermCareCategory1ManualEntry: boolean;
+  /**
    * Annual 介護保険料 billed directly to a 第1号被保険者 (ages 65 and over), from the
-   * June-July 介護保険料決定通知書. 0 when nothing has been entered; ignored below age 65
-   * and under manual social insurance entry. Required (rather than optional) because it
+   * June-July 介護保険料決定通知書. Read only when {@link longTermCareCategory1ManualEntry}
+   * is on; 0 when nothing has been entered. Required (rather than optional) because it
    * backs a controlled number field, matching {@link manualSocialInsuranceAmount}, which
    * is likewise only meaningful when a sibling field says so.
    */
@@ -338,6 +345,8 @@ export interface TakeHomeFormState {
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
   ageRange: TaxpayerAgeRange;
+  /** See {@link TakeHomeFormState.longTermCareCategory1ManualEntry}. Absent means false. */
+  longTermCareCategory1ManualEntry?: boolean | undefined;
   /** See {@link TakeHomeFormState.longTermCareCategory1Premium}. Absent means 0. */
   longTermCareCategory1Premium?: number | undefined;
   region: string;
@@ -461,11 +470,16 @@ export interface TakeHomeResults {
    */
   latterStageMedicalCapped?: boolean | undefined;
   /**
-   * Annual 介護保険料第1号 amount actually applied: ages 65+ outside manual entry, and only
-   * when a positive amount was entered; absent otherwise. Included in the social insurance
-   * deduction but not in {@link healthInsurance}.
+   * Annual 介護保険料第1号 amount actually applied at ages 65+ outside manual social insurance
+   * entry: the calculator's estimate, or the entered billed amount when positive. Included in
+   * the social insurance deduction but not in {@link healthInsurance}.
    */
   longTermCareCategory1Premium?: number | undefined;
+  /**
+   * Present exactly when {@link longTermCareCategory1Premium} is the calculator's estimate
+   * rather than an entered billed amount; carries the 所得段階 and 基準額 behind the figure.
+   */
+  longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   healthInsuranceProvider: HealthInsuranceProviderId;

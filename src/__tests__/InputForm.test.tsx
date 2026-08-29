@@ -37,6 +37,7 @@ describe('TakeHomeInputForm Tests', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
@@ -298,6 +299,7 @@ describe('Dependent Coverage UI Behavior', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
@@ -499,6 +501,7 @@ describe('Age Selection', () => {
     incomeMode: 'salary',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
@@ -547,7 +550,7 @@ describe('Age Selection', () => {
         dispatch={mockDispatch}
       />,
     );
-    expect(screen.queryByLabelText('Annual Premium')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: /Use estimated premium/ })).not.toBeInTheDocument();
 
     rerender(
       <TakeHomeInputForm
@@ -556,7 +559,9 @@ describe('Age Selection', () => {
       />,
     );
     expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
-    expect(screen.getByLabelText('Annual Premium')).toBeInTheDocument();
+    // The estimate switch defaults on, so the manual field is hidden.
+    expect(screen.getByRole('switch', { name: /Use estimated premium/ })).toBeChecked();
+    expect(screen.queryByLabelText('Annual Premium (billed amount)')).not.toBeInTheDocument();
 
     rerender(
       <TakeHomeInputForm
@@ -568,10 +573,28 @@ describe('Age Selection', () => {
         dispatch={mockDispatch}
       />,
     );
-    expect(screen.getByLabelText('Annual Premium')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /Use estimated premium/ })).toBeInTheDocument();
   });
 
-  it('dispatches setField for the 第1号 premium', async () => {
+  it('shows the estimated amount on the switch label', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        dispatch={mockDispatch}
+        longTermCareCategory1Estimate={{
+          tier: 7,
+          multiplier: 1.3,
+          annualBase: 75_840,
+          baseScope: 'prefecture',
+          prefecture: 'Tokyo',
+          total: 98_500,
+        }}
+      />,
+    );
+    expect(screen.getByText('Use estimated premium (≈ ¥98,500)')).toBeInTheDocument();
+  });
+
+  it('dispatches the manual-entry flag when the estimate switch is turned off', async () => {
     const user = userEvent.setup();
     render(
       <TakeHomeInputForm
@@ -580,7 +603,25 @@ describe('Age Selection', () => {
       />,
     );
 
-    await user.type(screen.getByLabelText('Annual Premium'), '5');
+    await user.click(screen.getByRole('switch', { name: /Use estimated premium/ }));
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'setField',
+      field: 'longTermCareCategory1ManualEntry',
+      value: true,
+    });
+  });
+
+  it('dispatches setField for the 第1号 premium under manual entry', async () => {
+    const user = userEvent.setup();
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69', longTermCareCategory1ManualEntry: true }}
+        dispatch={mockDispatch}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Annual Premium (billed amount)'), '5');
 
     expect(mockDispatch).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'setField', field: 'longTermCareCategory1Premium' }),
@@ -596,6 +637,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     incomeMode: 'advanced',
     incomeStreams: [],
     savedIncomeStreams: [],
+    longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
@@ -640,6 +682,7 @@ describe('TakeHomeInputForm Income Details Modal', () => {
       incomeMode: 'advanced' as const,
       incomeStreams: [{ id: 'p1', type: 'publicPension' as const, amount: 2_400_000 }],
       savedIncomeStreams: [],
+      longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
@@ -687,6 +730,7 @@ describe('Commuting Allowance Integration', () => {
       incomeMode: 'advanced',
       incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
       savedIncomeStreams: [],
+      longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo',
@@ -749,6 +793,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
         { id: '2', type: 'business', amount: 4000000 },
       ],
       savedIncomeStreams: [],
+      longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo', // An employee provider

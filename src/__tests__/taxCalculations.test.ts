@@ -1832,9 +1832,13 @@ describe('calculateTaxes at ages 65 and over', () => {
 
   describe('介護保険第1号 premium input (ages 65+)', () => {
     it('adds the entered annual amount to social insurance and the deduction', () => {
-      const without = calculateTaxes(employeeInputs65('age65to69'));
+      const without = calculateTaxes({
+        ...employeeInputs65('age65to69'),
+        longTermCareCategory1ManualEntry: true,
+      });
       const withPremium = calculateTaxes({
         ...employeeInputs65('age65to69'),
+        longTermCareCategory1ManualEntry: true,
         longTermCareCategory1Premium: 120_000,
       });
 
@@ -1867,9 +1871,13 @@ describe('calculateTaxes at ages 65 and over', () => {
     });
 
     it('treats a negative entered amount as nothing entered', () => {
-      const without = calculateTaxes(employeeInputs65('age65to69'));
+      const without = calculateTaxes({
+        ...employeeInputs65('age65to69'),
+        longTermCareCategory1ManualEntry: true,
+      });
       const negative = calculateTaxes({
         ...employeeInputs65('age65to69'),
+        longTermCareCategory1ManualEntry: true,
         longTermCareCategory1Premium: -5_000,
       });
       expect(negative.longTermCareCategory1Premium).toBeUndefined();
@@ -1879,12 +1887,75 @@ describe('calculateTaxes at ages 65 and over', () => {
     it('ignores the entered amount under manual social insurance entry', () => {
       const result = calculateTaxes({
         ...employeeInputs65('age65to69'),
+        longTermCareCategory1ManualEntry: true,
         longTermCareCategory1Premium: 120_000,
         manualSocialInsuranceEntry: true,
         manualSocialInsuranceAmount: 500_000,
       });
       expect(result.longTermCareCategory1Premium).toBeUndefined();
+      expect(result.longTermCareCategory1Estimate).toBeUndefined();
       expect(result.socialInsuranceOverride).toBe(500_000);
+    });
+  });
+
+  describe('介護保険第1号 estimate (ages 65+)', () => {
+    const nhiPensionInputs = (pensionAmount: number) => ({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ type: 'publicPension' as const, amount: pensionAmount, id: 'p1' }],
+      ageRange: 'age65to69' as const,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+
+    it('estimates the premium from the tier judgment by default', () => {
+      // 2,400,000 pension → 雑所得 1,300,000 = 合計所得金額 → 住民税課税, tier 7
+      // (120万-210万) → Tokyo 基準額 6,320 × 12 = 75,840 × 1.3 = 98,592 → 98,500.
+      const result = calculateTaxes(nhiPensionInputs(2_400_000));
+      expect(result.longTermCareCategory1Estimate).toEqual({
+        tier: 7,
+        multiplier: 1.3,
+        annualBase: 75_840,
+        baseScope: 'prefecture',
+        prefecture: 'Tokyo',
+        total: 98_500,
+      });
+      expect(result.longTermCareCategory1Premium).toBe(98_500);
+    });
+
+    it('moves from tiers 1-3 to 4-5 when an entered dependent is 住民税課税', () => {
+      // 1,500,000 pension → 雑所得 400,000, within the 均等割 limit → 本人非課税;
+      // 年金収入等 1,500,000 exceeds 120万.
+      // Alone: 世帯全員非課税 → tier 3 → 75,840 × 0.685 = 51,950.4 → 51,900.
+      const alone = calculateTaxes(nhiPensionInputs(1_500_000));
+      expect(alone.longTermCareCategory1Estimate?.tier).toBe(3);
+      expect(alone.longTermCareCategory1Premium).toBe(51_900);
+
+      // With a spouse whose own 合計所得金額 500,000 exceeds the 45万 均等割 limit:
+      // 世帯に課税者がいる → tier 5 → 75,840 × 1.0 = 75,800.
+      const withTaxableSpouse = calculateTaxes({
+        ...nhiPensionInputs(1_500_000),
+        dependents: [
+          {
+            id: 'spouse-1',
+            relationship: 'spouse' as const,
+            ageRange: 'under65' as const,
+            income: {
+              grossEmploymentIncome: 0,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 500_000,
+            },
+            disability: 'none' as const,
+            isCohabiting: true,
+          },
+        ],
+      });
+      expect(withTaxableSpouse.longTermCareCategory1Estimate?.tier).toBe(5);
+      expect(withTaxableSpouse.longTermCareCategory1Premium).toBe(75_800);
     });
   });
 
@@ -1947,12 +2018,22 @@ describe('calculateTaxes at ages 65 and over', () => {
       expect(result.pensionPayments).toBe(0);
     });
 
-    it('combines the latter-stage premium with the 第1号 amount', () => {
+    it('combines the latter-stage premium with the entered 第1号 amount', () => {
       const result = calculateTaxes({
         ...latterStageInputs,
+        longTermCareCategory1ManualEntry: true,
         longTermCareCategory1Premium: 150_000,
       });
       expect(result.longTermCareCategory1Premium).toBe(150_000);
+      expect(result.healthInsurance).toBe(408_500);
+    });
+
+    it('estimates the 第1号 amount by default at 75+', () => {
+      // 合計所得金額 4,000,000 → 課税, tier 9 (320万-420万) → Tokyo 75,840 × 1.7 =
+      // 128,928 → 128,900, its own component beside the latter-stage premium.
+      const result = calculateTaxes(latterStageInputs);
+      expect(result.longTermCareCategory1Estimate?.tier).toBe(9);
+      expect(result.longTermCareCategory1Premium).toBe(128_900);
       expect(result.healthInsurance).toBe(408_500);
     });
   });
@@ -2022,13 +2103,16 @@ describe('calculateTaxes with public pension income', () => {
     expect(pension.furusatoNozei.limit).toBe(equivalentMisc.furusatoNozei.limit);
     expect(pension.nationalIncomeTax).toBeGreaterThan(0);
     // No National Pension contributions at 65-69, and no employment insurance,
-    // so take-home is income minus taxes and the health premium exactly.
+    // so take-home is income minus taxes, the health premium, and the estimated
+    // 介護保険第1号 premium (identical on both sides, so every comparison above holds).
     expect(pension.pensionPayments).toBe(0);
+    expect(pension.longTermCareCategory1Premium).toBe(equivalentMisc.longTermCareCategory1Premium);
     expect(pension.takeHomeIncome).toBe(
       pension.annualIncome -
         pension.nationalIncomeTax -
         pension.residenceTax.totalResidenceTax -
-        pension.healthInsurance,
+        pension.healthInsurance -
+        (pension.longTermCareCategory1Premium ?? 0),
     );
   });
 
