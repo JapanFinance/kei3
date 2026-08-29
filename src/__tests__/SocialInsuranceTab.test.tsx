@@ -287,8 +287,7 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
             tier: 9,
             multiplier: 1.7,
             annualBase: 75_840,
-            baseScope: 'prefecture',
-            prefecture: 'Tokyo',
+            baseScope: 'Tokyo',
             total: 128_900,
           },
         }}

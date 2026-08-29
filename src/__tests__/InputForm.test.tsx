@@ -585,8 +585,7 @@ describe('Age Selection', () => {
           tier: 7,
           multiplier: 1.3,
           annualBase: 75_840,
-          baseScope: 'prefecture',
-          prefecture: 'Tokyo',
+          baseScope: 'Tokyo',
           total: 98_500,
         }}
       />,

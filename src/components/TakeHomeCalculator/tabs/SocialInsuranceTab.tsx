@@ -608,9 +608,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               />
               <ResultRow
                 label={
-                  results.longTermCareCategory1Estimate.baseScope === 'prefecture'
-                    ? 'Base Amount (基準額, prefecture average)'
-                    : 'Base Amount (基準額, national average)'
+                  results.longTermCareCategory1Estimate.baseScope === 'national'
+                    ? 'Base Amount (基準額, national average)'
+                    : 'Base Amount (基準額, prefecture average)'
                 }
                 value={formatJPY(results.longTermCareCategory1Estimate.annualBase)}
                 type="indented"

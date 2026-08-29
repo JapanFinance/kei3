@@ -1920,8 +1920,7 @@ describe('calculateTaxes at ages 65 and over', () => {
         tier: 7,
         multiplier: 1.3,
         annualBase: 75_840,
-        baseScope: 'prefecture',
-        prefecture: 'Tokyo',
+        baseScope: 'Tokyo',
         total: 98_500,
       });
       expect(result.longTermCareCategory1Premium).toBe(98_500);

@@ -38,9 +38,9 @@ const LongTermCareCategory1PremiumTooltip: React.FC<LongTermCareCategory1Premium
   <>
     <Typography variant="body2" sx={{ mb: 1 }}>
       The estimate multiplies the average annual base amount (基準額) —{' '}
-      {estimate.prefecture !== undefined
-        ? `the ${PREFECTURE_NAMES[estimate.prefecture]} prefecture average`
-        : 'the national average'}{' '}
+      {estimate.baseScope === 'national'
+        ? 'the national average'
+        : `the ${PREFECTURE_NAMES[estimate.baseScope]} prefecture average`}{' '}
       for FY2024-2026, {formatJPY(estimate.annualBase)} — by the national-standard multiplier for
       income tier (所得段階) {estimate.tier} of 13 (× {estimate.multiplier}), rounded down to ¥100
       per fiscal year. A calendar year spans two fiscal years, weighted 1/3 : 2/3 like the pension

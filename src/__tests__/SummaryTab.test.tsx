@@ -44,8 +44,7 @@ describe('SummaryTab with the 介護保険第1号 premium', () => {
             tier: 9,
             multiplier: 1.7,
             annualBase: 75_840,
-            baseScope: 'prefecture',
-            prefecture: 'Tokyo',
+            baseScope: 'Tokyo',
             total: 128_900,
           },
         }}
