@@ -29,6 +29,27 @@ export interface LongTermCareCategory1TierInputs {
   householdHasOtherTaxableMember: boolean;
 }
 
+/** The 1-based 所得段階, as {@link judgeLongTermCareCategory1Tier} describes it. */
+function incomeTierFor(
+  inputs: LongTermCareCategory1TierInputs,
+  tiers: LongTermCareStandardTierTable,
+): number {
+  if (inputs.taxpayerIsTaxable) {
+    const bracket = tiers.taxedIncomeBracketUpperBounds.findIndex(
+      bound => inputs.totalNetIncome < bound,
+    );
+    return bracket === -1 ? 13 : 6 + bracket;
+  }
+
+  const pensionIncomeEtc =
+    inputs.grossPublicPensionIncome + (inputs.totalNetIncome - inputs.netPublicPensionIncome);
+  if (inputs.householdHasOtherTaxableMember) {
+    return pensionIncomeEtc <= tiers.tier1PensionIncomeEtcMax ? 4 : 5;
+  }
+  if (pensionIncomeEtc <= tiers.tier1PensionIncomeEtcMax) return 1;
+  return pensionIncomeEtc <= tiers.tier2PensionIncomeEtcMax ? 2 : 3;
+}
+
 /**
  * Judges the national-standard 所得段階 (施行令第38条第1項). Tier 1 also covers 被保護者 and
  * 世帯非課税 recipients of 老齢福祉年金 regardless of income; neither status is modeled, so those
@@ -40,24 +61,7 @@ export function judgeLongTermCareCategory1Tier(
   inputs: LongTermCareCategory1TierInputs,
   tiers: LongTermCareStandardTierTable,
 ): { tier: number; multiplier: number } {
-  const tierOf = (): number => {
-    if (inputs.taxpayerIsTaxable) {
-      const bracket = tiers.taxedIncomeBracketUpperBounds.findIndex(
-        bound => inputs.totalNetIncome < bound,
-      );
-      return bracket === -1 ? 13 : 6 + bracket;
-    }
-
-    const pensionIncomeEtc =
-      inputs.grossPublicPensionIncome + (inputs.totalNetIncome - inputs.netPublicPensionIncome);
-    if (inputs.householdHasOtherTaxableMember) {
-      return pensionIncomeEtc <= tiers.tier1PensionIncomeEtcMax ? 4 : 5;
-    }
-    if (pensionIncomeEtc <= tiers.tier1PensionIncomeEtcMax) return 1;
-    return pensionIncomeEtc <= tiers.tier2PensionIncomeEtcMax ? 2 : 3;
-  };
-
-  const tier = tierOf();
+  const tier = incomeTierFor(inputs, tiers);
   return { tier, multiplier: tiers.multipliers[tier - 1]! };
 }
 
