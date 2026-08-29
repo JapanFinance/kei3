@@ -599,35 +599,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               </DetailedTooltip>
             )}
           </Typography>
-          {results.longTermCareCategory1Estimate ? (
-            <>
-              <ResultRow
-                label="Income Tier (所得段階)"
-                value={`${results.longTermCareCategory1Estimate.tier} of 13 (× ${results.longTermCareCategory1Estimate.multiplier})`}
-                type="indented"
-              />
-              <ResultRow
-                label={
-                  results.longTermCareCategory1Estimate.baseScope === 'national'
-                    ? 'Base Amount (基準額, national average)'
-                    : 'Base Amount (基準額, prefecture average)'
-                }
-                value={formatJPY(results.longTermCareCategory1Estimate.annualBase)}
-                type="indented"
-              />
-              <ResultRow
-                label="Estimated Annual Premium"
-                value={`≈ ${formatJPY(results.longTermCareCategory1Premium)}`}
-                type="subtotal"
-              />
-            </>
-          ) : (
-            <ResultRow
-              label="Annual Premium"
-              value={formatJPY(results.longTermCareCategory1Premium)}
-              type="subtotal"
-            />
-          )}
+          <ResultRow
+            label={
+              results.longTermCareCategory1Estimate ? 'Estimated Annual Premium' : 'Annual Premium'
+            }
+            value={`${results.longTermCareCategory1Estimate ? '≈ ' : ''}${formatJPY(
+              results.longTermCareCategory1Premium,
+            )}`}
+            type="subtotal"
+          />
         </Box>
       )}
 

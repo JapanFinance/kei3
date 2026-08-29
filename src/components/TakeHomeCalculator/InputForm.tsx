@@ -28,10 +28,6 @@ import React, { useState } from 'react';
 import type { Dispatch } from 'react';
 
 import {
-  LONG_TERM_CARE_BASE_SOURCES,
-  LONG_TERM_CARE_TIER_SOURCES,
-} from '../../data/longTermCareCategory1Params';
-import {
   availableProvidersFor,
   regionOptionsFor,
   type FormAction,
@@ -71,6 +67,7 @@ import { ADDITIONAL_DEDUCTION_INFO, getPersonalDeductionInfo } from './additiona
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
+import { LTC_ESTIMATE_SOURCES } from './tabs/LongTermCareCategory1PremiumTooltip';
 
 // Ordered to match the tooltip's bullets (youngest rule first).
 const AGE_RANGE_SOURCES: Source[] = [
@@ -97,14 +94,7 @@ const AGE_RANGE_SOURCES: Source[] = [
 ];
 
 const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
-  {
-    label: '第９期計画期間における介護保険の第１号保険料について (average 基準額 by prefecture)',
-    href: LONG_TERM_CARE_BASE_SOURCES.page,
-  },
-  {
-    label: '介護保険法施行令第38条 (standard income tiers and multipliers)',
-    href: LONG_TERM_CARE_TIER_SOURCES.statute,
-  },
+  ...LTC_ESTIMATE_SOURCES,
   {
     label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
     href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
@@ -141,6 +131,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // The stored field names the manual side, so that its false default means "estimate".
+  const useLongTermCareEstimate = !inputs.longTermCareCategory1ManualEntry;
 
   // Check if dependent coverage is eligible based on income and age
   const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome, inputs.ageRange);
@@ -810,13 +803,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                         is added to the social insurance deduction.
                       </Typography>
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        The estimate multiplies the selected prefecture's average base amount
-                        (基準額) for FY2024-2026 — the national average is ¥6,225/month — by the
-                        national-standard 13-tier multiplier (介護保険法施行令). Each municipality
-                        sets its own 基準額 (¥3,374 to ¥9,249/month in FY2024-2026) and may modify
-                        the tier schedule, so the billed amount can differ substantially. The tier
-                        judgment treats the household (世帯) as the taxpayer plus the entered
-                        dependents.
+                        The estimate multiplies an average base amount (基準額) — the selected
+                        region's prefecture average, or the national one where the region names no
+                        prefecture — by the national-standard 13-tier multiplier (介護保険法施行令).
+                        Each municipality sets its own 基準額 and may modify the tier schedule, so
+                        the billed amount can differ substantially. The Social Insurance tab breaks
+                        the figure down.
                       </Typography>
                       <Typography variant="body2" sx={{ mb: 1 }}>
                         The exact amount appears on the June-July notice (介護保険料決定通知書);
@@ -825,45 +817,55 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       <SourceLinks sources={LTC_CATEGORY1_INPUT_SOURCES} />
                     </DetailedTooltip>
                   </Typography>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={!inputs.longTermCareCategory1ManualEntry}
-                        onChange={e =>
-                          dispatch({
-                            type: 'setField',
-                            field: 'longTermCareCategory1ManualEntry',
-                            value: !e.target.checked,
-                          })
-                        }
-                        name="longTermCareCategory1UseEstimate"
-                        color="primary"
-                        size="small"
-                      />
-                    }
-                    label={
-                      <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                        {!inputs.longTermCareCategory1ManualEntry && longTermCareCategory1Estimate
-                          ? `Use estimated premium (≈ ${formatJPY(longTermCareCategory1Estimate.total)})`
-                          : 'Use estimated premium'}
-                      </Typography>
-                    }
-                  />
-                  {inputs.longTermCareCategory1ManualEntry && (
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                     <SpinnerNumberField
                       id="longTermCareCategory1Premium"
                       name="longTermCareCategory1Premium"
-                      value={inputs.longTermCareCategory1Premium}
-                      onChange={value =>
-                        dispatch({ type: 'setField', field: 'longTermCareCategory1Premium', value })
+                      value={
+                        useLongTermCareEstimate
+                          ? (longTermCareCategory1Estimate?.total ?? 0)
+                          : inputs.longTermCareCategory1Premium
                       }
-                      label="Annual Premium (billed amount)"
+                      onChange={value => {
+                        // The number formatter reports the value it is given, so while the field
+                        // is displaying the estimate it would store the estimate over whatever
+                        // amount was entered before.
+                        if (useLongTermCareEstimate) return;
+                        dispatch({
+                          type: 'setField',
+                          field: 'longTermCareCategory1Premium',
+                          value,
+                        });
+                      }}
+                      label={
+                        useLongTermCareEstimate ? 'Annual Premium (estimate)' : 'Annual Premium'
+                      }
                       step={1000}
                       shiftStep={10000}
                       min={0}
-                      sx={{ ...sharedInputSx, width: '100%' }}
+                      disabled={useLongTermCareEstimate}
+                      sx={{ ...sharedInputSx, flex: 1, minWidth: 0 }}
                     />
-                  )}
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={useLongTermCareEstimate}
+                          onChange={e =>
+                            dispatch({
+                              type: 'setField',
+                              field: 'longTermCareCategory1ManualEntry',
+                              value: !e.target.checked,
+                            })
+                          }
+                          name="longTermCareCategory1ManualEntry"
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={<Typography sx={{ fontSize: '0.9rem' }}>Estimate</Typography>}
+                      sx={{ mr: 0, mt: 0.9, whiteSpace: 'nowrap' }}
+                    />
+                  </Box>
                 </FormControl>
               )}
             </Box>

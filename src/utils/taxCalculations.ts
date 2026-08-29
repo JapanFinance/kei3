@@ -46,7 +46,10 @@ import {
   type LatterStageElderlyBreakdown,
 } from './healthInsuranceCalculator';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
-import { estimateLongTermCareCategory1Premium } from './longTermCareCategory1';
+import {
+  estimateLongTermCareCategory1Premium,
+  type LongTermCareCategory1TierInputs,
+} from './longTermCareCategory1';
 import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
 import { calculatePensionBreakdown } from './pensionCalculator';
 import { calculatePersonalDeductions } from './personalDeductions';
@@ -97,6 +100,30 @@ const calculateIncomeAdjustmentDeduction = (
   hasIncomeAdjustmentDeductionDependent(dependents, year)
     ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
     : 0;
+
+/**
+ * The 所得段階 judgment's view of the taxpayer and their household: the income measures the
+ * statute tests, plus who in the household is 住民税課税. The residence-tax side is derived here
+ * rather than reused from {@link calculateResidenceTax} because the premium is settled during the
+ * social-insurance stage, before any dependent deductions exist.
+ */
+const longTermCareCategory1TierInputs = (
+  inputs: TakeHomeInputs,
+  income: { netIncome: number; grossPublicPensionIncome: number; netPublicPensionIncome: number },
+): LongTermCareCategory1TierInputs => ({
+  totalNetIncome: income.netIncome,
+  grossPublicPensionIncome: income.grossPublicPensionIncome,
+  netPublicPensionIncome: income.netPublicPensionIncome,
+  taxpayerIsTaxable: !isResidenceTaxExempt(
+    income.netIncome,
+    countResidenceTaxQualifiedDependents(inputs.dependents, inputs.incomeYear),
+    inputs.ageRange,
+    inputs.personalCircumstances,
+  ),
+  householdHasOtherTaxableMember: inputs.dependents.some(dependent =>
+    isDependentResidenceTaxable(dependent, inputs.incomeYear),
+  ),
+});
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -586,20 +613,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         longTermCareCategory1Premium = Math.max(0, inputs.longTermCareCategory1Premium || 0);
       } else {
         longTermCareCategory1Estimate = estimateLongTermCareCategory1Premium(
-          {
-            totalNetIncome: netIncome,
+          longTermCareCategory1TierInputs(inputs, {
+            netIncome,
             grossPublicPensionIncome,
             netPublicPensionIncome,
-            taxpayerIsTaxable: !isResidenceTaxExempt(
-              netIncome,
-              countResidenceTaxQualifiedDependents(inputs.dependents, incomeYear),
-              inputs.ageRange,
-              inputs.personalCircumstances,
-            ),
-            householdHasOtherTaxableMember: inputs.dependents.some(dependent =>
-              isDependentResidenceTaxable(dependent, incomeYear),
-            ),
-          },
+          }),
           incomeYear,
           inputs.region,
         );

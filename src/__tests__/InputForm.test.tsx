@@ -550,7 +550,7 @@ describe('Age Selection', () => {
         dispatch={mockDispatch}
       />,
     );
-    expect(screen.queryByRole('switch', { name: /Use estimated premium/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Estimate' })).not.toBeInTheDocument();
 
     rerender(
       <TakeHomeInputForm
@@ -559,9 +559,9 @@ describe('Age Selection', () => {
       />,
     );
     expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
-    // The estimate switch defaults on, so the manual field is hidden.
-    expect(screen.getByRole('switch', { name: /Use estimated premium/ })).toBeChecked();
-    expect(screen.queryByLabelText('Annual Premium (billed amount)')).not.toBeInTheDocument();
+    // The estimate switch defaults on, so the amount field stays in place but read-only.
+    expect(screen.getByRole('switch', { name: 'Estimate' })).toBeChecked();
+    expect(screen.getByLabelText('Annual Premium (estimate)')).toBeDisabled();
 
     rerender(
       <TakeHomeInputForm
@@ -573,24 +573,81 @@ describe('Age Selection', () => {
         dispatch={mockDispatch}
       />,
     );
-    expect(screen.getByRole('switch', { name: /Use estimated premium/ })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Estimate' })).toBeInTheDocument();
   });
 
-  it('shows the estimated amount on the switch label', () => {
+  it('shows the estimated amount in the disabled field', () => {
     render(
       <TakeHomeInputForm
-        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        inputs={{ ...baseInputs, ageRange: 'age65to69', longTermCareCategory1Premium: 5_000 }}
         dispatch={mockDispatch}
         longTermCareCategory1Estimate={{
-          tier: 7,
-          multiplier: 1.3,
-          annualBase: 75_840,
+          currentFiscalYear: { tier: 7, multiplier: 1.3, annualBase: 75_840, premium: 98_500 },
           baseScope: 'Tokyo',
           total: 98_500,
         }}
       />,
     );
-    expect(screen.getByText('Use estimated premium (≈ ¥98,500)')).toBeInTheDocument();
+
+    // The estimate displaces the stored manual amount while the switch is on, rather than the
+    // two fighting over one field.
+    const field = screen.getByLabelText('Annual Premium (estimate)');
+    expect(field).toHaveValue('¥98,500');
+    expect(field).toBeDisabled();
+  });
+
+  it('keeps the entered amount across a round trip through the estimate', async () => {
+    // Runs on the real reducer so the field's two sources are exercised through actual state.
+    // Note this does not reproduce the number formatter writing the estimate back over the
+    // entered amount, which only happens in a browser; it pins the surrounding behaviour.
+    const RoundTrip = () => {
+      const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+        ...baseInputs,
+        ageRange: 'age65to69' as const,
+        longTermCareCategory1ManualEntry: true,
+        longTermCareCategory1Premium: 200_000,
+      });
+      return (
+        <TakeHomeInputForm
+          inputs={inputs}
+          dispatch={dispatch}
+          longTermCareCategory1Estimate={{
+            currentFiscalYear: { tier: 7, multiplier: 1.3, annualBase: 75_840, premium: 98_500 },
+            baseScope: 'Tokyo',
+            total: 98_500,
+          }}
+        />
+      );
+    };
+    const user = userEvent.setup();
+    render(<RoundTrip />);
+
+    expect(screen.getByLabelText('Annual Premium')).toHaveValue('¥200,000');
+
+    await user.click(screen.getByRole('switch', { name: 'Estimate' }));
+    expect(screen.getByLabelText('Annual Premium (estimate)')).toHaveValue('¥98,500');
+
+    await user.click(screen.getByRole('switch', { name: 'Estimate' }));
+    expect(screen.getByLabelText('Annual Premium')).toHaveValue('¥200,000');
+  });
+
+  it('shows the entered amount once the estimate is switched off', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={{
+          ...baseInputs,
+          ageRange: 'age65to69',
+          longTermCareCategory1ManualEntry: true,
+          longTermCareCategory1Premium: 5_000,
+        }}
+        dispatch={mockDispatch}
+        longTermCareCategory1Estimate={undefined}
+      />,
+    );
+
+    const field = screen.getByLabelText('Annual Premium');
+    expect(field).toHaveValue('¥5,000');
+    expect(field).not.toBeDisabled();
   });
 
   it('dispatches the manual-entry flag when the estimate switch is turned off', async () => {
@@ -602,12 +659,34 @@ describe('Age Selection', () => {
       />,
     );
 
-    await user.click(screen.getByRole('switch', { name: /Use estimated premium/ }));
+    await user.click(screen.getByRole('switch', { name: 'Estimate' }));
 
     expect(mockDispatch).toHaveBeenCalledWith({
       type: 'setField',
       field: 'longTermCareCategory1ManualEntry',
       value: true,
+    });
+  });
+
+  it('turns the estimate back on from manual entry', async () => {
+    // The switch is driven by the negation of the stored field on both the checked prop and the
+    // dispatched value, so the off-to-on direction fails independently of the on-to-off one.
+    const user = userEvent.setup();
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69', longTermCareCategory1ManualEntry: true }}
+        dispatch={mockDispatch}
+      />,
+    );
+
+    const estimateSwitch = screen.getByRole('switch', { name: 'Estimate' });
+    expect(estimateSwitch).not.toBeChecked();
+    await user.click(estimateSwitch);
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'setField',
+      field: 'longTermCareCategory1ManualEntry',
+      value: false,
     });
   });
 
@@ -620,11 +699,13 @@ describe('Age Selection', () => {
       />,
     );
 
-    await user.type(screen.getByLabelText('Annual Premium (billed amount)'), '5');
+    await user.type(screen.getByLabelText('Annual Premium'), '5');
 
-    expect(mockDispatch).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'setField', field: 'longTermCareCategory1Premium' }),
-    );
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'setField',
+      field: 'longTermCareCategory1Premium',
+      value: 5,
+    });
   });
 });
 

@@ -41,9 +41,7 @@ describe('SummaryTab with the 介護保険第1号 premium', () => {
           ...baseResults,
           longTermCareCategory1Premium: 128_900,
           longTermCareCategory1Estimate: {
-            tier: 9,
-            multiplier: 1.7,
-            annualBase: 75_840,
+            currentFiscalYear: { tier: 9, multiplier: 1.7, annualBase: 75_840, premium: 128_900 },
             baseScope: 'Tokyo',
             total: 128_900,
           },

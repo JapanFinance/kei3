@@ -210,22 +210,40 @@ export interface LatterStageElderlyRegionParams {
  * longTermCareCategory1.ts) and the parameters behind it, for display alongside the figure.
  */
 export interface LongTermCareCategory1Estimate {
+  /** The fiscal year that begins in April of the modeled calendar year. */
+  currentFiscalYear: LongTermCareCategory1FiscalYearEstimate;
   /**
-   * The 所得段階 under the national standard, 1-13. Judged with the fiscal year starting in the
-   * modeled calendar year, as are {@link multiplier}, {@link annualBase}, and
-   * {@link baseScope}; {@link total} additionally blends in the previous fiscal year, so
-   * around a boundary that moved a tier it can differ from 基準額 × 乗率.
+   * The fiscal year the calendar year opens in, covering its January-March months. Present only
+   * when its premium differs from {@link currentFiscalYear}'s — that is, when {@link total} is a
+   * genuine blend of two amounts rather than the same amount weighted against itself. The tier
+   * can differ between the two because the 年金収入等 boundary is revised every April.
    */
-  tier: number;
-  multiplier: number;
-  /** Annual 基準額 the estimate scaled (average monthly 基準額 × 12). */
-  annualBase: number;
+  previousFiscalYear?: LongTermCareCategory1FiscalYearEstimate | undefined;
   /**
-   * Whose average {@link annualBase} is: the prefecture the selected region resolved to, or
-   * 'national' when it carries none. No prefecture is keyed 'national', so comparing against
-   * it narrows the other branch to a {@link Prefecture}.
+   * Whose average the {@link LongTermCareCategory1FiscalYearEstimate.annualBase} figures are:
+   * the prefecture the selected region resolved to, or 'national' when it carries none. No
+   * prefecture is keyed 'national', so comparing against it narrows the other branch to a
+   * {@link Prefecture}. It depends on the region alone, so it is the same for both years.
    */
   baseScope: Prefecture | 'national';
-  /** Estimated annual premium for the calendar year. Always positive. */
+  /**
+   * Estimated annual premium for the calendar year: {@link currentFiscalYear}'s premium, or the
+   * 1/3 : 2/3 blend of the two when {@link previousFiscalYear} is present. Always positive.
+   */
   total: number;
+}
+
+/**
+ * One fiscal year's own contribution to a calendar-year estimate. Kept per year rather than
+ * flattened onto {@link LongTermCareCategory1Estimate} because the two years can land in
+ * different 所得段階, in which case no single tier and multiplier derive the blended total.
+ */
+export interface LongTermCareCategory1FiscalYearEstimate {
+  /** The 所得段階 under the national standard in force that fiscal year, 1-13. */
+  tier: number;
+  multiplier: number;
+  /** Annual 基準額 the multiplier scaled (average monthly 基準額 × 12). */
+  annualBase: number;
+  /** {@link annualBase} × {@link multiplier}, floored to ¥100 — this year's own annual premium. */
+  premium: number;
 }

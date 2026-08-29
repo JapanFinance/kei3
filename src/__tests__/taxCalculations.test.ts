@@ -1864,6 +1864,7 @@ describe('calculateTaxes at ages 65 and over', () => {
       for (const ageRange of ['age40to59', 'age60to64'] as const) {
         const result = calculateTaxes({
           ...employeeInputs65(ageRange),
+          longTermCareCategory1ManualEntry: true,
           longTermCareCategory1Premium: 120_000,
         });
         expect(result.longTermCareCategory1Premium, ageRange).toBeUndefined();
@@ -1893,7 +1894,20 @@ describe('calculateTaxes at ages 65 and over', () => {
         manualSocialInsuranceAmount: 500_000,
       });
       expect(result.longTermCareCategory1Premium).toBeUndefined();
+      expect(result.socialInsuranceOverride).toBe(500_000);
+    });
+
+    it('estimates nothing under manual social insurance entry', () => {
+      // The estimate is the default, so this is the case that would leak a premium into the
+      // results alongside socialInsuranceOverride if it were ever computed outside the
+      // automatic branch. Asserting it from manual entry instead would pass vacuously.
+      const result = calculateTaxes({
+        ...employeeInputs65('age65to69'),
+        manualSocialInsuranceEntry: true,
+        manualSocialInsuranceAmount: 500_000,
+      });
       expect(result.longTermCareCategory1Estimate).toBeUndefined();
+      expect(result.longTermCareCategory1Premium).toBeUndefined();
       expect(result.socialInsuranceOverride).toBe(500_000);
     });
   });
@@ -1917,9 +1931,7 @@ describe('calculateTaxes at ages 65 and over', () => {
       // (120万-210万) → Tokyo 基準額 6,320 × 12 = 75,840 × 1.3 = 98,592 → 98,500.
       const result = calculateTaxes(nhiPensionInputs(2_400_000));
       expect(result.longTermCareCategory1Estimate).toEqual({
-        tier: 7,
-        multiplier: 1.3,
-        annualBase: 75_840,
+        currentFiscalYear: { tier: 7, multiplier: 1.3, annualBase: 75_840, premium: 98_500 },
         baseScope: 'Tokyo',
         total: 98_500,
       });
@@ -1931,7 +1943,7 @@ describe('calculateTaxes at ages 65 and over', () => {
       // 年金収入等 1,500,000 exceeds 120万.
       // Alone: 世帯全員非課税 → tier 3 → 75,840 × 0.685 = 51,950.4 → 51,900.
       const alone = calculateTaxes(nhiPensionInputs(1_500_000));
-      expect(alone.longTermCareCategory1Estimate?.tier).toBe(3);
+      expect(alone.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(3);
       expect(alone.longTermCareCategory1Premium).toBe(51_900);
 
       // With a spouse whose own 合計所得金額 500,000 exceeds the 45万 均等割 limit:
@@ -1953,8 +1965,46 @@ describe('calculateTaxes at ages 65 and over', () => {
           },
         ],
       });
-      expect(withTaxableSpouse.longTermCareCategory1Estimate?.tier).toBe(5);
+      expect(withTaxableSpouse.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(5);
       expect(withTaxableSpouse.longTermCareCategory1Premium).toBe(75_800);
+    });
+
+    // The 均等割 limit the tier judgment tests the taxpayer against takes a dependent count and
+    // the taxpayer's own circumstances. Both are positional arguments carrying no unit, so a
+    // dropped or transposed one would move the taxpayer several tiers with nothing else failing.
+    // 1,700,000 of pension leaves 合計所得金額 600,000: above the 450,000 limit alone, below the
+    // 1,010,000 limit one qualified dependent buys, and below the 1,350,000 status limit.
+    const taxableAlone = () => calculateTaxes(nhiPensionInputs(1_700_000));
+
+    it('raises the taxpayer’s 均等割 limit by the qualified dependent count', () => {
+      expect(taxableAlone().longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(6);
+      expect(taxableAlone().longTermCareCategory1Premium).toBe(91_000);
+
+      const withDependent = calculateTaxes({
+        ...nhiPensionInputs(1_700_000),
+        dependents: [
+          {
+            id: 'spouse-1',
+            relationship: 'spouse' as const,
+            ageRange: 'under65' as const,
+            income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+            disability: 'none' as const,
+            isCohabiting: true,
+          },
+        ],
+      });
+      // Now 非課税, and the spouse has no income of their own, so the whole 世帯 is untaxed.
+      expect(withDependent.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(3);
+      expect(withDependent.longTermCareCategory1Premium).toBe(51_900);
+    });
+
+    it('applies the taxpayer’s own 地方税法295条1項2号 status to the same limit', () => {
+      const withDisability = calculateTaxes({
+        ...nhiPensionInputs(1_700_000),
+        personalCircumstances: { disability: 'regular', widowOrSingleParent: 'none' },
+      });
+      expect(withDisability.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(3);
+      expect(withDisability.longTermCareCategory1Premium).toBe(51_900);
     });
   });
 
@@ -2031,7 +2081,7 @@ describe('calculateTaxes at ages 65 and over', () => {
       // 合計所得金額 4,000,000 → 課税, tier 9 (320万-420万) → Tokyo 75,840 × 1.7 =
       // 128,928 → 128,900, its own component beside the latter-stage premium.
       const result = calculateTaxes(latterStageInputs);
-      expect(result.longTermCareCategory1Estimate?.tier).toBe(9);
+      expect(result.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(9);
       expect(result.longTermCareCategory1Premium).toBe(128_900);
       expect(result.healthInsurance).toBe(408_500);
     });
@@ -2105,6 +2155,8 @@ describe('calculateTaxes with public pension income', () => {
     // so take-home is income minus taxes, the health premium, and the estimated
     // 介護保険第1号 premium (identical on both sides, so every comparison above holds).
     expect(pension.pensionPayments).toBe(0);
+    // Pinned positive so the equivalence below cannot be satisfied by both sides being absent.
+    expect(pension.longTermCareCategory1Premium).toBeGreaterThan(0);
     expect(pension.longTermCareCategory1Premium).toBe(equivalentMisc.longTermCareCategory1Premium);
     expect(pension.takeHomeIncome).toBe(
       pension.annualIncome -

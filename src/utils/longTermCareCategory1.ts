@@ -6,7 +6,10 @@ import {
   type LongTermCareCategory1Params,
   type LongTermCareStandardTierTable,
 } from '../data/longTermCareCategory1Params';
-import type { LongTermCareCategory1Estimate } from '../types/healthInsurance';
+import type {
+  LongTermCareCategory1Estimate,
+  LongTermCareCategory1FiscalYearEstimate,
+} from '../types/healthInsurance';
 
 /**
  * The facts about the insured person that the 所得段階 judgment reads. All of them describe the
@@ -76,14 +79,19 @@ export function judgeLongTermCareCategory1Tier(
  */
 const MULTIPLIER_SCALE = 1_000;
 
-/** One fiscal year's annual premium: 基準額(年額) × 乗率, rounded down to ¥100. */
-function annualPremiumForParams(
+/** One fiscal year's tier and its annual premium: 基準額(年額) × 乗率, rounded down to ¥100. */
+function fiscalYearEstimate(
   inputs: LongTermCareCategory1TierInputs,
   params: LongTermCareCategory1Params,
-): number {
-  const { multiplier } = judgeLongTermCareCategory1Tier(inputs, params.tiers);
+): LongTermCareCategory1FiscalYearEstimate {
+  const { tier, multiplier } = judgeLongTermCareCategory1Tier(inputs, params.tiers);
   const scaled = params.annualBase * Math.round(multiplier * MULTIPLIER_SCALE);
-  return Math.floor(scaled / (MULTIPLIER_SCALE * 100)) * 100;
+  return {
+    tier,
+    multiplier,
+    annualBase: params.annualBase,
+    premium: Math.floor(scaled / (MULTIPLIER_SCALE * 100)) * 100,
+  };
 }
 
 /**
@@ -106,18 +114,23 @@ export function estimateLongTermCareCategory1Premium(
   const prevFYParams = getLongTermCareCategory1ParamsForMonth(region, year, 0);
   const currFYParams = getLongTermCareCategory1ParamsForMonth(region, year, 3);
 
-  const currFYPremium = annualPremiumForParams(inputs, currFYParams);
-  const total =
+  const currentFiscalYear = fiscalYearEstimate(inputs, currFYParams);
+  const previousFiscalYear =
     prevFYParams.periodId === currFYParams.periodId
-      ? currFYPremium
-      : Math.round(annualPremiumForParams(inputs, prevFYParams) / 3 + (currFYPremium * 2) / 3);
+      ? undefined
+      : fiscalYearEstimate(inputs, prevFYParams);
 
-  const { tier, multiplier } = judgeLongTermCareCategory1Tier(inputs, currFYParams.tiers);
+  // Two parameter periods that produce the same premium are reported as one: weighting an
+  // amount against itself would only invite the reader to check arithmetic that says nothing.
+  const isBlended =
+    previousFiscalYear !== undefined && previousFiscalYear.premium !== currentFiscalYear.premium;
+
   return {
-    tier,
-    multiplier,
-    annualBase: currFYParams.annualBase,
+    currentFiscalYear,
+    ...(isBlended && { previousFiscalYear }),
     baseScope: currFYParams.baseScope,
-    total,
+    total: isBlended
+      ? Math.round(previousFiscalYear.premium / 3 + (currentFiscalYear.premium * 2) / 3)
+      : currentFiscalYear.premium,
   };
 }
