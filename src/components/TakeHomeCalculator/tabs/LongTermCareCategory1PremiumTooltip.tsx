@@ -81,7 +81,7 @@ const LongTermCareCategory1PremiumTooltip: React.FC<LongTermCareCategory1Premium
 
     <Typography variant="body2" sx={{ mb: 1 }}>
       {estimate
-        ? 'The exact amount appears on the June-July notice (介護保険料決定通知書); switching the estimate off replaces it with that amount.'
+        ? 'The exact amount appears on the June-July notice (介護保険料決定通知書); if you have that, switch the estimate off and input that amount.'
         : 'The figure shown was entered rather than estimated. The exact amount appears on the June-July notice (介護保険料決定通知書).'}
     </Typography>
     <SourceLinks sources={LTC_CATEGORY1_SOURCES} />
@@ -101,21 +101,20 @@ const LongTermCareCategory1EstimateBreakdown: React.FC<{
         {estimate.baseScope === 'national'
           ? 'the national average'
           : `the ${PREFECTURE_NAMES[estimate.baseScope]} average`}{' '}
-        base amount and the national-standard 13 tiers (介護保険法施行令), with each fiscal year's
-        amount rounded down to ¥100.
+        base amount and the standard 13 tiers, with each fiscal year's amount rounded down to ¥100.
       </Typography>
 
       {previousFiscalYear ? (
         <>
           <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
             <FiscalYearBreakdown
-              label={'January-March (1⁄3 of the year):'}
+              label={'January-March (weighted 1⁄3):'}
               fiscalYear={previousFiscalYear}
             />
           </Box>
           <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
             <FiscalYearBreakdown
-              label={'April-December (2⁄3 of the year):'}
+              label={'April-December (weighted 2⁄3):'}
               fiscalYear={currentFiscalYear}
             />
           </Box>
@@ -137,10 +136,7 @@ const LongTermCareCategory1EstimateBreakdown: React.FC<{
           <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
             A calendar year spans two fiscal years, which can differ because the income boundary
             between the lower tiers is revised each April and the base amount is reset each plan
-            period. The 1&#8260;3 : 2&#8260;3 split is what the year's six pension deductions
-            (特別徴収) come to: April, June and August are provisional at the previous February's
-            level, then October and December true the fiscal year up to its own total, taking back
-            most of what those provisional deductions carried over.
+            period.
           </Typography>
         </>
       ) : (

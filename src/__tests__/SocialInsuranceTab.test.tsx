@@ -344,7 +344,7 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(text).toContain('billed by the municipality through income tiers');
     expect(text).toContain('entered rather than estimated');
     expect(text).not.toContain('Tier');
-    expect(text).not.toContain('of the year');
+    expect(text).not.toContain('weighted');
   });
 
   it('shows each fiscal year separately when the total is a blend', () => {
@@ -375,8 +375,10 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     const text = tooltipText();
     expect(text).toContain('Tier 2 of 13: ¥74,700 × 0.485 = ¥36,200');
     expect(text).toContain('Tier 1 of 13: ¥74,700 × 0.285 = ¥21,200');
-    expect(text).toContain('January-March');
-    expect(text).toContain('April-December');
+    // The weights are stated as weights, not as a share of elapsed time: January-March is a
+    // quarter of the calendar year, not a third.
+    expect(text).toContain('January-March (weighted 1⁄3)');
+    expect(text).toContain('April-December (weighted 2⁄3)');
     expect(text).toContain('¥36,200 × 1⁄3 + ¥21,200 × 2⁄3 = ¥26,200');
   });
 

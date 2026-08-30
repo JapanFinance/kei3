@@ -98,12 +98,12 @@ function fiscalYearEstimate(
  * Estimates the annual 介護保険 第1号被保険者 premium for a calendar year: the prefecture-average
  * (or national-average) 基準額 times the national-standard 所得段階 multiplier.
  *
- * A calendar year straddles two fiscal years. The premium is collected on the same
- * 特別徴収 calendar as the 後期高齢者医療 premium — six bimonthly pension deductions with the
- * April-August 仮徴収 held at the previous February's level — so the same 1/3 previous FY :
- * 2/3 current FY weighting applies; `calculateLatterStageElderlyPremium` in
- * healthInsuranceCalculator.ts derives that ratio. Within one parameter period the blend
- * collapses to a single calculation.
+ * A calendar year straddles two fiscal years, weighted 1/3 previous : 2/3 current. Both
+ * collection routes reach that same split — the bimonthly pension deductions of 特別徴収 and the
+ * direct instalments of 普通徴収 — so it does not depend on which one applies, which the
+ * calculator does not model. `calculateLatterStageElderlyPremium` in
+ * healthInsuranceCalculator.ts derives both. Within one parameter period the blend collapses to
+ * a single calculation.
  */
 export function estimateLongTermCareCategory1Premium(
   inputs: LongTermCareCategory1TierInputs,
