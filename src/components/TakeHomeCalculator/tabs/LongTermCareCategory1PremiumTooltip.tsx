@@ -20,7 +20,8 @@ import SourceLinks, { type Source } from '../../ui/SourceLinks';
 
 const LTC_CATEGORY1_SOURCES: Source[] = [
   {
-    label: '第９期計画期間における介護保険の第１号保険料について (average 基準額 by prefecture)',
+    label:
+      '第９期計画期間における介護保険の第１号保険料について (average base amount by prefecture)',
     href: LONG_TERM_CARE_BASE_SOURCES.page,
   },
   {
@@ -32,7 +33,7 @@ const LTC_CATEGORY1_SOURCES: Source[] = [
     href: LONG_TERM_CARE_TIER_SOURCES.mhlwDiagram,
   },
   {
-    label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
+    label: '介護保険料の納め方 (billing and collection)',
     href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
@@ -72,8 +73,8 @@ const LongTermCareCategory1PremiumTooltip: React.FC<LongTermCareCategory1Premium
   <Box sx={{ minWidth: { xs: 0, sm: 300 }, maxWidth: { xs: '100vw', sm: 440 } }}>
     <Typography variant="body2" sx={{ mb: 1 }}>
       From age 65, long-term care premiums (介護保険料, 第1号被保険者) are billed by the
-      municipality through income tiers (所得段階) assessed on the previous year's income, usually
-      deducted from pension payments (特別徴収), and are added to the social insurance deduction.
+      municipality through income tiers assessed on the previous year's income, usually deducted
+      from pension payments (特別徴収), and are added to the social insurance deduction.
     </Typography>
 
     {estimate && <LongTermCareCategory1EstimateBreakdown estimate={estimate} />}
@@ -96,7 +97,7 @@ const LongTermCareCategory1EstimateBreakdown: React.FC<{
     <>
       <Typography variant="body2" sx={{ mb: 1 }}>
         The premium is the municipality's base amount (基準額) times a multiplier set by the income
-        tier (所得段階) the insured person falls in. This estimate uses{' '}
+        tier the insured person falls in. This estimate uses{' '}
         {estimate.baseScope === 'national'
           ? 'the national average'
           : `the ${PREFECTURE_NAMES[estimate.baseScope]} average`}{' '}
@@ -134,10 +135,12 @@ const LongTermCareCategory1EstimateBreakdown: React.FC<{
             </Typography>
           </Box>
           <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
-            A calendar year spans two fiscal years, which can differ because the 年金収入等 boundary
+            A calendar year spans two fiscal years, which can differ because the income boundary
             between the lower tiers is revised each April and the base amount is reset each plan
-            period. The 1&#8260;3 : 2&#8260;3 weighting follows the pension-deduction schedule
-            (特別徴収), whose April-August instalments stay at the previous February's level.
+            period. The 1&#8260;3 : 2&#8260;3 split is what the year's six pension deductions
+            (特別徴収) come to: April, June and August are provisional at the previous February's
+            level, then October and December true the fiscal year up to its own total, taking back
+            most of what those provisional deductions carried over.
           </Typography>
         </>
       ) : (
@@ -147,10 +150,10 @@ const LongTermCareCategory1EstimateBreakdown: React.FC<{
       )}
 
       <Typography variant="body2" sx={{ mt: 1, mb: 1 }}>
-        Each municipality sets its own 基準額 and may modify the tier schedule, so the billed amount
-        can differ substantially. The tier judgment treats the household (世帯) as the taxpayer plus
-        the entered dependents and applies the Tokyo-standard (級地1) non-taxation limits. Municipal
-        reductions for special circumstances (減免) are not applied.
+        Each municipality sets its own base amount (基準額) and may modify the tier schedule, so the
+        billed amount can differ substantially. The tier judgment treats the household (世帯) as the
+        taxpayer plus the entered dependents and applies the Tokyo-standard (級地1) non-taxation
+        limits. Municipal reductions for special circumstances (減免) are not applied.
       </Typography>
     </>
   );
