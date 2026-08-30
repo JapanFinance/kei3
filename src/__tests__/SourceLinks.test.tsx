@@ -54,6 +54,40 @@ describe('SourceLinks', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
+  it('says when a link opens a PDF rather than a page', () => {
+    // Part of the link text, not a decorative icon, so it is announced rather than only seen.
+    render(
+      <SourceLinks
+        sources={[
+          { label: 'Rate table', href: 'https://example.com/rates.pdf' },
+          { label: 'Guidance', href: 'https://example.com/guidance' },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Rate table (PDF)' })).toHaveAttribute(
+      'href',
+      'https://example.com/rates.pdf',
+    );
+    expect(screen.getByRole('link', { name: 'Guidance' })).toBeInTheDocument();
+  });
+
+  it('sees the extension through a query string or fragment', () => {
+    render(
+      <SourceLinks
+        sources={[
+          { label: 'Versioned', href: 'https://example.com/a.pdf?v=2' },
+          { label: 'Anchored', href: 'https://example.com/b.pdf#page=3' },
+          { label: 'Not a document', href: 'https://example.com/pdf-guidance' },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Versioned (PDF)' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Anchored (PDF)' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Not a document' })).toBeInTheDocument();
+  });
+
   it('appends a decorative external-link icon inside each link', () => {
     render(<SourceLinks sources={[{ label: 'A', href: 'https://example.com/a' }]} />);
 
