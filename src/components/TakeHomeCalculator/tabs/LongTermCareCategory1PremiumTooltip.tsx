@@ -10,7 +10,6 @@ import {
   LONG_TERM_CARE_BASE_SOURCES,
   LONG_TERM_CARE_TIER_SOURCES,
 } from '../../../data/longTermCareCategory1Params';
-import { PREFECTURE_NAMES } from '../../../data/prefectures';
 import type {
   LongTermCareCategory1Estimate,
   LongTermCareCategory1FiscalYearEstimate,
@@ -81,7 +80,7 @@ const LongTermCareCategory1PremiumTooltip: React.FC<LongTermCareCategory1Premium
 
     <Typography variant="body2" sx={{ mb: 1 }}>
       {estimate
-        ? 'The exact amount appears on the June-July notice (介護保険料決定通知書); if you have that, switch the estimate off and input that amount.'
+        ? 'The exact amount appears on the June-July notice (介護保険料決定通知書); switch the estimate off to enter it instead.'
         : 'The figure shown was entered rather than estimated. The exact amount appears on the June-July notice (介護保険料決定通知書).'}
     </Typography>
     <SourceLinks sources={LTC_CATEGORY1_SOURCES} />
@@ -97,11 +96,10 @@ const LongTermCareCategory1EstimateBreakdown: React.FC<{
     <>
       <Typography variant="body2" sx={{ mb: 1 }}>
         The premium is the municipality's base amount (基準額) times a multiplier set by the income
-        tier the insured person falls in. This estimate uses{' '}
-        {estimate.baseScope === 'national'
-          ? 'the national average'
-          : `the ${PREFECTURE_NAMES[estimate.baseScope]} average`}{' '}
-        base amount and the standard 13 tiers, with each fiscal year's amount rounded down to ¥100.
+        tier the insured person falls in. This estimate uses the{' '}
+        <strong>{estimate.baseScope === 'national' ? 'national' : estimate.baseScope}</strong>{' '}
+        average base amount and the standard 13 tiers, with each fiscal year's amount rounded down
+        to ¥100.
       </Typography>
 
       {previousFiscalYear ? (

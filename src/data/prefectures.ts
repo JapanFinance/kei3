@@ -60,8 +60,23 @@ export const PREFECTURE_NAMES = {
 /**
  * One of the 47 prefecture identifiers. A dataset keyed by prefecture is typed
  * Record<Prefecture, ...>, so a missing prefecture fails to compile.
+ *
+ * Each identifier is also the English half of its {@link PREFECTURE_NAMES} entry, so copy that
+ * wants the English name alone can render the identifier rather than splitting the bilingual
+ * display string. The DEV check below keeps the two from drifting.
  */
 export type Prefecture = keyof typeof PREFECTURE_NAMES;
+
+if (import.meta.env.DEV) {
+  for (const [id, displayName] of Object.entries(PREFECTURE_NAMES)) {
+    if (!displayName.startsWith(`${id} / `)) {
+      throw new Error(
+        `PREFECTURE_NAMES['${id}'] is '${displayName}', which does not start with the identifier. ` +
+          `Copy that renders the identifier as the English name would show the wrong text.`,
+      );
+    }
+  }
+}
 
 /** Narrows a region key held as a string, such as one read from form state. */
 export function isPrefecture(region: string): region is Prefecture {

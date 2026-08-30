@@ -308,9 +308,10 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     // 408,500 health insurance + 0 pension + the 128,900 estimate.
     expect(screen.getByText('¥537,400')).toBeInTheDocument();
     // The tier and 基準額 belong to the tooltip, not to rows that would read as the total's
-    // arithmetic. PREFECTURE_NAMES values are bilingual.
+    // arithmetic. The region is named in English alone, unlike the bilingual dropdown.
     expect(screen.queryByText('Income Tier (所得段階)')).not.toBeInTheDocument();
-    expect(tooltipText()).toContain('the Tokyo / 東京都 average');
+    expect(tooltipText()).toContain('the Tokyo average');
+    expect(tooltipText()).not.toContain('東京都');
     expect(tooltipText()).toContain('Tier 9 of 13: ¥75,840 × 1.7 = ¥128,900');
   });
 
