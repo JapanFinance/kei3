@@ -334,6 +334,19 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(tooltipText()).not.toContain('東京都');
   });
 
+  it('explains the premium without a derivation when the amount was entered', () => {
+    // baseResults carries an entered premium and no estimate. The same tooltip serves both the
+    // input form and this tab, so it has to drop the estimate's arithmetic and keep the rest
+    // rather than disappear.
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    const text = tooltipText();
+    expect(text).toContain('billed by the municipality through income tiers');
+    expect(text).toContain('entered rather than estimated');
+    expect(text).not.toContain('Tier');
+    expect(text).not.toContain('of the year');
+  });
+
   it('shows each fiscal year separately when the total is a blend', () => {
     // The case the flattened rows could not express: no single tier and multiplier derive
     // ¥26,200, so the tooltip has to show both years and how they are weighted.

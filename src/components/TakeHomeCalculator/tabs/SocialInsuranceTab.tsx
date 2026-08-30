@@ -591,13 +591,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Age 65+ Long-term Care Insurance
-            {results.longTermCareCategory1Estimate && (
-              <DetailedTooltip title="Age 65+ Long-term Care Insurance" icon={SIMPLE_TOOLTIP_ICON}>
-                <LongTermCareCategory1PremiumTooltip
-                  estimate={results.longTermCareCategory1Estimate}
-                />
-              </DetailedTooltip>
-            )}
+            <DetailedTooltip title="Age 65+ Long-term Care Insurance" icon={SIMPLE_TOOLTIP_ICON}>
+              <LongTermCareCategory1PremiumTooltip
+                estimate={results.longTermCareCategory1Estimate}
+              />
+            </DetailedTooltip>
           </Typography>
           <ResultRow
             label={

@@ -18,8 +18,7 @@ import type {
 import { formatJPY } from '../../../utils/formatters';
 import SourceLinks, { type Source } from '../../ui/SourceLinks';
 
-/** Shared with the input form's tooltip, which cites the same figures. */
-export const LTC_ESTIMATE_SOURCES: Source[] = [
+const LTC_CATEGORY1_SOURCES: Source[] = [
   {
     label: '第９期計画期間における介護保険の第１号保険料について (average 基準額 by prefecture)',
     href: LONG_TERM_CARE_BASE_SOURCES.page,
@@ -31,6 +30,10 @@ export const LTC_ESTIMATE_SOURCES: Source[] = [
   {
     label: '介護保険料等における基準額の調整について (standard tier schedule diagram)',
     href: LONG_TERM_CARE_TIER_SOURCES.mhlwDiagram,
+  },
+  {
+    label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
+    href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
 
@@ -55,16 +58,42 @@ const FiscalYearBreakdown: React.FC<{
 );
 
 interface LongTermCareCategory1PremiumTooltipProps {
-  estimate: LongTermCareCategory1Estimate;
+  /**
+   * Absent when the entered amount is in use, which leaves the general explanation without the
+   * derivation. Both the input form and the results tab render this component, so the wording
+   * has to read from either.
+   */
+  estimate?: LongTermCareCategory1Estimate | undefined;
 }
 
 const LongTermCareCategory1PremiumTooltip: React.FC<LongTermCareCategory1PremiumTooltipProps> = ({
   estimate,
-}) => {
+}) => (
+  <Box sx={{ minWidth: { xs: 0, sm: 300 }, maxWidth: { xs: '100vw', sm: 440 } }}>
+    <Typography variant="body2" sx={{ mb: 1 }}>
+      From age 65, long-term care premiums (介護保険料, 第1号被保険者) are billed by the
+      municipality through income tiers (所得段階) assessed on the previous year's income, usually
+      deducted from pension payments (特別徴収), and are added to the social insurance deduction.
+    </Typography>
+
+    {estimate && <LongTermCareCategory1EstimateBreakdown estimate={estimate} />}
+
+    <Typography variant="body2" sx={{ mb: 1 }}>
+      {estimate
+        ? 'The exact amount appears on the June-July notice (介護保険料決定通知書); switching the estimate off replaces it with that amount.'
+        : 'The figure shown was entered rather than estimated. The exact amount appears on the June-July notice (介護保険料決定通知書).'}
+    </Typography>
+    <SourceLinks sources={LTC_CATEGORY1_SOURCES} />
+  </Box>
+);
+
+const LongTermCareCategory1EstimateBreakdown: React.FC<{
+  estimate: LongTermCareCategory1Estimate;
+}> = ({ estimate }) => {
   const { currentFiscalYear, previousFiscalYear } = estimate;
 
   return (
-    <Box sx={{ minWidth: { xs: 0, sm: 300 }, maxWidth: { xs: '100vw', sm: 440 } }}>
+    <>
       <Typography variant="body2" sx={{ mb: 1 }}>
         The premium is the municipality's base amount (基準額) times a multiplier set by the income
         tier (所得段階) the insured person falls in. This estimate uses{' '}
@@ -121,11 +150,9 @@ const LongTermCareCategory1PremiumTooltip: React.FC<LongTermCareCategory1Premium
         Each municipality sets its own 基準額 and may modify the tier schedule, so the billed amount
         can differ substantially. The tier judgment treats the household (世帯) as the taxpayer plus
         the entered dependents and applies the Tokyo-standard (級地1) non-taxation limits. Municipal
-        reductions for special circumstances (減免) are not applied. Entering the amount from the
-        介護保険料決定通知書 in the input form replaces the estimate.
+        reductions for special circumstances (減免) are not applied.
       </Typography>
-      <SourceLinks sources={LTC_ESTIMATE_SOURCES} />
-    </Box>
+    </>
   );
 };
 

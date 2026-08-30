@@ -67,7 +67,7 @@ import { ADDITIONAL_DEDUCTION_INFO, getPersonalDeductionInfo } from './additiona
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
-import { LTC_ESTIMATE_SOURCES } from './tabs/LongTermCareCategory1PremiumTooltip';
+import LongTermCareCategory1PremiumTooltip from './tabs/LongTermCareCategory1PremiumTooltip';
 
 // Ordered to match the tooltip's bullets (youngest rule first).
 const AGE_RANGE_SOURCES: Source[] = [
@@ -90,14 +90,6 @@ const AGE_RANGE_SOURCES: Source[] = [
   {
     label: '後期高齢者医療制度 (medical system for the elderly (75+))',
     href: 'https://www.gov-online.go.jp/article/202209/entry-10482.html',
-  },
-];
-
-const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
-  ...LTC_ESTIMATE_SOURCES,
-  {
-    label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
-    href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
   },
 ];
 
@@ -796,25 +788,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       title="Age 65+ Long-term Care Insurance"
                       icon={SIMPLE_TOOLTIP_ICON}
                     >
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        From age 65, long-term care premiums (介護保険料, 第1号被保険者) are billed
-                        by the municipality through income tiers (所得段階) assessed on the previous
-                        year's income, usually deducted from pension payments (特別徴収). The amount
-                        is added to the social insurance deduction.
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        The estimate multiplies an average base amount (基準額) — the selected
-                        region's prefecture average, or the national one where the region names no
-                        prefecture — by the national-standard 13-tier multiplier (介護保険法施行令).
-                        Each municipality sets its own 基準額 and may modify the tier schedule, so
-                        the billed amount can differ substantially. The Social Insurance tab breaks
-                        the figure down.
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        The exact amount appears on the June-July notice (介護保険料決定通知書);
-                        switch off the estimate to enter it.
-                      </Typography>
-                      <SourceLinks sources={LTC_CATEGORY1_INPUT_SOURCES} />
+                      <LongTermCareCategory1PremiumTooltip
+                        estimate={longTermCareCategory1Estimate}
+                      />
                     </DetailedTooltip>
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
