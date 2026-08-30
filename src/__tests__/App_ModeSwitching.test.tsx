@@ -40,3 +40,26 @@ describe('App Integration - Income Mode Switching', () => {
     );
   });
 });
+
+describe('App Integration - 介護保険第1号 estimate', () => {
+  it('feeds the computed estimate back into the input form at 65+', async () => {
+    // Pins the results → InputForm passthrough. Both the estimate prop and the read-only field
+    // fall back silently when it is missing, so dropping it is invisible to a component test.
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider theme={theme}>
+        <App />
+      </ThemeProvider>,
+    );
+
+    await user.click(screen.getByRole('combobox', { name: /age/i }));
+    await user.click(screen.getByRole('option', { name: '65-69' }));
+
+    const field = await screen.findByLabelText('Annual Premium (estimate)');
+    expect(field).toBeDisabled();
+    // The default ¥5,000,000 salary at 65-69 in Tokyo lands in tier 9: 75,840 × 1.7 = 128,928
+    // floored to 128,900.
+    expect(field).toHaveValue('¥128,900');
+    expect(screen.getByRole('switch', { name: 'Estimate' })).toBeChecked();
+  });
+});

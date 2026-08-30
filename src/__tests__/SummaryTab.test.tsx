@@ -34,6 +34,26 @@ describe('SummaryTab with the 介護保険第1号 premium', () => {
     expect(screen.getByText(/^¥558,500/)).toBeInTheDocument();
   });
 
+  it('marks the premium with ≈ when it is the calculator estimate', () => {
+    render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 128_900,
+          longTermCareCategory1Estimate: {
+            currentFiscalYear: { tier: 9, multiplier: 1.7, annualBase: 75_840, premium: 128_900 },
+            baseScope: 'Tokyo',
+            total: 128_900,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/^≈ ¥128,900/)).toBeInTheDocument();
+    // 408,500 health insurance + 0 pension + the 128,900 estimate.
+    expect(screen.getByText(/^¥537,400/)).toBeInTheDocument();
+  });
+
   it('omits the row when no premium applies', () => {
     render(<SummaryTab results={baseResults} />);
 

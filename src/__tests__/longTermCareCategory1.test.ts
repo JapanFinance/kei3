@@ -127,19 +127,20 @@ describe('estimateLongTermCareCategory1Premium', () => {
       'Tokyo',
     );
     expect(result).toEqual({
-      tier: 8,
-      multiplier: 1.5,
-      annualBase: 75_840,
+      currentFiscalYear: { tier: 8, multiplier: 1.5, annualBase: 75_840, premium: 113_700 },
       baseScope: 'Tokyo',
       total: 113_700,
     });
+    // Both fiscal years reach the same figure, so only one is reported: weighting an amount
+    // against itself would show the reader arithmetic that says nothing.
+    expect(result.previousFiscalYear).toBeUndefined();
   });
 
   it('floors each fiscal year to ¥100 before blending', () => {
     // Tokyo tier 1 for calendar 2027 (both fiscal years in the FY2026 parameters, no blend):
     // 75,840 × 0.285 = 21,614.4 → 21,600.
     const result = estimateLongTermCareCategory1Premium(tierInputs({}), 2027, 'Tokyo');
-    expect(result.tier).toBe(1);
+    expect(result.currentFiscalYear.tier).toBe(1);
     expect(result.total).toBe(21_600);
   });
 
@@ -147,13 +148,25 @@ describe('estimateLongTermCareCategory1Premium', () => {
     // A pure pensioner with 820,000円 of pension (公的年金等控除 leaves no 雑所得): FY2025
     // (January-March) judges tier 2 — 74,700 × 0.485 = 36,229.5 → 36,200 — while FY2026
     // judges tier 1 — 74,700 × 0.285 = 21,289.5 → 21,200.
-    // Blend: round(36,200/3 + 21,200×2/3) = 26,200; the reported tier is the current FY's.
+    // Blend: round(36,200/3 + 21,200×2/3) = 26,200. Both years are reported, because no single
+    // tier and multiplier derive that total — which is what the results tooltip has to show.
     const result = estimateLongTermCareCategory1Premium(
       tierInputs({ grossPublicPensionIncome: 820_000 }),
       2026,
       'DEFAULT',
     );
-    expect(result.tier).toBe(1);
+    expect(result.previousFiscalYear).toEqual({
+      tier: 2,
+      multiplier: 0.485,
+      annualBase: 74_700,
+      premium: 36_200,
+    });
+    expect(result.currentFiscalYear).toEqual({
+      tier: 1,
+      multiplier: 0.285,
+      annualBase: 74_700,
+      premium: 21_200,
+    });
     expect(result.total).toBe(26_200);
   });
 
@@ -171,9 +184,7 @@ describe('estimateLongTermCareCategory1Premium', () => {
       'DEFAULT',
     );
     expect(result).toEqual({
-      tier: 5,
-      multiplier: 1.0,
-      annualBase: 74_700,
+      currentFiscalYear: { tier: 5, multiplier: 1.0, annualBase: 74_700, premium: 74_700 },
       baseScope: 'national',
       total: 74_700,
     });
@@ -186,7 +197,7 @@ describe('estimateLongTermCareCategory1Premium', () => {
       2027,
       'Osaka',
     );
-    expect(result.tier).toBe(13);
+    expect(result.currentFiscalYear.tier).toBe(13);
     expect(result.total).toBe(215_500);
   });
 

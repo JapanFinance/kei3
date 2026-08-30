@@ -38,6 +38,7 @@ import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
 import LatterStageElderlyPremiumTooltip from './LatterStageElderlyPremiumTooltip';
+import LongTermCareCategory1PremiumTooltip from './LongTermCareCategory1PremiumTooltip';
 import NationalPensionTooltip from './NationalPensionTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
@@ -590,10 +591,19 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <Box sx={{ mt: 1 }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Age 65+ Long-term Care Insurance
+            <DetailedTooltip title="Age 65+ Long-term Care Insurance" icon={SIMPLE_TOOLTIP_ICON}>
+              <LongTermCareCategory1PremiumTooltip
+                estimate={results.longTermCareCategory1Estimate}
+              />
+            </DetailedTooltip>
           </Typography>
           <ResultRow
-            label="Annual Premium"
-            value={formatJPY(results.longTermCareCategory1Premium)}
+            label={
+              results.longTermCareCategory1Estimate ? 'Estimated Annual Premium' : 'Annual Premium'
+            }
+            value={`${results.longTermCareCategory1Estimate ? '≈ ' : ''}${formatJPY(
+              results.longTermCareCategory1Premium,
+            )}`}
             type="subtotal"
           />
         </Box>

@@ -238,9 +238,7 @@ export const generateChartData = (
           },
         ]
       : []),
-    // The 介護保険第1号 amount is entered, not derived from income, so the calculator applies
-    // the same figure at every income point; without this bar the stack would fall short of
-    // the income by that amount.
+    // Without this bar the stack would fall short of the income by the 介護保険第1号 amount.
     ...(resultsAndCaps.some(({ result }) => result.longTermCareCategory1Premium !== undefined)
       ? [
           {

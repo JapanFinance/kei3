@@ -145,6 +145,7 @@ interface TakeHomeChartProps {
   incomeYear: number;
   isEmploymentIncome: boolean;
   ageRange: TaxpayerAgeRange;
+  longTermCareCategory1ManualEntry?: boolean;
   longTermCareCategory1Premium: number;
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
@@ -226,6 +227,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   incomeYear,
   isEmploymentIncome,
   ageRange,
+  longTermCareCategory1ManualEntry,
   longTermCareCategory1Premium,
   healthInsuranceProvider,
   region,
@@ -328,6 +330,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         isEmploymentIncome,
         incomeYear,
         ageRange,
+        longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
         longTermCareCategory1Premium,
         healthInsuranceProvider,
         region,
@@ -348,6 +351,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       isEmploymentIncome,
       incomeYear,
       ageRange,
+      longTermCareCategory1ManualEntry,
       longTermCareCategory1Premium,
       healthInsuranceProvider,
       region,
@@ -405,6 +409,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   incomeYear,
                   isEmploymentIncome,
                   ageRange,
+                  longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
                   longTermCareCategory1Premium,
                   healthInsuranceProvider,
                   region,
@@ -448,6 +453,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     useCompactLabelFormat,
     isEmploymentIncome,
     ageRange,
+    longTermCareCategory1ManualEntry,
     longTermCareCategory1Premium,
     healthInsuranceProvider,
     region,

@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-08-30
+
+### Updated
+
+- The 65+ long-term care premium (介護保険料, 第1号被保険者) is now estimated by default. The estimate multiplies the average base amount (基準額) for the selected prefecture (or the national average) from the [MHLW FY2024-2026 publication](https://www.mhlw.go.jp/stf/newpage_40211.html) by the standard 13-tier income multiplier ([介護保険料等における基準額の調整について, PDF](https://www.mhlw.go.jp/content/12300000/001576452.pdf)), based on the entered income and household. Actual premiums and tiers are set per municipality and can differ substantially; the estimate can be switched off to enter the billed amount from the notice (介護保険料決定通知書) as before.
+
 ## 2026-08-28
 
 ### New

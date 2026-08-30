@@ -15,6 +15,7 @@ import {
   LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
   isEmployeeHealthProvider,
+  type LongTermCareCategory1Estimate,
 } from '../types/healthInsurance';
 import type {
   BonusIncomeStream,
@@ -45,12 +46,19 @@ import {
   type LatterStageElderlyBreakdown,
 } from './healthInsuranceCalculator';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
+import {
+  estimateLongTermCareCategory1Premium,
+  type LongTermCareCategory1TierInputs,
+} from './longTermCareCategory1';
 import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
 import { calculatePensionBreakdown } from './pensionCalculator';
 import { calculatePersonalDeductions } from './personalDeductions';
 import {
   calculateFurusatoNozeiDetails,
   calculateResidenceTax,
+  countResidenceTaxQualifiedDependents,
+  isDependentResidenceTaxable,
+  isResidenceTaxExempt,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from './residenceTax';
 
@@ -92,6 +100,30 @@ const calculateIncomeAdjustmentDeduction = (
   hasIncomeAdjustmentDeductionDependent(dependents, year)
     ? calculateIncomeAdjustmentDeductionAmount(grossEmploymentIncome)
     : 0;
+
+/**
+ * The 所得段階 judgment's view of the taxpayer and their household: the income measures the
+ * statute tests, plus who in the household is 住民税課税. The residence-tax side is derived here
+ * rather than reused from {@link calculateResidenceTax} because the premium is settled during the
+ * social-insurance stage, before any dependent deductions exist.
+ */
+const longTermCareCategory1TierInputs = (
+  inputs: TakeHomeInputs,
+  income: { netIncome: number; grossPublicPensionIncome: number; netPublicPensionIncome: number },
+): LongTermCareCategory1TierInputs => ({
+  totalNetIncome: income.netIncome,
+  grossPublicPensionIncome: income.grossPublicPensionIncome,
+  netPublicPensionIncome: income.netPublicPensionIncome,
+  taxpayerIsTaxable: !isResidenceTaxExempt(
+    income.netIncome,
+    countResidenceTaxQualifiedDependents(inputs.dependents, inputs.incomeYear),
+    inputs.ageRange,
+    inputs.personalCircumstances,
+  ),
+  householdHasOtherTaxableMember: inputs.dependents.some(dependent =>
+    isDependentResidenceTaxable(dependent, inputs.incomeYear),
+  ),
+});
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -463,6 +495,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   let pensionPayments = 0;
   let employmentInsurance = 0;
   let longTermCareCategory1Premium = 0;
+  let longTermCareCategory1Estimate: LongTermCareCategory1Estimate | null = null;
   let socialInsuranceDeduction: number;
   let nhiBreakdown = null;
   let latterStageBreakdown: LatterStageElderlyBreakdown | null = null;
@@ -576,7 +609,20 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     employmentInsuranceOnBonus = eiResult.bonusPortion;
 
     if (isLongTermCareCategory1Insured(inputs.ageRange)) {
-      longTermCareCategory1Premium = Math.max(0, inputs.longTermCareCategory1Premium || 0);
+      if (inputs.longTermCareCategory1ManualEntry) {
+        longTermCareCategory1Premium = Math.max(0, inputs.longTermCareCategory1Premium || 0);
+      } else {
+        longTermCareCategory1Estimate = estimateLongTermCareCategory1Premium(
+          longTermCareCategory1TierInputs(inputs, {
+            netIncome,
+            grossPublicPensionIncome,
+            netPublicPensionIncome,
+          }),
+          incomeYear,
+          inputs.region,
+        );
+        longTermCareCategory1Premium = longTermCareCategory1Estimate.total;
+      }
     }
 
     socialInsuranceDeduction =
@@ -762,6 +808,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     latterStageMedicalCapped: latterStageBreakdown?.medicalCapped,
     longTermCareCategory1Premium:
       longTermCareCategory1Premium > 0 ? longTermCareCategory1Premium : undefined,
+    ...(longTermCareCategory1Estimate && { longTermCareCategory1Estimate }),
     // Context needed for cap detection
     salaryIncome,
     healthInsuranceProvider: inputs.healthInsuranceProvider,

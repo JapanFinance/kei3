@@ -37,6 +37,7 @@ import {
   CUSTOM_PROVIDER_ID,
   isDependentCoverageEligible,
   getDependentIncomeThreshold,
+  type LongTermCareCategory1Estimate,
 } from '../../types/healthInsurance';
 import type {
   TakeHomeFormState,
@@ -66,6 +67,7 @@ import { ADDITIONAL_DEDUCTION_INFO, getPersonalDeductionInfo } from './additiona
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
+import LongTermCareCategory1PremiumTooltip from './tabs/LongTermCareCategory1PremiumTooltip';
 
 // Ordered to match the tooltip's bullets (youngest rule first).
 const AGE_RANGE_SOURCES: Source[] = [
@@ -91,13 +93,6 @@ const AGE_RANGE_SOURCES: Source[] = [
   },
 ];
 
-const LTC_CATEGORY1_INPUT_SOURCES: Source[] = [
-  {
-    label: '介護保険料の納め方 (第1号被保険者, billing and collection)',
-    href: 'https://www.city.shinjuku.lg.jp/fukushi/file07_02_00005.html',
-  },
-];
-
 const fieldLabelSx = {
   fontSize: '0.97rem',
   fontWeight: 500,
@@ -114,6 +109,8 @@ interface TaxInputFormProps {
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Computed 障害者・寡婦・ひとり親控除, passed through the same way; absent when none applies. */
   personalDeductions?: PersonalDeductionsResult | undefined;
+  /** Computed 介護保険料第1号 estimate, shown next to the estimate switch; absent below 65. */
+  longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
 }
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
@@ -122,9 +119,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   homeLoanTaxCreditResult,
   additionalDeductions,
   personalDeductions,
+  longTermCareCategory1Estimate,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // The stored field names the manual side, so that its false default means "estimate".
+  const useLongTermCareEstimate = !inputs.longTermCareCategory1ManualEntry;
 
   // Check if dependent coverage is eligible based on income and age
   const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome, inputs.ageRange);
@@ -787,30 +788,60 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       title="Age 65+ Long-term Care Insurance"
                       icon={SIMPLE_TOOLTIP_ICON}
                     >
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        From age 65, long-term care premiums are billed by the municipality based on
-                        income brackets. Enter the annual amount from the June-July notice
-                        (介護保険料決定通知書); this amount is added to social insurance deduction.
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        The billed amount is assessed on the previous year's income.
-                      </Typography>
-                      <SourceLinks sources={LTC_CATEGORY1_INPUT_SOURCES} />
+                      <LongTermCareCategory1PremiumTooltip
+                        estimate={longTermCareCategory1Estimate}
+                      />
                     </DetailedTooltip>
                   </Typography>
-                  <SpinnerNumberField
-                    id="longTermCareCategory1Premium"
-                    name="longTermCareCategory1Premium"
-                    value={inputs.longTermCareCategory1Premium}
-                    onChange={value =>
-                      dispatch({ type: 'setField', field: 'longTermCareCategory1Premium', value })
-                    }
-                    label="Annual Premium"
-                    step={1000}
-                    shiftStep={10000}
-                    min={0}
-                    sx={{ ...sharedInputSx, width: '100%' }}
-                  />
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <SpinnerNumberField
+                      id="longTermCareCategory1Premium"
+                      name="longTermCareCategory1Premium"
+                      value={
+                        useLongTermCareEstimate
+                          ? (longTermCareCategory1Estimate?.total ?? 0)
+                          : inputs.longTermCareCategory1Premium
+                      }
+                      onChange={value => {
+                        // The number formatter reports the value it is given, so while the field
+                        // is displaying the estimate it would store the estimate over whatever
+                        // amount was entered before.
+                        if (useLongTermCareEstimate) return;
+                        dispatch({
+                          type: 'setField',
+                          field: 'longTermCareCategory1Premium',
+                          value,
+                        });
+                      }}
+                      label={
+                        useLongTermCareEstimate ? 'Annual Premium (estimate)' : 'Annual Premium'
+                      }
+                      step={1000}
+                      shiftStep={10000}
+                      min={0}
+                      disabled={useLongTermCareEstimate}
+                      sx={{ ...sharedInputSx, flex: 1, minWidth: 0 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={useLongTermCareEstimate}
+                          onChange={e =>
+                            dispatch({
+                              type: 'setField',
+                              field: 'longTermCareCategory1ManualEntry',
+                              value: !e.target.checked,
+                            })
+                          }
+                          name="longTermCareCategory1ManualEntry"
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={<Typography sx={{ fontSize: '0.9rem' }}>Estimate</Typography>}
+                      sx={{ mr: 0, mt: 0.9, whiteSpace: 'nowrap' }}
+                    />
+                  </Box>
                 </FormControl>
               )}
             </Box>

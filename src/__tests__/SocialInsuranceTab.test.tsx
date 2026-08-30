@@ -276,6 +276,113 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(screen.getByText('¥558,500')).toBeInTheDocument();
   });
 
+  const tooltipText = () =>
+    screen
+      .getAllByTestId('detail-info-tooltip-content')
+      .map(node => node.textContent ?? '')
+      .join('\n');
+
+  it('shows one ≈ row and leaves the derivation to the tooltip when estimated', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 128_900,
+          longTermCareCategory1Estimate: {
+            currentFiscalYear: {
+              tier: 9,
+              multiplier: 1.7,
+              annualBase: 75_840,
+              premium: 128_900,
+            },
+            baseScope: 'Tokyo',
+            total: 128_900,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Estimated Annual Premium')).toBeInTheDocument();
+    expect(screen.getByText('≈ ¥128,900')).toBeInTheDocument();
+    // 408,500 health insurance + 0 pension + the 128,900 estimate.
+    expect(screen.getByText('¥537,400')).toBeInTheDocument();
+    // The tier and 基準額 belong to the tooltip, not to rows that would read as the total's
+    // arithmetic. The region is named in English alone, unlike the bilingual dropdown.
+    expect(screen.queryByText('Income Tier (所得段階)')).not.toBeInTheDocument();
+    expect(tooltipText()).toContain('the Tokyo average');
+    expect(tooltipText()).not.toContain('東京都');
+    expect(tooltipText()).toContain('Tier 9 of 13: ¥75,840 × 1.7 = ¥128,900');
+  });
+
+  it('names the national average when the region resolves to no prefecture', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 89_600,
+          longTermCareCategory1Estimate: {
+            currentFiscalYear: { tier: 6, multiplier: 1.2, annualBase: 74_700, premium: 89_600 },
+            baseScope: 'national',
+            total: 89_600,
+          },
+        }}
+      />,
+    );
+
+    expect(tooltipText()).toContain('the national average');
+    expect(tooltipText()).not.toContain('東京都');
+  });
+
+  it('explains the premium without a derivation when the amount was entered', () => {
+    // baseResults carries an entered premium and no estimate. The same tooltip serves both the
+    // input form and this tab, so it has to drop the estimate's arithmetic and keep the rest
+    // rather than disappear.
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    const text = tooltipText();
+    expect(text).toContain('billed by the municipality through income tiers');
+    expect(text).toContain('entered rather than estimated');
+    expect(text).not.toContain('Tier');
+    expect(text).not.toContain('weighted');
+  });
+
+  it('shows each fiscal year separately when the total is a blend', () => {
+    // The case the flattened rows could not express: no single tier and multiplier derive
+    // ¥26,200, so the tooltip has to show both years and how they are weighted.
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 26_200,
+          longTermCareCategory1Estimate: {
+            previousFiscalYear: {
+              tier: 2,
+              multiplier: 0.485,
+              annualBase: 74_700,
+              premium: 36_200,
+            },
+            currentFiscalYear: { tier: 1, multiplier: 0.285, annualBase: 74_700, premium: 21_200 },
+            baseScope: 'national',
+            total: 26_200,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('≈ ¥26,200')).toBeInTheDocument();
+    const text = tooltipText();
+    expect(text).toContain('Tier 2 of 13: ¥74,700 × 0.485 = ¥36,200');
+    expect(text).toContain('Tier 1 of 13: ¥74,700 × 0.285 = ¥21,200');
+    // The weights are stated as weights, not as a share of elapsed time: January-March is a
+    // quarter of the calendar year, not a third.
+    expect(text).toContain('January-March (weighted 1⁄3)');
+    expect(text).toContain('April-December (weighted 2⁄3)');
+    expect(text).toContain('¥36,200 × 1⁄3 + ¥21,200 × 2⁄3 = ¥26,200');
+  });
+
   it('omits the 第1号 section when no premium applies at 75+', () => {
     render(
       <SocialInsuranceTab

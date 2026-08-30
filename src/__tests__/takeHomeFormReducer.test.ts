@@ -28,6 +28,7 @@ const baseState: TakeHomeFormState = {
   incomeMode: 'salary',
   incomeStreams: [{ id: 'default-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
   savedIncomeStreams: [],
+  longTermCareCategory1ManualEntry: false,
   longTermCareCategory1Premium: 0,
   ageRange: 'age20to39',
   region: 'Tokyo',

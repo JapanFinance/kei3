@@ -125,11 +125,11 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             {results.longTermCareCategory1Premium !== undefined && (
               <ResultRow
                 label="Age 65+ Long-term Care Insurance"
-                value={formatAmountWithShare(
+                value={`${results.longTermCareCategory1Estimate ? '≈ ' : ''}${formatAmountWithShare(
                   results.longTermCareCategory1Premium,
                   results.annualIncome,
                   !isMobile,
-                )}
+                )}`}
                 type="indented"
               />
             )}
