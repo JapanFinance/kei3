@@ -5,9 +5,7 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Collapse from '@mui/material/Collapse';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import { useTheme } from '@mui/material/styles';
-import Switch from '@mui/material/Switch';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -158,10 +156,12 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
   );
 };
 
+const INCOME_BASED_SPLIT_ID = 'residence-tax-income-based-split';
+
 const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
+  const [showIncomeBasedSplit, setShowIncomeBasedSplit] = useState(false);
   const totalSocialInsurance =
     results.socialInsuranceOverride ??
     results.healthInsurance +
@@ -563,30 +563,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             total, whose tooltip states the exemption. */}
         {!results.residenceTax.nonTaxableStatus && (
           <>
-            {/* Detailed breakdown toggle */}
-            <Box sx={{ mb: 1.5, display: 'flex', justifyContent: 'center' }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showDetailedBreakdown}
-                    onChange={e => setShowDetailedBreakdown(e.target.checked)}
-                    size="small"
-                    color="primary"
-                  />
-                }
-                label={
-                  <Typography variant="body2" sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
-                    Show detailed breakdown
-                  </Typography>
-                }
-                sx={{
-                  '& .MuiFormControlLabel-label': {
-                    fontSize: '0.85rem',
-                  },
-                }}
-              />
-            </Box>
-
             <ResultRow
               label={
                 <span>
@@ -698,48 +674,51 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
             {/* Income-based portion breakdown */}
             <ResultRow
-              label={
-                <span>
-                  Income-based Portion
-                  <DetailedTooltip title="Income-based Residence Tax">
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        Income-based Portion (所得割): 10% of Taxable Income
-                      </Typography>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        This portion is calculated as a percentage of taxable income and split
-                        between municipal and prefectural governments.
-                      </Typography>
-                      <ReferenceTable
-                        headers={['Component', 'Rate']}
-                        rows={[
-                          ['Municipal Tax (市町村民税)', '6%'],
-                          ['Prefectural Tax (都道府県民税)', '4%'],
-                          [<strong>Total</strong>, <strong>10%</strong>],
-                        ]}
-                      />
-                      <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85em' }}>
-                        <strong>Rounding:</strong> The municipal and prefectural portions are each
-                        rounded down to the nearest 100 yen after applying any tax credits.
-                      </Typography>
-                      <SourceLinks
-                        sources={[
-                          {
-                            href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
-                            label: '個人住民税 (Tokyo Bureau of Taxation)',
-                          },
-                        ]}
-                      />
-                    </Box>
-                  </DetailedTooltip>
-                </span>
+              label="Income-based Portion"
+              disclosure={{
+                expanded: showIncomeBasedSplit,
+                onToggle: () => setShowIncomeBasedSplit(open => !open),
+                controlsId: INCOME_BASED_SPLIT_ID,
+              }}
+              labelSuffix={
+                <DetailedTooltip title="Income-based Residence Tax">
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Income-based Portion (所得割): 10% of Taxable Income
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      This portion is calculated as a percentage of taxable income and split between
+                      municipal and prefectural governments.
+                    </Typography>
+                    <ReferenceTable
+                      headers={['Component', 'Rate']}
+                      rows={[
+                        ['Municipal Tax (市町村民税)', '6%'],
+                        ['Prefectural Tax (都道府県民税)', '4%'],
+                        [<strong>Total</strong>, <strong>10%</strong>],
+                      ]}
+                    />
+                    <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85em' }}>
+                      <strong>Rounding:</strong> The municipal and prefectural portions are each
+                      rounded down to the nearest 100 yen after applying any tax credits.
+                    </Typography>
+                    <SourceLinks
+                      sources={[
+                        {
+                          href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
+                          label: '個人住民税 (Tokyo Bureau of Taxation)',
+                        },
+                      ]}
+                    />
+                  </Box>
+                </DetailedTooltip>
               }
               value={formatJPY(residenceIncomeBasedDisplayed)}
               type="detail"
             />
 
             {/* Municipal/Prefectural breakdown for income-based portion */}
-            <Collapse in={showDetailedBreakdown}>
+            <Collapse in={showIncomeBasedSplit} id={INCOME_BASED_SPLIT_ID}>
               <Box sx={{ ml: 2, mb: 1 }}>
                 <ResultRow
                   label="Municipal portion (6%)"
