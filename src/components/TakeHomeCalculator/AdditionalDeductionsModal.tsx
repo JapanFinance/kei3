@@ -453,15 +453,26 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     mb: 0.5,
                   }}
                 >
+                  iDeCo / Corporate DC / Small Enterprise Mutual Aid
+                  {' '}Contributions
+                  <SimpleTooltip>
+                    Contributions to iDeCo, employee contributions to a corporate DC plan
+                    (企業型DC), and Small Enterprise Mutual Aid (小規模企業共済) are all deducted in
+                    full as the 小規模企業共済等掛金控除. Enter the combined annual total.
+                  </SimpleTooltip>
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1.5 }}
+                >
                   <a
-                    href="https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/nenkin/nenkin/kyoshutsu/gaiyou.html"
+                    href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1135.htm"
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: 'inherit', fontWeight: 500 }}
+                    style={{ color: 'inherit' }}
                   >
-                    iDeCo / Corporate DC Plan
+                    小規模企業共済等掛金控除 (NTA)
                   </a>
-                  {' '}Contributions
                 </Typography>
                 <SpinnerNumberField
                   id="dcPlanContributions"
@@ -471,7 +482,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   label="Annual Contributions"
                   step={1_000}
                   shiftStep={10_000}
-                  helperText="Not including employer contributions."
+                  helperText="iDeCo + corporate DC + 小規模企業共済, not including employer contributions."
                 />
               </FormControl>
             </CardContent>

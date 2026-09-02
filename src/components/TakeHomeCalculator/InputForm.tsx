@@ -852,8 +852,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
           <Typography sx={{ ...fieldLabelSx, mb: 0.5, gap: 0.5 }}>
             Additional Deductions &amp; Credits
             <SimpleTooltip>
-              Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax
-              credit). These affect income tax, residence tax, and the furusato nozei limit.
+              Income deductions (所得控除, e.g. iDeCo or 小規模企業共済) and tax credits (税額控除,
+              e.g. home loan tax credit). These affect income tax, residence tax, and the furusato
+              nozei limit.
             </SimpleTooltip>
           </Typography>
           <Button
@@ -867,7 +868,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             {(() => {
               const parts: string[] = [];
               if (inputs.dcPlanContributions > 0)
-                parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
+                parts.push(`iDeCo/DC/Mutual Aid ${formatJPY(inputs.dcPlanContributions)}`);
               if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0)
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
@@ -915,7 +916,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   )}
                 </Box>
               ) : (
-                'Add iDeCo, home loan tax credit, etc.'
+                'Add iDeCo / 小規模企業共済, home loan tax credit, etc.'
               );
             })()}
           </Button>

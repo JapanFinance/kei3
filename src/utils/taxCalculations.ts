@@ -629,7 +629,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       healthInsurance + pensionPayments + employmentInsurance + longTermCareCategory1Premium;
   }
 
-  // iDeCo and corporate DC contributions are deductible as 小規模企業共済等掛金控除
+  // iDeCo, corporate DC, and 小規模企業共済 contributions are all deductible in full as
+  // 小規模企業共済等掛金控除 (所法75条); the input holds their combined total.
   const idecoDeduction = Math.max(0, inputs.dcPlanContributions || 0);
 
   // Additional income deductions (生命保険料控除, 地震保険料控除, 医療費控除) entered in the modal.

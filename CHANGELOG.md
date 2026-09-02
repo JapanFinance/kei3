@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-02
+
+### Updated
+
+- The iDeCo / corporate DC contribution input in "Additional Deductions & Credits" is now labelled to cover everything the [小規模企業共済等掛金控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1135.htm) applies to, including Small Enterprise Mutual Aid (小規模企業共済) contributions for the self-employed. The calculation is unchanged: it always deducted the entered amount in full, but the labels suggested it was for iDeCo and corporate DC plans only.
+
 ## 2026-08-30
 
 ### Updated
