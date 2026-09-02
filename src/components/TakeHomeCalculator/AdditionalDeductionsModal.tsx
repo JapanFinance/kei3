@@ -338,109 +338,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
           <SectionHeader tooltip="Deductions (所得控除) reduce taxable income before tax is calculated.">
             Income Deductions (所得控除)
           </SectionHeader>
-          {/* Personal Circumstances (障害者控除・寡婦控除・ひとり親控除) */}
           <Card variant="outlined">
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography
-                sx={{
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
-                  mb: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                Personal Circumstances (人的控除)
-                <SimpleTooltip>
-                  Deductions for the taxpayer's own status: disability (障害者控除), widowhood
-                  (寡婦控除), and single parenthood (ひとり親控除). A spouse's or dependent
-                  relative's disability is entered under Dependents instead.
-                </SimpleTooltip>
-              </Typography>
-              {/* Stacked rather than side by side: the longest option labels are wider than half
-                  the dialog, so a two-up row would ellipsize the selected value. */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <FormControl fullWidth>
-                  <InputLabel id="taxpayerDisabilityLabel">Disability (障害者控除)</InputLabel>
-                  <Select
-                    labelId="taxpayerDisabilityLabel"
-                    id="taxpayerDisability"
-                    label="Disability (障害者控除)"
-                    value={personalCircumstances.disability}
-                    onChange={e => updatePersonal({ disability: e.target.value })}
-                  >
-                    {DISABILITY_LEVELS.map(level => (
-                      <MenuItem key={level.value} value={level.value}>
-                        {level.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth>
-                  <InputLabel id="widowOrSingleParentLabel">
-                    Widow / single parent (寡婦控除 / ひとり親控除)
-                  </InputLabel>
-                  <Select
-                    labelId="widowOrSingleParentLabel"
-                    id="widowOrSingleParent"
-                    label="Widow / single parent (寡婦控除 / ひとり親控除)"
-                    value={personalCircumstances.widowOrSingleParent}
-                    onChange={e => updatePersonal({ widowOrSingleParent: e.target.value })}
-                    // FormControl wires helper text to a TextField automatically but not to a bare
-                    // Select, so the description is attached by hand.
-                    SelectDisplayProps={{ 'aria-describedby': 'widowOrSingleParentHelper' }}
-                  >
-                    {WIDOW_OR_SINGLE_PARENT_OPTIONS.map(option => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText id="widowOrSingleParentHelper">
-                    These deductions require not being married (including a common-law marriage).
-                  </FormHelperText>
-                </FormControl>
-              </Box>
-
-              {personalItems.map(item => {
-                const info = personalDeductionInfo[item.key];
-                return (
-                  <Typography key={item.key} variant="body2" sx={readoutSx}>
-                    {info.name} deduction: <strong>{formatJPY(item.national)}</strong> income tax,{' '}
-                    <strong>{formatJPY(item.residence)}</strong> residence tax
-                    <DeductionCalcTooltip info={info} />
-                  </Typography>
-                );
-              })}
-              {(widowOrSingleParentOverIncomeLimit
-                ? [
-                    `The widow / single parent deductions require a total net income of ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.`,
-                  ]
-                : circumstanceWarnings.map(warning => CIRCUMSTANCE_WARNING_TEXT[warning])
-              ).map(warning => (
-                <Box
-                  key={warning}
-                  sx={{
-                    p: 1.5,
-                    bgcolor: 'warning.light',
-                    color: 'warning.contrastText',
-                    borderRadius: 1,
-                    mt: 2,
-                    display: 'flex',
-                    gap: 1,
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-                    {warning}
-                  </Typography>
-                </Box>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card variant="outlined" sx={{ mt: 2 }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <FormControl fullWidth>
                 <Typography
@@ -702,6 +600,108 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Typography>
                 )
               )}
+            </CardContent>
+          </Card>
+
+          {/* Personal Circumstances (障害者控除・寡婦控除・ひとり親控除) */}
+          <Card variant="outlined" sx={{ mt: 2 }}>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+              <Typography
+                sx={{
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  mb: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                Personal Circumstances (人的控除)
+                <SimpleTooltip>
+                  Deductions for the taxpayer's own status: disability (障害者控除), widowhood
+                  (寡婦控除), and single parenthood (ひとり親控除). A spouse's or dependent
+                  relative's disability is entered under Dependents instead.
+                </SimpleTooltip>
+              </Typography>
+              {/* Stacked rather than side by side: the longest option labels are wider than half
+                  the dialog, so a two-up row would ellipsize the selected value. */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <FormControl fullWidth>
+                  <InputLabel id="taxpayerDisabilityLabel">Disability (障害者控除)</InputLabel>
+                  <Select
+                    labelId="taxpayerDisabilityLabel"
+                    id="taxpayerDisability"
+                    label="Disability (障害者控除)"
+                    value={personalCircumstances.disability}
+                    onChange={e => updatePersonal({ disability: e.target.value })}
+                  >
+                    {DISABILITY_LEVELS.map(level => (
+                      <MenuItem key={level.value} value={level.value}>
+                        {level.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel id="widowOrSingleParentLabel">
+                    Widow / single parent (寡婦控除 / ひとり親控除)
+                  </InputLabel>
+                  <Select
+                    labelId="widowOrSingleParentLabel"
+                    id="widowOrSingleParent"
+                    label="Widow / single parent (寡婦控除 / ひとり親控除)"
+                    value={personalCircumstances.widowOrSingleParent}
+                    onChange={e => updatePersonal({ widowOrSingleParent: e.target.value })}
+                    // FormControl wires helper text to a TextField automatically but not to a bare
+                    // Select, so the description is attached by hand.
+                    SelectDisplayProps={{ 'aria-describedby': 'widowOrSingleParentHelper' }}
+                  >
+                    {WIDOW_OR_SINGLE_PARENT_OPTIONS.map(option => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText id="widowOrSingleParentHelper">
+                    These deductions require not being married (including a common-law marriage).
+                  </FormHelperText>
+                </FormControl>
+              </Box>
+
+              {personalItems.map(item => {
+                const info = personalDeductionInfo[item.key];
+                return (
+                  <Typography key={item.key} variant="body2" sx={readoutSx}>
+                    {info.name} deduction: <strong>{formatJPY(item.national)}</strong> income tax,{' '}
+                    <strong>{formatJPY(item.residence)}</strong> residence tax
+                    <DeductionCalcTooltip info={info} />
+                  </Typography>
+                );
+              })}
+              {(widowOrSingleParentOverIncomeLimit
+                ? [
+                    `The widow / single parent deductions require a total net income of ${formatJPY(WIDOW_SINGLE_PARENT_INCOME_LIMIT)} or less.`,
+                  ]
+                : circumstanceWarnings.map(warning => CIRCUMSTANCE_WARNING_TEXT[warning])
+              ).map(warning => (
+                <Box
+                  key={warning}
+                  sx={{
+                    p: 1.5,
+                    bgcolor: 'warning.light',
+                    color: 'warning.contrastText',
+                    borderRadius: 1,
+                    mt: 2,
+                    display: 'flex',
+                    gap: 1,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    {warning}
+                  </Typography>
+                </Box>
+              ))}
             </CardContent>
           </Card>
         </Box>
