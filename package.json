@@ -15,7 +15,9 @@
     "format:check": "oxfmt --check",
     "preview": "vite preview",
     "test": "vitest",
-    "deploy": "wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "build:preview": "tsc -b && vite build --mode preview",
+    "deploy:preview": "npm run build:preview && wrangler deploy"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

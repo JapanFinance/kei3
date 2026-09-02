@@ -31,3 +31,10 @@
 # which is why this rule exists.)
 https://:version.:subdomain.workers.dev/*
   X-Robots-Tag: noindex
+
+# The preview deployment (a separate Worker, see vite.config) serves a copy of
+# the site on its own custom domain when a change needs feedback from people
+# outside the project. Serve it noindex for the same reason as the hosts above.
+# The rule is inert in a production deploy, which never answers on this host.
+https://preview.kei3.japanfinance.org/*
+  X-Robots-Tag: noindex
