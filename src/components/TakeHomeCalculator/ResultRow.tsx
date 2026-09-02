@@ -1,7 +1,9 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import { useTheme } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -37,6 +39,16 @@ interface ResultRowProps {
     | 'detail-subtotal';
   valuePrefix?: string;
   labelSuffix?: React.ReactNode; // Additional content to show after the label and tooltip
+  /**
+   * Makes the label a disclosure button that toggles a collapsible region below the row.
+   * A chevron is drawn in the row's indent gutter so the label text keeps its alignment.
+   */
+  disclosure?: {
+    expanded: boolean;
+    onToggle: () => void;
+    /** id of the element the button controls (for aria-controls) */
+    controlsId: string;
+  };
 }
 
 export const ResultRow: React.FC<ResultRowProps> = ({
@@ -45,6 +57,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
   type = 'default',
   valuePrefix,
   labelSuffix,
+  disclosure,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -171,10 +184,46 @@ export const ResultRow: React.FC<ResultRowProps> = ({
     : { flexBasis: '40%', textAlign: 'right' };
 
   // Add tooltip and icon if available
-  const labelContent = (
-    <Box component="span" sx={{ display: 'inline-flex' }}>
+  const labelText = (
+    <>
       {iconMap[typeof label === 'string' ? label : ''] || null}
       {label}
+    </>
+  );
+  const labelContent = (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+      {disclosure ? (
+        <ButtonBase
+          onClick={disclosure.onToggle}
+          aria-expanded={disclosure.expanded}
+          aria-controls={disclosure.controlsId}
+          sx={{
+            font: 'inherit',
+            color: 'inherit',
+            textAlign: 'left',
+            borderRadius: 1,
+            ml: '-1.5em',
+            pl: '1.5em',
+            '@media (hover: hover)': { '&:hover': { color: 'text.secondary' } },
+          }}
+        >
+          <ExpandMoreIcon
+            aria-hidden
+            fontSize="inherit"
+            sx={{
+              position: 'absolute',
+              left: 0,
+              transition: theme.transitions.create('transform', {
+                duration: theme.transitions.duration.shortest,
+              }),
+              transform: disclosure.expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+            }}
+          />
+          {labelText}
+        </ButtonBase>
+      ) : (
+        labelText
+      )}
       {typeof label === 'string' && labelTooltips[label] && (
         <SimpleTooltip>{labelTooltips[label]}</SimpleTooltip>
       )}
