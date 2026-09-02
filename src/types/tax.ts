@@ -242,7 +242,7 @@ export interface AdditionalDeductionItem {
 
 /**
  * Aggregated additional income deductions (所得控除) entered in the modal, beyond the
- * basic, dependent, social-insurance, and iDeCo deductions handled elsewhere. Shaped like
+ * basic, dependent, social-insurance, and 小規模企業共済等掛金 deductions handled elsewhere. Shaped like
  * {@link DependentDeductionResults}: per-tax totals plus an itemized breakdown for display.
  * Because every member is a 物的控除, none of these affect the residence-tax 調整控除.
  */

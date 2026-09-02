@@ -231,16 +231,18 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           <ResultRow
             label={
               <span>
-                iDeCo/Corp DC Deduction
-                <DetailedTooltip title="iDeCo and Corporate DC Contributions">
+                iDeCo / DC / Mutual Aid Deduction
+                <DetailedTooltip title="小規模企業共済等掛金控除">
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Small Enterprise Mutual Aid Contribution Deduction (小規模企業共済等掛金控除)
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Contributions to iDeCo (individual defined contribution pension) and corporate
-                      defined contribution plans reduce taxable income for income tax and residence
-                      tax. Employer contributions cannot be included in this deduction.
+                      Contributions to iDeCo (individual defined contribution pension), employee
+                      contributions to corporate defined contribution plans (企業型DC), and Small
+                      Enterprise Mutual Aid (小規模企業共済) are deducted in full from income for
+                      both income tax and residence tax. Employer contributions cannot be included
+                      in this deduction.
                     </Typography>
                     <SourceLinks
                       sources={[
