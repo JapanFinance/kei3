@@ -2,12 +2,6 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-09-02
-
-### Updated
-
-- In the Taxes tab, the municipal/prefectural split of the residence tax income-based portion (所得割) is now expanded by clicking the "Income-based Portion" row itself, which shows a chevron. The separate "Show detailed breakdown" switch has been removed.
-
 ## 2026-08-30
 
 ### Updated
