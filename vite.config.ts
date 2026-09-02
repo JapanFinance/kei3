@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { cloudflare } from '@cloudflare/vite-plugin';
+import { cloudflare, type WorkerConfig } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { defineConfig, type PluginOption } from 'vite';
@@ -83,10 +83,33 @@ const CSP_REPORT_ENDPOINT =
 // cloudflareinsights.com instead, the violation reports would show it.
 const CLOUDFLARE_ANALYTICS_SCRIPT = 'https://static.cloudflareinsights.com';
 
+// `vite build --mode preview` retargets the build at the preview Worker, which
+// serves a copy of the site for feedback from people outside the project. Only
+// the fields naming the deploy target are overridden; compatibility date and
+// asset handling still come from wrangler.toml, so the two cannot drift apart.
+const PREVIEW_HOST = 'preview.kei3.japanfinance.org';
+const applyPreviewWorkerConfig = (config: WorkerConfig): void => {
+  config.name = 'kei3-preview';
+  // Routes must be assigned over rather than returned: the plugin merges a
+  // returned object into the file config, concatenating the two arrays, which
+  // would attach the production custom domain to the preview Worker.
+  // Declaring the domain at all means deploying recreates the route and its
+  // DNS record, so taking the preview down is just deleting them again.
+  config.routes = [{ pattern: PREVIEW_HOST, custom_domain: true }];
+  // Production also answers on workers.dev because CI audits that host as the
+  // Lighthouse baseline. The preview has no such role, so it gets exactly one
+  // entry point, and removing that domain takes it fully offline.
+  config.workers_dev = false;
+  config.preview_urls = false;
+};
+
 // CSP is emitted once per deployed environment, host-scoped, so each carries a
-// distinct Sentry environment tag and a request matches exactly one rule.
+// distinct Sentry environment tag and a request matches exactly one rule. Every
+// host is listed in every build: a rule for a host that build never serves is
+// inert, and keeping one list means the preview cannot ship a weaker policy.
 const CSP_ENVIRONMENTS = [
   { host: 'https://kei3.japanfinance.org/*', sentryEnvironment: 'production' },
+  { host: `https://${PREVIEW_HOST}/*`, sentryEnvironment: 'preview' },
   { host: 'https://:version.:subdomain.workers.dev/*', sentryEnvironment: 'staging' },
 ];
 
@@ -282,7 +305,7 @@ const codeSplitting = {
 export default defineConfig(({ mode }) => ({
   define: changelogDefine(),
   plugins: [
-    cloudflare(),
+    cloudflare(mode === 'preview' ? { config: applyPreviewWorkerConfig } : undefined),
     stripHtmlComments(),
     dropImportMapAsset(),
     securityHeaders({ cspReportOnly: true, reportEndpoint: CSP_REPORT_ENDPOINT }),
