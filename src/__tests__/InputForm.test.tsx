@@ -922,3 +922,59 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
     expect(providerSelect).toHaveTextContent('National Health Insurance');
   });
 });
+
+describe('TakeHomeInputForm investment income header line', () => {
+  const mockDispatch = vi.fn();
+  const advancedInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    annualIncome: 5000000,
+    incomeYear: 2026,
+    incomeMode: 'advanced',
+    incomeStreams: [
+      { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+      { id: 'g1', type: 'listedCapitalGains', amount: 1_000_000 },
+    ],
+    savedIncomeStreams: [],
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39' as const,
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+  const investmentIncome = {
+    gross: { listedCapitalGains: 1_000_000, listedDividends: 0, depositInterest: 0 },
+    grossTotal: 1_000_000,
+    withheld: {
+      national: 153_150,
+      residence: 50_000,
+      total: 203_150,
+    },
+  };
+
+  beforeEach(() => {
+    mockDispatch.mockClear();
+  });
+
+  it('shows the Investment Income line in advanced mode when investment income is present', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={advancedInputs}
+        dispatch={mockDispatch}
+        investmentIncome={investmentIncome}
+      />,
+    );
+
+    expect(screen.getByText('Investment Income')).toBeInTheDocument();
+    expect(screen.getByText('¥1,000,000')).toBeInTheDocument();
+  });
+
+  it('omits the Investment Income line when there is none', () => {
+    render(<TakeHomeInputForm inputs={advancedInputs} dispatch={mockDispatch} />);
+
+    expect(screen.queryByText('Investment Income')).not.toBeInTheDocument();
+  });
+});

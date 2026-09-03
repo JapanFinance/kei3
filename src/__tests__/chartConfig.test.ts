@@ -117,3 +117,127 @@ describe('generateChartData with public pension income', () => {
     });
   });
 });
+
+describe('generateChartData with investment income', () => {
+  // Salary-only baseline: x sweeps 1M-5M, no investment streams.
+  const salaryOnlyContext: ChartCalculationContext = {
+    ...context,
+    ageRange: 'age20to39',
+    incomeStreams: [{ id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' }],
+  };
+
+  // Gains 1,000,000 + dividends 200,000 → base 1,200,000; withheld national 183,780 (15.315%),
+  // residence 60,000 (5%) — see calculateWithheldInvestmentTax.
+  const investmentContext: ChartCalculationContext = {
+    ...salaryOnlyContext,
+    incomeStreams: [
+      ...salaryOnlyContext.incomeStreams,
+      { id: 'g', type: 'listedCapitalGains', amount: 1_000_000 },
+      { id: 'd', type: 'listedDividends', amount: 200_000 },
+    ],
+  };
+
+  it('stacks to earned income plus the constant investment total at every point', () => {
+    const { datasets } = generateChartData(range, investmentContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x + 1_200_000);
+    });
+  });
+
+  it('lowers the stack when investment income is a net loss', () => {
+    const lossContext: ChartCalculationContext = {
+      ...salaryOnlyContext,
+      incomeStreams: [
+        ...salaryOnlyContext.incomeStreams,
+        { id: 'g', type: 'listedCapitalGains', amount: -300_000 },
+      ],
+    };
+    const { datasets } = generateChartData(range, lossContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x - 300_000);
+    });
+  });
+
+  it('holds investment amounts constant across the sweep and reports them in the breakdown', () => {
+    const { datasets } = generateChartData(range, investmentContext);
+    const withBreakdown = datasets.filter(d => d.type === 'bar');
+    expect(withBreakdown.length).toBeGreaterThan(0);
+
+    withBreakdown.forEach(dataset => {
+      const points = dataset.data as (Point & {
+        breakdown?: { label: string; amount: number }[];
+      })[];
+      expect(points).toHaveLength(5);
+      points.forEach(point => {
+        expect(point.breakdown).toContainEqual({
+          label: 'Listed Capital Gains',
+          amount: 1_000_000,
+        });
+        expect(point.breakdown).toContainEqual({ label: 'Listed Dividends', amount: 200_000 });
+      });
+    });
+  });
+
+  it('reports a capital loss in the breakdown with its sign kept', () => {
+    const lossContext: ChartCalculationContext = {
+      ...salaryOnlyContext,
+      incomeStreams: [
+        ...salaryOnlyContext.incomeStreams,
+        { id: 'g', type: 'listedCapitalGains', amount: -300_000 },
+      ],
+    };
+    const { datasets } = generateChartData(range, lossContext);
+    const takeHome = datasets.find(d => d.label === 'Take-Home Pay')!;
+    const points = pointsOf(takeHome) as (Point & {
+      breakdown?: { label: string; amount: number }[];
+    })[];
+
+    points.forEach(point => {
+      expect(point.breakdown).toContainEqual({
+        label: 'Listed Capital Gains',
+        amount: -300_000,
+      });
+    });
+  });
+
+  it('folds withheld tax into the Income Tax and Residence Tax bars by a constant amount', () => {
+    const withInvestment = generateChartData(range, investmentContext);
+    const withoutInvestment = generateChartData(range, salaryOnlyContext);
+    const incomeTaxWith = pointsOf(withInvestment.datasets.find(d => d.label === 'Income Tax')!);
+    const incomeTaxWithout = pointsOf(
+      withoutInvestment.datasets.find(d => d.label === 'Income Tax')!,
+    );
+    const residenceTaxWith = pointsOf(
+      withInvestment.datasets.find(d => d.label === 'Residence Tax')!,
+    );
+    const residenceTaxWithout = pointsOf(
+      withoutInvestment.datasets.find(d => d.label === 'Residence Tax')!,
+    );
+
+    incomeTaxWith.forEach((point, i) => {
+      expect(point.y - incomeTaxWithout[i]!.y, `income ${point.x}`).toBe(183_780);
+    });
+    residenceTaxWith.forEach((point, i) => {
+      expect(point.y - residenceTaxWithout[i]!.y, `income ${point.x}`).toBe(60_000);
+    });
+  });
+
+  it('divides the Take-Home % line by earned income plus investment income', () => {
+    const { datasets } = generateChartData(range, investmentContext);
+    const takeHomePercent = pointsOf(datasets.find(d => d.label === 'Take-Home %')!);
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+
+    takeHomePercent.forEach((point, i) => {
+      const totalGross = point.x + 1_200_000;
+      expect(point.y).toBeCloseTo((takeHome[i]!.y / totalGross) * 100, 6);
+    });
+  });
+});

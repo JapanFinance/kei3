@@ -62,3 +62,56 @@ describe('SummaryTab with the 介護保険第1号 premium', () => {
     expect(screen.getAllByText(/^¥408,500/)).toHaveLength(2);
   });
 });
+
+describe('SummaryTab with investment income', () => {
+  // 500万 salary baseline (src/__tests__/taxCalculations.test.ts) + gains 100万 + dividends 20万:
+  // base 1,200,000 → withheld national 183,780 (15.315%), residence 60,000 (5%), total 243,780.
+  const investmentResults: TakeHomeResults = makeTakeHomeResults({
+    annualIncome: 5_000_000,
+    hasEmploymentIncome: true,
+    nationalIncomeTax: 91_700,
+    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 243_100 }),
+    healthInsurance: 246_449,
+    pensionPayments: 450_180,
+    employmentInsurance: 25_623,
+    takeHomeIncome: 4_899_168,
+    totalNetIncome: 3_560_000,
+    investmentIncome: {
+      gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
+      grossTotal: 1_200_000,
+      withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+    },
+  });
+
+  it('shows the Investment Income row and the Total Income subtotal', () => {
+    render(<SummaryTab results={investmentResults} />);
+
+    expect(screen.getByText('Investment Income')).toBeInTheDocument();
+    expect(screen.getByText('¥1,200,000')).toBeInTheDocument();
+    expect(screen.getByText('Total Income')).toBeInTheDocument();
+    expect(screen.getByText('¥6,200,000')).toBeInTheDocument();
+  });
+
+  it('shows the withheld investment tax as its own row, as a share of the combined gross', () => {
+    render(<SummaryTab results={investmentResults} />);
+
+    expect(screen.getByText(/Investment Income Tax \(withheld\)/)).toBeInTheDocument();
+    // 243,780 / 6,200,000 = 3.9%
+    expect(screen.getByText(/¥243,780 \(3\.9%\)/)).toBeInTheDocument();
+  });
+
+  it('computes the take-home percentage over earned plus investment income', () => {
+    render(<SummaryTab results={investmentResults} />);
+
+    // 4,899,168 / 6,200,000 = 79.0%
+    expect(screen.getByText('(79.0%)')).toBeInTheDocument();
+  });
+
+  it('omits every investment row when there is no investment income', () => {
+    render(<SummaryTab results={{ ...investmentResults, investmentIncome: undefined }} />);
+
+    expect(screen.queryByText('Investment Income')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total Income')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Investment Income Tax/)).not.toBeInTheDocument();
+  });
+});

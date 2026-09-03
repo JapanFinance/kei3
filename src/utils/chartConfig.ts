@@ -3,7 +3,12 @@
 
 import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, Plugin } from 'chart.js';
 
-import type { TakeHomeInputs, ChartRange, IncomeStream } from '../types/tax';
+import {
+  isInvestmentIncomeStream,
+  type TakeHomeInputs,
+  type ChartRange,
+  type IncomeStream,
+} from '../types/tax';
 import { detectCaps } from './capDetection';
 import { formatJPY, formatYenCompact } from './formatters';
 import { calculateTaxes } from './taxCalculations';
@@ -69,10 +74,12 @@ export interface ChartCalculationContext extends TakeHomeInputs {
 }
 
 /**
- * Scale a set of income streams so their annualized total matches `targetIncome`,
- * preserving the original composition (salary/bonus/business mix). When the base
- * streams sum to 0 (or none are provided), fall back to a single annual salary
- * stream at `targetIncome` so downstream calculations still see income.
+ * Scale a set of income streams so their annualized EARNED total matches `targetIncome`,
+ * preserving the original composition (salary/bonus/business mix). Investment income
+ * ({@link isInvestmentIncomeStream}) is asset-based rather than earned, so it is carried through
+ * unscaled instead — see {@link generateChartData}. When the earned streams sum to 0 (or none are
+ * provided), fall back to a single annual salary stream at `targetIncome` so downstream
+ * calculations still see income.
  *
  * Shared by the chart's per-income bars and the tooltip's cap-detection probe so
  * the "🔒 Max reached" badge matches the bars exactly.
@@ -81,17 +88,23 @@ export const scaleIncomeStreamsToIncome = (
   streams: IncomeStream[],
   targetIncome: number,
 ): IncomeStream[] => {
-  const baseTotal = streams.reduce((sum, s) => {
+  const earnedStreams = streams.filter(s => !isInvestmentIncomeStream(s));
+  const investmentStreams = streams.filter(isInvestmentIncomeStream);
+
+  // Matches totalAnnualIncomeFromStreams's earned-income definition (commuting allowance and
+  // investment income excluded), so the ratio is exactly 1 at the taxpayer's actual income.
+  const baseTotal = earnedStreams.reduce((sum, s) => {
+    if (s.type === 'commutingAllowance') return sum;
     if (s.type === 'salary' && s.frequency === 'monthly') return sum + s.amount * 12;
     return sum + s.amount;
   }, 0);
 
   if (baseTotal > 0) {
     const ratio = targetIncome / baseTotal;
-    return streams.map(s => ({
-      ...s,
-      amount: s.amount * ratio,
-    }));
+    return [
+      ...earnedStreams.map(s => Object.assign({}, s, { amount: s.amount * ratio })),
+      ...investmentStreams,
+    ];
   }
 
   // Fallback if base is 0
@@ -102,6 +115,7 @@ export const scaleIncomeStreamsToIncome = (
       amount: targetIncome,
       frequency: 'annual',
     },
+    ...investmentStreams,
   ];
 };
 
@@ -145,7 +159,16 @@ export const generateChartData = (
     // Calculate breakdown for display
     let breakdown: { label: string; amount: number }[] | undefined;
     if (calcStreams.length > 0) {
-      const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0, publicPension: 0 };
+      const groups = {
+        salary: 0,
+        bonus: 0,
+        business: 0,
+        miscellaneous: 0,
+        publicPension: 0,
+        listedCapitalGains: 0,
+        listedDividends: 0,
+        depositInterest: 0,
+      };
       calcStreams.forEach(s => {
         const val = s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
         switch (s.type) {
@@ -164,14 +187,20 @@ export const generateChartData = (
           case 'publicPension':
             groups.publicPension += val;
             break;
-          // Not shown as breakdown rows: commuting allowance is excluded from income, stock
-          // compensation has no row of its own, and investment income gets its own chart
-          // treatment in the paired UI change (it is asset-based and does not scale with x).
+          case 'listedCapitalGains':
+            // Kept unscaled by scaleIncomeStreamsToIncome, so this is the same at every point.
+            groups.listedCapitalGains += val;
+            break;
+          case 'listedDividends':
+            groups.listedDividends += val;
+            break;
+          case 'depositInterest':
+            groups.depositInterest += val;
+            break;
+          // Not shown as breakdown rows: commuting allowance is excluded from income, and
+          // stock compensation has no row of its own.
           case 'commutingAllowance':
           case 'stockCompensation':
-          case 'listedCapitalGains':
-          case 'listedDividends':
-          case 'depositInterest':
             break;
           default: {
             const unhandled: never = s;
@@ -188,20 +217,29 @@ export const generateChartData = (
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
       if (groups.publicPension > 0)
         breakdown.push({ label: 'Public Pension Income', amount: groups.publicPension });
+      // Capital gains may be a loss (negative), unlike every other breakdown row.
+      if (groups.listedCapitalGains !== 0)
+        breakdown.push({ label: 'Listed Capital Gains', amount: groups.listedCapitalGains });
+      if (groups.listedDividends > 0)
+        breakdown.push({ label: 'Listed Dividends', amount: groups.listedDividends });
+      if (groups.depositInterest > 0)
+        breakdown.push({ label: 'Deposit Interest', amount: groups.depositInterest });
     }
 
     const result = calculateTaxes(inputsForCalc);
     const caps = detectCaps(result, currentInputs.incomeYear);
-    return { result, caps, breakdown };
+    const investmentGrossTotal = result.investmentIncome?.grossTotal ?? 0;
+    return { result, caps, breakdown, investmentGrossTotal };
   });
 
   const socialInsuranceDatasets = [
     {
       label: 'Health Insurance',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
         x: incomePoints[i]!,
         y: result.healthInsurance,
         breakdown,
+        investmentGrossTotal,
       })),
       borderColor: 'var(--mui-palette-text-primary)',
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
@@ -212,10 +250,11 @@ export const generateChartData = (
     },
     {
       label: 'Pension',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
         x: incomePoints[i]!,
         y: result.pensionPayments,
         breakdown,
+        investmentGrossTotal,
       })),
       borderColor: 'var(--mui-palette-text-primary)',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
@@ -230,10 +269,11 @@ export const generateChartData = (
       ? [
           {
             label: 'Employment Insurance',
-            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+            data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
               x: incomePoints[i]!,
               y: result.employmentInsurance ?? 0,
               breakdown,
+              investmentGrossTotal,
             })),
             backgroundColor: 'rgba(255, 20, 147, 0.7)',
             yAxisID: 'y',
@@ -247,10 +287,11 @@ export const generateChartData = (
       ? [
           {
             label: 'Long-term Care Insurance',
-            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+            data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
               x: incomePoints[i]!,
               y: result.longTermCareCategory1Premium ?? 0,
               breakdown,
+              investmentGrossTotal,
             })),
             backgroundColor: 'rgba(0, 139, 139, 0.7)',
             yAxisID: 'y',
@@ -264,10 +305,11 @@ export const generateChartData = (
   const datasets = [
     {
       label: 'Take-Home Pay',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
         x: incomePoints[i]!,
         y: result.takeHomeIncome,
         breakdown,
+        investmentGrossTotal,
       })),
       backgroundColor: 'rgba(34, 139, 34, 0.7)',
       yAxisID: 'y',
@@ -276,10 +318,12 @@ export const generateChartData = (
     },
     {
       label: 'Income Tax',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
         x: incomePoints[i]!,
-        y: result.nationalIncomeTax,
+        // Includes 上場株式等 withholding folded in — see calculateWithheldInvestmentTax.
+        y: result.nationalIncomeTax + (result.investmentIncome?.withheld.national ?? 0),
         breakdown,
+        investmentGrossTotal,
       })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
       yAxisID: 'y',
@@ -288,10 +332,13 @@ export const generateChartData = (
     },
     {
       label: 'Residence Tax',
-      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
         x: incomePoints[i]!,
-        y: result.residenceTax.totalResidenceTax,
+        y:
+          result.residenceTax.totalResidenceTax +
+          (result.investmentIncome?.withheld.residence ?? 0),
         breakdown,
+        investmentGrossTotal,
       })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',
       yAxisID: 'y',
@@ -301,10 +348,13 @@ export const generateChartData = (
     ...socialInsuranceDatasets,
     {
       label: 'Take-Home %',
-      data: resultsAndCaps.map(({ result }, i) => ({
-        x: incomePoints[i]!,
-        y: (result.takeHomeIncome / incomePoints[i]!) * 100,
-      })),
+      data: resultsAndCaps.map(({ result, investmentGrossTotal }, i) => {
+        const totalGross = incomePoints[i]! + investmentGrossTotal;
+        return {
+          x: incomePoints[i]!,
+          y: (result.takeHomeIncome / totalGross) * 100,
+        };
+      }),
       borderColor: 'rgb(105, 105, 105)',
       backgroundColor: 'rgba(105, 105, 105, 0.7)',
       yAxisID: 'y1',
@@ -358,7 +408,16 @@ export const getChartOptions = (
           title: function (context: TooltipItem<'bar' | 'line'>[]) {
             if (context.length > 0 && context[0]?.parsed.x != null) {
               const income = context[0].parsed.x;
-              return `Income: ${formatJPY(income)}`;
+              const raw = context[0].raw as { investmentGrossTotal?: number } | undefined;
+              const investmentGrossTotal = raw?.investmentGrossTotal ?? 0;
+              if (investmentGrossTotal === 0) {
+                return `Income: ${formatJPY(income)}`;
+              }
+              const sign = investmentGrossTotal > 0 ? '+' : '';
+              return [
+                `Income: ${formatJPY(income)}`,
+                `Investment income: ${sign}${formatJPY(investmentGrossTotal)} (held constant)`,
+              ];
             }
             return '';
           },
@@ -369,10 +428,12 @@ export const getChartOptions = (
             }
             if (context.parsed.y != null) {
               const income = context.parsed.x;
+              const raw = context.raw as { investmentGrossTotal?: number } | undefined;
+              const totalIncome = (income ?? 0) + (raw?.investmentGrossTotal ?? 0);
               const fractionDigits = context.dataset.label === 'Employment Insurance' ? 2 : 1;
               const percentage =
-                income != null && income > 0
-                  ? ((context.parsed.y / income) * 100).toFixed(fractionDigits)
+                totalIncome > 0
+                  ? ((context.parsed.y / totalIncome) * 100).toFixed(fractionDigits)
                   : '0.0';
               label += `${formatJPY(context.parsed.y)} (${percentage}%)`;
             }
