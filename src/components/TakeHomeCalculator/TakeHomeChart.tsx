@@ -34,15 +34,16 @@ import {
 } from '../../data/income';
 import type { Dependent } from '../../types/dependents';
 import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
-import type {
-  ChartRange,
-  CustomEmployeesHealthInsuranceRates,
-  IncomeStream,
-  LifeInsuranceInput,
-  EarthquakeInsuranceInput,
-  MedicalExpensesInput,
-  PersonalCircumstancesInput,
-  HomeLoanTaxCreditInput,
+import {
+  isInvestmentIncomeStream,
+  type ChartRange,
+  type CustomEmployeesHealthInsuranceRates,
+  type IncomeStream,
+  type LifeInsuranceInput,
+  type EarthquakeInsuranceInput,
+  type MedicalExpensesInput,
+  type PersonalCircumstancesInput,
+  type HomeLoanTaxCreditInput,
 } from '../../types/tax';
 import type { TaxpayerAgeRange } from '../../types/taxpayerAge';
 import { detectCaps } from '../../utils/capDetection';
@@ -247,6 +248,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   useLoadMilestone('chart-rendered');
 
   const theme = useTheme();
+
+  // Held constant across the chart's x-axis, which sweeps earned income only — see
+  // scaleIncomeStreamsToIncome. May be negative when capital losses exceed the rest.
+  const investmentGrossTotal = incomeStreams
+    .filter(isInvestmentIncomeStream)
+    .reduce((sum, s) => sum + s.amount, 0);
 
   // Track whether the user has manually adjusted the range
   const [hasManuallyAdjustedRange, setHasManuallyAdjustedRange] = useState(false);
@@ -614,6 +621,32 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             >
               Input Income: {formatJPY(currentIncome)}
             </Typography>
+          </Box>
+        )}
+        {investmentGrossTotal !== 0 && (
+          <Box className="legend-item" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                fontSize: { xs: '0.97rem', sm: '1rem' },
+                fontWeight: 500,
+              }}
+            >
+              Investment Income: {formatJPY(investmentGrossTotal)} (held constant)
+            </Typography>
+            <DetailedTooltip
+              title="Investment Income Held Constant"
+              icon={SIMPLE_TOOLTIP_ICON}
+              iconAriaLabel="Why investment income does not change across the chart"
+            >
+              <Typography variant="body2">
+                The horizontal axis sweeps earned income only. Investment income is asset-based
+                rather than earned, so it does not grow or shrink with it: every bar includes the
+                same {formatJPY(investmentGrossTotal)} and its withheld tax. The Take-Home % line
+                divides by earned income plus this amount.
+              </Typography>
+            </DetailedTooltip>
           </Box>
         )}
         <Box

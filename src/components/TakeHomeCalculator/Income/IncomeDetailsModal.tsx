@@ -25,6 +25,7 @@ import {
   isInvestmentIncomeStream,
   type IncomeStream,
   type IncomeStreamType,
+  type TakeHomeResults,
 } from '../../../types/tax';
 import {
   formatJPY,
@@ -58,6 +59,13 @@ interface IncomeDetailsModalProps {
    * omitted, the group shows only its gross subtotal.
    */
   netPublicPensionIncome?: number | undefined;
+  /**
+   * Investment income for {@link streams} — gross amounts and tax withheld at source — so the
+   * group can show what 申告不要 withholding takes off the gross. Computed by the caller from
+   * {@link TakeHomeResults.investmentIncome} rather than derived here, matching
+   * {@link netPublicPensionIncome}. Absent when every investment-income amount is 0.
+   */
+  investmentIncome?: TakeHomeResults['investmentIncome'];
 }
 
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
@@ -66,6 +74,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   streams,
   onStreamsChange,
   netPublicPensionIncome,
+  investmentIncome,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -120,6 +129,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     let miscellaneousIncome = 0;
     let publicPensionIncome = 0;
     let commutingAllowance = 0;
+    let investmentGrossIncome = 0;
 
     streams.forEach(s => {
       const annualAmount =
@@ -146,7 +156,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         case 'listedCapitalGains':
         case 'listedDividends':
         case 'depositInterest':
-          // Investment income has its own group and subtotal, added in the paired UI change.
+          investmentGrossIncome += annualAmount;
           break;
         default: {
           const unhandled: never = s;
@@ -161,6 +171,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       miscellaneousIncome,
       publicPensionIncome,
       commutingAllowance,
+      investmentGrossIncome,
     };
   };
 
@@ -175,8 +186,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     const business = streams.filter(s => s.type === 'business');
     const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
     const publicPension = streams.filter(s => s.type === 'publicPension');
+    const investment = streams.filter(isInvestmentIncomeStream);
 
-    return { employment, business, miscellaneous, publicPension };
+    return { employment, business, miscellaneous, publicPension, investment };
   };
 
   const subtotals = calculateSubtotals();
@@ -197,11 +209,25 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </>
     );
 
+  // Withheld at source under 申告不要 (源泉徴収あり特定口座) — see calculateWithheldInvestmentTax.
+  const investmentSubtotalFooter =
+    investmentIncome === undefined ? null : (
+      <>
+        <Typography variant="caption" color="text.secondary">
+          Withheld at Source (源泉徴収): -{formatJPY(investmentIncome.withheld.total)}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Net Investment Income:{' '}
+          {formatJPY(investmentIncome.grossTotal - investmentIncome.withheld.total)}
+        </Typography>
+      </>
+    );
+
   const renderStreamGroup = (
     title: string,
     groupStreams: IncomeStream[],
     subtotal: number,
-    chipColor: 'primary' | 'success' | 'warning' | 'secondary',
+    chipColor: 'primary' | 'success' | 'warning' | 'secondary' | 'info',
     subtotalFooter?: React.ReactNode,
   ) => {
     if (groupStreams.length === 0) return null;
@@ -320,14 +346,21 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Typography variant="h6">Income/Benefit Details</Typography>
-          <Chip
-            label={`Total: ${formatJPY(totalIncome)}`}
-            color="primary"
-            variant="outlined"
-            sx={{ fontWeight: 'bold' }}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.25 }}>
+            <Chip
+              label={`Total: ${formatJPY(totalIncome)}`}
+              color="primary"
+              variant="outlined"
+              sx={{ fontWeight: 'bold' }}
+            />
+            {subtotals.investmentGrossIncome !== 0 && (
+              <Typography variant="caption" color="text.secondary">
+                Investment: {formatJPY(subtotals.investmentGrossIncome)}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </DialogTitle>
       <DialogContent dividers>
@@ -382,6 +415,14 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               subtotals.publicPensionIncome,
               'secondary',
               publicPensionSubtotalFooter,
+            )}
+
+            {renderStreamGroup(
+              'Investment Income (配当・譲渡・利子)',
+              groupedStreams.investment,
+              subtotals.investmentGrossIncome,
+              'info',
+              investmentSubtotalFooter,
             )}
 
             <Button

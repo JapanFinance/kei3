@@ -171,7 +171,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome =
     results.totalNetIncome - totalSocialInsurance - results.dcPlanContributions;
-  const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
+  const totalTaxes =
+    results.nationalIncomeTax +
+    results.residenceTax.totalResidenceTax +
+    (results.investmentIncome?.withheld.total ?? 0);
   const incomeYear = inputs.incomeYear;
   const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
 
@@ -892,6 +895,79 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           type="subtotal"
         />
       </Box>
+
+      {results.investmentIncome !== undefined && (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
+            Investment Income Tax (源泉徴収)
+          </Typography>
+
+          {results.investmentIncome.gross.listedCapitalGains !== 0 && (
+            <ResultRow
+              label="Listed Capital Gains"
+              value={formatJPY(results.investmentIncome.gross.listedCapitalGains)}
+              type="detail"
+            />
+          )}
+          {results.investmentIncome.gross.listedDividends !== 0 && (
+            <ResultRow
+              label="Listed Dividends"
+              value={formatJPY(results.investmentIncome.gross.listedDividends)}
+              type="detail"
+            />
+          )}
+          {results.investmentIncome.gross.depositInterest !== 0 && (
+            <ResultRow
+              label="Deposit Interest"
+              value={formatJPY(results.investmentIncome.gross.depositInterest)}
+              type="detail"
+            />
+          )}
+          <ResultRow
+            label="Withheld Income Tax (15.315%)"
+            value={formatJPY(results.investmentIncome.withheld.national)}
+            type="detail"
+          />
+          <ResultRow
+            label="Withheld Residence Tax (5%)"
+            value={formatJPY(results.investmentIncome.withheld.residence)}
+            type="detail"
+          />
+          <ResultRow
+            label={
+              <span>
+                Total Withheld
+                <DetailedTooltip title="Investment Income Tax (源泉徴収)">
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    Assumes a domestic 特定口座（源泉徴収あり）with 申告不要 elected. A capital loss
+                    for the year is netted against dividends within the account before withholding,
+                    as the broker does at year end. None of this is reported on a tax return, so it
+                    does not affect 合計所得金額, the totals above, or anything computed from them.
+                  </Typography>
+                  <SourceLinks
+                    sources={[
+                      {
+                        href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+                        label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+                      },
+                      {
+                        href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+                        label: '配当金を受け取ったとき(配当所得) - NTA',
+                      },
+                      {
+                        href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
+                        label: '利息を受け取ったとき(利子所得) - NTA',
+                      },
+                    ]}
+                  />
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(results.investmentIncome.withheld.total)}
+            type="subtotal"
+          />
+        </Box>
+      )}
 
       {/* Total */}
       <Box sx={{ mt: 2 }}>

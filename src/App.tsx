@@ -158,6 +158,7 @@ function App() {
             additionalDeductions={results.additionalDeductions}
             personalDeductions={results.personalDeductions}
             longTermCareCategory1Estimate={results.longTermCareCategory1Estimate}
+            investmentIncome={results.investmentIncome}
           />
           <Suspense
             fallback={

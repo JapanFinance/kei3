@@ -106,6 +106,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       stream = { id, type: 'stockCompensation', amount, issuerDomicile };
     } else if (type === 'publicPension') {
       stream = { id, type: 'publicPension', amount };
+    } else if (type === 'listedCapitalGains') {
+      stream = { id, type: 'listedCapitalGains', amount };
+    } else if (type === 'listedDividends') {
+      stream = { id, type: 'listedDividends', amount };
+    } else if (type === 'depositInterest') {
+      stream = { id, type: 'depositInterest', amount };
     } else {
       stream = { id, type: 'miscellaneous', amount };
     }
@@ -122,6 +128,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         return 'Annual Gross Pension Income';
       case 'commutingAllowance':
         return 'Allowance Amount';
+      case 'listedCapitalGains':
+        return 'Annual Net Capital Gains';
+      case 'listedDividends':
+        return 'Annual Gross Dividends';
+      case 'depositInterest':
+        return 'Annual Gross Interest';
       default:
         return 'Gross Income';
     }
@@ -141,6 +153,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         return `Commuting allowance up to ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)} per month is non-taxable for income tax, but the full amount affects social insurance premiums.`;
       case 'publicPension':
         return 'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.';
+      case 'listedCapitalGains':
+        return 'Net of costs, across a 特定口座（源泉徴収あり）. Enter a loss as a negative amount. Exclude NISA amounts.';
+      case 'listedDividends':
+        return 'Before withholding. Includes 公募株式投資信託の分配金 and 特定公社債の利子. For foreign shares, enter the amount after any foreign withholding tax. Exclude NISA amounts.';
+      case 'depositInterest':
+        return '預貯金の利子 and similar: taxed at source at 20.315% and never reported on a tax return.';
       case 'stockCompensation':
         return undefined;
       default:
@@ -193,6 +211,18 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             </MenuItem>
             <MenuItem value="publicPension" disabled={disabledTypes.includes('publicPension')}>
               Public Pension
+            </MenuItem>
+            <MenuItem
+              value="listedCapitalGains"
+              disabled={disabledTypes.includes('listedCapitalGains')}
+            >
+              Listed Share Capital Gains
+            </MenuItem>
+            <MenuItem value="listedDividends" disabled={disabledTypes.includes('listedDividends')}>
+              Listed Share Dividends
+            </MenuItem>
+            <MenuItem value="depositInterest" disabled={disabledTypes.includes('depositInterest')}>
+              Deposit Interest
             </MenuItem>
           </Select>
         </FormControl>
@@ -463,6 +493,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             sx={{ width: '100%' }}
             helperText={error || getAmountHelperText()}
             error={!!error}
+            {...(type === 'listedCapitalGains' && { min: -100_000_000_000 })}
           />
           {type === 'salary' && frequency === 'monthly' && amount > 0 && (
             <Typography variant="body2" color="text.secondary" align="right" sx={{ mt: 0.5 }}>
@@ -495,6 +526,60 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                         : amount,
                 )}
               </Typography>
+            </Box>
+          )}
+
+          {(type === 'listedCapitalGains' || type === 'listedDividends') && (
+            <Box sx={guidanceBoxSx}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Assumptions for Listed-Share Income
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                Assumes a domestic 特定口座（源泉徴収あり）with 申告不要 elected: the broker
+                withholds 20.315% (15.315% income tax including 復興特別所得税, 5% residence tax),
+                and a capital loss for the year is netted against dividends within the account
+                before withholding, as the broker does at year end. These amounts are not reported
+                on a tax return, so they do not affect 合計所得金額, health-insurance premiums, the
+                basic deduction, spouse or dependent eligibility, residence-tax exemption, or the
+                furusato nozei limit.
+              </Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                Foreign brokerages, and reporting a gain or dividend on a tax return (申告分離課税 /
+                総合課税), are not yet supported. Do not include NISA (非課税) amounts.
+              </Typography>
+              <SourceLinks
+                sources={[
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+                    label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+                  },
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+                    label: '配当金を受け取ったとき(配当所得) - NTA',
+                  },
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',
+                    label: '特定口座制度 - NTA',
+                  },
+                ]}
+              />
+            </Box>
+          )}
+
+          {type === 'depositInterest' && (
+            <Box sx={guidanceBoxSx}>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                Taxed at source at 20.315% (源泉分離課税) and never reported on a tax return, so it
+                never affects 合計所得金額 or anything that depends on it.
+              </Typography>
+              <SourceLinks
+                sources={[
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
+                    label: '利息を受け取ったとき(利子所得) - NTA',
+                  },
+                ]}
+              />
             </Box>
           )}
 

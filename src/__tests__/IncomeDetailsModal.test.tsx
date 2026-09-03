@@ -484,3 +484,122 @@ describe('IncomeDetailsModal - Public Pension', () => {
     expect(screen.queryByText(/公的年金等控除/)).not.toBeInTheDocument();
   });
 });
+
+describe('IncomeDetailsModal - Investment Income', () => {
+  it('allows adding listed capital gains, dividends, and deposit interest', async () => {
+    const user = userEvent.setup();
+    const handleStreamsChange = vi.fn();
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[]}
+        onStreamsChange={handleStreamsChange}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
+    await user.click(typeSelect);
+    await user.click(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: /listed share capital gains/i,
+      }),
+    );
+
+    const amountInput = screen.getByRole('textbox', { name: /annual net capital gains/i });
+    await user.clear(amountInput);
+    await user.type(amountInput, '1000000');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(handleStreamsChange).toHaveBeenCalledWith([
+      expect.objectContaining({ type: 'listedCapitalGains', amount: 1000000 }),
+    ]);
+  });
+
+  it('displays investment streams in their own section with chips and a gross subtotal', () => {
+    const streams: IncomeStream[] = [
+      { id: 'g1', type: 'listedCapitalGains', amount: 1_000_000 },
+      { id: 'd1', type: 'listedDividends', amount: 200_000 },
+      { id: 'i1', type: 'depositInterest', amount: 50_000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Investment Income (配当・譲渡・利子)')).toBeInTheDocument();
+    expect(screen.getByText('CAPITAL GAINS')).toBeInTheDocument();
+    expect(screen.getByText('DIVIDENDS')).toBeInTheDocument();
+    expect(screen.getByText('INTEREST')).toBeInTheDocument();
+    expect(screen.getByText('Subtotal: ¥1,250,000')).toBeInTheDocument();
+    // Investment income is excluded from the header's earned-income total.
+    expect(screen.getByText('Total: ¥0')).toBeInTheDocument();
+    expect(screen.getByText('Investment: ¥1,250,000')).toBeInTheDocument();
+  });
+
+  it('shows a negative gross subtotal when capital losses exceed the rest', () => {
+    const streams: IncomeStream[] = [{ id: 'g1', type: 'listedCapitalGains', amount: -300_000 }];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Subtotal: -¥300,000')).toBeInTheDocument();
+  });
+
+  it('shows the withheld tax and net investment income alongside the group subtotal', () => {
+    const streams: IncomeStream[] = [
+      { id: 'g1', type: 'listedCapitalGains', amount: 1_000_000 },
+      { id: 'd1', type: 'listedDividends', amount: 200_000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
+          grossTotal: 1_200_000,
+          withheld: {
+            listed: { base: 1_200_000, national: 183_780, residence: 60_000 },
+            depositInterest: { base: 0, national: 0, residence: 0 },
+            national: 183_780,
+            residence: 60_000,
+            total: 243_780,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/Withheld at Source \(源泉徴収\): -¥243,780/)).toBeInTheDocument();
+    expect(screen.getByText(/Net Investment Income: ¥956,220/)).toBeInTheDocument();
+  });
+
+  it('omits the section when no investment streams are present', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText(/Investment Income/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Investment: ¥0')).not.toBeInTheDocument();
+  });
+});
