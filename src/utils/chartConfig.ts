@@ -164,10 +164,14 @@ export const generateChartData = (
           case 'publicPension':
             groups.publicPension += val;
             break;
-          // Not shown as breakdown rows: commuting allowance is excluded from income, and
-          // stock compensation has no row of its own.
+          // Not shown as breakdown rows: commuting allowance is excluded from income, stock
+          // compensation has no row of its own, and investment income gets its own chart
+          // treatment in the paired UI change (it is asset-based and does not scale with x).
           case 'commutingAllowance':
           case 'stockCompensation':
+          case 'listedCapitalGains':
+          case 'listedDividends':
+          case 'depositInterest':
             break;
           default: {
             const unhandled: never = s;

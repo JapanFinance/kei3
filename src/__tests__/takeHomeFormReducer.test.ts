@@ -754,6 +754,17 @@ describe('takeHomeFormReducer', () => {
     it('returns 0 for an empty stream list', () => {
       expect(totalAnnualIncomeFromStreams([])).toBe(0);
     });
+
+    it('excludes investment income (taxed separately from earned income)', () => {
+      expect(
+        totalAnnualIncomeFromStreams([
+          { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+          { id: 'g1', type: 'listedCapitalGains', amount: 2_000_000 },
+          { id: 'd1', type: 'listedDividends', amount: 300_000 },
+          { id: 'i1', type: 'depositInterest', amount: 100_000 },
+        ]),
+      ).toBe(1_000_000);
+    });
   });
 });
 

@@ -51,6 +51,30 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
   issuerDomicile: 'foreign' | 'domestic';
 }
 
+/**
+ * 上場株式等に係る譲渡所得等の金額 for the year, net of acquisition and transfer costs.
+ * {@link BaseIncomeStream.amount} may be negative (譲渡損失). Currently modeled as 申告不要
+ * (源泉徴収ありの特定口座, domestic broker only) — see {@link ListedDividendsIncomeStream}.
+ */
+export interface ListedCapitalGainsIncomeStream extends BaseIncomeStream {
+  type: 'listedCapitalGains';
+}
+
+/**
+ * 上場株式等の配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
+ * 特定公社債の利子. Currently modeled as 申告不要 (国内で源泉徴収済みのもの): a loss on
+ * {@link ListedCapitalGainsIncomeStream} in the same year is assumed netted against this within
+ * one 源泉徴収あり特定口座 before withholding, as the broker does at year end.
+ */
+export interface ListedDividendsIncomeStream extends BaseIncomeStream {
+  type: 'listedDividends';
+}
+
+/** 預貯金等の利子 and other 一般公社債の利子: 源泉分離課税, gross before withholding. */
+export interface DepositInterestIncomeStream extends BaseIncomeStream {
+  type: 'depositInterest';
+}
+
 export type IncomeStream =
   | SalaryIncomeStream
   | BonusIncomeStream
@@ -58,9 +82,56 @@ export type IncomeStream =
   | MiscellaneousIncomeStream
   | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
-  | StockCompensationIncomeStream;
+  | StockCompensationIncomeStream
+  | ListedCapitalGainsIncomeStream
+  | ListedDividendsIncomeStream
+  | DepositInterestIncomeStream;
 
 export type IncomeStreamType = IncomeStream['type'];
+
+/**
+ * Whether `stream` is one of the investment-income types. These are never earned income: they
+ * are excluded from {@link IncomeMode} totals and social-insurance routing, and are taxed
+ * separately from the progressive brackets — see
+ * {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
+ */
+export const isInvestmentIncomeStream = (
+  stream: IncomeStream,
+): stream is
+  | ListedCapitalGainsIncomeStream
+  | ListedDividendsIncomeStream
+  | DepositInterestIncomeStream =>
+  stream.type === 'listedCapitalGains' ||
+  stream.type === 'listedDividends' ||
+  stream.type === 'depositInterest';
+
+/** Gross investment-income amounts for the year, before withholding. */
+export interface InvestmentIncomeAmounts {
+  /** See {@link ListedCapitalGainsIncomeStream}; may be negative. */
+  listedCapitalGains: number;
+  /** See {@link ListedDividendsIncomeStream}. */
+  listedDividends: number;
+  /** See {@link DepositInterestIncomeStream}. */
+  depositInterest: number;
+}
+
+/**
+ * Tax withheld at source on investment income that is 申告不要 (not reported on the return).
+ * Unlike withholding on salary or other income — a prepayment reconciled against the progressive
+ * brackets at 年末調整/確定申告, and so never itself shown — 申告不要 investment income has no
+ * further step: 措法8条の4①・37条の11① tax it at the flat rate as the complete treatment, so what
+ * is withheld IS the final tax liability. This holds only while a stream is 申告不要; a reported
+ * (申告分離課税) stream's tax is an assessed amount, not a withholding, and should not be modeled
+ * through this type.
+ *
+ * 所得税 15.315% + 住民税 5% (措法9条の3, 3条①, 8条の4; 地方税法71条の28〔配当割〕,
+ * 71条の49〔株式等譲渡所得割〕, 71条の6〔利子割〕).
+ */
+export interface WithheldInvestmentTax {
+  national: number;
+  residence: number;
+  total: number;
+}
 
 /**
  * User input for the home loan tax credit (住宅ローン控除).
@@ -430,6 +501,23 @@ export interface TakeHomeResults {
    * not reach any tax; it counts towards 報酬 for social insurance.
    */
   commutingAllowance?: number;
+  /**
+   * Investment income (listed-share capital gains and dividends, deposit interest), currently
+   * always 申告不要 and taxed at source — none of it is part of {@link totalNetIncome}. Absent
+   * when every amount is 0.
+   */
+  investmentIncome?:
+    | {
+        gross: InvestmentIncomeAmounts;
+        /**
+         * Sum of the three {@link InvestmentIncomeAmounts}; may be negative when a capital-gains
+         * loss exceeds the dividends and interest. Included in {@link takeHomeIncome} but not in
+         * {@link annualIncome}, which stays earned income only.
+         */
+        grossTotal: number;
+        withheld: WithheldInvestmentTax;
+      }
+    | undefined;
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;
