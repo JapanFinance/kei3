@@ -21,7 +21,11 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useState } from 'react';
 
-import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
+import {
+  isInvestmentIncomeStream,
+  type IncomeStream,
+  type IncomeStreamType,
+} from '../../../types/tax';
 import {
   formatJPY,
   formatMonthLong,
@@ -37,6 +41,9 @@ const STREAM_CHIPS: Record<IncomeStreamType, { label: string; color: ChipProps['
   publicPension: { label: 'PENSION', color: 'secondary' },
   commutingAllowance: { label: 'COMMUTING', color: 'primary' },
   stockCompensation: { label: 'STOCK', color: 'primary' },
+  listedCapitalGains: { label: 'CAPITAL GAINS', color: 'info' },
+  listedDividends: { label: 'DIVIDENDS', color: 'info' },
+  depositInterest: { label: 'INTEREST', color: 'info' },
 };
 
 interface IncomeDetailsModalProps {
@@ -80,8 +87,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   const totalIncome = streams.reduce((sum, s) => {
-    // Exclude commuting allowance from total income
-    if (s.type === 'commutingAllowance') return sum;
+    // Exclude commuting allowance and investment income (taxed separately) from total income
+    if (s.type === 'commutingAllowance' || isInvestmentIncomeStream(s)) return sum;
 
     if (s.type === 'salary' && s.frequency === 'monthly') {
       return sum + s.amount * 12;
@@ -135,6 +142,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           break;
         case 'commutingAllowance':
           commutingAllowance += getCommutingAllowanceAnnualAmount(s);
+          break;
+        case 'listedCapitalGains':
+        case 'listedDividends':
+        case 'depositInterest':
+          // Investment income has its own group and subtotal, added in the paired UI change.
           break;
         default: {
           const unhandled: never = s;

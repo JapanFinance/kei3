@@ -15,7 +15,12 @@ import {
   isEmployeeHealthProvider,
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
-import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
+import {
+  isInvestmentIncomeStream,
+  type IncomeMode,
+  type IncomeStream,
+  type TakeHomeFormState,
+} from '../types/tax';
 import { isLatterStageElderly } from '../types/taxpayerAge';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
@@ -74,12 +79,13 @@ function defaultRegionForProvider(provider: HealthInsuranceProviderId): string {
 }
 
 /**
- * Total annual income represented by a set of income streams: commuting allowance is
- * not included, monthly salaries are annualized, everything else counts at face value.
+ * Total annual EARNED income represented by a set of income streams: commuting allowance and
+ * investment income ({@link isInvestmentIncomeStream}) are not included, monthly salaries are
+ * annualized, everything else counts at face value.
  */
 export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): number {
   return streams.reduce((sum, s) => {
-    if (s.type === 'commutingAllowance') {
+    if (s.type === 'commutingAllowance' || isInvestmentIncomeStream(s)) {
       return sum;
     }
     if (s.type === 'salary' && s.frequency === 'monthly') {
