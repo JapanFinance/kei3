@@ -79,13 +79,7 @@ describe('SummaryTab with investment income', () => {
     investmentIncome: {
       gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
       grossTotal: 1_200_000,
-      withheld: {
-        listed: { base: 1_200_000, national: 183_780, residence: 60_000 },
-        depositInterest: { base: 0, national: 0, residence: 0 },
-        national: 183_780,
-        residence: 60_000,
-        total: 243_780,
-      },
+      withheld: { national: 183_780, residence: 60_000, total: 243_780 },
     },
   });
 

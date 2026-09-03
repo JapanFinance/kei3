@@ -949,8 +949,6 @@ describe('TakeHomeInputForm investment income header line', () => {
     gross: { listedCapitalGains: 1_000_000, listedDividends: 0, depositInterest: 0 },
     grossTotal: 1_000_000,
     withheld: {
-      listed: { base: 1_000_000, national: 153_150, residence: 50_000 },
-      depositInterest: { base: 0, national: 0, residence: 0 },
       national: 153_150,
       residence: 50_000,
       total: 203_150,
