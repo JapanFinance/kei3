@@ -8,11 +8,22 @@ type IncomeStreamOfType = { [T in IncomeStreamType]: Extract<IncomeStream, { typ
 
 interface IncomeStreamBehavior<T extends IncomeStreamType> {
   /**
-   * Whether streams of this type are income at all. Not "is it taxable" and not "does it
-   * grow with earnings": a type that is income but is asset-based rather than earned still
-   * answers true here and needs its own property for that distinction.
+   * Whether streams of this type are earned annual income (see TakeHomeResults.annualIncome in
+   * tax.ts): gross salary-like or business/misc/pension income received over the year. False for
+   * a reimbursement (通勤手当, not income at all) and for investment income (真に income, but
+   * asset-based rather than earned — it is reported separately, see
+   * TakeHomeResults.investmentIncome). Also decides whether the chart sweep scales the stream:
+   * see isPassThroughStream in chartConfig.ts, the complement of this property.
    */
   countsTowardAnnualIncome: boolean;
+  /**
+   * Whether streams of this type contribute to their category's subtotal in the income modal.
+   * True for everything except a reimbursement (通勤手当), which sits in the employment category
+   * for entry but is not income of that category either. Distinct from
+   * {@link countsTowardAnnualIncome}: investment income is real income of its own category even
+   * though it does not count toward earned annual income.
+   */
+  countsTowardCategorySubtotal: boolean;
   /** The amount the stream represents over a year, from however its amount is entered. */
   annualAmount: (stream: IncomeStreamOfType[T]) => number;
 }
@@ -46,23 +57,66 @@ export const getFrequencyAnnualMultiplier = (
 const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T> } = {
   salary: {
     countsTowardAnnualIncome: true,
+    countsTowardCategorySubtotal: true,
     annualAmount: s => (s.frequency === 'monthly' ? s.amount * 12 : s.amount),
   },
-  bonus: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
-  business: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
-  miscellaneous: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
-  publicPension: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
-  stockCompensation: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
+  bonus: {
+    countsTowardAnnualIncome: true,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
+  },
+  business: {
+    countsTowardAnnualIncome: true,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
+  },
+  miscellaneous: {
+    countsTowardAnnualIncome: true,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
+  },
+  publicPension: {
+    countsTowardAnnualIncome: true,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
+  },
+  stockCompensation: {
+    countsTowardAnnualIncome: true,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
+  },
   // A commuting allowance (通勤手当) reimburses a cost rather than paying for work.
   commutingAllowance: {
     countsTowardAnnualIncome: false,
+    countsTowardCategorySubtotal: false,
     annualAmount: s => s.amount * getFrequencyAnnualMultiplier(s.frequency),
+  },
+  // Asset-based income, taxed separately at source — see calculateWithheldInvestmentTax in
+  // investmentIncome.ts. Not earned annual income, but real income of its own category.
+  listedCapitalGains: {
+    countsTowardAnnualIncome: false,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
+  },
+  listedDividends: {
+    countsTowardAnnualIncome: false,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
+  },
+  depositInterest: {
+    countsTowardAnnualIncome: false,
+    countsTowardCategorySubtotal: true,
+    annualAmount: s => s.amount,
   },
 };
 
 /** Whether `stream` contributes to {@link totalAnnualIncomeFromStreams}. */
 export const countsTowardAnnualIncome = (stream: IncomeStream): boolean =>
   INCOME_STREAM_BEHAVIOR[stream.type].countsTowardAnnualIncome;
+
+/** Whether `stream` contributes to its category's subtotal in the income modal. */
+export const countsTowardCategorySubtotal = (stream: IncomeStream): boolean =>
+  INCOME_STREAM_BEHAVIOR[stream.type].countsTowardCategorySubtotal;
 
 // Taking the discriminant and the stream as correlated parameters is what lets TypeScript
 // check the indexed call; reading INCOME_STREAM_BEHAVIOR[stream.type] inline does not.

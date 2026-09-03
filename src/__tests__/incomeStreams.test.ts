@@ -24,6 +24,17 @@ describe('totalAnnualIncomeFromStreams', () => {
   it('returns 0 for an empty stream list', () => {
     expect(totalAnnualIncomeFromStreams([])).toBe(0);
   });
+
+  it('excludes investment income (asset-based, taxed separately from earned income)', () => {
+    expect(
+      totalAnnualIncomeFromStreams([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        { id: 'g1', type: 'listedCapitalGains', amount: 2_000_000 },
+        { id: 'd1', type: 'listedDividends', amount: 300_000 },
+        { id: 'i1', type: 'depositInterest', amount: 100_000 },
+      ]),
+    ).toBe(1_000_000);
+  });
 });
 
 describe('annualIncomeStreamAmount', () => {
@@ -46,7 +57,7 @@ describe('annualIncomeStreamAmount', () => {
 });
 
 describe('countsTowardAnnualIncome', () => {
-  it('excludes only the commuting allowance', () => {
+  it('excludes the commuting allowance (a reimbursement) and investment income (asset-based)', () => {
     expect(
       countsTowardAnnualIncome({
         id: 'c1',
@@ -55,6 +66,15 @@ describe('countsTowardAnnualIncome', () => {
         frequency: 'monthly',
       }),
     ).toBe(false);
+    expect(countsTowardAnnualIncome({ id: 'g1', type: 'listedCapitalGains', amount: -10_000 })).toBe(
+      false,
+    );
+    expect(countsTowardAnnualIncome({ id: 'd1', type: 'listedDividends', amount: 10_000 })).toBe(
+      false,
+    );
+    expect(countsTowardAnnualIncome({ id: 'i1', type: 'depositInterest', amount: 10_000 })).toBe(
+      false,
+    );
     expect(
       countsTowardAnnualIncome({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
     ).toBe(true);

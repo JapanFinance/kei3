@@ -20,6 +20,7 @@ import {
 import type {
   BonusIncomeStream,
   IncomeStream,
+  InvestmentIncomeAmounts,
   PersonalCircumstancesInput,
   TakeHomeInputs,
   TakeHomeResults,
@@ -46,6 +47,7 @@ import {
 } from './healthInsuranceCalculator';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { annualIncomeStreamAmount } from './incomeStreams';
+import { calculateWithheldInvestmentTax, hasInvestmentIncome } from './investmentIncome';
 import {
   estimateLongTermCareCategory1Premium,
   type LongTermCareCategory1TierInputs,
@@ -289,10 +291,19 @@ interface IncomeBreakdown {
   netBusinessAndMiscIncomeBeforeBlueFilerDeduction: number;
   netBusinessAndMiscIncome: number;
   blueFilerDeduction: number;
+  /**
+   * Earned income only (employment + business/misc + public pension). Investment income is
+   * gathered separately in {@link investment} and is never part of this total — see
+   * {@link isInvestmentIncomeStream}.
+   */
   totalAnnualIncome: number;
   commutingAllowance: number;
   stockCompensationIncome: number;
   grossPublicPensionIncome: number;
+  /** Gross investment-income amounts for the year, before withholding. */
+  investment: InvestmentIncomeAmounts;
+  /** Sum of {@link investment}'s three amounts; may be negative. */
+  grossInvestmentIncome: number;
 }
 
 /**
@@ -308,6 +319,9 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   let commutingAllowance = 0;
   let stockCompensationIncome = 0;
   let grossPublicPensionIncome = 0;
+  let listedCapitalGains = 0;
+  let listedDividends = 0;
+  let depositInterest = 0;
   let processedBusinessIncome = false;
 
   for (const income of incomeStreams) {
@@ -354,6 +368,22 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
       case 'publicPension':
         grossPublicPensionIncome += income.amount;
         break;
+      case 'listedCapitalGains':
+        // Negative (譲渡損失) is expected — see calculateWithheldInvestmentTax's in-account netting.
+        listedCapitalGains += income.amount;
+        break;
+      case 'listedDividends':
+        if (income.amount < 0) {
+          throw new Error('Listed-share dividends cannot be negative.');
+        }
+        listedDividends += income.amount;
+        break;
+      case 'depositInterest':
+        if (income.amount < 0) {
+          throw new Error('Deposit interest cannot be negative.');
+        }
+        depositInterest += income.amount;
+        break;
       default: {
         const unhandled: never = income;
         throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
@@ -367,6 +397,12 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
     grossPublicPensionIncome;
+  const investment: InvestmentIncomeAmounts = {
+    listedCapitalGains,
+    listedDividends,
+    depositInterest,
+  };
+  const grossInvestmentIncome = listedCapitalGains + listedDividends + depositInterest;
 
   return {
     salaryIncome,
@@ -379,6 +415,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     commutingAllowance,
     stockCompensationIncome,
     grossPublicPensionIncome,
+    investment,
+    grossInvestmentIncome,
   };
 };
 
@@ -454,9 +492,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     commutingAllowance,
     stockCompensationIncome,
     grossPublicPensionIncome,
+    investment,
+    grossInvestmentIncome,
   } = incomeBreakdown;
 
-  if (totalAnnualIncome <= 0) {
+  if (totalAnnualIncome <= 0 && !hasInvestmentIncome(investment)) {
     return DEFAULT_TAKE_HOME_RESULTS;
   }
 
@@ -733,9 +773,14 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       : preCreditResidenceTax;
 
   // Calculate totals
+  const withheldInvestmentTax = calculateWithheldInvestmentTax(investment, incomeYear);
   const totalSocialsAndTax =
     nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;
-  const takeHomeIncome = annualIncome - totalSocialsAndTax;
+  // annualIncome is earned income only; investment income (currently always 申告不要) is added
+  // here and its withholding subtracted here, rather than folded into annualIncome, so the
+  // aggregate-consuming calculations above never see it (see isInvestmentIncomeStream).
+  const takeHomeIncome =
+    annualIncome + grossInvestmentIncome - totalSocialsAndTax - withheldInvestmentTax.total;
 
   const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
     nationalTaxableIncomeBeforeRounding,
@@ -771,6 +816,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     ...(grossPublicPensionIncome > 0 && {
       grossPublicPensionIncome,
       netPublicPensionIncome,
+    }),
+    ...(hasInvestmentIncome(investment) && {
+      investmentIncome: {
+        gross: investment,
+        grossTotal: grossInvestmentIncome,
+        withheld: withheldInvestmentTax,
+      },
     }),
     totalNetIncome: netIncome,
     nationalIncomeTaxBasicDeduction,

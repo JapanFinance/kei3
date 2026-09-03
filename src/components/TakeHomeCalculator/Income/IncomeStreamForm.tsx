@@ -115,6 +115,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         break;
       case 'miscellaneous':
       case 'publicPension':
+      case 'listedCapitalGains':
+      case 'listedDividends':
+      case 'depositInterest':
         stream = { id, type, amount };
         break;
       default: {
@@ -408,6 +411,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             sx={{ width: '100%' }}
             helperText={error || info.amountHelperText}
             error={!!error}
+            {...(info.min !== undefined && { min: info.min })}
           />
           {type === 'salary' && frequency === 'monthly' && amount > 0 && (
             <Typography variant="body2" align="right" sx={{ color: 'text.secondary', mt: 0.5 }}>

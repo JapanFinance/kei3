@@ -51,6 +51,30 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
   issuerDomicile: 'foreign' | 'domestic';
 }
 
+/**
+ * 上場株式等に係る譲渡所得等の金額 for the year, net of acquisition and transfer costs.
+ * {@link BaseIncomeStream.amount} may be negative (譲渡損失). Currently modeled as 申告不要
+ * (源泉徴収ありの特定口座, domestic broker only) — see {@link ListedDividendsIncomeStream}.
+ */
+export interface ListedCapitalGainsIncomeStream extends BaseIncomeStream {
+  type: 'listedCapitalGains';
+}
+
+/**
+ * 上場株式等の配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
+ * 特定公社債の利子. Currently modeled as 申告不要 (国内で源泉徴収済みのもの): a loss on
+ * {@link ListedCapitalGainsIncomeStream} in the same year is assumed netted against this within
+ * one 源泉徴収あり特定口座 before withholding, as the broker does at year end.
+ */
+export interface ListedDividendsIncomeStream extends BaseIncomeStream {
+  type: 'listedDividends';
+}
+
+/** 預貯金等の利子 and other 一般公社債の利子: 源泉分離課税, gross before withholding. */
+export interface DepositInterestIncomeStream extends BaseIncomeStream {
+  type: 'depositInterest';
+}
+
 export type IncomeStream =
   | SalaryIncomeStream
   | BonusIncomeStream
@@ -58,9 +82,60 @@ export type IncomeStream =
   | MiscellaneousIncomeStream
   | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
-  | StockCompensationIncomeStream;
+  | StockCompensationIncomeStream
+  | ListedCapitalGainsIncomeStream
+  | ListedDividendsIncomeStream
+  | DepositInterestIncomeStream;
 
 export type IncomeStreamType = IncomeStream['type'];
+
+/**
+ * Whether `stream` is one of the investment-income types. These are never earned income — see
+ * {@link import("../utils/incomeStreams").countsTowardAnnualIncome} — and are taxed separately
+ * from the progressive brackets, see
+ * {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
+ */
+export const isInvestmentIncomeStream = (
+  stream: IncomeStream,
+): stream is
+  | ListedCapitalGainsIncomeStream
+  | ListedDividendsIncomeStream
+  | DepositInterestIncomeStream =>
+  stream.type === 'listedCapitalGains' ||
+  stream.type === 'listedDividends' ||
+  stream.type === 'depositInterest';
+
+/** Gross investment-income amounts for the year, before withholding. */
+export interface InvestmentIncomeAmounts {
+  /** See {@link ListedCapitalGainsIncomeStream}; may be negative. */
+  listedCapitalGains: number;
+  /** See {@link ListedDividendsIncomeStream}. */
+  listedDividends: number;
+  /** See {@link DepositInterestIncomeStream}. */
+  depositInterest: number;
+}
+
+/** One category's withholding: the amount actually subject to it, and the tax withheld. */
+export interface WithheldTaxLine {
+  /** Amount subject to withholding, after any in-account netting (yen, ≥ 0). */
+  base: number;
+  national: number;
+  residence: number;
+}
+
+/**
+ * Tax withheld at source on investment income under 申告不要 (措法9条の3, 3条①, 8条の4;
+ * 地方税法71条の28〔配当割〕, 71条の49〔株式等譲渡所得割〕, 71条の6〔利子割〕). Cash-flow only: kei3
+ * shows the annual amount withheld, not a balance-due/refund position.
+ */
+export interface WithheldInvestmentTax {
+  /** 上場株式等の譲渡所得等 and 配当等 combined: `base` = max(0, gains + dividends). */
+  listed: WithheldTaxLine;
+  depositInterest: WithheldTaxLine;
+  national: number;
+  residence: number;
+  total: number;
+}
 
 /**
  * User input for the home loan tax credit (住宅ローン控除).
@@ -380,8 +455,11 @@ export interface TakeHomeResults {
    * of earning it and gross of every deduction that is not a cash outflow: salary, bonus and
    * stock compensation gross; public pension gross, before the 公的年金等控除; business and
    * miscellaneous income after 必要経費 but before the 青色申告特別控除. A commuting allowance is
-   * excluded as a cost reimbursement. Under this definition, and only this one,
-   * {@link takeHomeIncome} (this amount minus taxes and social insurance) is the money kept.
+   * excluded as a cost reimbursement, and investment income ({@link isInvestmentIncomeStream}) is
+   * excluded as asset-based rather than earned — see {@link investmentIncome} for where its own
+   * gross amount and tax are reported instead. Under this definition, and only this one,
+   * {@link takeHomeIncome} (this amount minus taxes and social insurance) is the money kept —
+   * plus investment income net of its own tax, which reaches {@link takeHomeIncome} separately.
    *
    * The same definition is used by the two external figures this amount is compared with. The
    * 所得 of the 国民生活基礎調査 behind the chart's median and percentile bands is defined in the
@@ -448,6 +526,23 @@ export interface TakeHomeResults {
    * not reach any tax; it counts towards 報酬 for social insurance.
    */
   commutingAllowance?: number;
+  /**
+   * Investment income (listed-share capital gains and dividends, deposit interest), currently
+   * always 申告不要 and taxed at source — none of it is part of {@link totalNetIncome}. Absent
+   * when every amount is 0.
+   */
+  investmentIncome?:
+    | {
+        gross: InvestmentIncomeAmounts;
+        /**
+         * Sum of the three {@link InvestmentIncomeAmounts}; may be negative when a capital-gains
+         * loss exceeds the dividends and interest. Included in {@link takeHomeIncome} but not in
+         * {@link annualIncome}, which stays earned income only.
+         */
+        grossTotal: number;
+        withheld: WithheldInvestmentTax;
+      }
+    | undefined;
   nationalIncomeTaxBasicDeduction?: number | undefined;
   taxableIncomeForNationalIncomeTax?: number | undefined;
   residenceTaxBasicDeduction?: number | undefined;
