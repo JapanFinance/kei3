@@ -33,11 +33,8 @@ describe('calculateWithheldInvestmentTax', () => {
       amounts({ listedCapitalGains: 1_000_000, listedDividends: 200_000 }),
       2026,
     );
-    expect(result.listed).toEqual({ base: 1_200_000, national: 183_780, residence: 60_000 });
-    expect(result.depositInterest).toEqual({ base: 0, national: 0, residence: 0 });
-    expect(result.national).toBe(183_780);
-    expect(result.residence).toBe(60_000);
-    expect(result.total).toBe(243_780);
+    // base = 1,200,000; 1,200,000 * 0.15315 = 183,780; 1,200,000 * 0.05 = 60,000
+    expect(result).toEqual({ national: 183_780, residence: 60_000, total: 243_780 });
   });
 
   // 措法37条の11の6: a same-account 譲渡損 nets against 配当等 before withholding.
@@ -46,8 +43,7 @@ describe('calculateWithheldInvestmentTax', () => {
       amounts({ listedCapitalGains: -500_000, listedDividends: 300_000 }),
       2026,
     );
-    expect(result.listed).toEqual({ base: 0, national: 0, residence: 0 });
-    expect(result.total).toBe(0);
+    expect(result).toEqual({ national: 0, residence: 0, total: 0 });
   });
 
   it('nets a capital loss against dividends, taxing only the remainder', () => {
@@ -56,15 +52,13 @@ describe('calculateWithheldInvestmentTax', () => {
       2026,
     );
     // base = 300,000; 300,000 * 0.15315 = 45,945; 300,000 * 0.05 = 15,000
-    expect(result.listed).toEqual({ base: 300_000, national: 45_945, residence: 15_000 });
-    expect(result.total).toBe(60_945);
+    expect(result).toEqual({ national: 45_945, residence: 15_000, total: 60_945 });
   });
 
   it('withholds deposit interest independently of listed gains and dividends', () => {
     const result = calculateWithheldInvestmentTax(amounts({ depositInterest: 100_000 }), 2026);
-    expect(result.depositInterest).toEqual({ base: 100_000, national: 15_315, residence: 5_000 });
-    expect(result.listed).toEqual({ base: 0, national: 0, residence: 0 });
-    expect(result.total).toBe(20_315);
+    // 100,000 * 0.15315 = 15,315; 100,000 * 0.05 = 5,000
+    expect(result).toEqual({ national: 15_315, residence: 5_000, total: 20_315 });
   });
 
   it('sums both categories when both are present', () => {
@@ -84,19 +78,13 @@ describe('calculateWithheldInvestmentTax', () => {
   it('truncates to the whole yen (floors, never rounds)', () => {
     // 1,234,567 * 0.15315 = 189,073.936..., * 0.05 = 61,728.35
     const result = calculateWithheldInvestmentTax(amounts({ listedDividends: 1_234_567 }), 2026);
-    expect(result.listed.national).toBe(189_073);
-    expect(result.listed.residence).toBe(61_728);
+    expect(result.national).toBe(189_073);
+    expect(result.residence).toBe(61_728);
   });
 
   it('is all zero for all-zero amounts', () => {
     const result = calculateWithheldInvestmentTax(amounts(), 2026);
-    expect(result).toEqual({
-      listed: { base: 0, national: 0, residence: 0 },
-      depositInterest: { base: 0, national: 0, residence: 0 },
-      national: 0,
-      residence: 0,
-      total: 0,
-    });
+    expect(result).toEqual({ national: 0, residence: 0, total: 0 });
   });
 });
 

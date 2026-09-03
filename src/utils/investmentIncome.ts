@@ -2,23 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
-import type { InvestmentIncomeAmounts, WithheldInvestmentTax, WithheldTaxLine } from '../types/tax';
+import type { InvestmentIncomeAmounts, WithheldInvestmentTax } from '../types/tax';
 
 /** Whether any of the three investment-income amounts is non-zero. */
 export const hasInvestmentIncome = (amounts: InvestmentIncomeAmounts): boolean =>
   amounts.listedCapitalGains !== 0 ||
   amounts.listedDividends !== 0 ||
   amounts.depositInterest !== 0;
-
-const withholdLine = (
-  base: number,
-  nationalRate: number,
-  residenceRate: number,
-): WithheldTaxLine => ({
-  base,
-  national: Math.floor(base * nationalRate),
-  residence: Math.floor(base * residenceRate),
-});
 
 /**
  * Tax withheld at source on investment income under 申告不要 — see {@link WithheldInvestmentTax}.
@@ -40,16 +30,18 @@ export const calculateWithheldInvestmentTax = (
   const rates = getInvestmentIncomeTaxRates(year);
 
   const listedBase = Math.max(0, amounts.listedCapitalGains + amounts.listedDividends);
-  const listed = withholdLine(listedBase, rates.listedNationalRate, rates.listedResidenceRate);
+  const listedNational = Math.floor(listedBase * rates.listedNationalRate);
+  const listedResidence = Math.floor(listedBase * rates.listedResidenceRate);
 
-  const depositInterest = withholdLine(
-    amounts.depositInterest,
-    rates.depositInterestNationalRate,
-    rates.depositInterestResidenceRate,
+  const depositInterestNational = Math.floor(
+    amounts.depositInterest * rates.depositInterestNationalRate,
+  );
+  const depositInterestResidence = Math.floor(
+    amounts.depositInterest * rates.depositInterestResidenceRate,
   );
 
-  const national = listed.national + depositInterest.national;
-  const residence = listed.residence + depositInterest.residence;
+  const national = listedNational + depositInterestNational;
+  const residence = listedResidence + depositInterestResidence;
 
-  return { listed, depositInterest, national, residence, total: national + residence };
+  return { national, residence, total: national + residence };
 };

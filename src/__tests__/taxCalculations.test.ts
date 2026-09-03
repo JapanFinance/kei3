@@ -2409,13 +2409,7 @@ describe('calculateTaxes with investment income streams', () => {
     expect(result.investmentIncome).toEqual({
       gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
       grossTotal: 1_200_000,
-      withheld: {
-        listed: { base: 1_200_000, national: 183_780, residence: 60_000 },
-        depositInterest: { base: 0, national: 0, residence: 0 },
-        national: 183_780,
-        residence: 60_000,
-        total: 243_780,
-      },
+      withheld: { national: 183_780, residence: 60_000, total: 243_780 },
     });
     expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 1_200_000 - 243_780);
   });
@@ -2472,8 +2466,6 @@ describe('calculateTaxes with investment income streams', () => {
     expect(result.healthInsurance).toBe(baseline.healthInsurance);
     expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
     expect(result.investmentIncome?.withheld).toEqual({
-      listed: { base: 0, national: 0, residence: 0 },
-      depositInterest: { base: 100_000, national: 15_315, residence: 5_000 },
       national: 15_315,
       residence: 5_000,
       total: 20_315,
@@ -2490,13 +2482,7 @@ describe('calculateTaxes with investment income streams', () => {
     expect(result.investmentIncome).toEqual({
       gross: { listedCapitalGains: -300_000, listedDividends: 0, depositInterest: 0 },
       grossTotal: -300_000,
-      withheld: {
-        listed: { base: 0, national: 0, residence: 0 },
-        depositInterest: { base: 0, national: 0, residence: 0 },
-        national: 0,
-        residence: 0,
-        total: 0,
-      },
+      withheld: { national: 0, residence: 0, total: 0 },
     });
     expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 300_000);
   });
@@ -2508,10 +2494,10 @@ describe('calculateTaxes with investment income streams', () => {
     );
 
     // 1,234,567 * 0.15315 = 189,073.93...; 1,234,567 * 0.05 = 61,728.35
-    expect(result.investmentIncome?.withheld.listed).toEqual({
-      base: 1_234_567,
+    expect(result.investmentIncome?.withheld).toEqual({
       national: 189_073,
       residence: 61_728,
+      total: 250_801,
     });
     expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 1_234_567 - 189_073 - 61_728);
   });

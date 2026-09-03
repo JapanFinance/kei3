@@ -115,23 +115,19 @@ export interface InvestmentIncomeAmounts {
   depositInterest: number;
 }
 
-/** One category's withholding: the amount actually subject to it, and the tax withheld. */
-export interface WithheldTaxLine {
-  /** Amount subject to withholding, after any in-account netting (yen, ≥ 0). */
-  base: number;
-  national: number;
-  residence: number;
-}
-
 /**
- * Tax withheld at source on investment income under 申告不要 (措法9条の3, 3条①, 8条の4;
- * 地方税法71条の28〔配当割〕, 71条の49〔株式等譲渡所得割〕, 71条の6〔利子割〕). Cash-flow only: kei3
- * shows the annual amount withheld, not a balance-due/refund position.
+ * Tax withheld at source on investment income that is 申告不要 (not reported on the return).
+ * Unlike withholding on salary or other income — a prepayment reconciled against the progressive
+ * brackets at 年末調整/確定申告, and so never itself shown — 申告不要 investment income has no
+ * further step: 措法8条の4①・37条の11① tax it at the flat rate as the complete treatment, so what
+ * is withheld IS the final tax liability. This holds only while a stream is 申告不要; a reported
+ * (申告分離課税) stream's tax is an assessed amount, not a withholding, and should not be modeled
+ * through this type.
+ *
+ * 所得税 15.315% + 住民税 5% (措法9条の3, 3条①, 8条の4; 地方税法71条の28〔配当割〕,
+ * 71条の49〔株式等譲渡所得割〕, 71条の6〔利子割〕).
  */
 export interface WithheldInvestmentTax {
-  /** 上場株式等の譲渡所得等 and 配当等 combined: `base` = max(0, gains + dividends). */
-  listed: WithheldTaxLine;
-  depositInterest: WithheldTaxLine;
   national: number;
   residence: number;
   total: number;
