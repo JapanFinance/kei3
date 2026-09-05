@@ -43,8 +43,6 @@ interface IncomeStreamFormProps {
   initialData?: IncomeStream;
   onSave: (stream: IncomeStream) => void;
   onCancel: () => void;
-  /** Goes back to choosing the type. Offered only while adding. */
-  onChangeType?: () => void;
 }
 
 const guidanceBoxSx = {
@@ -61,7 +59,6 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   initialData,
   onSave,
   onCancel,
-  onChangeType,
 }) => {
   const info = INCOME_STREAM_CATALOG[type];
   const [amount, setAmount] = useState<number>(initialData?.amount ?? 0);
@@ -145,14 +142,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             color={getIncomeCategory(info.category).chipColor}
             sx={{ fontSize: '0.7rem', height: 20 }}
           />
-          <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600, flexGrow: 1 }}>
+          <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
             {initialData ? 'Edit' : 'Add'} {info.label}
           </Typography>
-          {onChangeType && (
-            <Button size="small" onClick={onChangeType}>
-              Change type
-            </Button>
-          )}
         </Box>
 
         {type === 'salary' && (

@@ -21,17 +21,44 @@ export type IncomeCategoryKey =
 export interface IncomeCategory {
   key: IncomeCategoryKey;
   heading: string;
+  /** Label of the button that adds a stream to this category. */
+  addLabel: string;
   /** Colour of each stream's type chip and of the group subtotal chip. */
   chipColor: NonNullable<ChipProps['color']>;
 }
 
 /** Categories in display order. */
 export const INCOME_CATEGORIES: readonly IncomeCategory[] = [
-  { key: 'employment', heading: 'Employment Income (給与所得)', chipColor: 'primary' },
-  { key: 'business', heading: 'Business Income (事業所得)', chipColor: 'success' },
-  { key: 'miscellaneous', heading: 'Miscellaneous Income (雑所得)', chipColor: 'warning' },
-  { key: 'publicPension', heading: 'Public Pension Income (公的年金等)', chipColor: 'secondary' },
-  { key: 'investment', heading: 'Investment Income (配当・譲渡・利子)', chipColor: 'info' },
+  {
+    key: 'employment',
+    heading: 'Employment Income (給与所得)',
+    addLabel: 'Add Employment Income',
+    chipColor: 'primary',
+  },
+  {
+    key: 'business',
+    heading: 'Business Income (事業所得)',
+    addLabel: 'Add Business Income',
+    chipColor: 'success',
+  },
+  {
+    key: 'miscellaneous',
+    heading: 'Miscellaneous Income (雑所得)',
+    addLabel: 'Add Miscellaneous Income',
+    chipColor: 'warning',
+  },
+  {
+    key: 'publicPension',
+    heading: 'Public Pension Income (公的年金等)',
+    addLabel: 'Add Public Pension',
+    chipColor: 'secondary',
+  },
+  {
+    key: 'investment',
+    heading: 'Investment Income (配当・譲渡・利子)',
+    addLabel: 'Add Investment Income',
+    chipColor: 'info',
+  },
 ];
 
 export const getIncomeCategory = (key: IncomeCategoryKey): IncomeCategory =>
@@ -40,8 +67,6 @@ export const getIncomeCategory = (key: IncomeCategoryKey): IncomeCategory =>
 export interface IncomeStreamTypeInfo {
   label: string;
   category: IncomeCategoryKey;
-  /** One line shown when choosing the type to add. */
-  description: string;
   /** Uppercase badge on a stream in the list; its colour comes from the category. */
   chipLabel: string;
   amountLabel: string;
@@ -55,7 +80,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   salary: {
     label: 'Salary',
     category: 'employment',
-    description: 'Regular wages from an employer, entered as a monthly or annual amount.',
     chipLabel: 'SALARY',
     amountLabel: 'Gross Income',
     amountHelperText: 'Gross income before taxes and deductions',
@@ -63,7 +87,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   bonus: {
     label: 'Bonus',
     category: 'employment',
-    description: 'A one-off payment such as a summer or winter 賞与, with the month paid.',
     chipLabel: 'BONUS',
     amountLabel: 'Gross Income',
     amountHelperText: 'Gross bonus amount before taxes and deductions',
@@ -71,7 +94,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   commutingAllowance: {
     label: 'Commuting Allowance',
     category: 'employment',
-    description: `通勤手当 from the employer. Non-taxable up to ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)} per month; one entry covers the year.`,
     chipLabel: 'COMMUTING',
     amountLabel: 'Allowance Amount',
     amountHelperText: `Commuting allowance up to ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)} per month is non-taxable for income tax, but the full amount affects social insurance premiums.`,
@@ -80,15 +102,12 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   stockCompensation: {
     label: 'Stock-Based Compensation',
     category: 'employment',
-    description:
-      'RSU, stock option, or ESPP income from a foreign issuer, at the JPY value realized.',
     chipLabel: 'STOCK',
     amountLabel: 'Gross Income',
   },
   business: {
     label: 'Business',
     category: 'business',
-    description: 'Net income from self-employment after expenses. One entry covers all businesses.',
     chipLabel: 'BUSINESS',
     amountLabel: 'Annual Net Income',
     amountHelperText:
@@ -98,7 +117,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   miscellaneous: {
     label: 'Miscellaneous',
     category: 'miscellaneous',
-    description: 'Side income, private annuities, and other 雑所得, net of necessary expenses.',
     chipLabel: 'MISCELLANEOUS',
     amountLabel: 'Annual Net Income',
     amountHelperText: 'Income minus necessary expenses',
@@ -106,8 +124,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   publicPension: {
     label: 'Public Pension',
     category: 'publicPension',
-    description:
-      '国民年金, 厚生年金, 共済年金, and DB/DC plan annuities such as iDeCo, gross before withholding.',
     chipLabel: 'PENSION',
     amountLabel: 'Annual Gross Pension Income',
     amountHelperText:
@@ -116,7 +132,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   listedCapitalGains: {
     label: 'Listed Share Capital Gains',
     category: 'investment',
-    description: 'Net gain or loss for the year on 上場株式等 in a 特定口座（源泉徴収あり）.',
     chipLabel: 'CAPITAL GAINS',
     amountLabel: 'Annual Net Capital Gains',
     amountHelperText:
@@ -125,7 +140,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   listedDividends: {
     label: 'Listed Share Dividends',
     category: 'investment',
-    description: '上場株式等の配当等 and 公募株式投資信託の分配金, gross before withholding.',
     chipLabel: 'DIVIDENDS',
     amountLabel: 'Annual Gross Dividends',
     amountHelperText:
@@ -134,7 +148,6 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   depositInterest: {
     label: 'Deposit Interest',
     category: 'investment',
-    description: '預貯金の利子, taxed at source at 20.315% and never reported on a return.',
     chipLabel: 'INTEREST',
     amountLabel: 'Annual Gross Interest',
     amountHelperText:

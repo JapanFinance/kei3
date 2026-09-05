@@ -836,11 +836,9 @@ describe('Commuting Allowance Integration', () => {
     // 1. Open Income Details Modal
     await user.click(screen.getByRole('button', { name: /edit income/i }));
 
-    // 2. Click Add Income
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    // 3. Choose Commuting Allowance
-    await user.click(screen.getByRole('button', { name: /^Commuting Allowance/ }));
+    // 2. Open the employment-income type menu and choose Commuting Allowance
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /commuting allowance/i }));
 
     // 4. Enter Amount
     const amountInput = screen.getByRole('textbox', { name: /allowance amount/i });

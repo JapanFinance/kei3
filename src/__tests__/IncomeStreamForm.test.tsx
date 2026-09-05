@@ -29,18 +29,11 @@ describe('IncomeStreamForm', () => {
     expect(frequencySelect).toHaveTextContent('1 Month');
   });
 
-  it('names the chosen type in the heading and offers Change type only while adding', () => {
-    const onChangeType = vi.fn();
+  it('names the type in the heading for adding and for editing', () => {
     const { rerender } = render(
-      <IncomeStreamForm
-        type="bonus"
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-        onChangeType={onChangeType}
-      />,
+      <IncomeStreamForm type="bonus" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
     expect(screen.getByRole('heading', { name: 'Add Bonus' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /change type/i })).toBeInTheDocument();
 
     rerender(
       <IncomeStreamForm
@@ -51,22 +44,6 @@ describe('IncomeStreamForm', () => {
       />,
     );
     expect(screen.getByRole('heading', { name: 'Edit Bonus' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /change type/i })).not.toBeInTheDocument();
-  });
-
-  it('calls onChangeType from the Change type button', async () => {
-    const user = userEvent.setup();
-    const onChangeType = vi.fn();
-    render(
-      <IncomeStreamForm
-        type="salary"
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-        onChangeType={onChangeType}
-      />,
-    );
-    await user.click(screen.getByRole('button', { name: /change type/i }));
-    expect(onChangeType).toHaveBeenCalledTimes(1);
   });
 
   it('accepts a negative amount for listed capital gains (a loss)', async () => {

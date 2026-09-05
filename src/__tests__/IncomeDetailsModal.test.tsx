@@ -23,11 +23,8 @@ describe('IncomeDetailsModal - Business Income', () => {
       />,
     );
 
-    // 1. Click Add Income
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    // 2. Choose the "Business" type
-    await user.click(screen.getByRole('button', { name: /^Business/ }));
+    // 1. Add from the Business Income section
+    await user.click(screen.getByRole('button', { name: /add business income/i }));
 
     // 3. Verify Blue-Filer Deduction input and text appears
     const deductionSelect = screen.getByRole('combobox', { name: /blue-filer special deduction/i });
@@ -65,7 +62,6 @@ describe('IncomeDetailsModal - Business Income', () => {
   });
 
   it('disables Business option if a business stream already exists', async () => {
-    const user = userEvent.setup();
     const handleStreamsChange = vi.fn();
     const streams: IncomeStream[] = [
       {
@@ -85,13 +81,9 @@ describe('IncomeDetailsModal - Business Income', () => {
       />,
     );
 
-    // 1. Click Add Income
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    // 2. Verify the Business entry is disabled, with the reason
-    const businessOption = screen.getByRole('button', { name: /^Business/ });
-    expect(businessOption).toHaveAttribute('aria-disabled', 'true');
-    expect(businessOption).toHaveTextContent(/Already added/);
+    // The Business Income section has its one entry, so it offers no add button
+    expect(screen.queryByRole('button', { name: /add business income/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add employment income/i })).toBeInTheDocument();
   });
 
   it('displays Blue-filer Deduction in the list', () => {
@@ -189,7 +181,7 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     );
 
     // Section title "Employment Income (給与所得)" should be present
-    expect(screen.getByText(/Employment Income/i)).toBeInTheDocument();
+    expect(screen.getByText('Employment Income (給与所得)')).toBeInTheDocument();
 
     // Separate "Commuting Allowance" section title should NOT be present
     expect(screen.queryByText('Commuting Allowance (通勤手当)')).not.toBeInTheDocument();
@@ -217,11 +209,9 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
       />,
     );
 
-    // Click Add Income
-    await user.click(screen.getByText(/Add Income\/Benefit/i));
-
-    // Choose Commuting Allowance
-    await user.click(screen.getByRole('button', { name: /^Commuting Allowance/ }));
+    // Choose Commuting Allowance from the employment-income type menu
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /commuting allowance/i }));
 
     // Select Frequency: Monthly
     const frequencySelect = screen.getByLabelText(/Frequency/i);
@@ -267,12 +257,11 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
       />,
     );
 
-    // Click Add Income
-    await user.click(screen.getByText(/Add Income\/Benefit/i));
-
-    // Check that the Commuting Allowance entry is disabled
-    const option = screen.getByRole('button', { name: /^Commuting Allowance/ });
+    // The Commuting Allowance entry of the employment-income type menu is disabled
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    const option = screen.getByRole('menuitem', { name: /commuting allowance/i });
     expect(option).toHaveAttribute('aria-disabled', 'true');
+    expect(option).toHaveTextContent(/Already added/);
   });
 });
 
@@ -298,9 +287,8 @@ describe('IncomeDetailsModal - Stock Compensation', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    const stockOption = screen.getByRole('button', { name: /^Stock-Based Compensation/ });
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    const stockOption = screen.getByRole('menuitem', { name: /stock-based compensation/i });
     expect(stockOption).not.toHaveAttribute('aria-disabled', 'true');
 
     await user.click(stockOption);
@@ -336,9 +324,7 @@ describe('IncomeDetailsModal - Public Pension', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    await user.click(screen.getByRole('button', { name: /^Public Pension/ }));
+    await user.click(screen.getByRole('button', { name: /add public pension/i }));
 
     // The gross-amount guidance and non-taxable pension warning are shown
     expect(screen.getByText(/What Counts as Public Pension/i)).toBeInTheDocument();
@@ -384,7 +370,6 @@ describe('IncomeDetailsModal - Public Pension', () => {
   });
 
   it('keeps the Public Pension option enabled when a pension stream already exists', async () => {
-    const user = userEvent.setup();
     const streams: IncomeStream[] = [{ id: 'p1', type: 'publicPension', amount: 1_800_000 }];
 
     render(
@@ -396,10 +381,7 @@ describe('IncomeDetailsModal - Public Pension', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    const pensionOption = screen.getByRole('button', { name: /^Public Pension/ });
-    expect(pensionOption).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /add public pension/i })).toBeEnabled();
   });
 
   it('shows the deduction and net alongside the group subtotal, over the combined gross', () => {
@@ -472,8 +454,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-    await user.click(screen.getByRole('button', { name: /^Listed Share Capital Gains/ }));
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /listed share capital gains/i }));
 
     const amountInput = screen.getByRole('textbox', { name: /annual net capital gains/i });
     await user.clear(amountInput);
@@ -550,7 +532,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(screen.getByText(/Net Investment Income: ¥956,220/)).toBeInTheDocument();
   });
 
-  it('omits the section when no investment streams are present', () => {
+  it('shows an empty investment section with no subtotal when no investment streams are present', () => {
     render(
       <IncomeDetailsModal
         open={true}
@@ -560,28 +542,28 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    expect(screen.queryByText(/Investment Income/)).not.toBeInTheDocument();
+    expect(screen.getByText('Investment Income (配当・譲渡・利子)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add investment income/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Withheld at Source/)).not.toBeInTheDocument();
     expect(screen.queryByText('Investment: ¥0')).not.toBeInTheDocument();
   });
 });
 
-describe('IncomeDetailsModal - Type chooser', () => {
+describe('IncomeDetailsModal - Adding from each section', () => {
   const salary: IncomeStream = { id: 's1', type: 'salary', amount: 5000000, frequency: 'annual' };
 
-  const renderModal = () =>
+  const renderModal = (streams: IncomeStream[] = [salary]) =>
     render(
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[salary]}
+        streams={streams}
         onStreamsChange={vi.fn()}
       />,
     );
 
-  it('lists every income classification with a description per type', async () => {
-    const user = userEvent.setup();
-    renderModal();
-    await user.click(screen.getByRole('button', { name: /add income/i }));
+  it('shows every income classification with its own add button, even when empty', () => {
+    renderModal([]);
 
     for (const heading of [
       'Employment Income (給与所得)',
@@ -592,35 +574,42 @@ describe('IncomeDetailsModal - Type chooser', () => {
     ]) {
       expect(screen.getByText(heading)).toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: /^Salary/ })).toHaveTextContent(
-      /Regular wages from an employer/,
-    );
-    expect(screen.getByRole('button', { name: /^Deposit Interest/ })).toHaveTextContent(
-      /預貯金の利子/,
-    );
+    for (const label of [
+      /add employment income/i,
+      /add business income/i,
+      /add miscellaneous income/i,
+      /add public pension/i,
+      /add investment income/i,
+    ]) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/Subtotal:/)).not.toBeInTheDocument();
   });
 
-  it('returns to the list from Cancel', async () => {
+  it('lists the types of a multi-type section in a menu and opens the form for the chosen one', async () => {
     const user = userEvent.setup();
     renderModal();
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
 
-    expect(screen.getByRole('button', { name: /add income/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Salary/ })).not.toBeInTheDocument();
-  });
+    const menu = screen.getByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map(item => item.textContent),
+    ).toEqual(['Salary', 'Bonus', 'Commuting Allowance', 'Stock-Based Compensation']);
 
-  it('opens the form for the chosen type and returns to the chooser from Change type', async () => {
-    const user = userEvent.setup();
-    renderModal();
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-    await user.click(screen.getByRole('button', { name: /^Bonus/ }));
-
+    await user.click(within(menu).getByRole('menuitem', { name: /bonus/i }));
     expect(screen.getByRole('heading', { name: 'Add Bonus' })).toBeInTheDocument();
-    expect(screen.getAllByText('Month Paid').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
 
-    await user.click(screen.getByRole('button', { name: /change type/i }));
-    expect(screen.getByRole('button', { name: /^Bonus/ })).toBeInTheDocument();
+  it('opens the form directly for a single-type section', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /add miscellaneous income/i }));
+
+    expect(screen.getByRole('heading', { name: 'Add Miscellaneous' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /annual net income/i })).toBeInTheDocument();
   });
 
   it('keeps the type fixed while editing', async () => {
@@ -629,22 +618,16 @@ describe('IncomeDetailsModal - Type chooser', () => {
     await user.click(screen.getByRole('button', { name: /edit income/i }));
 
     expect(screen.getByRole('heading', { name: 'Edit Salary' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /change type/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: /income\/benefit type/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('reopens on the list after closing part-way through an add', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
-      <IncomeDetailsModal
-        open={true}
-        onClose={() => {}}
-        streams={[salary]}
-        onStreamsChange={vi.fn()}
-      />,
-    );
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-    await user.click(screen.getByRole('button', { name: /^Bonus/ }));
-    await user.click(screen.getByRole('textbox', { name: /gross income/i }));
+    const { rerender } = renderModal();
+    await user.click(screen.getByRole('button', { name: /add public pension/i }));
+    await user.click(screen.getByRole('textbox', { name: /annual gross pension income/i }));
     await user.keyboard('{Escape}');
 
     rerender(
@@ -655,6 +638,6 @@ describe('IncomeDetailsModal - Type chooser', () => {
         onStreamsChange={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /add income/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add public pension/i })).toBeInTheDocument();
   });
 });

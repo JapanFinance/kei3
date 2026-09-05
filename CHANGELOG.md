@@ -6,7 +6,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Updated
 
-- Adding income in the Advanced income mode now starts from a list of income types grouped by income classification (所得区分), with a one-line description of each type, instead of a form that opens on Salary with a type dropdown. Types that allow only one entry (Business, Commuting Allowance) are shown as already added rather than hidden. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
+- The Advanced income mode's income list now shows every income classification (所得区分) as its own section, each with an add button: sections with one income type open its form directly, and the employment and investment sections offer a menu of their types. This replaces the single Add Income/Benefit button and the type dropdown at the top of the form. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
 
 ## 2026-09-03
 

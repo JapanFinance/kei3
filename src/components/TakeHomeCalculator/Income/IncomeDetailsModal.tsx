@@ -14,6 +14,9 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
@@ -34,11 +37,12 @@ import {
 import {
   INCOME_CATEGORIES,
   INCOME_STREAM_CATALOG,
+  incomeStreamTypesInCategory,
+  isIncomeStreamTypeAtLimit,
   type IncomeCategory,
   type IncomeCategoryKey,
 } from './incomeStreamCatalog';
 import { IncomeStreamForm } from './IncomeStreamForm';
-import { IncomeStreamTypeChooser } from './IncomeStreamTypeChooser';
 
 interface IncomeDetailsModalProps {
   open: boolean;
@@ -63,9 +67,10 @@ interface IncomeDetailsModalProps {
 
 type ModalView =
   | { kind: 'list' }
-  | { kind: 'choose' }
   | { kind: 'add'; type: IncomeStreamType }
   | { kind: 'edit'; stream: IncomeStream };
+
+const addButtonId = (category: IncomeCategoryKey) => `add-${category}-income`;
 
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   open,
@@ -79,6 +84,16 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [view, setView] = useState<ModalView>({ kind: 'list' });
   const showList = () => setView({ kind: 'list' });
+  // The open type menu of a category that offers more than one type, and the button it hangs from.
+  const [addMenu, setAddMenu] = useState<{
+    category: IncomeCategoryKey;
+    anchor: HTMLElement;
+  } | null>(null);
+
+  const startAdding = (type: IncomeStreamType) => {
+    setAddMenu(null);
+    setView({ kind: 'add', type });
+  };
 
   const handleSaveStream = (stream: IncomeStream) => {
     if (view.kind === 'edit') {
@@ -189,9 +204,33 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     investment: investmentSubtotalFooter,
   };
 
+  const renderAddButton = (category: IncomeCategory) => {
+    const types = incomeStreamTypesInCategory(category.key);
+    if (types.every(type => isIncomeStreamTypeAtLimit(type, streams))) return null;
+    const singleType = types.length === 1 ? types[0] : undefined;
+    const hasMenu = singleType === undefined;
+
+    return (
+      <Button
+        id={addButtonId(category.key)}
+        size="small"
+        startIcon={<AddIcon />}
+        aria-haspopup={hasMenu ? 'menu' : undefined}
+        aria-expanded={hasMenu ? addMenu?.category === category.key : undefined}
+        onClick={e =>
+          singleType === undefined
+            ? setAddMenu({ category: category.key, anchor: e.currentTarget })
+            : startAdding(singleType)
+        }
+        sx={{ alignSelf: 'flex-start' }}
+      >
+        {category.addLabel}
+      </Button>
+    );
+  };
+
   const renderStreamGroup = (category: IncomeCategory) => {
     const groupStreams = streamsInCategory(category.key);
-    if (groupStreams.length === 0) return null;
 
     return (
       <Box key={category.key} sx={{ mb: 3 }}>
@@ -281,24 +320,27 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               </CardContent>
             </Card>
           ))}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              gap: 0.25,
-              mt: 1,
-              mr: 1,
-            }}
-          >
-            <Chip
-              label={`Subtotal: ${formatJPY(subtotals.byCategory[category.key])}`}
-              size="small"
-              color={category.chipColor}
-              variant="outlined"
-            />
-            {subtotalFooters[category.key]}
-          </Box>
+          {groupStreams.length > 0 && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 0.25,
+                mt: 1,
+                mr: 1,
+              }}
+            >
+              <Chip
+                label={`Subtotal: ${formatJPY(subtotals.byCategory[category.key])}`}
+                size="small"
+                color={category.chipColor}
+                variant="outlined"
+              />
+              {subtotalFooters[category.key]}
+            </Box>
+          )}
+          {renderAddButton(category)}
         </Stack>
       </Box>
     );
@@ -325,18 +367,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         </Box>
       </DialogTitle>
       <DialogContent dividers>
-        {view.kind === 'choose' ? (
-          <IncomeStreamTypeChooser
-            streams={streams}
-            onSelect={type => setView({ kind: 'add', type })}
-          />
-        ) : view.kind === 'add' ? (
-          <IncomeStreamForm
-            type={view.type}
-            onSave={handleSaveStream}
-            onCancel={showList}
-            onChangeType={() => setView({ kind: 'choose' })}
-          />
+        {view.kind === 'add' ? (
+          <IncomeStreamForm type={view.type} onSave={handleSaveStream} onCancel={showList} />
         ) : view.kind === 'edit' ? (
           <IncomeStreamForm
             key={view.stream.id}
@@ -346,32 +378,35 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             onCancel={showList}
           />
         ) : (
-          <Stack spacing={0}>
-            {streams.length === 0 && (
-              <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                No income added yet.
-              </Typography>
-            )}
-
-            {INCOME_CATEGORIES.map(renderStreamGroup)}
-
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => setView({ kind: 'choose' })}
-              fullWidth
-              sx={{
-                borderStyle: 'dashed',
-                borderColor: 'divider',
-                py: 1.5,
-                color: 'text.secondary',
-                mt: 2,
-              }}
-            >
-              Add Income/Benefit
-            </Button>
-          </Stack>
+          <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>
         )}
+        <Menu
+          open={addMenu !== null}
+          anchorEl={addMenu?.anchor}
+          onClose={() => setAddMenu(null)}
+          slotProps={{
+            list: { 'aria-labelledby': addMenu ? addButtonId(addMenu.category) : undefined },
+          }}
+        >
+          {addMenu &&
+            incomeStreamTypesInCategory(addMenu.category).map(type => {
+              const atLimit = isIncomeStreamTypeAtLimit(type, streams);
+              return (
+                <MenuItem
+                  key={type}
+                  disabled={atLimit}
+                  onClick={() => startAdding(type)}
+                  sx={{ '&.Mui-disabled': { opacity: 1, color: 'text.disabled' } }}
+                >
+                  <ListItemText
+                    primary={INCOME_STREAM_CATALOG[type].label}
+                    secondary={atLimit ? 'Already added' : undefined}
+                    slotProps={{ secondary: { color: 'inherit' } }}
+                  />
+                </MenuItem>
+              );
+            })}
+        </Menu>
       </DialogContent>
       <DialogActions
         sx={{
@@ -389,7 +424,6 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             Close
           </Button>
         )}
-        {view.kind === 'choose' && <Button onClick={showList}>Cancel</Button>}
       </DialogActions>
     </Dialog>
   );
