@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { IncomeStreamForm } from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
@@ -16,37 +16,63 @@ describe('IncomeStreamForm', () => {
   });
 
   it('should default frequency to Annual for Salary', () => {
-    render(<IncomeStreamForm onSave={mockOnSave} onCancel={mockOnCancel} />);
-    // Defaults to Salary
+    render(<IncomeStreamForm type="salary" onSave={mockOnSave} onCancel={mockOnCancel} />);
     const frequencySelect = screen.getByRole('combobox', { name: /frequency/i });
     expect(frequencySelect).toHaveTextContent('Annual');
   });
 
-  it('should default frequency to Monthly when switching to Commuting Allowance', async () => {
-    const user = userEvent.setup();
-    render(<IncomeStreamForm onSave={mockOnSave} onCancel={mockOnCancel} />);
-
-    // Switch to Commuting Allowance
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /commuting allowance/i }));
-
-    // Check frequency
+  it('should default frequency to Monthly for Commuting Allowance', () => {
+    render(
+      <IncomeStreamForm type="commutingAllowance" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
     const frequencySelect = screen.getByRole('combobox', { name: /frequency/i });
     expect(frequencySelect).toHaveTextContent('1 Month');
   });
 
+  it('names the chosen type in the heading and offers Change type only while adding', () => {
+    const onChangeType = vi.fn();
+    const { rerender } = render(
+      <IncomeStreamForm
+        type="bonus"
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        onChangeType={onChangeType}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Add Bonus' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /change type/i })).toBeInTheDocument();
+
+    rerender(
+      <IncomeStreamForm
+        type="bonus"
+        initialData={{ id: 'b1', type: 'bonus', amount: 300000, month: 5 }}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />,
+    );
+    expect(screen.getByRole('heading', { name: 'Edit Bonus' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /change type/i })).not.toBeInTheDocument();
+  });
+
+  it('calls onChangeType from the Change type button', async () => {
+    const user = userEvent.setup();
+    const onChangeType = vi.fn();
+    render(
+      <IncomeStreamForm
+        type="salary"
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+        onChangeType={onChangeType}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /change type/i }));
+    expect(onChangeType).toHaveBeenCalledTimes(1);
+  });
+
   it('accepts a negative amount for listed capital gains (a loss)', async () => {
     const user = userEvent.setup();
-    render(<IncomeStreamForm onSave={mockOnSave} onCancel={mockOnCancel} />);
-
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    await user.click(
-      within(screen.getByRole('listbox')).getByRole('option', {
-        name: /listed share capital gains/i,
-      }),
+    render(
+      <IncomeStreamForm type="listedCapitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
 
     const amountInput = screen.getByRole('textbox', { name: /annual net capital gains/i });
@@ -61,15 +87,7 @@ describe('IncomeStreamForm', () => {
 
   it('rejects a negative amount for listed dividends', async () => {
     const user = userEvent.setup();
-    render(<IncomeStreamForm onSave={mockOnSave} onCancel={mockOnCancel} />);
-
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    await user.click(
-      within(screen.getByRole('listbox')).getByRole('option', {
-        name: /listed share dividends/i,
-      }),
-    );
+    render(<IncomeStreamForm type="listedDividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     const amountInput = screen.getByRole('textbox', { name: /annual gross dividends/i });
     await user.clear(amountInput);
@@ -81,29 +99,15 @@ describe('IncomeStreamForm', () => {
     );
   });
 
-  it('shows the deposit interest withholding rate in the helper text', async () => {
-    const user = userEvent.setup();
-    render(<IncomeStreamForm onSave={mockOnSave} onCancel={mockOnCancel} />);
-
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    await user.click(
-      within(screen.getByRole('listbox')).getByRole('option', { name: /deposit interest/i }),
-    );
+  it('shows the deposit interest withholding rate in the helper text', () => {
+    render(<IncomeStreamForm type="depositInterest" onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     expect(screen.getAllByText(/20\.315%/).length).toBeGreaterThan(0);
   });
 
-  it('shows the listed-share assumptions and NTA sources for capital gains and dividends', async () => {
-    const user = userEvent.setup();
-    render(<IncomeStreamForm onSave={mockOnSave} onCancel={mockOnCancel} />);
-
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    await user.click(
-      within(screen.getByRole('listbox')).getByRole('option', {
-        name: /listed share capital gains/i,
-      }),
+  it('shows the listed-share assumptions and NTA sources for capital gains and dividends', () => {
+    render(
+      <IncomeStreamForm type="listedCapitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
 
     expect(screen.getByText(/Assumptions for Listed-Share Income/i)).toBeInTheDocument();

@@ -26,14 +26,8 @@ describe('IncomeDetailsModal - Business Income', () => {
     // 1. Click Add Income
     await user.click(screen.getByRole('button', { name: /add income/i }));
 
-    // 2. Select "Business" type
-    // Use getByRole 'combobox' for the MUI Select trigger
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-
-    // Select option from the listbox
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /business/i }));
+    // 2. Choose the "Business" type
+    await user.click(screen.getByRole('button', { name: /^Business/ }));
 
     // 3. Verify Blue-Filer Deduction input and text appears
     const deductionSelect = screen.getByRole('combobox', { name: /blue-filer special deduction/i });
@@ -94,15 +88,10 @@ describe('IncomeDetailsModal - Business Income', () => {
     // 1. Click Add Income
     await user.click(screen.getByRole('button', { name: /add income/i }));
 
-    // 2. Open Type Dropdown
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-
-    // 3. Verify Business option is disabled
-    const listbox = screen.getByRole('listbox');
-    const businessOption = within(listbox).getByRole('option', { name: /business/i });
-
+    // 2. Verify the Business entry is disabled, with the reason
+    const businessOption = screen.getByRole('button', { name: /^Business/ });
     expect(businessOption).toHaveAttribute('aria-disabled', 'true');
+    expect(businessOption).toHaveTextContent(/Already added/);
   });
 
   it('displays Blue-filer Deduction in the list', () => {
@@ -231,10 +220,8 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     // Click Add Income
     await user.click(screen.getByText(/Add Income\/Benefit/i));
 
-    // Select Commuting Allowance
-    const typeSelect = screen.getByLabelText(/Income\/Benefit Type/i);
-    await user.click(typeSelect);
-    await user.click(screen.getByRole('option', { name: /Commuting Allowance/i }));
+    // Choose Commuting Allowance
+    await user.click(screen.getByRole('button', { name: /^Commuting Allowance/ }));
 
     // Select Frequency: Monthly
     const frequencySelect = screen.getByLabelText(/Frequency/i);
@@ -283,12 +270,8 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     // Click Add Income
     await user.click(screen.getByText(/Add Income\/Benefit/i));
 
-    // Open Type Select
-    const typeSelect = screen.getByLabelText(/Income\/Benefit Type/i);
-    await user.click(typeSelect);
-
-    // Check if Commuting Allowance option is disabled
-    const option = screen.getByRole('option', { name: /Commuting Allowance/i });
+    // Check that the Commuting Allowance entry is disabled
+    const option = screen.getByRole('button', { name: /^Commuting Allowance/ });
     expect(option).toHaveAttribute('aria-disabled', 'true');
   });
 });
@@ -317,11 +300,7 @@ describe('IncomeDetailsModal - Stock Compensation', () => {
 
     await user.click(screen.getByRole('button', { name: /add income/i }));
 
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-
-    const listbox = screen.getByRole('listbox');
-    const stockOption = within(listbox).getByRole('option', { name: /stock-based compensation/i });
+    const stockOption = screen.getByRole('button', { name: /^Stock-Based Compensation/ });
     expect(stockOption).not.toHaveAttribute('aria-disabled', 'true');
 
     await user.click(stockOption);
@@ -359,10 +338,7 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
     await user.click(screen.getByRole('button', { name: /add income/i }));
 
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /public pension/i }));
+    await user.click(screen.getByRole('button', { name: /^Public Pension/ }));
 
     // The gross-amount guidance and non-taxable pension warning are shown
     expect(screen.getByText(/What Counts as Public Pension/i)).toBeInTheDocument();
@@ -422,10 +398,7 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
     await user.click(screen.getByRole('button', { name: /add income/i }));
 
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    const listbox = screen.getByRole('listbox');
-    const pensionOption = within(listbox).getByRole('option', { name: /public pension/i });
+    const pensionOption = screen.getByRole('button', { name: /^Public Pension/ });
     expect(pensionOption).not.toHaveAttribute('aria-disabled', 'true');
   });
 
@@ -500,13 +473,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /add income/i }));
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    await user.click(
-      within(screen.getByRole('listbox')).getByRole('option', {
-        name: /listed share capital gains/i,
-      }),
-    );
+    await user.click(screen.getByRole('button', { name: /^Listed Share Capital Gains/ }));
 
     const amountInput = screen.getByRole('textbox', { name: /annual net capital gains/i });
     await user.clear(amountInput);
@@ -595,5 +562,99 @@ describe('IncomeDetailsModal - Investment Income', () => {
 
     expect(screen.queryByText(/Investment Income/)).not.toBeInTheDocument();
     expect(screen.queryByText('Investment: ¥0')).not.toBeInTheDocument();
+  });
+});
+
+describe('IncomeDetailsModal - Type chooser', () => {
+  const salary: IncomeStream = { id: 's1', type: 'salary', amount: 5000000, frequency: 'annual' };
+
+  const renderModal = () =>
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[salary]}
+        onStreamsChange={vi.fn()}
+      />,
+    );
+
+  it('lists every income classification with a description per type', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+
+    for (const heading of [
+      'Employment Income (給与所得)',
+      'Business Income (事業所得)',
+      'Miscellaneous Income (雑所得)',
+      'Public Pension Income (公的年金等)',
+      'Investment Income (配当・譲渡・利子)',
+    ]) {
+      expect(screen.getByText(heading)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: /^Salary/ })).toHaveTextContent(
+      /Regular wages from an employer/,
+    );
+    expect(screen.getByRole('button', { name: /^Deposit Interest/ })).toHaveTextContent(
+      /預貯金の利子/,
+    );
+  });
+
+  it('returns to the list from Cancel', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.getByRole('button', { name: /add income/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Salary/ })).not.toBeInTheDocument();
+  });
+
+  it('opens the form for the chosen type and returns to the chooser from Change type', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+    await user.click(screen.getByRole('button', { name: /^Bonus/ }));
+
+    expect(screen.getByRole('heading', { name: 'Add Bonus' })).toBeInTheDocument();
+    expect(screen.getAllByText('Month Paid').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /change type/i }));
+    expect(screen.getByRole('button', { name: /^Bonus/ })).toBeInTheDocument();
+  });
+
+  it('keeps the type fixed while editing', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    expect(screen.getByRole('heading', { name: 'Edit Salary' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /change type/i })).not.toBeInTheDocument();
+  });
+
+  it('reopens on the list after closing part-way through an add', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[salary]}
+        onStreamsChange={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: /add income/i }));
+    await user.click(screen.getByRole('button', { name: /^Bonus/ }));
+    await user.click(screen.getByRole('textbox', { name: /gross income/i }));
+    await user.keyboard('{Escape}');
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[salary]}
+        onStreamsChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /add income/i })).toBeInTheDocument();
   });
 });

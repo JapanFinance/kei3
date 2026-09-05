@@ -839,11 +839,8 @@ describe('Commuting Allowance Integration', () => {
     // 2. Click Add Income
     await user.click(screen.getByRole('button', { name: /add income/i }));
 
-    // 3. Select Commuting Allowance
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /commuting allowance/i }));
+    // 3. Choose Commuting Allowance
+    await user.click(screen.getByRole('button', { name: /^Commuting Allowance/ }));
 
     // 4. Enter Amount
     const amountInput = screen.getByRole('textbox', { name: /allowance amount/i });

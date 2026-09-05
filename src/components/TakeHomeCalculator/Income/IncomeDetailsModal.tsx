@@ -8,7 +8,6 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import type { ChipProps } from '@mui/material/Chip';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -32,20 +31,14 @@ import {
   formatMonthLong,
   getCommutingAllowanceAnnualAmount,
 } from '../../../utils/formatters';
+import {
+  INCOME_CATEGORIES,
+  INCOME_STREAM_CATALOG,
+  type IncomeCategory,
+  type IncomeCategoryKey,
+} from './incomeStreamCatalog';
 import { IncomeStreamForm } from './IncomeStreamForm';
-
-const STREAM_CHIPS: Record<IncomeStreamType, { label: string; color: ChipProps['color'] }> = {
-  salary: { label: 'SALARY', color: 'primary' },
-  bonus: { label: 'BONUS', color: 'primary' },
-  business: { label: 'BUSINESS', color: 'success' },
-  miscellaneous: { label: 'MISCELLANEOUS', color: 'warning' },
-  publicPension: { label: 'PENSION', color: 'secondary' },
-  commutingAllowance: { label: 'COMMUTING', color: 'primary' },
-  stockCompensation: { label: 'STOCK', color: 'primary' },
-  listedCapitalGains: { label: 'CAPITAL GAINS', color: 'info' },
-  listedDividends: { label: 'DIVIDENDS', color: 'info' },
-  depositInterest: { label: 'INTEREST', color: 'info' },
-};
+import { IncomeStreamTypeChooser } from './IncomeStreamTypeChooser';
 
 interface IncomeDetailsModalProps {
   open: boolean;
@@ -68,6 +61,12 @@ interface IncomeDetailsModalProps {
   investmentIncome?: TakeHomeResults['investmentIncome'];
 }
 
+type ModalView =
+  | { kind: 'list' }
+  | { kind: 'choose' }
+  | { kind: 'add'; type: IncomeStreamType }
+  | { kind: 'edit'; stream: IncomeStream };
+
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   open,
   onClose,
@@ -78,17 +77,21 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [editingStream, setEditingStream] = useState<IncomeStream | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [view, setView] = useState<ModalView>({ kind: 'list' });
+  const showList = () => setView({ kind: 'list' });
 
   const handleSaveStream = (stream: IncomeStream) => {
-    if (editingStream) {
+    if (view.kind === 'edit') {
       onStreamsChange(streams.map(s => (s.id === stream.id ? stream : s)));
-      setEditingStream(null);
     } else {
       onStreamsChange([...streams, stream]);
-      setIsAddingNew(false);
     }
+    showList();
+  };
+
+  const handleClose = () => {
+    showList();
+    onClose();
   };
 
   const handleDeleteStream = (id: string) => {
@@ -123,76 +126,34 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     }
   };
 
+  // Commuting allowance sits in the employment group but is a nontaxable benefit, so it is
+  // tracked separately rather than added to that group's subtotal.
   const calculateSubtotals = () => {
-    let employmentIncome = 0;
-    let businessIncome = 0;
-    let miscellaneousIncome = 0;
-    let publicPensionIncome = 0;
+    const byCategory: Record<IncomeCategoryKey, number> = {
+      employment: 0,
+      business: 0,
+      miscellaneous: 0,
+      publicPension: 0,
+      investment: 0,
+    };
     let commutingAllowance = 0;
-    let investmentGrossIncome = 0;
 
     streams.forEach(s => {
+      if (s.type === 'commutingAllowance') {
+        commutingAllowance += getCommutingAllowanceAnnualAmount(s);
+        return;
+      }
       const annualAmount =
         s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
-
-      switch (s.type) {
-        case 'salary':
-        case 'bonus':
-        case 'stockCompensation':
-          employmentIncome += annualAmount;
-          break;
-        case 'business':
-          businessIncome += annualAmount;
-          break;
-        case 'miscellaneous':
-          miscellaneousIncome += annualAmount;
-          break;
-        case 'publicPension':
-          publicPensionIncome += annualAmount;
-          break;
-        case 'commutingAllowance':
-          commutingAllowance += getCommutingAllowanceAnnualAmount(s);
-          break;
-        case 'listedCapitalGains':
-        case 'listedDividends':
-        case 'depositInterest':
-          investmentGrossIncome += annualAmount;
-          break;
-        default: {
-          const unhandled: never = s;
-          throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
-        }
-      }
+      byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualAmount;
     });
 
-    return {
-      employmentIncome,
-      businessIncome,
-      miscellaneousIncome,
-      publicPensionIncome,
-      commutingAllowance,
-      investmentGrossIncome,
-    };
-  };
-
-  const groupStreams = () => {
-    const employment = streams.filter(
-      s =>
-        s.type === 'salary' ||
-        s.type === 'bonus' ||
-        s.type === 'commutingAllowance' ||
-        s.type === 'stockCompensation',
-    );
-    const business = streams.filter(s => s.type === 'business');
-    const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
-    const publicPension = streams.filter(s => s.type === 'publicPension');
-    const investment = streams.filter(isInvestmentIncomeStream);
-
-    return { employment, business, miscellaneous, publicPension, investment };
+    return { byCategory, commutingAllowance };
   };
 
   const subtotals = calculateSubtotals();
-  const groupedStreams = groupStreams();
+  const streamsInCategory = (category: IncomeCategoryKey) =>
+    streams.filter(s => INCOME_STREAM_CATALOG[s.type].category === category);
 
   // The 公的年金等控除 applies to the combined gross of every pension stream, so it belongs on the
   // group subtotal rather than on any one entry.
@@ -201,7 +162,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       <>
         <Typography variant="caption" color="text.secondary">
           Public Pension Deduction (公的年金等控除): -
-          {formatJPY(subtotals.publicPensionIncome - netPublicPensionIncome)}
+          {formatJPY(subtotals.byCategory.publicPension - netPublicPensionIncome)}
         </Typography>
         <Typography variant="caption" color="text.secondary">
           Net Public Pension Income: {formatJPY(netPublicPensionIncome)}
@@ -223,19 +184,19 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </>
     );
 
-  const renderStreamGroup = (
-    title: string,
-    groupStreams: IncomeStream[],
-    subtotal: number,
-    chipColor: 'primary' | 'success' | 'warning' | 'secondary' | 'info',
-    subtotalFooter?: React.ReactNode,
-  ) => {
+  const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
+    publicPension: publicPensionSubtotalFooter,
+    investment: investmentSubtotalFooter,
+  };
+
+  const renderStreamGroup = (category: IncomeCategory) => {
+    const groupStreams = streamsInCategory(category.key);
     if (groupStreams.length === 0) return null;
 
     return (
-      <Box sx={{ mb: 3 }}>
+      <Box key={category.key} sx={{ mb: 3 }}>
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, ml: 0.5 }}>
-          {title}
+          {category.heading}
         </Typography>
         <Stack spacing={1}>
           {groupStreams.map(stream => (
@@ -253,9 +214,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
-                      label={STREAM_CHIPS[stream.type].label}
+                      label={INCOME_STREAM_CATALOG[stream.type].chipLabel}
                       size="small"
-                      color={STREAM_CHIPS[stream.type].color}
+                      color={category.chipColor}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
@@ -301,7 +262,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 </Box>
                 <Box>
                   <IconButton
-                    onClick={() => setEditingStream(stream)}
+                    onClick={() => setView({ kind: 'edit', stream })}
                     color="primary"
                     size="small"
                     aria-label="edit income"
@@ -331,12 +292,12 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             }}
           >
             <Chip
-              label={`Subtotal: ${formatJPY(subtotal)}`}
+              label={`Subtotal: ${formatJPY(subtotals.byCategory[category.key])}`}
               size="small"
-              color={chipColor}
+              color={category.chipColor}
               variant="outlined"
             />
-            {subtotalFooter}
+            {subtotalFooters[category.key]}
           </Box>
         </Stack>
       </Box>
@@ -344,7 +305,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Typography variant="h6">Income/Benefit Details</Typography>
@@ -355,30 +316,34 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               variant="outlined"
               sx={{ fontWeight: 'bold' }}
             />
-            {subtotals.investmentGrossIncome !== 0 && (
+            {subtotals.byCategory.investment !== 0 && (
               <Typography variant="caption" color="text.secondary">
-                Investment: {formatJPY(subtotals.investmentGrossIncome)}
+                Investment: {formatJPY(subtotals.byCategory.investment)}
               </Typography>
             )}
           </Box>
         </Box>
       </DialogTitle>
       <DialogContent dividers>
-        {isAddingNew ? (
-          <IncomeStreamForm
-            onSave={handleSaveStream}
-            onCancel={() => setIsAddingNew(false)}
-            disabledTypes={[
-              ...(streams.some(s => s.type === 'business') ? ['business'] : []),
-              ...(streams.some(s => s.type === 'commutingAllowance') ? ['commutingAllowance'] : []),
-            ]}
+        {view.kind === 'choose' ? (
+          <IncomeStreamTypeChooser
+            streams={streams}
+            onSelect={type => setView({ kind: 'add', type })}
           />
-        ) : editingStream ? (
+        ) : view.kind === 'add' ? (
           <IncomeStreamForm
-            key={editingStream.id}
-            initialData={editingStream}
+            type={view.type}
             onSave={handleSaveStream}
-            onCancel={() => setEditingStream(null)}
+            onCancel={showList}
+            onChangeType={() => setView({ kind: 'choose' })}
+          />
+        ) : view.kind === 'edit' ? (
+          <IncomeStreamForm
+            key={view.stream.id}
+            type={view.stream.type}
+            initialData={view.stream}
+            onSave={handleSaveStream}
+            onCancel={showList}
           />
         ) : (
           <Stack spacing={0}>
@@ -388,47 +353,12 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               </Typography>
             )}
 
-            {renderStreamGroup(
-              'Employment Income (給与所得)',
-              groupedStreams.employment,
-              subtotals.employmentIncome,
-              'primary',
-            )}
-
-            {renderStreamGroup(
-              'Business Income (事業所得)',
-              groupedStreams.business,
-              subtotals.businessIncome,
-              'success',
-            )}
-
-            {renderStreamGroup(
-              'Miscellaneous Income (雑所得)',
-              groupedStreams.miscellaneous,
-              subtotals.miscellaneousIncome,
-              'warning',
-            )}
-
-            {renderStreamGroup(
-              'Public Pension Income (公的年金等)',
-              groupedStreams.publicPension,
-              subtotals.publicPensionIncome,
-              'secondary',
-              publicPensionSubtotalFooter,
-            )}
-
-            {renderStreamGroup(
-              'Investment Income (配当・譲渡・利子)',
-              groupedStreams.investment,
-              subtotals.investmentGrossIncome,
-              'info',
-              investmentSubtotalFooter,
-            )}
+            {INCOME_CATEGORIES.map(renderStreamGroup)}
 
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
-              onClick={() => setIsAddingNew(true)}
+              onClick={() => setView({ kind: 'choose' })}
               fullWidth
               sx={{
                 borderStyle: 'dashed',
@@ -454,11 +384,12 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           backgroundColor: 'background.paper',
         }}
       >
-        {!(isAddingNew || editingStream) && (
-          <Button onClick={onClose} variant="contained">
+        {view.kind === 'list' && (
+          <Button onClick={handleClose} variant="contained">
             Close
           </Button>
         )}
+        {view.kind === 'choose' && <Button onClick={showList}>Cancel</Button>}
       </DialogActions>
     </Dialog>
   );
