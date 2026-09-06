@@ -404,6 +404,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
 
           <SpinnerNumberField
+            inputProps={{ autoFocus: true }}
             label={info.amountLabel}
             value={amount}
             onChange={val => setAmount(val)}
@@ -412,13 +413,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             error={!!error}
           />
           {type === 'salary' && frequency === 'monthly' && amount > 0 && (
-            <Typography variant="body2" color="text.secondary" align="right" sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="textSecondary" align="right" sx={{ mt: 0.5 }}>
               Annual: {formatJPY(amount * 12)}
             </Typography>
           )}
           {type === 'commutingAllowance' && amount > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 0.5 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 Monthly:{' '}
                 {formatJPY(
                   frequency === 'monthly'
@@ -430,7 +431,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                         : amount / 12,
                 )}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="textSecondary">
                 Annual:{' '}
                 {formatJPY(
                   frequency === 'monthly'
@@ -500,7 +501,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   </Typography>
                   <Typography
                     variant="caption"
-                    color="text.secondary"
+                    color="textSecondary"
                     sx={{ mt: 1, display: 'block' }}
                   >
                     Example conversion: $15,000 × 150 JPY/USD = ¥2,250,000.

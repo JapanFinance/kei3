@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import AddIcon from '@mui/icons-material/Add';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Box from '@mui/material/Box';
@@ -21,7 +22,7 @@ import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import {
@@ -70,7 +71,22 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [view, setView] = useState<ModalView>({ kind: 'list' });
-  const showList = () => setView({ kind: 'list' });
+  // The section whose add button should take focus when the list comes back.
+  const returnFocusTo = useRef<IncomeCategoryKey | null>(null);
+
+  const showList = () => {
+    if (view.kind !== 'list') {
+      const type = view.kind === 'add' ? view.type : view.stream.type;
+      returnFocusTo.current = INCOME_STREAM_CATALOG[type].category;
+    }
+    setView({ kind: 'list' });
+  };
+
+  useEffect(() => {
+    if (view.kind !== 'list' || returnFocusTo.current === null) return;
+    document.getElementById(addButtonId(returnFocusTo.current))?.focus();
+    returnFocusTo.current = null;
+  }, [view.kind]);
   // The open type menu of a category that offers more than one type, and the button it hangs from.
   const [addMenu, setAddMenu] = useState<{
     category: IncomeCategoryKey;
@@ -161,11 +177,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const publicPensionSubtotalFooter =
     netPublicPensionIncome === undefined ? null : (
       <>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           Public Pension Deduction (公的年金等控除): -
           {formatJPY(subtotals.byCategory.publicPension - netPublicPensionIncome)}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           Net Public Pension Income: {formatJPY(netPublicPensionIncome)}
         </Typography>
       </>
@@ -184,8 +200,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     return (
       <Button
         id={addButtonId(category.key)}
-        size="small"
+        size={isMobile ? 'medium' : 'small'}
         startIcon={<AddIcon />}
+        endIcon={hasMenu ? <ArrowDropDownIcon /> : undefined}
+        aria-label={category.addLabel}
         aria-haspopup={hasMenu ? 'menu' : undefined}
         aria-expanded={hasMenu ? addMenu?.category === category.key : undefined}
         onClick={e =>
@@ -193,9 +211,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             ? setAddMenu({ category: category.key, anchor: e.currentTarget })
             : startAdding(singleType)
         }
-        sx={{ alignSelf: 'flex-start' }}
+        sx={{ flexShrink: 0, my: -0.5 }}
       >
-        {category.addLabel}
+        Add
       </Button>
     );
   };
@@ -205,9 +223,23 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
 
     return (
       <Box key={category.key} sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, ml: 0.5 }}>
-          {category.heading}
-        </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 1,
+            mb: 1,
+            pb: 0.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600 }}>
+            {category.heading}
+          </Typography>
+          {renderAddButton(category)}
+        </Box>
         <Stack spacing={1}>
           {groupStreams.map(stream => (
             <Card key={stream.id} variant="outlined">
@@ -229,43 +261,28 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       color={category.chipColor}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                       {formatJPY(stream.amount)}
                     </Typography>
                     {getStreamDescription(stream) && (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="textSecondary">
                         {getStreamDescription(stream)}
                       </Typography>
                     )}
                   </Box>
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      align="right"
-                      sx={{ display: 'block' }}
-                    >
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
                       (Annual: {formatJPY(stream.amount * 12)})
                     </Typography>
                   )}
                   {stream.type === 'business' && !!stream.blueFilerDeduction && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      align="right"
-                      sx={{ display: 'block' }}
-                    >
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
                       (Blue-filer Deduction: -
                       {formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
                     </Typography>
                   )}
                   {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      align="right"
-                      sx={{ display: 'block' }}
-                    >
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
                       (Annual: {formatJPY(getCommutingAllowanceAnnualAmount(stream))})
                     </Typography>
                   )}
@@ -274,7 +291,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   <IconButton
                     onClick={() => setView({ kind: 'edit', stream })}
                     color="primary"
-                    size="small"
+                    size={isMobile ? 'medium' : 'small'}
                     aria-label="edit income"
                   >
                     <EditIcon />
@@ -282,7 +299,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   <IconButton
                     onClick={() => handleDeleteStream(stream.id)}
                     color="error"
-                    size="small"
+                    size={isMobile ? 'medium' : 'small'}
                     aria-label="delete income"
                   >
                     <DeleteIcon />
@@ -311,7 +328,6 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               {subtotalFooters[category.key]}
             </Box>
           )}
-          {renderAddButton(category)}
         </Stack>
       </Box>
     );
@@ -321,7 +337,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Income/Benefit Details</Typography>
+          <Typography variant="h6" component="span">
+            Income/Benefit Details
+          </Typography>
           <Chip
             label={`Total: ${formatJPY(totalIncome)}`}
             color="primary"
@@ -372,23 +390,23 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             })}
         </Menu>
       </DialogContent>
-      <DialogActions
-        sx={{
-          px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
-          py: 2,
-          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
-          position: isMobile ? 'sticky' : 'relative',
-          bottom: 0,
-          zIndex: 1,
-          backgroundColor: 'background.paper',
-        }}
-      >
-        {view.kind === 'list' && (
+      {view.kind === 'list' && (
+        <DialogActions
+          sx={{
+            px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+            py: 2,
+            pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+            position: isMobile ? 'sticky' : 'relative',
+            bottom: 0,
+            zIndex: 1,
+            backgroundColor: 'background.paper',
+          }}
+        >
           <Button onClick={handleClose} variant="contained">
             Close
           </Button>
-        )}
-      </DialogActions>
+        </DialogActions>
+      )}
     </Dialog>
   );
 };
