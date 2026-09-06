@@ -5,7 +5,11 @@ import { describe, it, expect } from 'vitest';
 
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
-import { generateChartData, type ChartCalculationContext } from '../utils/chartConfig';
+import {
+  generateChartData,
+  scaleIncomeStreamsToIncome,
+  type ChartCalculationContext,
+} from '../utils/chartConfig';
 
 const context: ChartCalculationContext = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -114,6 +118,50 @@ describe('generateChartData with public pension income', () => {
     takeHome.forEach((point, i) => {
       const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
       expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
+  });
+});
+
+describe('generateChartData with a commuting allowance', () => {
+  // 100,000円/month is under the 150,000円 non-taxable cap, but scaling it with the swept
+  // income would carry it past the cap and the calculation would reject it.
+  const commutingContext: ChartCalculationContext = {
+    ...context,
+    incomeStreams: [
+      { id: 's', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+      { id: 'c', type: 'commutingAllowance', amount: 100_000, frequency: 'monthly' },
+    ],
+  };
+  const wideRange = { min: 0, max: 10_000_000 };
+
+  it('sweeps past the entered income without scaling the allowance over the cap', () => {
+    expect(() => generateChartData(wideRange, commutingContext)).not.toThrow();
+
+    const points = Array.from({ length: 11 }, (_, i) => i * 1_000_000);
+    points.forEach(income => {
+      const streams = scaleIncomeStreamsToIncome(commutingContext.incomeStreams, income);
+      const allowance = streams.filter(s => s.type === 'commutingAllowance');
+      expect(allowance, `income ${income}`).toEqual([
+        { id: 'c', type: 'commutingAllowance', amount: 100_000, frequency: 'monthly' },
+      ]);
+      expect(streams.find(s => s.type === 'salary')?.amount, `income ${income}`).toBe(income);
+    });
+  });
+
+  it('keeps the allowance out of the per-point breakdown', () => {
+    const { datasets } = generateChartData(wideRange, commutingContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    expect(bars.length).toBeGreaterThan(0);
+
+    bars.forEach(dataset => {
+      const points = dataset.data as (Point & {
+        breakdown?: { label: string; amount: number }[];
+      })[];
+      points.forEach(point => {
+        expect(point.breakdown, `income ${point.x}`).toEqual(
+          point.x > 0 ? [{ label: 'Salary', amount: point.x }] : [],
+        );
+      });
     });
   });
 });
