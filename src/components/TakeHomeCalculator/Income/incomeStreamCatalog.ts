@@ -27,7 +27,7 @@ export const INCOME_CATEGORIES: readonly IncomeCategory[] = [
   {
     key: 'employment',
     heading: 'Employment Income (給与所得)',
-    addLabel: 'Add Employment Income',
+    addLabel: 'Add Employment Income/Benefit',
     chipColor: 'primary',
   },
   {
