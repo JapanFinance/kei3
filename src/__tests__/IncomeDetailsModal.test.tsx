@@ -23,17 +23,8 @@ describe('IncomeDetailsModal - Business Income', () => {
       />,
     );
 
-    // 1. Click Add Income
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    // 2. Select "Business" type
-    // Use getByRole 'combobox' for the MUI Select trigger
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-
-    // Select option from the listbox
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /business/i }));
+    // 1. Add from the Business Income section
+    await user.click(screen.getByRole('button', { name: /add business income/i }));
 
     // 3. Verify Blue-Filer Deduction input and text appears
     const deductionSelect = screen.getByRole('combobox', { name: /blue-filer special deduction/i });
@@ -71,7 +62,6 @@ describe('IncomeDetailsModal - Business Income', () => {
   });
 
   it('disables Business option if a business stream already exists', async () => {
-    const user = userEvent.setup();
     const handleStreamsChange = vi.fn();
     const streams: IncomeStream[] = [
       {
@@ -91,18 +81,9 @@ describe('IncomeDetailsModal - Business Income', () => {
       />,
     );
 
-    // 1. Click Add Income
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    // 2. Open Type Dropdown
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-
-    // 3. Verify Business option is disabled
-    const listbox = screen.getByRole('listbox');
-    const businessOption = within(listbox).getByRole('option', { name: /business/i });
-
-    expect(businessOption).toHaveAttribute('aria-disabled', 'true');
+    // The Business Income section has its one entry, so it offers no add button
+    expect(screen.queryByRole('button', { name: /add business income/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /add employment income/i })).toBeInTheDocument();
   });
 
   it('displays Blue-filer Deduction in the list', () => {
@@ -200,7 +181,7 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     );
 
     // Section title "Employment Income (給与所得)" should be present
-    expect(screen.getByText(/Employment Income/i)).toBeInTheDocument();
+    expect(screen.getByText('Employment Income (給与所得)')).toBeInTheDocument();
 
     // Separate "Commuting Allowance" section title should NOT be present
     expect(screen.queryByText('Commuting Allowance (通勤手当)')).not.toBeInTheDocument();
@@ -228,13 +209,9 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
       />,
     );
 
-    // Click Add Income
-    await user.click(screen.getByText(/Add Income\/Benefit/i));
-
-    // Select Commuting Allowance
-    const typeSelect = screen.getByLabelText(/Income\/Benefit Type/i);
-    await user.click(typeSelect);
-    await user.click(screen.getByRole('option', { name: /Commuting Allowance/i }));
+    // Choose Commuting Allowance from the employment-income type menu
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /commuting allowance/i }));
 
     // Select Frequency: Monthly
     const frequencySelect = screen.getByLabelText(/Frequency/i);
@@ -280,16 +257,11 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
       />,
     );
 
-    // Click Add Income
-    await user.click(screen.getByText(/Add Income\/Benefit/i));
-
-    // Open Type Select
-    const typeSelect = screen.getByLabelText(/Income\/Benefit Type/i);
-    await user.click(typeSelect);
-
-    // Check if Commuting Allowance option is disabled
-    const option = screen.getByRole('option', { name: /Commuting Allowance/i });
+    // The Commuting Allowance entry of the employment-income type menu is disabled
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    const option = screen.getByRole('menuitem', { name: /commuting allowance/i });
     expect(option).toHaveAttribute('aria-disabled', 'true');
+    expect(option).toHaveTextContent(/Already added/);
   });
 });
 
@@ -315,13 +287,8 @@ describe('IncomeDetailsModal - Stock Compensation', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-
-    const listbox = screen.getByRole('listbox');
-    const stockOption = within(listbox).getByRole('option', { name: /stock-based compensation/i });
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    const stockOption = screen.getByRole('menuitem', { name: /stock-based compensation/i });
     expect(stockOption).not.toHaveAttribute('aria-disabled', 'true');
 
     await user.click(stockOption);
@@ -357,12 +324,7 @@ describe('IncomeDetailsModal - Public Pension', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /public pension/i }));
+    await user.click(screen.getByRole('button', { name: /add public pension/i }));
 
     // The gross-amount guidance and non-taxable pension warning are shown
     expect(screen.getByText(/What Counts as Public Pension/i)).toBeInTheDocument();
@@ -408,7 +370,6 @@ describe('IncomeDetailsModal - Public Pension', () => {
   });
 
   it('keeps the Public Pension option enabled when a pension stream already exists', async () => {
-    const user = userEvent.setup();
     const streams: IncomeStream[] = [{ id: 'p1', type: 'publicPension', amount: 1_800_000 }];
 
     render(
@@ -420,13 +381,7 @@ describe('IncomeDetailsModal - Public Pension', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    const listbox = screen.getByRole('listbox');
-    const pensionOption = within(listbox).getByRole('option', { name: /public pension/i });
-    expect(pensionOption).not.toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: /add public pension/i })).toBeEnabled();
   });
 
   it('shows the deduction and net alongside the group subtotal, over the combined gross', () => {
@@ -482,5 +437,96 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
     expect(screen.getByText('Subtotal: ¥2,400,000')).toBeInTheDocument();
     expect(screen.queryByText(/公的年金等控除/)).not.toBeInTheDocument();
+  });
+});
+
+describe('IncomeDetailsModal - Adding from each section', () => {
+  const salary: IncomeStream = { id: 's1', type: 'salary', amount: 5000000, frequency: 'annual' };
+
+  const renderModal = (streams: IncomeStream[] = [salary]) =>
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={vi.fn()}
+      />,
+    );
+
+  it('shows every income classification with its own add button, even when empty', () => {
+    renderModal([]);
+
+    for (const heading of [
+      'Employment Income (給与所得)',
+      'Business Income (事業所得)',
+      'Miscellaneous Income (雑所得)',
+      'Public Pension Income (公的年金等)',
+    ]) {
+      expect(screen.getByText(heading)).toBeInTheDocument();
+    }
+    for (const label of [
+      /add employment income/i,
+      /add business income/i,
+      /add miscellaneous income/i,
+      /add public pension/i,
+    ]) {
+      expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/Subtotal:/)).not.toBeInTheDocument();
+  });
+
+  it('lists the types of a multi-type section in a menu and opens the form for the chosen one', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+
+    const menu = screen.getByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map(item => item.textContent),
+    ).toEqual(['Salary', 'Bonus', 'Commuting Allowance', 'Stock-Based Compensation']);
+
+    await user.click(within(menu).getByRole('menuitem', { name: /bonus/i }));
+    expect(screen.getByRole('heading', { name: 'Add Bonus' })).toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('opens the form directly for a single-type section', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /add miscellaneous income/i }));
+
+    expect(screen.getByRole('heading', { name: 'Add Miscellaneous' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /annual net income/i })).toBeInTheDocument();
+  });
+
+  it('keeps the type fixed while editing', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    expect(screen.getByRole('heading', { name: 'Edit Salary' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: /income\/benefit type/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('reopens on the list after closing part-way through an add', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderModal();
+    await user.click(screen.getByRole('button', { name: /add public pension/i }));
+    await user.click(screen.getByRole('textbox', { name: /annual gross pension income/i }));
+    await user.keyboard('{Escape}');
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[salary]}
+        onStreamsChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /add public pension/i })).toBeInTheDocument();
   });
 });

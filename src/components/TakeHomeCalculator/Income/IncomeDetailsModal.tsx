@@ -2,24 +2,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import AddIcon from '@mui/icons-material/Add';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import type { ChipProps } from '@mui/material/Chip';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import IconButton from '@mui/material/IconButton';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import {
@@ -27,17 +30,15 @@ import {
   formatMonthLong,
   getCommutingAllowanceAnnualAmount,
 } from '../../../utils/formatters';
+import {
+  INCOME_CATEGORIES,
+  INCOME_STREAM_CATALOG,
+  incomeStreamTypesInCategory,
+  isIncomeStreamTypeAtLimit,
+  type IncomeCategory,
+  type IncomeCategoryKey,
+} from './incomeStreamCatalog';
 import { IncomeStreamForm } from './IncomeStreamForm';
-
-const STREAM_CHIPS: Record<IncomeStreamType, { label: string; color: ChipProps['color'] }> = {
-  salary: { label: 'SALARY', color: 'primary' },
-  bonus: { label: 'BONUS', color: 'primary' },
-  business: { label: 'BUSINESS', color: 'success' },
-  miscellaneous: { label: 'MISCELLANEOUS', color: 'warning' },
-  publicPension: { label: 'PENSION', color: 'secondary' },
-  commutingAllowance: { label: 'COMMUTING', color: 'primary' },
-  stockCompensation: { label: 'STOCK', color: 'primary' },
-};
 
 interface IncomeDetailsModalProps {
   open: boolean;
@@ -53,6 +54,13 @@ interface IncomeDetailsModalProps {
   netPublicPensionIncome?: number | undefined;
 }
 
+type ModalView =
+  | { kind: 'list' }
+  | { kind: 'add'; type: IncomeStreamType }
+  | { kind: 'edit'; stream: IncomeStream };
+
+const addButtonId = (category: IncomeCategoryKey) => `add-${category}-income`;
+
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   open,
   onClose,
@@ -62,17 +70,46 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [editingStream, setEditingStream] = useState<IncomeStream | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [view, setView] = useState<ModalView>({ kind: 'list' });
+  // The section whose add button should take focus when the list comes back.
+  const returnFocusTo = useRef<IncomeCategoryKey | null>(null);
+
+  const showList = () => {
+    if (view.kind !== 'list') {
+      const type = view.kind === 'add' ? view.type : view.stream.type;
+      returnFocusTo.current = INCOME_STREAM_CATALOG[type].category;
+    }
+    setView({ kind: 'list' });
+  };
+
+  useEffect(() => {
+    if (view.kind !== 'list' || returnFocusTo.current === null) return;
+    document.getElementById(addButtonId(returnFocusTo.current))?.focus();
+    returnFocusTo.current = null;
+  }, [view.kind]);
+  // The open type menu of a category that offers more than one type, and the button it hangs from.
+  const [addMenu, setAddMenu] = useState<{
+    category: IncomeCategoryKey;
+    anchor: HTMLElement;
+  } | null>(null);
+
+  const startAdding = (type: IncomeStreamType) => {
+    setAddMenu(null);
+    setView({ kind: 'add', type });
+  };
 
   const handleSaveStream = (stream: IncomeStream) => {
-    if (editingStream) {
+    if (view.kind === 'edit') {
       onStreamsChange(streams.map(s => (s.id === stream.id ? stream : s)));
-      setEditingStream(null);
     } else {
       onStreamsChange([...streams, stream]);
-      setIsAddingNew(false);
     }
+    showList();
+  };
+
+  const handleClose = () => {
+    showList();
+    onClose();
   };
 
   const handleDeleteStream = (id: string) => {
@@ -107,98 +144,102 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     }
   };
 
+  // Commuting allowance sits in the employment group but is a nontaxable benefit, so it is
+  // tracked separately rather than added to that group's subtotal.
   const calculateSubtotals = () => {
-    let employmentIncome = 0;
-    let businessIncome = 0;
-    let miscellaneousIncome = 0;
-    let publicPensionIncome = 0;
+    const byCategory: Record<IncomeCategoryKey, number> = {
+      employment: 0,
+      business: 0,
+      miscellaneous: 0,
+      publicPension: 0,
+    };
     let commutingAllowance = 0;
 
     streams.forEach(s => {
+      if (s.type === 'commutingAllowance') {
+        commutingAllowance += getCommutingAllowanceAnnualAmount(s);
+        return;
+      }
       const annualAmount =
         s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
-
-      switch (s.type) {
-        case 'salary':
-        case 'bonus':
-        case 'stockCompensation':
-          employmentIncome += annualAmount;
-          break;
-        case 'business':
-          businessIncome += annualAmount;
-          break;
-        case 'miscellaneous':
-          miscellaneousIncome += annualAmount;
-          break;
-        case 'publicPension':
-          publicPensionIncome += annualAmount;
-          break;
-        case 'commutingAllowance':
-          commutingAllowance += getCommutingAllowanceAnnualAmount(s);
-          break;
-        default: {
-          const unhandled: never = s;
-          throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
-        }
-      }
+      byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualAmount;
     });
 
-    return {
-      employmentIncome,
-      businessIncome,
-      miscellaneousIncome,
-      publicPensionIncome,
-      commutingAllowance,
-    };
-  };
-
-  const groupStreams = () => {
-    const employment = streams.filter(
-      s =>
-        s.type === 'salary' ||
-        s.type === 'bonus' ||
-        s.type === 'commutingAllowance' ||
-        s.type === 'stockCompensation',
-    );
-    const business = streams.filter(s => s.type === 'business');
-    const miscellaneous = streams.filter(s => s.type === 'miscellaneous');
-    const publicPension = streams.filter(s => s.type === 'publicPension');
-
-    return { employment, business, miscellaneous, publicPension };
+    return { byCategory, commutingAllowance };
   };
 
   const subtotals = calculateSubtotals();
-  const groupedStreams = groupStreams();
+  const streamsInCategory = (category: IncomeCategoryKey) =>
+    streams.filter(s => INCOME_STREAM_CATALOG[s.type].category === category);
 
   // The 公的年金等控除 applies to the combined gross of every pension stream, so it belongs on the
   // group subtotal rather than on any one entry.
   const publicPensionSubtotalFooter =
     netPublicPensionIncome === undefined ? null : (
       <>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           Public Pension Deduction (公的年金等控除): -
-          {formatJPY(subtotals.publicPensionIncome - netPublicPensionIncome)}
+          {formatJPY(subtotals.byCategory.publicPension - netPublicPensionIncome)}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="textSecondary">
           Net Public Pension Income: {formatJPY(netPublicPensionIncome)}
         </Typography>
       </>
     );
 
-  const renderStreamGroup = (
-    title: string,
-    groupStreams: IncomeStream[],
-    subtotal: number,
-    chipColor: 'primary' | 'success' | 'warning' | 'secondary',
-    subtotalFooter?: React.ReactNode,
-  ) => {
-    if (groupStreams.length === 0) return null;
+  const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
+    publicPension: publicPensionSubtotalFooter,
+  };
+
+  const renderAddButton = (category: IncomeCategory) => {
+    const types = incomeStreamTypesInCategory(category.key);
+    if (types.every(type => isIncomeStreamTypeAtLimit(type, streams))) return null;
+    const singleType = types.length === 1 ? types[0] : undefined;
+    const hasMenu = singleType === undefined;
 
     return (
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, ml: 0.5 }}>
-          {title}
-        </Typography>
+      <Button
+        id={addButtonId(category.key)}
+        size={isMobile ? 'medium' : 'small'}
+        startIcon={<AddIcon />}
+        endIcon={hasMenu ? <ArrowDropDownIcon /> : undefined}
+        aria-label={category.addLabel}
+        aria-haspopup={hasMenu ? 'menu' : undefined}
+        aria-expanded={hasMenu ? addMenu?.category === category.key : undefined}
+        onClick={e =>
+          singleType === undefined
+            ? setAddMenu({ category: category.key, anchor: e.currentTarget })
+            : startAdding(singleType)
+        }
+        sx={{ flexShrink: 0, my: -0.5 }}
+      >
+        Add
+      </Button>
+    );
+  };
+
+  const renderStreamGroup = (category: IncomeCategory) => {
+    const groupStreams = streamsInCategory(category.key);
+
+    return (
+      <Box key={category.key} sx={{ mb: 3 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 1,
+            mb: 1,
+            pb: 0.5,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600 }}>
+            {category.heading}
+          </Typography>
+          {renderAddButton(category)}
+        </Box>
         <Stack spacing={1}>
           {groupStreams.map(stream => (
             <Card key={stream.id} variant="outlined">
@@ -215,57 +256,42 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 <Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
-                      label={STREAM_CHIPS[stream.type].label}
+                      label={INCOME_STREAM_CATALOG[stream.type].chipLabel}
                       size="small"
-                      color={STREAM_CHIPS[stream.type].color}
+                      color={category.chipColor}
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                    <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
                       {formatJPY(stream.amount)}
                     </Typography>
                     {getStreamDescription(stream) && (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="textSecondary">
                         {getStreamDescription(stream)}
                       </Typography>
                     )}
                   </Box>
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      align="right"
-                      sx={{ display: 'block' }}
-                    >
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
                       (Annual: {formatJPY(stream.amount * 12)})
                     </Typography>
                   )}
                   {stream.type === 'business' && !!stream.blueFilerDeduction && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      align="right"
-                      sx={{ display: 'block' }}
-                    >
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
                       (Blue-filer Deduction: -
                       {formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
                     </Typography>
                   )}
                   {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      align="right"
-                      sx={{ display: 'block' }}
-                    >
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
                       (Annual: {formatJPY(getCommutingAllowanceAnnualAmount(stream))})
                     </Typography>
                   )}
                 </Box>
                 <Box>
                   <IconButton
-                    onClick={() => setEditingStream(stream)}
+                    onClick={() => setView({ kind: 'edit', stream })}
                     color="primary"
-                    size="small"
+                    size={isMobile ? 'medium' : 'small'}
                     aria-label="edit income"
                   >
                     <EditIcon />
@@ -273,7 +299,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   <IconButton
                     onClick={() => handleDeleteStream(stream.id)}
                     color="error"
-                    size="small"
+                    size={isMobile ? 'medium' : 'small'}
                     aria-label="delete income"
                   >
                     <DeleteIcon />
@@ -282,34 +308,38 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               </CardContent>
             </Card>
           ))}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              gap: 0.25,
-              mt: 1,
-              mr: 1,
-            }}
-          >
-            <Chip
-              label={`Subtotal: ${formatJPY(subtotal)}`}
-              size="small"
-              color={chipColor}
-              variant="outlined"
-            />
-            {subtotalFooter}
-          </Box>
+          {groupStreams.length > 0 && (
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 0.25,
+                mt: 1,
+                mr: 1,
+              }}
+            >
+              <Chip
+                label={`Subtotal: ${formatJPY(subtotals.byCategory[category.key])}`}
+                size="small"
+                color={category.chipColor}
+                variant="outlined"
+              />
+              {subtotalFooters[category.key]}
+            </Box>
+          )}
         </Stack>
       </Box>
     );
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Income/Benefit Details</Typography>
+          <Typography variant="h6" component="span">
+            Income/Benefit Details
+          </Typography>
           <Chip
             label={`Total: ${formatJPY(totalIncome)}`}
             color="primary"
@@ -319,94 +349,64 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         </Box>
       </DialogTitle>
       <DialogContent dividers>
-        {isAddingNew ? (
+        {view.kind === 'add' ? (
+          <IncomeStreamForm type={view.type} onSave={handleSaveStream} onCancel={showList} />
+        ) : view.kind === 'edit' ? (
           <IncomeStreamForm
+            key={view.stream.id}
+            type={view.stream.type}
+            initialData={view.stream}
             onSave={handleSaveStream}
-            onCancel={() => setIsAddingNew(false)}
-            disabledTypes={[
-              ...(streams.some(s => s.type === 'business') ? ['business'] : []),
-              ...(streams.some(s => s.type === 'commutingAllowance') ? ['commutingAllowance'] : []),
-            ]}
-          />
-        ) : editingStream ? (
-          <IncomeStreamForm
-            key={editingStream.id}
-            initialData={editingStream}
-            onSave={handleSaveStream}
-            onCancel={() => setEditingStream(null)}
+            onCancel={showList}
           />
         ) : (
-          <Stack spacing={0}>
-            {streams.length === 0 && (
-              <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-                No income added yet.
-              </Typography>
-            )}
-
-            {renderStreamGroup(
-              'Employment Income (給与所得)',
-              groupedStreams.employment,
-              subtotals.employmentIncome,
-              'primary',
-            )}
-
-            {renderStreamGroup(
-              'Business Income (事業所得)',
-              groupedStreams.business,
-              subtotals.businessIncome,
-              'success',
-            )}
-
-            {renderStreamGroup(
-              'Miscellaneous Income (雑所得)',
-              groupedStreams.miscellaneous,
-              subtotals.miscellaneousIncome,
-              'warning',
-            )}
-
-            {renderStreamGroup(
-              'Public Pension Income (公的年金等)',
-              groupedStreams.publicPension,
-              subtotals.publicPensionIncome,
-              'secondary',
-              publicPensionSubtotalFooter,
-            )}
-
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={() => setIsAddingNew(true)}
-              fullWidth
-              sx={{
-                borderStyle: 'dashed',
-                borderColor: 'divider',
-                py: 1.5,
-                color: 'text.secondary',
-                mt: 2,
-              }}
-            >
-              Add Income/Benefit
-            </Button>
-          </Stack>
+          <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>
         )}
+        <Menu
+          open={addMenu !== null}
+          anchorEl={addMenu?.anchor}
+          onClose={() => setAddMenu(null)}
+          slotProps={{
+            list: { 'aria-labelledby': addMenu ? addButtonId(addMenu.category) : undefined },
+          }}
+        >
+          {addMenu &&
+            incomeStreamTypesInCategory(addMenu.category).map(type => {
+              const atLimit = isIncomeStreamTypeAtLimit(type, streams);
+              return (
+                <MenuItem
+                  key={type}
+                  disabled={atLimit}
+                  onClick={() => startAdding(type)}
+                  sx={{ '&.Mui-disabled': { opacity: 1, color: 'text.disabled' } }}
+                >
+                  <ListItemText
+                    primary={INCOME_STREAM_CATALOG[type].label}
+                    secondary={atLimit ? 'Already added' : undefined}
+                    slotProps={{ secondary: { color: 'inherit' } }}
+                  />
+                </MenuItem>
+              );
+            })}
+        </Menu>
       </DialogContent>
-      <DialogActions
-        sx={{
-          px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
-          py: 2,
-          pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
-          position: isMobile ? 'sticky' : 'relative',
-          bottom: 0,
-          zIndex: 1,
-          backgroundColor: 'background.paper',
-        }}
-      >
-        {!(isAddingNew || editingStream) && (
-          <Button onClick={onClose} variant="contained">
+      {view.kind === 'list' && (
+        <DialogActions
+          sx={{
+            px: isMobile ? 'max(16px, env(safe-area-inset-left))' : 3,
+            py: 2,
+            pb: isMobile ? 'max(16px, env(safe-area-inset-bottom))' : 2,
+            position: isMobile ? 'sticky' : 'relative',
+            bottom: 0,
+            zIndex: 1,
+            backgroundColor: 'background.paper',
+          }}
+        >
+          <Button onClick={handleClose} variant="contained">
             Close
           </Button>
-        )}
-      </DialogActions>
+        </DialogActions>
+      )}
     </Dialog>
   );
 };

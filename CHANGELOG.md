@@ -4,6 +4,10 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ## 2026-09-06
 
+### Updated
+
+- The Advanced income mode's income list now shows every income classification (所得区分) as its own section, each with an add button: sections with one income type open its form directly, and the employment section offers a menu of its types (salary, bonus, commuting allowance, stock-based compensation). This replaces the single Add Income/Benefit button and the type dropdown at the top of the form. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
+
 ### Fixed
 
 - Fixed a crash in the Advanced income mode when a commuting allowance (通勤手当) was entered alongside a salary. The take-home chart scales the entered income streams across its whole income range, and it was scaling the commuting allowance along with them, pushing it above the non-taxable limit (¥150,000 per month) at the upper end of the range. The commuting allowance is a fixed non-taxable benefit, so it is now held at the entered amount across the chart, as it already was in the income total.
