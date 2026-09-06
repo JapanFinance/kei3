@@ -32,7 +32,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
         </Typography>
       </Box>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
         The employer also pays an equal amount.
       </Typography>
 
@@ -102,7 +102,7 @@ const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) 
         item => item.standardBonusAmount < Math.floor(item.totalBonusAmount / 1000) * 1000,
       ) && (
         <Box sx={{ mb: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>
               *
             </Box>

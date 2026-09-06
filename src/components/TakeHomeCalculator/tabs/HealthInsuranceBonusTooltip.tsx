@@ -134,7 +134,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
         item => item.standardBonusAmount < Math.floor(item.bonusAmount / 1000) * 1000,
       ) && (
         <Box sx={{ mb: 1.5 }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             <Box component="span" sx={{ color: 'warning.main', mr: 0.5 }}>
               *
             </Box>
@@ -156,7 +156,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
       {/* Source Link */}
       {sourceUrl && (
         <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             <strong>Source:</strong>{' '}
             <a
               href={sourceUrl}

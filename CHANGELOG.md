@@ -10,6 +10,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Fixed
 
+- Restored the muted colour on captions, helper lines and secondary labels throughout the app. MUI v9 no longer resolves a theme colour path given as a component prop, so those elements were rendering at the primary text colour; the colour is now set through `sx`.
 - Fixed a crash in the Advanced income mode when a commuting allowance (通勤手当) was entered alongside a salary. The take-home chart scales the entered income streams across its whole income range, and it was scaling the commuting allowance along with them, pushing it above the non-taxable limit (¥150,000 per month) at the upper end of the range. The commuting allowance is a fixed non-taxable benefit, so it is now held at the entered amount across the chart, as it already was in the income total.
 
 ## 2026-08-30

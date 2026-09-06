@@ -553,15 +553,13 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           >
             <Typography
               variant="subtitle2"
-              color="warning.main"
-              sx={{ fontWeight: 600, fontSize: '0.9rem' }}
+              sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.9rem' }}
             >
               Comparative Data Unavailable
             </Typography>
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}
+              sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.3, mt: 0.5 }}
             >
               Data for other income levels cannot be calculated
               <br />
@@ -606,8 +604,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             />
             <Typography
               variant="body2"
-              color="text.secondary"
               sx={{
+                color: 'text.secondary',
                 fontSize: { xs: '0.97rem', sm: '1rem' },
                 fontWeight: 500,
               }}
@@ -638,8 +636,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
           />
           <Typography
             variant="body2"
-            color="text.secondary"
             sx={{
+              color: 'text.secondary',
               fontSize: { xs: '0.97rem', sm: '1rem' },
               fontWeight: 500,
             }}
@@ -741,8 +739,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         >
           <Typography
             variant="body2"
-            color="text.secondary"
             sx={{
+              color: 'text.secondary',
               fontSize: { xs: '0.92rem', sm: '0.95rem' },
               fontWeight: 500,
             }}

@@ -139,8 +139,8 @@ const ChangelogSection = ({ type, items }: { type: string; items: string[] }) =>
                 <Typography
                   component="span"
                   variant="body2"
-                  color="text.secondary"
                   sx={{
+                    color: 'text.secondary',
                     fontSize: { xs: '0.875rem', sm: '0.875rem' },
                     lineHeight: 1.5,
                   }}
@@ -282,7 +282,7 @@ export default function ChangelogModal({ open, onClose, onViewed }: ChangelogMod
             ))}
 
             {changelog.entries.length === 0 && (
-              <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              <Typography sx={{ color: 'text.secondary', textAlign: 'center', py: 4 }}>
                 No changelog entries found.
               </Typography>
             )}
