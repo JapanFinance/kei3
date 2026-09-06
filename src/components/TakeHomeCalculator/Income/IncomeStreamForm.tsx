@@ -8,6 +8,7 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import FormControl from '@mui/material/FormControl';
 import FormHelperText from '@mui/material/FormHelperText';
 import FormLabel from '@mui/material/FormLabel';
@@ -31,15 +32,18 @@ import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip } from '../../ui/Tooltips';
+import { getIncomeCategory, INCOME_STREAM_CATALOG } from './incomeStreamCatalog';
 
 interface IncomeStreamFormProps {
+  /**
+   * Fixed for the life of the form: chosen before the form opens when adding, or taken from
+   * {@link initialData} when editing.
+   */
+  type: IncomeStreamType;
   initialData?: IncomeStream;
   onSave: (stream: IncomeStream) => void;
   onCancel: () => void;
-  disabledTypes?: string[];
 }
-
-const validSalaryFrequencies = ['monthly', 'annual'];
 
 const guidanceBoxSx = {
   p: 1.5,
@@ -51,17 +55,19 @@ const guidanceBoxSx = {
 };
 
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
+  type,
   initialData,
   onSave,
   onCancel,
-  disabledTypes = [],
 }) => {
-  const [type, setType] = useState<IncomeStreamType>(initialData?.type ?? 'salary');
+  const info = INCOME_STREAM_CATALOG[type];
   const [amount, setAmount] = useState<number>(initialData?.amount ?? 0);
   const [frequency, setFrequency] = useState<'monthly' | '3-months' | '6-months' | 'annual'>(
     initialData?.type === 'salary' || initialData?.type === 'commutingAllowance'
       ? initialData.frequency
-      : 'annual',
+      : type === 'commutingAllowance'
+        ? 'monthly'
+        : 'annual',
   );
   const [month, setMonth] = useState<number>(
     (initialData?.type === 'bonus' && initialData.month) || 0,
@@ -94,108 +100,49 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     const id = initialData?.id ?? Date.now().toString(36) + Math.random().toString(36).substring(2);
     let stream: IncomeStream;
 
-    if (type === 'salary') {
-      stream = { id, type: 'salary', amount, frequency: frequency as 'monthly' | 'annual' };
-    } else if (type === 'bonus') {
-      stream = { id, type: 'bonus', amount, month };
-    } else if (type === 'business') {
-      stream = { id, type: 'business', amount, blueFilerDeduction };
-    } else if (type === 'commutingAllowance') {
-      stream = { id, type: 'commutingAllowance', amount, frequency };
-    } else if (type === 'stockCompensation') {
-      stream = { id, type: 'stockCompensation', amount, issuerDomicile };
-    } else if (type === 'publicPension') {
-      stream = { id, type: 'publicPension', amount };
-    } else {
-      stream = { id, type: 'miscellaneous', amount };
+    switch (type) {
+      case 'salary':
+        stream = { id, type, amount, frequency: frequency as 'monthly' | 'annual' };
+        break;
+      case 'bonus':
+        stream = { id, type, amount, month };
+        break;
+      case 'business':
+        stream = { id, type, amount, blueFilerDeduction };
+        break;
+      case 'commutingAllowance':
+        stream = { id, type, amount, frequency };
+        break;
+      case 'stockCompensation':
+        stream = { id, type, amount, issuerDomicile };
+        break;
+      case 'miscellaneous':
+      case 'publicPension':
+        stream = { id, type, amount };
+        break;
+      default: {
+        const unhandled: never = type;
+        throw new Error(`Unhandled income stream type: ${String(unhandled)}`);
+      }
     }
 
     onSave(stream);
   };
 
-  const getAmountLabel = () => {
-    switch (type) {
-      case 'business':
-      case 'miscellaneous':
-        return 'Annual Net Income';
-      case 'publicPension':
-        return 'Annual Gross Pension Income';
-      case 'commutingAllowance':
-        return 'Allowance Amount';
-      default:
-        return 'Gross Income';
-    }
-  };
-
-  const getAmountHelperText = () => {
-    switch (type) {
-      case 'business':
-        return 'Business income minus business expenses. For multiple businesses, combine the income across all businesses.';
-      case 'miscellaneous':
-        return 'Income minus necessary expenses';
-      case 'salary':
-        return 'Gross income before taxes and deductions';
-      case 'bonus':
-        return 'Gross bonus amount before taxes and deductions';
-      case 'commutingAllowance':
-        return `Commuting allowance up to ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)} per month is non-taxable for income tax, but the full amount affects social insurance premiums.`;
-      case 'publicPension':
-        return 'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.';
-      case 'stockCompensation':
-        return undefined;
-      default:
-        return undefined;
-    }
-  };
-
   return (
     <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 2 }}>
       <Stack spacing={2}>
-        <FormControl fullWidth>
-          <InputLabel id="income-type-label">Income/Benefit Type</InputLabel>
-          <Select
-            labelId="income-type-label"
-            value={type}
-            label="Income/Benefit Type"
-            onChange={e => {
-              const newType = e.target.value;
-              setType(newType);
-              if (newType === 'commutingAllowance') {
-                setFrequency('monthly');
-              } else if (newType === 'salary' && !validSalaryFrequencies.includes(frequency)) {
-                setFrequency('annual');
-              }
-            }}
-          >
-            <MenuItem value="salary" disabled={disabledTypes.includes('salary')}>
-              Salary
-            </MenuItem>
-            <MenuItem value="bonus" disabled={disabledTypes.includes('bonus')}>
-              Bonus
-            </MenuItem>
-            <MenuItem
-              value="commutingAllowance"
-              disabled={disabledTypes.includes('commutingAllowance')}
-            >
-              Commuting Allowance
-            </MenuItem>
-            <MenuItem
-              value="stockCompensation"
-              disabled={disabledTypes.includes('stockCompensation')}
-            >
-              Stock-Based Compensation
-            </MenuItem>
-            <MenuItem value="business" disabled={disabledTypes.includes('business')}>
-              Business
-            </MenuItem>
-            <MenuItem value="miscellaneous" disabled={disabledTypes.includes('miscellaneous')}>
-              Miscellaneous
-            </MenuItem>
-            <MenuItem value="publicPension" disabled={disabledTypes.includes('publicPension')}>
-              Public Pension
-            </MenuItem>
-          </Select>
-        </FormControl>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <Chip
+            label={info.chipLabel}
+            size="small"
+            color={getIncomeCategory(info.category).chipColor}
+            sx={{ fontSize: '0.7rem', height: 20 }}
+          />
+          <Typography variant="subtitle1" component="h3" sx={{ fontWeight: 600 }}>
+            {initialData ? 'Edit' : 'Add'} {info.label}
+          </Typography>
+        </Box>
 
         {type === 'salary' && (
           <FormControl fullWidth>
@@ -457,11 +404,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
 
           <SpinnerNumberField
-            label={getAmountLabel()}
+            label={info.amountLabel}
             value={amount}
             onChange={val => setAmount(val)}
             sx={{ width: '100%' }}
-            helperText={error || getAmountHelperText()}
+            helperText={error || info.amountHelperText}
             error={!!error}
           />
           {type === 'salary' && frequency === 'monthly' && amount > 0 && (
