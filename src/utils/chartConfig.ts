@@ -69,10 +69,21 @@ export interface ChartCalculationContext extends TakeHomeInputs {
 }
 
 /**
+ * Stream types carried through the chart sweep at their entered amount instead of being
+ * scaled with the swept income. A commuting allowance (通勤手当) is a fixed non-taxable
+ * benefit that does not grow with income, and scaling it can push it past the non-taxable
+ * cap, which the calculation rejects.
+ */
+const isPassThroughStream = (stream: IncomeStream): boolean => stream.type === 'commutingAllowance';
+
+/**
  * Scale a set of income streams so their annualized total matches `targetIncome`,
- * preserving the original composition (salary/bonus/business mix). When the base
- * streams sum to 0 (or none are provided), fall back to a single annual salary
- * stream at `targetIncome` so downstream calculations still see income.
+ * preserving the original composition (salary/bonus/business mix). Pass-through streams
+ * (see {@link isPassThroughStream}) keep their entered amount and are excluded from the
+ * base total, so the ratio is exactly 1 at the taxpayer's own income — matching
+ * {@link import('../state/takeHomeFormReducer').totalAnnualIncomeFromStreams}.
+ * When the scaled streams sum to 0 (or none are provided), fall back to a single annual
+ * salary stream at `targetIncome` so downstream calculations still see income.
  *
  * Shared by the chart's per-income bars and the tooltip's cap-detection probe so
  * the "🔒 Max reached" badge matches the bars exactly.
@@ -82,19 +93,24 @@ export const scaleIncomeStreamsToIncome = (
   targetIncome: number,
 ): IncomeStream[] => {
   const baseTotal = streams.reduce((sum, s) => {
+    if (isPassThroughStream(s)) return sum;
     if (s.type === 'salary' && s.frequency === 'monthly') return sum + s.amount * 12;
     return sum + s.amount;
   }, 0);
 
   if (baseTotal > 0) {
     const ratio = targetIncome / baseTotal;
-    return streams.map(s => ({
-      ...s,
-      amount: s.amount * ratio,
-    }));
+    return streams.map(s =>
+      isPassThroughStream(s)
+        ? s
+        : {
+            ...s,
+            amount: s.amount * ratio,
+          },
+    );
   }
 
-  // Fallback if base is 0
+  // Fallback if the scaled streams are 0
   return [
     {
       id: 'chart-salary-fallback',
@@ -102,6 +118,7 @@ export const scaleIncomeStreamsToIncome = (
       amount: targetIncome,
       frequency: 'annual',
     },
+    ...streams.filter(isPassThroughStream),
   ];
 };
 
