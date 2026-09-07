@@ -383,10 +383,14 @@ export interface TakeHomeResults {
    * excluded as a cost reimbursement. Under this definition, and only this one,
    * {@link takeHomeIncome} (this amount minus taxes and social insurance) is the money kept.
    *
-   * The same definition is used by the two external figures this amount is compared with: the
-   * 所得 of the 国民生活基礎調査 behind the chart's median and percentile bands (雇用者所得 and
-   * 公的年金・恩給 tax-inclusive, 事業所得 net of expenses), and the 年間収入 of the social insurance
-   * dependent-coverage test (isDependentCoverageEligible in healthInsurance.ts). Totalled by
+   * The same definition is used by the two external figures this amount is compared with. The
+   * 所得 of the 国民生活基礎調査 behind the chart's median and percentile bands is defined in the
+   * survey's 用語の説明 (2025 edition, item 13「所得の種類」, k-tyosa25/dl/07.pdf p. 38) as
+   * 雇用者所得 = 給料・賃金・賞与の合計金額 including 税金や社会保険料, 事業所得 = 収入 minus
+   * 仕入原価や必要経費, and 公的年金・恩給 = 支給された年金額; item 15 defines 可処分所得 as that
+   * 所得 minus taxes and social insurance and calls it the equivalent of 手取り収入, which is
+   * {@link takeHomeIncome}. The 年間収入 of the social insurance dependent-coverage test
+   * (isDependentCoverageEligible in healthInsurance.ts) counts income the same way. Totalled by
    * totalAnnualIncomeFromStreams on the input side.
    */
   annualIncome: number;
