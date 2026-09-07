@@ -17,6 +17,7 @@ import {
 } from '../types/healthInsurance';
 import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
 import { isLatterStageElderly } from '../types/taxpayerAge';
+import { totalAnnualIncomeFromStreams } from '../utils/incomeStreams';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
   return regions.includes('Tokyo')
@@ -71,22 +72,6 @@ export function regionOptionsFor(provider: HealthInsuranceProviderId): RegionOpt
  */
 function defaultRegionForProvider(provider: HealthInsuranceProviderId): string {
   return selectDefaultRegion(regionOptionsFor(provider).map(option => option.id));
-}
-
-/**
- * Total annual income represented by a set of income streams: commuting allowance is
- * not included, monthly salaries are annualized, everything else counts at face value.
- */
-export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): number {
-  return streams.reduce((sum, s) => {
-    if (s.type === 'commutingAllowance') {
-      return sum;
-    }
-    if (s.type === 'salary' && s.frequency === 'monthly') {
-      return sum + s.amount * 12;
-    }
-    return sum + s.amount;
-  }, 0);
 }
 
 /**

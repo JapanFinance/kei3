@@ -25,11 +25,13 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useEffect, useRef, useState } from 'react';
 
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
+import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
-  formatJPY,
-  formatMonthLong,
+  annualIncomeStreamAmount,
+  countsTowardAnnualIncome,
   getCommutingAllowanceAnnualAmount,
-} from '../../../utils/formatters';
+  totalAnnualIncomeFromStreams,
+} from '../../../utils/incomeStreams';
 import {
   INCOME_CATEGORIES,
   INCOME_STREAM_CATALOG,
@@ -116,15 +118,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     onStreamsChange(streams.filter(s => s.id !== id));
   };
 
-  const totalIncome = streams.reduce((sum, s) => {
-    // Exclude commuting allowance from total income
-    if (s.type === 'commutingAllowance') return sum;
-
-    if (s.type === 'salary' && s.frequency === 'monthly') {
-      return sum + s.amount * 12;
-    }
-    return sum + s.amount;
-  }, 0);
+  const totalIncome = totalAnnualIncomeFromStreams(streams);
 
   const getStreamDescription = (stream: IncomeStream) => {
     switch (stream.type) {
@@ -144,8 +138,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     }
   };
 
-  // Commuting allowance sits in the employment group but is a nontaxable benefit, so it is
-  // tracked separately rather than added to that group's subtotal.
+  // A category's subtotal is the income of that classification, so the commuting allowance —
+  // which sits in the employment group but reimburses a cost rather than paying for work — is
+  // left out of it.
   const calculateSubtotals = () => {
     const byCategory: Record<IncomeCategoryKey, number> = {
       employment: 0,
@@ -153,19 +148,13 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       miscellaneous: 0,
       publicPension: 0,
     };
-    let commutingAllowance = 0;
 
     streams.forEach(s => {
-      if (s.type === 'commutingAllowance') {
-        commutingAllowance += getCommutingAllowanceAnnualAmount(s);
-        return;
-      }
-      const annualAmount =
-        s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
-      byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualAmount;
+      if (!countsTowardAnnualIncome(s)) return;
+      byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualIncomeStreamAmount(s);
     });
 
-    return { byCategory, commutingAllowance };
+    return byCategory;
   };
 
   const subtotals = calculateSubtotals();
@@ -179,7 +168,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       <>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Public Pension Deduction (公的年金等控除): -
-          {formatJPY(subtotals.byCategory.publicPension - netPublicPensionIncome)}
+          {formatJPY(subtotals.publicPension - netPublicPensionIncome)}
         </Typography>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Net Public Pension Income: {formatJPY(netPublicPensionIncome)}
@@ -275,7 +264,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       variant="caption"
                       sx={{ color: 'text.secondary', display: 'block' }}
                     >
-                      (Annual: {formatJPY(stream.amount * 12)})
+                      (Annual: {formatJPY(annualIncomeStreamAmount(stream))})
                     </Typography>
                   )}
                   {stream.type === 'business' && !!stream.blueFilerDeduction && (
@@ -329,7 +318,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               }}
             >
               <Chip
-                label={`Subtotal: ${formatJPY(subtotals.byCategory[category.key])}`}
+                label={`Subtotal: ${formatJPY(subtotals[category.key])}`}
                 size="small"
                 color={category.chipColor}
                 variant="outlined"

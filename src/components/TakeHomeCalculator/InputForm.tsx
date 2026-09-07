@@ -58,6 +58,7 @@ import {
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
+import { getCommutingAllowanceAnnualAmount } from '../../utils/incomeStreams';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -339,15 +340,13 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </Box>
 
                   {(() => {
-                    const totalNontaxableBenefits = inputs.incomeStreams.reduce((sum, s) => {
-                      if (s.type === 'commutingAllowance') {
-                        if (s.frequency === 'monthly') return sum + s.amount * 12;
-                        if (s.frequency === '3-months') return sum + s.amount * 4;
-                        if (s.frequency === '6-months') return sum + s.amount * 2;
-                        return sum + s.amount;
-                      }
-                      return sum;
-                    }, 0);
+                    const totalNontaxableBenefits = inputs.incomeStreams.reduce(
+                      (sum, s) =>
+                        s.type === 'commutingAllowance'
+                          ? sum + getCommutingAllowanceAnnualAmount(s)
+                          : sum,
+                      0,
+                    );
 
                     return totalNontaxableBenefits > 0 ? (
                       <Box
