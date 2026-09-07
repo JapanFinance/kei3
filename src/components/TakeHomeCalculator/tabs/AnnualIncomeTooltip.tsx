@@ -26,9 +26,9 @@ const AnnualIncomeTooltip: React.FC = () => (
       necessary expenses.
     </Typography>
     <Typography variant="body2">
-      Deductions that reduce net income without reducing the amount received are not subtracted:
-      the employment income deduction, the public pension deduction, and the blue-filer special deduction.
-      A commuting allowance is not counted, as it reimburses a cost.
+      Deductions that reduce net income without reducing the amount received are not subtracted: the
+      employment income deduction, the public pension deduction, and the blue-filer special
+      deduction. A commuting allowance is not counted, as it reimburses a cost.
     </Typography>
   </DetailedTooltip>
 );
