@@ -24,6 +24,7 @@ import {
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
+import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   calculatePensionBonusBreakdown,
   findPensionBracket,
@@ -190,7 +191,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     inputs.incomeStreams.length > 0
       ? inputs.incomeStreams
           .filter(s => s.type === 'salary')
-          .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0)
+          .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0)
       : results.hasEmploymentIncome
         ? results.annualIncome
         : 0;

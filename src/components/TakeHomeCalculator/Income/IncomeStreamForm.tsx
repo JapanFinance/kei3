@@ -417,28 +417,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           {type === 'commutingAllowance' && amount > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 0.5 }}>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Monthly:{' '}
-                {formatJPY(
-                  frequency === 'monthly'
-                    ? amount
-                    : frequency === '3-months'
-                      ? amount / 3
-                      : frequency === '6-months'
-                        ? amount / 6
-                        : amount / 12,
-                )}
+                Monthly: {formatJPY((amount * getFrequencyAnnualMultiplier(frequency)) / 12)}
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Annual:{' '}
-                {formatJPY(
-                  frequency === 'monthly'
-                    ? amount * 12
-                    : frequency === '3-months'
-                      ? amount * 4
-                      : frequency === '6-months'
-                        ? amount * 2
-                        : amount,
-                )}
+                Annual: {formatJPY(amount * getFrequencyAnnualMultiplier(frequency))}
               </Typography>
             </Box>
           )}
