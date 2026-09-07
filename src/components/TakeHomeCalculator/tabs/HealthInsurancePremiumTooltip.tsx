@@ -22,6 +22,7 @@ import {
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
+import { monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
 import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 import SMRTableTooltip from './SMRTableTooltip';
 
@@ -561,12 +562,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                 {formatJPY(
                   inputs.incomeStreams
                     .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-                    .reduce((sum, s) => {
-                      if (s.frequency === 'monthly') return sum + s.amount;
-                      if (s.frequency === '3-months') return sum + s.amount / 3;
-                      if (s.frequency === '6-months') return sum + s.amount / 6;
-                      return sum + s.amount / 12;
-                    }, 0),
+                    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0),
                 )}
               </Typography>
             </Box>

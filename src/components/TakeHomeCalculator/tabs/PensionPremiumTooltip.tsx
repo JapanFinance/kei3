@@ -9,6 +9,7 @@ import React from 'react';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatPercent } from '../../../utils/formatters';
+import { monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   EMPLOYEES_PENSION_BRACKETS,
   EMPLOYEES_PENSION_RATE,
@@ -107,12 +108,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
               {formatJPY(
                 inputs.incomeStreams
                   .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-                  .reduce((sum, s) => {
-                    if (s.frequency === 'monthly') return sum + s.amount;
-                    if (s.frequency === '3-months') return sum + s.amount / 3;
-                    if (s.frequency === '6-months') return sum + s.amount / 6;
-                    return sum + s.amount / 12;
-                  }, 0),
+                  .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0),
               )}
             </Typography>
           </Box>
