@@ -24,7 +24,7 @@ import {
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
-import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
+import { annualIncomeStreamAmount, monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   calculatePensionBonusBreakdown,
   findPensionBracket,
@@ -202,22 +202,12 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
   const monthlyCommutingAllowance = inputs.incomeStreams
     .filter(s => s.type === 'commutingAllowance')
-    .reduce((sum, s) => {
-      if (s.frequency === 'monthly') return sum + s.amount;
-      if (s.frequency === '3-months') return sum + s.amount / 3;
-      if (s.frequency === '6-months') return sum + s.amount / 6;
-      return sum + s.amount / 12;
-    }, 0);
+    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0);
 
   // Calculate Raw Monthly Remuneration (Salary + Commuting)
   const rawMonthlyRemuneration = inputs.incomeStreams
     .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-    .reduce((sum, s) => {
-      if (s.frequency === 'monthly') return sum + s.amount;
-      if (s.frequency === '3-months') return sum + s.amount / 3;
-      if (s.frequency === '6-months') return sum + s.amount / 6;
-      return sum + s.amount / 12;
-    }, 0);
+    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0);
 
   // Find SMR Brackets
   const healthSMR = findSMRBracket(rawMonthlyRemuneration).smrAmount;

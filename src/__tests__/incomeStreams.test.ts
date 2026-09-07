@@ -4,6 +4,7 @@
 import {
   annualIncomeStreamAmount,
   countsTowardAnnualIncome,
+  monthlyIncomeStreamAmount,
   totalAnnualIncomeFromStreams,
 } from '../utils/incomeStreams';
 
@@ -57,5 +58,67 @@ describe('countsTowardAnnualIncome', () => {
     expect(
       countsTowardAnnualIncome({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
     ).toBe(true);
+  });
+});
+
+describe('monthlyIncomeStreamAmount', () => {
+  it('returns the entered amount for a commuting allowance already entered per month', () => {
+    expect(
+      monthlyIncomeStreamAmount({
+        id: 'c1',
+        type: 'commutingAllowance',
+        amount: 20_000,
+        frequency: 'monthly',
+      }),
+    ).toBe(20_000);
+  });
+
+  it.each([
+    { frequency: '3-months' as const, amount: 60_000, monthly: 20_000 },
+    { frequency: '6-months' as const, amount: 120_000, monthly: 20_000 },
+    { frequency: 'annual' as const, amount: 240_000, monthly: 20_000 },
+  ])(
+    'divides a $frequency commuting allowance down to a month',
+    ({ frequency, amount, monthly }) => {
+      expect(
+        monthlyIncomeStreamAmount({ id: 'c1', type: 'commutingAllowance', amount, frequency }),
+      ).toBe(monthly);
+    },
+  );
+
+  // The 標準報酬月額 band a premium is read from turns on this value, so a per-period amount
+  // that does not divide evenly has to give the same double as dividing it directly.
+  it.each([
+    { frequency: '3-months' as const, divisor: 3 },
+    { frequency: '6-months' as const, divisor: 6 },
+    { frequency: 'annual' as const, divisor: 12 },
+  ])(
+    'matches an exact division of a $frequency amount that does not divide evenly',
+    ({ frequency, divisor }) => {
+      for (let amount = 1; amount <= 2_000; amount++) {
+        expect(
+          monthlyIncomeStreamAmount({ id: 'c1', type: 'commutingAllowance', amount, frequency }),
+        ).toBe(amount / divisor);
+      }
+    },
+  );
+
+  it('returns a twelfth of a salary entered annually and the entered amount when monthly', () => {
+    expect(
+      monthlyIncomeStreamAmount({
+        id: 's1',
+        type: 'salary',
+        amount: 6_000_000,
+        frequency: 'annual',
+      }),
+    ).toBe(500_000);
+    expect(
+      monthlyIncomeStreamAmount({
+        id: 's2',
+        type: 'salary',
+        amount: 494_999,
+        frequency: 'monthly',
+      }),
+    ).toBe(494_999);
   });
 });

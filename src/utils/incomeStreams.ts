@@ -75,6 +75,13 @@ const annualAmountOf = <T extends IncomeStreamType>(
 export const annualIncomeStreamAmount = (stream: IncomeStream): number =>
   annualAmountOf(stream.type, stream);
 
+/**
+ * The amount `stream` represents in a month, from however its amount is entered: its
+ * {@link annualIncomeStreamAmount} spread evenly over the year.
+ */
+export const monthlyIncomeStreamAmount = (stream: IncomeStream): number =>
+  annualIncomeStreamAmount(stream) / 12;
+
 /** Returns the annualized amount for a commuting allowance income stream. */
 export const getCommutingAllowanceAnnualAmount = (stream: CommutingAllowanceIncomeStream): number =>
   INCOME_STREAM_BEHAVIOR.commutingAllowance.annualAmount(stream);
