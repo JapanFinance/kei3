@@ -23,6 +23,15 @@ const baseResults: TakeHomeResults = makeTakeHomeResults({
   latterStageChildSupportPortion: 7_000,
 });
 
+describe('SummaryTab annual income header', () => {
+  it('explains what annual income counts', () => {
+    render(<SummaryTab results={baseResults} />);
+
+    expect(screen.getByText('Annual Income')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About annual income' })).toBeInTheDocument();
+  });
+});
+
 describe('SummaryTab with the 介護保険第1号 premium', () => {
   it('shows the premium as its own row and includes it in the social insurance total', () => {
     render(<SummaryTab results={{ ...baseResults, longTermCareCategory1Premium: 150_000 }} />);

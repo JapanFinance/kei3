@@ -411,7 +411,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   value={inputs.annualIncome}
                   onChange={handleAnnualIncomeChange}
                   label={
-                    inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Annual Income'
+                    inputs.incomeMode === 'salary'
+                      ? 'Gross Annual Salary'
+                      : 'Annual Income After Expenses'
                   }
                   step={10_000}
                   shiftStep={100_000}

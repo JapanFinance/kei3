@@ -16,6 +16,7 @@ import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
+import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 
 interface SummaryTabProps {
   results: TakeHomeResults;
@@ -56,7 +57,16 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
 
   return (
     <Box>
-      <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
+      <ResultRow
+        label={
+          <span>
+            Annual Income
+            <AnnualIncomeTooltip />
+          </span>
+        }
+        value={formatJPY(results.annualIncome)}
+        type="header"
+      />
       <Divider sx={{ my: { xs: 1, sm: 1.5 } }} />
 
       {/* Social Insurance Section */}

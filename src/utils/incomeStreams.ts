@@ -81,7 +81,10 @@ export const getCommutingAllowanceAnnualAmount = (stream: CommutingAllowanceInco
 
 /**
  * Total annual income represented by a set of income streams: every stream that
- * {@link countsTowardAnnualIncome}, at its {@link annualIncomeStreamAmount}.
+ * {@link countsTowardAnnualIncome}, at its {@link annualIncomeStreamAmount}. Each stream's
+ * entered amount is already at the level this total is defined at (see
+ * TakeHomeResults.annualIncome in tax.ts): gross for employment and public pension income, after
+ * 必要経費 for business and miscellaneous income.
  */
 export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): number {
   return streams.reduce(

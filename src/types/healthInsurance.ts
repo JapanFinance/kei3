@@ -79,10 +79,12 @@ export function isEmployeeHealthProvider(id: HealthInsuranceProviderId): id is E
  * ({@link getDependentIncomeThreshold}).
  *
  * @param grossAnnualIncome  Stands in for the statutory 年間収入 (see
- *   {@link DEPENDENT_INCOME_THRESHOLD}). Callers pass the form's gross annual income —
- *   annualized salary plus bonuses and face-value business/miscellaneous amounts — which
- *   understates 年間収入 where commuting allowance exists (the form excludes it from annual
- *   income) or where the person receives benefits the calculator does not model.
+ *   {@link DEPENDENT_INCOME_THRESHOLD}). Callers pass the form's annual income
+ *   (TakeHomeResults.annualIncome in tax.ts): salary, bonuses and public pension gross, business
+ *   and miscellaneous income after expenses — the same basis as 年間収入, which also counts
+ *   pension gross and allows business expenses but not the 青色申告特別控除. It understates
+ *   年間収入 where a commuting allowance exists (the form excludes it from annual income) or
+ *   where the person receives benefits the calculator does not model.
  */
 export function isDependentCoverageEligible(
   grossAnnualIncome: number,
