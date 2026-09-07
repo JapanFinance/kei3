@@ -3,14 +3,14 @@
 
 import type { CommutingAllowanceIncomeStream, IncomeStream, IncomeStreamType } from '../types/tax';
 
-/** The member of the {@link IncomeStream} union discriminated by `T`. */
-type IncomeStreamOfType<T extends IncomeStreamType> = Extract<IncomeStream, { type: T }>;
+/** The member of the {@link IncomeStream} union discriminated by `T`, by discriminant. */
+type IncomeStreamOfType = { [T in IncomeStreamType]: Extract<IncomeStream, { type: T }> };
 
 interface IncomeStreamBehavior<T extends IncomeStreamType> {
   /** Whether streams of this type are part of {@link totalAnnualIncomeFromStreams}. */
   countsTowardAnnualIncome: boolean;
   /** The amount the stream represents over a year, from however its amount is entered. */
-  annualAmount: (stream: IncomeStreamOfType<T>) => number;
+  annualAmount: (stream: IncomeStreamOfType[T]) => number;
 }
 
 /**
@@ -60,12 +60,16 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
 export const countsTowardAnnualIncome = (stream: IncomeStream): boolean =>
   INCOME_STREAM_BEHAVIOR[stream.type].countsTowardAnnualIncome;
 
+// Taking the discriminant and the stream as correlated parameters is what lets TypeScript
+// check the indexed call; reading INCOME_STREAM_BEHAVIOR[stream.type] inline does not.
+const annualAmountOf = <T extends IncomeStreamType>(
+  type: T,
+  stream: IncomeStreamOfType[T],
+): number => INCOME_STREAM_BEHAVIOR[type].annualAmount(stream);
+
 /** The amount `stream` represents over a year. */
 export const annualIncomeStreamAmount = (stream: IncomeStream): number =>
-  // The table is keyed by the same discriminant that narrows `stream`, but TypeScript cannot
-  // correlate an indexed access with that narrowing (microsoft/TypeScript#30581), so the
-  // entry's parameter type widens to `never` at this one call.
-  (INCOME_STREAM_BEHAVIOR[stream.type].annualAmount as (s: IncomeStream) => number)(stream);
+  annualAmountOf(stream.type, stream);
 
 /** Returns the annualized amount for a commuting allowance income stream. */
 export const getCommutingAllowanceAnnualAmount = (stream: CommutingAllowanceIncomeStream): number =>
