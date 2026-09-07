@@ -132,7 +132,7 @@ const employeeProviderOptions: HealthInsuranceProviderOption[] = (
  * ({@link applyProviderValidity}), rather than the two drifting apart.
  */
 export function availableProvidersFor(
-  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'annualIncome' | 'ageRange'>,
+  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'ageRange'>,
 ): HealthInsuranceProviderOption[] {
   // From age 75 everyone is in the 後期高齢者医療制度 regardless of employment, so it is
   // the only coverage on offer.
@@ -140,7 +140,7 @@ export function availableProvidersFor(
     return [latterStageProviderOption];
   }
   const dependentEligible = isDependentCoverageEligible(
-    dependentTestAnnualIncome(state.annualIncome, state.incomeStreams),
+    dependentTestAnnualIncome(state.incomeStreams),
     state.ageRange,
   );
   if (hasEmploymentIncome(state)) {

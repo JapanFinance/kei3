@@ -58,10 +58,7 @@ import {
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
-import {
-  dependentTestAnnualIncome,
-  totalCommutingAllowanceFromStreams,
-} from '../../utils/incomeStreams';
+import { dependentTestAnnualIncome, totalNonIncomeFromStreams } from '../../utils/incomeStreams';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -133,7 +130,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   // Check if dependent coverage is eligible based on income and age
   const isDependentEligible = isDependentCoverageEligible(
-    dependentTestAnnualIncome(inputs.annualIncome, inputs.incomeStreams),
+    dependentTestAnnualIncome(inputs.incomeStreams),
     inputs.ageRange,
   );
 
@@ -346,9 +343,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </Box>
 
                   {(() => {
-                    const totalNontaxableBenefits = totalCommutingAllowanceFromStreams(
-                      inputs.incomeStreams,
-                    );
+                    const totalNontaxableBenefits = totalNonIncomeFromStreams(inputs.incomeStreams);
 
                     return totalNontaxableBenefits > 0 ? (
                       <Box
@@ -681,7 +676,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, counting any commuting allowance, is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance, is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>

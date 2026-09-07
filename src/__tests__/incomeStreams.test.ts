@@ -8,6 +8,7 @@ import {
   monthlyIncomeStreamAmount,
   totalAnnualIncomeFromStreams,
   totalCommutingAllowanceFromStreams,
+  totalNonIncomeFromStreams,
 } from '../utils/incomeStreams';
 
 describe('totalAnnualIncomeFromStreams', () => {
@@ -145,22 +146,42 @@ describe('totalCommutingAllowanceFromStreams', () => {
 
 describe('dependentTestAnnualIncome', () => {
   it('adds the annualized commuting allowance that annual income leaves out', () => {
-    const streams: Parameters<typeof dependentTestAnnualIncome>[1] = [
+    const streams: Parameters<typeof dependentTestAnnualIncome>[0] = [
       { id: 's1', type: 'salary', amount: 100_000, frequency: 'monthly' },
       { id: 'c1', type: 'commutingAllowance', amount: 15_000, frequency: 'monthly' },
     ];
 
     expect(totalAnnualIncomeFromStreams(streams)).toBe(1_200_000);
-    expect(dependentTestAnnualIncome(totalAnnualIncomeFromStreams(streams), streams)).toBe(
-      1_200_000 + 15_000 * 12,
-    );
+    expect(dependentTestAnnualIncome(streams)).toBe(1_200_000 + 15_000 * 12);
   });
 
   it('equals the annual income when there is no commuting allowance', () => {
     expect(
-      dependentTestAnnualIncome(1_200_000, [
+      dependentTestAnnualIncome([
         { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
       ]),
     ).toBe(1_200_000);
+  });
+});
+
+describe('totalNonIncomeFromStreams', () => {
+  it('totals the streams excluded from annual income and ignores the rest', () => {
+    const streams: Parameters<typeof totalNonIncomeFromStreams>[0] = [
+      { id: 's1', type: 'salary', amount: 3_000_000, frequency: 'annual' },
+      { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      { id: 'c2', type: 'commutingAllowance', amount: 60_000, frequency: '6-months' },
+    ];
+
+    expect(totalNonIncomeFromStreams(streams)).toBe(10_000 * 12 + 60_000 * 2);
+    // Together the two totals account for every stream, at its annual amount.
+    expect(totalNonIncomeFromStreams(streams) + totalAnnualIncomeFromStreams(streams)).toBe(
+      streams.reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0),
+    );
+  });
+
+  it('returns 0 when every stream counts toward annual income', () => {
+    expect(totalNonIncomeFromStreams([{ id: 'm1', type: 'miscellaneous', amount: 500_000 }])).toBe(
+      0,
+    );
   });
 });

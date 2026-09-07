@@ -750,7 +750,14 @@ describe('takeHomeFormReducer', () => {
     it('adds dependent coverage for employment income under the threshold', () => {
       const ids = availableProvidersFor({
         ...baseState,
-        annualIncome: DEPENDENT_INCOME_THRESHOLD - 1,
+        incomeStreams: [
+          {
+            id: 'simple-salary',
+            type: 'salary',
+            amount: DEPENDENT_INCOME_THRESHOLD - 1,
+            frequency: 'annual',
+          },
+        ],
       }).map(option => option.id);
 
       expect(ids).toEqual([
@@ -770,11 +777,7 @@ describe('takeHomeFormReducer', () => {
           frequency: 'annual',
         },
       ];
-      const advanced = {
-        ...baseState,
-        incomeMode: 'advanced' as const,
-        annualIncome: DEPENDENT_INCOME_THRESHOLD - 100_000,
-      };
+      const advanced = { ...baseState, incomeMode: 'advanced' as const };
 
       expect(
         availableProvidersFor({ ...advanced, incomeStreams: salaryUnderThreshold }).map(o => o.id),
@@ -803,7 +806,6 @@ describe('takeHomeFormReducer', () => {
       const underThreshold = availableProvidersFor({
         ...baseState,
         incomeMode: 'miscellaneous',
-        annualIncome: 1_000_000,
         incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 1_000_000 }],
       });
       expect(underThreshold.map(option => option.id)).toEqual([
