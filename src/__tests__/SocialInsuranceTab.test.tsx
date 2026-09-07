@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
-import type { TakeHomeResults, TakeHomeInputs } from '../types/tax';
+import type { CommutingAllowanceIncomeStream, TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
@@ -425,4 +425,242 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     // 200,000 + 300,000 + 18,000 + 150,000.
     expect(screen.getByText('¥668,000')).toBeInTheDocument();
   });
+});
+
+/**
+ * The tab derives a monthly remuneration from the entered income streams and looks up the
+ * standard remuneration (標準報酬月額) band from it. A commuting allowance entered per three
+ * months, per six months or per year has to be divided down to a month first, so these cases
+ * put the result on each side of a band boundary at every frequency, including the amounts
+ * whose division does not terminate in binary.
+ */
+describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
+  const baseInputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [],
+    ageRange: 'age40to59',
+    region: 'Tokyo',
+    healthInsuranceProvider: 'KyokaiKenpo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2025,
+  };
+
+  const baseResults: TakeHomeResults = makeTakeHomeResults({
+    annualIncome: 6_000_000,
+    healthInsurance: 300_000,
+    pensionPayments: 500_000,
+    employmentInsurance: 30_000,
+    nationalIncomeTax: 100_000,
+    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 200_000 }),
+    takeHomeIncome: 4_870_000,
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    ageRange: 'age40to59',
+    hasEmploymentIncome: true,
+    totalNetIncome: 4_200_000,
+    residenceTaxBasicDeduction: 430_000,
+    salaryIncome: 6_000_000,
+    grossEmploymentIncome: 6_000_000,
+  });
+
+  interface BandCase {
+    /** Frequency the commuting allowance is entered at. */
+    frequency: CommutingAllowanceIncomeStream['frequency'];
+    /** Commuting allowance per period, as entered. */
+    commuting: number;
+    /** Monthly salary, chosen to place the total beside a band boundary. */
+    salary: number;
+    /** The commuting allowance per month, as the tab displays it. */
+    monthlyCommuting: string;
+    /** The monthly remuneration the bands are read from, as the tab displays it. */
+    remuneration: string;
+    /** Health insurance standard remuneration for that monthly remuneration. */
+    healthSMR: string;
+    /** Employees' pension standard remuneration for that monthly remuneration. */
+    pensionSMR: string;
+  }
+
+  // The boundary at 515,000 separates 500,000 from 530,000 in both tables. The one at 665,000
+  // separates 650,000 from 680,000 for health insurance while the pension table has already
+  // reached its 650,000 ceiling, so it reads the same monthly remuneration differently.
+  const BAND_CASES: BandCase[] = [
+    {
+      frequency: 'monthly',
+      commuting: 20_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: 'monthly',
+      commuting: 20_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 60_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 60_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 481_666,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 481_667,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 120_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 120_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 100_000,
+      salary: 498_333,
+      monthlyCommuting: '¥16,667',
+      remuneration: '¥515,000',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 100_000,
+      salary: 498_334,
+      monthlyCommuting: '¥16,667',
+      remuneration: '¥515,001',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 240_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 240_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 100_000,
+      salary: 506_666,
+      monthlyCommuting: '¥8,333',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 100_000,
+      salary: 506_667,
+      monthlyCommuting: '¥8,333',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 631_666,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥664,999',
+      healthSMR: '¥650,000',
+      pensionSMR: '¥650,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 631_667,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥665,000',
+      healthSMR: '¥680,000',
+      pensionSMR: '¥650,000',
+    },
+  ];
+
+  /** The value cell of a `label` row in the monthly remuneration breakdown table. */
+  const breakdownValue = (label: string) => screen.getByText(label).nextElementSibling?.textContent;
+
+  /** Every `label` row of a tooltip's supporting-details block, as its displayed value. */
+  const detailValues = (label: string) =>
+    screen
+      .getAllByText(label)
+      .map(node => node.parentElement?.textContent?.slice(label.length) ?? '')
+      .filter(text => text.startsWith('¥'));
+
+  it.each(BAND_CASES)(
+    'reads $remuneration and health SMR $healthSMR from a commuting allowance of $commuting every $frequency',
+    ({ frequency, commuting, salary, monthlyCommuting, remuneration, healthSMR, pensionSMR }) => {
+      const inputs: TakeHomeInputs = {
+        ...baseInputs,
+        incomeStreams: [
+          { id: 's1', type: 'salary', amount: salary, frequency: 'monthly' },
+          { id: 'c1', type: 'commutingAllowance', amount: commuting, frequency },
+        ],
+      };
+
+      render(<SocialInsuranceTab inputs={inputs} results={baseResults} />);
+
+      expect(breakdownValue('Monthly Commuting Allowance:')).toBe(monthlyCommuting);
+      expect(breakdownValue('Total:')).toBe(remuneration);
+      // The health insurance and the pension tooltip each restate the monthly remuneration.
+      expect(detailValues('Monthly Remuneration')).toEqual([remuneration, remuneration]);
+      expect(detailValues('Standard Monthly Remuneration')).toEqual([healthSMR, pensionSMR]);
+    },
+  );
 });
