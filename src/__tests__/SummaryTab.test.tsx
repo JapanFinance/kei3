@@ -32,6 +32,41 @@ describe('SummaryTab annual income header', () => {
   });
 });
 
+describe('SummaryTab with investment income', () => {
+  const withInvestmentIncome: TakeHomeResults = makeTakeHomeResults({
+    annualIncome: 5_000_000,
+    healthInsurance: 246_449,
+    pensionPayments: 450_180,
+    employmentInsurance: 25_623,
+    hasEmploymentIncome: true,
+    nationalIncomeTax: 91_700,
+    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 243_100 }),
+    // 1,200,000 gross investment income, 243,780 withheld; take-home = 3,942,948 + 1,200,000 - 243,780.
+    takeHomeIncome: 4_899_168,
+    totalNetIncome: 3_560_000,
+    investmentIncome: {
+      gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
+      grossTotal: 1_200_000,
+      withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+    },
+  });
+
+  it('divides every share by gross earned plus gross investment income, not earned income alone', () => {
+    render(<SummaryTab results={withInvestmentIncome} />);
+
+    // grossTotal = 5,000,000 + 1,200,000 = 6,200,000; take-home share = 4,899,168 / 6,200,000 = 79.0%.
+    expect(screen.getByText('(79.0%)')).toBeInTheDocument();
+    // Income tax share = 91,700 / 6,200,000 = 1.5% (not 1.8%, its share of annualIncome alone).
+    expect(screen.getByText(/\(1\.5%\)/)).toBeInTheDocument();
+  });
+
+  it('still shows the Annual Income header as earned income only', () => {
+    render(<SummaryTab results={withInvestmentIncome} />);
+
+    expect(screen.getByText('¥5,000,000')).toBeInTheDocument();
+  });
+});
+
 describe('SummaryTab with the 介護保険第1号 premium', () => {
   it('shows the premium as its own row and includes it in the social insurance total', () => {
     render(<SummaryTab results={{ ...baseResults, longTermCareCategory1Premium: 150_000 }} />);
