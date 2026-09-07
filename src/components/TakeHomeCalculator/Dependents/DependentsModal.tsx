@@ -357,7 +357,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           return (
                             <TableRow>
                               <TableCell colSpan={4} align="center">
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                   No dependents added
                                 </Typography>
                               </TableCell>
@@ -429,8 +429,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                                 {group.count > 1 && (
                                   <Typography
                                     variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: 'block' }}
+                                    sx={{ color: 'text.secondary', display: 'block' }}
                                   >
                                     = {formatJPY(group.natAmount * group.count)}
                                   </Typography>
@@ -441,8 +440,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                                 {group.count > 1 && (
                                   <Typography
                                     variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: 'block' }}
+                                    sx={{ color: 'text.secondary', display: 'block' }}
                                   >
                                     = {formatJPY(group.resAmount * group.count)}
                                   </Typography>
@@ -496,7 +494,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       >
         {!showingForm && (
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto', ml: 1 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mr: 'auto', ml: 1 }}>
               {spouse ? '1 spouse, ' : ''}
               {otherDependents.length} other dependent{otherDependents.length !== 1 ? 's' : ''}
             </Typography>

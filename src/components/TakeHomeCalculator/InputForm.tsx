@@ -358,13 +358,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                           px: 1,
                         }}
                       >
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           Total Nontaxable Benefits
                         </Typography>
                         <Typography
                           variant="subtitle1"
-                          color="text.secondary"
-                          sx={{ fontWeight: 'medium' }}
+                          sx={{ color: 'text.secondary', fontWeight: 'medium' }}
                         >
                           {formatJPY(totalNontaxableBenefits)}
                         </Typography>

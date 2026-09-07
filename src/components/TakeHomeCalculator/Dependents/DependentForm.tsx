@@ -170,7 +170,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   mb: 1,
                 }}
               >
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Gross (収入)
                 </Typography>
                 <SpinnerNumberField
@@ -188,7 +188,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 />
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Net (所得)
                 </Typography>
                 <Typography variant="body2">
@@ -213,7 +213,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   mb: 1,
                 }}
               >
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Gross (収入)
                 </Typography>
                 <SpinnerNumberField
@@ -231,7 +231,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 />
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Net (所得)
                 </Typography>
                 <Typography variant="body2">
@@ -248,7 +248,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 Other Income (その他)
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Net (所得)
                 </Typography>
                 <SpinnerNumberField
@@ -298,7 +298,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   <TableCell>
                     Employment
                     <br />
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       給与
                     </Typography>
                   </TableCell>
@@ -331,7 +331,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   <TableCell>
                     Public Pension
                     <br />
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       公的年金等
                     </Typography>
                   </TableCell>
@@ -363,12 +363,12 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   <TableCell>
                     Other
                     <br />
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       その他
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                       —
                     </Typography>
                   </TableCell>
@@ -557,7 +557,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   return (
                     <TableRow>
                       <TableCell colSpan={3} align="center">
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           No deductions available
                         </Typography>
                       </TableCell>
