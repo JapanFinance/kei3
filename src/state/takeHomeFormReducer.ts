@@ -17,7 +17,7 @@ import {
 } from '../types/healthInsurance';
 import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
 import { isLatterStageElderly } from '../types/taxpayerAge';
-import { totalAnnualIncomeFromStreams } from '../utils/incomeStreams';
+import { dependentTestAnnualIncome, totalAnnualIncomeFromStreams } from '../utils/incomeStreams';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
   return regions.includes('Tokyo')
@@ -125,8 +125,9 @@ const employeeProviderOptions: HealthInsuranceProviderOption[] = (
  * The health insurance providers selectable for a given form state, in dropdown order.
  * From age 75 only the 後期高齢者医療制度 is offered. Below that, employment income can use
  * an employee provider, National Health Insurance, or a custom provider; dependent coverage
- * ("None") is offered only while income is under the eligibility threshold; non-employment
- * income is limited to NHI (plus dependent coverage when eligible). Pure and colocated with the reducer so the same list drives both the
+ * ("None") is offered only while the income the dependent test is judged on
+ * ({@link dependentTestAnnualIncome}) is under the eligibility threshold; non-employment income
+ * is limited to NHI (plus dependent coverage when eligible). Pure and colocated with the reducer so the same list drives both the
  * dropdown (via a `useMemo` in InputForm) and the reducer's provider-validity cascade
  * ({@link applyProviderValidity}), rather than the two drifting apart.
  */
@@ -138,7 +139,10 @@ export function availableProvidersFor(
   if (isLatterStageElderly(state.ageRange)) {
     return [latterStageProviderOption];
   }
-  const dependentEligible = isDependentCoverageEligible(state.annualIncome, state.ageRange);
+  const dependentEligible = isDependentCoverageEligible(
+    dependentTestAnnualIncome(state.annualIncome, state.incomeStreams),
+    state.ageRange,
+  );
   if (hasEmploymentIncome(state)) {
     return dependentEligible
       ? [

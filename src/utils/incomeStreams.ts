@@ -99,3 +99,30 @@ export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): 
     0,
   );
 }
+
+/** The annualized total of every commuting allowance among `streams`. */
+export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStream[]): number {
+  return streams.reduce(
+    (sum, s) =>
+      s.type === 'commutingAllowance' ? sum + getCommutingAllowanceAnnualAmount(s) : sum,
+    0,
+  );
+}
+
+/**
+ * The 年間収入 the dependent-coverage test is judged on: annual income plus the annualized
+ * commuting allowance. The allowance is the one amount the two figures disagree on — annual
+ * income leaves it out as a cost reimbursement, while 認定 reads 年間収入 off the 労働基準法
+ * 第11条 賃金, which includes 諸手当, and a labour contract stating only 「通勤手当有」 without
+ * an amount is one the 保険者 cannot judge on. Its income-tax non-taxability does not exempt
+ * it, that being a tax rule rather than a 社会保険 one.
+ *
+ * Source: 日本年金機構「労働契約内容による年間収入での被扶養者の認定の取り扱いについて」
+ * https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html
+ */
+export function dependentTestAnnualIncome(
+  annualIncome: number,
+  streams: readonly IncomeStream[],
+): number {
+  return annualIncome + totalCommutingAllowanceFromStreams(streams);
+}

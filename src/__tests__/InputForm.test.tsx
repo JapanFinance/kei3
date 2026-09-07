@@ -383,6 +383,52 @@ describe('Dependent Coverage UI Behavior', () => {
     ).toBeInTheDocument();
   });
 
+  it('should NOT include dependent coverage when a commuting allowance carries the 年間収入 over', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      ],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    const listbox = screen.getByRole('listbox');
+    const optionTexts = within(listbox)
+      .getAllByRole('option')
+      .map(option => option.textContent);
+
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it('should include dependent coverage for the same salary without a commuting allowance', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' }],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    expect(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'None (dependent of insured employee)',
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('should show helper text about dependent coverage when income is below threshold', () => {
     const inputs = { ...baseInputs, annualIncome: 1_200_000 };
 
