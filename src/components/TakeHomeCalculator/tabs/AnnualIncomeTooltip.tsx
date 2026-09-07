@@ -22,14 +22,13 @@ const AnnualIncomeTooltip: React.FC = () => (
   >
     <Typography variant="body2" sx={{ mb: 1 }}>
       The amount received over the year, before taxes and social insurance: gross salary, bonus and
-      stock compensation, gross public pension income, and business and miscellaneous income after
-      necessary expenses (必要経費).
+      stock compensation, gross public pension income, and business and miscellaneous income less
+      necessary expenses.
     </Typography>
     <Typography variant="body2">
-      Deductions that reduce taxable income without reducing the amount received are not subtracted:
-      the employment income deduction (給与所得控除), the public pension deduction (公的年金等控除)
-      and the blue-filer special deduction (青色申告特別控除). A commuting allowance is not counted,
-      as it reimburses a cost.
+      Deductions that reduce net income without reducing the amount received are not subtracted:
+      the employment income deduction, the public pension deduction, and the blue-filer special deduction.
+      A commuting allowance is not counted, as it reimburses a cost.
     </Typography>
   </DetailedTooltip>
 );
