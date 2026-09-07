@@ -138,7 +138,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   };
 
   // Commuting allowance sits in the employment group but is a nontaxable benefit, so it is
-  // tracked separately rather than added to that group's subtotal.
+  // left out of that group's subtotal.
   const calculateSubtotals = () => {
     const byCategory: Record<IncomeCategoryKey, number> = {
       employment: 0,
@@ -146,20 +146,15 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       miscellaneous: 0,
       publicPension: 0,
     };
-    let commutingAllowance = 0;
 
     streams.forEach(s => {
-      // Keyed on the type rather than on whether it counts as income: the separate bucket is
-      // specifically the commuting allowance, and another non-income type would still belong
-      // in its own category's subtotal.
-      if (s.type === 'commutingAllowance') {
-        commutingAllowance += annualIncomeStreamAmount(s);
-        return;
-      }
+      // Skipped on the type rather than on whether it counts as income: another non-income
+      // type would still belong in its own category's subtotal.
+      if (s.type === 'commutingAllowance') return;
       byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualIncomeStreamAmount(s);
     });
 
-    return { byCategory, commutingAllowance };
+    return byCategory;
   };
 
   const subtotals = calculateSubtotals();
@@ -173,7 +168,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       <>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Public Pension Deduction (公的年金等控除): -
-          {formatJPY(subtotals.byCategory.publicPension - netPublicPensionIncome)}
+          {formatJPY(subtotals.publicPension - netPublicPensionIncome)}
         </Typography>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Net Public Pension Income: {formatJPY(netPublicPensionIncome)}
@@ -323,7 +318,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               }}
             >
               <Chip
-                label={`Subtotal: ${formatJPY(subtotals.byCategory[category.key])}`}
+                label={`Subtotal: ${formatJPY(subtotals[category.key])}`}
                 size="small"
                 color={category.chipColor}
                 variant="outlined"
