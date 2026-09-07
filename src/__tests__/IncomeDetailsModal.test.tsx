@@ -440,6 +440,96 @@ describe('IncomeDetailsModal - Public Pension', () => {
   });
 });
 
+describe('IncomeDetailsModal - Investment Income', () => {
+  it('lists all three investment types in the category menu and opens the form for the chosen one', async () => {
+    const user = userEvent.setup();
+    const handleStreamsChange = vi.fn();
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[]}
+        onStreamsChange={handleStreamsChange}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    const menu = screen.getByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map(item => item.textContent),
+    ).toEqual(['Listed Share Capital Gains', 'Listed Share Dividends', 'Deposit Interest']);
+
+    await user.click(within(menu).getByRole('menuitem', { name: /listed share dividends/i }));
+    expect(screen.getByRole('heading', { name: 'Add Listed Share Dividends' })).toBeInTheDocument();
+
+    const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
+    await user.clear(amountInput);
+    await user.type(amountInput, '300000');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(handleStreamsChange).toHaveBeenCalledWith([
+      expect.objectContaining({ type: 'listedDividends', amount: 300000 }),
+    ]);
+  });
+
+  it('displays the withheld-tax footer and net investment income alongside the subtotal', () => {
+    const streams: IncomeStream[] = [
+      { id: 'g1', type: 'listedCapitalGains', amount: 1_000_000 },
+      { id: 'd1', type: 'listedDividends', amount: 200_000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
+          grossTotal: 1_200_000,
+          withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Subtotal: ¥1,200,000')).toBeInTheDocument();
+    expect(screen.getByText(/Withheld at Source \(源泉徴収\): -¥243,780/)).toBeInTheDocument();
+    expect(screen.getByText(/Net Investment Income: ¥956,220/)).toBeInTheDocument();
+    // The header caption mirrors the category subtotal.
+    expect(screen.getByText('Investment: ¥1,200,000')).toBeInTheDocument();
+  });
+
+  it('shows only the gross subtotal when no investmentIncome prop is supplied', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[{ id: 'd1', type: 'listedDividends', amount: 200_000 }]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Subtotal: ¥200,000')).toBeInTheDocument();
+    expect(screen.queryByText(/Withheld at Source/)).not.toBeInTheDocument();
+  });
+
+  it('omits the header Investment caption when there is no investment income', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.queryByText(/Investment:/)).not.toBeInTheDocument();
+  });
+});
+
 describe('IncomeDetailsModal - Adding from each section', () => {
   const salary: IncomeStream = { id: 's1', type: 'salary', amount: 5000000, frequency: 'annual' };
 

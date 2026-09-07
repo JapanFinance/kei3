@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 import { IncomeStreamForm } from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
 
@@ -43,5 +43,45 @@ describe('IncomeStreamForm', () => {
       />,
     );
     expect(screen.getByRole('heading', { name: 'Edit Bonus' })).toBeInTheDocument();
+  });
+
+  it('shows the listed-share guidance box for both capital gains and dividends', () => {
+    const { rerender } = render(
+      <IncomeStreamForm type="listedCapitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
+    expect(screen.getByText('Assumptions for Listed-Share Income')).toBeInTheDocument();
+
+    rerender(
+      <IncomeStreamForm type="listedDividends" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
+    expect(screen.getByText('Assumptions for Listed-Share Income')).toBeInTheDocument();
+  });
+
+  it('shows the deposit-interest guidance box', () => {
+    render(<IncomeStreamForm type="depositInterest" onSave={mockOnSave} onCancel={mockOnCancel} />);
+    expect(screen.getByText(/never affects 合計所得金額/)).toBeInTheDocument();
+  });
+
+  it('accepts a capital-gains loss as a negative amount and saves it unchanged', () => {
+    render(
+      <IncomeStreamForm type="listedCapitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
+    const input = screen.getByLabelText('Net Capital Gains');
+    fireEvent.change(input, { target: { value: '-¥500,000' } });
+    expect(input.getAttribute('value')).toBe('-¥500,000');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'listedCapitalGains', amount: -500000 }),
+    );
+  });
+
+  it('has no minus sign available for dividends, unlike capital gains', () => {
+    render(<IncomeStreamForm type="listedDividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+    const input = screen.getByLabelText('Gross Dividends');
+    // The minus sign is not part of the allowed format (min is 0, not negative), so it is
+    // dropped rather than producing a negative value.
+    fireEvent.change(input, { target: { value: '-¥300,000' } });
+    expect(input.getAttribute('value')).toBe('¥300,000');
   });
 });

@@ -165,3 +165,100 @@ describe('generateChartData with a commuting allowance', () => {
     });
   });
 });
+
+describe('generateChartData with investment income', () => {
+  // Dividends 300,000 + interest 100,000, both held constant across the sweep like the
+  // commuting allowance. Withheld at source (申告不要): listed base 300,000 (no capital
+  // gains to net against) → 45,945 national + 15,000 residence; interest 100,000 → 15,315
+  // national + 5,000 residence.
+  const investmentContext: ChartCalculationContext = {
+    ...context,
+    incomeStreams: [
+      { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
+      { id: 'd', type: 'listedDividends', amount: 300_000 },
+      { id: 'i', type: 'depositInterest', amount: 100_000 },
+    ],
+  };
+
+  type PointWithExtras = Point & {
+    breakdown?: { label: string; amount: number }[];
+    investmentGrossTotal?: number;
+  };
+
+  it('holds the investment total constant across the sweep', () => {
+    const { datasets } = generateChartData(range, investmentContext);
+    const takeHome = datasets.find(d => d.label === 'Take-Home Pay')!;
+    const points = takeHome.data as PointWithExtras[];
+
+    expect(points).toHaveLength(5);
+    points.forEach(point => {
+      expect(point.investmentGrossTotal, `income ${point.x}`).toBe(400_000);
+    });
+  });
+
+  it('labels the investment rows in the breakdown, keeping the sign on a capital-gains loss', () => {
+    const lossContext: ChartCalculationContext = {
+      ...context,
+      incomeStreams: [
+        { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
+        { id: 'c', type: 'listedCapitalGains', amount: -500_000 },
+        { id: 'd', type: 'listedDividends', amount: 300_000 },
+      ],
+    };
+    const { datasets } = generateChartData(range, lossContext);
+    const takeHome = datasets.find(d => d.label === 'Take-Home Pay')!;
+    const points = takeHome.data as PointWithExtras[];
+
+    points.forEach(point => {
+      expect(point.breakdown, `income ${point.x}`).toEqual(
+        expect.arrayContaining([
+          { label: 'Listed Capital Gains', amount: -500_000 },
+          { label: 'Listed Dividends', amount: 300_000 },
+        ]),
+      );
+    });
+  });
+
+  it('stacks to income plus the investment total, with withheld tax folded into the tax bars', () => {
+    const { datasets } = generateChartData(range, investmentContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = datasets.find(d => d.label === 'Take-Home Pay')!;
+    const points = takeHome.data as PointWithExtras[];
+
+    points.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + (d.data as Point[])[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x + point.investmentGrossTotal!);
+    });
+
+    // Investment income does not enter taxable income in Phase 1 (申告不要), so the
+    // assessed income/residence tax at each swept point is identical to a salary-only sweep;
+    // only the withheld amounts — constant, since the investment streams are held constant —
+    // are added on top.
+    const { datasets: baselineDatasets } = generateChartData(range, context);
+    const incomeTax = datasets.find(d => d.label === 'Income Tax')!.data as Point[];
+    const residenceTax = datasets.find(d => d.label === 'Residence Tax')!.data as Point[];
+    const baselineIncomeTax = baselineDatasets.find(d => d.label === 'Income Tax')!.data as Point[];
+    const baselineResidenceTax = baselineDatasets.find(d => d.label === 'Residence Tax')!
+      .data as Point[];
+
+    incomeTax.forEach((point, i) => {
+      expect(point.y - baselineIncomeTax[i]!.y, `income ${point.x}`).toBe(61_260); // 45,945 + 15,315
+    });
+    residenceTax.forEach((point, i) => {
+      expect(point.y - baselineResidenceTax[i]!.y, `income ${point.x}`).toBe(20_000); // 15,000 + 5,000
+    });
+  });
+
+  it('divides the Take-Home % line by income plus the investment total', () => {
+    const { datasets } = generateChartData(range, investmentContext);
+    const takeHomePercent = datasets.find(d => d.label === 'Take-Home %')!;
+    const takeHome = datasets.find(d => d.label === 'Take-Home Pay')!;
+    const percentPoints = takeHomePercent.data as Point[];
+    const takeHomePoints = takeHome.data as PointWithExtras[];
+
+    percentPoints.forEach((point, i) => {
+      const totalGross = takeHomePoints[i]!.x + takeHomePoints[i]!.investmentGrossTotal!;
+      expect(point.y, `income ${point.x}`).toBeCloseTo((takeHomePoints[i]!.y / totalGross) * 100);
+    });
+  });
+});

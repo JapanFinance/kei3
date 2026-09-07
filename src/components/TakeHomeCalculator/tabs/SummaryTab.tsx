@@ -48,7 +48,10 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       results.pensionPayments +
       (results.employmentInsurance ?? 0) +
       (results.longTermCareCategory1Premium ?? 0);
-  const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
+  const totalTaxes =
+    results.nationalIncomeTax +
+    results.residenceTax.totalResidenceTax +
+    (results.investmentIncome?.withheld.total ?? 0);
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage =
     results.annualIncome > 0
@@ -67,6 +70,16 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         value={formatJPY(results.annualIncome)}
         type="header"
       />
+      {results.investmentIncome !== undefined && (
+        <>
+          <ResultRow
+            label="Investment Income"
+            value={formatJPY(results.investmentIncome.grossTotal)}
+            type="default"
+          />
+          <ResultRow label="Total Income" value={formatJPY(grossTotal)} type="subtotal" />
+        </>
+      )}
       <Divider sx={{ my: { xs: 1, sm: 1.5 } }} />
 
       {/* Social Insurance Section */}
@@ -191,6 +204,17 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
           )}
           type="indented"
         />
+        {results.investmentIncome !== undefined && (
+          <ResultRow
+            label="Investment Income Tax (withheld)"
+            value={formatAmountWithShare(
+              results.investmentIncome.withheld.total,
+              grossTotal,
+              !isMobile,
+            )}
+            type="indented"
+          />
+        )}
         <ResultRow
           label="Total Taxes"
           value={formatAmountWithShare(totalTaxes, results.annualIncome, !isMobile)}

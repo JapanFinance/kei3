@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-08
+
+### New
+
+- Investment income can now be entered as Advanced-mode income types: listed-share capital gains ([上場株式等の譲渡所得等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm)) and dividends ([上場株式等の配当等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm)) held in a [特定口座（源泉徴収あり）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm) under 申告不要, plus deposit [interest](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm) (利子所得). The 20.315% withheld at source appears as its own line in the Summary and Taxes tabs; in the take-home chart, investment income is held constant across the income range instead of scaling with it. Reporting a gain, dividend, or loss on a tax return (申告分離課税 / 総合課税), foreign brokerages, and NISA are not yet supported.
+
 ## 2026-09-06
 
 ### Updated

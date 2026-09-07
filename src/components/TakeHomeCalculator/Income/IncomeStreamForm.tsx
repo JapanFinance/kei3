@@ -444,6 +444,60 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             </Box>
           )}
 
+          {(type === 'listedCapitalGains' || type === 'listedDividends') && (
+            <Box sx={guidanceBoxSx}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                Assumptions for Listed-Share Income
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                Assumes a domestic 特定口座（源泉徴収あり）with 申告不要 elected: the broker
+                withholds 20.315% (15.315% income tax including 復興特別所得税, 5% residence tax),
+                and a capital loss for the year is netted against dividends within the account
+                before withholding, as the broker does at year end. These amounts are not reported
+                on a tax return, so they do not affect 合計所得金額, health-insurance premiums, the
+                basic deduction, spouse or dependent eligibility, residence-tax exemption, or the
+                furusato nozei limit.
+              </Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                Foreign brokerages, and reporting a gain or dividend on a tax return (申告分離課税 /
+                総合課税), are not yet supported. Do not include NISA (非課税) amounts.
+              </Typography>
+              <SourceLinks
+                sources={[
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+                    label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+                  },
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+                    label: '配当金を受け取ったとき(配当所得) - NTA',
+                  },
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',
+                    label: '特定口座制度 - NTA',
+                  },
+                ]}
+              />
+            </Box>
+          )}
+
+          {type === 'depositInterest' && (
+            <Box sx={guidanceBoxSx}>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                Taxed at source at 20.315% (源泉分離課税) and never reported on a tax return, so it
+                never affects 合計所得金額 or anything that depends on it.
+              </Typography>
+              <SourceLinks
+                sources={[
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
+                    label: '利息を受け取ったとき(利子所得) - NTA',
+                  },
+                ]}
+              />
+            </Box>
+          )}
+
           {type === 'publicPension' && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
