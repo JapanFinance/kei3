@@ -7,7 +7,11 @@ import type { CommutingAllowanceIncomeStream, IncomeStream, IncomeStreamType } f
 type IncomeStreamOfType = { [T in IncomeStreamType]: Extract<IncomeStream, { type: T }> };
 
 interface IncomeStreamBehavior<T extends IncomeStreamType> {
-  /** Whether streams of this type are part of {@link totalAnnualIncomeFromStreams}. */
+  /**
+   * Whether streams of this type are income at all. Not "is it taxable" and not "does it
+   * grow with earnings": a type that is income but is asset-based rather than earned still
+   * answers true here and needs its own property for that distinction.
+   */
   countsTowardAnnualIncome: boolean;
   /** The amount the stream represents over a year, from however its amount is entered. */
   annualAmount: (stream: IncomeStreamOfType[T]) => number;

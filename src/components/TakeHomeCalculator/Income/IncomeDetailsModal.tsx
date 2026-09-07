@@ -28,6 +28,7 @@ import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
   annualIncomeStreamAmount,
+  countsTowardAnnualIncome,
   getCommutingAllowanceAnnualAmount,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
@@ -137,8 +138,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     }
   };
 
-  // Commuting allowance sits in the employment group but is a nontaxable benefit, so it is
-  // left out of that group's subtotal.
+  // A category's subtotal is the income of that classification, so the commuting allowance —
+  // which sits in the employment group but reimburses a cost rather than paying for work — is
+  // left out of it.
   const calculateSubtotals = () => {
     const byCategory: Record<IncomeCategoryKey, number> = {
       employment: 0,
@@ -148,9 +150,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     };
 
     streams.forEach(s => {
-      // Skipped on the type rather than on whether it counts as income: another non-income
-      // type would still belong in its own category's subtotal.
-      if (s.type === 'commutingAllowance') return;
+      if (!countsTowardAnnualIncome(s)) return;
       byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualIncomeStreamAmount(s);
     });
 
