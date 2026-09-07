@@ -375,6 +375,24 @@ export interface CustomEmployeesHealthInsuranceRates {
 }
 
 export interface TakeHomeResults {
+  /**
+   * The amount received over the year before taxes and social insurance, net of the real costs
+   * of earning it and gross of every deduction that is not a cash outflow: salary, bonus and
+   * stock compensation gross; public pension gross, before the 公的年金等控除; business and
+   * miscellaneous income after 必要経費 but before the 青色申告特別控除. A commuting allowance is
+   * excluded as a cost reimbursement. Under this definition, and only this one,
+   * {@link takeHomeIncome} (this amount minus taxes and social insurance) is the money kept.
+   *
+   * The same definition is used by the two external figures this amount is compared with. The
+   * 所得 of the 国民生活基礎調査 behind the chart's median and percentile bands is defined in the
+   * survey's 用語の説明 (2025 edition, item 13「所得の種類」, k-tyosa25/dl/07.pdf p. 38) as
+   * 雇用者所得 = 給料・賃金・賞与の合計金額 including 税金や社会保険料, 事業所得 = 収入 minus
+   * 仕入原価や必要経費, and 公的年金・恩給 = 支給された年金額; item 15 defines 可処分所得 as that
+   * 所得 minus taxes and social insurance and calls it the equivalent of 手取り収入, which is
+   * {@link takeHomeIncome}. The 年間収入 of the social insurance dependent-coverage test
+   * (isDependentCoverageEligible in healthInsurance.ts) counts income the same way. Totalled by
+   * totalAnnualIncomeFromStreams on the input side.
+   */
   annualIncome: number;
   hasEmploymentIncome: boolean;
   blueFilerDeduction?: number;

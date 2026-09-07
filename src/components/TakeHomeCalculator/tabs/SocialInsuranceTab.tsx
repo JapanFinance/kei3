@@ -34,6 +34,7 @@ import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
+import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
@@ -158,7 +159,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           Social Insurance Details
         </Typography>
 
-        <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
+        <ResultRow
+          label={
+            <span>
+              Annual Income
+              <AnnualIncomeTooltip />
+            </span>
+          }
+          value={formatJPY(results.annualIncome)}
+          type="header"
+        />
 
         <Box
           sx={{

@@ -44,7 +44,7 @@ describe('IncomeDetailsModal - Business Income', () => {
 
     // 5. Enter Amount
     // SpinnerNumberField renders as a textbox type="text" for formatting
-    const amountInput = screen.getByRole('textbox', { name: /annual net income/i });
+    const amountInput = screen.getByRole('textbox', { name: /annual income after expenses/i });
     await user.clear(amountInput);
     await user.type(amountInput, '6000000');
 
@@ -498,7 +498,9 @@ describe('IncomeDetailsModal - Adding from each section', () => {
     await user.click(screen.getByRole('button', { name: /add miscellaneous income/i }));
 
     expect(screen.getByRole('heading', { name: 'Add Miscellaneous' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /annual net income/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: /annual income after expenses/i }),
+    ).toBeInTheDocument();
   });
 
   it('keeps the type fixed while editing', async () => {

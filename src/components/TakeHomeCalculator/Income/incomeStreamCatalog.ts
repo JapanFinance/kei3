@@ -98,17 +98,17 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     label: 'Business',
     category: 'business',
     chipLabel: 'BUSINESS',
-    amountLabel: 'Annual Net Income',
+    amountLabel: 'Annual Income After Expenses',
     amountHelperText:
-      'Business income minus business expenses. For multiple businesses, combine the income across all businesses.',
+      'Business revenue minus necessary expenses (収入金額 − 必要経費), before the blue-filer special deduction. For multiple businesses, combine the income across all businesses.',
     maxCount: 1,
   },
   miscellaneous: {
     label: 'Miscellaneous',
     category: 'miscellaneous',
     chipLabel: 'MISCELLANEOUS',
-    amountLabel: 'Annual Net Income',
-    amountHelperText: 'Income minus necessary expenses',
+    amountLabel: 'Annual Income After Expenses',
+    amountHelperText: 'Income minus necessary expenses (収入金額 − 必要経費)',
   },
   publicPension: {
     label: 'Public Pension',
