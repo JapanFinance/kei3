@@ -170,11 +170,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const publicPensionSubtotalFooter =
     netPublicPensionIncome === undefined ? null : (
       <>
-        <Typography variant="caption" color="textSecondary">
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Public Pension Deduction (公的年金等控除): -
           {formatJPY(subtotals.byCategory.publicPension - netPublicPensionIncome)}
         </Typography>
-        <Typography variant="caption" color="textSecondary">
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Net Public Pension Income: {formatJPY(netPublicPensionIncome)}
         </Typography>
       </>
@@ -258,24 +258,33 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       {formatJPY(stream.amount)}
                     </Typography>
                     {getStreamDescription(stream) && (
-                      <Typography variant="body2" color="textSecondary">
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         {getStreamDescription(stream)}
                       </Typography>
                     )}
                   </Box>
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', display: 'block' }}
+                    >
                       (Annual: {formatJPY(stream.amount * 12)})
                     </Typography>
                   )}
                   {stream.type === 'business' && !!stream.blueFilerDeduction && (
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', display: 'block' }}
+                    >
                       (Blue-filer Deduction: -
                       {formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
                     </Typography>
                   )}
                   {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
-                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', display: 'block' }}
+                    >
                       (Annual: {formatJPY(getCommutingAllowanceAnnualAmount(stream))})
                     </Typography>
                   )}

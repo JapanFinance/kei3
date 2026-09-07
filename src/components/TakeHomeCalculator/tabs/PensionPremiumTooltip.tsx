@@ -100,7 +100,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Monthly Remuneration
             </Typography>
             <Typography variant="caption" sx={{ fontWeight: 500 }}>
@@ -117,7 +117,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Standard Monthly Remuneration
             </Typography>
             <Typography variant="caption" sx={{ fontWeight: 500 }}>
@@ -136,7 +136,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
             gap: 1,
           }}
         >
-          <Typography variant="subtitle2" color="primary.main" sx={{ fontWeight: 600, mb: 0.5 }}>
+          <Typography variant="subtitle2" sx={{ color: 'primary.main', fontWeight: 600, mb: 0.5 }}>
             Monthly Pension Contribution
           </Typography>
 
@@ -166,8 +166,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
 
       <Typography
         variant="caption"
-        color="text.secondary"
-        sx={{ fontStyle: 'italic', display: 'block', mb: 1 }}
+        sx={{ color: 'text.secondary', fontStyle: 'italic', display: 'block', mb: 1 }}
       >
         The employer also pays {formatPercent(employeeRate)}.
       </Typography>

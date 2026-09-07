@@ -169,7 +169,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             borderColor: 'text.secondary',
           }}
         >
-          <Typography variant="body2" color="text.secondary" align="center">
+          <Typography variant="body2" align="center" sx={{ color: 'text.secondary' }}>
             Using manually entered social insurance amount.
             <br />
             Detailed breakdown is not available.
@@ -299,7 +299,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                       </tr>
                     </tbody>
                   </table>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     Monthly remuneration includes base salary and various allowances (e.g. commuting
                     allowance, housing allowance).
                   </Typography>

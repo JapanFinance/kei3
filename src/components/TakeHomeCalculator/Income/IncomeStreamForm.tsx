@@ -410,13 +410,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             error={!!error}
           />
           {type === 'salary' && frequency === 'monthly' && amount > 0 && (
-            <Typography variant="body2" color="textSecondary" align="right" sx={{ mt: 0.5 }}>
+            <Typography variant="body2" align="right" sx={{ color: 'text.secondary', mt: 0.5 }}>
               Annual: {formatJPY(amount * 12)}
             </Typography>
           )}
           {type === 'commutingAllowance' && amount > 0 && (
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 0.5 }}>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Monthly:{' '}
                 {formatJPY(
                   frequency === 'monthly'
@@ -428,7 +428,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                         : amount / 12,
                 )}
               </Typography>
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Annual:{' '}
                 {formatJPY(
                   frequency === 'monthly'
@@ -498,8 +498,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   </Typography>
                   <Typography
                     variant="caption"
-                    color="textSecondary"
-                    sx={{ mt: 1, display: 'block' }}
+                    sx={{ color: 'text.secondary', mt: 1, display: 'block' }}
                   >
                     Example conversion: $15,000 × 150 JPY/USD = ¥2,250,000.
                   </Typography>
