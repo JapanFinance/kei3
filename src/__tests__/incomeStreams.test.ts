@@ -66,9 +66,9 @@ describe('countsTowardAnnualIncome', () => {
         frequency: 'monthly',
       }),
     ).toBe(false);
-    expect(countsTowardAnnualIncome({ id: 'g1', type: 'listedCapitalGains', amount: -10_000 })).toBe(
-      false,
-    );
+    expect(
+      countsTowardAnnualIncome({ id: 'g1', type: 'listedCapitalGains', amount: -10_000 }),
+    ).toBe(false);
     expect(countsTowardAnnualIncome({ id: 'd1', type: 'listedDividends', amount: 10_000 })).toBe(
       false,
     );
