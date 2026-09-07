@@ -25,11 +25,13 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useEffect, useRef, useState } from 'react';
 
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
+import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
-  formatJPY,
-  formatMonthLong,
+  annualIncomeStreamAmount,
+  countsTowardAnnualIncome,
   getCommutingAllowanceAnnualAmount,
-} from '../../../utils/formatters';
+  totalAnnualIncomeFromStreams,
+} from '../../../utils/incomeStreams';
 import {
   INCOME_CATEGORIES,
   INCOME_STREAM_CATALOG,
@@ -116,15 +118,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     onStreamsChange(streams.filter(s => s.id !== id));
   };
 
-  const totalIncome = streams.reduce((sum, s) => {
-    // Exclude commuting allowance from total income
-    if (s.type === 'commutingAllowance') return sum;
-
-    if (s.type === 'salary' && s.frequency === 'monthly') {
-      return sum + s.amount * 12;
-    }
-    return sum + s.amount;
-  }, 0);
+  const totalIncome = totalAnnualIncomeFromStreams(streams);
 
   const getStreamDescription = (stream: IncomeStream) => {
     switch (stream.type) {
@@ -156,13 +150,12 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     let commutingAllowance = 0;
 
     streams.forEach(s => {
-      if (s.type === 'commutingAllowance') {
-        commutingAllowance += getCommutingAllowanceAnnualAmount(s);
-        return;
+      const annualAmount = annualIncomeStreamAmount(s);
+      if (countsTowardAnnualIncome(s)) {
+        byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualAmount;
+      } else {
+        commutingAllowance += annualAmount;
       }
-      const annualAmount =
-        s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
-      byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualAmount;
     });
 
     return { byCategory, commutingAllowance };

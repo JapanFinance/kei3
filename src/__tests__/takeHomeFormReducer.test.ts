@@ -5,7 +5,6 @@ import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerR
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   takeHomeFormReducer,
-  totalAnnualIncomeFromStreams,
   availableProvidersFor,
   regionOptionsFor,
 } from '../state/takeHomeFormReducer';
@@ -735,24 +734,6 @@ describe('takeHomeFormReducer', () => {
         DEPENDENT_COVERAGE_ID,
         NATIONAL_HEALTH_INSURANCE_ID,
       ]);
-    });
-  });
-
-  describe('totalAnnualIncomeFromStreams', () => {
-    it('annualizes monthly salaries, excludes commuting allowance, and sums everything else', () => {
-      expect(
-        totalAnnualIncomeFromStreams([
-          { id: 's1', type: 'salary', amount: 300_000, frequency: 'monthly' },
-          { id: 's2', type: 'salary', amount: 1_000_000, frequency: 'annual' },
-          { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
-          { id: 'b1', type: 'bonus', amount: 500_000, month: 5 },
-          { id: 'm1', type: 'miscellaneous', amount: 200_000 },
-        ]),
-      ).toBe(300_000 * 12 + 1_000_000 + 500_000 + 200_000);
-    });
-
-    it('returns 0 for an empty stream list', () => {
-      expect(totalAnnualIncomeFromStreams([])).toBe(0);
     });
   });
 });

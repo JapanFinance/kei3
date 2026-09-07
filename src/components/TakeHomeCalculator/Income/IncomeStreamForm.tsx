@@ -23,11 +23,8 @@ import React, { useState } from 'react';
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
 import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
-import {
-  formatJPY,
-  formatMonthLong,
-  getFrequencyAnnualMultiplier,
-} from '../../../utils/formatters';
+import { formatJPY, formatMonthLong } from '../../../utils/formatters';
+import { getFrequencyAnnualMultiplier } from '../../../utils/incomeStreams';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';

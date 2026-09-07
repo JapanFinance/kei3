@@ -38,7 +38,6 @@ import {
   calculateDependentDeductions,
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
-import { getCommutingAllowanceAnnualAmount } from './formatters';
 import {
   calculateHealthInsuranceBreakdown,
   calculateLatterStageElderlyPremium,
@@ -46,6 +45,7 @@ import {
   type LatterStageElderlyBreakdown,
 } from './healthInsuranceCalculator';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
+import { annualIncomeStreamAmount } from './incomeStreams';
 import {
   estimateLongTermCareCategory1Premium,
   type LongTermCareCategory1TierInputs,
@@ -313,14 +313,10 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   for (const income of incomeStreams) {
     switch (income.type) {
       case 'salary':
-        if (income.frequency === 'monthly') {
-          salaryIncome += income.amount * 12;
-        } else {
-          salaryIncome += income.amount;
-        }
+        salaryIncome += annualIncomeStreamAmount(income);
         break;
       case 'commutingAllowance': {
-        const annualAmount = getCommutingAllowanceAnnualAmount(income);
+        const annualAmount = annualIncomeStreamAmount(income);
         if (annualAmount / 12 > COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP) {
           throw new Error(
             'A commuting allowance above the non-taxable cap is not supported. Enter the excess as salary.',
