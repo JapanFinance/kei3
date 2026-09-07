@@ -58,7 +58,7 @@ import {
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
-import { getCommutingAllowanceAnnualAmount } from '../../utils/incomeStreams';
+import { dependentTestAnnualIncome, totalNonIncomeFromStreams } from '../../utils/incomeStreams';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -129,7 +129,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   const useLongTermCareEstimate = !inputs.longTermCareCategory1ManualEntry;
 
   // Check if dependent coverage is eligible based on income and age
-  const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome, inputs.ageRange);
+  const isDependentEligible = isDependentCoverageEligible(
+    dependentTestAnnualIncome(inputs.incomeStreams),
+    inputs.ageRange,
+  );
 
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
@@ -340,13 +343,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </Box>
 
                   {(() => {
-                    const totalNontaxableBenefits = inputs.incomeStreams.reduce(
-                      (sum, s) =>
-                        s.type === 'commutingAllowance'
-                          ? sum + getCommutingAllowanceAnnualAmount(s)
-                          : sum,
-                      0,
-                    );
+                    const totalNontaxableBenefits = totalNonIncomeFromStreams(inputs.incomeStreams);
 
                     return totalNontaxableBenefits > 0 ? (
                       <Box
@@ -679,7 +676,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective gross annual income is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance, is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>

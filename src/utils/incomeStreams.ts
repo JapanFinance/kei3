@@ -99,3 +99,43 @@ export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): 
     0,
   );
 }
+
+/**
+ * Total of the amounts {@link totalAnnualIncomeFromStreams} leaves out: the streams
+ * {@link countsTowardAnnualIncome} rejects as not income at all, at their
+ * {@link annualIncomeStreamAmount}.
+ */
+export function totalNonIncomeFromStreams(streams: readonly IncomeStream[]): number {
+  return streams.reduce(
+    (sum, s) => (countsTowardAnnualIncome(s) ? sum : sum + annualIncomeStreamAmount(s)),
+    0,
+  );
+}
+
+/** The annualized total of every commuting allowance among `streams`. */
+export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStream[]): number {
+  return streams.reduce(
+    (sum, s) =>
+      s.type === 'commutingAllowance' ? sum + getCommutingAllowanceAnnualAmount(s) : sum,
+    0,
+  );
+}
+
+/**
+ * The 年間収入 the dependent-coverage test is judged on: {@link totalAnnualIncomeFromStreams}
+ * plus the annualized commuting allowance. The allowance is the one amount the two figures
+ * disagree on — annual income leaves it out as a cost reimbursement, while 認定 reads 年間収入
+ * off the 労働基準法第11条 賃金, which includes 諸手当, and a labour contract stating only
+ * 「通勤手当有」 without an amount is one the 保険者 cannot judge on. Its income-tax
+ * non-taxability does not exempt it, that being a tax rule rather than a 社会保険 one.
+ *
+ * This adds the commuting allowance back by name rather than everything
+ * {@link totalNonIncomeFromStreams} leaves out: whether a further non-income stream type counts
+ * toward 年間収入 is its own question of social insurance law, to answer when one exists.
+ *
+ * Source: 日本年金機構「労働契約内容による年間収入での被扶養者の認定の取り扱いについて」
+ * https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html
+ */
+export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): number {
+  return totalAnnualIncomeFromStreams(streams) + totalCommutingAllowanceFromStreams(streams);
+}

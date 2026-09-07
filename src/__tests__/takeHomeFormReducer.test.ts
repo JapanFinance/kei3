@@ -616,6 +616,51 @@ describe('takeHomeFormReducer', () => {
       expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
     });
 
+    it('drops dependent coverage when a commuting allowance pushes the 年間収入 over the threshold', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+        annualIncome: 1_200_000,
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [
+          { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+          { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+        ],
+      });
+
+      // The allowance stays out of annual income but counts toward the 年間収入 the
+      // dependent test is judged on: 1,200,000 + 120,000 is over the 1,300,000 threshold.
+      expect(result.annualIncome).toBe(1_200_000);
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('keeps dependent coverage for the same salary without a commuting allowance', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+        annualIncome: 1_200_000,
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [{ id: 's1', type: 'salary', amount: 1_250_000, frequency: 'annual' }],
+      });
+
+      expect(result.annualIncome).toBe(1_250_000);
+      expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);
+      expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
+    });
+
     it('switches an employee provider to NHI and resets the region when the last employment stream is removed', () => {
       const state: TakeHomeFormState = {
         ...baseState,
@@ -705,7 +750,14 @@ describe('takeHomeFormReducer', () => {
     it('adds dependent coverage for employment income under the threshold', () => {
       const ids = availableProvidersFor({
         ...baseState,
-        annualIncome: DEPENDENT_INCOME_THRESHOLD - 1,
+        incomeStreams: [
+          {
+            id: 'simple-salary',
+            type: 'salary',
+            amount: DEPENDENT_INCOME_THRESHOLD - 1,
+            frequency: 'annual',
+          },
+        ],
       }).map(option => option.id);
 
       expect(ids).toEqual([
@@ -714,6 +766,33 @@ describe('takeHomeFormReducer', () => {
         NATIONAL_HEALTH_INSURANCE_ID,
         CUSTOM_PROVIDER_ID,
       ]);
+    });
+
+    it('withholds dependent coverage once a commuting allowance carries the 年間収入 over', () => {
+      const salaryUnderThreshold: TakeHomeFormState['incomeStreams'] = [
+        {
+          id: 's1',
+          type: 'salary',
+          amount: DEPENDENT_INCOME_THRESHOLD - 100_000,
+          frequency: 'annual',
+        },
+      ];
+      const advanced = { ...baseState, incomeMode: 'advanced' as const };
+
+      expect(
+        availableProvidersFor({ ...advanced, incomeStreams: salaryUnderThreshold }).map(o => o.id),
+      ).toContain(DEPENDENT_COVERAGE_ID);
+
+      // 100,000 short of the threshold, but a 10,000/month allowance is 120,000 over the year.
+      expect(
+        availableProvidersFor({
+          ...advanced,
+          incomeStreams: [
+            ...salaryUnderThreshold,
+            { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+          ],
+        }).map(o => o.id),
+      ).not.toContain(DEPENDENT_COVERAGE_ID);
     });
 
     it('limits non-employment income to NHI, adding dependent coverage only under the threshold', () => {
@@ -727,7 +806,6 @@ describe('takeHomeFormReducer', () => {
       const underThreshold = availableProvidersFor({
         ...baseState,
         incomeMode: 'miscellaneous',
-        annualIncome: 1_000_000,
         incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 1_000_000 }],
       });
       expect(underThreshold.map(option => option.id)).toEqual([
