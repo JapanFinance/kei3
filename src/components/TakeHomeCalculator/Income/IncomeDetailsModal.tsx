@@ -28,7 +28,6 @@ import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
   annualIncomeStreamAmount,
-  countsTowardAnnualIncome,
   getCommutingAllowanceAnnualAmount,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
@@ -150,12 +149,14 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     let commutingAllowance = 0;
 
     streams.forEach(s => {
-      const annualAmount = annualIncomeStreamAmount(s);
-      if (countsTowardAnnualIncome(s)) {
-        byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualAmount;
-      } else {
-        commutingAllowance += annualAmount;
+      // Keyed on the type rather than on whether it counts as income: the separate bucket is
+      // specifically the commuting allowance, and another non-income type would still belong
+      // in its own category's subtotal.
+      if (s.type === 'commutingAllowance') {
+        commutingAllowance += annualIncomeStreamAmount(s);
+        return;
       }
+      byCategory[INCOME_STREAM_CATALOG[s.type].category] += annualIncomeStreamAmount(s);
     });
 
     return { byCategory, commutingAllowance };
