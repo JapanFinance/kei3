@@ -3,25 +3,15 @@
 
 import type { CommutingAllowanceIncomeStream, IncomeStream, IncomeStreamType } from '../types/tax';
 
-/**
- * Whether each stream type is part of the taxpayer's income. A commuting allowance (通勤手当)
- * reimburses a cost rather than paying for work, so it is the only type excluded.
- *
- * Consumed through {@link countsTowardAnnualIncome}; adding a stream type must answer here.
- */
-const COUNTS_TOWARD_ANNUAL_INCOME: Record<IncomeStreamType, boolean> = {
-  salary: true,
-  bonus: true,
-  business: true,
-  miscellaneous: true,
-  publicPension: true,
-  stockCompensation: true,
-  commutingAllowance: false,
-};
+/** The member of the {@link IncomeStream} union discriminated by `T`. */
+type IncomeStreamOfType<T extends IncomeStreamType> = Extract<IncomeStream, { type: T }>;
 
-/** Whether `stream` contributes to {@link totalAnnualIncomeFromStreams}. */
-export const countsTowardAnnualIncome = (stream: IncomeStream): boolean =>
-  COUNTS_TOWARD_ANNUAL_INCOME[stream.type];
+interface IncomeStreamBehavior<T extends IncomeStreamType> {
+  /** Whether streams of this type are part of {@link totalAnnualIncomeFromStreams}. */
+  countsTowardAnnualIncome: boolean;
+  /** The amount the stream represents over a year, from however its amount is entered. */
+  annualAmount: (stream: IncomeStreamOfType<T>) => number;
+}
 
 /**
  * Returns the multiplier to convert a per-period commuting allowance amount to an annual total.
@@ -43,25 +33,43 @@ export const getFrequencyAnnualMultiplier = (
 };
 
 /**
- * Returns the annualized amount for a commuting allowance income stream.
+ * How each income stream type behaves. Every type answers both questions, so adding one to
+ * {@link IncomeStream} does not compile until its behaviour is declared here — in particular
+ * a type whose amount is entered per period cannot silently annualize at face value.
+ *
+ * Read through {@link countsTowardAnnualIncome} and {@link annualIncomeStreamAmount}.
  */
-export const getCommutingAllowanceAnnualAmount = (stream: CommutingAllowanceIncomeStream): number =>
-  stream.amount * getFrequencyAnnualMultiplier(stream.frequency);
-
-/**
- * The annual amount of a single stream: salary and commuting allowance are entered per period
- * and annualized by their frequency, every other type is entered as an annual amount.
- */
-export const annualIncomeStreamAmount = (stream: IncomeStream): number => {
-  switch (stream.type) {
-    case 'salary':
-      return stream.frequency === 'monthly' ? stream.amount * 12 : stream.amount;
-    case 'commutingAllowance':
-      return getCommutingAllowanceAnnualAmount(stream);
-    default:
-      return stream.amount;
-  }
+const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T> } = {
+  salary: {
+    countsTowardAnnualIncome: true,
+    annualAmount: s => (s.frequency === 'monthly' ? s.amount * 12 : s.amount),
+  },
+  bonus: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
+  business: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
+  miscellaneous: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
+  publicPension: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
+  stockCompensation: { countsTowardAnnualIncome: true, annualAmount: s => s.amount },
+  // A commuting allowance (通勤手当) reimburses a cost rather than paying for work.
+  commutingAllowance: {
+    countsTowardAnnualIncome: false,
+    annualAmount: s => s.amount * getFrequencyAnnualMultiplier(s.frequency),
+  },
 };
+
+/** Whether `stream` contributes to {@link totalAnnualIncomeFromStreams}. */
+export const countsTowardAnnualIncome = (stream: IncomeStream): boolean =>
+  INCOME_STREAM_BEHAVIOR[stream.type].countsTowardAnnualIncome;
+
+/** The amount `stream` represents over a year. */
+export const annualIncomeStreamAmount = (stream: IncomeStream): number =>
+  // The table is keyed by the same discriminant that narrows `stream`, but TypeScript cannot
+  // correlate an indexed access with that narrowing (microsoft/TypeScript#30581), so the
+  // entry's parameter type widens to `never` at this one call.
+  (INCOME_STREAM_BEHAVIOR[stream.type].annualAmount as (s: IncomeStream) => number)(stream);
+
+/** Returns the annualized amount for a commuting allowance income stream. */
+export const getCommutingAllowanceAnnualAmount = (stream: CommutingAllowanceIncomeStream): number =>
+  INCOME_STREAM_BEHAVIOR.commutingAllowance.annualAmount(stream);
 
 /**
  * Total annual income represented by a set of income streams: every stream that
