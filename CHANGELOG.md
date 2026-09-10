@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-10
+
+### Updated
+
+- The income mode selection is now a choice between "Salary only" and "Advanced". The separate Miscellaneous mode has been removed: enter miscellaneous income (雑所得) in the Advanced mode, where it can also be combined with other income types. The two quick modes shared one amount field and could read as separate inputs that both applied; with one quick mode for a single salary and one detailed mode for everything else, the selection shows what the calculation uses.
+
 ## 2026-09-06
 
 ### Updated

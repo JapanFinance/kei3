@@ -316,10 +316,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 size="small"
                 fullWidth
               >
-                <ToggleButton value="salary">Salary</ToggleButton>
-                <ToggleButton value="miscellaneous">
-                  {isMobile ? 'Misc' : 'Miscellaneous'}
-                </ToggleButton>
+                <ToggleButton value="salary">Salary only</ToggleButton>
                 <ToggleButton value="advanced">Advanced</ToggleButton>
               </ToggleButtonGroup>
             </Box>
@@ -407,11 +404,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   name="annualIncome"
                   value={inputs.annualIncome}
                   onChange={handleAnnualIncomeChange}
-                  label={
-                    inputs.incomeMode === 'salary'
-                      ? 'Gross Annual Salary'
-                      : 'Annual Income After Expenses'
-                  }
+                  label="Gross Annual Salary"
                   step={10_000}
                   shiftStep={100_000}
                   helperText={
@@ -424,7 +417,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               </Box>
             )}
 
-            {/* Annual Income Slider - Only show for simple modes */}
+            {/* Annual Income Slider - Only show in salary mode */}
             {inputs.incomeMode !== 'advanced' && (
               <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 0.5 }}>
                 <Slider
