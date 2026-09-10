@@ -409,8 +409,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   shiftStep={100_000}
                   helperText={
                     isMobile
-                      ? 'Input amount directly for ¥20M+ incomes.'
-                      : 'For incomes over 20 million yen, input the amount directly.'
+                      ? 'Input amount directly for ¥20M+ salaries.'
+                      : 'For salaries over 20 million yen, input the amount directly.'
                   }
                   sx={sharedInputSx}
                 />
