@@ -2,11 +2,17 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-10
+
+### Updated
+
+- The income mode selection is now a choice between "Salary only" and "Advanced". The separate Miscellaneous mode has been removed. Instead, enter miscellaneous income (雑所得) in the Advanced mode, where it can also be combined with other income types.
+
 ## 2026-09-06
 
 ### Updated
 
-- The Advanced income mode's income list now shows every income classification (所得区分) as its own section, each with an add button: sections with one income type open its form directly, and the employment section offers a menu of its types (salary, bonus, commuting allowance, stock-based compensation). This replaces the single Add Income/Benefit button and the type dropdown at the top of the form. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
+- The Advanced income mode's income list now shows every income type as its own section, each with an add button: sections with one income type open its form directly, and the employment section offers a menu of its types (salary, bonus, commuting allowance, stock-based compensation). This replaces the single Add Income/Benefit button and the type dropdown at the top of the form. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
 
 ### Fixed
 

@@ -28,23 +28,28 @@ vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
 }));
 
 /**
- * A simple-mode form state at `annualIncome`, carrying the single stream the reducer keeps in
+ * A salary-mode form state at `annualIncome`, carrying the single stream the reducer keeps in
  * sync with it. Overriding `annualIncome` alone would leave the two disagreeing, which no
  * reducer path produces and which the provider selector — now stream-derived — would not see.
  */
-const atSimpleModeIncome = (
-  base: TakeHomeFormState,
-  annualIncome: number,
-  incomeMode: 'salary' | 'miscellaneous' = 'salary',
-): TakeHomeFormState => ({
+const atSalaryIncome = (base: TakeHomeFormState, annualIncome: number): TakeHomeFormState => ({
   ...base,
-  incomeMode,
+  incomeMode: 'salary',
   annualIncome,
   incomeStreams: [
-    incomeMode === 'salary'
-      ? { id: 'simple-salary', type: 'salary', amount: annualIncome, frequency: 'annual' }
-      : { id: 'simple-miscellaneous', type: 'miscellaneous', amount: annualIncome },
+    { id: 'simple-salary', type: 'salary', amount: annualIncome, frequency: 'annual' },
   ],
+});
+
+/** An advanced-mode form state whose only stream is miscellaneous income of `annualIncome`. */
+const atMiscellaneousIncome = (
+  base: TakeHomeFormState,
+  annualIncome: number,
+): TakeHomeFormState => ({
+  ...base,
+  incomeMode: 'advanced',
+  annualIncome,
+  incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: annualIncome }],
 });
 
 describe('TakeHomeInputForm Tests', () => {
@@ -119,11 +124,11 @@ describe('TakeHomeInputForm Tests', () => {
     });
   });
 
-  describe('when in miscellaneous income mode (non-employment income)', () => {
+  describe('when in advanced mode with only non-employment income', () => {
     it('should show dependent coverage and NHI when income is below threshold', async () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
-        ...atSimpleModeIncome(baseInputs, 1_000_000, 'miscellaneous'),
+        ...atMiscellaneousIncome(baseInputs, 1_000_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -148,7 +153,7 @@ describe('TakeHomeInputForm Tests', () => {
 
     it('should only show NHI when non-employment income is above threshold', () => {
       const nonEmploymentInputs = {
-        ...atSimpleModeIncome(baseInputs, 1_500_000, 'miscellaneous'),
+        ...atMiscellaneousIncome(baseInputs, 1_500_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -167,7 +172,7 @@ describe('TakeHomeInputForm Tests', () => {
     it('should not show employee health insurance providers for non-employment income', async () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
-        ...atSimpleModeIncome(baseInputs, 1_000_000, 'miscellaneous'),
+        ...atMiscellaneousIncome(baseInputs, 1_000_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -206,20 +211,20 @@ describe('TakeHomeInputForm Tests', () => {
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
       expect(providerSelect).not.toBeDisabled();
 
-      // Find and click the Miscellaneous toggle
-      const miscToggle = screen.getByRole('button', { name: /misc/i });
-      await user.click(miscToggle);
+      // Find and click the Advanced toggle
+      const advancedToggle = screen.getByRole('button', { name: /advanced/i });
+      await user.click(advancedToggle);
 
       // Verify that the mode change was dispatched
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'incomeModeChanged',
-        mode: 'miscellaneous',
+        mode: 'advanced',
       });
 
-      // Update props to simulate the mode change taking effect
+      // Update props to simulate the mode change and a switch to miscellaneous income
       rerender(
         <TakeHomeInputForm
-          inputs={atSimpleModeIncome(baseInputs, 5000000, 'miscellaneous')}
+          inputs={atMiscellaneousIncome(baseInputs, 5000000)}
           dispatch={mockDispatch}
         />,
       );
@@ -256,7 +261,7 @@ describe('TakeHomeInputForm Tests', () => {
 
     it('should maintain consistency with provider display names', () => {
       const nonEmploymentInputs = {
-        ...atSimpleModeIncome(baseInputs, 5000000, 'miscellaneous'),
+        ...atMiscellaneousIncome(baseInputs, 5000000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -282,8 +287,8 @@ describe('TakeHomeInputForm Tests', () => {
 
       // Income mode selection should be present
       expect(screen.getByRole('group', { name: /income mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Salary' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /misc/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salary only' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
     });
 
     it('should show helpful tooltips and explanatory text', () => {
@@ -329,7 +334,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should include dependent coverage option when income is below threshold for employment income', async () => {
     const user = userEvent.setup();
-    const inputs = atSimpleModeIncome(baseInputs, 1_200_000);
+    const inputs = atSalaryIncome(baseInputs, 1_200_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -346,7 +351,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should NOT include dependent coverage option when income is at or above threshold', async () => {
     const user = userEvent.setup();
-    const inputs = atSimpleModeIncome(baseInputs, 1_300_000);
+    const inputs = atSalaryIncome(baseInputs, 1_300_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -362,7 +367,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should include dependent coverage option for non-employment income when below threshold', async () => {
     const user = userEvent.setup();
-    const inputs = atSimpleModeIncome(baseInputs, 1_000_000, 'miscellaneous');
+    const inputs = atMiscellaneousIncome(baseInputs, 1_000_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -381,7 +386,7 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 
   it('should NOT include dependent coverage option for non-employment income above threshold', () => {
-    const inputs = atSimpleModeIncome(baseInputs, 1_500_000, 'miscellaneous');
+    const inputs = atMiscellaneousIncome(baseInputs, 1_500_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -443,7 +448,7 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 
   it('should show helper text about dependent coverage when income is below threshold', () => {
-    const inputs = atSimpleModeIncome(baseInputs, 1_200_000);
+    const inputs = atSalaryIncome(baseInputs, 1_200_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
