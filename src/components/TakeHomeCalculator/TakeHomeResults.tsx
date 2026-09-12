@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Tab from '@mui/material/Tab';
@@ -9,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import React from 'react';
 
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
+import { hasHighOutOfPocketCost } from '../../utils/furusatoNozei';
 import { useLoadMilestone } from '../../utils/loadMilestones';
 import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';
@@ -20,15 +22,23 @@ interface DetailedTaxResultsProps {
   inputs: TakeHomeInputs;
 }
 
+// Width the high-out-of-pocket warning icon adds to the Furusato Nozei tab:
+// the 16px glyph plus its 4px left margin.
+const WARNING_ICON_WIDTH = 20;
+
 // The full wordings stop fitting at different container widths in the two tab
 // padding regimes: they need 469px of container at the desktop padding and
 // 419px at the mobile padding (measured 2026-07, bold; Arial and Segoe UI
 // fallbacks measure the same or narrower), so each regime gets its own
 // threshold, ~3.5% above the need for rendering variance. The 600px media
 // split must match the viewport breakpoint where the tab padding changes.
-const narrowTabs = (styles: Record<string, string>) => ({
-  '@container (max-width: 435px)': styles,
-  '@media (min-width: 600px)': { '@container (max-width: 485px)': styles },
+// While the warning icon shows, the wordings need its width on top, so both
+// thresholds shift by it rather than the strip overflowing into scroll mode.
+const narrowTabs = (styles: Record<string, string>, warningIconWidth: number) => ({
+  [`@container (max-width: ${435 + warningIconWidth}px)`]: styles,
+  '@media (min-width: 600px)': {
+    [`@container (max-width: ${485 + warningIconWidth}px)`]: styles,
+  },
 });
 
 // Long tab wordings shorten by dropping their trailing words, which a container
@@ -36,23 +46,39 @@ const narrowTabs = (styles: Record<string, string>) => ({
 // means the wording that survives is already in place at first paint, so the
 // tab strip never re-lays-out. `display: none` also keeps the dropped words out
 // of the accessible name.
-const TAB_LABELS: readonly { head: string; tail?: string }[] = [
+const TAB_LABELS: readonly {
+  head: string;
+  tail?: string;
+  warnsOnHighOutOfPocket?: true;
+}[] = [
   { head: 'Summary' },
   { head: 'Social', tail: ' Insurance' },
   { head: 'Taxes' },
-  { head: 'Furusato', tail: ' Nozei' },
+  { head: 'Furusato', tail: ' Nozei', warnsOnHighOutOfPocket: true },
 ];
 
-const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number]) => (
+const renderTabLabel = (
+  { head, tail, warnsOnHighOutOfPocket }: (typeof TAB_LABELS)[number],
+  warningIconWidth: number,
+) => (
   // A single element keeps the wording on one line: MUI lays a Tab's children
   // out as a flex column, so a bare text node and the tail would stack.
   <span>
     {head}
     {tail && (
-      <Box component="span" sx={narrowTabs({ display: 'none' })}>
+      <Box component="span" sx={narrowTabs({ display: 'none' }, warningIconWidth)}>
         {tail}
       </Box>
     )}
+    {warnsOnHighOutOfPocket &&
+      warningIconWidth > 0 && (
+        // titleAccess renders an SVG <title>, which joins the tab's accessible
+        // name so the warning is not color-and-shape only.
+        <WarningIcon
+          titleAccess="High out-of-pocket cost"
+          sx={{ ml: 0.5, fontSize: '1rem', color: 'error.main', verticalAlign: 'text-bottom' }}
+        />
+      )}
   </span>
 );
 
@@ -60,6 +86,11 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
   useLoadMilestone('results-rendered');
 
   const [currentTab, setCurrentTab] = React.useState(0);
+
+  const warningIconWidth =
+    results.furusatoNozei.limit > 0 && hasHighOutOfPocketCost(results.furusatoNozei)
+      ? WARNING_ICON_WIDTH
+      : 0;
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -120,14 +151,14 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
               minWidth: 72,
               minHeight: { xs: 36, sm: 48 },
               padding: { xs: '6px 8px', sm: '12px 16px' },
-              ...narrowTabs({ fontSize: '0.8rem' }),
+              ...narrowTabs({ fontSize: '0.8rem' }, warningIconWidth),
             },
           }}
         >
           {TAB_LABELS.map((label, index) => (
             <Tab
               key={label.head}
-              label={renderTabLabel(label)}
+              label={renderTabLabel(label, warningIconWidth)}
               id={`tab-${index}`}
               aria-controls={`tabpanel-${index}`}
             />
