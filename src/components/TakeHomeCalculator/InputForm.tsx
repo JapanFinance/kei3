@@ -58,7 +58,7 @@ import {
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
-import { getCommutingAllowanceAnnualAmount } from '../../utils/incomeStreams';
+import { dependentTestAnnualIncome, totalNonIncomeFromStreams } from '../../utils/incomeStreams';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -129,7 +129,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   const useLongTermCareEstimate = !inputs.longTermCareCategory1ManualEntry;
 
   // Check if dependent coverage is eligible based on income and age
-  const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome, inputs.ageRange);
+  const isDependentEligible = isDependentCoverageEligible(
+    dependentTestAnnualIncome(inputs.incomeStreams),
+    inputs.ageRange,
+  );
 
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
@@ -313,10 +316,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 size="small"
                 fullWidth
               >
-                <ToggleButton value="salary">Salary</ToggleButton>
-                <ToggleButton value="miscellaneous">
-                  {isMobile ? 'Misc' : 'Miscellaneous'}
-                </ToggleButton>
+                <ToggleButton value="salary">Salary only</ToggleButton>
                 <ToggleButton value="advanced">Advanced</ToggleButton>
               </ToggleButtonGroup>
             </Box>
@@ -340,13 +340,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </Box>
 
                   {(() => {
-                    const totalNontaxableBenefits = inputs.incomeStreams.reduce(
-                      (sum, s) =>
-                        s.type === 'commutingAllowance'
-                          ? sum + getCommutingAllowanceAnnualAmount(s)
-                          : sum,
-                      0,
-                    );
+                    const totalNontaxableBenefits = totalNonIncomeFromStreams(inputs.incomeStreams);
 
                     return totalNontaxableBenefits > 0 ? (
                       <Box
@@ -410,24 +404,20 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   name="annualIncome"
                   value={inputs.annualIncome}
                   onChange={handleAnnualIncomeChange}
-                  label={
-                    inputs.incomeMode === 'salary'
-                      ? 'Gross Annual Salary'
-                      : 'Annual Income After Expenses'
-                  }
+                  label="Gross Annual Salary"
                   step={10_000}
                   shiftStep={100_000}
                   helperText={
                     isMobile
-                      ? 'Input amount directly for ¥20M+ incomes.'
-                      : 'For incomes over 20 million yen, input the amount directly.'
+                      ? 'Input amount directly for ¥20M+ salaries.'
+                      : 'For salaries over 20 million yen, input the amount directly.'
                   }
                   sx={sharedInputSx}
                 />
               </Box>
             )}
 
-            {/* Annual Income Slider - Only show for simple modes */}
+            {/* Annual Income Slider - Only show in salary mode */}
             {inputs.incomeMode !== 'advanced' && (
               <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 0.5 }}>
                 <Slider
@@ -679,7 +669,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective gross annual income is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance, is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>

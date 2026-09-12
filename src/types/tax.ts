@@ -5,7 +5,7 @@ import type { Dependent, DependentDeductionResults, DisabilityLevel } from './de
 import type { HealthInsuranceProviderId, LongTermCareCategory1Estimate } from './healthInsurance';
 import type { TaxpayerAgeRange } from './taxpayerAge';
 
-export type IncomeMode = 'salary' | 'miscellaneous' | 'advanced';
+export type IncomeMode = 'salary' | 'advanced';
 
 export interface BaseIncomeStream {
   id: string;

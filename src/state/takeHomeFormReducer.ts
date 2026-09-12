@@ -15,9 +15,9 @@ import {
   isEmployeeHealthProvider,
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
-import type { IncomeMode, IncomeStream, TakeHomeFormState } from '../types/tax';
+import type { IncomeStream, TakeHomeFormState } from '../types/tax';
 import { isLatterStageElderly } from '../types/taxpayerAge';
-import { totalAnnualIncomeFromStreams } from '../utils/incomeStreams';
+import { dependentTestAnnualIncome, totalAnnualIncomeFromStreams } from '../utils/incomeStreams';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
   return regions.includes('Tokyo')
@@ -125,20 +125,24 @@ const employeeProviderOptions: HealthInsuranceProviderOption[] = (
  * The health insurance providers selectable for a given form state, in dropdown order.
  * From age 75 only the 後期高齢者医療制度 is offered. Below that, employment income can use
  * an employee provider, National Health Insurance, or a custom provider; dependent coverage
- * ("None") is offered only while income is under the eligibility threshold; non-employment
- * income is limited to NHI (plus dependent coverage when eligible). Pure and colocated with the reducer so the same list drives both the
+ * ("None") is offered only while the income the dependent test is judged on
+ * ({@link dependentTestAnnualIncome}) is under the eligibility threshold; non-employment income
+ * is limited to NHI (plus dependent coverage when eligible). Pure and colocated with the reducer so the same list drives both the
  * dropdown (via a `useMemo` in InputForm) and the reducer's provider-validity cascade
  * ({@link applyProviderValidity}), rather than the two drifting apart.
  */
 export function availableProvidersFor(
-  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'annualIncome' | 'ageRange'>,
+  state: Pick<TakeHomeFormState, 'incomeMode' | 'incomeStreams' | 'ageRange'>,
 ): HealthInsuranceProviderOption[] {
   // From age 75 everyone is in the 後期高齢者医療制度 regardless of employment, so it is
   // the only coverage on offer.
   if (isLatterStageElderly(state.ageRange)) {
     return [latterStageProviderOption];
   }
-  const dependentEligible = isDependentCoverageEligible(state.annualIncome, state.ageRange);
+  const dependentEligible = isDependentCoverageEligible(
+    dependentTestAnnualIncome(state.incomeStreams),
+    state.ageRange,
+  );
   if (hasEmploymentIncome(state)) {
     return dependentEligible
       ? [
@@ -152,25 +156,9 @@ export function availableProvidersFor(
   return dependentEligible ? [dependentProviderOption, nhiProviderOption] : [nhiProviderOption];
 }
 
-/** The simple (non-advanced) income modes, each of which mirrors `annualIncome` in one stream. */
-type SimpleIncomeMode = Exclude<IncomeMode, 'advanced'>;
-
-/**
- * The single income stream that mirrors `annualIncome` in a simple mode. The `never`
- * default makes adding a mode to {@link IncomeMode} a compile error here (matching the
- * exhaustiveness idiom in {@link takeHomeFormReducer}) rather than a silent fall-through.
- */
-function simpleModeStreams(mode: SimpleIncomeMode, amount: number): IncomeStream[] {
-  switch (mode) {
-    case 'salary':
-      return [{ id: 'simple-salary', type: 'salary', amount, frequency: 'annual' }];
-    case 'miscellaneous':
-      return [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount }];
-    default: {
-      const unhandledMode: never = mode;
-      throw new Error(`Unhandled simple income mode: ${JSON.stringify(unhandledMode)}`);
-    }
-  }
+/** The single income stream that mirrors `annualIncome` in salary mode. */
+function salaryModeStreams(amount: number): IncomeStream[] {
+  return [{ id: 'simple-salary', type: 'salary', amount, frequency: 'annual' }];
 }
 
 /**
@@ -220,8 +208,8 @@ type SetFieldAction = {
 }[Exclude<keyof TakeHomeFormState, CascadeManagedField>];
 
 /**
- * Income mode changed: resets health insurance provider/region for salary and
- * miscellaneous modes, and syncs the income streams to the new mode — saving the
+ * Income mode changed: resets health insurance provider/region for salary mode, and
+ * syncs the income streams to the new mode — saving the
  * advanced-mode streams when leaving advanced, and restoring or resetting them when
  * entering it (see {@link reduceIncomeModeChanged}).
  */
@@ -342,20 +330,18 @@ function reduceIncomeModeChanged(
 
   switch (action.mode) {
     case 'salary':
-    case 'miscellaneous':
       // At 75+ the provider is age-determined (後期高齢者医療制度), not income-determined. The
       // mode-based default would be rejected by applyProviderValidity and replaced with the
       // default region, discarding the selected prefecture.
       if (!isLatterStageElderly(state.ageRange)) {
-        newState.healthInsuranceProvider =
-          action.mode === 'salary' ? 'KyokaiKenpo' : NATIONAL_HEALTH_INSURANCE_ID;
+        newState.healthInsuranceProvider = 'KyokaiKenpo';
         newState.region = defaultRegionForProvider(newState.healthInsuranceProvider);
       }
-      newState.incomeStreams = simpleModeStreams(action.mode, state.annualIncome);
+      newState.incomeStreams = salaryModeStreams(state.annualIncome);
       break;
     case 'advanced': {
       // Entering advanced mode: restore the saved advanced streams if they still total the
-      // current annual income; otherwise keep the current simple-mode stream.
+      // current annual income; otherwise keep the current salary-mode stream.
       const saved = state.savedIncomeStreams;
       newState.incomeStreams =
         saved.length > 0 && totalAnnualIncomeFromStreams(saved) === state.annualIncome
@@ -371,7 +357,7 @@ function reduceIncomeModeChanged(
     }
   }
 
-  // Salary/miscellaneous force a valid provider above; but entering advanced mode carries
+  // Salary mode forces a valid provider above; but entering advanced mode carries
   // the provider over, and restored/kept streams may lack employment income — reconcile it.
   return applyProviderValidity(newState);
 }
@@ -387,9 +373,9 @@ function reduceAnnualIncomeChanged(
     return state;
   }
   const newState = { ...state, annualIncome: action.value };
-  // In the simple modes the single income stream mirrors the annual income
-  newState.incomeStreams = simpleModeStreams(state.incomeMode, action.value);
-  // Reconcile the provider through the same selector the dropdown uses. In the simple modes
+  // In salary mode the single income stream mirrors the annual income
+  newState.incomeStreams = salaryModeStreams(action.value);
+  // Reconcile the provider through the same selector the dropdown uses. In salary mode
   // this only ever fires for dependent coverage crossing the income threshold, but routing it
   // through applyProviderValidity keeps every path on one definition of "valid provider".
   return applyProviderValidity(newState);

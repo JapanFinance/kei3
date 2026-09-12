@@ -30,6 +30,7 @@ export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 // Sources: https://www.nenkin.go.jp/service/kounen/tekiyo/hihokensha1/20141202.html
 //          https://www.mhlw.go.jp/stf/taiou_001_00002.html
 //          https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html
+//          https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html (通勤手当)
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
 export const DEPENDENT_INCOME_THRESHOLD_ELDERLY = 1_800_000;
 
@@ -78,19 +79,20 @@ export function isEmployeeHealthProvider(id: HealthInsuranceProviderId): id is E
  * Checks if dependent coverage is eligible against the age-dependent 年間収入 threshold
  * ({@link getDependentIncomeThreshold}).
  *
- * @param grossAnnualIncome  Stands in for the statutory 年間収入 (see
- *   {@link DEPENDENT_INCOME_THRESHOLD}). Callers pass the form's annual income
- *   (TakeHomeResults.annualIncome in tax.ts): salary, bonuses and public pension gross, business
- *   and miscellaneous income after expenses — the same basis as 年間収入, which also counts
- *   pension gross and allows business expenses but not the 青色申告特別控除. It understates
- *   年間収入 where a commuting allowance exists (the form excludes it from annual income) or
- *   where the person receives benefits the calculator does not model.
+ * @param dependentTestIncome  Stands in for the statutory 年間収入 (see
+ *   {@link DEPENDENT_INCOME_THRESHOLD}). Callers pass `dependentTestAnnualIncome` from
+ *   utils/incomeStreams.ts: the form's annual income (TakeHomeResults.annualIncome in tax.ts) —
+ *   salary, bonuses and public pension gross, business and miscellaneous income after expenses,
+ *   the same basis as 年間収入, which also counts pension gross and allows business expenses but
+ *   not the 青色申告特別控除 — plus the commuting allowance, which 年間収入 counts and annual
+ *   income does not. It still understates 年間収入 where the person receives benefits the
+ *   calculator does not model.
  */
 export function isDependentCoverageEligible(
-  grossAnnualIncome: number,
+  dependentTestIncome: number,
   ageRange: TaxpayerAgeRange,
 ): boolean {
-  return grossAnnualIncome < getDependentIncomeThreshold(ageRange);
+  return dependentTestIncome < getDependentIncomeThreshold(ageRange);
 }
 
 /**
