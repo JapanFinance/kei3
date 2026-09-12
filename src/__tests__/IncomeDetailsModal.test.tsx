@@ -473,7 +473,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(handleStreamsChange).toHaveBeenCalledWith([
       expect.objectContaining({
         type: 'dividends',
-        listingStatus: 'listed',
+        shareType: 'listed',
         taxTreatment: 'withheldOnly',
         amount: 300000,
       }),
@@ -485,7 +485,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       {
         id: 'g1',
         type: 'capitalGains',
-        listingStatus: 'listed',
+        shareType: 'listed',
         account: 'specifiedWithholding',
         taxTreatment: 'withheldOnly',
         amount: 1_000_000,
@@ -493,7 +493,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       {
         id: 'd1',
         type: 'dividends',
-        listingStatus: 'listed',
+        shareType: 'listed',
         taxTreatment: 'withheldOnly',
         amount: 200_000,
       },
@@ -529,7 +529,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
           {
             id: 'd1',
             type: 'dividends',
-            listingStatus: 'listed',
+            shareType: 'listed',
             taxTreatment: 'withheldOnly',
             amount: 200_000,
           },

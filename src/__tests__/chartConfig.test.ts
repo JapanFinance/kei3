@@ -178,7 +178,7 @@ describe('generateChartData with investment income', () => {
       {
         id: 'd',
         type: 'dividends',
-        listingStatus: 'listed',
+        shareType: 'listed',
         taxTreatment: 'withheldOnly',
         amount: 300_000,
       },
@@ -210,7 +210,7 @@ describe('generateChartData with investment income', () => {
         {
           id: 'c',
           type: 'capitalGains',
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
           amount: -500_000,
@@ -218,7 +218,7 @@ describe('generateChartData with investment income', () => {
         {
           id: 'd',
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 300_000,
         },

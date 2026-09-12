@@ -85,8 +85,8 @@ describe('IncomeStreamForm', () => {
   // The unsupported variant of each investment type is shown but disabled, so what the
   // calculation does and does not cover is visible where the amount is entered.
   it.each([
-    ['capitalGains', 'Listed', 'Unlisted'],
-    ['dividends', 'Listed', 'Unlisted'],
+    ['capitalGains', 'Listed', 'Other'],
+    ['dividends', 'Listed', 'Other'],
   ] as const)('offers only listed shares for %s', (type, supported, unsupported) => {
     render(<IncomeStreamForm type={type} onSave={mockOnSave} onCancel={mockOnCancel} />);
 
@@ -94,7 +94,7 @@ describe('IncomeStreamForm', () => {
     expect(screen.getByRole('button', { name: unsupported })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-    expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ listingStatus: 'listed' }));
+    expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ shareType: 'listed' }));
   });
 
   it('offers only interest paid in Japan', () => {
@@ -117,10 +117,9 @@ describe('IncomeStreamForm', () => {
     await user.click(screen.getByRole('combobox', { name: /account/i }));
     const options = screen.getAllByRole('option');
     expect(options.map(o => o.textContent)).toEqual([
-      '特定口座（源泉徴収あり） — broker withholds',
-      '特定口座（源泉徴収なし）',
-      '一般口座',
-      'Foreign broker',
+      'Withholding account (特定口座（源泉徴収あり）)',
+      'Domestic account without withholding (特定口座（源泉徴収なし）・一般口座)',
+      'Foreign account',
     ]);
     expect(options[0]).not.toHaveAttribute('aria-disabled', 'true');
     for (const unsupported of options.slice(1)) {
@@ -166,7 +165,7 @@ describe('IncomeStreamForm', () => {
           id: 'd1',
           type: 'dividends',
           amount: 300000,
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
         }}
         onSave={mockOnSave}
@@ -176,7 +175,7 @@ describe('IncomeStreamForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
     expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'd1', listingStatus: 'listed' }),
+      expect.objectContaining({ id: 'd1', shareType: 'listed' }),
     );
   });
 });

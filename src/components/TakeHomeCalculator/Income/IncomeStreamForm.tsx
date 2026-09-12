@@ -123,6 +123,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   );
   const [error, setError] = useState<string | null>(null);
 
+  // 措法37条の11の5 attaches 申告不要 to the 源泉徴収選択口座, so a sale from any other account
+  // has to be reported. A dividend qualifies on the withholding alone (措法8条の5) and has no
+  // account to choose.
+  const canLeaveOffReturn = type !== 'capitalGains' || account === 'specifiedWithholding';
+
   const validate = (): boolean => {
     if (type === 'commutingAllowance') {
       const monthlyAmount = (amount * getFrequencyAnnualMultiplier(frequency)) / 12;
@@ -339,23 +344,20 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               onChange={e => setAccount(e.target.value)}
             >
               <MenuItem value="specifiedWithholding">
-                特定口座（源泉徴収あり） — broker withholds
+                Withholding account (特定口座（源泉徴収あり）)
               </MenuItem>
-              <MenuItem value="specifiedNoWithholding" disabled>
-                特定口座（源泉徴収なし）
-              </MenuItem>
-              <MenuItem value="general" disabled>
-                一般口座
+              <MenuItem value="domesticNoWithholding" disabled>
+                Domestic account without withholding (特定口座（源泉徴収なし）・一般口座)
               </MenuItem>
               <MenuItem value="foreign" disabled>
-                Foreign broker
+                Foreign account
               </MenuItem>
             </Select>
             <FormHelperText
               component="div"
               sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
             >
-              <span>Only a 源泉徴収あり account can leave the sale off a tax return.</span>
+              <span>Only a withholding account can leave the sale off a tax return.</span>
               <DetailedTooltip
                 title="Account and the Election"
                 icon={SIMPLE_TOOLTIP_ICON}
@@ -363,12 +365,15 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   措法37条の11の5 lets a share sale stay off the return only where it settles in a
-                  源泉徴収選択口座 — a 特定口座 whose holder elected withholding.
+                  源泉徴収選択口座 — a 特定口座 whose holder elected withholding. A sale anywhere
+                  else has to be reported, which changes 合計所得金額 and everything keyed to it.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  A sale in a 特定口座（源泉徴収なし）, a 一般口座, or at a broker outside Japan has
-                  to be reported, which changes 合計所得金額 and everything keyed to it. Those are
-                  not modelled yet.
+                  A 特定口座（源泉徴収なし）and a 一般口座 are one option here because the tax
+                  cannot tell them apart — they differ only in who computes the figures. A foreign
+                  account is its own option because a sale there is not 売委託 to a licensed
+                  金融商品取引業者, which 措法37条の12の2② requires of a loss before it can offset
+                  配当等 or be carried forward. Neither is modelled yet.
                 </Typography>
               </DetailedTooltip>
             </FormHelperText>
@@ -411,7 +416,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               size="small"
               sx={variantToggleGroupSx}
             >
-              <ToggleButton value="withheldOnly">Withheld only</ToggleButton>
+              <ToggleButton value="withheldOnly" disabled={!canLeaveOffReturn}>
+                Withheld only
+              </ToggleButton>
               <ToggleButton value="separate" disabled>
                 Reported (separate)
               </ToggleButton>
