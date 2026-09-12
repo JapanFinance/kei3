@@ -17,7 +17,8 @@
     "test": "vitest",
     "deploy": "npm run build && wrangler deploy",
     "build:preview": "tsc -b && vite build --mode preview",
-    "deploy:preview": "npm run build:preview && wrangler deploy"
+    "deploy:preview": "npm run build:preview && wrangler deploy",
+    "prepare": "husky"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -39,8 +40,10 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "chrome-launcher": "^1.2.1",
+    "husky": "^9.1.7",
     "jsdom": "^30.0.1",
     "lighthouse": "13.4.1",
+    "lint-staged": "^17.5.1",
     "oxfmt": "0.67.0",
     "oxlint": "^1.82.0",
     "oxlint-tsgolint": "^7.0.2001",
@@ -50,5 +53,9 @@
     "vite-plugin-sitemap": "^0.8.2",
     "vitest": "^5.0.0",
     "wrangler": "^4.131.0"
+  },
+  "lint-staged": {
+    "*": "oxfmt --no-error-on-unmatched-pattern",
+    "*.{js,jsx,ts,tsx}": "oxlint --fix --no-error-on-unmatched-pattern"
   }
 }
