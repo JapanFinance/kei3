@@ -372,12 +372,23 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         if (income.listingStatus !== 'listed') {
           throw new Error('Capital gains on 一般株式等 are not currently supported.');
         }
+        if (income.account !== 'specifiedWithholding') {
+          throw new Error(
+            'Capital gains outside a 特定口座（源泉徴収あり）are not currently supported.',
+          );
+        }
+        if (income.taxTreatment !== 'withheldOnly') {
+          throw new Error('Reporting capital gains on a tax return is not currently supported.');
+        }
         // Negative (譲渡損失) is expected — see calculateWithheldInvestmentTax's in-account netting.
         capitalGains += income.amount;
         break;
       case 'dividends':
         if (income.listingStatus !== 'listed') {
           throw new Error('Dividends on 一般株式等 are not currently supported.');
+        }
+        if (income.taxTreatment !== 'withheldOnly') {
+          throw new Error('Reporting dividends on a tax return is not currently supported.');
         }
         if (income.amount < 0) {
           throw new Error('Dividends cannot be negative.');

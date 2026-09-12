@@ -2394,8 +2394,21 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'capitalGains', listingStatus: 'listed', amount: 1_000_000, id: 'gains' },
-        { type: 'dividends', listingStatus: 'listed', amount: 200_000, id: 'dividends' },
+        {
+          type: 'capitalGains',
+          listingStatus: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: 1_000_000,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 200_000,
+          id: 'dividends',
+        },
       ]),
     );
 
@@ -2418,8 +2431,21 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'capitalGains', listingStatus: 'listed', amount: -500_000, id: 'gains' },
-        { type: 'dividends', listingStatus: 'listed', amount: 300_000, id: 'dividends' },
+        {
+          type: 'capitalGains',
+          listingStatus: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: -500_000,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 300_000,
+          id: 'dividends',
+        },
       ]),
     );
 
@@ -2431,8 +2457,21 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'capitalGains', listingStatus: 'listed', amount: -500_000, id: 'gains' },
-        { type: 'dividends', listingStatus: 'listed', amount: 800_000, id: 'dividends' },
+        {
+          type: 'capitalGains',
+          listingStatus: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: -500_000,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 800_000,
+          id: 'dividends',
+        },
       ]),
     );
 
@@ -2477,7 +2516,14 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'capitalGains', listingStatus: 'listed', amount: -300_000, id: 'gains' },
+        {
+          type: 'capitalGains',
+          listingStatus: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: -300_000,
+          id: 'gains',
+        },
       ]),
     );
 
@@ -2493,7 +2539,13 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'dividends', listingStatus: 'listed', amount: 1_234_567, id: 'dividends' },
+        {
+          type: 'dividends',
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 1_234_567,
+          id: 'dividends',
+        },
       ]),
     );
 
@@ -2510,8 +2562,21 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'capitalGains', listingStatus: 'listed', amount: 0, id: 'gains' },
-        { type: 'dividends', listingStatus: 'listed', amount: 0, id: 'dividends' },
+        {
+          type: 'capitalGains',
+          listingStatus: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: 0,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 0,
+          id: 'dividends',
+        },
         { type: 'interest', payerDomicile: 'domestic', amount: 0, id: 'interest' },
       ]),
     );
@@ -2524,7 +2589,13 @@ describe('calculateTaxes with investment income streams', () => {
     const result = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
-        { type: 'dividends', listingStatus: 'listed', amount: 1_000_000, id: 'dividends' },
+        {
+          type: 'dividends',
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 1_000_000,
+          id: 'dividends',
+        },
       ],
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
@@ -2552,17 +2623,63 @@ describe('calculateTaxes with investment income streams', () => {
     expect(() =>
       calculateTaxes(
         salaryInputs([
-          { type: 'capitalGains', listingStatus: 'unlisted', amount: 500_000, id: 'gains' },
+          {
+            type: 'capitalGains',
+            listingStatus: 'unlisted',
+            account: 'specifiedWithholding',
+            taxTreatment: 'withheldOnly',
+            amount: 500_000,
+            id: 'gains',
+          },
         ]),
       ),
     ).toThrow(/一般株式等/);
     expect(() =>
       calculateTaxes(
         salaryInputs([
-          { type: 'dividends', listingStatus: 'unlisted', amount: 500_000, id: 'dividends' },
+          {
+            type: 'dividends',
+            listingStatus: 'unlisted',
+            taxTreatment: 'withheldOnly',
+            amount: 500_000,
+            id: 'dividends',
+          },
         ]),
       ),
     ).toThrow(/一般株式等/);
+  });
+
+  it('rejects a share sale outside a 源泉徴収あり特定口座, which cannot elect 申告不要', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'capitalGains',
+            listingStatus: 'listed',
+            account: 'general',
+            taxTreatment: 'withheldOnly',
+            amount: 500_000,
+            id: 'gains',
+          },
+        ]),
+      ),
+    ).toThrow(/特定口座/);
+  });
+
+  it('rejects amounts reported on a tax return, which enter 合計所得金額', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'dividends',
+            listingStatus: 'listed',
+            taxTreatment: 'separate',
+            amount: 500_000,
+            id: 'dividends',
+          },
+        ]),
+      ),
+    ).toThrow(/Reporting dividends/);
   });
 
   it('rejects interest paid outside Japan, which is 総合課税 rather than withheld at source', () => {

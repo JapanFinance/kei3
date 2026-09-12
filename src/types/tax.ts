@@ -52,6 +52,19 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 }
 
 /**
+ * How an investment amount is taxed, which for shares the taxpayer elects:
+ * - `withheldOnly` — 申告不要: the tax withheld at source is the whole liability and the amount
+ *   stays off the return, so it enters no aggregate (措法37条の11の5, 8条の5).
+ * - `separate` — 申告分離課税: reported and taxed apart from the progressive brackets
+ *   (措法37条の11①, 8条の4①), which is what makes 損益通算 and 繰越控除 available.
+ * - `aggregate` — 総合課税: reported into the progressive brackets with 配当控除 (所法92).
+ *
+ * Interest carries no election of its own: 措法3条① makes 源泉分離課税 the final treatment of
+ * 一般利子等 paid in Japan — see {@link InterestIncomeStream}.
+ */
+export type InvestmentTaxTreatment = 'withheldOnly' | 'separate' | 'aggregate';
+
+/**
  * 株式等に係る譲渡所得等の金額 for the year, net of acquisition and transfer costs.
  * {@link BaseIncomeStream.amount} may be negative (譲渡損失). Currently modeled as 申告不要
  * (源泉徴収ありの特定口座, domestic broker only) — see {@link DividendsIncomeStream}.
@@ -64,6 +77,14 @@ export interface CapitalGainsIncomeStream extends BaseIncomeStream {
    * so a 一般株式等 amount needs a calculation of its own rather than joining this one.
    */
   listingStatus: 'listed' | 'unlisted';
+  /**
+   * The account the shares were sold from, which decides whether {@link taxTreatment} may be
+   * 'withheldOnly': 措法37条の11の5 grants 申告不要 only for a 源泉徴収選択口座, the
+   * 特定口座 whose holder elected withholding. Only 'specifiedWithholding' is supported.
+   */
+  account: 'specifiedWithholding' | 'specifiedNoWithholding' | 'general' | 'foreign';
+  /** See {@link InvestmentTaxTreatment}; only 'withheldOnly' is supported. */
+  taxTreatment: 'withheldOnly' | 'separate';
 }
 
 /**
@@ -80,15 +101,28 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
    * 総合課税 unless it is a 少額配当 (措法8条の5①一), so it belongs in the brackets instead.
    */
   listingStatus: 'listed' | 'unlisted';
+  /**
+   * See {@link InvestmentTaxTreatment}; only 'withheldOnly' is supported. Unlike a share sale,
+   * a dividend needs no particular account for 申告不要 — 措法8条の5 grants it on the
+   * withholding alone — so there is no account field here.
+   */
+  taxTreatment: 'withheldOnly' | 'separate' | 'aggregate';
 }
 
-/** 利子所得: 預貯金の利子 and 一般公社債の利子, gross before withholding. */
+/**
+ * 利子所得 as 所法23条① defines it — the interest on 公社債 and 預貯金, and distributions from
+ * 合同運用信託, 公社債投資信託 and 公募公社債等運用投資信託 — gross before withholding. Interest
+ * outside that definition is not 利子所得 at all: interest on money lent privately, for one, is
+ * 雑所得, is not withheld, and has to be reported, so it belongs in
+ * {@link MiscellaneousIncomeStream} instead.
+ */
 export interface InterestIncomeStream extends BaseIncomeStream {
   type: 'interest';
   /**
-   * Where the interest is paid. 措法3条① applies 源泉分離課税 only to 一般利子等
-   * 国内において支払を受けるもの, so interest paid outside Japan is 総合課税 and has to be
-   * reported. Only 'domestic' is supported.
+   * Where the interest is paid. 措法3条① settles 一般利子等 国内において支払を受けるもの by
+   * 源泉分離課税, with no election and nothing to report; interest paid outside Japan is not
+   * withheld, so it is reported and taxed in the progressive brackets. Only 'domestic' is
+   * supported.
    */
   payerDomicile: 'domestic' | 'foreign';
 }

@@ -132,7 +132,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
       'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.',
   },
   capitalGains: {
-    label: 'Share Capital Gains',
+    label: 'Capital Gains (Shares)',
     category: 'investment',
     chipLabel: 'CAPITAL GAINS',
     amountLabel: 'Net Capital Gains',
