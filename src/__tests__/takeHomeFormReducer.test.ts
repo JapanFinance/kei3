@@ -705,7 +705,14 @@ describe('takeHomeFormReducer', () => {
     it('adds dependent coverage for employment income under the threshold', () => {
       const ids = availableProvidersFor({
         ...baseState,
-        annualIncome: DEPENDENT_INCOME_THRESHOLD - 1,
+        incomeStreams: [
+          {
+            id: 'simple-salary',
+            type: 'salary',
+            amount: DEPENDENT_INCOME_THRESHOLD - 1,
+            frequency: 'annual',
+          },
+        ],
       }).map(option => option.id);
 
       expect(ids).toEqual([
@@ -727,13 +734,33 @@ describe('takeHomeFormReducer', () => {
       const underThreshold = availableProvidersFor({
         ...baseState,
         incomeMode: 'miscellaneous',
-        annualIncome: 1_000_000,
         incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 1_000_000 }],
       });
       expect(underThreshold.map(option => option.id)).toEqual([
         DEPENDENT_COVERAGE_ID,
         NATIONAL_HEALTH_INSURANCE_ID,
       ]);
+    });
+
+    it('judges dependent coverage on earned income, leaving reported investment income out', () => {
+      // Salary under the threshold; the reported dividends would carry the annual income over it,
+      // but the 年間収入 test is a social-insurance rule, not a matter of the tax election.
+      const ids = availableProvidersFor({
+        ...baseState,
+        incomeMode: 'advanced',
+        incomeStreams: [
+          { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+          {
+            id: 'd1',
+            type: 'dividends',
+            shareType: 'listed',
+            taxTreatment: 'separate',
+            amount: 1_000_000,
+          },
+        ],
+      }).map(option => option.id);
+
+      expect(ids).toContain(DEPENDENT_COVERAGE_ID);
     });
   });
 });

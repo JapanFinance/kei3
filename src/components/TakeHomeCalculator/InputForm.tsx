@@ -59,7 +59,11 @@ import {
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
-import { getCommutingAllowanceAnnualAmount } from '../../utils/incomeStreams';
+import {
+  dependentTestAnnualIncome,
+  getCommutingAllowanceAnnualAmount,
+} from '../../utils/incomeStreams';
+import { hasInvestmentIncome } from '../../utils/investmentIncome';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -134,7 +138,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   const useLongTermCareEstimate = !inputs.longTermCareCategory1ManualEntry;
 
   // Check if dependent coverage is eligible based on income and age
-  const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome, inputs.ageRange);
+  const isDependentEligible = isDependentCoverageEligible(
+    dependentTestAnnualIncome(inputs.incomeStreams),
+    inputs.ageRange,
+  );
 
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
@@ -375,28 +382,31 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                     ) : null;
                   })()}
 
-                  {investmentIncome !== undefined && (
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        px: 1,
-                      }}
-                    >
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        {isMobile
-                          ? 'Investment Income (separate)'
-                          : 'Investment Income (taxed separately)'}
-                      </Typography>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ color: 'text.secondary', fontWeight: 'medium' }}
+                  {/* Only the withheld part sits outside the total; reported investment income is
+                      inside it. */}
+                  {investmentIncome !== undefined &&
+                    hasInvestmentIncome(investmentIncome.gross) && (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          px: 1,
+                        }}
                       >
-                        {formatJPY(investmentIncome.grossTotal)}
-                      </Typography>
-                    </Box>
-                  )}
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          {isMobile
+                            ? 'Investment Income (separate)'
+                            : 'Investment Income (taxed separately)'}
+                        </Typography>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ color: 'text.secondary', fontWeight: 'medium' }}
+                        >
+                          {formatJPY(investmentIncome.grossTotal)}
+                        </Typography>
+                      </Box>
+                    )}
                 </Box>
 
                 <Badge

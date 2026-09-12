@@ -93,6 +93,13 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     Actual limits may vary depending on the applicable deductions and municipality.
                   </Typography>
+                  {results.investmentIncome?.reported && (
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Investment income reported under 申告分離課税 raises the limit through the
+                      residence tax it adds; with no other taxable income the limit is set from its
+                      own 15% rate.
+                    </Typography>
+                  )}
                   <Typography variant="body2">
                     If deductions or tax credits not supported by this calculator are claimed, this
                     limit will not be accurate (it will likely be too high).

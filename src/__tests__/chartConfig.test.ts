@@ -7,6 +7,7 @@ import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   generateChartData,
+  heldIncomeInSweep,
   scaleIncomeStreamsToIncome,
   type ChartCalculationContext,
 } from '../utils/chartConfig';
@@ -188,5 +189,65 @@ describe('generateChartData with investment income', () => {
 
   it('leaves every dataset identical to the same sweep without it', () => {
     expect(generateChartData(range, investmentContext)).toEqual(generateChartData(range, context));
+  });
+});
+
+describe('generateChartData with investment income reported under 申告分離課税', () => {
+  // Reported investment income is on the return and inside take-home, so the x-axis — the income
+  // on the return — includes it. It is asset-based, so the sweep holds it at the entered amount
+  // and scales the earned streams to the remainder.
+  const dividends = {
+    id: 'd',
+    type: 'dividends' as const,
+    shareType: 'listed' as const,
+    taxTreatment: 'separate' as const,
+    amount: 1_000_000,
+  };
+  const reportedContext: ChartCalculationContext = {
+    ...context,
+    incomeStreams: [{ id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' }, dividends],
+  };
+
+  it('holds the reported amount and scales the earned income to the remainder', () => {
+    expect(heldIncomeInSweep(reportedContext.incomeStreams)).toBe(1_000_000);
+    expect(scaleIncomeStreamsToIncome(reportedContext.incomeStreams, 3_000_000)).toEqual([
+      { id: 's', type: 'salary', amount: 2_000_000, frequency: 'annual' },
+      dividends,
+    ]);
+    // At the entered total the ratio is exactly 1.
+    expect(scaleIncomeStreamsToIncome(reportedContext.incomeStreams, 5_000_000)).toEqual(
+      reportedContext.incomeStreams,
+    );
+  });
+
+  it('starts the sweep at the held amount and stacks to the total income at every point', () => {
+    const { datasets } = generateChartData({ min: 0, max: 5_000_000 }, reportedContext);
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+    // No earned income could bring the total below the 1,000,000 held, so 0 is left out.
+    expect(takeHome.map(p => p.x)).toEqual([1_000_000, 2_000_000, 3_000_000, 4_000_000, 5_000_000]);
+
+    const bars = datasets.filter(d => d.type === 'bar');
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
+  });
+
+  it('labels the reported income in the breakdown at every point', () => {
+    const { datasets } = generateChartData({ min: 0, max: 5_000_000 }, reportedContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    expect(bars.length).toBeGreaterThan(0);
+
+    bars.forEach(dataset => {
+      const points = dataset.data as (Point & {
+        breakdown?: { label: string; amount: number }[];
+      })[];
+      points.forEach(point => {
+        expect(point.breakdown, `income ${point.x}`).toEqual([
+          ...(point.x > 1_000_000 ? [{ label: 'Salary', amount: point.x - 1_000_000 }] : []),
+          { label: 'Reported Investment Income', amount: 1_000_000 },
+        ]);
+      });
+    });
   });
 });

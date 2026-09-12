@@ -65,9 +65,12 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 export type InvestmentTaxTreatment = 'withheldOnly' | 'separate' | 'aggregate';
 
 /**
- * 株式等に係る譲渡所得等の金額 for the year, net of acquisition and transfer costs.
- * {@link BaseIncomeStream.amount} may be negative (譲渡損失). Currently modeled as 申告不要
- * (源泉徴収ありの特定口座, domestic broker only) — see {@link DividendsIncomeStream}.
+ * 株式等に係る譲渡所得等の金額 for the year in one account, net of acquisition and transfer
+ * costs. {@link BaseIncomeStream.amount} may be negative (譲渡損失). Under 申告不要 a loss is
+ * netted against the dividends of the same 源泉徴収あり特定口座 before withholding, as the
+ * broker does at year end; under 申告分離課税 it is netted against the year's other reported
+ * gains, and what remains is 損益通算 against reported dividends only where the sale qualifies
+ * — see {@link account}.
  */
 export interface CapitalGainsIncomeStream extends BaseIncomeStream {
   type: 'capitalGains';
@@ -78,24 +81,28 @@ export interface CapitalGainsIncomeStream extends BaseIncomeStream {
    */
   shareType: 'listed' | 'other';
   /**
-   * The account the shares were sold from. Only the three the tax turns on are distinguished:
+   * The account the shares were sold from, in the three variants the tax turns on.
    * 措法37条の11の5 grants 申告不要 only for a 源泉徴収選択口座 — the 特定口座 whose holder
-   * elected withholding — so everything else has to be reported, and a sale outside Japan is
-   * not 売委託 to a licensed 金融商品取引業者, which is what 措法37条の12の2② requires of a loss
-   * before it can offset 配当等 or be carried forward. A 特定口座（源泉徴収なし）and a 一般口座
-   * differ only in who computes the figures, so they share an option. Only
-   * 'specifiedWithholding' is supported.
+   * elected withholding — so a sale anywhere else is reported. A sale outside Japan is not
+   * 売委託 to a licensed 金融商品取引業者, which 措法37条の12の2②一〜三 requires of a loss
+   * before it is 上場株式等に係る譲渡損失の金額, so a loss in a 'foreign' account nets against
+   * the year's other reported gains and no further: it neither offsets 配当等 nor carries
+   * forward. A 特定口座（源泉徴収なし）and a 一般口座 differ only in who computes the figures,
+   * so they share an option.
    */
   account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign';
-  /** See {@link InvestmentTaxTreatment}; only 'withheldOnly' is supported. */
+  /**
+   * See {@link InvestmentTaxTreatment}. 'withheldOnly' is only valid with a
+   * 'specifiedWithholding' {@link account}.
+   */
   taxTreatment: 'withheldOnly' | 'separate';
 }
 
 /**
  * 配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
- * 特定公社債の利子. Currently modeled as 申告不要 (国内で源泉徴収済みのもの): a loss on
- * {@link CapitalGainsIncomeStream} in the same year is assumed netted against this within
- * one 源泉徴収あり特定口座 before withholding, as the broker does at year end.
+ * 特定公社債の利子. Under 申告不要 (国内で源泉徴収済みのもの) a same-year loss on
+ * {@link CapitalGainsIncomeStream} is netted against this within one 源泉徴収あり特定口座
+ * before withholding; under 申告分離課税 the 損益通算 of 措法37条の12の2① applies instead.
  */
 export interface DividendsIncomeStream extends BaseIncomeStream {
   type: 'dividends';
@@ -106,9 +113,9 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
    */
   shareType: 'listed' | 'other';
   /**
-   * See {@link InvestmentTaxTreatment}; only 'withheldOnly' is supported. Unlike a share sale,
-   * a dividend needs no particular account for 申告不要 — 措法8条の5 grants it on the
-   * withholding alone — so there is no account field here.
+   * See {@link InvestmentTaxTreatment}; 'aggregate' (総合課税) is not yet supported. Unlike a
+   * share sale, a dividend needs no particular account for 申告不要 — 措法8条の5 grants it on
+   * the withholding alone — so there is no account field here.
    */
   taxTreatment: 'withheldOnly' | 'separate' | 'aggregate';
 }
@@ -157,9 +164,9 @@ export const isInvestmentIncomeStream = (
   stream.type === 'capitalGains' || stream.type === 'dividends' || stream.type === 'interest';
 
 /**
- * Gross investment-income amounts for the year, before withholding. Only the supported
- * variants reach here: 上場株式等 for {@link capitalGains} and {@link dividends}, and
- * 国内において支払を受ける一般利子等 for {@link interest}.
+ * Gross investment-income amounts for the year that are settled by withholding and stay off
+ * the return, before that withholding: 上場株式等 under 申告不要 for {@link capitalGains} and
+ * {@link dividends}, and 国内において支払を受ける一般利子等 for {@link interest}.
  */
 export interface InvestmentIncomeAmounts {
   /** See {@link CapitalGainsIncomeStream}; may be negative. */
@@ -168,6 +175,60 @@ export interface InvestmentIncomeAmounts {
   dividends: number;
   /** See {@link InterestIncomeStream}. */
   interest: number;
+}
+
+/** The 申告分離課税 amounts gathered from the reported streams, as entered. */
+export interface ReportedInvestmentAmounts {
+  /**
+   * 上場株式等に係る譲渡所得等 netted across every reported account; negative when the year
+   * closed at a loss.
+   */
+  capitalGains: number;
+  /**
+   * The losses within {@link capitalGains} realized in a Japanese account. Only these can be
+   * 上場株式等に係る譲渡損失の金額 — 措法37条の12の2②一〜三 requires a sale through a licensed
+   * 金融商品取引業者 or 登録金融機関 — so only these can offset dividends or carry forward.
+   */
+  qualifyingCapitalLosses: number;
+  /** 上場株式等の配当等 reported under 措法8条の4①. */
+  dividends: number;
+}
+
+/**
+ * The net 分離課税 amounts that enter 合計所得金額 (措法8条の4③一, 37条の10⑥一 as 37条の11⑥
+ * applies it): each class after 損益通算, never negative.
+ */
+export interface SeparateNetIncome {
+  capitalGains: number;
+  dividends: number;
+}
+
+/** Investment income reported under 申告分離課税 and how the return taxes it. */
+export interface ReportedInvestmentIncome {
+  gross: ReportedInvestmentAmounts;
+  /** 上場株式等に係る譲渡損失の金額 deducted from the dividends (措法37条の12の2①). */
+  lossOffsetAgainstDividends: number;
+  /**
+   * Qualifying loss left after that offset. It would carry forward for three years
+   * (措法37条の12の2⑤), which is not modelled.
+   */
+  unabsorbedQualifyingLoss: number;
+  /**
+   * Loss realized in a foreign account that the year's reported gains did not absorb. It
+   * offsets nothing and is not carried forward (措法37条の12の2②, 措令25条の11の2②③).
+   */
+  nonQualifyingLoss: number;
+  netIncome: SeparateNetIncome;
+  /**
+   * National taxable amounts (上場株式等に係る課税配当所得等の金額・課税譲渡所得等の金額): the
+   * net amounts less the 所得控除 that 総所得金額 could not absorb, each floored to ¥1,000.
+   */
+  taxable: SeparateNetIncome;
+  /**
+   * 15% of the taxable total (措法8条の4①, 37条の11①), before the 復興特別所得税 that the
+   * total income tax applies to it together with the bracket tax.
+   */
+  nationalIncomeTaxBase: number;
 }
 
 /**
@@ -502,25 +563,27 @@ export interface CustomEmployeesHealthInsuranceRates {
 
 export interface TakeHomeResults {
   /**
-   * The amount received over the year before taxes and social insurance, net of the real costs
-   * of earning it and gross of every deduction that is not a cash outflow: salary, bonus and
-   * stock compensation gross; public pension gross, before the 公的年金等控除; business and
-   * miscellaneous income after 必要経費 but before the 青色申告特別控除. A commuting allowance is
-   * excluded as a cost reimbursement, and investment income ({@link isInvestmentIncomeStream}) is
-   * excluded as asset-based rather than earned — see {@link investmentIncome} for where its own
-   * gross amount and tax are reported instead. Under this definition, and only this one,
-   * {@link takeHomeIncome} (this amount minus taxes and social insurance) is the money kept —
-   * plus investment income net of its own tax, which reaches {@link takeHomeIncome} separately.
+   * The income that goes on the return, as received over the year before taxes and social
+   * insurance: net of the real costs of earning it and gross of every deduction that is not a
+   * cash outflow. Salary, bonus and stock compensation gross; public pension gross, before the
+   * 公的年金等控除; business and miscellaneous income after 必要経費 but before the
+   * 青色申告特別控除; and investment income reported under 申告分離課税, as entered (so a
+   * reported 譲渡損失 reduces it). A commuting allowance is excluded as a cost reimbursement,
+   * and investment income that is 申告不要 is excluded because the tax system does not count
+   * it: withholding settles it and it enters no aggregate — see {@link investmentIncome} for
+   * where its own gross amount and tax are reported instead. Under this definition, and only
+   * this one, {@link takeHomeIncome} (this amount minus taxes and social insurance) is the money
+   * kept from what the return covers.
    *
-   * The same definition is used by the two external figures this amount is compared with. The
-   * 所得 of the 国民生活基礎調査 behind the chart's median and percentile bands is defined in the
-   * survey's 用語の説明 (2025 edition, item 13「所得の種類」, k-tyosa25/dl/07.pdf p. 38) as
-   * 雇用者所得 = 給料・賃金・賞与の合計金額 including 税金や社会保険料, 事業所得 = 収入 minus
-   * 仕入原価や必要経費, and 公的年金・恩給 = 支給された年金額; item 15 defines 可処分所得 as that
-   * 所得 minus taxes and social insurance and calls it the equivalent of 手取り収入, which is
-   * {@link takeHomeIncome}. The 年間収入 of the social insurance dependent-coverage test
-   * (isDependentCoverageEligible in healthInsurance.ts) counts income the same way. Totalled by
-   * totalAnnualIncomeFromStreams on the input side.
+   * The same definition is used by the 国民生活基礎調査 figure behind the chart's median and
+   * percentile bands, which the survey's 用語の説明 (2025 edition, item 13「所得の種類」,
+   * k-tyosa25/dl/07.pdf p. 38) defines as 雇用者所得 = 給料・賃金・賞与の合計金額 including
+   * 税金や社会保険料, 事業所得 = 収入 minus 仕入原価や必要経費, and 公的年金・恩給 =
+   * 支給された年金額; item 15 defines 可処分所得 as that 所得 minus taxes and social insurance
+   * and calls it the equivalent of 手取り収入, which is {@link takeHomeIncome}. The 年間収入 of
+   * the social insurance dependent-coverage test is judged on the earned part alone
+   * (dependentTestAnnualIncome in incomeStreams.ts). Totalled by totalAnnualIncomeFromStreams
+   * on the input side.
    */
   annualIncome: number;
   hasEmploymentIncome: boolean;
@@ -578,20 +641,23 @@ export interface TakeHomeResults {
    */
   commutingAllowance?: number;
   /**
-   * Investment income (listed-share capital gains and dividends, deposit interest), currently
-   * always 申告不要 and taxed at source — none of it is part of {@link totalNetIncome}. Absent
-   * when every amount is 0.
+   * Investment income (listed-share capital gains and dividends, deposit interest). The
+   * amounts settled by withholding are outside {@link annualIncome}, {@link totalNetIncome} and
+   * {@link takeHomeIncome} alike; the amounts reported under 申告分離課税 are inside all three,
+   * taxed through the same calculation as the earned income. Absent when every amount is 0.
    */
   investmentIncome?:
     | {
+        /** The 申告不要 amounts, before withholding. */
         gross: InvestmentIncomeAmounts;
         /**
          * Sum of the three {@link InvestmentIncomeAmounts}; may be negative when a capital-gains
-         * loss exceeds the dividends and interest. Included in {@link takeHomeIncome} but not in
-         * {@link annualIncome}, which stays earned income only.
+         * loss exceeds the dividends and interest.
          */
         grossTotal: number;
         withheld: WithheldInvestmentTax;
+        /** Present when any amount is reported under 申告分離課税. */
+        reported?: ReportedInvestmentIncome | undefined;
       }
     | undefined;
   nationalIncomeTaxBasicDeduction?: number | undefined;
@@ -680,6 +746,27 @@ export interface ResidenceTaxDetails {
    * applied, so the display can explain the zero rows without re-deriving the rule.
    */
   nonTaxableStatus?: NonTaxableResidenceTaxStatus;
+  /**
+   * The 所得割 on investment income reported under 申告分離課税, which {@link city} and
+   * {@link prefecture} already include. Present only when 所得割 is levied and an amount is
+   * reported.
+   */
+  separate?: ResidenceTaxSeparateDetails;
+}
+
+/**
+ * The 分離課税 part of the 所得割 (地方税法附則第33条の2, 第35条の2の2): 3% 市町村民税 + 2%
+ * 道府県民税 on the taxable amounts, alongside the 6% + 4% on 課税総所得金額.
+ */
+export interface ResidenceTaxSeparateDetails {
+  /** 上場株式等に係る課税配当所得等の金額 for residence tax, floored to ¥1,000. */
+  taxableDividends: number;
+  /** 上場株式等に係る課税譲渡所得等の金額 for residence tax, floored to ¥1,000. */
+  taxableCapitalGains: number;
+  /** 3% of the taxable total, before the ¥100 floor applied to the whole 市町村民税所得割. */
+  cityIncomeTax: number;
+  /** 2% of the taxable total, before the ¥100 floor applied to the whole 道府県民税所得割. */
+  prefecturalIncomeTax: number;
 }
 
 /**

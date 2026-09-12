@@ -251,6 +251,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           />
           <ResultRow
             label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
+            labelSuffix={
+              results.investmentIncome?.reported ? (
+                <SimpleTooltip>
+                  {`Includes ${formatJPY(
+                    results.investmentIncome.reported.netIncome.capitalGains +
+                      results.investmentIncome.reported.netIncome.dividends,
+                  )} of investment income reported under 申告分離課税, which is part of the 総所得金額等 the premium is assessed on.`}
+                </SimpleTooltip>
+              ) : undefined
+            }
             value={formatJPY(
               Math.max(0, results.totalNetIncome - results.residenceTaxBasicDeduction!),
             )}

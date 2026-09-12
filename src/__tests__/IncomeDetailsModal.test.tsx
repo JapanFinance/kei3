@@ -520,6 +520,57 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(screen.getByText('Investment: ¥1,200,000')).toBeInTheDocument();
   });
 
+  it('describes each entry by its election and account, and footers the reported total without a withheld line', () => {
+    const streams: IncomeStream[] = [
+      {
+        id: 'g1',
+        type: 'capitalGains',
+        shareType: 'listed',
+        account: 'foreign',
+        taxTreatment: 'separate',
+        amount: -100_000,
+      },
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        taxTreatment: 'separate',
+        amount: 300_000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          gross: { capitalGains: 0, dividends: 0, interest: 0 },
+          grossTotal: 0,
+          withheld: { national: 0, residence: 0, total: 0 },
+          reported: {
+            gross: { capitalGains: -100_000, qualifyingCapitalLosses: 0, dividends: 300_000 },
+            lossOffsetAgainstDividends: 0,
+            unabsorbedQualifyingLoss: 0,
+            nonQualifyingLoss: 100_000,
+            netIncome: { capitalGains: 0, dividends: 300_000 },
+            taxable: { capitalGains: 0, dividends: 300_000 },
+            nationalIncomeTaxBase: 45_000,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Reported (separate), foreign account')).toBeInTheDocument();
+    expect(screen.getByText('Reported (separate)')).toBeInTheDocument();
+    expect(screen.getByText('Subtotal: ¥200,000')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Reported \(申告分離課税\): ¥200,000, taxed with the other income/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Withheld at Source/)).not.toBeInTheDocument();
+  });
+
   it('shows only the gross subtotal when no investmentIncome prop is supplied', () => {
     render(
       <IncomeDetailsModal

@@ -21,14 +21,16 @@ const AnnualIncomeTooltip: React.FC = () => (
     iconAriaLabel="About annual income"
   >
     <Typography variant="body2" sx={{ mb: 1 }}>
-      The amount received over the year, before taxes and social insurance: gross salary, bonus and
-      stock compensation, gross public pension income, and business and miscellaneous income less
-      necessary expenses.
+      The income that goes on the tax return, as received over the year before taxes and social
+      insurance: gross salary, bonus and stock compensation, gross public pension income, business
+      and miscellaneous income less necessary expenses, and investment income reported under
+      申告分離課税 as entered.
     </Typography>
     <Typography variant="body2">
       Deductions that reduce net income without reducing the amount received are not subtracted: the
       employment income deduction, the public pension deduction, and the blue-filer special
-      deduction. A commuting allowance is not counted, as it reimburses a cost.
+      deduction. A commuting allowance is not counted, as it reimburses a cost, and neither is
+      investment income settled by withholding (申告不要), which stays off the return.
     </Typography>
   </DetailedTooltip>
 );

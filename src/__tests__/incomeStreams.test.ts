@@ -4,6 +4,8 @@
 import {
   annualIncomeStreamAmount,
   countsTowardAnnualIncome,
+  dependentTestAnnualIncome,
+  isEarnedIncomeStream,
   monthlyIncomeStreamAmount,
   totalAnnualIncomeFromStreams,
 } from '../utils/incomeStreams';
@@ -25,7 +27,7 @@ describe('totalAnnualIncomeFromStreams', () => {
     expect(totalAnnualIncomeFromStreams([])).toBe(0);
   });
 
-  it('excludes investment income (asset-based, taxed separately from earned income)', () => {
+  it('excludes investment income settled by withholding, which stays off the return', () => {
     expect(
       totalAnnualIncomeFromStreams([
         { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
@@ -47,6 +49,81 @@ describe('totalAnnualIncomeFromStreams', () => {
         { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
       ]),
     ).toBe(1_000_000);
+  });
+
+  it('includes investment income reported under 申告分離課税, as entered', () => {
+    expect(
+      totalAnnualIncomeFromStreams([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'foreign',
+          taxTreatment: 'separate',
+          amount: -200_000,
+        },
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'separate',
+          amount: 300_000,
+        },
+      ]),
+    ).toBe(1_000_000 - 200_000 + 300_000);
+  });
+});
+
+describe('dependentTestAnnualIncome', () => {
+  it('counts earned income only, leaving investment income out whether or not it is reported', () => {
+    expect(
+      dependentTestAnnualIncome([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        { id: 'p1', type: 'publicPension', amount: 500_000 },
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'separate',
+          amount: 300_000,
+        },
+        {
+          id: 'd2',
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 300_000,
+        },
+        { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      ]),
+    ).toBe(1_500_000);
+  });
+});
+
+describe('isEarnedIncomeStream', () => {
+  it('is true for pay, business, miscellaneous and pension income and false for the rest', () => {
+    expect(isEarnedIncomeStream({ id: 's1', type: 'salary', amount: 1, frequency: 'annual' })).toBe(
+      true,
+    );
+    expect(isEarnedIncomeStream({ id: 'p1', type: 'publicPension', amount: 1 })).toBe(true);
+    expect(
+      isEarnedIncomeStream({
+        id: 'c1',
+        type: 'commutingAllowance',
+        amount: 1,
+        frequency: 'monthly',
+      }),
+    ).toBe(false);
+    expect(
+      isEarnedIncomeStream({
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        taxTreatment: 'separate',
+        amount: 1,
+      }),
+    ).toBe(false);
   });
 });
 
@@ -70,7 +147,29 @@ describe('annualIncomeStreamAmount', () => {
 });
 
 describe('countsTowardAnnualIncome', () => {
-  it('excludes the commuting allowance (a reimbursement) and investment income (asset-based)', () => {
+  it('includes investment income once it is reported', () => {
+    expect(
+      countsTowardAnnualIncome({
+        id: 'g1',
+        type: 'capitalGains',
+        shareType: 'listed',
+        account: 'domesticNoWithholding',
+        taxTreatment: 'separate',
+        amount: 10_000,
+      }),
+    ).toBe(true);
+    expect(
+      countsTowardAnnualIncome({
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        taxTreatment: 'separate',
+        amount: 10_000,
+      }),
+    ).toBe(true);
+  });
+
+  it('excludes the commuting allowance (a reimbursement) and investment income settled by withholding', () => {
     expect(
       countsTowardAnnualIncome({
         id: 'c1',
