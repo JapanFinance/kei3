@@ -9,6 +9,7 @@ import { formatJPY, formatYenCompact } from './formatters';
 import {
   annualIncomeStreamAmount,
   countsTowardAnnualIncome,
+  isEarnedIncomeStream,
   totalAnnualIncomeFromStreams,
 } from './incomeStreams';
 import { calculateTaxes } from './taxCalculations';
@@ -74,21 +75,36 @@ export interface ChartCalculationContext extends TakeHomeInputs {
 }
 
 /**
- * Stream types carried through the chart sweep at their entered amount instead of being
- * scaled with the swept income. The sweep scales exactly what the swept total is made of,
- * so this is the complement of {@link countsTowardAnnualIncome}: a commuting allowance
- * (通勤手当) is not income, does not grow with it, and scaling it can push it past the
- * non-taxable cap, which the calculation rejects.
+ * Streams carried through the chart sweep at their entered amount instead of being scaled
+ * with the swept income: everything that is not earned income ({@link isEarnedIncomeStream}).
+ * A commuting allowance (通勤手当) is not income, does not grow with it, and scaling it can
+ * push it past the non-taxable cap, which the calculation rejects; investment income is
+ * asset-based and does not grow with earned income either.
  */
-const isPassThroughStream = (stream: IncomeStream): boolean => !countsTowardAnnualIncome(stream);
+const isPassThroughStream = (stream: IncomeStream): boolean => !isEarnedIncomeStream(stream);
+
+/**
+ * The part of the annual income total that the sweep holds constant: pass-through streams that
+ * nonetheless count toward annual income, which is investment income reported under
+ * 申告分離課税. A swept income below this amount cannot be reached by scaling the earned
+ * streams, so the sweep starts here.
+ */
+export const heldIncomeInSweep = (streams: readonly IncomeStream[]): number =>
+  streams.reduce(
+    (sum, s) =>
+      isPassThroughStream(s) && countsTowardAnnualIncome(s)
+        ? sum + annualIncomeStreamAmount(s)
+        : sum,
+    0,
+  );
 
 /**
  * Scale a set of income streams so their annualized total matches `targetIncome`,
  * preserving the original composition (salary/bonus/business mix). Pass-through streams
- * (see {@link isPassThroughStream}) keep their entered amount and are excluded from the
- * base total, so the ratio is exactly 1 at the taxpayer's own income.
- * When the scaled streams sum to 0 (or none are provided), fall back to a single annual
- * salary stream at `targetIncome` so downstream calculations still see income.
+ * (see {@link isPassThroughStream}) keep their entered amount: the earned streams are scaled
+ * to the target less {@link heldIncomeInSweep}, so the ratio is exactly 1 at the taxpayer's
+ * own income. When the earned streams sum to 0 (or none are provided), fall back to a single
+ * annual salary stream at that remainder so downstream calculations still see income.
  *
  * Shared by the chart's per-income bars and the tooltip's cap-detection probe so
  * the "🔒 Max reached" badge matches the bars exactly.
@@ -97,10 +113,11 @@ export const scaleIncomeStreamsToIncome = (
   streams: IncomeStream[],
   targetIncome: number,
 ): IncomeStream[] => {
-  const baseTotal = totalAnnualIncomeFromStreams(streams);
+  const earnedTarget = targetIncome - heldIncomeInSweep(streams);
+  const earnedTotal = totalAnnualIncomeFromStreams(streams.filter(s => !isPassThroughStream(s)));
 
-  if (baseTotal > 0) {
-    const ratio = targetIncome / baseTotal;
+  if (earnedTotal > 0) {
+    const ratio = earnedTarget / earnedTotal;
     return streams.map(s =>
       isPassThroughStream(s)
         ? s
@@ -111,12 +128,12 @@ export const scaleIncomeStreamsToIncome = (
     );
   }
 
-  // Fallback if the scaled streams are 0
+  // Fallback if the earned streams are 0
   return [
     {
       id: 'chart-salary-fallback',
       type: 'salary',
-      amount: targetIncome,
+      amount: earnedTarget,
       frequency: 'annual',
     },
     ...streams.filter(isPassThroughStream),
@@ -127,10 +144,15 @@ export const generateChartData = (
   chartRange: ChartRange,
   currentInputs: ChartCalculationContext,
 ): ChartData<'bar' | 'line'> => {
-  // Create income points based on the current range
+  // Create income points based on the current range. Points below the income the sweep holds
+  // constant are left out: no earned income could bring the total that low.
   const step = 1000000; // 1 million yen
   const numPoints = Math.floor((chartRange.max - chartRange.min) / step) + 1;
-  const incomePoints = Array.from({ length: numPoints }, (_, i) => chartRange.min + i * step);
+  const heldIncome = heldIncomeInSweep(currentInputs.incomeStreams);
+  const incomePoints = Array.from(
+    { length: numPoints },
+    (_, i) => chartRange.min + i * step,
+  ).filter(income => income >= heldIncome);
 
   // If manual social insurance is entered, we cannot accurately calculate the breakdown for other income levels.
   // We return a dummy dataset to ensure the chart renders (axes, background bands, vertical lines) but without misleading bars.
@@ -163,7 +185,14 @@ export const generateChartData = (
     // Calculate breakdown for display
     let breakdown: { label: string; amount: number }[] | undefined;
     if (calcStreams.length > 0) {
-      const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0, publicPension: 0 };
+      const groups = {
+        salary: 0,
+        bonus: 0,
+        business: 0,
+        miscellaneous: 0,
+        publicPension: 0,
+        reportedInvestment: 0,
+      };
       calcStreams.forEach(s => {
         const val = annualIncomeStreamAmount(s);
         switch (s.type) {
@@ -182,14 +211,17 @@ export const generateChartData = (
           case 'publicPension':
             groups.publicPension += val;
             break;
-          // Not shown as breakdown rows: commuting allowance is excluded from income, stock
-          // compensation has no row of its own, and investment income gets its own chart
-          // treatment in the paired UI change (it is asset-based and does not scale with x).
-          case 'commutingAllowance':
-          case 'stockCompensation':
+          // Investment income is in the breakdown only when it is part of the income: the
+          // reported amounts, held constant across the sweep. What is withheld at source stays
+          // outside the income, like the commuting allowance; stock compensation has no row of
+          // its own.
           case 'capitalGains':
           case 'dividends':
           case 'interest':
+            if (countsTowardAnnualIncome(s)) groups.reportedInvestment += val;
+            break;
+          case 'commutingAllowance':
+          case 'stockCompensation':
             break;
           default: {
             const unhandled: never = s;
@@ -206,6 +238,8 @@ export const generateChartData = (
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
       if (groups.publicPension > 0)
         breakdown.push({ label: 'Public Pension Income', amount: groups.publicPension });
+      if (groups.reportedInvestment !== 0)
+        breakdown.push({ label: 'Reported Investment Income', amount: groups.reportedInvestment });
     }
 
     const result = calculateTaxes(inputsForCalc);
