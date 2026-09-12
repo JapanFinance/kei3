@@ -163,16 +163,7 @@ export const generateChartData = (
     // Calculate breakdown for display
     let breakdown: { label: string; amount: number }[] | undefined;
     if (calcStreams.length > 0) {
-      const groups = {
-        salary: 0,
-        bonus: 0,
-        business: 0,
-        miscellaneous: 0,
-        publicPension: 0,
-        capitalGains: 0,
-        dividends: 0,
-        interest: 0,
-      };
+      const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0, publicPension: 0 };
       calcStreams.forEach(s => {
         const val = annualIncomeStreamAmount(s);
         switch (s.type) {
@@ -191,20 +182,14 @@ export const generateChartData = (
           case 'publicPension':
             groups.publicPension += val;
             break;
-          case 'capitalGains':
-            // Kept unscaled by scaleIncomeStreamsToIncome, so this is the same at every point.
-            groups.capitalGains += val;
-            break;
-          case 'dividends':
-            groups.dividends += val;
-            break;
-          case 'interest':
-            groups.interest += val;
-            break;
-          // Not shown as breakdown rows: commuting allowance is excluded from income, and
-          // stock compensation has no row of its own.
+          // Not shown as breakdown rows: commuting allowance is excluded from income, stock
+          // compensation has no row of its own, and investment income gets its own chart
+          // treatment in the paired UI change (it is asset-based and does not scale with x).
           case 'commutingAllowance':
           case 'stockCompensation':
+          case 'capitalGains':
+          case 'dividends':
+          case 'interest':
             break;
           default: {
             const unhandled: never = s;
@@ -221,27 +206,20 @@ export const generateChartData = (
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
       if (groups.publicPension > 0)
         breakdown.push({ label: 'Public Pension Income', amount: groups.publicPension });
-      // Capital gains may be a loss (negative), unlike every other breakdown row.
-      if (groups.capitalGains !== 0)
-        breakdown.push({ label: 'Capital Gains', amount: groups.capitalGains });
-      if (groups.dividends > 0) breakdown.push({ label: 'Dividends', amount: groups.dividends });
-      if (groups.interest > 0) breakdown.push({ label: 'Interest', amount: groups.interest });
     }
 
     const result = calculateTaxes(inputsForCalc);
     const caps = detectCaps(result, currentInputs.incomeYear);
-    const investmentGrossTotal = result.investmentIncome?.grossTotal ?? 0;
-    return { result, caps, breakdown, investmentGrossTotal };
+    return { result, caps, breakdown };
   });
 
   const socialInsuranceDatasets = [
     {
       label: 'Health Insurance',
-      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
         y: result.healthInsurance,
         breakdown,
-        investmentGrossTotal,
       })),
       borderColor: 'var(--mui-palette-text-primary)',
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
@@ -252,11 +230,10 @@ export const generateChartData = (
     },
     {
       label: 'Pension',
-      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
         y: result.pensionPayments,
         breakdown,
-        investmentGrossTotal,
       })),
       borderColor: 'var(--mui-palette-text-primary)',
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
@@ -271,11 +248,10 @@ export const generateChartData = (
       ? [
           {
             label: 'Employment Insurance',
-            data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
+            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
               x: incomePoints[i]!,
               y: result.employmentInsurance ?? 0,
               breakdown,
-              investmentGrossTotal,
             })),
             backgroundColor: 'rgba(255, 20, 147, 0.7)',
             yAxisID: 'y',
@@ -289,11 +265,10 @@ export const generateChartData = (
       ? [
           {
             label: 'Long-term Care Insurance',
-            data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
+            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
               x: incomePoints[i]!,
               y: result.longTermCareCategory1Premium ?? 0,
               breakdown,
-              investmentGrossTotal,
             })),
             backgroundColor: 'rgba(0, 139, 139, 0.7)',
             yAxisID: 'y',
@@ -307,11 +282,10 @@ export const generateChartData = (
   const datasets = [
     {
       label: 'Take-Home Pay',
-      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
         y: result.takeHomeIncome,
         breakdown,
-        investmentGrossTotal,
       })),
       backgroundColor: 'rgba(34, 139, 34, 0.7)',
       yAxisID: 'y',
@@ -320,12 +294,10 @@ export const generateChartData = (
     },
     {
       label: 'Income Tax',
-      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        // Includes 上場株式等 withholding folded in — see calculateWithheldInvestmentTax.
-        y: result.nationalIncomeTax + (result.investmentIncome?.withheld.national ?? 0),
+        y: result.nationalIncomeTax,
         breakdown,
-        investmentGrossTotal,
       })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
       yAxisID: 'y',
@@ -334,13 +306,10 @@ export const generateChartData = (
     },
     {
       label: 'Residence Tax',
-      data: resultsAndCaps.map(({ result, breakdown, investmentGrossTotal }, i) => ({
+      data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y:
-          result.residenceTax.totalResidenceTax +
-          (result.investmentIncome?.withheld.residence ?? 0),
+        y: result.residenceTax.totalResidenceTax,
         breakdown,
-        investmentGrossTotal,
       })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',
       yAxisID: 'y',
@@ -350,13 +319,10 @@ export const generateChartData = (
     ...socialInsuranceDatasets,
     {
       label: 'Take-Home %',
-      data: resultsAndCaps.map(({ result, investmentGrossTotal }, i) => {
-        const totalGross = incomePoints[i]! + investmentGrossTotal;
-        return {
-          x: incomePoints[i]!,
-          y: (result.takeHomeIncome / totalGross) * 100,
-        };
-      }),
+      data: resultsAndCaps.map(({ result }, i) => ({
+        x: incomePoints[i]!,
+        y: (result.takeHomeIncome / incomePoints[i]!) * 100,
+      })),
       borderColor: 'rgb(105, 105, 105)',
       backgroundColor: 'rgba(105, 105, 105, 0.7)',
       yAxisID: 'y1',
@@ -410,13 +376,7 @@ export const getChartOptions = (
           title: function (context: TooltipItem<'bar' | 'line'>[]) {
             if (context.length > 0 && context[0]?.parsed.x != null) {
               const income = context[0].parsed.x;
-              const raw = context[0].raw as { investmentGrossTotal?: number } | undefined;
-              const investmentGrossTotal = raw?.investmentGrossTotal ?? 0;
-              const lines = [`Income: ${formatJPY(income)}`];
-              if (investmentGrossTotal !== 0) {
-                lines.push(`Investment income: ${formatJPY(investmentGrossTotal)} (held constant)`);
-              }
-              return lines;
+              return `Income: ${formatJPY(income)}`;
             }
             return '';
           },
@@ -427,12 +387,10 @@ export const getChartOptions = (
             }
             if (context.parsed.y != null) {
               const income = context.parsed.x;
-              const raw = context.raw as { investmentGrossTotal?: number } | undefined;
-              const totalGross = (income ?? 0) + (raw?.investmentGrossTotal ?? 0);
               const fractionDigits = context.dataset.label === 'Employment Insurance' ? 2 : 1;
               const percentage =
-                totalGross > 0
-                  ? ((context.parsed.y / totalGross) * 100).toFixed(fractionDigits)
+                income != null && income > 0
+                  ? ((context.parsed.y / income) * 100).toFixed(fractionDigits)
                   : '0.0';
               label += `${formatJPY(context.parsed.y)} (${percentage}%)`;
             }

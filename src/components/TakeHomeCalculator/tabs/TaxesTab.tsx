@@ -171,10 +171,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome =
     results.totalNetIncome - totalSocialInsurance - results.dcPlanContributions;
-  const totalTaxes =
-    results.nationalIncomeTax +
-    results.residenceTax.totalResidenceTax +
-    (results.investmentIncome?.withheld.total ?? 0);
+  // The tax assessed on the income that is reported. Tax withheld on 申告不要 investment income
+  // is final and settled apart from this calculation, so it has its own total below rather than
+  // joining this one — which is also what keeps this figure equal to the summary tab's.
+  const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const incomeYear = inputs.incomeYear;
   const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
 
@@ -896,6 +896,11 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
         />
       </Box>
 
+      {/* Total */}
+      <Box sx={{ mt: 2 }}>
+        <ResultRow label="Total Taxes" value={formatJPY(totalTaxes)} type="total" />
+      </Box>
+
       {results.investmentIncome !== undefined && (
         <Box sx={{ mb: 1 }}>
           <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
@@ -939,10 +944,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 Total Withheld
                 <DetailedTooltip title="Investment Income Tax (源泉徴収)">
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    Assumes a domestic 特定口座（源泉徴収あり）with 申告不要 elected. A capital loss
-                    for the year is netted against dividends within the account before withholding,
-                    as the broker does at year end. None of this is reported on a tax return, so it
-                    does not affect 合計所得金額, the totals above, or anything computed from them.
+                    A capital loss for the year is netted against dividends within the account
+                    before withholding, as the broker does at year end. What is withheld settles the
+                    tax in full: none of it is reported on a tax return, so it sits apart from the
+                    tax above and changes neither 合計所得金額 nor take-home pay.
                   </Typography>
                   <SourceLinks
                     sources={[
@@ -968,11 +973,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         </Box>
       )}
-
-      {/* Total */}
-      <Box sx={{ mt: 2 }}>
-        <ResultRow label="Total Taxes" value={formatJPY(totalTaxes)} type="total" />
-      </Box>
     </Box>
   );
 };

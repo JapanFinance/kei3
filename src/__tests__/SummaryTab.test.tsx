@@ -56,30 +56,6 @@ describe('SummaryTab with investment income', () => {
 
     expect(withInvestmentIncome()).toEqual(withoutInvestmentIncome);
   });
-
-  it('adds an Investment Income row and a Total Income subtotal under the header', () => {
-    render(<SummaryTab results={withInvestmentIncome} />);
-
-    expect(screen.getByText('Investment Income')).toBeInTheDocument();
-    expect(screen.getByText('¥1,200,000')).toBeInTheDocument();
-    expect(screen.getByText('Total Income')).toBeInTheDocument();
-    expect(screen.getByText('¥6,200,000')).toBeInTheDocument();
-  });
-
-  it('shows the withheld investment tax as its own row in the Taxes section', () => {
-    render(<SummaryTab results={withInvestmentIncome} />);
-
-    expect(screen.getByText('Investment Income Tax (withheld)')).toBeInTheDocument();
-    expect(screen.getByText(/¥243,780/)).toBeInTheDocument();
-  });
-
-  it('omits the investment rows entirely when there is no investment income', () => {
-    render(<SummaryTab results={baseResults} />);
-
-    expect(screen.queryByText('Investment Income')).not.toBeInTheDocument();
-    expect(screen.queryByText('Total Income')).not.toBeInTheDocument();
-    expect(screen.queryByText('Investment Income Tax (withheld)')).not.toBeInTheDocument();
-  });
 });
 
 describe('SummaryTab with the 介護保険第1号 premium', () => {

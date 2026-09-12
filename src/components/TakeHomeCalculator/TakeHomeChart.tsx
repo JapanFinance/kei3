@@ -44,7 +44,6 @@ import type {
   PersonalCircumstancesInput,
   HomeLoanTaxCreditInput,
 } from '../../types/tax';
-import { isInvestmentIncomeStream } from '../../types/tax';
 import type { TaxpayerAgeRange } from '../../types/taxpayerAge';
 import { detectCaps } from '../../utils/capDetection';
 import {
@@ -58,7 +57,6 @@ import {
   estimateIncomePercentile,
   estimateIncomeAtPercentile,
 } from '../../utils/incomeDistribution';
-import { annualIncomeStreamAmount } from '../../utils/incomeStreams';
 import { useLoadMilestone } from '../../utils/loadMilestones';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
@@ -493,12 +491,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   const medianIncomeIsVisibleInChart =
     distribution.median >= chartRange.min && distribution.median <= chartRange.max;
 
-  // Held constant across the sweep by scaleIncomeStreamsToIncome; shown in the legend since it
-  // is not visible from the x-axis (earned income) the way the other legend items are.
-  const investmentGrossTotal = incomeStreams
-    .filter(isInvestmentIncomeStream)
-    .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0);
-
   const percentileEstimate = useMemo(
     () => estimateIncomePercentile(currentIncome, distribution.ranges),
     [currentIncome, distribution],
@@ -653,32 +645,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             Median Income: {formatJPY(distribution.median)}
           </Typography>
         </Box>
-        {investmentGrossTotal !== 0 && (
-          <Box className="legend-item" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'text.secondary',
-                fontSize: { xs: '0.97rem', sm: '1rem' },
-                fontWeight: 500,
-              }}
-            >
-              Investment Income: {formatJPY(investmentGrossTotal)} (held constant)
-            </Typography>
-            <DetailedTooltip
-              title="Investment Income Held Constant"
-              icon={SIMPLE_TOOLTIP_ICON}
-              iconAriaLabel="Learn more about how investment income is shown in this chart"
-            >
-              <Typography variant="body2">
-                The horizontal axis sweeps earned income (salary, bonus, business, miscellaneous,
-                and public pension). Listed-share capital gains and dividends, and deposit interest,
-                do not scale with earned income, so they are held at the entered amount at every
-                point instead. The bars and the take-home percentage both include this amount.
-              </Typography>
-            </DetailedTooltip>
-          </Box>
-        )}
         {/* The comparison group reads inline within the percentile sentence. Always rendered
             (not gated on income): the selection also drives the median line, which is meaningful
             before any income is entered. */}
