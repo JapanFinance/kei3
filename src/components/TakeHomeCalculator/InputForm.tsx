@@ -385,7 +385,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       }}
                     >
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        Investment Income
+                        {isMobile
+                          ? 'Investment Income (separate)'
+                          : 'Investment Income (taxed separately)'}
                       </Typography>
                       <Typography
                         variant="subtitle1"

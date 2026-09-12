@@ -892,7 +892,7 @@ describe('Investment Income Integration', () => {
     const user = userEvent.setup();
     render(<TestWrapper />);
 
-    expect(screen.queryByText('Investment Income')).not.toBeInTheDocument();
+    expect(screen.queryByText('Investment Income (taxed separately)')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
     await user.click(screen.getByRole('button', { name: /add investment income/i }));
@@ -904,7 +904,9 @@ describe('Investment Income Integration', () => {
     await user.click(screen.getByRole('button', { name: /close/i }));
 
     // Gross, before the 20.315% withheld at source.
-    const investmentIncomeRow = screen.getByText('Investment Income').parentElement!;
+    const investmentIncomeRow = screen.getByText(
+      'Investment Income (taxed separately)',
+    ).parentElement!;
     expect(within(investmentIncomeRow).getByText('¥300,000')).toBeInTheDocument();
   }, 10_000);
 });
