@@ -11,6 +11,7 @@ import React from 'react';
 
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
+import { hasHighOutOfPocketCost } from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
@@ -240,7 +241,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           label={
             <span style={{ display: 'flex', alignItems: 'center' }}>
               Out-of-Pocket Cost
-              {results.furusatoNozei.outOfPocketCost > 2200 && (
+              {hasHighOutOfPocketCost(results.furusatoNozei) && (
                 <WarningIcon
                   fontSize="small"
                   sx={{
@@ -256,8 +257,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             <Box
               component="span"
               sx={{
-                color: results.furusatoNozei.outOfPocketCost > 2200 ? 'error.main' : 'inherit',
-                fontWeight: results.furusatoNozei.outOfPocketCost > 2200 ? 700 : 500,
+                color: hasHighOutOfPocketCost(results.furusatoNozei) ? 'error.main' : 'inherit',
+                fontWeight: hasHighOutOfPocketCost(results.furusatoNozei) ? 700 : 500,
                 display: 'inline-flex',
                 alignItems: 'center',
               }}
@@ -312,7 +313,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       </Box>
 
       {/* Warning for high out-of-pocket cost */}
-      {results.furusatoNozei.outOfPocketCost > 2200 && (
+      {hasHighOutOfPocketCost(results.furusatoNozei) && (
         <Box
           sx={{
             bgcolor: 'error.light',
