@@ -8,9 +8,9 @@ import type { InvestmentIncomeAmounts } from '../types/tax';
 import { calculateWithheldInvestmentTax, hasInvestmentIncome } from '../utils/investmentIncome';
 
 const amounts = (overrides: Partial<InvestmentIncomeAmounts> = {}): InvestmentIncomeAmounts => ({
-  listedCapitalGains: 0,
-  listedDividends: 0,
-  depositInterest: 0,
+  capitalGains: 0,
+  dividends: 0,
+  interest: 0,
   ...overrides,
 });
 
@@ -20,9 +20,9 @@ describe('hasInvestmentIncome', () => {
   });
 
   it('is true when any one amount is non-zero, including a loss', () => {
-    expect(hasInvestmentIncome(amounts({ listedCapitalGains: -500_000 }))).toBe(true);
-    expect(hasInvestmentIncome(amounts({ listedDividends: 1 }))).toBe(true);
-    expect(hasInvestmentIncome(amounts({ depositInterest: 1 }))).toBe(true);
+    expect(hasInvestmentIncome(amounts({ capitalGains: -500_000 }))).toBe(true);
+    expect(hasInvestmentIncome(amounts({ dividends: 1 }))).toBe(true);
+    expect(hasInvestmentIncome(amounts({ interest: 1 }))).toBe(true);
   });
 });
 
@@ -30,7 +30,7 @@ describe('calculateWithheldInvestmentTax', () => {
   // 措法8条の4①・37条の11①: 15% national + 2.1% surtax = 15.315%; 地方税法71条の28・71条の49: 5%.
   it('withholds 15.315% national and 5% residence on gains plus dividends, in one account', () => {
     const result = calculateWithheldInvestmentTax(
-      amounts({ listedCapitalGains: 1_000_000, listedDividends: 200_000 }),
+      amounts({ capitalGains: 1_000_000, dividends: 200_000 }),
       2026,
     );
     // base = 1,200,000; 1,200,000 * 0.15315 = 183,780; 1,200,000 * 0.05 = 60,000
@@ -40,7 +40,7 @@ describe('calculateWithheldInvestmentTax', () => {
   // 措法37条の11の6: a same-account 譲渡損 nets against 配当等 before withholding.
   it('nets a capital loss against dividends down to zero when the loss is larger', () => {
     const result = calculateWithheldInvestmentTax(
-      amounts({ listedCapitalGains: -500_000, listedDividends: 300_000 }),
+      amounts({ capitalGains: -500_000, dividends: 300_000 }),
       2026,
     );
     expect(result).toEqual({ national: 0, residence: 0, total: 0 });
@@ -48,7 +48,7 @@ describe('calculateWithheldInvestmentTax', () => {
 
   it('nets a capital loss against dividends, taxing only the remainder', () => {
     const result = calculateWithheldInvestmentTax(
-      amounts({ listedCapitalGains: -500_000, listedDividends: 800_000 }),
+      amounts({ capitalGains: -500_000, dividends: 800_000 }),
       2026,
     );
     // base = 300,000; 300,000 * 0.15315 = 45,945; 300,000 * 0.05 = 15,000
@@ -56,7 +56,7 @@ describe('calculateWithheldInvestmentTax', () => {
   });
 
   it('withholds deposit interest independently of listed gains and dividends', () => {
-    const result = calculateWithheldInvestmentTax(amounts({ depositInterest: 100_000 }), 2026);
+    const result = calculateWithheldInvestmentTax(amounts({ interest: 100_000 }), 2026);
     // 100,000 * 0.15315 = 15,315; 100,000 * 0.05 = 5,000
     expect(result).toEqual({ national: 15_315, residence: 5_000, total: 20_315 });
   });
@@ -64,9 +64,9 @@ describe('calculateWithheldInvestmentTax', () => {
   it('sums both categories when both are present', () => {
     const result = calculateWithheldInvestmentTax(
       amounts({
-        listedCapitalGains: 1_000_000,
-        listedDividends: 200_000,
-        depositInterest: 100_000,
+        capitalGains: 1_000_000,
+        dividends: 200_000,
+        interest: 100_000,
       }),
       2026,
     );
@@ -77,7 +77,7 @@ describe('calculateWithheldInvestmentTax', () => {
 
   it('truncates to the whole yen (floors, never rounds)', () => {
     // 1,234,567 * 0.15315 = 189,073.936..., * 0.05 = 61,728.35
-    const result = calculateWithheldInvestmentTax(amounts({ listedDividends: 1_234_567 }), 2026);
+    const result = calculateWithheldInvestmentTax(amounts({ dividends: 1_234_567 }), 2026);
     expect(result.national).toBe(189_073);
     expect(result.residence).toBe(61_728);
   });
@@ -95,8 +95,8 @@ describe('getInvestmentIncomeTaxRates', () => {
         effectiveYear: 2014,
         listedNationalRate: 0.15315,
         listedResidenceRate: 0.05,
-        depositInterestNationalRate: 0.15315,
-        depositInterestResidenceRate: 0.05,
+        interestNationalRate: 0.15315,
+        interestResidenceRate: 0.05,
       });
     }
   });

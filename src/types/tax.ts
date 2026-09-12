@@ -52,27 +52,45 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 }
 
 /**
- * 上場株式等に係る譲渡所得等の金額 for the year, net of acquisition and transfer costs.
+ * 株式等に係る譲渡所得等の金額 for the year, net of acquisition and transfer costs.
  * {@link BaseIncomeStream.amount} may be negative (譲渡損失). Currently modeled as 申告不要
- * (源泉徴収ありの特定口座, domestic broker only) — see {@link ListedDividendsIncomeStream}.
+ * (源泉徴収ありの特定口座, domestic broker only) — see {@link DividendsIncomeStream}.
  */
-export interface ListedCapitalGainsIncomeStream extends BaseIncomeStream {
-  type: 'listedCapitalGains';
+export interface CapitalGainsIncomeStream extends BaseIncomeStream {
+  type: 'capitalGains';
+  /**
+   * 上場株式等 (措法37条の11) or 一般株式等 — 株式等 other than those (措法37条の10①). Only
+   * 'listed' is supported: the two are separate 分離課税 classes that cannot offset each other,
+   * so a 一般株式等 amount needs a calculation of its own rather than joining this one.
+   */
+  listingStatus: 'listed' | 'unlisted';
 }
 
 /**
- * 上場株式等の配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
+ * 配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
  * 特定公社債の利子. Currently modeled as 申告不要 (国内で源泉徴収済みのもの): a loss on
- * {@link ListedCapitalGainsIncomeStream} in the same year is assumed netted against this within
+ * {@link CapitalGainsIncomeStream} in the same year is assumed netted against this within
  * one 源泉徴収あり特定口座 before withholding, as the broker does at year end.
  */
-export interface ListedDividendsIncomeStream extends BaseIncomeStream {
-  type: 'listedDividends';
+export interface DividendsIncomeStream extends BaseIncomeStream {
+  type: 'dividends';
+  /**
+   * Whether the payer is 上場株式等, whose 配当等 措法8条の4 taxes separately from the
+   * progressive brackets, or 一般株式等. Only 'listed' is supported: a 一般株式等 dividend is
+   * 総合課税 unless it is a 少額配当 (措法8条の5①一), so it belongs in the brackets instead.
+   */
+  listingStatus: 'listed' | 'unlisted';
 }
 
-/** 預貯金等の利子 and other 一般公社債の利子: 源泉分離課税, gross before withholding. */
-export interface DepositInterestIncomeStream extends BaseIncomeStream {
-  type: 'depositInterest';
+/** 利子所得: 預貯金の利子 and 一般公社債の利子, gross before withholding. */
+export interface InterestIncomeStream extends BaseIncomeStream {
+  type: 'interest';
+  /**
+   * Where the interest is paid. 措法3条① applies 源泉分離課税 only to 一般利子等
+   * 国内において支払を受けるもの, so interest paid outside Japan is 総合課税 and has to be
+   * reported. Only 'domestic' is supported.
+   */
+  payerDomicile: 'domestic' | 'foreign';
 }
 
 export type IncomeStream =
@@ -83,9 +101,9 @@ export type IncomeStream =
   | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
   | StockCompensationIncomeStream
-  | ListedCapitalGainsIncomeStream
-  | ListedDividendsIncomeStream
-  | DepositInterestIncomeStream;
+  | CapitalGainsIncomeStream
+  | DividendsIncomeStream
+  | InterestIncomeStream;
 
 export type IncomeStreamType = IncomeStream['type'];
 
@@ -97,22 +115,21 @@ export type IncomeStreamType = IncomeStream['type'];
  */
 export const isInvestmentIncomeStream = (
   stream: IncomeStream,
-): stream is
-  | ListedCapitalGainsIncomeStream
-  | ListedDividendsIncomeStream
-  | DepositInterestIncomeStream =>
-  stream.type === 'listedCapitalGains' ||
-  stream.type === 'listedDividends' ||
-  stream.type === 'depositInterest';
+): stream is CapitalGainsIncomeStream | DividendsIncomeStream | InterestIncomeStream =>
+  stream.type === 'capitalGains' || stream.type === 'dividends' || stream.type === 'interest';
 
-/** Gross investment-income amounts for the year, before withholding. */
+/**
+ * Gross investment-income amounts for the year, before withholding. Only the supported
+ * variants reach here: 上場株式等 for {@link capitalGains} and {@link dividends}, and
+ * 国内において支払を受ける一般利子等 for {@link interest}.
+ */
 export interface InvestmentIncomeAmounts {
-  /** See {@link ListedCapitalGainsIncomeStream}; may be negative. */
-  listedCapitalGains: number;
-  /** See {@link ListedDividendsIncomeStream}. */
-  listedDividends: number;
-  /** See {@link DepositInterestIncomeStream}. */
-  depositInterest: number;
+  /** See {@link CapitalGainsIncomeStream}; may be negative. */
+  capitalGains: number;
+  /** See {@link DividendsIncomeStream}. */
+  dividends: number;
+  /** See {@link InterestIncomeStream}. */
+  interest: number;
 }
 
 /**

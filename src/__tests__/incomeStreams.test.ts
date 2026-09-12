@@ -29,9 +29,9 @@ describe('totalAnnualIncomeFromStreams', () => {
     expect(
       totalAnnualIncomeFromStreams([
         { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
-        { id: 'g1', type: 'listedCapitalGains', amount: 2_000_000 },
-        { id: 'd1', type: 'listedDividends', amount: 300_000 },
-        { id: 'i1', type: 'depositInterest', amount: 100_000 },
+        { id: 'g1', type: 'capitalGains', listingStatus: 'listed', amount: 2_000_000 },
+        { id: 'd1', type: 'dividends', listingStatus: 'listed', amount: 300_000 },
+        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
       ]),
     ).toBe(1_000_000);
   });
@@ -67,14 +67,29 @@ describe('countsTowardAnnualIncome', () => {
       }),
     ).toBe(false);
     expect(
-      countsTowardAnnualIncome({ id: 'g1', type: 'listedCapitalGains', amount: -10_000 }),
+      countsTowardAnnualIncome({
+        id: 'g1',
+        type: 'capitalGains',
+        listingStatus: 'listed',
+        amount: -10_000,
+      }),
     ).toBe(false);
-    expect(countsTowardAnnualIncome({ id: 'd1', type: 'listedDividends', amount: 10_000 })).toBe(
-      false,
-    );
-    expect(countsTowardAnnualIncome({ id: 'i1', type: 'depositInterest', amount: 10_000 })).toBe(
-      false,
-    );
+    expect(
+      countsTowardAnnualIncome({
+        id: 'd1',
+        type: 'dividends',
+        listingStatus: 'listed',
+        amount: 10_000,
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardAnnualIncome({
+        id: 'i1',
+        type: 'interest',
+        payerDomicile: 'domestic',
+        amount: 10_000,
+      }),
+    ).toBe(false);
     expect(
       countsTowardAnnualIncome({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
     ).toBe(true);

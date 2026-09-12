@@ -131,29 +131,29 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     amountHelperText:
       'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.',
   },
-  listedCapitalGains: {
-    label: 'Listed Share Capital Gains',
+  capitalGains: {
+    label: 'Share Capital Gains',
     category: 'investment',
     chipLabel: 'CAPITAL GAINS',
     amountLabel: 'Net Capital Gains',
     amountHelperText:
-      'Net of costs across a 特定口座（源泉徴収あり）; enter a loss as a negative amount. Exclude NISA amounts.',
+      'Net of acquisition and transfer costs; enter a loss as a negative amount. Exclude NISA amounts.',
     min: Number.MIN_SAFE_INTEGER,
   },
-  listedDividends: {
-    label: 'Listed Share Dividends',
+  dividends: {
+    label: 'Dividends',
     category: 'investment',
     chipLabel: 'DIVIDENDS',
     amountLabel: 'Gross Dividends',
     amountHelperText:
       'Before withholding; includes 公募株式投資信託の分配金 and 特定公社債の利子. Exclude NISA amounts.',
   },
-  depositInterest: {
-    label: 'Deposit Interest',
+  interest: {
+    label: 'Interest',
     category: 'investment',
     chipLabel: 'INTEREST',
     amountLabel: 'Gross Interest',
-    amountHelperText: '預貯金の利子 etc.: 源泉分離課税 at 20.315%, never reported on a tax return.',
+    amountHelperText: '預貯金の利子 and 一般公社債の利子, before withholding.',
   },
 };
 

@@ -187,9 +187,9 @@ export const generateChartData = (
           // treatment in the paired UI change (it is asset-based and does not scale with x).
           case 'commutingAllowance':
           case 'stockCompensation':
-          case 'listedCapitalGains':
-          case 'listedDividends':
-          case 'depositInterest':
+          case 'capitalGains':
+          case 'dividends':
+          case 'interest':
             break;
           default: {
             const unhandled: never = s;

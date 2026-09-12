@@ -319,9 +319,9 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   let commutingAllowance = 0;
   let stockCompensationIncome = 0;
   let grossPublicPensionIncome = 0;
-  let listedCapitalGains = 0;
-  let listedDividends = 0;
-  let depositInterest = 0;
+  let capitalGains = 0;
+  let dividends = 0;
+  let interest = 0;
   let processedBusinessIncome = false;
 
   for (const income of incomeStreams) {
@@ -368,21 +368,30 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
       case 'publicPension':
         grossPublicPensionIncome += income.amount;
         break;
-      case 'listedCapitalGains':
+      case 'capitalGains':
+        if (income.listingStatus !== 'listed') {
+          throw new Error('Capital gains on 一般株式等 are not currently supported.');
+        }
         // Negative (譲渡損失) is expected — see calculateWithheldInvestmentTax's in-account netting.
-        listedCapitalGains += income.amount;
+        capitalGains += income.amount;
         break;
-      case 'listedDividends':
-        if (income.amount < 0) {
-          throw new Error('Listed-share dividends cannot be negative.');
+      case 'dividends':
+        if (income.listingStatus !== 'listed') {
+          throw new Error('Dividends on 一般株式等 are not currently supported.');
         }
-        listedDividends += income.amount;
+        if (income.amount < 0) {
+          throw new Error('Dividends cannot be negative.');
+        }
+        dividends += income.amount;
         break;
-      case 'depositInterest':
-        if (income.amount < 0) {
-          throw new Error('Deposit interest cannot be negative.');
+      case 'interest':
+        if (income.payerDomicile !== 'domestic') {
+          throw new Error('Interest paid outside Japan is not currently supported.');
         }
-        depositInterest += income.amount;
+        if (income.amount < 0) {
+          throw new Error('Interest cannot be negative.');
+        }
+        interest += income.amount;
         break;
       default: {
         const unhandled: never = income;
@@ -398,11 +407,11 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
     grossPublicPensionIncome;
   const investment: InvestmentIncomeAmounts = {
-    listedCapitalGains,
-    listedDividends,
-    depositInterest,
+    capitalGains,
+    dividends,
+    interest,
   };
-  const grossInvestmentIncome = listedCapitalGains + listedDividends + depositInterest;
+  const grossInvestmentIncome = capitalGains + dividends + interest;
 
   return {
     salaryIncome,

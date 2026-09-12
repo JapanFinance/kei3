@@ -2394,8 +2394,8 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'listedCapitalGains', amount: 1_000_000, id: 'gains' },
-        { type: 'listedDividends', amount: 200_000, id: 'dividends' },
+        { type: 'capitalGains', listingStatus: 'listed', amount: 1_000_000, id: 'gains' },
+        { type: 'dividends', listingStatus: 'listed', amount: 200_000, id: 'dividends' },
       ]),
     );
 
@@ -2407,7 +2407,7 @@ describe('calculateTaxes with investment income streams', () => {
 
     // base = max(0, 1,000,000 + 200,000) = 1,200,000; 15.315% = 183,780; 5% = 60,000
     expect(result.investmentIncome).toEqual({
-      gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
+      gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
       grossTotal: 1_200_000,
       withheld: { national: 183_780, residence: 60_000, total: 243_780 },
     });
@@ -2418,8 +2418,8 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'listedCapitalGains', amount: -500_000, id: 'gains' },
-        { type: 'listedDividends', amount: 300_000, id: 'dividends' },
+        { type: 'capitalGains', listingStatus: 'listed', amount: -500_000, id: 'gains' },
+        { type: 'dividends', listingStatus: 'listed', amount: 300_000, id: 'dividends' },
       ]),
     );
 
@@ -2431,8 +2431,8 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'listedCapitalGains', amount: -500_000, id: 'gains' },
-        { type: 'listedDividends', amount: 800_000, id: 'dividends' },
+        { type: 'capitalGains', listingStatus: 'listed', amount: -500_000, id: 'gains' },
+        { type: 'dividends', listingStatus: 'listed', amount: 800_000, id: 'dividends' },
       ]),
     );
 
@@ -2460,7 +2460,7 @@ describe('calculateTaxes with investment income streams', () => {
     });
     const baseline = calculateTaxes(nhiInputs());
     const result = calculateTaxes(
-      nhiInputs([{ type: 'depositInterest', amount: 100_000, id: 'interest' }]),
+      nhiInputs([{ type: 'interest', payerDomicile: 'domestic', amount: 100_000, id: 'interest' }]),
     );
 
     expect(result.healthInsurance).toBe(baseline.healthInsurance);
@@ -2476,11 +2476,13 @@ describe('calculateTaxes with investment income streams', () => {
   it('handles a capital loss with no dividends to net against (withheld tax is zero)', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
-      salaryInputs([{ type: 'listedCapitalGains', amount: -300_000, id: 'gains' }]),
+      salaryInputs([
+        { type: 'capitalGains', listingStatus: 'listed', amount: -300_000, id: 'gains' },
+      ]),
     );
 
     expect(result.investmentIncome).toEqual({
-      gross: { listedCapitalGains: -300_000, listedDividends: 0, depositInterest: 0 },
+      gross: { capitalGains: -300_000, dividends: 0, interest: 0 },
       grossTotal: -300_000,
       withheld: { national: 0, residence: 0, total: 0 },
     });
@@ -2490,7 +2492,9 @@ describe('calculateTaxes with investment income streams', () => {
   it('truncates withholding to the whole yen on top of earned income', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
-      salaryInputs([{ type: 'listedDividends', amount: 1_234_567, id: 'dividends' }]),
+      salaryInputs([
+        { type: 'dividends', listingStatus: 'listed', amount: 1_234_567, id: 'dividends' },
+      ]),
     );
 
     // 1,234,567 * 0.15315 = 189,073.93...; 1,234,567 * 0.05 = 61,728.35
@@ -2506,9 +2510,9 @@ describe('calculateTaxes with investment income streams', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
-        { type: 'listedCapitalGains', amount: 0, id: 'gains' },
-        { type: 'listedDividends', amount: 0, id: 'dividends' },
-        { type: 'depositInterest', amount: 0, id: 'interest' },
+        { type: 'capitalGains', listingStatus: 'listed', amount: 0, id: 'gains' },
+        { type: 'dividends', listingStatus: 'listed', amount: 0, id: 'dividends' },
+        { type: 'interest', payerDomicile: 'domestic', amount: 0, id: 'interest' },
       ]),
     );
 
@@ -2519,7 +2523,9 @@ describe('calculateTaxes with investment income streams', () => {
   it('computes real results for an investment-only taxpayer with no earned income', () => {
     const result = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-      incomeStreams: [{ type: 'listedDividends', amount: 1_000_000, id: 'dividends' }],
+      incomeStreams: [
+        { type: 'dividends', listingStatus: 'listed', amount: 1_000_000, id: 'dividends' },
+      ],
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
       region: 'Tokyo',
@@ -2538,5 +2544,34 @@ describe('calculateTaxes with investment income streams', () => {
     // base = 1,000,000; national = 153,150; residence = 50,000
     expect(result.investmentIncome?.withheld.total).toBe(203_150);
     expect(result.takeHomeIncome).toBe(1_000_000 - 203_150);
+  });
+
+  // The UI offers only the supported variant, so these guard the engine against a stream
+  // built elsewhere being silently taxed under the wrong regime.
+  it('rejects 一般株式等 gains and dividends, which are a separate 分離課税 class', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          { type: 'capitalGains', listingStatus: 'unlisted', amount: 500_000, id: 'gains' },
+        ]),
+      ),
+    ).toThrow(/一般株式等/);
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          { type: 'dividends', listingStatus: 'unlisted', amount: 500_000, id: 'dividends' },
+        ]),
+      ),
+    ).toThrow(/一般株式等/);
+  });
+
+  it('rejects interest paid outside Japan, which is 総合課税 rather than withheld at source', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          { type: 'interest', payerDomicile: 'foreign', amount: 100_000, id: 'interest' },
+        ]),
+      ),
+    ).toThrow(/outside Japan/);
   });
 });

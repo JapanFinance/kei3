@@ -93,17 +93,17 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
   },
   // Asset-based income, taxed separately at source — see calculateWithheldInvestmentTax in
   // investmentIncome.ts. Not earned annual income, but real income of its own category.
-  listedCapitalGains: {
+  capitalGains: {
     countsTowardAnnualIncome: false,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
   },
-  listedDividends: {
+  dividends: {
     countsTowardAnnualIncome: false,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
   },
-  depositInterest: {
+  interest: {
     countsTowardAnnualIncome: false,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,

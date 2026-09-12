@@ -45,7 +45,7 @@ describe('SummaryTab with investment income', () => {
     takeHomeIncome: 4_899_168,
     totalNetIncome: 3_560_000,
     investmentIncome: {
-      gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
+      gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
       grossTotal: 1_200_000,
       withheld: { national: 183_780, residence: 60_000, total: 243_780 },
     },

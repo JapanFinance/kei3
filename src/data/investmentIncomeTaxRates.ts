@@ -38,9 +38,9 @@ export interface InvestmentIncomeTaxRatePeriod {
   /** 住民税 rate (配当割・株式等譲渡所得割 combined) on the same. */
   listedResidenceRate: number;
   /** 所得税 rate on 一般利子等 (源泉分離課税), including the 復興特別所得税 fold-in. */
-  depositInterestNationalRate: number;
+  interestNationalRate: number;
   /** 住民税 rate (利子割) on the same. */
-  depositInterestResidenceRate: number;
+  interestResidenceRate: number;
 }
 
 /** Time-series of investment-income withholding rates, sorted newest-first. */
@@ -49,8 +49,8 @@ export const INVESTMENT_INCOME_TAX_RATE_PERIODS: ReadonlyArray<InvestmentIncomeT
     effectiveYear: 2014,
     listedNationalRate: 0.15315,
     listedResidenceRate: 0.05,
-    depositInterestNationalRate: 0.15315,
-    depositInterestResidenceRate: 0.05,
+    interestNationalRate: 0.15315,
+    interestResidenceRate: 0.05,
   },
 ];
 

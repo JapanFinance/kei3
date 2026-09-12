@@ -115,10 +115,18 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         break;
       case 'miscellaneous':
       case 'publicPension':
-      case 'listedCapitalGains':
-      case 'listedDividends':
-      case 'depositInterest':
         stream = { id, type, amount };
+        break;
+      // Only the supported variant is offered; the selector that says so arrives with the
+      // rest of the investment-income UI.
+      case 'capitalGains':
+        stream = { id, type, amount, listingStatus: 'listed' };
+        break;
+      case 'dividends':
+        stream = { id, type, amount, listingStatus: 'listed' };
+        break;
+      case 'interest':
+        stream = { id, type, amount, payerDomicile: 'domestic' };
         break;
       default: {
         const unhandled: never = type;
