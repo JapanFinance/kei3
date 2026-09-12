@@ -165,3 +165,28 @@ describe('generateChartData with a commuting allowance', () => {
     });
   });
 });
+
+describe('generateChartData with investment income', () => {
+  // 申告不要 investment income is settled by withholding and enters no aggregate, so it is
+  // outside take-home and outside this chart: the bars, the breakdown and the percentage line
+  // are all about earned income, which is what the x-axis sweeps.
+  const investmentContext: ChartCalculationContext = {
+    ...context,
+    incomeStreams: [
+      { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
+      {
+        id: 'c',
+        type: 'capitalGains',
+        shareType: 'listed',
+        account: 'specifiedWithholding',
+        taxTreatment: 'withheldOnly',
+        amount: 1_000_000,
+      },
+      { id: 'i', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
+    ],
+  };
+
+  it('leaves every dataset identical to the same sweep without it', () => {
+    expect(generateChartData(range, investmentContext)).toEqual(generateChartData(range, context));
+  });
+});

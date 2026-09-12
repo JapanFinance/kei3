@@ -41,6 +41,7 @@ import {
 } from '../../types/healthInsurance';
 import type {
   TakeHomeFormState,
+  TakeHomeResults,
   IncomeMode,
   IncomeStream,
   HomeLoanTaxCreditInput,
@@ -112,6 +113,9 @@ interface TaxInputFormProps {
   personalDeductions?: PersonalDeductionsResult | undefined;
   /** Computed 介護保険料第1号 estimate, shown next to the estimate switch; absent below 65. */
   longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
+  /** Computed investment income (gross amounts and tax withheld at source), passed through to
+   *  the income modal for its group footer; absent when every amount is 0. */
+  investmentIncome?: TakeHomeResults['investmentIncome'];
 }
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
@@ -121,6 +125,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   additionalDeductions,
   personalDeductions,
   longTermCareCategory1Estimate,
+  investmentIncome,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -363,6 +368,29 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       </Box>
                     ) : null;
                   })()}
+
+                  {investmentIncome !== undefined && (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        px: 1,
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {isMobile
+                          ? 'Investment Income (separate)'
+                          : 'Investment Income (taxed separately)'}
+                      </Typography>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ color: 'text.secondary', fontWeight: 'medium' }}
+                      >
+                        {formatJPY(investmentIncome.grossTotal)}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
 
                 <Badge
@@ -928,6 +956,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
         netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
+        investmentIncome={investmentIncome}
       />
 
       <AdditionalDeductionsModal
