@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import SummaryTab from '../components/TakeHomeCalculator/tabs/SummaryTab';
@@ -33,37 +33,28 @@ describe('SummaryTab annual income header', () => {
 });
 
 describe('SummaryTab with investment income', () => {
-  const withInvestmentIncome: TakeHomeResults = makeTakeHomeResults({
-    annualIncome: 5_000_000,
-    healthInsurance: 246_449,
-    pensionPayments: 450_180,
-    employmentInsurance: 25_623,
-    hasEmploymentIncome: true,
-    nationalIncomeTax: 91_700,
-    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 243_100 }),
-    // 1,200,000 gross investment income, 243,780 withheld; take-home = 3,942,948 + 1,200,000 - 243,780.
-    takeHomeIncome: 4_899_168,
-    totalNetIncome: 3_560_000,
-    investmentIncome: {
-      gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
-      grossTotal: 1_200_000,
-      withheld: { national: 183_780, residence: 60_000, total: 243_780 },
-    },
-  });
+  // 申告不要 investment income enters no aggregate and changes no assessed figure, so it stays
+  // out of take-home and out of this tab entirely — the same treatment a 通勤手当 gets. It is
+  // reported on the input form, in the income modal, and in the Taxes tab instead.
+  it('renders exactly as it would without it', () => {
+    const { asFragment } = render(<SummaryTab results={baseResults} />);
+    const withoutInvestmentIncome = asFragment();
 
-  it('divides every share by gross earned plus gross investment income, not earned income alone', () => {
-    render(<SummaryTab results={withInvestmentIncome} />);
+    cleanup();
+    const { asFragment: withInvestmentIncome } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          investmentIncome: {
+            gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
+            grossTotal: 1_200_000,
+            withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+          },
+        }}
+      />,
+    );
 
-    // grossTotal = 5,000,000 + 1,200,000 = 6,200,000; take-home share = 4,899,168 / 6,200,000 = 79.0%.
-    expect(screen.getByText('(79.0%)')).toBeInTheDocument();
-    // Income tax share = 91,700 / 6,200,000 = 1.5% (not 1.8%, its share of annualIncome alone).
-    expect(screen.getByText(/\(1\.5%\)/)).toBeInTheDocument();
-  });
-
-  it('still shows the Annual Income header as earned income only', () => {
-    render(<SummaryTab results={withInvestmentIncome} />);
-
-    expect(screen.getByText('¥5,000,000')).toBeInTheDocument();
+    expect(withInvestmentIncome()).toEqual(withoutInvestmentIncome);
   });
 });
 

@@ -50,12 +50,10 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       (results.longTermCareCategory1Premium ?? 0);
   const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
-  // Every share below is of gross earned income PLUS gross investment income, since take-home
-  // includes both; results.annualIncome alone (earned only) would make the shares read over
-  // 100% when investment income is positive, or overstate them when it is a net loss.
-  const grossTotal = results.annualIncome + (results.investmentIncome?.grossTotal ?? 0);
   const takeHomePercentage =
-    grossTotal > 0 ? `${((results.takeHomeIncome / grossTotal) * 100).toFixed(1)}%` : '100%';
+    results.annualIncome > 0
+      ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%`
+      : '100%';
 
   return (
     <Box>
@@ -99,19 +97,27 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         {results.socialInsuranceOverride !== undefined ? (
           <ResultRow
             label="Total Social Insurance (Manual)"
-            value={formatAmountWithShare(totalSocialInsurance, grossTotal, !isMobile)}
+            value={formatAmountWithShare(totalSocialInsurance, results.annualIncome, !isMobile)}
             type="subtotal"
           />
         ) : (
           <>
             <ResultRow
               label="Health Insurance"
-              value={formatAmountWithShare(results.healthInsurance, grossTotal, !isMobile)}
+              value={formatAmountWithShare(
+                results.healthInsurance,
+                results.annualIncome,
+                !isMobile,
+              )}
               type="indented"
             />
             <ResultRow
               label="Pension Payments"
-              value={formatAmountWithShare(results.pensionPayments, grossTotal, !isMobile)}
+              value={formatAmountWithShare(
+                results.pensionPayments,
+                results.annualIncome,
+                !isMobile,
+              )}
               type="indented"
             />
             {results.hasEmploymentIncome && (
@@ -119,7 +125,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
                 label="Employment Insurance"
                 value={formatAmountWithShare(
                   results.employmentInsurance ?? 0,
-                  grossTotal,
+                  results.annualIncome,
                   !isMobile,
                   2,
                 )}
@@ -131,7 +137,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
                 label="Age 65+ Long-term Care Insurance"
                 value={`${results.longTermCareCategory1Estimate ? '≈ ' : ''}${formatAmountWithShare(
                   results.longTermCareCategory1Premium,
-                  grossTotal,
+                  results.annualIncome,
                   !isMobile,
                 )}`}
                 type="indented"
@@ -139,7 +145,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             )}
             <ResultRow
               label="Total Social Insurance"
-              value={formatAmountWithShare(totalSocialInsurance, grossTotal, !isMobile)}
+              value={formatAmountWithShare(totalSocialInsurance, results.annualIncome, !isMobile)}
               type="subtotal"
             />
           </>
@@ -173,21 +179,21 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         </Typography>
         <ResultRow
           label="Income Tax"
-          value={formatAmountWithShare(results.nationalIncomeTax, grossTotal, !isMobile)}
+          value={formatAmountWithShare(results.nationalIncomeTax, results.annualIncome, !isMobile)}
           type="indented"
         />
         <ResultRow
           label="Residence Tax"
           value={formatAmountWithShare(
             results.residenceTax.totalResidenceTax,
-            grossTotal,
+            results.annualIncome,
             !isMobile,
           )}
           type="indented"
         />
         <ResultRow
           label="Total Taxes"
-          value={formatAmountWithShare(totalTaxes, grossTotal, !isMobile)}
+          value={formatAmountWithShare(totalTaxes, results.annualIncome, !isMobile)}
           type="subtotal"
         />
       </Box>
@@ -203,7 +209,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
           label="Total Deductions"
           value={
             !isMobile
-              ? `${formatJPY(-totalDeductions)} (${((totalDeductions / grossTotal) * 100).toFixed(1)}%)`
+              ? `${formatJPY(-totalDeductions)} (${((totalDeductions / results.annualIncome) * 100).toFixed(1)}%)`
               : formatJPY(-totalDeductions)
           }
           type="total"

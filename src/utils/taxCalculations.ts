@@ -796,11 +796,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const withheldInvestmentTax = calculateWithheldInvestmentTax(investment, incomeYear);
   const totalSocialsAndTax =
     nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;
-  // annualIncome is earned income only; investment income (currently always 申告不要) is added
-  // here and its withholding subtracted here, rather than folded into annualIncome, so the
-  // aggregate-consuming calculations above never see it (see isInvestmentIncomeStream).
-  const takeHomeIncome =
-    annualIncome + grossInvestmentIncome - totalSocialsAndTax - withheldInvestmentTax.total;
+  // Take-home is what is left of the income the tax system counts. 申告不要 investment income
+  // enters no aggregate and changes no assessed figure, so like a 通勤手当 it stays out of this
+  // total and is reported beside it, through results.investmentIncome.
+  const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
   const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
     nationalTaxableIncomeBeforeRounding,
