@@ -163,16 +163,34 @@ export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): 
   );
 }
 
+/** The annualized total of every commuting allowance among `streams`. */
+export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStream[]): number {
+  return streams.reduce(
+    (sum, s) =>
+      s.type === 'commutingAllowance' ? sum + getCommutingAllowanceAnnualAmount(s) : sum,
+    0,
+  );
+}
+
 /**
  * The 年間収入 the dependent-coverage test is judged on: the earned income among `streams`
- * ({@link isEarnedIncomeStream}). Investment income is left out whether or not it is reported.
- * The test is a social-insurance rule on 収入, not a tax rule on the return, so the reporting
- * election cannot be what decides it; which investment receipts count is a question of
- * 被扶養者認定 practice that is not modelled.
+ * ({@link isEarnedIncomeStream}), plus the annualized commuting allowance. Investment income is
+ * left out whether or not it is reported — the test is a social-insurance rule on 収入, not a tax
+ * rule on the return, so the reporting election cannot be what decides it; which investment
+ * receipts count is a question of 被扶養者認定 practice that is not modelled.
+ *
+ * The commuting allowance is added back by name because it is the one amount earned income and
+ * 年間収入 disagree on — annual income leaves it out as a cost reimbursement, while 認定 reads
+ * 年間収入 off the 労働基準法第11条 賃金, which includes 諸手当, and a labour contract stating
+ * only 「通勤手当有」 without an amount is one the 保険者 cannot judge on. Its income-tax
+ * non-taxability does not exempt it, that being a tax rule rather than a 社会保険 one.
+ *
+ * Source: 日本年金機構「労働契約内容による年間収入での被扶養者の認定の取り扱いについて」
+ * https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html
  */
 export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): number {
-  return streams.reduce(
-    (sum, s) => (isEarnedIncomeStream(s) ? sum + annualIncomeStreamAmount(s) : sum),
-    0,
+  return (
+    streams.reduce((sum, s) => (isEarnedIncomeStream(s) ? sum + annualIncomeStreamAmount(s) : sum), 0) +
+    totalCommutingAllowanceFromStreams(streams)
   );
 }

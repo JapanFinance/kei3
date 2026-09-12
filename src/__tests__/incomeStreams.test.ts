@@ -8,6 +8,7 @@ import {
   isEarnedIncomeStream,
   monthlyIncomeStreamAmount,
   totalAnnualIncomeFromStreams,
+  totalCommutingAllowanceFromStreams,
 } from '../utils/incomeStreams';
 
 describe('totalAnnualIncomeFromStreams', () => {
@@ -97,7 +98,25 @@ describe('dependentTestAnnualIncome', () => {
         },
         { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
       ]),
-    ).toBe(1_500_000);
+    ).toBe(1_500_000 + 10_000 * 12);
+  });
+
+  it('adds the annualized commuting allowance that annual income leaves out', () => {
+    const streams: Parameters<typeof dependentTestAnnualIncome>[0] = [
+      { id: 's1', type: 'salary', amount: 100_000, frequency: 'monthly' },
+      { id: 'c1', type: 'commutingAllowance', amount: 15_000, frequency: 'monthly' },
+    ];
+
+    expect(totalAnnualIncomeFromStreams(streams)).toBe(1_200_000);
+    expect(dependentTestAnnualIncome(streams)).toBe(1_200_000 + 15_000 * 12);
+  });
+
+  it('equals the annual income when there is no commuting allowance', () => {
+    expect(
+      dependentTestAnnualIncome([
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+      ]),
+    ).toBe(1_200_000);
   });
 });
 
@@ -272,3 +291,22 @@ describe('monthlyIncomeStreamAmount', () => {
     ).toBe(494_999);
   });
 });
+
+describe('totalCommutingAllowanceFromStreams', () => {
+  it('annualizes every commuting allowance by its frequency and ignores other streams', () => {
+    expect(
+      totalCommutingAllowanceFromStreams([
+        { id: 's1', type: 'salary', amount: 3_000_000, frequency: 'annual' },
+        { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+        { id: 'c2', type: 'commutingAllowance', amount: 60_000, frequency: '6-months' },
+      ]),
+    ).toBe(10_000 * 12 + 60_000 * 2);
+  });
+
+  it('returns 0 when no stream is a commuting allowance', () => {
+    expect(
+      totalCommutingAllowanceFromStreams([{ id: 'm1', type: 'miscellaneous', amount: 500_000 }]),
+    ).toBe(0);
+  });
+});
+

@@ -42,15 +42,15 @@ const atSalaryIncome = (base: TakeHomeFormState, annualIncome: number): TakeHome
   ],
 });
 
-/** A miscellaneous-mode form state at `annualIncome`, with the stream the reducer keeps in sync. */
+/** An advanced-mode form state whose only stream is miscellaneous income of `annualIncome`. */
 const atMiscellaneousIncome = (
   base: TakeHomeFormState,
   annualIncome: number,
 ): TakeHomeFormState => ({
   ...base,
-  incomeMode: 'miscellaneous',
+  incomeMode: 'advanced',
   annualIncome,
-  incomeStreams: [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount: annualIncome }],
+  incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: annualIncome }],
 });
 
 describe('TakeHomeInputForm Tests', () => {
@@ -125,11 +125,11 @@ describe('TakeHomeInputForm Tests', () => {
     });
   });
 
-  describe('when in miscellaneous income mode (non-employment income)', () => {
+  describe('when in advanced mode with only non-employment income', () => {
     it('should show dependent coverage and NHI when income is below threshold', async () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
-        ...atMiscellaneousIncome(baseInputs, 1_000_000), // Below threshold
+        ...atMiscellaneousIncome(baseInputs, 1_000_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -154,7 +154,7 @@ describe('TakeHomeInputForm Tests', () => {
 
     it('should only show NHI when non-employment income is above threshold', () => {
       const nonEmploymentInputs = {
-        ...atMiscellaneousIncome(baseInputs, 1_500_000), // Above threshold
+        ...atMiscellaneousIncome(baseInputs, 1_500_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -173,7 +173,7 @@ describe('TakeHomeInputForm Tests', () => {
     it('should not show employee health insurance providers for non-employment income', async () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
-        ...atMiscellaneousIncome(baseInputs, 1_000_000), // Below threshold to have options
+        ...atMiscellaneousIncome(baseInputs, 1_000_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -212,20 +212,20 @@ describe('TakeHomeInputForm Tests', () => {
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
       expect(providerSelect).not.toBeDisabled();
 
-      // Find and click the Miscellaneous toggle
-      const miscToggle = screen.getByRole('button', { name: /misc/i });
-      await user.click(miscToggle);
+      // Find and click the Advanced toggle
+      const advancedToggle = screen.getByRole('button', { name: /advanced/i });
+      await user.click(advancedToggle);
 
       // Verify that the mode change was dispatched
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'incomeModeChanged',
-        mode: 'miscellaneous',
+        mode: 'advanced',
       });
 
-      // Update props to simulate the mode change taking effect
+      // Update props to simulate the mode change and a switch to miscellaneous income
       rerender(
         <TakeHomeInputForm
-          inputs={atMiscellaneousIncome(baseInputs, baseInputs.annualIncome)}
+          inputs={atMiscellaneousIncome(baseInputs, 5000000)}
           dispatch={mockDispatch}
         />,
       );
@@ -262,7 +262,7 @@ describe('TakeHomeInputForm Tests', () => {
 
     it('should maintain consistency with provider display names', () => {
       const nonEmploymentInputs = {
-        ...atMiscellaneousIncome(baseInputs, baseInputs.annualIncome),
+        ...atMiscellaneousIncome(baseInputs, 5000000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -288,8 +288,8 @@ describe('TakeHomeInputForm Tests', () => {
 
       // Income mode selection should be present
       expect(screen.getByRole('group', { name: /income mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Salary' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /misc/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salary only' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
     });
 
     it('should show helpful tooltips and explanatory text', () => {
@@ -399,6 +399,52 @@ describe('Dependent Coverage UI Behavior', () => {
     // Should show helper text explaining only NHI is available for this configuration
     expect(
       screen.getByText(/Only National Health Insurance available for this configuration/i),
+    ).toBeInTheDocument();
+  });
+
+  it('should NOT include dependent coverage when a commuting allowance carries the 年間収入 over', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      ],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    const listbox = screen.getByRole('listbox');
+    const optionTexts = within(listbox)
+      .getAllByRole('option')
+      .map(option => option.textContent);
+
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it('should include dependent coverage for the same salary without a commuting allowance', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' }],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    expect(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'None (dependent of insured employee)',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -518,7 +564,7 @@ describe('Age Selection', () => {
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'salary',
-    incomeStreams: [],
+    incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
