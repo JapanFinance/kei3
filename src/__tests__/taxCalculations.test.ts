@@ -2396,7 +2396,7 @@ describe('calculateTaxes with investment income streams', () => {
       salaryInputs([
         {
           type: 'capitalGains',
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
           amount: 1_000_000,
@@ -2404,7 +2404,7 @@ describe('calculateTaxes with investment income streams', () => {
         },
         {
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 200_000,
           id: 'dividends',
@@ -2433,7 +2433,7 @@ describe('calculateTaxes with investment income streams', () => {
       salaryInputs([
         {
           type: 'capitalGains',
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
           amount: -500_000,
@@ -2441,7 +2441,7 @@ describe('calculateTaxes with investment income streams', () => {
         },
         {
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 300_000,
           id: 'dividends',
@@ -2459,7 +2459,7 @@ describe('calculateTaxes with investment income streams', () => {
       salaryInputs([
         {
           type: 'capitalGains',
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
           amount: -500_000,
@@ -2467,7 +2467,7 @@ describe('calculateTaxes with investment income streams', () => {
         },
         {
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 800_000,
           id: 'dividends',
@@ -2518,7 +2518,7 @@ describe('calculateTaxes with investment income streams', () => {
       salaryInputs([
         {
           type: 'capitalGains',
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
           amount: -300_000,
@@ -2541,7 +2541,7 @@ describe('calculateTaxes with investment income streams', () => {
       salaryInputs([
         {
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 1_234_567,
           id: 'dividends',
@@ -2564,7 +2564,7 @@ describe('calculateTaxes with investment income streams', () => {
       salaryInputs([
         {
           type: 'capitalGains',
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
           amount: 0,
@@ -2572,7 +2572,7 @@ describe('calculateTaxes with investment income streams', () => {
         },
         {
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 0,
           id: 'dividends',
@@ -2591,7 +2591,7 @@ describe('calculateTaxes with investment income streams', () => {
       incomeStreams: [
         {
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 1_000_000,
           id: 'dividends',
@@ -2625,7 +2625,7 @@ describe('calculateTaxes with investment income streams', () => {
         salaryInputs([
           {
             type: 'capitalGains',
-            listingStatus: 'unlisted',
+            shareType: 'other',
             account: 'specifiedWithholding',
             taxTreatment: 'withheldOnly',
             amount: 500_000,
@@ -2639,7 +2639,7 @@ describe('calculateTaxes with investment income streams', () => {
         salaryInputs([
           {
             type: 'dividends',
-            listingStatus: 'unlisted',
+            shareType: 'other',
             taxTreatment: 'withheldOnly',
             amount: 500_000,
             id: 'dividends',
@@ -2655,8 +2655,8 @@ describe('calculateTaxes with investment income streams', () => {
         salaryInputs([
           {
             type: 'capitalGains',
-            listingStatus: 'listed',
-            account: 'general',
+            shareType: 'listed',
+            account: 'domesticNoWithholding',
             taxTreatment: 'withheldOnly',
             amount: 500_000,
             id: 'gains',
@@ -2672,7 +2672,7 @@ describe('calculateTaxes with investment income streams', () => {
         salaryInputs([
           {
             type: 'dividends',
-            listingStatus: 'listed',
+            shareType: 'listed',
             taxTreatment: 'separate',
             amount: 500_000,
             id: 'dividends',

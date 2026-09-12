@@ -32,7 +32,7 @@ describe('totalAnnualIncomeFromStreams', () => {
         {
           id: 'g1',
           type: 'capitalGains',
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
           amount: 2_000_000,
@@ -40,7 +40,7 @@ describe('totalAnnualIncomeFromStreams', () => {
         {
           id: 'd1',
           type: 'dividends',
-          listingStatus: 'listed',
+          shareType: 'listed',
           taxTreatment: 'withheldOnly',
           amount: 300_000,
         },
@@ -83,7 +83,7 @@ describe('countsTowardAnnualIncome', () => {
       countsTowardAnnualIncome({
         id: 'g1',
         type: 'capitalGains',
-        listingStatus: 'listed',
+        shareType: 'listed',
         account: 'specifiedWithholding',
         taxTreatment: 'withheldOnly',
         amount: -10_000,
@@ -93,7 +93,7 @@ describe('countsTowardAnnualIncome', () => {
       countsTowardAnnualIncome({
         id: 'd1',
         type: 'dividends',
-        listingStatus: 'listed',
+        shareType: 'listed',
         taxTreatment: 'withheldOnly',
         amount: 10_000,
       }),

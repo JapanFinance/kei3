@@ -369,7 +369,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         grossPublicPensionIncome += income.amount;
         break;
       case 'capitalGains':
-        if (income.listingStatus !== 'listed') {
+        if (income.shareType !== 'listed') {
           throw new Error('Capital gains on 一般株式等 are not currently supported.');
         }
         if (income.account !== 'specifiedWithholding') {
@@ -384,7 +384,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         capitalGains += income.amount;
         break;
       case 'dividends':
-        if (income.listingStatus !== 'listed') {
+        if (income.shareType !== 'listed') {
           throw new Error('Dividends on 一般株式等 are not currently supported.');
         }
         if (income.taxTreatment !== 'withheldOnly') {

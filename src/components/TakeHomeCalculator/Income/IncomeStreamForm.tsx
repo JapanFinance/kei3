@@ -124,13 +124,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           id,
           type,
           amount,
-          listingStatus: 'listed',
+          shareType: 'listed',
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
         };
         break;
       case 'dividends':
-        stream = { id, type, amount, listingStatus: 'listed', taxTreatment: 'withheldOnly' };
+        stream = { id, type, amount, shareType: 'listed', taxTreatment: 'withheldOnly' };
         break;
       case 'interest':
         stream = { id, type, amount, payerDomicile: 'domestic' };

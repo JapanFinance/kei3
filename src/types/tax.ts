@@ -72,17 +72,21 @@ export type InvestmentTaxTreatment = 'withheldOnly' | 'separate' | 'aggregate';
 export interface CapitalGainsIncomeStream extends BaseIncomeStream {
   type: 'capitalGains';
   /**
-   * 上場株式等 (措法37条の11) or 一般株式等 — 株式等 other than those (措法37条の10①). Only
-   * 'listed' is supported: the two are separate 分離課税 classes that cannot offset each other,
-   * so a 一般株式等 amount needs a calculation of its own rather than joining this one.
+   * 上場株式等 (措法37条の11) or 一般株式等, which 措法37条の10① defines as 株式等 other than
+   * those. Only 'listed' is supported: the two are separate 分離課税 classes that cannot offset
+   * each other, so a 一般株式等 amount needs a calculation of its own rather than joining this one.
    */
-  listingStatus: 'listed' | 'unlisted';
+  shareType: 'listed' | 'other';
   /**
-   * The account the shares were sold from, which decides whether {@link taxTreatment} may be
-   * 'withheldOnly': 措法37条の11の5 grants 申告不要 only for a 源泉徴収選択口座, the
-   * 特定口座 whose holder elected withholding. Only 'specifiedWithholding' is supported.
+   * The account the shares were sold from. Only the three the tax turns on are distinguished:
+   * 措法37条の11の5 grants 申告不要 only for a 源泉徴収選択口座 — the 特定口座 whose holder
+   * elected withholding — so everything else has to be reported, and a sale outside Japan is
+   * not 売委託 to a licensed 金融商品取引業者, which is what 措法37条の12の2② requires of a loss
+   * before it can offset 配当等 or be carried forward. A 特定口座（源泉徴収なし）and a 一般口座
+   * differ only in who computes the figures, so they share an option. Only
+   * 'specifiedWithholding' is supported.
    */
-  account: 'specifiedWithholding' | 'specifiedNoWithholding' | 'general' | 'foreign';
+  account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign';
   /** See {@link InvestmentTaxTreatment}; only 'withheldOnly' is supported. */
   taxTreatment: 'withheldOnly' | 'separate';
 }
@@ -100,7 +104,7 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
    * progressive brackets, or 一般株式等. Only 'listed' is supported: a 一般株式等 dividend is
    * 総合課税 unless it is a 少額配当 (措法8条の5①一), so it belongs in the brackets instead.
    */
-  listingStatus: 'listed' | 'unlisted';
+  shareType: 'listed' | 'other';
   /**
    * See {@link InvestmentTaxTreatment}; only 'withheldOnly' is supported. Unlike a share sale,
    * a dividend needs no particular account for 申告不要 — 措法8条の5 grants it on the
