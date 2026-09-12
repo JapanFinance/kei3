@@ -20,6 +20,7 @@ import {
 import type {
   BonusIncomeStream,
   IncomeStream,
+  InvestmentIncomeAmounts,
   PersonalCircumstancesInput,
   TakeHomeInputs,
   TakeHomeResults,
@@ -46,6 +47,7 @@ import {
 } from './healthInsuranceCalculator';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { annualIncomeStreamAmount } from './incomeStreams';
+import { calculateWithheldInvestmentTax, hasInvestmentIncome } from './investmentIncome';
 import {
   estimateLongTermCareCategory1Premium,
   type LongTermCareCategory1TierInputs,
@@ -289,10 +291,19 @@ interface IncomeBreakdown {
   netBusinessAndMiscIncomeBeforeBlueFilerDeduction: number;
   netBusinessAndMiscIncome: number;
   blueFilerDeduction: number;
+  /**
+   * Earned income only (employment + business/misc + public pension). Investment income is
+   * gathered separately in {@link investment} and is never part of this total — see
+   * {@link isInvestmentIncomeStream}.
+   */
   totalAnnualIncome: number;
   commutingAllowance: number;
   stockCompensationIncome: number;
   grossPublicPensionIncome: number;
+  /** Gross investment-income amounts for the year, before withholding. */
+  investment: InvestmentIncomeAmounts;
+  /** Sum of {@link investment}'s three amounts; may be negative. */
+  grossInvestmentIncome: number;
 }
 
 /**
@@ -308,6 +319,9 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   let commutingAllowance = 0;
   let stockCompensationIncome = 0;
   let grossPublicPensionIncome = 0;
+  let capitalGains = 0;
+  let dividends = 0;
+  let interest = 0;
   let processedBusinessIncome = false;
 
   for (const income of incomeStreams) {
@@ -354,6 +368,42 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
       case 'publicPension':
         grossPublicPensionIncome += income.amount;
         break;
+      case 'capitalGains':
+        if (income.shareType !== 'listed') {
+          throw new Error('Capital gains on 一般株式等 are not currently supported.');
+        }
+        if (income.account !== 'specifiedWithholding') {
+          throw new Error(
+            'Capital gains outside a 特定口座（源泉徴収あり）are not currently supported.',
+          );
+        }
+        if (income.taxTreatment !== 'withheldOnly') {
+          throw new Error('Reporting capital gains on a tax return is not currently supported.');
+        }
+        // Negative (譲渡損失) is expected — see calculateWithheldInvestmentTax's in-account netting.
+        capitalGains += income.amount;
+        break;
+      case 'dividends':
+        if (income.shareType !== 'listed') {
+          throw new Error('Dividends on 一般株式等 are not currently supported.');
+        }
+        if (income.taxTreatment !== 'withheldOnly') {
+          throw new Error('Reporting dividends on a tax return is not currently supported.');
+        }
+        if (income.amount < 0) {
+          throw new Error('Dividends cannot be negative.');
+        }
+        dividends += income.amount;
+        break;
+      case 'interest':
+        if (income.payerDomicile !== 'domestic') {
+          throw new Error('Interest paid outside Japan is not currently supported.');
+        }
+        if (income.amount < 0) {
+          throw new Error('Interest cannot be negative.');
+        }
+        interest += income.amount;
+        break;
       default: {
         const unhandled: never = income;
         throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
@@ -367,6 +417,12 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
     grossPublicPensionIncome;
+  const investment: InvestmentIncomeAmounts = {
+    capitalGains,
+    dividends,
+    interest,
+  };
+  const grossInvestmentIncome = capitalGains + dividends + interest;
 
   return {
     salaryIncome,
@@ -379,6 +435,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     commutingAllowance,
     stockCompensationIncome,
     grossPublicPensionIncome,
+    investment,
+    grossInvestmentIncome,
   };
 };
 
@@ -454,9 +512,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     commutingAllowance,
     stockCompensationIncome,
     grossPublicPensionIncome,
+    investment,
+    grossInvestmentIncome,
   } = incomeBreakdown;
 
-  if (totalAnnualIncome <= 0) {
+  if (totalAnnualIncome <= 0 && !hasInvestmentIncome(investment)) {
     return DEFAULT_TAKE_HOME_RESULTS;
   }
 
@@ -733,8 +793,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       : preCreditResidenceTax;
 
   // Calculate totals
+  const withheldInvestmentTax = calculateWithheldInvestmentTax(investment, incomeYear);
   const totalSocialsAndTax =
     nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;
+  // Take-home is what is left of the income the tax system counts. 申告不要 investment income
+  // enters no aggregate and changes no assessed figure, so like a 通勤手当 it stays out of this
+  // total and is reported beside it, through results.investmentIncome.
   const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
   const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
@@ -771,6 +835,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     ...(grossPublicPensionIncome > 0 && {
       grossPublicPensionIncome,
       netPublicPensionIncome,
+    }),
+    ...(hasInvestmentIncome(investment) && {
+      investmentIncome: {
+        gross: investment,
+        grossTotal: grossInvestmentIncome,
+        withheld: withheldInvestmentTax,
+      },
     }),
     totalNetIncome: netIncome,
     nationalIncomeTaxBasicDeduction,

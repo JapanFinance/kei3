@@ -12,7 +12,11 @@ import {
   DEPENDENT_COVERAGE_ID,
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
+import {
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  EMPTY_PERSONAL_CIRCUMSTANCES,
+  type TakeHomeInputs,
+} from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateTaxes,
@@ -2365,5 +2369,326 @@ describe('calculateNetIncomeComponents with public pension income', () => {
       calculateNetIncomeComponents(streams, 2026, 'age60to64', [], EMPTY_PERSONAL_CIRCUMSTANCES)
         .totalNetIncome,
     ).toBe(1_975_000);
+  });
+});
+
+describe('calculateTaxes with investment income streams', () => {
+  // Baseline: the 5,000,000-yen salary case from the top-level describe block above.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []) => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39' as const,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+
+  it('leaves take-home and every earned-income field untouched, reporting only the withholding', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: 1_000_000,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 200_000,
+          id: 'dividends',
+        },
+      ]),
+    );
+
+    expect(result.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+    expect(result.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
+    expect(result.healthInsurance).toBe(baseline.healthInsurance);
+    expect(result.pensionPayments).toBe(baseline.pensionPayments);
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
+
+    // base = max(0, 1,000,000 + 200,000) = 1,200,000; 15.315% = 183,780; 5% = 60,000
+    expect(result.investmentIncome).toEqual({
+      gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
+      grossTotal: 1_200_000,
+      withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+    });
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+  });
+
+  it('nets a capital loss against dividends down to zero tax when the loss is larger', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: -500_000,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 300_000,
+          id: 'dividends',
+        },
+      ]),
+    );
+
+    expect(result.investmentIncome?.withheld.total).toBe(0);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+  });
+
+  it('taxes only the remainder when a capital loss partially offsets dividends', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: -500_000,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 800_000,
+          id: 'dividends',
+        },
+      ]),
+    );
+
+    // base = 300,000; national = 45,945; residence = 15,000; total = 60,945
+    expect(result.investmentIncome?.withheld.total).toBe(60_945);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+  });
+
+  it('does not change National Health Insurance when only deposit interest is reported', () => {
+    // Non-employment-income NHI baseline: 5,000,000-yen miscellaneous income.
+    const nhiInputs = (streams: TakeHomeInputs['incomeStreams'] = []) => ({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { type: 'miscellaneous' as const, amount: 5_000_000, id: 'misc' },
+        ...streams,
+      ],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    const baseline = calculateTaxes(nhiInputs());
+    const result = calculateTaxes(
+      nhiInputs([{ type: 'interest', payerDomicile: 'domestic', amount: 100_000, id: 'interest' }]),
+    );
+
+    expect(result.healthInsurance).toBe(baseline.healthInsurance);
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
+    expect(result.investmentIncome?.withheld).toEqual({
+      national: 15_315,
+      residence: 5_000,
+      total: 20_315,
+    });
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+  });
+
+  it('handles a capital loss with no dividends to net against (withheld tax is zero)', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: -300_000,
+          id: 'gains',
+        },
+      ]),
+    );
+
+    expect(result.investmentIncome).toEqual({
+      gross: { capitalGains: -300_000, dividends: 0, interest: 0 },
+      grossTotal: -300_000,
+      withheld: { national: 0, residence: 0, total: 0 },
+    });
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+  });
+
+  it('truncates withholding to the whole yen on top of earned income', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 1_234_567,
+          id: 'dividends',
+        },
+      ]),
+    );
+
+    // 1,234,567 * 0.15315 = 189,073.93...; 1,234,567 * 0.05 = 61,728.35
+    expect(result.investmentIncome?.withheld).toEqual({
+      national: 189_073,
+      residence: 61_728,
+      total: 250_801,
+    });
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+  });
+
+  it('leaves investmentIncome absent and results identical when every stream amount is zero', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: 0,
+          id: 'gains',
+        },
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 0,
+          id: 'dividends',
+        },
+        { type: 'interest', payerDomicile: 'domestic', amount: 0, id: 'interest' },
+      ]),
+    );
+
+    expect(result.investmentIncome).toBeUndefined();
+    expect(result).toEqual(baseline);
+  });
+
+  it('reports the withholding for an investment-only taxpayer, whose take-home is nil', () => {
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 1_000_000,
+          id: 'dividends',
+        },
+      ],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      // Manual social insurance entry isolates this case from the NHI/pension data tables,
+      // which are unaffected by 申告不要 investment income and are exercised elsewhere.
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+
+    expect(result.annualIncome).toBe(0);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    // base = 1,000,000; national = 153,150; residence = 50,000
+    expect(result.investmentIncome?.withheld.total).toBe(203_150);
+    expect(result.takeHomeIncome).toBe(0);
+  });
+
+  // The UI offers only the supported variant, so these guard the engine against a stream
+  // built elsewhere being silently taxed under the wrong regime.
+  it('rejects 一般株式等 gains and dividends, which are a separate 分離課税 class', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'capitalGains',
+            shareType: 'other',
+            account: 'specifiedWithholding',
+            taxTreatment: 'withheldOnly',
+            amount: 500_000,
+            id: 'gains',
+          },
+        ]),
+      ),
+    ).toThrow(/一般株式等/);
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'dividends',
+            shareType: 'other',
+            taxTreatment: 'withheldOnly',
+            amount: 500_000,
+            id: 'dividends',
+          },
+        ]),
+      ),
+    ).toThrow(/一般株式等/);
+  });
+
+  it('rejects a share sale outside a 源泉徴収あり特定口座, which cannot elect 申告不要', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'capitalGains',
+            shareType: 'listed',
+            account: 'domesticNoWithholding',
+            taxTreatment: 'withheldOnly',
+            amount: 500_000,
+            id: 'gains',
+          },
+        ]),
+      ),
+    ).toThrow(/特定口座/);
+  });
+
+  it('rejects amounts reported on a tax return, which enter 合計所得金額', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'dividends',
+            shareType: 'listed',
+            taxTreatment: 'separate',
+            amount: 500_000,
+            id: 'dividends',
+          },
+        ]),
+      ),
+    ).toThrow(/Reporting dividends/);
+  });
+
+  it('rejects interest paid outside Japan, which is 総合課税 rather than withheld at source', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          { type: 'interest', payerDomicile: 'foreign', amount: 100_000, id: 'interest' },
+        ]),
+      ),
+    ).toThrow(/outside Japan/);
   });
 });

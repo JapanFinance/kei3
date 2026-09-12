@@ -11,7 +11,12 @@ import { formatJPY } from '../../../utils/formatters';
  * The income classification (所得区分) an Advanced-mode income stream belongs to. Groups the
  * streams in {@link IncomeDetailsModal} and the types offered when adding one.
  */
-export type IncomeCategoryKey = 'employment' | 'business' | 'miscellaneous' | 'publicPension';
+export type IncomeCategoryKey =
+  | 'employment'
+  | 'business'
+  | 'miscellaneous'
+  | 'publicPension'
+  | 'investment';
 
 export interface IncomeCategory {
   key: IncomeCategoryKey;
@@ -48,6 +53,12 @@ export const INCOME_CATEGORIES: readonly IncomeCategory[] = [
     addLabel: 'Add Public Pension',
     chipColor: 'secondary',
   },
+  {
+    key: 'investment',
+    heading: 'Investment Income (配当・譲渡・利子)',
+    addLabel: 'Add Investment Income',
+    chipColor: 'info',
+  },
 ];
 
 export const getIncomeCategory = (key: IncomeCategoryKey): IncomeCategory =>
@@ -62,6 +73,8 @@ export interface IncomeStreamTypeInfo {
   amountHelperText?: string;
   /** Maximum number of streams of this type; unlimited when omitted. */
   maxCount?: number;
+  /** Lower bound on the entered amount; 0 (no negative entry) when omitted. */
+  min?: number;
 }
 
 /** Per-type presentation, in display order within each category. */
@@ -117,6 +130,30 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     amountLabel: 'Annual Gross Pension Income',
     amountHelperText:
       'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.',
+  },
+  capitalGains: {
+    label: 'Capital Gains (Shares)',
+    category: 'investment',
+    chipLabel: 'CAPITAL GAINS',
+    amountLabel: 'Net Capital Gains',
+    amountHelperText:
+      'Net of acquisition and transfer costs; enter a loss as a negative amount. Exclude NISA amounts.',
+    min: Number.MIN_SAFE_INTEGER,
+  },
+  dividends: {
+    label: 'Dividends',
+    category: 'investment',
+    chipLabel: 'DIVIDENDS',
+    amountLabel: 'Gross Dividends',
+    amountHelperText:
+      'Before withholding; includes 公募株式投資信託の分配金 and 特定公社債の利子. Exclude NISA amounts.',
+  },
+  interest: {
+    label: 'Interest',
+    category: 'investment',
+    chipLabel: 'INTEREST',
+    amountLabel: 'Gross Interest',
+    amountHelperText: '預貯金の利子 and 一般公社債の利子, before withholding.',
   },
 };
 
