@@ -8,11 +8,17 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 - Investment income can now be entered as Advanced-mode income types: capital gains on shares, dividends, and interest. Only the amounts taxed at source are covered — [上場株式等の譲渡所得等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm) and [上場株式等の配当等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm) held in a [特定口座（源泉徴収あり）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm) under 申告不要, and [利子所得](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm) paid in Japan. Each entry carries the choices that decide its tax — the share type, the account it was sold from, and whether the amount is reported — with the options that are not modelled yet shown disabled, so the limits are visible where the amount is entered. Because these amounts are settled by the 20.315% withheld at source and stay off the tax return, they change no other figure the calculator shows: take-home pay, the summary and the chart are all unaffected, exactly as a commuting allowance is. What is withheld, and what is left after it, appear alongside the entered amount and in the Taxes tab. Reporting a gain, dividend, or loss on a tax return (申告分離課税 / 総合課税), 一般株式等, foreign brokerages, interest paid outside Japan, and NISA are not yet supported.
 
+## 2026-09-10
+
+### Updated
+
+- The income mode selection is now a choice between "Salary only" and "Advanced". The separate Miscellaneous mode has been removed. Instead, enter miscellaneous income (雑所得) in the Advanced mode, where it can also be combined with other income types.
+
 ## 2026-09-06
 
 ### Updated
 
-- The Advanced income mode's income list now shows every income classification (所得区分) as its own section, each with an add button: sections with one income type open its form directly, and the employment section offers a menu of its types (salary, bonus, commuting allowance, stock-based compensation). This replaces the single Add Income/Benefit button and the type dropdown at the top of the form. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
+- The Advanced income mode's income list now shows every income type as its own section, each with an add button: sections with one income type open its form directly, and the employment section offers a menu of its types (salary, bonus, commuting allowance, stock-based compensation). This replaces the single Add Income/Benefit button and the type dropdown at the top of the form. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
 
 ### Fixed
 

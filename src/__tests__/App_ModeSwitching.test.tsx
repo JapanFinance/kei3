@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { ThemeProvider } from '@mui/material/styles';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitForElementToBeRemoved } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import App from '../App';
@@ -11,8 +11,14 @@ import { theme } from '../theme';
 // Mock scrollIntoView to avoid errors in JSDOM
 window.HTMLElement.prototype.scrollIntoView = function () {};
 
+// The lazily loaded chart is outside these tests' scope. Left real, chart.js measures its
+// canvas from a resize callback that can fire after the test's DOM has been torn down.
+vi.mock('../components/TakeHomeCalculator/TakeHomeChart', () => ({
+  default: () => null,
+}));
+
 describe('App Integration - Income Mode Switching', () => {
-  it('should switch health insurance provider when changing income mode', async () => {
+  it('should switch health insurance provider when the income streams lose employment income', async () => {
     const user = userEvent.setup();
     render(
       <ThemeProvider theme={theme}>
@@ -21,20 +27,39 @@ describe('App Integration - Income Mode Switching', () => {
     );
 
     // 1. Initial State: Salary Mode -> Kyokai Kenpo
-    expect(screen.getByRole('button', { name: 'Salary' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Salary only' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     // Verify provider is Kyokai Kenpo (or default employee provider)
     expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toHaveTextContent(
       'Kyokai Kenpo',
     );
 
-    // 2. Switch to Miscellaneous Mode
-    await user.click(screen.getByRole('button', { name: /misc/i }));
+    // 2. Switch to Advanced Mode: the salary stream carries over, so the provider is kept
+    await user.click(screen.getByRole('button', { name: 'Advanced' }));
+    expect(screen.getByRole('button', { name: 'Advanced' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toHaveTextContent(
+      'Kyokai Kenpo',
+    );
 
-    // Verify mode changed
-    expect(screen.getByRole('button', { name: /misc/i })).toHaveAttribute('aria-pressed', 'true');
+    // 3. Replace the salary with miscellaneous income
+    await user.click(screen.getByRole('button', { name: /edit income\/benefits/i }));
+    await user.click(await screen.findByRole('button', { name: /delete income/i }));
+    await user.click(screen.getByRole('button', { name: /add miscellaneous income/i }));
+    await user.type(
+      screen.getByRole('textbox', { name: /annual income after expenses/i }),
+      '5000000',
+    );
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
 
-    // 3. Verify Provider Switched to National Health Insurance
+    // 4. Verify Provider Switched to National Health Insurance
     expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toHaveTextContent(
       'National Health Insurance',
     );
