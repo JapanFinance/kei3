@@ -309,4 +309,3 @@ describe('totalCommutingAllowanceFromStreams', () => {
     ).toBe(0);
   });
 });
-

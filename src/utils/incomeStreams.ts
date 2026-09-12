@@ -190,7 +190,9 @@ export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStrea
  */
 export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): number {
   return (
-    streams.reduce((sum, s) => (isEarnedIncomeStream(s) ? sum + annualIncomeStreamAmount(s) : sum), 0) +
-    totalCommutingAllowanceFromStreams(streams)
+    streams.reduce(
+      (sum, s) => (isEarnedIncomeStream(s) ? sum + annualIncomeStreamAmount(s) : sum),
+      0,
+    ) + totalCommutingAllowanceFromStreams(streams)
   );
 }
