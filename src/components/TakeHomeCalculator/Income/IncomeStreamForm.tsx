@@ -51,6 +51,31 @@ const guidanceBoxSx = {
   borderColor: 'divider',
 };
 
+const variantToggleGroupSx = {
+  '& .MuiToggleButton-root': {
+    px: 2,
+    py: 0.5,
+    fontSize: '0.85rem',
+    fontWeight: 500,
+  },
+  '& .MuiToggleButton-root.Mui-selected': {
+    bgcolor: 'primary.main',
+    color: 'primary.contrastText',
+    '&:hover': {
+      bgcolor: 'primary.dark',
+    },
+  },
+};
+
+const variantLabelSx = {
+  mb: 0.5,
+  fontWeight: 500,
+  color: 'text.primary',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.5,
+};
+
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   type,
   initialData,
@@ -74,6 +99,14 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   );
   const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>(
     initialData?.type === 'stockCompensation' ? initialData.issuerDomicile : 'foreign',
+  );
+  const [shareType, setShareType] = useState<'listed' | 'other'>(
+    initialData?.type === 'capitalGains' || initialData?.type === 'dividends'
+      ? initialData.shareType
+      : 'listed',
+  );
+  const [payerDomicile, setPayerDomicile] = useState<'domestic' | 'foreign'>(
+    initialData?.type === 'interest' ? initialData.payerDomicile : 'domestic',
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -117,23 +150,23 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       case 'publicPension':
         stream = { id, type, amount };
         break;
-      // Only the supported variant is offered; the selectors that say so arrive with the
-      // rest of the investment-income UI.
+      // The account and the election are still fixed to the one supported combination; their
+      // selectors follow.
       case 'capitalGains':
         stream = {
           id,
           type,
           amount,
-          shareType: 'listed',
+          shareType,
           account: 'specifiedWithholding',
           taxTreatment: 'withheldOnly',
         };
         break;
       case 'dividends':
-        stream = { id, type, amount, shareType: 'listed', taxTreatment: 'withheldOnly' };
+        stream = { id, type, amount, shareType, taxTreatment: 'withheldOnly' };
         break;
       case 'interest':
-        stream = { id, type, amount, payerDomicile: 'domestic' };
+        stream = { id, type, amount, payerDomicile };
         break;
       default: {
         const unhandled: never = type;
@@ -206,17 +239,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
         {type === 'stockCompensation' && (
           <FormControl fullWidth>
-            <FormLabel
-              id="stock-issuer-label"
-              sx={{
-                mb: 0.5,
-                fontWeight: 500,
-                color: 'text.primary',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}
-            >
+            <FormLabel id="stock-issuer-label" sx={variantLabelSx}>
               <span>Stock Issuer</span>
               <DetailedTooltip
                 title="Stock Issuer"
@@ -245,26 +268,97 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               aria-labelledby="stock-issuer-label"
               aria-label="stock compensation issuance"
               size="small"
-              sx={{
-                '& .MuiToggleButton-root': {
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                },
-                '& .MuiToggleButton-root.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                  },
-                },
-              }}
+              sx={variantToggleGroupSx}
             >
               <ToggleButton value="domestic" disabled>
                 Domestic
               </ToggleButton>
               <ToggleButton value="foreign">Foreign</ToggleButton>
+            </ToggleButtonGroup>
+          </FormControl>
+        )}
+
+        {(type === 'capitalGains' || type === 'dividends') && (
+          <FormControl fullWidth>
+            <FormLabel id="share-type-label" sx={variantLabelSx}>
+              <span>Share Type</span>
+              <DetailedTooltip
+                title="Share Type"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="share type info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Listed (上場株式等)</strong> covers shares traded on an exchange, along
+                  with 公募株式投資信託 and 特定公社債. These are taxed apart from the progressive
+                  brackets at a flat rate.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Other (一般株式等)</strong> is everything else — 措法37条の10① defines it
+                  as 株式等 other than 上場株式等, which is mostly but not only unlisted shares. It
+                  is not currently supported: it is a separate class that cannot be offset against
+                  listed amounts, and its dividends are taxed at the progressive rates instead.
+                </Typography>
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={shareType}
+              exclusive
+              onChange={(_, newValue: 'listed' | 'other' | null) => {
+                if (newValue) {
+                  setShareType(newValue);
+                }
+              }}
+              aria-labelledby="share-type-label"
+              aria-label="share type"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="listed">Listed</ToggleButton>
+              <ToggleButton value="other" disabled>
+                Other
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </FormControl>
+        )}
+
+        {type === 'interest' && (
+          <FormControl fullWidth>
+            <FormLabel id="interest-payer-label" sx={variantLabelSx}>
+              <span>Paid</span>
+              <DetailedTooltip
+                title="Where the Interest Is Paid"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="interest payer info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>In Japan</strong> means interest received from a Japanese payer, such as a
+                  bank deposit held in Japan. Tax is withheld at source and the interest is never
+                  reported on a tax return.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Outside Japan</strong> is not currently supported. No Japanese tax is
+                  withheld, so the interest has to be reported and is taxed at the progressive
+                  rates.
+                </Typography>
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={payerDomicile}
+              exclusive
+              onChange={(_, newValue: 'domestic' | 'foreign' | null) => {
+                if (newValue) {
+                  setPayerDomicile(newValue);
+                }
+              }}
+              aria-labelledby="interest-payer-label"
+              aria-label="where the interest is paid"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="domestic">In Japan</ToggleButton>
+              <ToggleButton value="foreign" disabled>
+                Outside Japan
+              </ToggleButton>
             </ToggleButtonGroup>
           </FormControl>
         )}
@@ -444,10 +538,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             </Box>
           )}
 
-          {(type === 'listedCapitalGains' || type === 'listedDividends') && (
+          {(type === 'capitalGains' || type === 'dividends') && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
-                Assumptions for Listed-Share Income
+                Assumptions
               </Typography>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
                 Assumes a domestic 特定口座（源泉徴収あり）with 申告不要 elected: the broker
@@ -481,7 +575,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             </Box>
           )}
 
-          {type === 'depositInterest' && (
+          {type === 'interest' && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                 Taxed at source at 20.315% (源泉分離課税) and never reported on a tax return, so it

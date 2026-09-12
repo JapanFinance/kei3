@@ -175,8 +175,8 @@ describe('generateChartData with investment income', () => {
     ...context,
     incomeStreams: [
       { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
-      { id: 'd', type: 'listedDividends', amount: 300_000 },
-      { id: 'i', type: 'depositInterest', amount: 100_000 },
+      { id: 'd', type: 'dividends', listingStatus: 'listed', amount: 300_000 },
+      { id: 'i', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
     ],
   };
 
@@ -201,8 +201,8 @@ describe('generateChartData with investment income', () => {
       ...context,
       incomeStreams: [
         { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
-        { id: 'c', type: 'listedCapitalGains', amount: -500_000 },
-        { id: 'd', type: 'listedDividends', amount: 300_000 },
+        { id: 'c', type: 'capitalGains', listingStatus: 'listed', amount: -500_000 },
+        { id: 'd', type: 'dividends', listingStatus: 'listed', amount: 300_000 },
       ],
     };
     const { datasets } = generateChartData(range, lossContext);
@@ -212,8 +212,8 @@ describe('generateChartData with investment income', () => {
     points.forEach(point => {
       expect(point.breakdown, `income ${point.x}`).toEqual(
         expect.arrayContaining([
-          { label: 'Listed Capital Gains', amount: -500_000 },
-          { label: 'Listed Dividends', amount: 300_000 },
+          { label: 'Capital Gains', amount: -500_000 },
+          { label: 'Dividends', amount: 300_000 },
         ]),
       );
     });

@@ -896,7 +896,7 @@ describe('Investment Income Integration', () => {
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
     await user.click(screen.getByRole('button', { name: /add investment income/i }));
-    await user.click(screen.getByRole('menuitem', { name: /listed share dividends/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends$/i }));
 
     const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
     await user.type(amountInput, '300000');

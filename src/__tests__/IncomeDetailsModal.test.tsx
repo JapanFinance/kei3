@@ -460,10 +460,10 @@ describe('IncomeDetailsModal - Investment Income', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map(item => item.textContent),
-    ).toEqual(['Listed Share Capital Gains', 'Listed Share Dividends', 'Deposit Interest']);
+    ).toEqual(['Share Capital Gains', 'Dividends', 'Interest']);
 
-    await user.click(within(menu).getByRole('menuitem', { name: /listed share dividends/i }));
-    expect(screen.getByRole('heading', { name: 'Add Listed Share Dividends' })).toBeInTheDocument();
+    await user.click(within(menu).getByRole('menuitem', { name: /^dividends$/i }));
+    expect(screen.getByRole('heading', { name: 'Add Dividends' })).toBeInTheDocument();
 
     const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
     await user.clear(amountInput);
@@ -471,14 +471,14 @@ describe('IncomeDetailsModal - Investment Income', () => {
     await user.click(screen.getByRole('button', { name: 'Add' }));
 
     expect(handleStreamsChange).toHaveBeenCalledWith([
-      expect.objectContaining({ type: 'listedDividends', amount: 300000 }),
+      expect.objectContaining({ type: 'dividends', listingStatus: 'listed', amount: 300000 }),
     ]);
   });
 
   it('displays the withheld-tax footer and net investment income alongside the subtotal', () => {
     const streams: IncomeStream[] = [
-      { id: 'g1', type: 'listedCapitalGains', amount: 1_000_000 },
-      { id: 'd1', type: 'listedDividends', amount: 200_000 },
+      { id: 'g1', type: 'capitalGains', listingStatus: 'listed', amount: 1_000_000 },
+      { id: 'd1', type: 'dividends', listingStatus: 'listed', amount: 200_000 },
     ];
 
     render(
@@ -488,7 +488,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
         streams={streams}
         onStreamsChange={() => {}}
         investmentIncome={{
-          gross: { listedCapitalGains: 1_000_000, listedDividends: 200_000, depositInterest: 0 },
+          gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
           grossTotal: 1_200_000,
           withheld: { national: 183_780, residence: 60_000, total: 243_780 },
         }}
@@ -507,7 +507,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[{ id: 'd1', type: 'listedDividends', amount: 200_000 }]}
+        streams={[{ id: 'd1', type: 'dividends', listingStatus: 'listed', amount: 200_000 }]}
         onStreamsChange={() => {}}
       />,
     );

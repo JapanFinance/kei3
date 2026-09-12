@@ -902,24 +902,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             Investment Income Tax (源泉徴収)
           </Typography>
 
-          {results.investmentIncome.gross.listedCapitalGains !== 0 && (
+          {results.investmentIncome.gross.capitalGains !== 0 && (
             <ResultRow
-              label="Listed Capital Gains"
-              value={formatJPY(results.investmentIncome.gross.listedCapitalGains)}
+              label="Capital Gains"
+              value={formatJPY(results.investmentIncome.gross.capitalGains)}
               type="detail"
             />
           )}
-          {results.investmentIncome.gross.listedDividends !== 0 && (
+          {results.investmentIncome.gross.dividends !== 0 && (
             <ResultRow
-              label="Listed Dividends"
-              value={formatJPY(results.investmentIncome.gross.listedDividends)}
+              label="Dividends"
+              value={formatJPY(results.investmentIncome.gross.dividends)}
               type="detail"
             />
           )}
-          {results.investmentIncome.gross.depositInterest !== 0 && (
+          {results.investmentIncome.gross.interest !== 0 && (
             <ResultRow
-              label="Deposit Interest"
-              value={formatJPY(results.investmentIncome.gross.depositInterest)}
+              label="Interest"
+              value={formatJPY(results.investmentIncome.gross.interest)}
               type="detail"
             />
           )}
