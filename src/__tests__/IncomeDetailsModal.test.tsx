@@ -460,7 +460,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map(item => item.textContent),
-    ).toEqual(['Share Capital Gains', 'Dividends', 'Interest']);
+    ).toEqual(['Capital Gains (Shares)', 'Dividends', 'Interest']);
 
     await user.click(within(menu).getByRole('menuitem', { name: /^dividends$/i }));
     expect(screen.getByRole('heading', { name: 'Add Dividends' })).toBeInTheDocument();
@@ -471,14 +471,32 @@ describe('IncomeDetailsModal - Investment Income', () => {
     await user.click(screen.getByRole('button', { name: 'Add' }));
 
     expect(handleStreamsChange).toHaveBeenCalledWith([
-      expect.objectContaining({ type: 'dividends', listingStatus: 'listed', amount: 300000 }),
+      expect.objectContaining({
+        type: 'dividends',
+        listingStatus: 'listed',
+        taxTreatment: 'withheldOnly',
+        amount: 300000,
+      }),
     ]);
   });
 
   it('displays the withheld-tax footer and net investment income alongside the subtotal', () => {
     const streams: IncomeStream[] = [
-      { id: 'g1', type: 'capitalGains', listingStatus: 'listed', amount: 1_000_000 },
-      { id: 'd1', type: 'dividends', listingStatus: 'listed', amount: 200_000 },
+      {
+        id: 'g1',
+        type: 'capitalGains',
+        listingStatus: 'listed',
+        account: 'specifiedWithholding',
+        taxTreatment: 'withheldOnly',
+        amount: 1_000_000,
+      },
+      {
+        id: 'd1',
+        type: 'dividends',
+        listingStatus: 'listed',
+        taxTreatment: 'withheldOnly',
+        amount: 200_000,
+      },
     ];
 
     render(
@@ -507,7 +525,15 @@ describe('IncomeDetailsModal - Investment Income', () => {
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[{ id: 'd1', type: 'dividends', listingStatus: 'listed', amount: 200_000 }]}
+        streams={[
+          {
+            id: 'd1',
+            type: 'dividends',
+            listingStatus: 'listed',
+            taxTreatment: 'withheldOnly',
+            amount: 200_000,
+          },
+        ]}
         onStreamsChange={() => {}}
       />,
     );

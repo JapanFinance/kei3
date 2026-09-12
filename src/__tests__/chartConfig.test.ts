@@ -175,7 +175,13 @@ describe('generateChartData with investment income', () => {
     ...context,
     incomeStreams: [
       { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
-      { id: 'd', type: 'dividends', listingStatus: 'listed', amount: 300_000 },
+      {
+        id: 'd',
+        type: 'dividends',
+        listingStatus: 'listed',
+        taxTreatment: 'withheldOnly',
+        amount: 300_000,
+      },
       { id: 'i', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
     ],
   };
@@ -201,8 +207,21 @@ describe('generateChartData with investment income', () => {
       ...context,
       incomeStreams: [
         { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
-        { id: 'c', type: 'capitalGains', listingStatus: 'listed', amount: -500_000 },
-        { id: 'd', type: 'dividends', listingStatus: 'listed', amount: 300_000 },
+        {
+          id: 'c',
+          type: 'capitalGains',
+          listingStatus: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: -500_000,
+        },
+        {
+          id: 'd',
+          type: 'dividends',
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 300_000,
+        },
       ],
     };
     const { datasets } = generateChartData(range, lossContext);

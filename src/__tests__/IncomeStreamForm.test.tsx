@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { IncomeStreamForm } from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
 
@@ -49,15 +50,15 @@ describe('IncomeStreamForm', () => {
     const { rerender } = render(
       <IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
-    expect(screen.getByText(/Assumes a domestic 特定口座/)).toBeInTheDocument();
+    expect(screen.getByText(/netted against dividends within the account/)).toBeInTheDocument();
 
     rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.getByText(/Assumes a domestic 特定口座/)).toBeInTheDocument();
+    expect(screen.getByText(/netted against dividends within the account/)).toBeInTheDocument();
   });
 
   it('shows the deposit-interest guidance box', () => {
     render(<IncomeStreamForm type="interest" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.getByText(/never affects 合計所得金額/)).toBeInTheDocument();
+    expect(screen.getByText(/does not affect 合計所得金額/)).toBeInTheDocument();
   });
 
   it('accepts a capital-gains loss as a negative amount and saves it unchanged', () => {
@@ -109,11 +110,65 @@ describe('IncomeStreamForm', () => {
     expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ payerDomicile: 'domestic' }));
   });
 
+  it('offers only the account that can leave a share sale off the return', async () => {
+    const user = userEvent.setup();
+    render(<IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    await user.click(screen.getByRole('combobox', { name: /account/i }));
+    const options = screen.getAllByRole('option');
+    expect(options.map(o => o.textContent)).toEqual([
+      '特定口座（源泉徴収あり） — broker withholds',
+      '特定口座（源泉徴収なし）',
+      '一般口座',
+      'Foreign broker',
+    ]);
+    expect(options[0]).not.toHaveAttribute('aria-disabled', 'true');
+    for (const unsupported of options.slice(1)) {
+      expect(unsupported).toHaveAttribute('aria-disabled', 'true');
+    }
+  });
+
+  it('offers only 申告不要, with 総合課税 shown for dividends alone', () => {
+    const { rerender } = render(
+      <IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
+    expect(screen.getByRole('button', { name: 'Withheld only' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toBeDisabled();
+    // 措法37条の11 has no 総合課税 election for a share sale.
+    expect(
+      screen.queryByRole('button', { name: 'Reported (progressive)' }),
+    ).not.toBeInTheDocument();
+
+    rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+    expect(screen.getByRole('button', { name: 'Reported (progressive)' })).toBeDisabled();
+  });
+
+  it('saves the supported account and election', () => {
+    render(<IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: 'specifiedWithholding',
+        taxTreatment: 'withheldOnly',
+      }),
+    );
+  });
+
   it('keeps an edited entry on the variant it was saved with', () => {
     render(
       <IncomeStreamForm
         type="dividends"
-        initialData={{ id: 'd1', type: 'dividends', amount: 300000, listingStatus: 'listed' }}
+        initialData={{
+          id: 'd1',
+          type: 'dividends',
+          amount: 300000,
+          listingStatus: 'listed',
+          taxTreatment: 'withheldOnly',
+        }}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
       />,
