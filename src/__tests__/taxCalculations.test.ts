@@ -2927,7 +2927,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     // 1,900,000 of salary in 2025 → 給与所得 1,250,000 (the 650,000 floor). 100,000 of dividends
     // withheld leaves 合計所得金額 at 1,250,000 → 950,000; reported, 1,350,000 → 880,000
     // (措法41条の16の2, 2025 amounts).
-    const inputs = (dividends: ReturnType<typeof reportedDividends>): TakeHomeInputs => ({
+    const inputs = (dividends: TakeHomeInputs['incomeStreams'][number]): TakeHomeInputs => ({
       ...salaryInputs(),
       incomeStreams: [
         { type: 'salary', amount: 1_900_000, frequency: 'annual', id: 'salary' },
@@ -2955,7 +2955,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     // 10,500,000 of salary → 給与所得 8,550,000 (the 1,950,000 cap), spouse without income.
     // 500,000 of dividends withheld → 配偶者控除 380,000; reported → 9,050,000 → 260,000
     // (所法83条①二), 330,000 → 220,000 for the 住民税 (地方税法第314条の2第1項第10号の2).
-    const inputs = (dividends: ReturnType<typeof reportedDividends>): TakeHomeInputs => ({
+    const inputs = (dividends: TakeHomeInputs['incomeStreams'][number]): TakeHomeInputs => ({
       ...salaryInputs(),
       incomeStreams: [
         { type: 'salary', amount: 10_500_000, frequency: 'annual', id: 'salary' },
