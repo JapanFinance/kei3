@@ -52,17 +52,28 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 }
 
 /**
- * How an investment amount is taxed, which for shares the taxpayer elects:
- * - `withheldOnly` — 申告不要: the tax withheld at source is the whole liability and the amount
- *   stays off the return, so it enters no aggregate (措法37条の11の5, 8条の5).
- * - `separate` — 申告分離課税: reported and taxed apart from the progressive brackets
- *   (措法37条の11①, 8条の4①), which is what makes 損益通算 and 繰越控除 available.
- * - `aggregate` — 総合課税: reported into the progressive brackets with 配当控除 (所法92).
+ * How the dividends that go on the return are taxed — one election for all of them, not one per
+ * entry. 措法8条の4② applies 申告分離課税 only where the return elects it for the year's
+ * 特定上場株式等の配当等, and withdraws it from every other such dividend once one of them is
+ * taxed under 所法22条 (総合課税); NTA No.1330 puts it as 申告分離課税の選択は、確定申告する
+ * 上場株式等の配当所得の全額についてしなければなりません. 申告不要 is different: 措法8条の5 grants
+ * it per payment, so each entry chooses that for itself — {@link DividendsIncomeStream.isReported}.
+ * - `separate` — 申告分離課税 (措法8条の4①): 15% + 復興特別所得税 and 5%, apart from the
+ *   progressive brackets; what makes 損益通算 with a reported 譲渡損失 available; no 配当控除.
+ * - `aggregate` — 総合課税: 配当所得 inside 総所得金額 (所法22条②一), taxed in the progressive
+ *   brackets. The 配当控除 (所法92, 地方税法附則5条) is not yet modelled, so for a dividend from a
+ *   domestic company the tax under this election is overstated. Open to 配当等 proper (剰余金の
+ *   配当 and 公募株式投資信託の分配金) only: 特定公社債の利子 is 利子所得 that 措法8条の4① taxes
+ *   apart from the brackets with no 総合課税 election.
  *
- * Interest carries no election of its own: 措法3条① makes 源泉分離課税 the final treatment of
- * 一般利子等 paid in Japan — see {@link InterestIncomeStream}.
+ * A share sale has no such election — 措法37条の11 taxes a reported sale under 申告分離課税 and
+ * nothing else — and interest none at all: 措法3条① makes 源泉分離課税 the final treatment of
+ * 一般利子等 paid in Japan, see {@link InterestIncomeStream}.
  */
-export type InvestmentTaxTreatment = 'withheldOnly' | 'separate' | 'aggregate';
+export type ReportedDividendsTaxation = 'separate' | 'aggregate';
+
+/** The election in force until one is made — see {@link TakeHomeInputs.reportedDividendsTaxation}. */
+export const DEFAULT_REPORTED_DIVIDENDS_TAXATION: ReportedDividendsTaxation = 'separate';
 
 /**
  * 株式等に係る譲渡所得等の金額 for the year in one account, net of acquisition and transfer
@@ -92,17 +103,21 @@ export interface CapitalGainsIncomeStream extends BaseIncomeStream {
    */
   account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign';
   /**
-   * See {@link InvestmentTaxTreatment}. 'withheldOnly' is only valid with a
-   * 'specifiedWithholding' {@link account}.
+   * Whether the sale goes on the return. False is 申告不要 — the 20.315% withheld is the whole
+   * liability and the amount enters no aggregate — and is only valid with a 'specifiedWithholding'
+   * {@link account}. True is 申告分離課税, the one reported treatment of a share sale
+   * (措法37条の11①).
    */
-  taxTreatment: 'withheldOnly' | 'separate';
+  isReported: boolean;
 }
 
 /**
  * 配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
  * 特定公社債の利子. Under 申告不要 (国内で源泉徴収済みのもの) a same-year loss on
  * {@link CapitalGainsIncomeStream} is netted against this within one 源泉徴収あり特定口座
- * before withholding; under 申告分離課税 the 損益通算 of 措法37条の12の2① applies instead.
+ * before withholding; under 申告分離課税 the 損益通算 of 措法37条の12の2① applies instead; under
+ * 総合課税 nothing nets against it — 措法37条の12の2① offsets a loss only against the
+ * 配当所得等 that elected 措法8条の4.
  */
 export interface DividendsIncomeStream extends BaseIncomeStream {
   type: 'dividends';
@@ -113,11 +128,14 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
    */
   shareType: 'listed' | 'other';
   /**
-   * See {@link InvestmentTaxTreatment}; 'aggregate' (総合課税) is not yet supported. Unlike a
-   * share sale, a dividend needs no particular account for 申告不要 — 措法8条の5 grants it on
-   * the withholding alone — so there is no account field here.
+   * Whether the dividend goes on the return. False is 申告不要, which 措法8条の5 grants per
+   * payment on the withholding alone — so a dividend needs no particular account for it and there
+   * is no account field here. True puts it on the return, where it is taxed under the election
+   * made once for every reported dividend, {@link ReportedDividendsTaxation}. The amount is taken
+   * as the 配当所得 (所法24条②: 収入金額 less the 負債利子 on money borrowed to buy the shares,
+   * which is not modelled).
    */
-  taxTreatment: 'withheldOnly' | 'separate' | 'aggregate';
+  isReported: boolean;
 }
 
 /**
@@ -154,8 +172,8 @@ export type IncomeStreamType = IncomeStream['type'];
 
 /**
  * Whether `stream` is one of the investment-income types. These are never earned income — see
- * {@link import("../utils/incomeStreams").countsTowardAnnualIncome} — and are taxed separately
- * from the progressive brackets, see
+ * {@link import("../utils/incomeStreams").countsTowardAnnualIncome} — and, except for a
+ * dividend reported under 総合課税, are taxed separately from the progressive brackets, see
  * {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
  */
 export const isInvestmentIncomeStream = (
@@ -497,6 +515,8 @@ export interface TakeHomeFormState {
   incomeYear: number;
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
+  /** See {@link TakeHomeInputs.reportedDividendsTaxation}. */
+  reportedDividendsTaxation: ReportedDividendsTaxation;
   ageRange: TaxpayerAgeRange;
   /**
    * True when the user has switched off the calculated 介護保険料 estimate to enter the billed
@@ -531,6 +551,11 @@ export interface TakeHomeFormState {
 /** Interface for Calculation Logic (clean, normalized inputs) */
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
+  /**
+   * The one election that taxes every reported dividend among {@link incomeStreams} — see
+   * {@link ReportedDividendsTaxation}. Absent means {@link DEFAULT_REPORTED_DIVIDENDS_TAXATION}.
+   */
+  reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
   ageRange: TaxpayerAgeRange;
   /** See {@link TakeHomeFormState.longTermCareCategory1ManualEntry}. Absent means false. */
   longTermCareCategory1ManualEntry?: boolean | undefined;
@@ -567,8 +592,8 @@ export interface TakeHomeResults {
    * insurance: net of the real costs of earning it and gross of every deduction that is not a
    * cash outflow. Salary, bonus and stock compensation gross; public pension gross, before the
    * 公的年金等控除; business and miscellaneous income after 必要経費 but before the
-   * 青色申告特別控除; and investment income reported under 申告分離課税, as entered (so a
-   * reported 譲渡損失 reduces it). A commuting allowance is excluded as a cost reimbursement,
+   * 青色申告特別控除; and investment income reported under 申告分離課税 or 総合課税, as
+   * entered (so a reported 譲渡損失 reduces it). A commuting allowance is excluded as a cost reimbursement,
    * and investment income that is 申告不要 is excluded because the tax system does not count
    * it: withholding settles it and it enters no aggregate — see {@link investmentIncome} for
    * where its own gross amount and tax are reported instead. Under this definition, and only
@@ -581,7 +606,8 @@ export interface TakeHomeResults {
    * 税金や社会保険料, 事業所得 = 収入 minus 仕入原価や必要経費, and 公的年金・恩給 =
    * 支給された年金額; item 15 defines 可処分所得 as that 所得 minus taxes and social insurance
    * and calls it the equivalent of 手取り収入, which is {@link takeHomeIncome}. The 年間収入 of
-   * the social insurance dependent-coverage test is judged on the earned part alone
+   * the social insurance dependent-coverage test is a different total — the earned part plus
+   * the commuting allowance and the investment receipts whatever their election
    * (dependentTestAnnualIncome in incomeStreams.ts). Totalled by totalAnnualIncomeFromStreams
    * on the input side.
    */
@@ -643,8 +669,9 @@ export interface TakeHomeResults {
   /**
    * Investment income (listed-share capital gains and dividends, deposit interest). The
    * amounts settled by withholding are outside {@link annualIncome}, {@link totalNetIncome} and
-   * {@link takeHomeIncome} alike; the amounts reported under 申告分離課税 are inside all three,
-   * taxed through the same calculation as the earned income. Absent when every amount is 0.
+   * {@link takeHomeIncome} alike; the amounts reported, under 申告分離課税 or 総合課税, are
+   * inside all three, taxed through the same calculation as the earned income. Absent when
+   * every amount is 0.
    */
   investmentIncome?:
     | {
@@ -658,6 +685,12 @@ export interface TakeHomeResults {
         withheld: WithheldInvestmentTax;
         /** Present when any amount is reported under 申告分離課税. */
         reported?: ReportedInvestmentIncome | undefined;
+        /**
+         * 配当所得 reported under 総合課税, as entered: part of 総所得金額 and taxed in the
+         * progressive brackets with the earned income, with no 配当控除 (not yet modelled) and
+         * nothing netted against it. Present when any dividend is reported that way.
+         */
+        aggregateDividends?: number | undefined;
       }
     | undefined;
   nationalIncomeTaxBasicDeduction?: number | undefined;

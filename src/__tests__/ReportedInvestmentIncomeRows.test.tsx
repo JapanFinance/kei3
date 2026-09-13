@@ -63,10 +63,10 @@ const inputs: TakeHomeInputs = {
       type: 'capitalGains',
       shareType: 'listed',
       account: 'specifiedWithholding',
-      taxTreatment: 'separate',
+      isReported: true,
       amount: -500_000,
     },
-    { id: 'd1', type: 'dividends', shareType: 'listed', taxTreatment: 'separate', amount: 800_000 },
+    { id: 'd1', type: 'dividends', shareType: 'listed', isReported: true, amount: 800_000 },
   ],
   ageRange: 'age20to39',
   region: 'Tokyo',
@@ -76,6 +76,30 @@ const inputs: TakeHomeInputs = {
   manualSocialInsuranceEntry: false,
   manualSocialInsuranceAmount: 0,
   incomeYear: 2026,
+};
+
+const residenceTaxOnEarnedIncome = {
+  taxableIncome: 2_407_000,
+  cityProportion: 0.6,
+  prefecturalProportion: 0.4,
+  residenceTaxRate: 0.1,
+  basicDeduction: 430_000,
+  personalDeductionDifference: 50_000,
+  city: {
+    cityTaxableIncome: 1_444_200,
+    cityAdjustmentCredit: 1_500,
+    cityIncomeTax: 151_900,
+    cityPerCapitaTax: 3_000,
+  },
+  prefecture: {
+    prefecturalTaxableIncome: 962_800,
+    prefecturalAdjustmentCredit: 1_000,
+    prefecturalIncomeTax: 101_200,
+    prefecturalPerCapitaTax: 1_000,
+  },
+  perCapitaTax: 5_000,
+  forestEnvironmentTax: 1_000,
+  totalResidenceTax: 258_100,
 };
 
 const results: TakeHomeResults = makeTakeHomeResults({
@@ -96,27 +120,7 @@ const results: TakeHomeResults = makeTakeHomeResults({
   residenceTaxBasicDeduction: 430_000,
   taxableIncomeForResidenceTax: 2_407_000,
   residenceTax: makeResidenceTaxDetails({
-    taxableIncome: 2_407_000,
-    cityProportion: 0.6,
-    prefecturalProportion: 0.4,
-    residenceTaxRate: 0.1,
-    basicDeduction: 430_000,
-    personalDeductionDifference: 50_000,
-    city: {
-      cityTaxableIncome: 1_444_200,
-      cityAdjustmentCredit: 1_500,
-      cityIncomeTax: 151_900,
-      cityPerCapitaTax: 3_000,
-    },
-    prefecture: {
-      prefecturalTaxableIncome: 962_800,
-      prefecturalAdjustmentCredit: 1_000,
-      prefecturalIncomeTax: 101_200,
-      prefecturalPerCapitaTax: 1_000,
-    },
-    perCapitaTax: 5_000,
-    forestEnvironmentTax: 1_000,
-    totalResidenceTax: 258_100,
+    ...residenceTaxOnEarnedIncome,
     separate: {
       taxableDividends: 300_000,
       taxableCapitalGains: 0,
@@ -169,6 +173,62 @@ describe.each([
 
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.getAllByText('¥3,860,000').length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// 400,000 of dividends reported under 総合課税 beside the 申告分離課税 amounts above: 配当所得 in
+// 総所得金額, so 合計所得金額 is 3,860,000 + 400,000.
+const withAggregateDividends = <T extends { results: TakeHomeResults }>(props: T): T => ({
+  ...props,
+  results: {
+    ...props.results,
+    totalNetIncome: 4_260_000,
+    investmentIncome: { ...props.results.investmentIncome!, aggregateDividends: 400_000 },
+  },
+});
+
+describe.each([
+  ['TaxesTab', TaxesTab, withAggregateDividends({ results, inputs })],
+  ['SocialInsuranceTab', SocialInsuranceTab, withAggregateDividends(onNhi)],
+] as const)('%s dividends reported under 総合課税', (_name, Tab, props) => {
+  it('lists them on a row of their own, inside the 合計所得金額 subtotal', () => {
+    render(<Tab results={props.results} inputs={props.inputs} />);
+
+    const label = screen.getByText('Net Dividend Income (reported, progressive)');
+    expect(within(label.closest('div')!.parentElement!).getByText('¥400,000')).toBeInTheDocument();
+    const tooltip = tooltipTitled('Dividends Reported under 総合課税');
+    expect(tooltip).toBeDefined();
+    expect(within(tooltip!).getByText(/配当控除 \(所法92条.*not modelled yet/)).toBeInTheDocument();
+    expect(screen.getByText('Net Investment Income (reported)')).toBeInTheDocument();
+    expect(screen.getByText('Total Net Income')).toBeInTheDocument();
+    expect(screen.getAllByText('¥4,260,000').length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('TaxesTab with dividends reported under 総合課税 alone', () => {
+  it('shows the dividend row and the 合計所得金額 subtotal with no 申告分離課税 rows', () => {
+    render(
+      <TaxesTab
+        results={{
+          ...results,
+          totalNetIncome: 3_960_000,
+          investmentIncome: {
+            gross: { capitalGains: 0, dividends: 0, interest: 0 },
+            grossTotal: 0,
+            withheld: { national: 0, residence: 0, total: 0 },
+            aggregateDividends: 400_000,
+          },
+          residenceTax: makeResidenceTaxDetails(residenceTaxOnEarnedIncome),
+        }}
+        inputs={inputs}
+      />,
+    );
+
+    expect(screen.getByText('Net Dividend Income (reported, progressive)')).toBeInTheDocument();
+    expect(screen.getByText('Total Net Income')).toBeInTheDocument();
+    expect(screen.queryByText('Net Investment Income (reported)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Taxable Investment Income (reported)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tax on Investment Income (15%)')).not.toBeInTheDocument();
   });
 });
 
@@ -225,6 +285,17 @@ describe('SocialInsuranceTab with reported investment income on NHI', () => {
     expect(screen.getByText('NHI Calculation Base')).toBeInTheDocument();
     expect(
       screen.getByText(/Includes ¥300,000 of investment income reported under 申告分離課税/),
+    ).toBeInTheDocument();
+  });
+
+  it('names the dividends reported under 総合課税 beside them', () => {
+    const props = withAggregateDividends(onNhi);
+    render(<SocialInsuranceTab results={props.results} inputs={props.inputs} />);
+
+    expect(
+      screen.getByText(
+        /Includes ¥300,000 of investment income reported under 申告分離課税 and ¥400,000 of dividends reported under 総合課税, which is part of the 総所得金額等/,
+      ),
     ).toBeInTheDocument();
   });
 });

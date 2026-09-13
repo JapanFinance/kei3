@@ -180,7 +180,7 @@ describe('generateChartData with investment income', () => {
         type: 'capitalGains',
         shareType: 'listed',
         account: 'specifiedWithholding',
-        taxTreatment: 'withheldOnly',
+        isReported: false,
         amount: 1_000_000,
       },
       { id: 'i', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
@@ -200,7 +200,7 @@ describe('generateChartData with investment income reported under 申告分離�
     id: 'd',
     type: 'dividends' as const,
     shareType: 'listed' as const,
-    taxTreatment: 'separate' as const,
+    isReported: true as const,
     amount: 1_000_000,
   };
   const reportedContext: ChartCalculationContext = {
@@ -231,6 +231,24 @@ describe('generateChartData with investment income reported under 申告分離�
       const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
       expect(stacked, `income ${point.x}`).toBe(point.x);
     });
+  });
+
+  it('taxes the held dividends under the election in force, as the results do', () => {
+    // At 6,000,000 on the return — 5,000,000 of salary beside the held 1,000,000 — take-home is
+    // 4,739,848 under 申告分離課税 and 4,748,648 under 総合課税 (the calculateTaxes cases, whose
+    // taxpayer is 20-39).
+    const takeHomeAt = (election: ChartCalculationContext['reportedDividendsTaxation']) => {
+      const { datasets } = generateChartData(
+        { min: 1_000_000, max: 6_000_000 },
+        { ...reportedContext, ageRange: 'age20to39', reportedDividendsTaxation: election },
+      );
+      const takeHome = datasets.find(d => d.label === 'Take-Home Pay');
+      return pointsOf(takeHome!).find(p => p.x === 6_000_000)?.y;
+    };
+
+    expect(takeHomeAt(undefined)).toBe(4_739_848);
+    expect(takeHomeAt('separate')).toBe(4_739_848);
+    expect(takeHomeAt('aggregate')).toBe(4_748_648);
   });
 
   it('labels the reported income in the breakdown at every point', () => {
