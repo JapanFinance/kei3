@@ -210,6 +210,13 @@ describe('generateChartData with investment income reported under 申告分離�
 
   it('holds the reported amount and scales the earned income to the remainder', () => {
     expect(heldIncomeInSweep(reportedContext.incomeStreams)).toBe(1_000_000);
+    // A dividend reported under 総合課税 is on the return and held the same way.
+    expect(
+      heldIncomeInSweep([
+        reportedContext.incomeStreams[0]!,
+        { ...dividends, taxTreatment: 'aggregate' },
+      ]),
+    ).toBe(1_000_000);
     expect(scaleIncomeStreamsToIncome(reportedContext.incomeStreams, 3_000_000)).toEqual([
       { id: 's', type: 'salary', amount: 2_000_000, frequency: 'annual' },
       dividends,

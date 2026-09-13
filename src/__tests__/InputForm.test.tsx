@@ -427,6 +427,75 @@ describe('Dependent Coverage UI Behavior', () => {
     expect(optionTexts).not.toContain('None (dependent of insured employee)');
   });
 
+  it('should NOT include dependent coverage when dividends left off the return carry the 年間収入 over', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        // 100,000 short of the threshold; the dividends are 収入 whether or not they are reported.
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 100_000,
+        },
+      ],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    const optionTexts = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .map(option => option.textContent);
+
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it("should NOT include dependent coverage when a year's capital gains carry the 年間収入 over, but should for a losing year", async () => {
+    const user = userEvent.setup();
+    const withGains = (amount: number): TakeHomeFormState => ({
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount,
+        },
+      ],
+    });
+
+    const { unmount } = render(
+      <TakeHomeInputForm inputs={withGains(100_000)} dispatch={mockDispatch} />,
+    );
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map(option => option.textContent),
+    ).not.toContain('None (dependent of insured employee)');
+    await user.keyboard('{Escape}');
+    unmount();
+
+    render(<TakeHomeInputForm inputs={withGains(-500_000)} dispatch={mockDispatch} />);
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'None (dependent of insured employee)',
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('should include dependent coverage for the same salary without a commuting allowance', async () => {
     const user = userEvent.setup();
     const inputs: TakeHomeFormState = {

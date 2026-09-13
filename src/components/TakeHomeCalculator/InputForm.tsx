@@ -706,7 +706,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance, is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance and investment income (dividends and interest before withholding, and a year's capital gains), is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>
@@ -964,6 +964,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+        calculationInputs={inputs}
         netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
         investmentIncome={investmentIncome}
       />

@@ -6,7 +6,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
 import { IncomeDetailsModal } from '../components/TakeHomeCalculator/Income/IncomeDetailsModal';
-import type { IncomeStream } from '../types/tax';
+import {
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  type IncomeStream,
+  type TakeHomeInputs,
+} from '../types/tax';
 
 describe('IncomeDetailsModal - Business Income', () => {
   it('allows adding business income with blue-filer deduction', async () => {
@@ -569,6 +573,121 @@ describe('IncomeDetailsModal - Investment Income', () => {
       screen.getByText(/Reported \(申告分離課税\): ¥200,000, taxed with the other income/),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Withheld at Source/)).not.toBeInTheDocument();
+  });
+
+  it('describes a dividend reported under 総合課税 and footers it beside the 申告分離課税 total', () => {
+    const streams: IncomeStream[] = [
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        taxTreatment: 'aggregate',
+        amount: 400_000,
+      },
+      {
+        id: 'd2',
+        type: 'dividends',
+        shareType: 'listed',
+        taxTreatment: 'separate',
+        amount: 300_000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          gross: { capitalGains: 0, dividends: 0, interest: 0 },
+          grossTotal: 0,
+          withheld: { national: 0, residence: 0, total: 0 },
+          reported: {
+            gross: { capitalGains: 0, qualifyingCapitalLosses: 0, dividends: 300_000 },
+            lossOffsetAgainstDividends: 0,
+            unabsorbedQualifyingLoss: 0,
+            nonQualifyingLoss: 0,
+            netIncome: { capitalGains: 0, dividends: 300_000 },
+            taxable: { capitalGains: 0, dividends: 300_000 },
+            nationalIncomeTaxBase: 45_000,
+          },
+          aggregateDividends: 400_000,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Reported (progressive)')).toBeInTheDocument();
+    expect(screen.getByText('Reported (separate)')).toBeInTheDocument();
+    expect(screen.getByText('Subtotal: ¥700,000')).toBeInTheDocument();
+    expect(
+      screen.getByText(/Reported \(申告分離課税\): ¥300,000, taxed with the other income/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Reported \(総合課税\): ¥400,000, taxed in the brackets with the other income/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('offers the treatment comparison with calculation inputs and a listed-share entry, computing it on expand', async () => {
+    const user = userEvent.setup();
+    const streams: IncomeStream[] = [
+      { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        taxTreatment: 'separate',
+        amount: 1_000_000,
+      },
+    ];
+    const calculationInputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: streams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    const { rerender } = render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        calculationInputs={calculationInputs}
+      />,
+    );
+
+    const toggle = screen.getByRole('button', { name: /compare tax treatments/i });
+    expect(screen.queryByText('Kept after tax and insurance')).not.toBeInTheDocument();
+    await user.click(toggle);
+
+    // The three elections of the engine tests: 申告分離課税 is the one in force.
+    expect(screen.getByText('Kept after tax and insurance')).toBeInTheDocument();
+    expect(screen.getByText('(current)')).toBeInTheDocument();
+    expect(screen.getByText('¥4,739,798')).toBeInTheDocument();
+    expect(screen.getByText('¥4,739,848')).toBeInTheDocument();
+    expect(screen.getByText('¥4,748,648')).toBeInTheDocument();
+    expect(screen.getByText(/no 配当控除, which is not modelled yet/)).toBeInTheDocument();
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /compare tax treatments/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows only the gross subtotal when no investmentIncome prop is supplied', () => {

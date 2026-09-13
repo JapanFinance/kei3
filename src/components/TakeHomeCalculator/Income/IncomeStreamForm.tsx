@@ -411,9 +411,21 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   (損益通算). Reporting is what makes that offset available; carrying a loss forward
                   (繰越控除) is not modelled.
                 </Typography>
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Reported (progressive, 総合課税)</strong> puts a dividend on the return as
+                  配当所得, inside 総所得金額: it enters 合計所得金額 the same way and is taxed in
+                  the progressive brackets and at the 10% residence rate with the other income. The
+                  配当控除 (所法92条) that offsets part of that for a dividend from a domestic
+                  company is not modelled yet, so for those the figures under this election are
+                  overstated. No capital loss is set against a dividend reported this way
+                  (措法37条の12の2 nets a loss only against dividends reported under 申告分離課税),
+                  and the 20.315% withheld is credited on the return rather than shown here. Only
+                  配当等 proper — 剰余金の配当 and 公募株式投資信託の分配金 — can be reported this
+                  way; 特定公社債の利子 cannot.
+                </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Reported (progressive, 総合課税)</strong> taxes a dividend in the brackets
-                  with the 配当控除. It is not modelled yet.
+                  Since 令和6年度 the residence tax follows the election made for income tax
+                  (地方税法32条⑬, 313条⑬).
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -435,11 +447,16 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               </ToggleButton>
               <ToggleButton value="separate">Reported (separate)</ToggleButton>
               {type === 'dividends' && (
-                <ToggleButton value="aggregate" disabled>
-                  Reported (progressive)
-                </ToggleButton>
+                <ToggleButton value="aggregate">Reported (progressive)</ToggleButton>
               )}
             </ToggleButtonGroup>
+            {type === 'dividends' && taxTreatment === 'aggregate' && (
+              <FormHelperText>
+                Taxed in the brackets without the 配当控除, which is not modelled yet — the tax
+                shown is overstated for a dividend from a domestic company. 配当等 only:
+                特定公社債の利子 cannot be reported this way.
+              </FormHelperText>
+            )}
           </FormControl>
         )}
 
@@ -690,6 +707,14 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',
                     label: '特定口座制度 - NTA',
                   },
+                  ...(type === 'dividends'
+                    ? [
+                        {
+                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1250.htm',
+                          label: '配当所得があるとき(配当控除) - NTA',
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </Box>

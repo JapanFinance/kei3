@@ -760,25 +760,41 @@ describe('takeHomeFormReducer', () => {
       ]);
     });
 
-    it('judges dependent coverage on earned income, leaving reported investment income out', () => {
-      // Salary under the threshold; the reported dividends would carry the annual income over it,
-      // but the 年間収入 test is a social-insurance rule, not a matter of the tax election.
-      const ids = availableProvidersFor({
-        ...baseState,
-        incomeMode: 'advanced',
-        incomeStreams: [
-          { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
-          {
-            id: 'd1',
-            type: 'dividends',
-            shareType: 'listed',
-            taxTreatment: 'separate',
-            amount: 1_000_000,
-          },
-        ],
-      }).map(option => option.id);
+    it('counts investment receipts toward the 年間収入 whatever their tax election', () => {
+      const advanced = { ...baseState, incomeMode: 'advanced' as const };
+      const salary = (amount: number) => ({
+        id: 's1',
+        type: 'salary' as const,
+        amount,
+        frequency: 'annual' as const,
+      });
+      const providerIds = (streams: TakeHomeFormState['incomeStreams']) =>
+        availableProvidersFor({ ...advanced, incomeStreams: streams }).map(o => o.id);
 
-      expect(ids).toContain(DEPENDENT_COVERAGE_ID);
+      // 1,000,000 of salary is under the threshold; 300,000 of dividends carries the 年間収入 to
+      // it whether the dividends are withheld or reported — the test is a social-insurance rule,
+      // not a matter of the tax election.
+      expect(providerIds([salary(1_000_000)])).toContain(DEPENDENT_COVERAGE_ID);
+      for (const taxTreatment of ['withheldOnly', 'separate', 'aggregate'] as const) {
+        expect(
+          providerIds([
+            salary(1_000_000),
+            { id: 'd1', type: 'dividends', shareType: 'listed', taxTreatment, amount: 300_000 },
+          ]),
+        ).not.toContain(DEPENDENT_COVERAGE_ID);
+      }
+
+      // A year's capital gains count when positive; a losing year lowers nothing.
+      const gains = (amount: number) => ({
+        id: 'g1',
+        type: 'capitalGains' as const,
+        shareType: 'listed' as const,
+        account: 'specifiedWithholding' as const,
+        taxTreatment: 'withheldOnly' as const,
+        amount,
+      });
+      expect(providerIds([salary(1_000_000), gains(300_000)])).not.toContain(DEPENDENT_COVERAGE_ID);
+      expect(providerIds([salary(1_290_000), gains(-300_000)])).toContain(DEPENDENT_COVERAGE_ID);
     });
   });
 });

@@ -144,7 +144,7 @@ describe('IncomeStreamForm', () => {
     );
   });
 
-  it('offers 申告不要 and 申告分離課税, with 総合課税 shown for dividends alone and not yet selectable', () => {
+  it('offers 申告不要 and 申告分離課税 for both, and 総合課税 for dividends alone', () => {
     const { rerender } = render(
       <IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
@@ -160,7 +160,20 @@ describe('IncomeStreamForm', () => {
 
     rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
     expect(screen.getByRole('button', { name: 'Reported (separate)' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Reported (progressive)' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reported (progressive)' })).toBeEnabled();
+  });
+
+  it('saves a dividend as reported under 総合課税, saying the 配当控除 is not applied', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    expect(screen.queryByText(/without the 配当控除/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reported (progressive)' }));
+    expect(screen.getByText(/without the 配当控除/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'dividends', taxTreatment: 'aggregate' }),
+    );
   });
 
   it('saves a dividend as reported when 申告分離課税 is chosen', () => {

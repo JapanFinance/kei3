@@ -28,6 +28,7 @@ import type {
   IncomeStream,
   IncomeStreamType,
   InvestmentTaxTreatment,
+  TakeHomeInputs,
   TakeHomeResults,
 } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
@@ -47,12 +48,18 @@ import {
   type IncomeCategoryKey,
 } from './incomeStreamCatalog';
 import { IncomeStreamForm } from './IncomeStreamForm';
+import InvestmentTreatmentComparison from './InvestmentTreatmentComparison';
 
 interface IncomeDetailsModalProps {
   open: boolean;
   onClose: () => void;
   streams: IncomeStream[];
   onStreamsChange: (streams: IncomeStream[]) => void;
+  /**
+   * The full calculation inputs {@link streams} belong to, for the comparison of the listed-share
+   * elections at the foot of the investment group. When omitted the comparison is not offered.
+   */
+  calculationInputs?: TakeHomeInputs | undefined;
   /**
    * Net public pension income (公的年金等に係る雑所得) for {@link streams}, so the group can show
    * what the 公的年金等控除 takes off the gross. Depends on the taxpayer's age and other income as
@@ -88,6 +95,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   onClose,
   streams,
   onStreamsChange,
+  calculationInputs,
   netPublicPensionIncome,
   investmentIncome,
 }) => {
@@ -236,8 +244,19 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             , taxed with the other income
           </Typography>
         )}
+        {investmentIncome.aggregateDividends !== undefined && (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Reported (総合課税): {formatJPY(investmentIncome.aggregateDividends)}, taxed in the
+            brackets with the other income
+          </Typography>
+        )}
       </>
     );
+
+  // The comparison is offered once a capital-gains or dividends entry exists to elect on.
+  const hasListedShareStream = streams.some(
+    s => s.type === 'capitalGains' || s.type === 'dividends',
+  );
 
   const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
     publicPension: publicPensionSubtotalFooter,
@@ -391,6 +410,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             </Box>
           )}
         </Stack>
+        {category.key === 'investment' && calculationInputs && hasListedShareStream && (
+          <InvestmentTreatmentComparison inputs={calculationInputs} />
+        )}
       </Box>
     );
   };

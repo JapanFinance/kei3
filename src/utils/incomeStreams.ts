@@ -10,10 +10,12 @@ interface IncomeStreamBehavior<T extends IncomeStreamType> {
   /**
    * Whether streams of this type are earned income: pay for work, or business, miscellaneous or
    * pension income received over the year. Earned income is what the chart sweep scales across
-   * its income range (see isPassThroughStream in chartConfig.ts, the complement of this) and what
-   * the social-insurance dependent-coverage test counts ({@link dependentTestAnnualIncome}).
-   * False for a reimbursement (通勤手当, not income at all) and for investment income, which is
-   * asset-based: it is held at its entered amount across the sweep.
+   * its income range (see isPassThroughStream in chartConfig.ts, the complement of this) and
+   * the part of the social-insurance dependent-coverage test's 年間収入 that is taken at its
+   * annual amount ({@link dependentTestAnnualIncome}, which adds the investment receipts and the
+   * commuting allowance on their own terms). False for a reimbursement (通勤手当, not income at
+   * all) and for investment income, which is asset-based: it is held at its entered amount
+   * across the sweep.
    */
   isEarnedIncome: boolean;
   /**
@@ -173,11 +175,30 @@ export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStrea
 }
 
 /**
- * The 年間収入 the dependent-coverage test is judged on: the earned income among `streams`
- * ({@link isEarnedIncomeStream}), plus the annualized commuting allowance. Investment income is
- * left out whether or not it is reported — the test is a social-insurance rule on 収入, not a tax
- * rule on the return, so the reporting election cannot be what decides it; which investment
- * receipts count is a question of 被扶養者認定 practice that is not modelled.
+ * The 年間収入 the dependent-coverage test (被扶養者認定) is judged on: the earned income among
+ * `streams` ({@link isEarnedIncomeStream}) and the annualized commuting allowance, plus the
+ * investment receipts — dividends and interest gross of the tax withheld, and the year's capital
+ * gains with every capital-gains stream netted together and floored at zero — whatever their
+ * tax election or account. The test is a social-insurance rule on 収入, not a tax rule on the
+ * return, so the reporting election cannot be what decides it.
+ *
+ * The rule itself names a figure and no list: 昭和52年4月6日 保発第9号・庁保発第9号「収入がある
+ * 者についての被扶養者の認定について」sets the 130万円 (180万円) 年間収入 test without
+ * enumerating what counts. 日本年金機構 reads 年間収入 as the amount expected from the
+ * certification date onward, counting non-taxable benefits, self-employment income after
+ * 必要経費, and any other income a 課税証明書 evidences. 協会けんぽ's 再確認 guidance lists
+ * 給与収入, 事業収入, 地代・家賃収入などの財産収入, 公的年金 and the insurance benefits, and
+ * judges a 給与所得者 on the 総収入額; dividends and interest are read here as 財産収入 and taken
+ * gross, before the 20.315% withheld.
+ *
+ * Capital gains have no uniform rule — a securities-company FAQ notes that whether 株式の譲渡所得
+ * や配当 count as 恒常的な収入 has no explicit provision — so the written 健保組合 practice is
+ * modelled: 株等の譲渡収入 (譲渡価額 − 取得価額) is 恒常的 while the person keeps holding 株等, a
+ * losing year counts as ¥0 and is never netted against other income, 繰越損失 is ignored, and
+ * only a one-time sale, of inherited shares for one, is 一時的. So a positive year's gains count,
+ * a losing year adds nothing, and whether a given sale is 恒常的 is the insurer's call. An amount
+ * that is 申告不要 never reaches a 課税証明書, but the rule is about the amount, not where it can
+ * be read from, so it counts all the same.
  *
  * The commuting allowance is added back by name because it is the one amount earned income and
  * 年間収入 disagree on — annual income leaves it out as a cost reimbursement, while 認定 reads
@@ -185,14 +206,33 @@ export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStrea
  * only 「通勤手当有」 without an amount is one the 保険者 cannot judge on. Its income-tax
  * non-taxability does not exempt it, that being a tax rule rather than a 社会保険 one.
  *
- * Source: 日本年金機構「労働契約内容による年間収入での被扶養者の認定の取り扱いについて」
- * https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html
+ * Sources:
+ * - 昭和52年4月6日 保発第9号・庁保発第9号
+ *   https://www.mhlw.go.jp/web/t_doc?dataId=00tb0189&dataType=1&pageNo=1
+ * - 日本年金機構「被扶養者になれる人の範囲」
+ *   https://www.nenkin.go.jp/service/kounen/tekiyo/hihokensha1/20141202.html
+ * - 日本年金機構「労働契約内容による年間収入での被扶養者の認定の取り扱いについて」
+ *   https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html
+ * - 協会けんぽ「被扶養者資格の再確認」
+ *   https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html
+ * - 三菱UFJモルガン・スタンレー証券 FAQ
+ *   https://faq.sc.mufg.jp/faq/show/2238?category_id=97&site_domain=default
+ * - azbil健康保険組合「株の譲渡収入がある場合」
+ *   https://www.kenpo.gr.jp/azbil-g/contents/04shinsei/case/fuyou_kabu.html
+ * - 安川電機健康保険組合 FAQ
+ *   https://www.yaskawa-kenpo.or.jp/asp/faq/faq.asp?articleid=12565
  */
 export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): number {
-  return (
-    streams.reduce(
-      (sum, s) => (isEarnedIncomeStream(s) ? sum + annualIncomeStreamAmount(s) : sum),
-      0,
-    ) + totalCommutingAllowanceFromStreams(streams)
-  );
+  let capitalGains = 0;
+  let total = totalCommutingAllowanceFromStreams(streams);
+  for (const s of streams) {
+    if (isEarnedIncomeStream(s)) {
+      total += annualIncomeStreamAmount(s);
+    } else if (s.type === 'dividends' || s.type === 'interest') {
+      total += s.amount;
+    } else if (s.type === 'capitalGains') {
+      capitalGains += s.amount;
+    }
+  }
+  return total + Math.max(0, capitalGains);
 }
