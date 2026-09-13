@@ -37,14 +37,14 @@ describe('totalAnnualIncomeFromStreams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 2_000_000,
         },
         {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 300_000,
         },
         { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
@@ -61,14 +61,14 @@ describe('totalAnnualIncomeFromStreams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'foreign',
-          taxTreatment: 'separate',
+          isReported: true,
           amount: -200_000,
         },
         {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'separate',
+          isReported: true,
           amount: 300_000,
         },
       ]),
@@ -86,27 +86,20 @@ describe('dependentTestAnnualIncome', () => {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'separate',
+          isReported: true,
           amount: 300_000,
         },
         {
           id: 'd2',
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
-          amount: 300_000,
-        },
-        {
-          id: 'd3',
-          type: 'dividends',
-          shareType: 'listed',
-          taxTreatment: 'aggregate',
+          isReported: false,
           amount: 300_000,
         },
         { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
         { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
       ]),
-    ).toBe(1_500_000 + 300_000 * 3 + 100_000 + 10_000 * 12);
+    ).toBe(1_500_000 + 300_000 * 2 + 100_000 + 10_000 * 12);
   });
 
   it('counts a year of capital gains netted across accounts, and nothing in a losing year', () => {
@@ -120,22 +113,22 @@ describe('dependentTestAnnualIncome', () => {
       id: string,
       amount: number,
       account: 'specifiedWithholding' | 'foreign',
-      taxTreatment: 'withheldOnly' | 'separate',
+      isReported: boolean,
     ) => ({
       id,
       type: 'capitalGains' as const,
       shareType: 'listed' as const,
       account,
       amount,
-      taxTreatment,
+      isReported,
     });
 
     // +500,000 in a withholding account and −200,000 in a foreign one: the year's gains are 300,000.
     expect(
       dependentTestAnnualIncome([
         salary,
-        gains('g1', 500_000, 'specifiedWithholding', 'withheldOnly'),
-        gains('g2', -200_000, 'foreign', 'separate'),
+        gains('g1', 500_000, 'specifiedWithholding', false),
+        gains('g2', -200_000, 'foreign', true),
       ]),
     ).toBe(1_300_000);
 
@@ -143,12 +136,12 @@ describe('dependentTestAnnualIncome', () => {
     expect(
       dependentTestAnnualIncome([
         salary,
-        gains('g1', -500_000, 'specifiedWithholding', 'withheldOnly'),
+        gains('g1', -500_000, 'specifiedWithholding', false),
         {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 300_000,
         },
       ]),
@@ -193,7 +186,7 @@ describe('isEarnedIncomeStream', () => {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
-        taxTreatment: 'separate',
+        isReported: true,
         amount: 1,
       }),
     ).toBe(false);
@@ -227,7 +220,7 @@ describe('countsTowardAnnualIncome', () => {
         type: 'capitalGains',
         shareType: 'listed',
         account: 'domesticNoWithholding',
-        taxTreatment: 'separate',
+        isReported: true,
         amount: 10_000,
       }),
     ).toBe(true);
@@ -236,7 +229,7 @@ describe('countsTowardAnnualIncome', () => {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
-        taxTreatment: 'separate',
+        isReported: true,
         amount: 10_000,
       }),
     ).toBe(true);
@@ -257,7 +250,7 @@ describe('countsTowardAnnualIncome', () => {
         type: 'capitalGains',
         shareType: 'listed',
         account: 'specifiedWithholding',
-        taxTreatment: 'withheldOnly',
+        isReported: false,
         amount: -10_000,
       }),
     ).toBe(false);
@@ -266,7 +259,7 @@ describe('countsTowardAnnualIncome', () => {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
-        taxTreatment: 'withheldOnly',
+        isReported: false,
         amount: 10_000,
       }),
     ).toBe(false);

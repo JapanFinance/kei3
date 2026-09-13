@@ -133,18 +133,18 @@ describe('IncomeStreamForm', () => {
     // moves the entry onto the return.
     await user.click(screen.getByRole('option', { name: 'Foreign account' }));
     expect(screen.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Reported' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({ account: 'foreign', taxTreatment: 'separate' }),
+      expect.objectContaining({ account: 'foreign', isReported: true }),
     );
   });
 
-  it('offers 申告不要 and 申告分離課税 for both, and 総合課税 for dividends alone', () => {
+  it('offers withheld-only and reported for a sale and for a dividend, starting withheld only', () => {
     const { rerender } = render(
       <IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
@@ -152,37 +152,54 @@ describe('IncomeStreamForm', () => {
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toBeEnabled();
-    // 措法37条の11 has no 総合課税 election for a share sale.
-    expect(
-      screen.queryByRole('button', { name: 'Reported (progressive)' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reported' })).toBeEnabled();
 
     rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Reported (progressive)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Withheld only' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Reported' })).toBeEnabled();
   });
 
-  it('saves a dividend as reported under 総合課税, saying the 配当控除 is not applied', () => {
-    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+  it('names the election set for all reported dividends once a dividend is reported', () => {
+    // 措法8条の4② makes the election one for every reported dividend, so the form only says
+    // which one applies; the default is 申告分離課税.
+    const { rerender } = render(
+      <IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
 
-    expect(screen.queryByText(/without the 配当控除/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Reported (progressive)' }));
-    expect(screen.getByText(/without the 配当控除/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/the election set for all reported dividends/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Reported' }));
+    expect(screen.getByText(/Taxed as separate \(申告分離課税\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/the 配当控除 is not modelled yet/)).not.toBeInTheDocument();
+
+    rerender(
+      <IncomeStreamForm
+        type="dividends"
+        reportedDividendsTaxation="aggregate"
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />,
+    );
+    expect(screen.getByText(/Taxed as progressive \(総合課税\)/)).toBeInTheDocument();
+    expect(screen.getByText(/the 配当控除 is not modelled yet/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'dividends', taxTreatment: 'aggregate' }),
+      expect.objectContaining({ type: 'dividends', isReported: true }),
     );
   });
 
-  it('saves a dividend as reported when 申告分離課税 is chosen', () => {
+  it('saves a dividend as reported when Reported is chosen', () => {
     render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Reported (separate)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reported' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'dividends', taxTreatment: 'separate' }),
+      expect.objectContaining({ type: 'dividends', isReported: true }),
     );
   });
 
@@ -193,7 +210,7 @@ describe('IncomeStreamForm', () => {
     expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({
         account: 'specifiedWithholding',
-        taxTreatment: 'withheldOnly',
+        isReported: false,
       }),
     );
   });
@@ -207,7 +224,7 @@ describe('IncomeStreamForm', () => {
           type: 'dividends',
           amount: 300000,
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
         }}
         onSave={mockOnSave}
         onCancel={mockOnCancel}

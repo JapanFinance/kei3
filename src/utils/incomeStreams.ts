@@ -92,13 +92,13 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
   // category either way.
   capitalGains: {
     isEarnedIncome: false,
-    countsTowardAnnualIncome: s => s.taxTreatment !== 'withheldOnly',
+    countsTowardAnnualIncome: s => s.isReported,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
   },
   dividends: {
     isEarnedIncome: false,
-    countsTowardAnnualIncome: s => s.taxTreatment !== 'withheldOnly',
+    countsTowardAnnualIncome: s => s.isReported,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
   },

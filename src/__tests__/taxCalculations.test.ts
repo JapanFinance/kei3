@@ -2398,14 +2398,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 1_000_000,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 200_000,
           id: 'dividends',
         },
@@ -2435,14 +2435,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: -500_000,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 300_000,
           id: 'dividends',
         },
@@ -2461,14 +2461,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: -500_000,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 800_000,
           id: 'dividends',
         },
@@ -2520,7 +2520,7 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: -300_000,
           id: 'gains',
         },
@@ -2542,7 +2542,7 @@ describe('calculateTaxes with investment income streams', () => {
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 1_234_567,
           id: 'dividends',
         },
@@ -2566,14 +2566,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 0,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 0,
           id: 'dividends',
         },
@@ -2592,7 +2592,7 @@ describe('calculateTaxes with investment income streams', () => {
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 1_000_000,
           id: 'dividends',
         },
@@ -2627,7 +2627,7 @@ describe('calculateTaxes with investment income streams', () => {
             type: 'capitalGains',
             shareType: 'other',
             account: 'specifiedWithholding',
-            taxTreatment: 'withheldOnly',
+            isReported: false,
             amount: 500_000,
             id: 'gains',
           },
@@ -2640,7 +2640,7 @@ describe('calculateTaxes with investment income streams', () => {
           {
             type: 'dividends',
             shareType: 'other',
-            taxTreatment: 'withheldOnly',
+            isReported: false,
             amount: 500_000,
             id: 'dividends',
           },
@@ -2657,7 +2657,7 @@ describe('calculateTaxes with investment income streams', () => {
             type: 'capitalGains',
             shareType: 'listed',
             account: 'domesticNoWithholding',
-            taxTreatment: 'withheldOnly',
+            isReported: false,
             amount: 500_000,
             id: 'gains',
           },
@@ -2701,7 +2701,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
   const reportedDividends = (amount: number, id = 'dividends') => ({
     type: 'dividends' as const,
     shareType: 'listed' as const,
-    taxTreatment: 'separate' as const,
+    isReported: true as const,
     amount,
     id,
   });
@@ -2713,7 +2713,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     type: 'capitalGains' as const,
     shareType: 'listed' as const,
     account,
-    taxTreatment: 'separate' as const,
+    isReported: true as const,
     amount,
     id,
   });
@@ -2810,10 +2810,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     expect(reported.healthInsurance).toBe(652_479);
 
     const withheld = calculateTaxes(
-      nhiInputs([
-        miscellaneous(5_000_000),
-        { ...reportedDividends(1_000_000), taxTreatment: 'withheldOnly' },
-      ]),
+      nhiInputs([miscellaneous(5_000_000), { ...reportedDividends(1_000_000), isReported: false }]),
     );
     expect(withheld.healthInsurance).toBe(
       calculateTaxes(nhiInputs([miscellaneous(5_000_000)])).healthInsurance,
@@ -2920,9 +2917,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
       incomeYear: 2025,
     });
 
-    const withheld = calculateTaxes(
-      inputs({ ...reportedDividends(100_000), taxTreatment: 'withheldOnly' }),
-    );
+    const withheld = calculateTaxes(inputs({ ...reportedDividends(100_000), isReported: false }));
     expect(withheld.totalNetIncome).toBe(1_250_000);
     expect(withheld.nationalIncomeTaxBasicDeduction).toBe(950_000);
 
@@ -2958,9 +2953,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     });
 
     // Social insurance 528,968 + 713,700 + 53,811 = 1,296,479; 基礎控除 620,000 either way.
-    const withheld = calculateTaxes(
-      inputs({ ...reportedDividends(500_000), taxTreatment: 'withheldOnly' }),
-    );
+    const withheld = calculateTaxes(inputs({ ...reportedDividends(500_000), isReported: false }));
     expect(withheld.totalNetIncome).toBe(8_550_000);
     // 8,550,000 − 1,296,479 − 620,000 − 380,000 = 6,253,521 → 6,253,000.
     expect(withheld.taxableIncomeForNationalIncomeTax).toBe(6_253_000);
@@ -3027,7 +3020,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     // max(0, −500,000) = 0); the 800,000 of reported dividends are taxed whole.
     const result = calculateTaxes(
       salaryInputs([
-        { ...reportedGains(-500_000, 'specifiedWithholding'), taxTreatment: 'withheldOnly' },
+        { ...reportedGains(-500_000, 'specifiedWithholding'), isReported: false },
         reportedDividends(800_000),
       ]),
     );
@@ -3101,13 +3094,15 @@ describe('calculateTaxes with investment income reported under 申告分離課�
 describe('calculateTaxes with dividends reported under 総合課税', () => {
   // The same 5,000,000-yen employee, income year 2026: 給与所得 3,560,000; social insurance
   // 722,252; 基礎控除 1,040,000 up to a 合計所得金額 of 4,890,000; 住民税 基礎控除 430,000 and
-  // 調整控除 2,500 (人的控除差 50,000, 課税総所得金額 over 2,000,000).
+  // 調整控除 2,500 (人的控除差 50,000, 課税総所得金額 over 2,000,000). The election is made once
+  // for every reported dividend (措法8条の4②), so it is an input beside the streams.
   const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     incomeStreams: [
       { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
       ...streams,
     ],
+    reportedDividendsTaxation: 'aggregate',
     ageRange: 'age20to39',
     healthInsuranceProvider: DEFAULT_PROVIDER,
     region: 'Tokyo',
@@ -3120,9 +3115,37 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
   const aggregateDividends = (amount: number, id = 'dividends') => ({
     type: 'dividends' as const,
     shareType: 'listed' as const,
-    taxTreatment: 'aggregate' as const,
+    isReported: true as const,
     amount,
     id,
+  });
+
+  it('applies the election to every reported dividend and to no withheld-only one', () => {
+    // 1,000,000 reported and 300,000 left to withholding: the reported amount is 配当所得 in
+    // 総所得金額 and the withheld amount stays outside the return, as under 申告分離課税. With the
+    // election absent, the same reported dividend is 申告分離課税.
+    const streams = [
+      aggregateDividends(600_000, 'd1'),
+      aggregateDividends(400_000, 'd2'),
+      { ...aggregateDividends(300_000, 'd3'), isReported: false as const },
+    ];
+    const elected = calculateTaxes(salaryInputs(streams));
+    expect(elected.investmentIncome).toEqual({
+      gross: { capitalGains: 0, dividends: 300_000, interest: 0 },
+      grossTotal: 300_000,
+      withheld: { national: 45_945, residence: 15_000, total: 60_945 },
+      aggregateDividends: 1_000_000,
+    });
+    expect(elected.nationalIncomeTax).toBe(186_000);
+
+    const { reportedDividendsTaxation: _unused, ...withoutElection } = salaryInputs(streams);
+    const separate = calculateTaxes(withoutElection);
+    expect(separate.investmentIncome?.aggregateDividends).toBeUndefined();
+    expect(separate.investmentIncome?.reported?.taxable).toEqual({
+      capitalGains: 0,
+      dividends: 1_000_000,
+    });
+    expect(separate.nationalIncomeTax).toBe(244_800);
   });
 
   it('taxes them in the brackets as 配当所得 inside 総所得金額, with no 配当控除', () => {
@@ -3170,7 +3193,7 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'domesticNoWithholding',
-          taxTreatment: 'separate',
+          isReported: true,
           amount: -400_000,
           id: 'gains',
         },
@@ -3205,7 +3228,7 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'domesticNoWithholding',
-          taxTreatment: 'separate',
+          isReported: true,
           amount: 500_000,
           id: 'gains',
         },
@@ -3258,6 +3281,7 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
       'age65to69',
       [],
       EMPTY_PERSONAL_CIRCUMSTANCES,
+      'aggregate',
     );
 
     // 公的年金等に係る雑所得以外の合計所得金額 of 10,500,000 is over 10,000,000, so the 65+ deduction

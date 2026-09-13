@@ -52,6 +52,7 @@ import type {
   AdditionalDeductionsResult,
   PersonalCircumstancesInput,
   PersonalDeductionsResult,
+  ReportedDividendsTaxation,
 } from '../../types/tax';
 import {
   TAXPAYER_AGE_RANGES,
@@ -184,6 +185,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     dispatch({ type: 'setField', field: 'personalCircumstances', value: newInput });
   };
 
+  const handleReportedDividendsTaxationChange = (value: ReportedDividendsTaxation) => {
+    dispatch({ type: 'setField', field: 'reportedDividendsTaxation', value });
+  };
+
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
     dispatch({ type: 'incomeStreamsChanged', streams: newStreams });
   };
@@ -274,6 +279,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         inputs.ageRange,
         inputs.dependents,
         inputs.personalCircumstances,
+        inputs.reportedDividendsTaxation,
       ),
     [
       inputs.incomeStreams,
@@ -281,6 +287,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       inputs.dependents,
       inputs.ageRange,
       inputs.personalCircumstances,
+      inputs.reportedDividendsTaxation,
     ],
   );
 
@@ -389,8 +396,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       >
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           {isMobile
-                            ? 'Investment Income (separate)'
-                            : 'Investment Income (taxed separately)'}
+                            ? 'Investment (withheld only)'
+                            : 'Investment Income (withheld only)'}
                         </Typography>
                         <Typography
                           variant="subtitle1"
@@ -964,6 +971,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+        reportedDividendsTaxation={inputs.reportedDividendsTaxation}
+        onReportedDividendsTaxationChange={handleReportedDividendsTaxationChange}
         calculationInputs={inputs}
         netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
         investmentIncome={investmentIncome}

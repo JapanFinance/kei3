@@ -1,24 +1,29 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {
-  CapitalGainsIncomeStream,
-  IncomeStream,
-  InvestmentTaxTreatment,
-  TakeHomeInputs,
-  TakeHomeResults,
+import {
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  type IncomeStream,
+  type ReportedDividendsTaxation,
+  type TakeHomeInputs,
+  type TakeHomeResults,
 } from '../types/tax';
 import { calculateTaxes } from './taxCalculations';
 
-/** The election a comparison column applies to every listed-share stream. */
+export type InvestmentTreatmentColumnKey = 'withheldOnly' | 'separate' | 'aggregate';
+
+/**
+ * What a comparison column sets: whether every listed-share entry goes on the return, and the
+ * election that then taxes the reported dividends ({@link ReportedDividendsTaxation}). A share
+ * sale has no election of its own — reported, it is 申告分離課税 (措法37条の11) in every column.
+ */
 export interface InvestmentTreatmentElection {
-  /** 措法37条の11 has no 総合課税 election for a share sale, so a sale is never 'aggregate'. */
-  capitalGains: CapitalGainsIncomeStream['taxTreatment'];
-  dividends: InvestmentTaxTreatment;
+  isReported: boolean;
+  reportedDividendsTaxation: ReportedDividendsTaxation;
 }
 
 export interface InvestmentTreatmentColumnDefinition {
-  key: InvestmentTaxTreatment;
+  key: InvestmentTreatmentColumnKey;
   label: string;
   election: InvestmentTreatmentElection;
 }
@@ -28,17 +33,20 @@ export const INVESTMENT_TREATMENT_COLUMNS: readonly InvestmentTreatmentColumnDef
   {
     key: 'withheldOnly',
     label: '申告不要',
-    election: { capitalGains: 'withheldOnly', dividends: 'withheldOnly' },
+    election: {
+      isReported: false,
+      reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+    },
   },
   {
     key: 'separate',
     label: '申告分離課税',
-    election: { capitalGains: 'separate', dividends: 'separate' },
+    election: { isReported: true, reportedDividendsTaxation: 'separate' },
   },
   {
     key: 'aggregate',
     label: '総合課税',
-    election: { capitalGains: 'separate', dividends: 'aggregate' },
+    election: { isReported: true, reportedDividendsTaxation: 'aggregate' },
   },
 ];
 
@@ -61,7 +69,7 @@ export interface InvestmentTreatmentFigures {
 }
 
 export interface InvestmentTreatmentColumn extends InvestmentTreatmentColumnDefinition {
-  /** Whether every listed-share stream already carries this column's election. */
+  /** Whether the entries and the election already stand as this column would set them. */
   isCurrent: boolean;
   /** The figures, or absent when {@link unavailableReason} says why the election is not open. */
   figures?: InvestmentTreatmentFigures;
@@ -79,10 +87,8 @@ const applyElection = (
   for (const stream of streams) {
     switch (stream.type) {
       case 'capitalGains':
-        elected.push({ ...stream, taxTreatment: election.capitalGains });
-        break;
       case 'dividends':
-        elected.push({ ...stream, taxTreatment: election.dividends });
+        elected.push({ ...stream, isReported: election.isReported });
         break;
       default:
         elected.push(stream);
@@ -110,8 +116,9 @@ const figuresOf = (results: TakeHomeResults): InvestmentTreatmentFigures => {
 
 /**
  * Runs the calculation once per election in {@link INVESTMENT_TREATMENT_COLUMNS}, with every
- * listed-share stream switched to that election, so the elections can be set side by side.
- * Interest carries no election and is left as entered.
+ * listed-share entry reported or not as the column says and the reported dividends taxed under
+ * its election, so the elections can be set side by side. Interest carries no election and is
+ * left as entered.
  *
  * 申告不要 is open only while every sale settles in a 特定口座（源泉徴収あり）
  * (措法37条の11の5); with a sale anywhere else the column is marked unavailable instead of
@@ -119,6 +126,7 @@ const figuresOf = (results: TakeHomeResults): InvestmentTreatmentFigures => {
  */
 export function compareInvestmentTreatments(inputs: TakeHomeInputs): InvestmentTreatmentColumn[] {
   const listedStreams = inputs.incomeStreams.filter(isListedShareStream);
+  const currentElection = inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION;
   const saleOutsideWithholdingAccount = inputs.incomeStreams.some(
     s => s.type === 'capitalGains' && s.account !== 'specifiedWithholding',
   );
@@ -127,7 +135,9 @@ export function compareInvestmentTreatments(inputs: TakeHomeInputs): InvestmentT
   for (const column of INVESTMENT_TREATMENT_COLUMNS) {
     const isCurrent =
       listedStreams.length > 0 &&
-      listedStreams.every(s => s.taxTreatment === column.election[s.type]);
+      listedStreams.every(s => s.isReported === column.election.isReported) &&
+      (!column.election.isReported ||
+        column.election.reportedDividendsTaxation === currentElection);
     if (column.key === 'withheldOnly' && saleOutsideWithholdingAccount) {
       columns.push({
         ...column,
@@ -140,6 +150,7 @@ export function compareInvestmentTreatments(inputs: TakeHomeInputs): InvestmentT
     const results = calculateTaxes({
       ...inputs,
       incomeStreams: applyElection(inputs.incomeStreams, column.election),
+      reportedDividendsTaxation: column.election.reportedDividendsTaxation,
     });
     columns.push({ ...column, isCurrent, figures: figuresOf(results) });
   }

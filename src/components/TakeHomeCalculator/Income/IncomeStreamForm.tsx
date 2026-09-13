@@ -22,11 +22,12 @@ import Typography from '@mui/material/Typography';
 import React, { useState } from 'react';
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
-import type {
-  CapitalGainsIncomeStream,
-  IncomeStream,
-  IncomeStreamType,
-  InvestmentTaxTreatment,
+import {
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  type CapitalGainsIncomeStream,
+  type IncomeStream,
+  type IncomeStreamType,
+  type ReportedDividendsTaxation,
 } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import { getFrequencyAnnualMultiplier } from '../../../utils/incomeStreams';
@@ -35,6 +36,7 @@ import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { getIncomeCategory, INCOME_STREAM_CATALOG } from './incomeStreamCatalog';
+import { variantLabelSx, variantToggleGroupSx } from './variantControlStyles';
 
 interface IncomeStreamFormProps {
   /**
@@ -45,6 +47,11 @@ interface IncomeStreamFormProps {
   initialData?: IncomeStream;
   onSave: (stream: IncomeStream) => void;
   onCancel: () => void;
+  /**
+   * The election in force for every reported dividend, so the form can say how a dividend it
+   * reports will be taxed. Made in the income list, not here; the default when omitted.
+   */
+  reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
 }
 
 const guidanceBoxSx = {
@@ -56,36 +63,12 @@ const guidanceBoxSx = {
   borderColor: 'divider',
 };
 
-const variantToggleGroupSx = {
-  '& .MuiToggleButton-root': {
-    px: 2,
-    py: 0.5,
-    fontSize: '0.85rem',
-    fontWeight: 500,
-  },
-  '& .MuiToggleButton-root.Mui-selected': {
-    bgcolor: 'primary.main',
-    color: 'primary.contrastText',
-    '&:hover': {
-      bgcolor: 'primary.dark',
-    },
-  },
-};
-
-const variantLabelSx = {
-  mb: 0.5,
-  fontWeight: 500,
-  color: 'text.primary',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 0.5,
-};
-
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   type,
   initialData,
   onSave,
   onCancel,
+  reportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
 }) => {
   const info = INCOME_STREAM_CATALOG[type];
   const [amount, setAmount] = useState<number>(initialData?.amount ?? 0);
@@ -116,10 +99,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [account, setAccount] = useState<CapitalGainsIncomeStream['account']>(
     initialData?.type === 'capitalGains' ? initialData.account : 'specifiedWithholding',
   );
-  const [taxTreatment, setTaxTreatment] = useState<InvestmentTaxTreatment>(
+  const [isReported, setIsReported] = useState<boolean>(
     initialData?.type === 'capitalGains' || initialData?.type === 'dividends'
-      ? initialData.taxTreatment
-      : 'withheldOnly',
+      ? initialData.isReported
+      : false,
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -131,8 +114,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const handleAccountChange = (newAccount: CapitalGainsIncomeStream['account']) => {
     setAccount(newAccount);
     // Moving the sale out of the withholding account takes 申告不要 off the table.
-    if (newAccount !== 'specifiedWithholding' && taxTreatment === 'withheldOnly') {
-      setTaxTreatment('separate');
+    if (newAccount !== 'specifiedWithholding') {
+      setIsReported(true);
     }
   };
 
@@ -177,14 +160,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         stream = { id, type, amount };
         break;
       case 'capitalGains':
-        if (taxTreatment === 'aggregate') {
-          // 措法37条の11 has no 総合課税 election, so the selector never offers one.
-          throw new Error('総合課税 does not apply to a share sale.');
-        }
-        stream = { id, type, amount, shareType, account, taxTreatment };
+        stream = { id, type, amount, shareType, account, isReported };
         break;
       case 'dividends':
-        stream = { id, type, amount, shareType, taxTreatment };
+        stream = { id, type, amount, shareType, isReported };
         break;
       case 'interest':
         stream = { id, type, amount, payerDomicile };
@@ -389,39 +368,39 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
         {(type === 'capitalGains' || type === 'dividends') && (
           <FormControl fullWidth>
-            <FormLabel id="tax-treatment-label" sx={variantLabelSx}>
-              <span>Tax treatment</span>
+            <FormLabel id="reporting-label" sx={variantLabelSx}>
+              <span>Reporting</span>
               <DetailedTooltip
-                title="Tax Treatment"
+                title="Reporting"
                 icon={SIMPLE_TOOLTIP_ICON}
-                iconAriaLabel="tax treatment info"
+                iconAriaLabel="reporting info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   <strong>Withheld only (申告不要)</strong> means the 20.315% the payer withholds
                   settles the tax in full. The amount stays off the return, so it changes no
                   aggregate — not 合計所得金額, health-insurance premiums, the basic deduction,
                   spouse or dependent eligibility, residence-tax exemption, or the furusato nozei
-                  limit.
+                  limit. It is a choice per payment (措法8条の5, 37条の11の5).
                 </Typography>
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Reported (separate, 申告分離課税)</strong> puts the amount on the return.
-                  It enters 合計所得金額 — and so every figure keyed to it — and is taxed at the
-                  same 15.315% and 5% through the return, after any deductions the other income
-                  could not use and, for a dividend, after a reported capital loss is set against it
-                  (損益通算). Reporting is what makes that offset available; carrying a loss forward
-                  (繰越控除) is not modelled.
+                  <strong>Reported</strong> puts the amount on the return, where it enters
+                  合計所得金額 — and so every figure keyed to it. Tax the payer withheld on a
+                  reported amount is credited at filing, so it is not shown. A share sale is then
+                  taxed under 申告分離課税 (措法37条の11): the same 15.315% and 5% through the
+                  return, after any deductions the other income could not use, with a loss set
+                  against the year's other reported gains and then, where the sale qualifies,
+                  against reported dividends (損益通算). Carrying a loss forward (繰越控除) is not
+                  modelled.
                 </Typography>
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Reported (progressive, 総合課税)</strong> puts a dividend on the return as
-                  配当所得, inside 総所得金額: it enters 合計所得金額 the same way and is taxed in
-                  the progressive brackets and at the 10% residence rate with the other income. The
-                  配当控除 (所法92条) that offsets part of that for a dividend from a domestic
-                  company is not modelled yet, so for those the figures under this election are
-                  overstated. No capital loss is set against a dividend reported this way
-                  (措法37条の12の2 nets a loss only against dividends reported under 申告分離課税),
-                  and the 20.315% withheld is credited on the return rather than shown here. Only
-                  配当等 proper — 剰余金の配当 and 公募株式投資信託の分配金 — can be reported this
-                  way; 特定公社債の利子 cannot.
+                  <strong>Reported dividends</strong> are taxed under one election for all of them,
+                  made in the Investment Income list: 申告分離課税, the same 15.315% and 5% apart
+                  from the brackets, or 総合課税, in the progressive brackets and at the 10%
+                  residence rate with the other income. 措法8条の4② allows no mix of the two on one
+                  return. The 配当控除 (所法92条) that offsets part of the 総合課税 tax for a
+                  dividend from a domestic company is not modelled yet, and only 配当等 proper —
+                  剰余金の配当 and 公募株式投資信託の分配金 — can be taxed that way;
+                  特定公社債の利子 cannot.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
                   Since 令和6年度 the residence tax follows the election made for income tax
@@ -430,31 +409,28 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               </DetailedTooltip>
             </FormLabel>
             <ToggleButtonGroup
-              value={taxTreatment}
+              value={isReported ? 'reported' : 'withheldOnly'}
               exclusive
-              onChange={(_, newValue: InvestmentTaxTreatment | null) => {
+              onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
                 if (newValue) {
-                  setTaxTreatment(newValue);
+                  setIsReported(newValue === 'reported');
                 }
               }}
-              aria-labelledby="tax-treatment-label"
-              aria-label="tax treatment"
+              aria-labelledby="reporting-label"
+              aria-label="reporting"
               size="small"
               sx={variantToggleGroupSx}
             >
               <ToggleButton value="withheldOnly" disabled={!canLeaveOffReturn}>
                 Withheld only
               </ToggleButton>
-              <ToggleButton value="separate">Reported (separate)</ToggleButton>
-              {type === 'dividends' && (
-                <ToggleButton value="aggregate">Reported (progressive)</ToggleButton>
-              )}
+              <ToggleButton value="reported">Reported</ToggleButton>
             </ToggleButtonGroup>
-            {type === 'dividends' && taxTreatment === 'aggregate' && (
+            {type === 'dividends' && isReported && (
               <FormHelperText>
-                Taxed in the brackets without the 配当控除, which is not modelled yet — the tax
-                shown is overstated for a dividend from a domestic company. 配当等 only:
-                特定公社債の利子 cannot be reported this way.
+                {reportedDividendsTaxation === 'separate'
+                  ? 'Taxed as separate (申告分離課税), the election set for all reported dividends in the income list.'
+                  : 'Taxed as progressive (総合課税), the election set for all reported dividends in the income list; the 配当控除 is not modelled yet.'}
               </FormHelperText>
             )}
           </FormControl>

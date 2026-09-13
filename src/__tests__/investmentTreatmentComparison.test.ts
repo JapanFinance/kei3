@@ -25,31 +25,31 @@ const salaryInputs = (streams: TakeHomeInputs['incomeStreams']): TakeHomeInputs 
   incomeYear: 2026,
 });
 const dividends = (
-  taxTreatment: 'withheldOnly' | 'separate' | 'aggregate',
+  isReported: boolean,
   amount = 1_000_000,
 ): TakeHomeInputs['incomeStreams'][number] => ({
   type: 'dividends',
   shareType: 'listed',
-  taxTreatment,
+  isReported,
   amount,
   id: 'dividends',
 });
 const gains = (
   account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign',
-  taxTreatment: 'withheldOnly' | 'separate',
+  isReported: boolean,
   amount: number,
 ): TakeHomeInputs['incomeStreams'][number] => ({
   type: 'capitalGains',
   shareType: 'listed',
   account,
-  taxTreatment,
+  isReported,
   amount,
   id: 'gains',
 });
 
 describe('compareInvestmentTreatments', () => {
   it('recomputes each election for 1,000,000 of dividends and marks the one in force', () => {
-    const columns = compareInvestmentTreatments(salaryInputs([dividends('separate')]));
+    const columns = compareInvestmentTreatments(salaryInputs([dividends(true)]));
 
     expect(columns.map(c => c.key)).toEqual(['withheldOnly', 'separate', 'aggregate']);
     expect(columns.map(c => c.isCurrent)).toEqual([false, true, false]);
@@ -83,9 +83,20 @@ describe('compareInvestmentTreatments', () => {
     });
   });
 
+  it('marks the 総合課税 column current when that election is in force for the reported dividends', () => {
+    const columns = compareInvestmentTreatments({
+      ...salaryInputs([dividends(true)]),
+      reportedDividendsTaxation: 'aggregate',
+    });
+    expect(columns.map(c => c.isCurrent)).toEqual([false, false, true]);
+    expect(columns[2]!.figures?.incomeTax).toBe(186_000);
+    // The 申告分離課税 column is computed under its own election, whatever is in force.
+    expect(columns[1]!.figures?.incomeTax).toBe(244_800);
+  });
+
   it('marks 申告不要 unavailable for a sale outside a withholding account, and no column current for mixed elections', () => {
     const columns = compareInvestmentTreatments(
-      salaryInputs([gains('foreign', 'separate', 500_000), dividends('withheldOnly')]),
+      salaryInputs([gains('foreign', true, 500_000), dividends(false)]),
     );
 
     expect(columns[0]!.figures).toBeUndefined();
@@ -103,7 +114,7 @@ describe('compareInvestmentTreatments', () => {
     const columns = compareInvestmentTreatments(
       salaryInputs([
         { type: 'interest', payerDomicile: 'domestic', amount: 100_000, id: 'interest' },
-        dividends('separate'),
+        dividends(true),
       ]),
     );
 

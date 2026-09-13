@@ -52,19 +52,28 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
 }
 
 /**
- * How an investment amount is taxed, which for shares the taxpayer elects:
- * - `withheldOnly` — 申告不要: the tax withheld at source is the whole liability and the amount
- *   stays off the return, so it enters no aggregate (措法37条の11の5, 8条の5).
- * - `separate` — 申告分離課税: reported and taxed apart from the progressive brackets
- *   (措法37条の11①, 8条の4①), which is what makes 損益通算 and 繰越控除 available.
- * - `aggregate` — 総合課税: reported as 配当所得 inside 総所得金額 (所法22条②一) and taxed in the
- *   progressive brackets. The 配当控除 (所法92, 地方税法附則5条) is not yet modelled, so for a
- *   dividend from a domestic company the tax under this election is overstated.
+ * How the dividends that go on the return are taxed — one election for all of them, not one per
+ * entry. 措法8条の4② applies 申告分離課税 only where the return elects it for the year's
+ * 特定上場株式等の配当等, and withdraws it from every other such dividend once one of them is
+ * taxed under 所法22条 (総合課税); NTA No.1330 puts it as 申告分離課税の選択は、確定申告する
+ * 上場株式等の配当所得の全額についてしなければなりません. 申告不要 is different: 措法8条の5 grants
+ * it per payment, so each entry chooses that for itself — {@link DividendsIncomeStream.isReported}.
+ * - `separate` — 申告分離課税 (措法8条の4①): 15% + 復興特別所得税 and 5%, apart from the
+ *   progressive brackets; what makes 損益通算 with a reported 譲渡損失 available; no 配当控除.
+ * - `aggregate` — 総合課税: 配当所得 inside 総所得金額 (所法22条②一), taxed in the progressive
+ *   brackets. The 配当控除 (所法92, 地方税法附則5条) is not yet modelled, so for a dividend from a
+ *   domestic company the tax under this election is overstated. Open to 配当等 proper (剰余金の
+ *   配当 and 公募株式投資信託の分配金) only: 特定公社債の利子 is 利子所得 that 措法8条の4① taxes
+ *   apart from the brackets with no 総合課税 election.
  *
- * Interest carries no election of its own: 措法3条① makes 源泉分離課税 the final treatment of
- * 一般利子等 paid in Japan — see {@link InterestIncomeStream}.
+ * A share sale has no such election — 措法37条の11 taxes a reported sale under 申告分離課税 and
+ * nothing else — and interest none at all: 措法3条① makes 源泉分離課税 the final treatment of
+ * 一般利子等 paid in Japan, see {@link InterestIncomeStream}.
  */
-export type InvestmentTaxTreatment = 'withheldOnly' | 'separate' | 'aggregate';
+export type ReportedDividendsTaxation = 'separate' | 'aggregate';
+
+/** The election in force until one is made — see {@link TakeHomeInputs.reportedDividendsTaxation}. */
+export const DEFAULT_REPORTED_DIVIDENDS_TAXATION: ReportedDividendsTaxation = 'separate';
 
 /**
  * 株式等に係る譲渡所得等の金額 for the year in one account, net of acquisition and transfer
@@ -94,10 +103,12 @@ export interface CapitalGainsIncomeStream extends BaseIncomeStream {
    */
   account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign';
   /**
-   * See {@link InvestmentTaxTreatment}. 'withheldOnly' is only valid with a
-   * 'specifiedWithholding' {@link account}.
+   * Whether the sale goes on the return. False is 申告不要 — the 20.315% withheld is the whole
+   * liability and the amount enters no aggregate — and is only valid with a 'specifiedWithholding'
+   * {@link account}. True is 申告分離課税, the one reported treatment of a share sale
+   * (措法37条の11①).
    */
-  taxTreatment: 'withheldOnly' | 'separate';
+  isReported: boolean;
 }
 
 /**
@@ -117,15 +128,14 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
    */
   shareType: 'listed' | 'other';
   /**
-   * See {@link InvestmentTaxTreatment}. Unlike a share sale, a dividend needs no particular
-   * account for 申告不要 — 措法8条の5 grants it on the withholding alone — so there is no account
-   * field here. 'aggregate' is open to 配当等 proper (剰余金の配当 and 公募株式投資信託の
-   * 分配金) only: 特定公社債の利子 is 利子所得 that 措法8条の4① taxes apart from the brackets
-   * with no 総合課税 election, so an entry that includes it cannot be reported that way. The
-   * amount is taken as the 配当所得 (所法24条②: 収入金額 less the 負債利子 on money borrowed to
-   * buy the shares, which is not modelled).
+   * Whether the dividend goes on the return. False is 申告不要, which 措法8条の5 grants per
+   * payment on the withholding alone — so a dividend needs no particular account for it and there
+   * is no account field here. True puts it on the return, where it is taxed under the election
+   * made once for every reported dividend, {@link ReportedDividendsTaxation}. The amount is taken
+   * as the 配当所得 (所法24条②: 収入金額 less the 負債利子 on money borrowed to buy the shares,
+   * which is not modelled).
    */
-  taxTreatment: 'withheldOnly' | 'separate' | 'aggregate';
+  isReported: boolean;
 }
 
 /**
@@ -505,6 +515,8 @@ export interface TakeHomeFormState {
   incomeYear: number;
   incomeMode: IncomeMode;
   incomeStreams: IncomeStream[];
+  /** See {@link TakeHomeInputs.reportedDividendsTaxation}. */
+  reportedDividendsTaxation: ReportedDividendsTaxation;
   ageRange: TaxpayerAgeRange;
   /**
    * True when the user has switched off the calculated 介護保険料 estimate to enter the billed
@@ -539,6 +551,11 @@ export interface TakeHomeFormState {
 /** Interface for Calculation Logic (clean, normalized inputs) */
 export interface TakeHomeInputs {
   incomeStreams: IncomeStream[];
+  /**
+   * The one election that taxes every reported dividend among {@link incomeStreams} — see
+   * {@link ReportedDividendsTaxation}. Absent means {@link DEFAULT_REPORTED_DIVIDENDS_TAXATION}.
+   */
+  reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
   ageRange: TaxpayerAgeRange;
   /** See {@link TakeHomeFormState.longTermCareCategory1ManualEntry}. Absent means false. */
   longTermCareCategory1ManualEntry?: boolean | undefined;

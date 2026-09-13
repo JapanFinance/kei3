@@ -18,7 +18,11 @@ import {
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, DEFAULT_INCOME_YEAR } from '../types/tax';
+import {
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  DEFAULT_INCOME_YEAR,
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+} from '../types/tax';
 
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -27,6 +31,7 @@ const baseState: TakeHomeFormState = {
   incomeMode: 'salary',
   incomeStreams: [{ id: 'default-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
   savedIncomeStreams: [],
+  reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   longTermCareCategory1ManualEntry: false,
   longTermCareCategory1Premium: 0,
   ageRange: 'age20to39',
@@ -775,11 +780,11 @@ describe('takeHomeFormReducer', () => {
       // it whether the dividends are withheld or reported — the test is a social-insurance rule,
       // not a matter of the tax election.
       expect(providerIds([salary(1_000_000)])).toContain(DEPENDENT_COVERAGE_ID);
-      for (const taxTreatment of ['withheldOnly', 'separate', 'aggregate'] as const) {
+      for (const isReported of [false, true]) {
         expect(
           providerIds([
             salary(1_000_000),
-            { id: 'd1', type: 'dividends', shareType: 'listed', taxTreatment, amount: 300_000 },
+            { id: 'd1', type: 'dividends', shareType: 'listed', isReported, amount: 300_000 },
           ]),
         ).not.toContain(DEPENDENT_COVERAGE_ID);
       }
@@ -790,7 +795,7 @@ describe('takeHomeFormReducer', () => {
         type: 'capitalGains' as const,
         shareType: 'listed' as const,
         account: 'specifiedWithholding' as const,
-        taxTreatment: 'withheldOnly' as const,
+        isReported: false as const,
         amount,
       });
       expect(providerIds([salary(1_000_000), gains(300_000)])).not.toContain(DEPENDENT_COVERAGE_ID);

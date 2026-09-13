@@ -17,14 +17,16 @@ import {
   isEmployeeHealthProvider,
   type LongTermCareCategory1Estimate,
 } from '../types/healthInsurance';
-import type {
-  BonusIncomeStream,
-  IncomeStream,
-  InvestmentIncomeAmounts,
-  PersonalCircumstancesInput,
-  ReportedInvestmentAmounts,
-  TakeHomeInputs,
-  TakeHomeResults,
+import {
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  type BonusIncomeStream,
+  type IncomeStream,
+  type InvestmentIncomeAmounts,
+  type PersonalCircumstancesInput,
+  type ReportedDividendsTaxation,
+  type ReportedInvestmentAmounts,
+  type TakeHomeInputs,
+  type TakeHomeResults,
 } from '../types/tax';
 import {
   type TaxpayerAgeRange,
@@ -323,8 +325,15 @@ interface IncomeBreakdown {
 /**
  * Processes income streams to categorize them and calculate totals.
  * This is used by both the main tax calculation and the net income calculation.
+ *
+ * @param reportedDividendsTaxation  The one election that taxes every reported dividend
+ *   ({@link ReportedDividendsTaxation}): it decides whether a reported dividend joins the
+ *   申告分離課税 classes or 総所得金額.
  */
-const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdown => {
+const calculateIncomeBreakdown = (
+  incomeStreams: IncomeStream[],
+  reportedDividendsTaxation: ReportedDividendsTaxation,
+): IncomeBreakdown => {
   let salaryIncome = 0;
   const bonusIncome: BonusIncomeStream[] = [];
   let netBusinessAndMiscIncomeBeforeBlueFilerDeduction = 0;
@@ -392,7 +401,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         }
         // Negative (譲渡損失) is expected in either bucket: see calculateWithheldInvestmentTax's
         // in-account netting and classifyReportedInvestmentIncome's 損益通算.
-        if (income.taxTreatment === 'withheldOnly') {
+        if (!income.isReported) {
           if (income.account !== 'specifiedWithholding') {
             throw new Error(
               'Only a sale in a 特定口座（源泉徴収あり）can be left off the return (措法37条の11の5).',
@@ -413,10 +422,11 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         if (income.amount < 0) {
           throw new Error('Dividends cannot be negative.');
         }
-        switch (income.taxTreatment) {
-          case 'withheldOnly':
-            dividends += income.amount;
-            break;
+        if (!income.isReported) {
+          dividends += income.amount;
+          break;
+        }
+        switch (reportedDividendsTaxation) {
           case 'separate':
             reportedDividends += income.amount;
             break;
@@ -426,8 +436,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
             aggregateDividends += income.amount;
             break;
           default: {
-            const unhandled: never = income;
-            throw new Error(`Unhandled tax treatment: ${JSON.stringify(unhandled)}`);
+            const unhandled: never = reportedDividendsTaxation;
+            throw new Error(`Unhandled dividend election: ${JSON.stringify(unhandled)}`);
           }
         }
         break;
@@ -529,6 +539,8 @@ const composeTaxpayerNetIncomeComponents = (
  *                       taxpayer for
  * @param personalCircumstances  The taxpayer's own status, for the 特別障害者 condition of that
  *                       same deduction
+ * @param reportedDividendsTaxation  The election that taxes every reported dividend; the
+ *                       default when the caller has none
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
@@ -536,9 +548,10 @@ export const calculateNetIncomeComponents = (
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
+  reportedDividendsTaxation: ReportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
 ): NetIncomeComponents =>
   composeTaxpayerNetIncomeComponents(
-    calculateIncomeBreakdown(incomeStreams),
+    calculateIncomeBreakdown(incomeStreams, reportedDividendsTaxation),
     year,
     ageRange,
     dependents,
@@ -546,7 +559,10 @@ export const calculateNetIncomeComponents = (
   );
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
-  const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
+  const incomeBreakdown = calculateIncomeBreakdown(
+    inputs.incomeStreams,
+    inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  );
   const {
     salaryIncome,
     bonusIncome,
