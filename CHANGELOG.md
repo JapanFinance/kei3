@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-17
+
+### Updated
+
+- A withholding designated account (特定口座（源泉徴収あり）) is now entered as one entry holding the year's net capital gain or loss and the dividends received into the account, as the account's annual transaction report (特定口座年間取引報告書) states them. Whether the sales and the dividends go on the tax return is chosen per account, the unit the law uses ([措法37条の11の5](https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11_5), [37条の11の6](https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11_6)): a loss is netted against the same account's dividends before withholding, accounts no longer net with each other, and reporting an account's loss puts its dividends on the return as well. Capital Gains and Dividends entries now cover everything outside such an account: a sale there is always reported, and a dividend says whether it was paid in Japan or abroad — one paid abroad, into a foreign brokerage account for example, has to be reported ([措令4条の3②](https://laws.e-gov.go.jp/law/332CO0000000043#Mp-Ch_2-Se_1-At_4_3)).
+
 ## 2026-09-13
 
 ### New

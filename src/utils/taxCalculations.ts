@@ -58,7 +58,12 @@ import {
   floorTaxableIncome,
   hasInvestmentIncome,
   hasReportedInvestmentIncome,
+  withholdingAccountBase,
 } from './investmentIncome';
+import {
+  dividendMustBeReported,
+  withholdingAccountDividendsMustBeReported,
+} from './investmentReporting';
 import {
   estimateLongTermCareCategory1Premium,
   type LongTermCareCategory1TierInputs,
@@ -316,6 +321,12 @@ interface IncomeBreakdown {
   investment: InvestmentIncomeAmounts;
   /** Sum of {@link investment}'s three amounts; may be negative. */
   grossInvestmentIncome: number;
+  /**
+   * The base the 20.315% listed-share withholding rate applies to: every withholding account's
+   * {@link import("./investmentIncome").withholdingAccountBase}, plus the dividends withheld
+   * outside such an account.
+   */
+  listedWithholdingBase: number;
   /** Investment-income amounts reported under 申告分離課税, as entered. */
   reportedInvestment: ReportedInvestmentAmounts;
   /** 配当等 reported under 総合課税, as entered — the 配当所得 that joins 総所得金額. */
@@ -345,11 +356,31 @@ const calculateIncomeBreakdown = (
   let capitalGains = 0;
   let dividends = 0;
   let interest = 0;
+  let listedWithholdingBase = 0;
   let reportedCapitalGains = 0;
   let reportedQualifyingCapitalLosses = 0;
   let reportedDividends = 0;
   let aggregateDividends = 0;
   let processedBusinessIncome = false;
+
+  // 措法8条の4② makes the 申告分離課税/総合課税 election one for every reported dividend of the
+  // year, whichever entry it came from — a plain dividend or a withholding account's.
+  const addReportedDividends = (amount: number) => {
+    switch (reportedDividendsTaxation) {
+      case 'separate':
+        reportedDividends += amount;
+        break;
+      case 'aggregate':
+        // 配当所得 in 総所得金額 (所法22条②一), kept apart from reportedDividends: 措法37条の
+        // 12の2① nets a loss only against the 配当所得等 that elected 措法8条の4.
+        aggregateDividends += amount;
+        break;
+      default: {
+        const unhandled: never = reportedDividendsTaxation;
+        throw new Error(`Unhandled dividend election: ${JSON.stringify(unhandled)}`);
+      }
+    }
+  };
 
   for (const income of incomeStreams) {
     switch (income.type) {
@@ -395,24 +426,44 @@ const calculateIncomeBreakdown = (
       case 'publicPension':
         grossPublicPensionIncome += income.amount;
         break;
+      case 'withholdingAccount': {
+        if (income.dividends < 0) {
+          throw new Error('Dividends cannot be negative.');
+        }
+        if (withholdingAccountDividendsMustBeReported(income) && !income.reportsDividends) {
+          throw new Error(
+            "A reported loss that reduced this account's dividend withholding must be reported together with the dividends (措法37条の11の6⑩).",
+          );
+        }
+        // The part left to withholding: netted against each other in the account
+        // (withholdingAccountBase), the way the broker nets them before withholding.
+        const unreportedGains = income.reportsCapitalGains ? 0 : income.capitalGains;
+        const unreportedDividends = income.reportsDividends ? 0 : income.dividends;
+        capitalGains += unreportedGains;
+        dividends += unreportedDividends;
+        listedWithholdingBase += withholdingAccountBase(unreportedGains, unreportedDividends);
+        if (income.reportsCapitalGains) {
+          reportedCapitalGains += income.capitalGains;
+          // A 特定口座 is held at a licensed 金融商品取引業者, so its loss qualifies.
+          if (income.capitalGains < 0) {
+            reportedQualifyingCapitalLosses -= income.capitalGains;
+          }
+        }
+        if (income.reportsDividends) {
+          addReportedDividends(income.dividends);
+        }
+        break;
+      }
       case 'capitalGains':
         if (income.shareType !== 'listed') {
           throw new Error('Capital gains on 一般株式等 are not currently supported.');
         }
-        // Negative (譲渡損失) is expected in either bucket: see calculateWithheldInvestmentTax's
-        // in-account netting and classifyReportedInvestmentIncome's 損益通算.
-        if (!income.isReported) {
-          if (income.account !== 'specifiedWithholding') {
-            throw new Error(
-              'Only a sale in a 特定口座（源泉徴収あり）can be left off the return (措法37条の11の5).',
-            );
-          }
-          capitalGains += income.amount;
-        } else {
-          reportedCapitalGains += income.amount;
-          if (income.amount < 0 && income.account !== 'foreign') {
-            reportedQualifyingCapitalLosses -= income.amount;
-          }
+        // 措法37条の11の5① grants 申告不要 only to a 源泉徴収選択口座 (a
+        // WithholdingAccountIncomeStream), so a sale here is always reported. Negative
+        // (譲渡損失) is expected: see classifyReportedInvestmentIncome's 損益通算.
+        reportedCapitalGains += income.amount;
+        if (income.amount < 0 && income.account !== 'foreign') {
+          reportedQualifyingCapitalLosses -= income.amount;
         }
         break;
       case 'dividends':
@@ -422,24 +473,17 @@ const calculateIncomeBreakdown = (
         if (income.amount < 0) {
           throw new Error('Dividends cannot be negative.');
         }
+        if (dividendMustBeReported(income) && !income.isReported) {
+          throw new Error(
+            'A dividend paid abroad with no Japanese handler must be reported (措令4条の3②).',
+          );
+        }
         if (!income.isReported) {
           dividends += income.amount;
+          listedWithholdingBase += income.amount;
           break;
         }
-        switch (reportedDividendsTaxation) {
-          case 'separate':
-            reportedDividends += income.amount;
-            break;
-          case 'aggregate':
-            // 配当所得 in 総所得金額 (所法22条②一), kept apart from reportedDividends: 措法37条の
-            // 12の2① nets a loss only against the 配当所得等 that elected 措法8条の4.
-            aggregateDividends += income.amount;
-            break;
-          default: {
-            const unhandled: never = reportedDividendsTaxation;
-            throw new Error(`Unhandled dividend election: ${JSON.stringify(unhandled)}`);
-          }
-        }
+        addReportedDividends(income.amount);
         break;
       case 'interest':
         if (income.payerDomicile !== 'domestic') {
@@ -488,6 +532,7 @@ const calculateIncomeBreakdown = (
     grossPublicPensionIncome,
     investment,
     grossInvestmentIncome,
+    listedWithholdingBase,
     reportedInvestment,
     aggregateDividends,
   };
@@ -575,6 +620,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     grossPublicPensionIncome,
     investment,
     grossInvestmentIncome,
+    listedWithholdingBase,
     reportedInvestment,
     aggregateDividends,
   } = incomeBreakdown;
@@ -895,7 +941,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       : preCreditResidenceTax;
 
   // Calculate totals
-  const withheldInvestmentTax = calculateWithheldInvestmentTax(investment, incomeYear);
+  const withheldInvestmentTax = calculateWithheldInvestmentTax(
+    { listed: listedWithholdingBase, interest: investment.interest },
+    incomeYear,
+  );
   const totalSocialsAndTax =
     nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;
   // Take-home is what is left of the income the tax system counts. 申告不要 investment income

@@ -445,7 +445,7 @@ describe('IncomeDetailsModal - Public Pension', () => {
 });
 
 describe('IncomeDetailsModal - Investment Income', () => {
-  it('lists all three investment types in the category menu and opens the form for the chosen one', async () => {
+  it('lists all four investment types in the category menu and opens the form for the chosen one', async () => {
     const user = userEvent.setup();
     const handleStreamsChange = vi.fn();
 
@@ -464,9 +464,14 @@ describe('IncomeDetailsModal - Investment Income', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map(item => item.textContent),
-    ).toEqual(['Capital Gains (Shares)', 'Dividends', 'Interest']);
+    ).toEqual([
+      'Withholding Designated Account特定口座（源泉徴収あり）',
+      'Capital GainsOther accounts',
+      'DividendsOther accounts',
+      'Interest',
+    ]);
 
-    await user.click(within(menu).getByRole('menuitem', { name: /^dividends$/i }));
+    await user.click(within(menu).getByRole('menuitem', { name: /^dividends/i }));
     expect(screen.getByRole('heading', { name: 'Add Dividends' })).toBeInTheDocument();
 
     const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
@@ -478,6 +483,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       expect.objectContaining({
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: false,
         amount: 300000,
       }),
@@ -487,19 +493,12 @@ describe('IncomeDetailsModal - Investment Income', () => {
   it('displays the withheld-tax footer and net investment income alongside the subtotal', () => {
     const streams: IncomeStream[] = [
       {
-        id: 'g1',
-        type: 'capitalGains',
-        shareType: 'listed',
-        account: 'specifiedWithholding',
-        isReported: false,
-        amount: 1_000_000,
-      },
-      {
-        id: 'd1',
-        type: 'dividends',
-        shareType: 'listed',
-        isReported: false,
-        amount: 200_000,
+        id: 'a1',
+        type: 'withholdingAccount',
+        capitalGains: 1_000_000,
+        dividends: 200_000,
+        reportsCapitalGains: false,
+        reportsDividends: false,
       },
     ];
 
@@ -525,6 +524,111 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(screen.getByText('Investment: ¥1,200,000')).toBeInTheDocument();
   });
 
+  it("shows an account's card total, its sales/dividends caption, and its per-flag description", () => {
+    const { rerender } = render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'a1',
+            type: 'withholdingAccount',
+            capitalGains: -500_000,
+            dividends: 800_000,
+            reportsCapitalGains: false,
+            reportsDividends: false,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+    expect(screen.getByText('¥300,000')).toBeInTheDocument();
+    // Each figure is its own unbreakable span, so a narrow card breaks at the separator.
+    expect(screen.getByText('Sales -¥500,000')).toBeInTheDocument();
+    expect(screen.getByText('Dividends ¥800,000')).toBeInTheDocument();
+    expect(screen.getByText('Withheld only')).toBeInTheDocument();
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'a1',
+            type: 'withholdingAccount',
+            capitalGains: -500_000,
+            dividends: 800_000,
+            reportsCapitalGains: true,
+            reportsDividends: true,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+    expect(screen.getByText('Reported')).toBeInTheDocument();
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'a1',
+            type: 'withholdingAccount',
+            capitalGains: 500_000,
+            dividends: 0,
+            reportsCapitalGains: true,
+            reportsDividends: false,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+    expect(screen.getByText('Sales reported')).toBeInTheDocument();
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'a1',
+            type: 'withholdingAccount',
+            capitalGains: 0,
+            dividends: 300_000,
+            reportsCapitalGains: false,
+            reportsDividends: true,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+    expect(screen.getByText('Dividends reported')).toBeInTheDocument();
+  });
+
+  it('offers the reported-dividends election for an account whose dividends are reported', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'a1',
+            type: 'withholdingAccount',
+            capitalGains: 0,
+            dividends: 300_000,
+            reportsCapitalGains: false,
+            reportsDividends: true,
+          },
+        ]}
+        onStreamsChange={() => {}}
+        onReportedDividendsTaxationChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole('group', { name: 'Reported dividends' })).toBeInTheDocument();
+  });
+
   it('describes each entry by its election and account, and footers the reported total without a withheld line', () => {
     const streams: IncomeStream[] = [
       {
@@ -532,13 +636,13 @@ describe('IncomeDetailsModal - Investment Income', () => {
         type: 'capitalGains',
         shareType: 'listed',
         account: 'foreign',
-        isReported: true,
         amount: -100_000,
       },
       {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: true,
         amount: 300_000,
       },
@@ -582,6 +686,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: true,
         amount: 400_000,
       },
@@ -589,6 +694,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
         id: 'd2',
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: false,
         amount: 300_000,
       },
@@ -625,11 +731,32 @@ describe('IncomeDetailsModal - Investment Income', () => {
     const user = userEvent.setup();
     const onReportedDividendsTaxationChange = vi.fn();
     const withheldOnly: IncomeStream[] = [
-      { id: 'd1', type: 'dividends', shareType: 'listed', isReported: false, amount: 300_000 },
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: false,
+        amount: 300_000,
+      },
     ];
     const reported: IncomeStream[] = [
-      { id: 'd1', type: 'dividends', shareType: 'listed', isReported: true, amount: 300_000 },
-      { id: 'd2', type: 'dividends', shareType: 'listed', isReported: false, amount: 200_000 },
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: true,
+        amount: 300_000,
+      },
+      {
+        id: 'd2',
+        type: 'dividends',
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: false,
+        amount: 200_000,
+      },
     ];
 
     const { rerender } = render(
@@ -688,6 +815,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: true,
         amount: 1_000_000,
       },
@@ -750,6 +878,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
             id: 'd1',
             type: 'dividends',
             shareType: 'listed',
+            paymentChannel: 'domestic',
             isReported: false,
             amount: 200_000,
           },
