@@ -20,30 +20,34 @@ export const hasReportedInvestmentIncome = (amounts: ReportedInvestmentAmounts):
 export const NO_SEPARATE_NET_INCOME: SeparateNetIncome = { capitalGains: 0, dividends: 0 };
 
 /**
+ * The base a withholding account's 20.315% applies to: the broker nets the year's loss against
+ * the dividends received into the account before withholding (措法37条の11の6⑥), never below
+ * zero. Accounts do not net with each other, and the reported part of an account is settled on
+ * the return instead of here.
+ */
+export const withholdingAccountBase = (
+  unreportedCapitalGains: number,
+  unreportedDividends: number,
+): number => Math.max(0, unreportedCapitalGains + unreportedDividends);
+
+/**
  * Tax withheld at source on investment income under 申告不要 — see {@link WithheldInvestmentTax}.
  *
- * Listed-share gains and dividends are netted within a single 特定口座（源泉徴収あり）before
- * withholding: a 譲渡損 in {@link InvestmentIncomeAmounts.capitalGains} offsets
- * {@link InvestmentIncomeAmounts.dividends} for the year, as the broker does at year end
- * (措法37条の11の6). One combined account is modelled, so every 申告不要 amount nets together;
- * losses across separate accounts that are not reported do not offset each other (disclosed
- * limitation).
- *
- * {@link InvestmentIncomeAmounts.interest} is assumed non-negative, validated where the
- * amounts are gathered.
+ * `bases.listed` is the sum of every withholding account's {@link withholdingAccountBase} plus
+ * the dividends withheld outside such an account; `bases.interest` is assumed non-negative,
+ * validated where the amounts are gathered.
  */
 export const calculateWithheldInvestmentTax = (
-  amounts: InvestmentIncomeAmounts,
+  bases: { listed: number; interest: number },
   year: number,
 ): WithheldInvestmentTax => {
   const rates = getInvestmentIncomeTaxRates(year);
 
-  const listedBase = Math.max(0, amounts.capitalGains + amounts.dividends);
-  const listedNational = Math.floor(listedBase * rates.listedNationalRate);
-  const listedResidence = Math.floor(listedBase * rates.listedResidenceRate);
+  const listedNational = Math.floor(bases.listed * rates.listedNationalRate);
+  const listedResidence = Math.floor(bases.listed * rates.listedResidenceRate);
 
-  const interestNational = Math.floor(amounts.interest * rates.interestNationalRate);
-  const interestResidence = Math.floor(amounts.interest * rates.interestResidenceRate);
+  const interestNational = Math.floor(bases.interest * rates.interestNationalRate);
+  const interestResidence = Math.floor(bases.interest * rates.interestResidenceRate);
 
   const national = listedNational + interestNational;
   const residence = listedResidence + interestResidence;

@@ -2395,19 +2395,12 @@ describe('calculateTaxes with investment income streams', () => {
     const result = calculateTaxes(
       salaryInputs([
         {
-          type: 'capitalGains',
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          isReported: false,
-          amount: 1_000_000,
-          id: 'gains',
-        },
-        {
-          type: 'dividends',
-          shareType: 'listed',
-          isReported: false,
-          amount: 200_000,
-          id: 'dividends',
+          type: 'withholdingAccount',
+          capitalGains: 1_000_000,
+          dividends: 200_000,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
         },
       ]),
     );
@@ -2432,19 +2425,12 @@ describe('calculateTaxes with investment income streams', () => {
     const result = calculateTaxes(
       salaryInputs([
         {
-          type: 'capitalGains',
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          isReported: false,
-          amount: -500_000,
-          id: 'gains',
-        },
-        {
-          type: 'dividends',
-          shareType: 'listed',
-          isReported: false,
-          amount: 300_000,
-          id: 'dividends',
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 300_000,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
         },
       ]),
     );
@@ -2458,19 +2444,12 @@ describe('calculateTaxes with investment income streams', () => {
     const result = calculateTaxes(
       salaryInputs([
         {
-          type: 'capitalGains',
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          isReported: false,
-          amount: -500_000,
-          id: 'gains',
-        },
-        {
-          type: 'dividends',
-          shareType: 'listed',
-          isReported: false,
-          amount: 800_000,
-          id: 'dividends',
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 800_000,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
         },
       ]),
     );
@@ -2517,12 +2496,12 @@ describe('calculateTaxes with investment income streams', () => {
     const result = calculateTaxes(
       salaryInputs([
         {
-          type: 'capitalGains',
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          isReported: false,
-          amount: -300_000,
-          id: 'gains',
+          type: 'withholdingAccount',
+          capitalGains: -300_000,
+          dividends: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
         },
       ]),
     );
@@ -2542,6 +2521,7 @@ describe('calculateTaxes with investment income streams', () => {
         {
           type: 'dividends',
           shareType: 'listed',
+          paymentChannel: 'domestic',
           isReported: false,
           amount: 1_234_567,
           id: 'dividends',
@@ -2563,19 +2543,12 @@ describe('calculateTaxes with investment income streams', () => {
     const result = calculateTaxes(
       salaryInputs([
         {
-          type: 'capitalGains',
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          isReported: false,
-          amount: 0,
-          id: 'gains',
-        },
-        {
-          type: 'dividends',
-          shareType: 'listed',
-          isReported: false,
-          amount: 0,
-          id: 'dividends',
+          type: 'withholdingAccount',
+          capitalGains: 0,
+          dividends: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
         },
         { type: 'interest', payerDomicile: 'domestic', amount: 0, id: 'interest' },
       ]),
@@ -2592,6 +2565,7 @@ describe('calculateTaxes with investment income streams', () => {
         {
           type: 'dividends',
           shareType: 'listed',
+          paymentChannel: 'domestic',
           isReported: false,
           amount: 1_000_000,
           id: 'dividends',
@@ -2626,8 +2600,7 @@ describe('calculateTaxes with investment income streams', () => {
           {
             type: 'capitalGains',
             shareType: 'other',
-            account: 'specifiedWithholding',
-            isReported: false,
+            account: 'domesticNoWithholding',
             amount: 500_000,
             id: 'gains',
           },
@@ -2640,6 +2613,7 @@ describe('calculateTaxes with investment income streams', () => {
           {
             type: 'dividends',
             shareType: 'other',
+            paymentChannel: 'domestic',
             isReported: false,
             amount: 500_000,
             id: 'dividends',
@@ -2649,21 +2623,21 @@ describe('calculateTaxes with investment income streams', () => {
     ).toThrow(/一般株式等/);
   });
 
-  it('rejects a share sale outside a 源泉徴収あり特定口座, which cannot elect 申告不要', () => {
+  it('rejects a dividend paid abroad left off the return, which 措令4条の3② excludes from 申告不要', () => {
     expect(() =>
       calculateTaxes(
         salaryInputs([
           {
-            type: 'capitalGains',
+            type: 'dividends',
             shareType: 'listed',
-            account: 'domesticNoWithholding',
+            paymentChannel: 'abroad',
             isReported: false,
-            amount: 500_000,
-            id: 'gains',
+            amount: 1_000_000,
+            id: 'dividends',
           },
         ]),
       ),
-    ).toThrow(/特定口座/);
+    ).toThrow(/措令4条の3/);
   });
 
   it('rejects interest paid outside Japan, which is 総合課税 rather than withheld at source', () => {
@@ -2674,6 +2648,130 @@ describe('calculateTaxes with investment income streams', () => {
         ]),
       ),
     ).toThrow(/outside Japan/);
+  });
+});
+
+describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
+  // Same 5,000,000-yen employee baseline as above: 所得税 91,700, 住民税 243,100, social
+  // insurance 722,252, take-home 3,942,948.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  const account = (
+    capitalGains: number,
+    dividends: number,
+    reportsCapitalGains = false,
+    reportsDividends = false,
+    id = 'account',
+  ) => ({
+    type: 'withholdingAccount' as const,
+    id,
+    capitalGains,
+    dividends,
+    reportsCapitalGains,
+    reportsDividends,
+  });
+
+  it('does not net one account against another', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        account(-500_000, 300_000, false, false, 'a'),
+        account(0, 600_000, false, false, 'b'),
+      ]),
+    );
+
+    // base = max(0, −500,000 + 300,000) + max(0, 0 + 600,000) = 0 + 600,000 = 600,000;
+    // 600,000 × 15.315% = 91,890; 600,000 × 5% = 30,000.
+    expect(result.investmentIncome).toEqual({
+      gross: { capitalGains: -500_000, dividends: 900_000, interest: 0 },
+      grossTotal: 400_000,
+      withheld: { national: 91_890, residence: 30_000, total: 121_890 },
+    });
+    expect(result.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+    expect(result.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
+    expect(result.annualIncome).toBe(5_000_000);
+  });
+
+  it('leaves a withheld loss in the account when only the dividends are reported', () => {
+    // The migrated "does not net a withheld loss against reported dividends" case: the loss
+    // stays in the account (base max(0, −500,000) = 0), so the return taxes the 800,000 whole.
+    const result = calculateTaxes(salaryInputs([account(-500_000, 800_000, false, true)]));
+
+    expect(result.investmentIncome?.withheld).toEqual({ national: 0, residence: 0, total: 0 });
+    expect(result.investmentIncome?.reported).toMatchObject({
+      gross: { capitalGains: 0, qualifyingCapitalLosses: 0, dividends: 800_000 },
+      lossOffsetAgainstDividends: 0,
+      taxable: { capitalGains: 0, dividends: 800_000 },
+      nationalIncomeTaxBase: 120_000,
+    });
+    expect(result.annualIncome).toBe(5_800_000);
+  });
+
+  it('has to report the dividends when a reported loss reduced their withholding (措法37条の11の6⑩)', () => {
+    expect(() => calculateTaxes(salaryInputs([account(-500_000, 800_000, true, false)]))).toThrow(
+      /措法37条の11の6/,
+    );
+  });
+
+  it('nets a qualifying loss against reported dividends from the same account (損益通算)', () => {
+    // The migrated 損益通算 case.
+    const result = calculateTaxes(salaryInputs([account(-500_000, 800_000, true, true)]));
+
+    expect(result.investmentIncome?.reported).toEqual({
+      gross: { capitalGains: -500_000, qualifyingCapitalLosses: 500_000, dividends: 800_000 },
+      lossOffsetAgainstDividends: 500_000,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 0, dividends: 300_000 },
+      taxable: { capitalGains: 0, dividends: 300_000 },
+      nationalIncomeTaxBase: 45_000,
+    });
+    expect(result.annualIncome).toBe(5_300_000);
+    // 89,850 + 45,000 = 134,850 × 1.021 = 137,681.85 → 137,600; 住民税 243,100 + (9,000 + 6,000) =
+    // 258,100.
+    expect(result.nationalIncomeTax).toBe(137_600);
+    expect(result.residenceTax.totalResidenceTax).toBe(258_100);
+    expect(result.takeHomeIncome).toBe(5_300_000 - 137_600 - 258_100 - 722_252);
+  });
+
+  it('reports a gain alone, leaving the dividends withheld', () => {
+    const result = calculateTaxes(salaryInputs([account(1_000_000, 200_000, true, false)]));
+
+    expect(result.investmentIncome?.reported?.taxable).toEqual({
+      capitalGains: 1_000_000,
+      dividends: 0,
+    });
+    expect(result.investmentIncome?.gross).toEqual({
+      capitalGains: 0,
+      dividends: 200_000,
+      interest: 0,
+    });
+    // 89,850 + 15% of 1,000,000 (150,000) = 239,850; × 1.021 = 244,886.85 → 244,800.
+    expect(result.nationalIncomeTax).toBe(244_800);
+    // 243,100 + 3%/2% of 1,000,000 (30,000 + 20,000) = 293,100.
+    expect(result.residenceTax.totalResidenceTax).toBe(293_100);
+    // base = 200,000; national = 30,630; residence = 10,000.
+    expect(result.investmentIncome?.withheld).toEqual({
+      national: 30_630,
+      residence: 10_000,
+      total: 40_630,
+    });
+    expect(result.annualIncome).toBe(6_000_000);
+    expect(result.takeHomeIncome).toBe(4_739_848);
   });
 });
 
@@ -2701,19 +2799,19 @@ describe('calculateTaxes with investment income reported under 申告分離課�
   const reportedDividends = (amount: number, id = 'dividends') => ({
     type: 'dividends' as const,
     shareType: 'listed' as const,
+    paymentChannel: 'domestic' as const,
     isReported: true as const,
     amount,
     id,
   });
   const reportedGains = (
     amount: number,
-    account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign',
+    account: 'domesticNoWithholding' | 'foreign',
     id = 'gains',
   ) => ({
     type: 'capitalGains' as const,
     shareType: 'listed' as const,
     account,
-    isReported: true as const,
     amount,
     id,
   });
@@ -2756,6 +2854,17 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     // 6,000,000 − 244,800 − 293,100 − 722,252.
     expect(result.investmentIncome?.withheld).toEqual({ national: 0, residence: 0, total: 0 });
     expect(result.takeHomeIncome).toBe(4_739_848);
+  });
+
+  it('taxes a dividend paid abroad the same way once it is reported', () => {
+    // 措令4条の3② excludes a dividend paid abroad from 申告不要, but says nothing about how a
+    // reported one is taxed once it is on the return.
+    const result = calculateTaxes(
+      salaryInputs([{ ...reportedDividends(1_000_000), paymentChannel: 'abroad' as const }]),
+    );
+
+    expect(result.nationalIncomeTax).toBe(244_800);
+    expect(result.residenceTax.totalResidenceTax).toBe(293_100);
   });
 
   it('taxes a reported capital gain the same way, in its own class', () => {
@@ -2968,37 +3077,25 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     expect(reported.nationalIncomeTax).toBe(941_400);
   });
 
-  it('nets a qualifying loss against reported dividends (損益通算)', () => {
-    // −500,000 from a 特定口座 and 800,000 of dividends: the whole loss is 上場株式等に係る譲渡損失
-    // の金額 (措法37条の12の2②一) and offsets the dividends (①) down to 300,000.
-    const result = calculateTaxes(
-      salaryInputs([reportedGains(-500_000, 'specifiedWithholding'), reportedDividends(800_000)]),
-    );
-
-    expect(result.investmentIncome?.reported).toEqual({
-      gross: { capitalGains: -500_000, qualifyingCapitalLosses: 500_000, dividends: 800_000 },
-      lossOffsetAgainstDividends: 500_000,
-      unabsorbedQualifyingLoss: 0,
-      nonQualifyingLoss: 0,
-      netIncome: { capitalGains: 0, dividends: 300_000 },
-      taxable: { capitalGains: 0, dividends: 300_000 },
-      nationalIncomeTaxBase: 45_000,
-    });
-    expect(result.annualIncome).toBe(5_300_000);
-    expect(result.totalNetIncome).toBe(3_860_000);
-    // 89,850 + 45,000 = 134,850 × 1.021 = 137,681 → 137,600; 住民税 144,420 + 9,000 − 1,500 →
-    // 151,900 and 96,280 + 6,000 − 1,000 → 101,200, plus 5,000 = 258,100.
-    expect(result.nationalIncomeTax).toBe(137_600);
-    expect(result.residenceTax.totalResidenceTax).toBe(258_100);
-    expect(result.takeHomeIncome).toBe(5_300_000 - 137_600 - 258_100 - 722_252);
-  });
+  // The single-account loss/dividends 損益通算 cases (both reported, and a withheld loss beside
+  // reported dividends) moved to 'calculateTaxes with a 特定口座（源泉徴収あり）' above, since a
+  // 特定口座 is now its own entry type.
 
   it('leaves a loss the dividends cannot absorb unused, changing no assessed figure', () => {
-    // −500,000 and 300,000 of dividends: 300,000 offsets, the other 200,000 would carry forward
-    // (措法37条の12の2⑤), which is not modelled.
+    // −500,000 and 300,000 of dividends in one account, both reported: 300,000 offsets, the
+    // other 200,000 would carry forward (措法37条の12の2⑤), which is not modelled.
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
-      salaryInputs([reportedGains(-500_000, 'specifiedWithholding'), reportedDividends(300_000)]),
+      salaryInputs([
+        {
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 300_000,
+          reportsCapitalGains: true,
+          reportsDividends: true,
+          id: 'account',
+        },
+      ]),
     );
 
     expect(result.investmentIncome?.reported).toMatchObject({
@@ -3013,26 +3110,6 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     // The income on the return is 200,000 lower, and so is take-home.
     expect(result.annualIncome).toBe(4_800_000);
     expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 200_000);
-  });
-
-  it('does not net a withheld loss against reported dividends, nor the reverse', () => {
-    // A −500,000 loss left in its 特定口座 under 申告不要 nets only within that account (base
-    // max(0, −500,000) = 0); the 800,000 of reported dividends are taxed whole.
-    const result = calculateTaxes(
-      salaryInputs([
-        { ...reportedGains(-500_000, 'specifiedWithholding'), isReported: false },
-        reportedDividends(800_000),
-      ]),
-    );
-
-    expect(result.investmentIncome?.withheld).toEqual({ national: 0, residence: 0, total: 0 });
-    expect(result.investmentIncome?.reported).toMatchObject({
-      gross: { capitalGains: 0, qualifyingCapitalLosses: 0, dividends: 800_000 },
-      lossOffsetAgainstDividends: 0,
-      taxable: { capitalGains: 0, dividends: 800_000 },
-      nationalIncomeTaxBase: 120_000,
-    });
-    expect(result.annualIncome).toBe(5_800_000);
   });
 
   it('caps the loss that offsets dividends at the losses realized through a Japanese account', () => {
@@ -3115,6 +3192,7 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
   const aggregateDividends = (amount: number, id = 'dividends') => ({
     type: 'dividends' as const,
     shareType: 'listed' as const,
+    paymentChannel: 'domestic' as const,
     isReported: true as const,
     amount,
     id,
@@ -3193,7 +3271,6 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'domesticNoWithholding',
-          isReported: true,
           amount: -400_000,
           id: 'gains',
         },
@@ -3228,7 +3305,6 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'domesticNoWithholding',
-          isReported: true,
           amount: 500_000,
           id: 'gains',
         },
