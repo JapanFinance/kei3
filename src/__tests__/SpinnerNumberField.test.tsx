@@ -32,6 +32,31 @@ describe('SpinnerNumberField', () => {
     expect(mockOnChange).toHaveBeenCalledWith(789000);
   });
 
+  it('does not report a change of the value prop back through onChange', () => {
+    const mockOnChange = vi.fn();
+
+    const { rerender } = render(
+      <SpinnerNumberField value={100000} onChange={mockOnChange} label="Test Amount" />,
+    );
+    rerender(<SpinnerNumberField value={250000} onChange={mockOnChange} label="Test Amount" />);
+
+    expect(screen.getByLabelText('Test Amount').getAttribute('value')).toBe('¥250,000');
+    expect(mockOnChange).not.toHaveBeenCalled();
+  });
+
+  it('still reports a value prop below min as the clamped value', () => {
+    const mockOnChange = vi.fn();
+
+    const { rerender } = render(
+      <SpinnerNumberField value={1000} onChange={mockOnChange} label="Test Amount" min={500} />,
+    );
+    rerender(
+      <SpinnerNumberField value={100} onChange={mockOnChange} label="Test Amount" min={500} />,
+    );
+
+    expect(mockOnChange).toHaveBeenCalledExactlyOnceWith(500);
+  });
+
   it('handles up and down arrow keys for increment/decrement', () => {
     const mockOnChange = vi.fn();
 

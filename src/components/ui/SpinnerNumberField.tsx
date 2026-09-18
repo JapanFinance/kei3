@@ -58,6 +58,9 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
     if (typeof min === 'number') clampedValue = Math.max(min, clampedValue);
     if (typeof max === 'number') clampedValue = Math.min(max, clampedValue);
 
+    // NumericFormat reports every change of the value prop back through onValueChange, so
+    // without this check each change from outside the field would be dispatched a second time.
+    if (clampedValue === value) return;
     onChange(clampedValue);
   };
 

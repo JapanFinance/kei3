@@ -12,7 +12,6 @@ import {
   getProviderDefinition,
   type RegionalRates,
 } from './providerRateData';
-import { EHI_SMR_BRACKETS } from './smrBrackets';
 
 /**
  * Returns the applicable regional rates for a given provider, region, year, and month.
@@ -75,80 +74,4 @@ export function getAvailableProviders(): Array<{ providerId: string; providerNam
     providerId,
     providerName: provider.providerName,
   }));
-}
-
-/**
- * Generate a premium table from a specific set of rates
- */
-export function generatePremiumTableFromRates(regionalRates: RegionalRates): Array<{
-  minIncomeInclusive: number;
-  maxIncomeExclusive: number;
-  employeePremiumNoLTC: number;
-  employeePremiumWithLTC: number;
-  fullPremiumNoLTC: number;
-  fullPremiumWithLTC: number;
-}> {
-  return EHI_SMR_BRACKETS.map(bracket => {
-    const employeePremiumNoLTC = calculateMonthlyEmployeePremium(
-      bracket.smrAmount,
-      regionalRates,
-      false,
-    );
-    const employeePremiumWithLTC = calculateMonthlyEmployeePremium(
-      bracket.smrAmount,
-      regionalRates,
-      true,
-    );
-
-    // Calculate full premiums (employee + employer)
-    const employerHealthRate =
-      regionalRates.employerHealthInsuranceRate ?? regionalRates.employeeHealthInsuranceRate;
-    const employerLTCRate =
-      regionalRates.employerLongTermCareRate ?? regionalRates.employeeLongTermCareRate;
-
-    const fullHealthPremium = Math.round(
-      bracket.smrAmount * (regionalRates.employeeHealthInsuranceRate + employerHealthRate),
-    );
-    const fullLTCPremium = Math.round(
-      bracket.smrAmount * (regionalRates.employeeLongTermCareRate + employerLTCRate),
-    );
-
-    return {
-      minIncomeInclusive: bracket.minIncomeInclusive,
-      maxIncomeExclusive: bracket.maxIncomeExclusive,
-      employeePremiumNoLTC,
-      employeePremiumWithLTC,
-      fullPremiumNoLTC: fullHealthPremium,
-      fullPremiumWithLTC: fullHealthPremium + fullLTCPremium,
-    };
-  });
-}
-
-/**
- * Generate a premium table for display purposes
- *
- * @param providerId Provider key
- * @param year Calendar year for rate lookup
- * @param month 0-indexed month for rate lookup
- * @param region Region key
- */
-export function generateHealthInsurancePremiumTable(
-  providerId: string,
-  year: number,
-  month: number,
-  region: string = 'DEFAULT',
-):
-  | Array<{
-      minIncomeInclusive: number;
-      maxIncomeExclusive: number;
-      employeePremiumNoLTC: number;
-      employeePremiumWithLTC: number;
-      fullPremiumNoLTC: number;
-      fullPremiumWithLTC: number;
-    }>
-  | undefined {
-  const regionalRates = getRegionalRatesForMonth(providerId, region, year, month);
-  if (!regionalRates) return undefined;
-
-  return generatePremiumTableFromRates(regionalRates);
 }
