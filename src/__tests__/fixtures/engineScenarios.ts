@@ -27,9 +27,9 @@ const EMPLOYEE: TakeHomeInputs = {
 };
 
 /**
- * The workloads of the engine benchmark (calculateTaxes.bench.ts) and profiler
- * (scripts/profile-engine.mjs). One iteration of a scenario runs {@link calculateTaxes} once per
- * listed input; the chart sweep lists the 11 incomes the chart calculates per input change.
+ * The workloads of the engine benchmark (calculateTaxes.bench.ts), which `npm run profile` also
+ * runs. One iteration of a scenario runs {@link calculateTaxes} once per listed input; the chart
+ * sweep lists the 11 incomes the chart calculates per input change.
  */
 export const ENGINE_SCENARIOS = {
   employee: [EMPLOYEE],

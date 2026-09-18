@@ -5,8 +5,8 @@
 // type stripping. Relative imports are written without an extension, so they are resolved to
 // the .ts file here. `import.meta.env` does not exist, so it is defined here: DEV and PROD as in
 // a production build, and MODE as the mode Vitest was started with (`--mode`), which Vitest
-// passes to its workers as process.env.MODE. Loaded by the engine benchmark
-// (vitest.bench.config.ts) and profiler (scripts/profile-engine.mjs).
+// passes to its workers as process.env.MODE. Loaded into the benchmark workers by
+// vitest.bench.config.ts.
 
 import { registerHooks } from 'node:module';
 import { extname } from 'node:path';

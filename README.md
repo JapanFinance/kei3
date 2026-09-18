@@ -75,12 +75,14 @@ Each scenario then shows a `baseline` row beside the new result. Differences of 
 within run-to-run noise. The `min` column varies least between runs; rerun when a result is in
 doubt.
 
-To see where the time goes, write a CPU profile of each scenario (or of the named ones) to
-`profiles/`, and open it in Chrome DevTools (Performance panel, "Load profile") or VS Code:
+To see where the time goes, run the benchmark under V8's CPU profiler. It writes a profile of each
+scenario's measured iterations, without the warm-up, to `profiles/<scenario>.cpuprofile`; open it
+in Chrome DevTools (Performance panel, "Load profile") or VS Code. `-t` limits the run to the
+scenarios whose names match. The timings printed in this mode include the profiler's overhead.
 
 ```bash
 npm run profile
-npm run profile -- employee chart-sweep
+npm run profile -- -t chart-sweep
 ```
 
 ### Linting
