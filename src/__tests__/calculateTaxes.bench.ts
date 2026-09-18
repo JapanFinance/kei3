@@ -9,6 +9,10 @@ import { ENGINE_SCENARIOS, runScenario } from './fixtures/engineScenarios';
 // beside the new one.
 const mode = import.meta.env.MODE;
 
+// On a fast desktop, V8 finishes optimizing calculateTaxes about 110-220 ms into each scenario,
+// too close to Tinybench's default warm-up of 250 ms.
+const OPTIONS = { warmupTime: 1000 };
+
 test.for(Object.entries(ENGINE_SCENARIOS))('%s', async ([name, inputs], { bench }) => {
   let takeHome = 0;
   const run = () => {
@@ -18,8 +22,11 @@ test.for(Object.entries(ENGINE_SCENARIOS))('%s', async ([name, inputs], { bench 
   const current =
     mode === 'baseline' ? bench(name, { writeResult: baselinePath }, run) : bench(name, run);
 
-  if (mode === 'compare') await bench.compare(current, bench.from('baseline', baselinePath));
-  else await current.run();
+  if (mode === 'compare') {
+    await bench.compare(current, bench.from('baseline', baselinePath), OPTIONS);
+  } else {
+    await current.run(OPTIONS);
+  }
 
   expect(takeHome).toBeGreaterThan(0);
 });
