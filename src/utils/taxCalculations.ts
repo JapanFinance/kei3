@@ -62,6 +62,20 @@ import {
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from './residenceTax';
 
+/** Creating and first using a formatter costs about as much as a {@link calculateTaxes} run. */
+const PREMIUM_ROUNDERS: Record<'halfTrunc' | 'halfExpand', Intl.NumberFormat> = {
+  halfTrunc: new Intl.NumberFormat('en', {
+    maximumFractionDigits: 0,
+    useGrouping: false,
+    roundingMode: 'halfTrunc',
+  }),
+  halfExpand: new Intl.NumberFormat('en', {
+    maximumFractionDigits: 0,
+    useGrouping: false,
+    roundingMode: 'halfExpand',
+  }),
+};
+
 /**
  * Rounds the premium to a nearby whole yen according to the given mode.
  * By default, it rounds using halfTrunc mode:
@@ -72,14 +86,7 @@ import {
 export const roundSocialInsurancePremium = (
   amount: number,
   mode: 'halfTrunc' | 'halfExpand' = 'halfTrunc',
-): number => {
-  const roundedAmount = new Intl.NumberFormat('en', {
-    maximumFractionDigits: 0,
-    useGrouping: false,
-    roundingMode: mode,
-  }).format(amount);
-  return Number.parseInt(roundedAmount);
-};
+): number => Number.parseInt(PREMIUM_ROUNDERS[mode].format(amount));
 
 /**
  * Composes the taxpayer's 所得金額調整控除（子ども・特別障害者等を有する者等）: the salary-based
