@@ -50,6 +50,39 @@ Run the test suite:
 npm test
 ```
 
+### Benchmarking and profiling
+
+`src/__tests__/calculateTaxes.bench.ts` times the tax calculation on the typical inputs in
+`src/__tests__/fixtures/engineScenarios.ts`. It is not part of `npm test` or CI, because timings
+on shared machines vary too much to pass or fail on. Run it on demand:
+
+```bash
+npm run bench
+```
+
+To measure a change, save a baseline from `main` and compare the branch with it on the same
+machine. The baseline is written to `bench-baseline/`, which git ignores, so it stays in place
+when switching commits:
+
+```bash
+git switch --detach origin/main
+npm run bench:baseline
+git switch -
+npm run bench:compare
+```
+
+Each scenario then shows a `baseline` row beside the new result. Differences of a few percent are
+within run-to-run noise. The `min` column varies least between runs; rerun when a result is in
+doubt.
+
+To see where the time goes, write a CPU profile of each scenario (or of the named ones) to
+`profiles/`, and open it in Chrome DevTools (Performance panel, "Load profile") or VS Code:
+
+```bash
+npm run profile
+npm run profile -- employee chart-sweep
+```
+
 ### Linting
 
 Check code quality:
