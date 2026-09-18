@@ -3,8 +3,6 @@
 
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
-import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
-import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { useTheme, alpha } from '@mui/material/styles';
@@ -14,7 +12,6 @@ import React from 'react';
 
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 
@@ -239,75 +236,6 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         }
         type="final"
       />
-
-      {/* Furusato Nozei Summary */}
-      {results.furusatoNozei.limit > 0 && (
-        <Box
-          sx={{
-            bgcolor: theme => alpha(theme.palette.secondary.main, 0.07),
-            borderRadius: 2,
-            px: 1,
-            py: 1,
-            mt: { xs: 0.5, sm: 1 },
-            mb: { xs: 0.5, sm: 1 },
-          }}
-        >
-          <Typography
-            variant="subtitle2"
-            sx={{
-              mt: { xs: 0.5, sm: 1 },
-              mb: { xs: 0.5, sm: 1 },
-              color: 'secondary.main',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: isMobile ? '1rem' : '1.1rem',
-            }}
-          >
-            <VolunteerActivismIcon
-              sx={{ mr: 1, fontSize: isMobile ? 18 : 20, color: 'secondary.main' }}
-            />
-            Furusato Nozei
-          </Typography>
-          <ResultRow
-            label={
-              <span>
-                Furusato Nozei Limit
-                {results.furusatoNozei.outOfPocketCost > 2200 && (
-                  <DetailedTooltip
-                    title="Warning: High Out-of-Pocket Cost"
-                    icon={<WarningIcon fontSize="small" />}
-                    iconSx={{ color: 'error.main' }}
-                    iconAriaLabel="Warning: High out-of-pocket cost"
-                  >
-                    <Box>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        The out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)})
-                        is higher than the expected ≈2,000 yen.
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        See the Furusato Nozei tab for details.
-                      </Typography>
-                    </Box>
-                  </DetailedTooltip>
-                )}
-              </span>
-            }
-            value={
-              <Box
-                component="span"
-                sx={{
-                  color: results.furusatoNozei.outOfPocketCost > 2200 ? 'error.main' : 'inherit',
-                  fontWeight: results.furusatoNozei.outOfPocketCost > 2200 ? 700 : 500,
-                }}
-              >
-                {formatJPY(results.furusatoNozei.limit)}
-              </Box>
-            }
-            type="subtotal"
-          />
-        </Box>
-      )}
     </Box>
   );
 };

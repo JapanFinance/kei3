@@ -163,8 +163,11 @@ function App() {
             fallback={
               <Box
                 sx={{
-                  // Matches TakeHomeResultsDisplay's natural content height at default inputs.
-                  height: { xs: 617, md: 811 },
+                  // Sized without reference to the results' content. In the single column, a
+                  // viewport of height keeps everything after it below the fold until the results
+                  // replace it, so the swap moves nothing on screen. In two columns the box
+                  // stretches to the grid row that the input form sets, as the results Paper does.
+                  minHeight: { xs: '100svh', md: 0 },
                   borderRadius: 1,
                   bgcolor: 'action.hover',
                   animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
