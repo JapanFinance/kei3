@@ -163,8 +163,11 @@ function App() {
             fallback={
               <Box
                 sx={{
-                  // Matches TakeHomeResultsDisplay's natural content height at default inputs.
-                  height: { xs: 617, md: 811 },
+                  // TakeHomeResultsDisplay's natural content height at default inputs, measured at
+                  // 412px (the Lighthouse mobile viewport) and 1280px. A minimum rather than a fixed
+                  // height so that, like the results Paper, the box stretches to the grid row, which
+                  // at md is set by the taller input form.
+                  minHeight: { xs: 531, md: 598 },
                   borderRadius: 1,
                   bgcolor: 'action.hover',
                   animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
