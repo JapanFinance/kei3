@@ -6,8 +6,16 @@ import { describe, it, expect } from 'vitest';
 import { calculateMonthlyEmployeePremium } from '../data/employeesHealthInsurance/providerRates';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../utils/healthInsuranceCalculator';
 import { calculatePensionBonusBreakdown } from '../utils/pensionCalculator';
+import { roundSocialInsurancePremium } from '../utils/taxCalculations';
 
 describe('Social Insurance Rounding', () => {
+  describe('roundSocialInsurancePremium', () => {
+    it('rounds 0.50 yen down by default and up in halfExpand mode', () => {
+      expect(roundSocialInsurancePremium(91.5)).toBe(91);
+      expect(roundSocialInsurancePremium(91.5, 'halfExpand')).toBe(92);
+    });
+  });
+
   describe('Pension Bonus Rounding', () => {
     it('rounds 0.50 yen down (halfTrunc)', () => {
       // Rate is 18.3%. Half is 9.15%.
