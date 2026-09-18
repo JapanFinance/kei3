@@ -49,6 +49,10 @@ export const formatPercent = (rate: number, decimals: number = 3) => {
   return formatter.format(rate);
 };
 
+// Date#toLocaleString with options builds a new formatter on every call, so build each one once.
+const monthShortFormat = new Intl.DateTimeFormat('en', { month: 'short' });
+const monthLongFormat = new Intl.DateTimeFormat('en', { month: 'long' });
+
 /**
  * Format a zero-based month index (0 = January) as its short English name.
  *
@@ -61,7 +65,7 @@ export const formatPercent = (rate: number, decimals: number = 3) => {
  * month's length (e.g. the 31st with February), so avoid that pattern here.
  */
 export const formatMonthShort = (monthIndex: number): string =>
-  new Date(2000, monthIndex, 1).toLocaleString('en', { month: 'short' });
+  monthShortFormat.format(new Date(2000, monthIndex, 1));
 
 /**
  * Format a zero-based month index (0 = January) as its full English name.
@@ -75,4 +79,4 @@ export const formatMonthShort = (monthIndex: number): string =>
  * month's length (e.g. the 31st with February), so avoid that pattern here.
  */
 export const formatMonthLong = (monthIndex: number): string =>
-  new Date(2000, monthIndex, 1).toLocaleString('en', { month: 'long' });
+  monthLongFormat.format(new Date(2000, monthIndex, 1));
