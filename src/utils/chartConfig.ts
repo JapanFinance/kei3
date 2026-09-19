@@ -338,6 +338,7 @@ export const getChartOptions = (
   currentIncome: number,
   medianIncome: number,
   useCompactLabelFormat: boolean = false,
+  animate: boolean = true,
 ): ChartOptions<'bar' | 'line'> => {
   const maxIncome = chartRange.max;
   const minIncome = chartRange.min;
@@ -353,6 +354,7 @@ export const getChartOptions = (
   return {
     responsive: true,
     maintainAspectRatio: false,
+    ...(animate ? {} : { animation: false as const }),
     interaction: {
       mode: 'index' as const,
       intersect: false,
