@@ -10,9 +10,20 @@ import { roundSocialInsurancePremium } from '../utils/taxCalculations';
 
 describe('Social Insurance Rounding', () => {
   describe('roundSocialInsurancePremium', () => {
-    it('rounds 0.50 yen down by default and up in halfExpand mode', () => {
+    it('rounds 0.50 yen down and more than 0.50 yen up', () => {
       expect(roundSocialInsurancePremium(91.5)).toBe(91);
-      expect(roundSocialInsurancePremium(91.5, 'halfExpand')).toBe(92);
+      expect(roundSocialInsurancePremium(91.50000000000001)).toBe(92);
+    });
+
+    it('rounds amounts below 0.50 yen to positive zero', () => {
+      expect(roundSocialInsurancePremium(0)).toBe(0);
+      expect(roundSocialInsurancePremium(0.3)).toBe(0);
+    });
+
+    it('throws for a negative or NaN amount', () => {
+      expect(() => roundSocialInsurancePremium(-0.3)).toThrow('must be non-negative');
+      expect(() => roundSocialInsurancePremium(-500)).toThrow('must be non-negative');
+      expect(() => roundSocialInsurancePremium(Number.NaN)).toThrow('must be non-negative');
     });
   });
 

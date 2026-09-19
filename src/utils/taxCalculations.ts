@@ -62,31 +62,22 @@ import {
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from './residenceTax';
 
-/** Creating and first using a formatter costs about as much as a {@link calculateTaxes} run. */
-const PREMIUM_ROUNDERS: Record<'halfTrunc' | 'halfExpand', Intl.NumberFormat> = {
-  halfTrunc: new Intl.NumberFormat('en', {
-    maximumFractionDigits: 0,
-    useGrouping: false,
-    roundingMode: 'halfTrunc',
-  }),
-  halfExpand: new Intl.NumberFormat('en', {
-    maximumFractionDigits: 0,
-    useGrouping: false,
-    roundingMode: 'halfExpand',
-  }),
-};
-
 /**
- * Rounds the premium to a nearby whole yen according to the given mode.
- * By default, it rounds using halfTrunc mode:
+ * Rounds a premium to whole yen by the rule for a premium deducted from pay:
  * - 0.50 yen or less rounds down
  * - more than 0.50 yen rounds up
+ *
+ * Throws if the amount is negative or NaN, since no premium can be.
  * @see https://www.nenkin.go.jp/service/kounen/hokenryo/nofu/20121026.html
  */
-export const roundSocialInsurancePremium = (
-  amount: number,
-  mode: 'halfTrunc' | 'halfExpand' = 'halfTrunc',
-): number => Number.parseInt(PREMIUM_ROUNDERS[mode].format(amount));
+export const roundSocialInsurancePremium = (amount: number): number => {
+  // Negated so that NaN, which fails every comparison, is rejected too.
+  if (!(amount >= 0)) {
+    throw new Error(`Premium amount must be non-negative: ${amount}`);
+  }
+  const yen = Math.floor(amount);
+  return amount - yen > 0.5 ? yen + 1 : yen;
+};
 
 /**
  * Composes the taxpayer's 所得金額調整控除（子ども・特別障害者等を有する者等）: the salary-based
