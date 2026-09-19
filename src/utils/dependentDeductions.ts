@@ -916,8 +916,6 @@ export function calculateDependentDeductions(
     }
   }
 
-  // Stored rather than computed by a getter: V8 keeps an object literal that defines a getter
-  // in dictionary mode and creates a new getter function on every call.
   results.nationalTax.total = sumDeductions(results.nationalTax);
   results.residenceTax.total = sumDeductions(results.residenceTax);
   return results;
