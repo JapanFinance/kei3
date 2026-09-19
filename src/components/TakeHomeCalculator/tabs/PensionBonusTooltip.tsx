@@ -8,6 +8,7 @@ import React from 'react';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import {
   EMPLOYEES_PENSION_RATE,
+  EMPLOYEES_PENSION_RATE_SCALE,
   type PensionBonusBreakdownItem,
 } from '../../../utils/pensionCalculator';
 
@@ -17,7 +18,7 @@ interface PensionBonusTooltipProps {
 
 const PensionBonusTooltip: React.FC<PensionBonusTooltipProps> = ({ breakdown }) => {
   // Employee share is half
-  const employeeRate = EMPLOYEES_PENSION_RATE / 2;
+  const employeeRate = EMPLOYEES_PENSION_RATE / (2 * EMPLOYEES_PENSION_RATE_SCALE);
 
   return (
     <>

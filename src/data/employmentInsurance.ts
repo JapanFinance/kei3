@@ -11,9 +11,15 @@
 export interface EmploymentInsuranceRatePeriod {
   /** The date from which this rate applies (inclusive). Month is 0-indexed (0=Jan, 3=Apr). */
   effectiveFrom: { year: number; month: number };
-  /** Employee premium rate as a decimal (e.g., 0.005 for 0.50%) */
+  /** Employee premium rate, an integer over {@link EMPLOYMENT_INSURANCE_RATE_SCALE} */
   rate: number;
 }
+
+/**
+ * Employment insurance rates are integers over this scale (55 is 5.5/1,000), so that a premium,
+ * a whole-yen wage times a rate, is an exact integer product.
+ */
+export const EMPLOYMENT_INSURANCE_RATE_SCALE = 10_000;
 
 /**
  * Time-series of employment insurance rates, sorted newest-first.
@@ -22,14 +28,22 @@ export interface EmploymentInsuranceRatePeriod {
 export const EMPLOYMENT_INSURANCE_RATES: EmploymentInsuranceRatePeriod[] = [
   // FY2026 (令和8年度): April 2026 – March 2027
   // source: https://www.mhlw.go.jp/content/001672589.pdf
-  { effectiveFrom: { year: 2026, month: 3 }, rate: 0.005 }, // 5/1,000
+  { effectiveFrom: { year: 2026, month: 3 }, rate: 50 }, // 5/1,000
 
   // FY2025 (令和7年度): April 2025 – March 2026
   // source: https://www.mhlw.go.jp/content/001401966.pdf
-  { effectiveFrom: { year: 2025, month: 3 }, rate: 0.0055 }, // 5.5/1,000
+  { effectiveFrom: { year: 2025, month: 3 }, rate: 55 }, // 5.5/1,000
 ];
 
 if (import.meta.env.DEV) {
+  for (let i = 0; i < EMPLOYMENT_INSURANCE_RATES.length; i++) {
+    const { effectiveFrom, rate } = EMPLOYMENT_INSURANCE_RATES[i]!;
+    if (!(Number.isSafeInteger(rate) && rate >= 0)) {
+      throw new Error(
+        `EMPLOYMENT_INSURANCE_RATES entry ${i} (${effectiveFrom.year}-${effectiveFrom.month}) must have a non-negative integer rate over EMPLOYMENT_INSURANCE_RATE_SCALE, but has ${rate}`,
+      );
+    }
+  }
   // Validate that the rates are sorted newest-first
   for (let i = 1; i < EMPLOYMENT_INSURANCE_RATES.length; i++) {
     const prev = EMPLOYMENT_INSURANCE_RATES[i - 1]!.effectiveFrom;
@@ -43,7 +57,8 @@ if (import.meta.env.DEV) {
 }
 
 /**
- * Returns the applicable employment insurance rate for a given calendar year and month.
+ * Returns the applicable employment insurance rate for a given calendar year and month, an
+ * integer over {@link EMPLOYMENT_INSURANCE_RATE_SCALE}.
  * Finds the most recent rate entry whose effective date is on or before the given date.
  *
  * @param year Calendar year
