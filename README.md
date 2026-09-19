@@ -53,8 +53,10 @@ npm test
 ### Benchmarking and profiling
 
 `src/__tests__/calculateTaxes.bench.ts` times the tax calculation on the typical inputs in
-`src/__tests__/fixtures/engineScenarios.ts`. It is not part of `npm test` or CI, because timings
-on shared machines vary too much to pass or fail on. Run it on demand:
+`src/__tests__/fixtures/engineScenarios.ts`. Each scenario runs in a new Node process, so the
+code that V8 optimizes for one scenario cannot change the timings of another. The benchmark is
+not part of `npm test` or CI, because timings on shared machines vary too much to pass or fail
+on. Run it on demand:
 
 ```bash
 npm run bench
