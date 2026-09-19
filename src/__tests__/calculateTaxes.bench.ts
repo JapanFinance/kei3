@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { expect, test } from 'vitest';
+import { expect, inject, test } from 'vitest';
 
 import { ENGINE_SCENARIOS, runScenario } from './fixtures/engineScenarios';
 
@@ -13,7 +13,11 @@ const mode = import.meta.env.MODE;
 // too close to Tinybench's default warm-up of 250 ms.
 const OPTIONS = { warmupTime: 1000 };
 
-test.for(Object.entries(ENGINE_SCENARIOS))('%s', async ([name, inputs], { bench }) => {
+// vitest.bench.config.ts runs this file once per scenario, each time in a new process.
+const name = inject('scenario');
+
+test(name, async ({ bench }) => {
+  const inputs = ENGINE_SCENARIOS[name];
   let takeHome = 0;
   const run = () => {
     takeHome += runScenario(inputs);

@@ -6,6 +6,7 @@ import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../../types/heal
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, type TakeHomeInputs } from '../../types/tax';
 import { scaleIncomeStreamsToIncome } from '../../utils/chartConfig';
 import { calculateTaxes } from '../../utils/taxCalculations';
+import type { EngineScenarioName } from './engineScenarioNames';
 
 const NO_INCOME: DependentIncome = {
   grossEmploymentIncome: 0,
@@ -84,7 +85,7 @@ export const ENGINE_SCENARIOS = {
     ...EMPLOYEE,
     incomeStreams: scaleIncomeStreamsToIncome(EMPLOYEE.incomeStreams, i * 1_000_000),
   })),
-} satisfies Record<string, TakeHomeInputs[]>;
+} satisfies Record<EngineScenarioName, TakeHomeInputs[]>;
 
 /**
  * Runs {@link calculateTaxes} on every input of a scenario and returns the summed take-home
