@@ -67,10 +67,14 @@ import {
  * - 0.50 yen or less rounds down
  * - more than 0.50 yen rounds up
  *
- * The amount must not be negative.
+ * Throws if the amount is negative or NaN, since no premium can be.
  * @see https://www.nenkin.go.jp/service/kounen/hokenryo/nofu/20121026.html
  */
 export const roundSocialInsurancePremium = (amount: number): number => {
+  // Negated so that NaN, which fails every comparison, is rejected too.
+  if (!(amount >= 0)) {
+    throw new Error(`Premium amount must be non-negative: ${amount}`);
+  }
   const yen = Math.floor(amount);
   return amount - yen > 0.5 ? yen + 1 : yen;
 };

@@ -19,6 +19,12 @@ describe('Social Insurance Rounding', () => {
       expect(roundSocialInsurancePremium(0)).toBe(0);
       expect(roundSocialInsurancePremium(0.3)).toBe(0);
     });
+
+    it('throws for a negative or NaN amount', () => {
+      expect(() => roundSocialInsurancePremium(-0.3)).toThrow('must be non-negative');
+      expect(() => roundSocialInsurancePremium(-500)).toThrow('must be non-negative');
+      expect(() => roundSocialInsurancePremium(Number.NaN)).toThrow('must be non-negative');
+    });
   });
 
   describe('Pension Bonus Rounding', () => {
