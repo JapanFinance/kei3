@@ -487,7 +487,7 @@ describe('Dependent Coverage', () => {
 });
 
 describe('Custom Provider', () => {
-  const customRates = { healthRate: 5, ltcRate: 1 }; // 5% and 1%
+  const customRates = { healthInsuranceRate: 5, longTermCareRate: 1 }; // 5% and 1%
 
   // Annual income 5,000,000 / 12 = 416,666.67. SMR: 410,000円
   // Employee No LTC: 410,000 * 0.05 = 20,500
@@ -673,12 +673,12 @@ describe('calculateHealthInsuranceBreakdown with bonuses', () => {
 
 describe('calculateHealthInsuranceBonusBreakdown details', () => {
   // Using Kyokai Kenpo (Tokyo) rates for testing
-  // Health Rate: 9.91% -> Employee: 4.955% (0.04955)
-  // LTC Rate: 1.59% -> Employee: 0.795% (0.00795)
+  // Health Rate: 9.91% -> Employee: 4.955%
+  // LTC Rate: 1.59% -> Employee: 0.795%
 
   const rates = {
-    employeeHealthInsuranceRate: 0.04955,
-    employeeLongTermCareRate: 0.00795,
+    employeeHealthInsuranceRate: 4_955,
+    employeeLongTermCareRate: 795,
   };
 
   it('returns correct breakdown for single bonus below cap', () => {

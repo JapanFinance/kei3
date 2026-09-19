@@ -9,7 +9,7 @@ import type { TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 // Mock the provider data (time-series structure: regions map to arrays of rate periods)
-vi.mock('../data/employeesHealthInsurance/providerRateData', () => {
+vi.mock('../data/employeesHealthInsurance/providerRateData', async importOriginal => {
   const PROVIDER_DEFINITIONS = {
     KyokaiKenpo: {
       providerName: 'Kyokai Kenpo',
@@ -18,10 +18,10 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', () => {
           {
             effectiveFrom: { year: 2025, month: 3 },
             rates: {
-              employeeHealthInsuranceRate: 0.05,
-              employerHealthInsuranceRate: 0.06,
-              employeeLongTermCareRate: 0.01,
-              employerLongTermCareRate: 0.01,
+              employeeHealthInsuranceRate: 5_000,
+              employerHealthInsuranceRate: 6_000,
+              employeeLongTermCareRate: 1_000,
+              employerLongTermCareRate: 1_000,
             },
           },
         ],
@@ -34,8 +34,8 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', () => {
           {
             effectiveFrom: { year: 2025, month: 3 },
             rates: {
-              employeeHealthInsuranceRate: 0.04,
-              employeeLongTermCareRate: 0.01,
+              employeeHealthInsuranceRate: 4_000,
+              employeeLongTermCareRate: 1_000,
             },
           },
         ],
@@ -43,6 +43,7 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', () => {
     },
   };
   return {
+    ...(await importOriginal<typeof import('../data/employeesHealthInsurance/providerRateData')>()),
     PROVIDER_DEFINITIONS,
     getProviderDefinition: (id: string) =>
       PROVIDER_DEFINITIONS[id as keyof typeof PROVIDER_DEFINITIONS],
@@ -50,18 +51,19 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', () => {
 });
 
 // Mock the rate lookup to use the mocked data
-vi.mock('../data/employeesHealthInsurance/providerRates', () => ({
+vi.mock('../data/employeesHealthInsurance/providerRates', async importOriginal => ({
+  ...(await importOriginal<typeof import('../data/employeesHealthInsurance/providerRates')>()),
   getRegionalRatesForMonth: (providerId: string) => {
     const providers: Record<string, Record<string, unknown>> = {
       KyokaiKenpo: {
-        employeeHealthInsuranceRate: 0.05,
-        employerHealthInsuranceRate: 0.06,
-        employeeLongTermCareRate: 0.01,
-        employerLongTermCareRate: 0.01,
+        employeeHealthInsuranceRate: 5_000,
+        employerHealthInsuranceRate: 6_000,
+        employeeLongTermCareRate: 1_000,
+        employerLongTermCareRate: 1_000,
       },
       TestProviderNoEmployerRate: {
-        employeeHealthInsuranceRate: 0.04,
-        employeeLongTermCareRate: 0.01,
+        employeeHealthInsuranceRate: 4_000,
+        employeeLongTermCareRate: 1_000,
       },
     };
     return providers[providerId];
@@ -102,5 +104,40 @@ describe('HealthInsuranceBonusTooltip', () => {
     render(<HealthInsuranceBonusTooltip inputs={customInputs} />);
 
     expect(screen.getByText(/The employer also contributes separately./)).toBeInTheDocument();
+  });
+
+  const breakdown = [
+    {
+      month: 6,
+      bonusAmount: 1_000_000,
+      standardBonusAmount: 1_000_000,
+      cumulativeStandardBonus: 1_000_000,
+      premium: 60_000,
+      includesLongTermCare: true,
+    },
+  ];
+
+  test('shows the rate of a provider as a percentage', () => {
+    render(
+      <HealthInsuranceBonusTooltip
+        inputs={{ ...mockInputs, ageRange: 'age40to59' }}
+        breakdown={breakdown}
+      />,
+    );
+
+    expect(screen.getByText('6.0%')).toBeInTheDocument();
+  });
+
+  test('shows the custom rate as a percentage', () => {
+    const customInputs: TakeHomeInputs = {
+      ...mockInputs,
+      healthInsuranceProvider: CUSTOM_PROVIDER_ID,
+      customEHIRates: { healthInsuranceRate: 3.505, longTermCareRate: 1.2 },
+      ageRange: 'age40to59',
+    };
+
+    render(<HealthInsuranceBonusTooltip inputs={customInputs} breakdown={breakdown} />);
+
+    expect(screen.getByText('4.705%')).toBeInTheDocument();
   });
 });

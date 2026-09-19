@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../constants/taxThresholds';
-import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
+import {
+  EMPLOYMENT_INSURANCE_RATE_SCALE,
+  getEmploymentInsuranceRate,
+} from '../data/employmentInsurance';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
@@ -63,20 +66,28 @@ import {
 } from './residenceTax';
 
 /**
- * Rounds a premium to whole yen by the rule for a premium deducted from pay:
+ * Rounds a premium of `units / scale` yen to whole yen by the rule for a premium deducted from
+ * pay:
  * - 0.50 yen or less rounds down
  * - more than 0.50 yen rounds up
  *
- * Throws if the amount is negative or NaN, since no premium can be.
+ * The premium is passed as a numerator and a denominator because a rate such as 5.075% has no
+ * exact binary fraction: a whole-yen amount times a rate that is an integer over `scale` is an
+ * exact integer product, so a premium of exactly x.50 yen is seen as a tie and rounded down.
+ * The result is exact whenever `units` is an integer below 2^53.
+ *
+ * Throws if `units` is negative, NaN or infinite, since no premium can be.
  * @see https://www.nenkin.go.jp/service/kounen/hokenryo/nofu/20121026.html
  */
-export const roundSocialInsurancePremium = (amount: number): number => {
+export const roundSocialInsurancePremium = (units: number, scale: number): number => {
   // Negated so that NaN, which fails every comparison, is rejected too.
-  if (!(amount >= 0)) {
-    throw new Error(`Premium amount must be non-negative: ${amount}`);
+  if (!(units >= 0 && units < Infinity)) {
+    throw new Error(`Premium amount must be non-negative and finite: ${units}`);
   }
-  const yen = Math.floor(amount);
-  return amount - yen > 0.5 ? yen + 1 : yen;
+  // The division rounds, but it can round up to the next integer only when the fraction is
+  // above 0.50; the remainder is then not positive, and yen is still the rounded premium.
+  const yen = Math.floor(units / scale);
+  return 2 * (units - yen * scale) > scale ? yen + 1 : yen;
 };
 
 /**
@@ -132,6 +143,28 @@ export interface EmploymentInsuranceBreakdown {
 }
 
 /**
+ * The employee's employment insurance premium on one month's wage, which is modelled as one
+ * twelfth of the annual wage. The division by 12 is part of the scale, so the product stays
+ * exact for a whole-yen annual wage.
+ *
+ * @param rate An integer over {@link EMPLOYMENT_INSURANCE_RATE_SCALE}
+ */
+export const calculateMonthlyEmploymentInsurancePremium = (
+  annualWage: number,
+  rate: number,
+): number => roundSocialInsurancePremium(annualWage * rate, 12 * EMPLOYMENT_INSURANCE_RATE_SCALE);
+
+/**
+ * The employee's employment insurance premium on a bonus.
+ *
+ * @param rate An integer over {@link EMPLOYMENT_INSURANCE_RATE_SCALE}
+ */
+export const calculateBonusEmploymentInsurancePremium = (
+  bonusAmount: number,
+  rate: number,
+): number => roundSocialInsurancePremium(bonusAmount * rate, EMPLOYMENT_INSURANCE_RATE_SCALE);
+
+/**
  * Calculates employment insurance premiums breakdown based on income.
  * The rate may vary by month within a calendar year (fiscal year changes in April).
  */
@@ -150,17 +183,16 @@ const calculateEmploymentInsuranceBreakdown = (
 
   // Calculate on regular monthly salary — each month may have a different rate
   if (salaryIncome > 0) {
-    const monthlySalary = salaryIncome / 12;
     for (let month = 0; month < 12; month++) {
       const rate = getEmploymentInsuranceRate(year, month);
-      annualPremium += roundSocialInsurancePremium(monthlySalary * rate);
+      annualPremium += calculateMonthlyEmploymentInsurancePremium(salaryIncome, rate);
     }
   }
 
   // Calculate on bonuses — use the rate for the month the bonus is paid
   for (const bonus of bonuses) {
     const rate = getEmploymentInsuranceRate(year, bonus.month);
-    const bonusPremium = roundSocialInsurancePremium(bonus.amount * rate);
+    const bonusPremium = calculateBonusEmploymentInsurancePremium(bonus.amount, rate);
 
     bonusPortion += bonusPremium;
     annualPremium += bonusPremium;
@@ -533,12 +565,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         inputs.healthInsuranceProvider,
         incomeYear,
         inputs.region,
-        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates
-          ? {
-              healthRate: inputs.customEHIRates.healthInsuranceRate,
-              ltcRate: inputs.customEHIRates.longTermCareRate,
-            }
-          : undefined,
+        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? inputs.customEHIRates : undefined,
         bonusIncome,
       );
       healthInsurance = hiResult.total;

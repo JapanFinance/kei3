@@ -5,8 +5,15 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
-import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
-import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
+import {
+  HEALTH_INSURANCE_RATE_SCALE,
+  getProviderDefinition,
+} from '../../../data/employeesHealthInsurance/providerRateData';
+import {
+  getCustomProviderRates,
+  getEmployeePremiumRate,
+  getRegionalRatesForMonth,
+} from '../../../data/employeesHealthInsurance/providerRates';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
@@ -49,14 +56,11 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
 
   // Look up the applicable rate for a given bonus month
   const getRateForMonth = (month: number): number => {
-    if (provider === CUSTOM_PROVIDER_ID) {
-      let rate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
-      if (includeLTC) rate += (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
-      return rate;
-    }
-    const rates = getRegionalRatesForMonth(provider, region, year, month);
-    if (!rates) return 0;
-    return rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
+    const rates =
+      provider === CUSTOM_PROVIDER_ID
+        ? getCustomProviderRates(inputs.customEHIRates)
+        : getRegionalRatesForMonth(provider, region, year, month);
+    return rates ? getEmployeePremiumRate(rates, includeLTC) : 0;
   };
 
   return (
@@ -105,7 +109,9 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                       </Box>
                     )}
                   </td>
-                  <td>{formatPercent(getRateForMonth(item.month))}</td>
+                  <td>
+                    {formatPercent(getRateForMonth(item.month) / HEALTH_INSURANCE_RATE_SCALE)}
+                  </td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
                 </tr>
               ))}
