@@ -175,4 +175,5 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
   );
 };
 
-export default TakeHomeResultsDisplay;
+// App's urgent render passes the previous results unchanged; memo lets it skip this panel.
+export default React.memo(TakeHomeResultsDisplay);
