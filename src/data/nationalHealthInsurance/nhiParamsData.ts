@@ -1151,6 +1151,53 @@ export function getNHIParamsForMonth(
   return periods[periods.length - 1]!.params;
 }
 
+/** The {@link NationalHealthInsuranceRegionParams} fields that enter the premium calculation. */
+export type NHIParamsField = {
+  [K in keyof NationalHealthInsuranceRegionParams]-?: NonNullable<
+    NationalHealthInsuranceRegionParams[K]
+  > extends number
+    ? K
+    : never;
+}[keyof NationalHealthInsuranceRegionParams];
+
+const ALL_NHI_PARAMS_FIELDS = Object.keys({
+  medicalRate: true,
+  supportRate: true,
+  ltcRateForEligible: true,
+  medicalPerCapita: true,
+  supportPerCapita: true,
+  ltcPerCapitaForEligible: true,
+  medicalHouseholdFlat: true,
+  supportHouseholdFlat: true,
+  ltcHouseholdFlatForEligible: true,
+  medicalCap: true,
+  supportCap: true,
+  ltcCapForEligible: true,
+  childSupportRate: true,
+  childSupportPerCapita: true,
+  childSupportHouseholdFlat: true,
+  childSupportCap: true,
+  nhiStandardDeduction: true,
+} satisfies Record<NHIParamsField, true>) as NHIParamsField[];
+
+/**
+ * Whether two sets of NHI parameters give different premiums, which decides whether a calendar
+ * year blends its two fiscal years. A missing field counts as 0, as it does in the calculation.
+ *
+ * @param fields The fields to compare; every field that enters the calculation by default.
+ */
+export function nhiParamsDiffer(
+  a: NationalHealthInsuranceRegionParams,
+  b: NationalHealthInsuranceRegionParams,
+  fields: readonly NHIParamsField[] = ALL_NHI_PARAMS_FIELDS,
+): boolean {
+  if (a === b) return false;
+  for (const field of fields) {
+    if ((a[field] ?? 0) !== (b[field] ?? 0)) return true;
+  }
+  return false;
+}
+
 /**
  * Exported list of available region keys for National Health Insurance.
  */

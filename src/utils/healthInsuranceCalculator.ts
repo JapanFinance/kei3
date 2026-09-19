@@ -7,7 +7,10 @@ import {
 } from '../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+import {
+  getNHIParamsForMonth,
+  nhiParamsDiffer,
+} from '../data/nationalHealthInsurance/nhiParamsData';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type {
   ProviderRegion,
@@ -390,30 +393,7 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
 
   // If both fiscal years have the same params (no rate change), use single calculation
   // to avoid rounding artifacts from the blending arithmetic.
-  if (!prevFYParams || prevFYParams === currFYParams) {
-    return calculateNationalHealthInsurancePremiumBreakdown(
-      annualIncome,
-      isSubjectToLongTermCarePremium,
-      currFYParams,
-    );
-  }
-
-  // Check if the params are actually different by comparing key rate fields
-  const paramsMatch =
-    prevFYParams.medicalRate === currFYParams.medicalRate &&
-    prevFYParams.supportRate === currFYParams.supportRate &&
-    prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
-    prevFYParams.supportPerCapita === currFYParams.supportPerCapita &&
-    prevFYParams.medicalCap === currFYParams.medicalCap &&
-    prevFYParams.supportCap === currFYParams.supportCap &&
-    prevFYParams.ltcRateForEligible === currFYParams.ltcRateForEligible &&
-    prevFYParams.ltcPerCapitaForEligible === currFYParams.ltcPerCapitaForEligible &&
-    prevFYParams.ltcCapForEligible === currFYParams.ltcCapForEligible &&
-    prevFYParams.childSupportRate === currFYParams.childSupportRate &&
-    prevFYParams.childSupportPerCapita === currFYParams.childSupportPerCapita &&
-    prevFYParams.childSupportCap === currFYParams.childSupportCap;
-
-  if (paramsMatch) {
+  if (!prevFYParams || !nhiParamsDiffer(prevFYParams, currFYParams)) {
     return calculateNationalHealthInsurancePremiumBreakdown(
       annualIncome,
       isSubjectToLongTermCarePremium,
