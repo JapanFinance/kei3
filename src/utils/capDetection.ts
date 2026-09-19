@@ -3,7 +3,10 @@
 
 import { getRegionalRatesForMonth } from '../data/employeesHealthInsurance/providerRates';
 import { EHI_SMR_BRACKETS } from '../data/employeesHealthInsurance/smrBrackets';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+import {
+  getNHIParamsForMonth,
+  nhiParamsDiffer,
+} from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
@@ -171,6 +174,8 @@ function checkHealthInsuranceCap(
         return { capped: false };
       }
 
+      const blended = prevFYParams !== undefined && nhiParamsDiffer(prevFYParams, currFYParams);
+
       // Helper: check if a portion is capped in both FYs.
       // For portions that didn't exist in the previous FY (e.g., child support),
       // the prev FY contribution is always 0 and trivially "capped".
@@ -179,7 +184,7 @@ function checkHealthInsuranceCap(
         prevCap: number | undefined,
         currCap: number,
       ): boolean => {
-        if (!prevFYParams || prevFYParams === currFYParams) {
+        if (!blended) {
           // No blending — single FY, just compare against current cap
           return portionAmount === currCap;
         }
