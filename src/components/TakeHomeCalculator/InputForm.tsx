@@ -27,6 +27,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useState } from 'react';
 import type { Dispatch } from 'react';
 
+import { HEALTH_INSURANCE_RATE_PERCENT_DECIMALS } from '../../data/employeesHealthInsurance/providerRateData';
 import {
   availableProvidersFor,
   regionOptionsFor,
@@ -697,6 +698,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       prefix=""
                       suffix="%"
                       max={100}
+                      decimalScale={HEALTH_INSURANCE_RATE_PERCENT_DECIMALS}
                       sx={sharedInputSx}
                     />
                   </FormControl>
@@ -720,6 +722,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       prefix=""
                       suffix="%"
                       max={100}
+                      decimalScale={HEALTH_INSURANCE_RATE_PERCENT_DECIMALS}
                       sx={sharedInputSx}
                     />
                   </FormControl>

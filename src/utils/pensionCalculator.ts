@@ -9,10 +9,16 @@ import { roundSocialInsurancePremium } from './taxCalculations';
 export type { StandardMonthlyRemunerationBracket };
 
 /**
+ * {@link EMPLOYEES_PENSION_RATE} is an integer over this scale, so that a premium, a whole-yen
+ * amount times the rate, is an exact integer product.
+ */
+export const EMPLOYEES_PENSION_RATE_SCALE = 1_000;
+
+/**
  * Employees' pension insurance rate (厚生年金保険料率)
  * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
  */
-export const EMPLOYEES_PENSION_RATE = 0.183; // 18.3%
+export const EMPLOYEES_PENSION_RATE = 183; // 18.3%
 
 /**
  * Employees' pension insurance SMR brackets
@@ -67,6 +73,19 @@ export function findPensionBracket(monthlyIncome: number): StandardMonthlyRemune
 }
 
 /**
+ * The employees' pension premium on a standard monthly remuneration or standard bonus amount:
+ * the half amount (折半額) that the employee pays, or the full amount (全額).
+ */
+export const calculateEmployeesPensionPremium = (
+  standardAmount: number,
+  isHalfAmount: boolean = true,
+): number =>
+  roundSocialInsurancePremium(
+    standardAmount * EMPLOYEES_PENSION_RATE,
+    (isHalfAmount ? 2 : 1) * EMPLOYEES_PENSION_RATE_SCALE,
+  );
+
+/**
  * Breakdown of Pension premium components
  */
 export interface PensionBreakdown {
@@ -95,8 +114,7 @@ export function calculatePensionBreakdown(
   // negative income.
   const bracket = findPensionBracket(monthlyIncome);
 
-  const fullPremium = bracket.smrAmount * EMPLOYEES_PENSION_RATE;
-  const monthlyAmount = roundSocialInsurancePremium(isHalfAmount ? fullPremium / 2 : fullPremium);
+  const monthlyAmount = calculateEmployeesPensionPremium(bracket.smrAmount, isHalfAmount);
 
   let totalPremium = monthlyAmount * 12;
   let bonusPortion = 0;
@@ -133,7 +151,6 @@ export function calculatePensionBonusBreakdown(
     return [];
   }
 
-  const effectiveRate = isHalfAmount ? EMPLOYEES_PENSION_RATE / 2 : EMPLOYEES_PENSION_RATE;
   const breakdown: PensionBonusBreakdownItem[] = [];
 
   // Group bonuses by month (0-11)
@@ -153,7 +170,7 @@ export function calculatePensionBonusBreakdown(
     const standardBonusAmount = Math.min(roundedBonusAmount, 1_500_000);
 
     // 3. Calculate premium
-    const premium = roundSocialInsurancePremium(standardBonusAmount * effectiveRate);
+    const premium = calculateEmployeesPensionPremium(standardBonusAmount, isHalfAmount);
 
     breakdown.push({
       month,

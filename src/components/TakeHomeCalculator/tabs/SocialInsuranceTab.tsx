@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
+import { getCustomProviderRates } from '../../../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -105,13 +106,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     const region = inputs.region;
 
     if (provider === CUSTOM_PROVIDER_ID) {
-      const rates = {
-        employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
-        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100,
-      };
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
-        rates,
+        getCustomProviderRates(inputs.customEHIRates),
         includeLTC,
         inputs.incomeYear,
       );
@@ -642,7 +639,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             type="indented"
             labelSuffix={
               <SalaryBreakdownTooltip
-                monthlyIncome={rawMonthlyRemuneration}
+                annualWage={results.salaryIncome + (results.commutingAllowance ?? 0)}
                 year={inputs.incomeYear}
               />
             }

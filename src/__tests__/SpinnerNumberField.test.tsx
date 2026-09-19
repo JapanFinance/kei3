@@ -159,4 +159,23 @@ describe('SpinnerNumberField', () => {
     // Should have inputMode="numeric" attribute for mobile keyboards
     expect(input).toHaveAttribute('inputmode', 'numeric');
   });
+
+  it('drops decimal places beyond decimalScale', () => {
+    const mockOnChange = vi.fn();
+
+    render(
+      <SpinnerNumberField
+        value={0}
+        onChange={mockOnChange}
+        label="Rate"
+        prefix=""
+        suffix="%"
+        decimalScale={3}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '5.0755%' } });
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(5.075);
+  });
 });

@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
-  calculateMonthlyEmployeePremium,
+  calculateEmployeeHealthInsurancePremium,
+  getCustomProviderRates,
   getRegionalRatesForMonth,
+  type EmployeeRates,
 } from '../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
@@ -21,8 +23,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
-import type { BonusIncomeStream } from '../types/tax';
-import { roundSocialInsurancePremium } from './taxCalculations';
+import type { BonusIncomeStream, CustomEmployeesHealthInsuranceRates } from '../types/tax';
 
 /**
  * Breakdown of National Health Insurance premium components
@@ -52,7 +53,7 @@ export function calculateHealthInsuranceBreakdown(
   provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-  customRates?: { healthRate: number; ltcRate: number },
+  customRates?: CustomEmployeesHealthInsuranceRates,
   bonuses: BonusIncomeStream[] = [],
 ): HealthInsuranceBreakdown {
   if (annualIncome < 0) {
@@ -85,15 +86,10 @@ export function calculateHealthInsuranceBreakdown(
         // Fallback if custom rates are missing but provider is custom
         return { total: 0, bonusPortion: 0 };
       }
-      const staticRates = {
-        employeeHealthInsuranceRate: customRates.healthRate / 100,
-        employeeLongTermCareRate: customRates.ltcRate / 100,
-        employerHealthInsuranceRate: 0,
-        employerLongTermCareRate: 0,
-      };
+      const staticRates = getCustomProviderRates(customRates);
 
       // Custom rates don't vary by month
-      const monthlyPremium = calculateMonthlyEmployeePremium(
+      const monthlyPremium = calculateEmployeeHealthInsurancePremium(
         smrBracket.smrAmount,
         staticRates,
         isSubjectToLongTermCarePremium,
@@ -120,7 +116,7 @@ export function calculateHealthInsuranceBreakdown(
     for (let month = 0; month < 12; month++) {
       const monthRates = getRegionalRatesForMonth(provider, region, year, month);
       if (monthRates) {
-        totalPremium += calculateMonthlyEmployeePremium(
+        totalPremium += calculateEmployeeHealthInsurancePremium(
           smrBracket.smrAmount,
           monthRates,
           isSubjectToLongTermCarePremium,
@@ -174,9 +170,7 @@ export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
  */
 export function calculateEmployeesHealthInsuranceBonusBreakdown(
   bonuses: BonusIncomeStream[],
-  providerOrRates:
-    | string
-    | { employeeHealthInsuranceRate: number; employeeLongTermCareRate: number },
+  providerOrRates: string | EmployeeRates,
   regionOrLTC: string | boolean,
   year: number,
   isSubjectToLongTermCarePremium?: boolean,
@@ -226,9 +220,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
       continue;
     }
 
-    const rate =
-      rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
-    const premium = roundSocialInsurancePremium(standardBonusAmount * rate);
+    const premium = calculateEmployeeHealthInsurancePremium(standardBonusAmount, rates, includeLTC);
 
     breakdown.push({
       month: bonus.month,
@@ -261,7 +253,7 @@ export function calculateHealthInsurancePremium(
   provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-  customRates?: { healthRate: number; ltcRate: number },
+  customRates?: CustomEmployeesHealthInsuranceRates,
   bonuses: BonusIncomeStream[] = [],
 ): number {
   return calculateHealthInsuranceBreakdown(

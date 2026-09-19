@@ -4,10 +4,16 @@
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
-import { getEmploymentInsuranceRate } from '../../../data/employmentInsurance';
+import {
+  EMPLOYMENT_INSURANCE_RATE_SCALE,
+  getEmploymentInsuranceRate,
+} from '../../../data/employmentInsurance';
 import type { BonusIncomeStream } from '../../../types/tax';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
-import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
+import {
+  calculateBonusEmploymentInsurancePremium,
+  calculateMonthlyEmploymentInsurancePremium,
+} from '../../../utils/taxCalculations';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
 const cellStyle = { padding: '2px 8px 2px 0' } as const;
@@ -29,15 +35,16 @@ const totalStyle = {
 };
 
 interface SalaryTooltipProps {
-  monthlyIncome: number;
+  /** Salary and commuting allowance over the year; each month's wage is one twelfth of it. */
+  annualWage: number;
   /** Income year whose fiscal-year rates to display. */
   year: number;
 }
 
-const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ monthlyIncome, year }) => {
+const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ annualWage, year }) => {
   const months = Array.from({ length: 12 }, (_, month) => {
     const rate = getEmploymentInsuranceRate(year, month);
-    const premium = roundSocialInsurancePremium(monthlyIncome * rate);
+    const premium = calculateMonthlyEmploymentInsurancePremium(annualWage, rate);
     return { month, rate, premium };
   });
 
@@ -61,8 +68,10 @@ const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ monthlyIncome, y
           {months.map(({ month, rate, premium }) => (
             <tr key={month}>
               <td style={cellStyle}>{formatMonthShort(month)}</td>
-              <td style={rightCellStyle}>{formatJPY(Math.round(monthlyIncome))}</td>
-              <td style={rightCellStyle}>{formatPercent(rate, 2)}</td>
+              <td style={rightCellStyle}>{formatJPY(Math.round(annualWage / 12))}</td>
+              <td style={rightCellStyle}>
+                {formatPercent(rate / EMPLOYMENT_INSURANCE_RATE_SCALE, 2)}
+              </td>
               <td style={rightCellStyle}>{formatJPY(premium)}</td>
             </tr>
           ))}
@@ -87,7 +96,7 @@ interface BonusTooltipProps {
 const BonusBreakdownTooltip: React.FC<BonusTooltipProps> = ({ bonuses, year }) => {
   const rows = bonuses.map(bonus => {
     const rate = getEmploymentInsuranceRate(year, bonus.month);
-    const premium = roundSocialInsurancePremium(bonus.amount * rate);
+    const premium = calculateBonusEmploymentInsurancePremium(bonus.amount, rate);
     return { month: bonus.month, amount: bonus.amount, rate, premium };
   });
 
@@ -112,7 +121,9 @@ const BonusBreakdownTooltip: React.FC<BonusTooltipProps> = ({ bonuses, year }) =
             <tr key={i}>
               <td style={cellStyle}>{formatMonthShort(month)}</td>
               <td style={rightCellStyle}>{formatJPY(amount)}</td>
-              <td style={rightCellStyle}>{formatPercent(rate, 2)}</td>
+              <td style={rightCellStyle}>
+                {formatPercent(rate / EMPLOYMENT_INSURANCE_RATE_SCALE, 2)}
+              </td>
               <td style={rightCellStyle}>{formatJPY(premium)}</td>
             </tr>
           ))}

@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-19
+
+### Fixed
+
+- Fixed employee health insurance premiums that were ¥1 too high for some rates from April 2026. A premium that ends in exactly 0.50 yen is rounded down (50銭以下切り捨て), but the calculation, done in binary floating point, could come out slightly above 0.50 yen and round up. For example, Kyokai Kenpo Kanagawa's 5.075% of a ¥150,000 standard monthly remuneration is exactly ¥7,612.50, which now rounds to ¥7,612 instead of ¥7,613. Premiums on bonuses were affected in the same way. Custom provider rates now accept at most three decimal places (for example, 5.075%).
+
 ## 2026-09-10
 
 ### Updated

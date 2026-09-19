@@ -6,8 +6,17 @@ import { alpha } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
-import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
-import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
+import {
+  HEALTH_INSURANCE_RATE_SCALE,
+  getProviderDefinition,
+} from '../../../data/employeesHealthInsurance/providerRateData';
+import {
+  calculateEmployeeHealthInsurancePremium,
+  getCustomProviderRates,
+  getEmployeePremiumRate,
+  getRegionalRatesForMonth,
+  type EmployeeRates,
+} from '../../../data/employeesHealthInsurance/providerRates';
 import {
   EHI_SMR_BRACKETS,
   type StandardMonthlyRemunerationBracket,
@@ -23,7 +32,6 @@ import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import { monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
-import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 import SMRTableTooltip from './SMRTableTooltip';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
@@ -451,16 +459,14 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     );
   } else {
     // Employee Health Insurance
-    let employeeRate = 0;
-    let employeeLtcRate = 0;
+    let rates: EmployeeRates = { employeeHealthInsuranceRate: 0, employeeLongTermCareRate: 0 };
     let sourceUrl;
     let providerLabel;
 
     const year = inputs.incomeYear;
 
     if (provider === CUSTOM_PROVIDER_ID) {
-      employeeRate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
-      employeeLtcRate = (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
+      rates = getCustomProviderRates(inputs.customEHIRates);
       // For custom provider, we don't know the employer rate, so we leave it undefined.
       providerLabel = 'Custom Provider';
     } else {
@@ -469,16 +475,19 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       const providerDef = getProviderDefinition(provider);
 
       if (regionalRates) {
-        employeeRate = regionalRates.employeeHealthInsuranceRate;
-        employeeLtcRate = regionalRates.employeeLongTermCareRate;
+        rates = regionalRates;
         sourceUrl = regionalRates.source || providerDef?.defaultSource;
         providerLabel = `${providerDef!.providerName}${region === DEFAULT_PROVIDER_REGION ? '' : ` (${region})`}`;
       }
     }
 
     const includeLTC: boolean = isLongTermCareCategory2Insured(inputs.ageRange);
-    const finalRate = employeeRate + (includeLTC ? employeeLtcRate : 0);
-    const totalPremium = roundSocialInsurancePremium(standardMonthlyRemuneration * finalRate);
+    const finalRate = getEmployeePremiumRate(rates, includeLTC);
+    const totalPremium = calculateEmployeeHealthInsurancePremium(
+      standardMonthlyRemuneration,
+      rates,
+      includeLTC,
+    );
 
     // Check if rates differ across the 12 months of the year
     const monthlyRates: { rate: number; premium: number }[] = [];
@@ -488,10 +497,12 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       for (let m = 0; m < 12; m++) {
         const monthRates = getRegionalRatesForMonth(provider, region, year, m);
         if (monthRates) {
-          const r =
-            monthRates.employeeHealthInsuranceRate +
-            (includeLTC ? monthRates.employeeLongTermCareRate : 0);
-          const p = roundSocialInsurancePremium(standardMonthlyRemuneration * r);
+          const r = getEmployeePremiumRate(monthRates, includeLTC);
+          const p = calculateEmployeeHealthInsurancePremium(
+            standardMonthlyRemuneration,
+            monthRates,
+            includeLTC,
+          );
           monthlyRates.push({ rate: r, premium: p });
           if (m > 0 && r !== monthlyRates[0]!.rate) ratesVary = true;
         }
@@ -676,7 +687,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                             <tr key={idx}>
                               <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>
                               <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
-                                {formatPercent(g.rate)}
+                                {formatPercent(g.rate / HEALTH_INSURANCE_RATE_SCALE)}
                               </td>
                               <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
                                 {formatJPY(g.premium)}
@@ -737,7 +748,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
                     ×
                   </Box>
-                  {formatPercent(finalRate)}
+                  {formatPercent(finalRate / HEALTH_INSURANCE_RATE_SCALE)}
                   <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
                     =
                   </Box>
@@ -752,8 +763,9 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
         {includeLTC && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: -0.5 }}>
-            Rate breakdown: Health {formatPercent(employeeRate)} + LTC{' '}
-            {formatPercent(employeeLtcRate)}
+            Rate breakdown: Health{' '}
+            {formatPercent(rates.employeeHealthInsuranceRate / HEALTH_INSURANCE_RATE_SCALE)} + LTC{' '}
+            {formatPercent(rates.employeeLongTermCareRate / HEALTH_INSURANCE_RATE_SCALE)}
           </Typography>
         )}
 
