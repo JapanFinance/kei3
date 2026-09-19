@@ -516,23 +516,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       );
       healthInsurance = latterStageBreakdown.total;
     } else if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
-      const hiResult = calculateHealthInsuranceBreakdown(
-        netIncome,
-        subjectToLongTermCarePremium,
-        inputs.healthInsuranceProvider,
-        incomeYear,
-        inputs.region,
-      );
-      healthInsurance = hiResult.total;
-      healthInsuranceOnBonus = hiResult.bonusPortion;
-
-      // For NHI breakdown, also use net income
       nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
         netIncome,
         subjectToLongTermCarePremium,
         incomeYear,
         inputs.region,
       );
+      healthInsurance = nhiBreakdown.total;
     } else {
       // Employee Health Insurance
       // For Employee Health Insurance, the premiums are based on standard monthly remuneration,

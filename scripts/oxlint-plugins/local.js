@@ -74,10 +74,40 @@ const noJsxUnicodeEscape = {
   },
 };
 
+/**
+ * Flags getters and setters in object literals. V8 builds an object literal from a template in
+ * which the accessor's name is a plain property, and defining the accessor over that property
+ * converts the object to dictionary mode (a hash table) every time the literal is evaluated.
+ * Reads and writes of its properties are then hash lookups, and every evaluation also creates new
+ * accessor functions. Class accessors are not affected: the prototype holds them once.
+ */
+const noObjectLiteralAccessor = {
+  meta: {
+    type: 'suggestion',
+    docs: {
+      description:
+        'Disallow getters and setters in object literals, which V8 stores as dictionaries.',
+    },
+  },
+  create(context) {
+    return {
+      Property(node) {
+        if (node.kind !== 'get' && node.kind !== 'set') return;
+        context.report({
+          node,
+          message:
+            'A getter or setter in an object literal makes V8 store the object as a hash table each time the literal is evaluated. Store the value as a data property, or define the accessor in a class.',
+        });
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: 'local' },
   rules: {
     'license-header': licenseHeader,
     'no-jsx-unicode-escape': noJsxUnicodeEscape,
+    'no-object-literal-accessor': noObjectLiteralAccessor,
   },
 };
