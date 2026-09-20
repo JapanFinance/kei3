@@ -483,8 +483,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     const finalRate = getEmployeePremiumRate(rates, includeLTC);
     const totalPremium = calculateEmployeeHealthInsurancePremium(
       standardMonthlyRemuneration,
-      rates,
-      includeLTC,
+      finalRate,
     );
 
     // Check if rates differ across the 12 months of the year
@@ -496,11 +495,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         const monthRates = getRegionalRatesForMonth(provider, region, year, m);
         if (monthRates) {
           const r = getEmployeePremiumRate(monthRates, includeLTC);
-          const p = calculateEmployeeHealthInsurancePremium(
-            standardMonthlyRemuneration,
-            monthRates,
-            includeLTC,
-          );
+          const p = calculateEmployeeHealthInsurancePremium(standardMonthlyRemuneration, r);
           monthlyRates.push({ rate: r, premium: p });
           if (m > 0 && !r.equals(monthlyRates[0]!.rate)) ratesVary = true;
         }
