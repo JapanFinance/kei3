@@ -13,7 +13,6 @@ import { monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   EMPLOYEES_PENSION_BRACKETS,
   EMPLOYEES_PENSION_RATE,
-  EMPLOYEES_PENSION_RATE_SCALE,
   calculateEmployeesPensionPremium,
   type StandardMonthlyRemunerationBracket,
 } from '../../../utils/pensionCalculator';
@@ -72,7 +71,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
     return baseSummary;
   };
 
-  const employeeRate = EMPLOYEES_PENSION_RATE / (2 * EMPLOYEES_PENSION_RATE_SCALE);
+  const employeeRate = EMPLOYEES_PENSION_RATE.toFraction() / 2;
   const totalPremium = calculateEmployeesPensionPremium(standardMonthlyRemuneration);
 
   return (

@@ -7,18 +7,15 @@
  */
 
 import type { CustomEmployeesHealthInsuranceRates } from '../../types/tax';
-import { roundSocialInsurancePremium } from '../../utils/taxCalculations';
+import type { PremiumRate } from '../premiumRate';
 import {
-  HEALTH_INSURANCE_RATE_SCALE,
   PROVIDER_DEFINITIONS,
   getProviderDefinition,
+  percent,
   type RegionalRates,
 } from './providerRateData';
 
-/**
- * The rates that an employee's premium is calculated with, as integers over
- * {@link HEALTH_INSURANCE_RATE_SCALE}.
- */
+/** The rates that an employee's premium is calculated with. */
 export type EmployeeRates = Pick<
   RegionalRates,
   'employeeHealthInsuranceRate' | 'employeeLongTermCareRate'
@@ -56,30 +53,30 @@ export function getRegionalRatesForMonth(
 }
 
 /**
- * The custom provider's employee rates, from the percentages entered in the form, rounded to
- * whole units of 1/{@link HEALTH_INSURANCE_RATE_SCALE} (the form accepts no finer percentages).
- * Missing rates count as 0%, as the form shows them.
+ * The custom provider's employee rates, from the percentages entered in the form. A percentage
+ * finer than the rate scale is rounded to it, which the form does not allow but other callers
+ * could. Missing rates count as 0%, as the form shows them.
  */
 export function getCustomProviderRates(
   customRates: CustomEmployeesHealthInsuranceRates | undefined,
 ): EmployeeRates {
-  const unitsPerPercent = HEALTH_INSURANCE_RATE_SCALE / 100;
   return {
-    employeeHealthInsuranceRate: Math.round(
-      (customRates?.healthInsuranceRate ?? 0) * unitsPerPercent,
-    ),
-    employeeLongTermCareRate: Math.round((customRates?.longTermCareRate ?? 0) * unitsPerPercent),
+    employeeHealthInsuranceRate: percent.rounded(customRates?.healthInsuranceRate ?? 0),
+    employeeLongTermCareRate: percent.rounded(customRates?.longTermCareRate ?? 0),
   };
 }
 
 /**
  * The employee's premium rate: health insurance, plus long-term care for a Category 2 insured
- * person (ages 40-64). An integer over {@link HEALTH_INSURANCE_RATE_SCALE}.
+ * person (ages 40-64).
  */
-export function getEmployeePremiumRate(rates: EmployeeRates, includeLongTermCare: boolean): number {
-  return (
-    rates.employeeHealthInsuranceRate + (includeLongTermCare ? rates.employeeLongTermCareRate : 0)
-  );
+export function getEmployeePremiumRate(
+  rates: EmployeeRates,
+  includeLongTermCare: boolean,
+): PremiumRate {
+  return includeLongTermCare
+    ? rates.employeeHealthInsuranceRate.plus(rates.employeeLongTermCareRate)
+    : rates.employeeHealthInsuranceRate;
 }
 
 /**
@@ -90,10 +87,7 @@ export function calculateEmployeeHealthInsurancePremium(
   rates: EmployeeRates,
   includeLongTermCare: boolean,
 ): number {
-  return roundSocialInsurancePremium(
-    standardAmount * getEmployeePremiumRate(rates, includeLongTermCare),
-    HEALTH_INSURANCE_RATE_SCALE,
-  );
+  return getEmployeePremiumRate(rates, includeLongTermCare).premiumOn(standardAmount);
 }
 
 /**

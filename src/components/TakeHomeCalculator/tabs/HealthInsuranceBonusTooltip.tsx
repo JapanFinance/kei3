@@ -6,14 +6,15 @@ import Typography from '@mui/material/Typography';
 import React from 'react';
 
 import {
-  HEALTH_INSURANCE_RATE_SCALE,
   getProviderDefinition,
+  percent,
 } from '../../../data/employeesHealthInsurance/providerRateData';
 import {
   getCustomProviderRates,
   getEmployeePremiumRate,
   getRegionalRatesForMonth,
 } from '../../../data/employeesHealthInsurance/providerRates';
+import type { PremiumRate } from '../../../data/premiumRate';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
@@ -55,12 +56,12 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   }
 
   // Look up the applicable rate for a given bonus month
-  const getRateForMonth = (month: number): number => {
+  const getRateForMonth = (month: number): PremiumRate => {
     const rates =
       provider === CUSTOM_PROVIDER_ID
         ? getCustomProviderRates(inputs.customEHIRates)
         : getRegionalRatesForMonth(provider, region, year, month);
-    return rates ? getEmployeePremiumRate(rates, includeLTC) : 0;
+    return rates ? getEmployeePremiumRate(rates, includeLTC) : percent(0);
   };
 
   return (
@@ -109,9 +110,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                       </Box>
                     )}
                   </td>
-                  <td>
-                    {formatPercent(getRateForMonth(item.month) / HEALTH_INSURANCE_RATE_SCALE)}
-                  </td>
+                  <td>{formatPercent(getRateForMonth(item.month).toFraction())}</td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
                 </tr>
               ))}

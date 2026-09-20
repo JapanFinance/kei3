@@ -3,17 +3,13 @@
 
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
-import { perMilleOf } from '../data/rateUnits';
+import { perMilleOf } from '../data/premiumRate';
 import type { BonusIncomeStream } from '../types/tax';
-import { roundSocialInsurancePremium } from './taxCalculations';
 
 export type { StandardMonthlyRemunerationBracket };
 
-/**
- * {@link EMPLOYEES_PENSION_RATE} is an integer over this scale, so that a premium, a whole-yen
- * amount times the rate, is an exact integer product.
- */
-export const EMPLOYEES_PENSION_RATE_SCALE = 1_000;
+/** The unit the employees' pension rate is held in: 1/1,000, as the statute writes it. */
+const EMPLOYEES_PENSION_RATE_SCALE = 1_000;
 
 /** The employees' pension rate as the statute writes it: perMille(183) is 1000分の183. */
 const perMille = perMilleOf(EMPLOYEES_PENSION_RATE_SCALE);
@@ -83,11 +79,7 @@ export function findPensionBracket(monthlyIncome: number): StandardMonthlyRemune
 export const calculateEmployeesPensionPremium = (
   standardAmount: number,
   isHalfAmount: boolean = true,
-): number =>
-  roundSocialInsurancePremium(
-    standardAmount * EMPLOYEES_PENSION_RATE,
-    (isHalfAmount ? 2 : 1) * EMPLOYEES_PENSION_RATE_SCALE,
-  );
+): number => EMPLOYEES_PENSION_RATE.premiumOn(standardAmount, isHalfAmount ? 2 : 1);
 
 /**
  * Breakdown of Pension premium components

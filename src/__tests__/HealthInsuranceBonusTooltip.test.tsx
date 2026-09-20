@@ -10,6 +10,8 @@ import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 // Mock the provider data (time-series structure: regions map to arrays of rate periods)
 vi.mock('../data/employeesHealthInsurance/providerRateData', async importOriginal => {
+  const { percentOf } = await import('../data/premiumRate');
+  const percent = percentOf(1_000_000);
   const PROVIDER_DEFINITIONS = {
     KyokaiKenpo: {
       providerName: 'Kyokai Kenpo',
@@ -18,10 +20,10 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', async importOrigina
           {
             effectiveFrom: { year: 2025, month: 3 },
             rates: {
-              employeeHealthInsuranceRate: 50_000,
-              employerHealthInsuranceRate: 60_000,
-              employeeLongTermCareRate: 10_000,
-              employerLongTermCareRate: 10_000,
+              employeeHealthInsuranceRate: percent(5),
+              employerHealthInsuranceRate: percent(6),
+              employeeLongTermCareRate: percent(1),
+              employerLongTermCareRate: percent(1),
             },
           },
         ],
@@ -34,8 +36,8 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', async importOrigina
           {
             effectiveFrom: { year: 2025, month: 3 },
             rates: {
-              employeeHealthInsuranceRate: 40_000,
-              employeeLongTermCareRate: 10_000,
+              employeeHealthInsuranceRate: percent(4),
+              employeeLongTermCareRate: percent(1),
             },
           },
         ],
@@ -51,24 +53,28 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', async importOrigina
 });
 
 // Mock the rate lookup to use the mocked data
-vi.mock('../data/employeesHealthInsurance/providerRates', async importOriginal => ({
-  ...(await importOriginal<typeof import('../data/employeesHealthInsurance/providerRates')>()),
-  getRegionalRatesForMonth: (providerId: string) => {
-    const providers: Record<string, Record<string, unknown>> = {
-      KyokaiKenpo: {
-        employeeHealthInsuranceRate: 50_000,
-        employerHealthInsuranceRate: 60_000,
-        employeeLongTermCareRate: 10_000,
-        employerLongTermCareRate: 10_000,
-      },
-      TestProviderNoEmployerRate: {
-        employeeHealthInsuranceRate: 40_000,
-        employeeLongTermCareRate: 10_000,
-      },
-    };
-    return providers[providerId];
-  },
-}));
+vi.mock('../data/employeesHealthInsurance/providerRates', async importOriginal => {
+  const { percentOf } = await import('../data/premiumRate');
+  const percent = percentOf(1_000_000);
+  return {
+    ...(await importOriginal<typeof import('../data/employeesHealthInsurance/providerRates')>()),
+    getRegionalRatesForMonth: (providerId: string) => {
+      const providers: Record<string, Record<string, unknown>> = {
+        KyokaiKenpo: {
+          employeeHealthInsuranceRate: percent(5),
+          employerHealthInsuranceRate: percent(6),
+          employeeLongTermCareRate: percent(1),
+          employerLongTermCareRate: percent(1),
+        },
+        TestProviderNoEmployerRate: {
+          employeeHealthInsuranceRate: percent(4),
+          employeeLongTermCareRate: percent(1),
+        },
+      };
+      return providers[providerId];
+    },
+  };
+});
 
 describe('HealthInsuranceBonusTooltip', () => {
   const mockInputs: TakeHomeInputs = {

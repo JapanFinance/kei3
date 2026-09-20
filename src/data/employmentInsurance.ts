@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { perMilleOf } from './rateUnits';
+import { perMilleOf, type PremiumRate } from './premiumRate';
 
 /**
  * Employment insurance (雇用保険) premium rates for general businesses (一般の事業).
@@ -13,18 +13,15 @@ import { perMilleOf } from './rateUnits';
 export interface EmploymentInsuranceRatePeriod {
   /** The date from which this rate applies (inclusive). Month is 0-indexed (0=Jan, 3=Apr). */
   effectiveFrom: { year: number; month: number };
-  /** Employee premium rate, an integer over {@link EMPLOYMENT_INSURANCE_RATE_SCALE} */
-  rate: number;
+  /** Employee premium rate */
+  rate: PremiumRate;
 }
 
-/**
- * Employment insurance rates are integers over this scale (55 is 5.5/1,000), so that a premium,
- * a whole-yen wage times a rate, is an exact integer product.
- */
-export const EMPLOYMENT_INSURANCE_RATE_SCALE = 10_000;
+/** The unit an employment insurance rate is held in: 1/10,000, that is 0.1/1,000. */
+const EMPLOYMENT_INSURANCE_RATE_SCALE = 10_000;
 
 /** An employment insurance rate as the MHLW publishes it: perMille(5.5) is 5.5/1,000. */
-const perMille = perMilleOf(EMPLOYMENT_INSURANCE_RATE_SCALE);
+export const perMille = perMilleOf(EMPLOYMENT_INSURANCE_RATE_SCALE);
 
 /**
  * Time-series of employment insurance rates, sorted newest-first.
@@ -41,14 +38,6 @@ export const EMPLOYMENT_INSURANCE_RATES: EmploymentInsuranceRatePeriod[] = [
 ];
 
 if (import.meta.env.DEV) {
-  for (let i = 0; i < EMPLOYMENT_INSURANCE_RATES.length; i++) {
-    const { effectiveFrom, rate } = EMPLOYMENT_INSURANCE_RATES[i]!;
-    if (!(Number.isSafeInteger(rate) && rate >= 0)) {
-      throw new Error(
-        `EMPLOYMENT_INSURANCE_RATES entry ${i} (${effectiveFrom.year}-${effectiveFrom.month}) must have a non-negative integer rate over EMPLOYMENT_INSURANCE_RATE_SCALE, but has ${rate}`,
-      );
-    }
-  }
   // Validate that the rates are sorted newest-first
   for (let i = 1; i < EMPLOYMENT_INSURANCE_RATES.length; i++) {
     const prev = EMPLOYMENT_INSURANCE_RATES[i - 1]!.effectiveFrom;
@@ -62,14 +51,13 @@ if (import.meta.env.DEV) {
 }
 
 /**
- * Returns the applicable employment insurance rate for a given calendar year and month, an
- * integer over {@link EMPLOYMENT_INSURANCE_RATE_SCALE}.
+ * Returns the applicable employment insurance rate for a given calendar year and month.
  * Finds the most recent rate entry whose effective date is on or before the given date.
  *
  * @param year Calendar year
  * @param month 0-indexed month (0=Jan, 11=Dec)
  */
-export const getEmploymentInsuranceRate = (year: number, month: number): number => {
+export const getEmploymentInsuranceRate = (year: number, month: number): PremiumRate => {
   for (const period of EMPLOYMENT_INSURANCE_RATES) {
     const { effectiveFrom } = period;
     if (

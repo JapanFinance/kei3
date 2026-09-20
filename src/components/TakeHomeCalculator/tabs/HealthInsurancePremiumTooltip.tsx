@@ -7,8 +7,8 @@ import Typography from '@mui/material/Typography';
 import React from 'react';
 
 import {
-  HEALTH_INSURANCE_RATE_SCALE,
   getProviderDefinition,
+  percent,
 } from '../../../data/employeesHealthInsurance/providerRateData';
 import {
   calculateEmployeeHealthInsurancePremium,
@@ -26,6 +26,7 @@ import {
   nhiParamsDiffer,
   type NHIParamsField,
 } from '../../../data/nationalHealthInsurance/nhiParamsData';
+import type { PremiumRate } from '../../../data/premiumRate';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -451,7 +452,10 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     );
   } else {
     // Employee Health Insurance
-    let rates: EmployeeRates = { employeeHealthInsuranceRate: 0, employeeLongTermCareRate: 0 };
+    let rates: EmployeeRates = {
+      employeeHealthInsuranceRate: percent(0),
+      employeeLongTermCareRate: percent(0),
+    };
     let sourceUrl;
     let providerLabel;
 
@@ -482,7 +486,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     );
 
     // Check if rates differ across the 12 months of the year
-    const monthlyRates: { rate: number; premium: number }[] = [];
+    const monthlyRates: { rate: PremiumRate; premium: number }[] = [];
     let ratesVary = false;
 
     if (provider !== CUSTOM_PROVIDER_ID) {
@@ -496,7 +500,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
             includeLTC,
           );
           monthlyRates.push({ rate: r, premium: p });
-          if (m > 0 && r !== monthlyRates[0]!.rate) ratesVary = true;
+          if (m > 0 && !r.equals(monthlyRates[0]!.rate)) ratesVary = true;
         }
       }
     }
@@ -602,13 +606,13 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   const groups: {
                     startMonth: number;
                     endMonth: number;
-                    rate: number;
+                    rate: PremiumRate;
                     premium: number;
                   }[] = [];
                   for (let i = 0; i < monthlyRates.length; i++) {
                     const mr = monthlyRates[i]!;
                     const lastGroup = groups[groups.length - 1];
-                    if (lastGroup && lastGroup.rate === mr.rate) {
+                    if (lastGroup && lastGroup.rate.equals(mr.rate)) {
                       lastGroup.endMonth = i;
                     } else {
                       groups.push({
@@ -679,7 +683,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                             <tr key={idx}>
                               <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>
                               <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
-                                {formatPercent(g.rate / HEALTH_INSURANCE_RATE_SCALE)}
+                                {formatPercent(g.rate.toFraction())}
                               </td>
                               <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
                                 {formatJPY(g.premium)}
@@ -740,7 +744,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
                     ×
                   </Box>
-                  {formatPercent(finalRate / HEALTH_INSURANCE_RATE_SCALE)}
+                  {formatPercent(finalRate.toFraction())}
                   <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
                     =
                   </Box>
@@ -755,9 +759,8 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
         {includeLTC && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: -0.5 }}>
-            Rate breakdown: Health{' '}
-            {formatPercent(rates.employeeHealthInsuranceRate / HEALTH_INSURANCE_RATE_SCALE)} + LTC{' '}
-            {formatPercent(rates.employeeLongTermCareRate / HEALTH_INSURANCE_RATE_SCALE)}
+            Rate breakdown: Health {formatPercent(rates.employeeHealthInsuranceRate.toFraction())} +
+            LTC {formatPercent(rates.employeeLongTermCareRate.toFraction())}
           </Typography>
         )}
 

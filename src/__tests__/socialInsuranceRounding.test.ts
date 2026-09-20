@@ -9,6 +9,8 @@ import {
   getCustomProviderRates,
   getRegionalRatesForMonth,
 } from '../data/employeesHealthInsurance/providerRates';
+import { perMille } from '../data/employmentInsurance';
+import { roundSocialInsurancePremium } from '../data/premiumRate';
 import {
   calculateEmployeesHealthInsuranceBonusBreakdown,
   calculateHealthInsuranceBreakdown,
@@ -17,7 +19,6 @@ import { calculatePensionBonusBreakdown } from '../utils/pensionCalculator';
 import {
   calculateBonusEmploymentInsurancePremium,
   calculateMonthlyEmploymentInsurancePremium,
-  roundSocialInsurancePremium,
 } from '../utils/taxCalculations';
 
 describe('Social Insurance Rounding', () => {
@@ -62,7 +63,10 @@ describe('Social Insurance Rounding', () => {
     it('rounds 0.50 yen down', () => {
       // 1,000 yen × 0.15% = 1.5 yen
       const bonuses = [{ amount: 1000, month: 6, id: 'test', type: 'bonus' as const }];
-      const rates = { employeeHealthInsuranceRate: percent(0.15), employeeLongTermCareRate: 0 };
+      const rates = {
+        employeeHealthInsuranceRate: percent(0.15),
+        employeeLongTermCareRate: percent(0),
+      };
 
       const result = calculateEmployeesHealthInsuranceBonusBreakdown(bonuses, rates, false, 2026);
 
@@ -103,7 +107,10 @@ describe('Social Insurance Rounding', () => {
   describe('Monthly Employees Health Insurance Premium Rounding', () => {
     it('rounds 0.50 yen down', () => {
       // 410,000 × 4.955% (Kyokai Kenpo Tokyo, FY2025) = 20,315.5 yen
-      const rates = { employeeHealthInsuranceRate: percent(4.955), employeeLongTermCareRate: 0 };
+      const rates = {
+        employeeHealthInsuranceRate: percent(4.955),
+        employeeLongTermCareRate: percent(0),
+      };
 
       expect(calculateEmployeeHealthInsurancePremium(410_000, rates, false)).toBe(20_315);
     });
@@ -144,7 +151,7 @@ describe('Social Insurance Rounding', () => {
       // プリマハム健康保険組合: 39.947/1,000 for the employee, and 500,000 × 3.9947% = 19,973.50
       const rates = getCustomProviderRates({ healthInsuranceRate: 3.9947, longTermCareRate: 0.9 });
 
-      expect(rates.employeeHealthInsuranceRate).toBe(percent(3.9947));
+      expect(rates.employeeHealthInsuranceRate.equals(percent(3.9947))).toBe(true);
       expect(calculateEmployeeHealthInsurancePremium(500_000, rates, false)).toBe(19_973);
     });
   });
@@ -152,17 +159,17 @@ describe('Social Insurance Rounding', () => {
   describe('Employment Insurance Premium Rounding', () => {
     it('rounds an exact 0.50 yen tie down', () => {
       // 301,000 yen a month × 5.5/1,000 = 1,655.50
-      expect(calculateMonthlyEmploymentInsurancePremium(12 * 301_000, 55)).toBe(1_655);
-      expect(calculateBonusEmploymentInsurancePremium(301_000, 55)).toBe(1_655);
+      expect(calculateMonthlyEmploymentInsurancePremium(12 * 301_000, perMille(5.5))).toBe(1_655);
+      expect(calculateBonusEmploymentInsurancePremium(301_000, perMille(5.5))).toBe(1_655);
     });
 
     it('takes one twelfth of the annual wage without rounding the division first', () => {
       // 999,600 / 12 × 5/1,000 = 416.50 exactly
-      expect(calculateMonthlyEmploymentInsurancePremium(999_600, 50)).toBe(416);
+      expect(calculateMonthlyEmploymentInsurancePremium(999_600, perMille(5))).toBe(416);
       // 999,601 / 12 × 5/1,000 = 416.5004...
-      expect(calculateMonthlyEmploymentInsurancePremium(999_601, 50)).toBe(417);
+      expect(calculateMonthlyEmploymentInsurancePremium(999_601, perMille(5))).toBe(417);
       // 999,599 / 12 × 5/1,000 = 416.4995...
-      expect(calculateMonthlyEmploymentInsurancePremium(999_599, 50)).toBe(416);
+      expect(calculateMonthlyEmploymentInsurancePremium(999_599, perMille(5))).toBe(416);
     });
   });
 });

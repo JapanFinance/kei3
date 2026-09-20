@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Prefecture } from '../prefectures';
-import { percentOf } from '../rateUnits';
+import { percentOf, type PremiumRate } from '../premiumRate';
 
 /**
  * Decimal places of a percentage that a health insurance premium rate can have. Four, because a
@@ -12,11 +12,8 @@ import { percentOf } from '../rateUnits';
  */
 export const HEALTH_INSURANCE_RATE_PERCENT_DECIMALS = 4;
 
-/**
- * Health insurance premium rates are integers over this scale (50_750 is 5.075%), so that a
- * premium, a whole-yen amount times a rate, is an exact integer product.
- */
-export const HEALTH_INSURANCE_RATE_SCALE = 100 * 10 ** HEALTH_INSURANCE_RATE_PERCENT_DECIMALS;
+/** The unit a health insurance rate is held in: 1/1,000,000, that is 0.0001%. */
+const HEALTH_INSURANCE_RATE_SCALE = 100 * 10 ** HEALTH_INSURANCE_RATE_PERCENT_DECIMALS;
 
 /** A health insurance rate as the percentage its provider publishes: percent(5.075) is 5.075%. */
 export const percent = percentOf(HEALTH_INSURANCE_RATE_SCALE);
@@ -25,20 +22,18 @@ export const percent = percentOf(HEALTH_INSURANCE_RATE_SCALE);
  * Regional rate variations for a provider
  * Contains only the data that varies by region: rates and region-specific metadata
  * Note: region is now the map key, so no longer needed as a field
- *
- * Each rate is an integer over {@link HEALTH_INSURANCE_RATE_SCALE}.
  */
 export interface RegionalRates {
   /** Region-specific source URL or document reference */
   source?: string;
   /** Employee's health insurance premium rate */
-  employeeHealthInsuranceRate: number;
+  employeeHealthInsuranceRate: PremiumRate;
   /** Employer's health insurance premium rate. If omitted, defaults to same as employee */
-  employerHealthInsuranceRate?: number;
+  employerHealthInsuranceRate?: PremiumRate;
   /** Employee's long-term care insurance premium rate */
-  employeeLongTermCareRate: number;
+  employeeLongTermCareRate: PremiumRate;
   /** Employer's long-term care insurance premium rate. If omitted, defaults to same as employee */
-  employerLongTermCareRate?: number;
+  employerLongTermCareRate?: PremiumRate;
 }
 
 /**
@@ -1477,23 +1472,6 @@ if (import.meta.env.DEV) {
             `${providerId}/${regionKey} rate periods must be sorted newest-first, ` +
               `but entry ${i - 1} (${prev.year}-${prev.month}) is not after entry ${i} (${curr.year}-${curr.month})`,
           );
-        }
-      }
-      for (const period of periods) {
-        const { effectiveFrom, rates }: HealthInsuranceRatePeriod = period;
-        for (const field of [
-          'employeeHealthInsuranceRate',
-          'employerHealthInsuranceRate',
-          'employeeLongTermCareRate',
-          'employerLongTermCareRate',
-        ] as const) {
-          const rate = rates[field];
-          if (rate !== undefined && !(Number.isSafeInteger(rate) && rate >= 0)) {
-            throw new Error(
-              `${providerId}/${regionKey} ${effectiveFrom.year}-${effectiveFrom.month} ${field} ` +
-                `must be a non-negative integer over HEALTH_INSURANCE_RATE_SCALE, but is ${rate}`,
-            );
-          }
         }
       }
     }
