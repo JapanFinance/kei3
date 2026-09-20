@@ -677,8 +677,8 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
   // LTC Rate: 1.59% -> Employee: 0.795%
 
   const rates = {
-    employeeHealthInsuranceRate: 4_955,
-    employeeLongTermCareRate: 795,
+    employeeHealthInsuranceRate: 49_550,
+    employeeLongTermCareRate: 7_950,
   };
 
   it('returns correct breakdown for single bonus below cap', () => {

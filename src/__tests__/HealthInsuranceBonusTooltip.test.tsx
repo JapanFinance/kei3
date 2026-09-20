@@ -18,10 +18,10 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', async importOrigina
           {
             effectiveFrom: { year: 2025, month: 3 },
             rates: {
-              employeeHealthInsuranceRate: 5_000,
-              employerHealthInsuranceRate: 6_000,
-              employeeLongTermCareRate: 1_000,
-              employerLongTermCareRate: 1_000,
+              employeeHealthInsuranceRate: 50_000,
+              employerHealthInsuranceRate: 60_000,
+              employeeLongTermCareRate: 10_000,
+              employerLongTermCareRate: 10_000,
             },
           },
         ],
@@ -34,8 +34,8 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', async importOrigina
           {
             effectiveFrom: { year: 2025, month: 3 },
             rates: {
-              employeeHealthInsuranceRate: 4_000,
-              employeeLongTermCareRate: 1_000,
+              employeeHealthInsuranceRate: 40_000,
+              employeeLongTermCareRate: 10_000,
             },
           },
         ],
@@ -56,14 +56,14 @@ vi.mock('../data/employeesHealthInsurance/providerRates', async importOriginal =
   getRegionalRatesForMonth: (providerId: string) => {
     const providers: Record<string, Record<string, unknown>> = {
       KyokaiKenpo: {
-        employeeHealthInsuranceRate: 5_000,
-        employerHealthInsuranceRate: 6_000,
-        employeeLongTermCareRate: 1_000,
-        employerLongTermCareRate: 1_000,
+        employeeHealthInsuranceRate: 50_000,
+        employerHealthInsuranceRate: 60_000,
+        employeeLongTermCareRate: 10_000,
+        employerLongTermCareRate: 10_000,
       },
       TestProviderNoEmployerRate: {
-        employeeHealthInsuranceRate: 4_000,
-        employeeLongTermCareRate: 1_000,
+        employeeHealthInsuranceRate: 40_000,
+        employeeLongTermCareRate: 10_000,
       },
     };
     return providers[providerId];

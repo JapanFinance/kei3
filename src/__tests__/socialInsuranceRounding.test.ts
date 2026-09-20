@@ -61,7 +61,7 @@ describe('Social Insurance Rounding', () => {
     it('rounds 0.50 yen down', () => {
       // 1,000 yen × 0.15% = 1.5 yen
       const bonuses = [{ amount: 1000, month: 6, id: 'test', type: 'bonus' as const }];
-      const rates = { employeeHealthInsuranceRate: 150, employeeLongTermCareRate: 0 };
+      const rates = { employeeHealthInsuranceRate: 1_500, employeeLongTermCareRate: 0 };
 
       const result = calculateEmployeesHealthInsuranceBonusBreakdown(bonuses, rates, false, 2026);
 
@@ -72,7 +72,7 @@ describe('Social Insurance Rounding', () => {
       // 1,000 yen × 0.16% = 1.6 yen and 1,000 yen × 0.06% = 0.6 yen: rounding each gives
       // 2 + 1 = 3, rounding the 2.2 yen total gives 2.
       const bonuses = [{ amount: 1000, month: 6, id: 'test', type: 'bonus' as const }];
-      const rates = { employeeHealthInsuranceRate: 160, employeeLongTermCareRate: 60 };
+      const rates = { employeeHealthInsuranceRate: 1_600, employeeLongTermCareRate: 600 };
 
       const result = calculateEmployeesHealthInsuranceBonusBreakdown(bonuses, rates, true, 2026);
 
@@ -99,7 +99,7 @@ describe('Social Insurance Rounding', () => {
   describe('Monthly Employees Health Insurance Premium Rounding', () => {
     it('rounds 0.50 yen down', () => {
       // 410,000 × 4.955% (Kyokai Kenpo Tokyo, FY2025) = 20,315.5 yen
-      const rates = { employeeHealthInsuranceRate: 4_955, employeeLongTermCareRate: 0 };
+      const rates = { employeeHealthInsuranceRate: 49_550, employeeLongTermCareRate: 0 };
 
       expect(calculateEmployeeHealthInsurancePremium(410_000, rates, false)).toBe(20_315);
     });
@@ -134,6 +134,14 @@ describe('Social Insurance Rounding', () => {
       const rates = getCustomProviderRates({ healthInsuranceRate: 4.755, longTermCareRate: 0.81 });
 
       expect(calculateEmployeeHealthInsurancePremium(190_000, rates, true)).toBe(10_573);
+    });
+
+    it('keeps a custom rate with four decimal places exact', () => {
+      // プリマハム健康保険組合: 39.947/1,000 for the employee, and 500,000 × 3.9947% = 19,973.50
+      const rates = getCustomProviderRates({ healthInsuranceRate: 3.9947, longTermCareRate: 0.9 });
+
+      expect(rates.employeeHealthInsuranceRate).toBe(39_947);
+      expect(calculateEmployeeHealthInsurancePremium(500_000, rates, false)).toBe(19_973);
     });
   });
 

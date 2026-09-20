@@ -3,11 +3,16 @@
 
 import type { Prefecture } from '../prefectures';
 
-/** Decimal places of a percentage that a health insurance premium rate can have. */
-export const HEALTH_INSURANCE_RATE_PERCENT_DECIMALS = 3;
+/**
+ * Decimal places of a percentage that a health insurance premium rate can have. Four, because a
+ * society can set a rate that fine: プリマハム健康保険組合 splits 88/1,000 into 48.053/1,000 for
+ * the employer and 39.947/1,000, that is 3.9947%, for the employee.
+ * @see https://www.kenpo.gr.jp/primaham/contents/shikumi/hkenryou/index.html
+ */
+export const HEALTH_INSURANCE_RATE_PERCENT_DECIMALS = 4;
 
 /**
- * Health insurance premium rates are integers over this scale (5_075 is 5.075%), so that a
+ * Health insurance premium rates are integers over this scale (50_750 is 5.075%), so that a
  * premium, a whole-yen amount times a rate, is an exact integer product.
  */
 export const HEALTH_INSURANCE_RATE_SCALE = 100 * 10 ** HEALTH_INSURANCE_RATE_PERCENT_DECIMALS;
@@ -87,8 +92,8 @@ export const PROVIDER_DEFINITIONS = {
           rates: {
             source:
               'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/20260401kara_hokenryouichiran.pdf',
-            employeeHealthInsuranceRate: 4_750, // 4.75%
-            employeeLongTermCareRate: 900, // 0.9%
+            employeeHealthInsuranceRate: 47_500, // 4.75%
+            employeeLongTermCareRate: 9_000, // 0.9%
           },
         },
         // FY2026 without contribution (April 2026 paycheck — March billing, new health rate)
@@ -97,8 +102,8 @@ export const PROVIDER_DEFINITIONS = {
           rates: {
             source:
               'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/20260331made_hokenryouichiran.pdf',
-            employeeHealthInsuranceRate: 4_750, // 4.75%
-            employeeLongTermCareRate: 900, // 0.9%
+            employeeHealthInsuranceRate: 47_500, // 4.75%
+            employeeLongTermCareRate: 9_000, // 0.9%
           },
         },
         // FY2025 (April 2025 paycheck — March billing)
@@ -107,8 +112,8 @@ export const PROVIDER_DEFINITIONS = {
           rates: {
             source:
               'https://www.its-kenpo.or.jp/documents/hoken/jimu/hokenryou/2025.3.1ryougaku.pdf',
-            employeeHealthInsuranceRate: 4_750, // 4.75%
-            employeeLongTermCareRate: 900, // 0.9%
+            employeeHealthInsuranceRate: 47_500, // 4.75%
+            employeeLongTermCareRate: 9_000, // 0.9%
           },
         },
       ],
@@ -123,24 +128,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_01hokkaido.pdf',
-            employeeHealthInsuranceRate: 5_255,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 52_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.28% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_01hokkaido.pdf',
-            employeeHealthInsuranceRate: 5_140,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.28% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/01hokkaido_7.pdf',
-            employeeHealthInsuranceRate: 5_155,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 51_550,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.31% / 2
       ],
@@ -149,24 +154,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_02aomori.pdf',
-            employeeHealthInsuranceRate: 5_040,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.85% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_02aomori.pdf',
-            employeeHealthInsuranceRate: 4_925,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_250,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.85% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/02aomori_7.pdf',
-            employeeHealthInsuranceRate: 4_925,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_250,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.85% / 2
       ],
@@ -175,24 +180,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_03iwate.pdf',
-            employeeHealthInsuranceRate: 4_870,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_700,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.51% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_03iwate.pdf',
-            employeeHealthInsuranceRate: 4_755,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 47_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.51% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/03iwate_7.pdf',
-            employeeHealthInsuranceRate: 4_810,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_100,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.62% / 2
       ],
@@ -201,24 +206,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_04miyagi.pdf',
-            employeeHealthInsuranceRate: 5_165,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_650,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.10% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_04miyagi.pdf',
-            employeeHealthInsuranceRate: 5_050,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_500,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.10% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/04miyagi_7.pdf',
-            employeeHealthInsuranceRate: 5_055,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_550,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.11% / 2
       ],
@@ -227,24 +232,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_05akita.pdf',
-            employeeHealthInsuranceRate: 5_120,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_200,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.01% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_05akita.pdf',
-            employeeHealthInsuranceRate: 5_005,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_050,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.01% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/05akita_7.pdf',
-            employeeHealthInsuranceRate: 5_005,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_050,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.01% / 2
       ],
@@ -253,24 +258,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_06yamagata.pdf',
-            employeeHealthInsuranceRate: 4_990,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_900,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.75% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_06yamagata.pdf',
-            employeeHealthInsuranceRate: 4_875,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_750,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.75% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/06yamagata_7.pdf',
-            employeeHealthInsuranceRate: 4_875,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_750,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.75% / 2
       ],
@@ -279,24 +284,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_07fukushima.pdf',
-            employeeHealthInsuranceRate: 4_865,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_650,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.50% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_07fukushima.pdf',
-            employeeHealthInsuranceRate: 4_750,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 47_500,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.50% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/07fukushima_7.pdf',
-            employeeHealthInsuranceRate: 4_810,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_100,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.62% / 2
       ],
@@ -307,24 +312,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_08ibaraki.pdf',
-            employeeHealthInsuranceRate: 4_875,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_750,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.52% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_08ibaraki.pdf',
-            employeeHealthInsuranceRate: 4_760,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 47_600,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.52% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/08ibaraki_7.pdf',
-            employeeHealthInsuranceRate: 4_835,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_350,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.67% / 2
       ],
@@ -333,24 +338,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_09tochigi.pdf',
-            employeeHealthInsuranceRate: 5_025,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_250,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.82% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_09tochigi.pdf',
-            employeeHealthInsuranceRate: 4_910,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_100,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.82% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/09tochigi_7.pdf',
-            employeeHealthInsuranceRate: 4_910,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_100,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.82% / 2
       ],
@@ -359,24 +364,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_10gunma.pdf',
-            employeeHealthInsuranceRate: 4_955,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.68% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_10gunma.pdf',
-            employeeHealthInsuranceRate: 4_840,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.68% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/10gunma_7.pdf',
-            employeeHealthInsuranceRate: 4_885,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_850,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.77% / 2
       ],
@@ -385,24 +390,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_11saitama.pdf',
-            employeeHealthInsuranceRate: 4_950,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_500,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.67% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_11saitama.pdf',
-            employeeHealthInsuranceRate: 4_835,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_350,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.67% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/11saitama_7.pdf',
-            employeeHealthInsuranceRate: 4_880,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_800,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.76% / 2
       ],
@@ -411,24 +416,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_12chiba.pdf',
-            employeeHealthInsuranceRate: 4_980,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_800,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.73% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_12chiba.pdf',
-            employeeHealthInsuranceRate: 4_865,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_650,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.73% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/12chiba_7.pdf',
-            employeeHealthInsuranceRate: 4_895,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_950,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.79% / 2
       ],
@@ -437,24 +442,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_13tokyo.pdf',
-            employeeHealthInsuranceRate: 5_040,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.85% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_13tokyo.pdf',
-            employeeHealthInsuranceRate: 4_925,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_250,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.85% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/13tokyo_7.pdf',
-            employeeHealthInsuranceRate: 4_955,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_550,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.91% / 2
       ],
@@ -463,24 +468,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_14kanagawa.pdf',
-            employeeHealthInsuranceRate: 5_075,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_750,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.92% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_14kanagawa.pdf',
-            employeeHealthInsuranceRate: 4_960,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_600,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.92% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/14kanagawa_7.pdf',
-            employeeHealthInsuranceRate: 4_960,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_600,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.92% / 2
       ],
@@ -491,24 +496,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_15niigata.pdf',
-            employeeHealthInsuranceRate: 4_720,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 47_200,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.21% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_15niigata.pdf',
-            employeeHealthInsuranceRate: 4_605,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 46_050,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.21% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/15niigata_7.pdf',
-            employeeHealthInsuranceRate: 4_775,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 47_750,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.55% / 2
       ],
@@ -517,24 +522,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_16toyama.pdf',
-            employeeHealthInsuranceRate: 4_910,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_100,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.59% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_16toyama.pdf',
-            employeeHealthInsuranceRate: 4_795,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 47_950,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.59% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/16toyama_7.pdf',
-            employeeHealthInsuranceRate: 4_825,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_250,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.65% / 2
       ],
@@ -543,24 +548,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_17ishikawa.pdf',
-            employeeHealthInsuranceRate: 4_965,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_650,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.70% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_17ishikawa.pdf',
-            employeeHealthInsuranceRate: 4_850,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_500,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.70% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/17ishikawa_7.pdf',
-            employeeHealthInsuranceRate: 4_940,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_400,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.88% / 2
       ],
@@ -569,24 +574,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_18fukui.pdf',
-            employeeHealthInsuranceRate: 4_970,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_700,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.71% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_18fukui.pdf',
-            employeeHealthInsuranceRate: 4_855,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.71% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/18fukui_7.pdf',
-            employeeHealthInsuranceRate: 4_970,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_700,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.94% / 2
       ],
@@ -595,24 +600,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_19yamanashi.pdf',
-            employeeHealthInsuranceRate: 4_890,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_900,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.55% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_19yamanashi.pdf',
-            employeeHealthInsuranceRate: 4_775,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 47_750,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.55% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/19yamanashi_7.pdf',
-            employeeHealthInsuranceRate: 4_945,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_450,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.89% / 2
       ],
@@ -621,24 +626,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_20nagano.pdf',
-            employeeHealthInsuranceRate: 4_930,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_300,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.63% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_20nagano.pdf',
-            employeeHealthInsuranceRate: 4_815,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_150,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.63% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/20nagano_7.pdf',
-            employeeHealthInsuranceRate: 4_845,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 48_450,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.69% / 2
       ],
@@ -647,24 +652,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_21gifu.pdf',
-            employeeHealthInsuranceRate: 5_015,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_150,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.80% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_21gifu.pdf',
-            employeeHealthInsuranceRate: 4_900,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_000,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.80% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/21gifu_7.pdf',
-            employeeHealthInsuranceRate: 4_965,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_650,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.93% / 2
       ],
@@ -673,24 +678,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_22shizuoka.pdf',
-            employeeHealthInsuranceRate: 4_920,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_200,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.61% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_22shizuoka.pdf',
-            employeeHealthInsuranceRate: 4_805,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_050,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.61% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/22shizuoka_7.pdf',
-            employeeHealthInsuranceRate: 4_900,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_000,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.80% / 2
       ],
@@ -699,24 +704,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_23aichi.pdf',
-            employeeHealthInsuranceRate: 5_080,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_800,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.93% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_23aichi.pdf',
-            employeeHealthInsuranceRate: 4_965,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_650,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.93% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/23aichi_7.pdf',
-            employeeHealthInsuranceRate: 5_015,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_150,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.03% / 2
       ],
@@ -727,24 +732,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_24mie.pdf',
-            employeeHealthInsuranceRate: 5_000,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_000,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.77% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_24mie.pdf',
-            employeeHealthInsuranceRate: 4_885,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_850,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.77% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/24mie_7_1.pdf',
-            employeeHealthInsuranceRate: 4_995,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_950,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.99% / 2
       ],
@@ -753,24 +758,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_25shiga.pdf',
-            employeeHealthInsuranceRate: 5_055,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.88% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_25shiga.pdf',
-            employeeHealthInsuranceRate: 4_940,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.88% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/25shiga_7.pdf',
-            employeeHealthInsuranceRate: 4_985,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_850,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.97% / 2
       ],
@@ -779,24 +784,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_26kyoto.pdf',
-            employeeHealthInsuranceRate: 5_060,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_600,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.89% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_26kyoto.pdf',
-            employeeHealthInsuranceRate: 4_945,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_450,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.89% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/26kyoto_7.pdf',
-            employeeHealthInsuranceRate: 5_015,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_150,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.03% / 2
       ],
@@ -805,24 +810,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_27osaka.pdf',
-            employeeHealthInsuranceRate: 5_180,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_800,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.13% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_27osaka.pdf',
-            employeeHealthInsuranceRate: 5_065,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_650,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.13% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/27osaka_7.pdf',
-            employeeHealthInsuranceRate: 5_120,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 51_200,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.24% / 2
       ],
@@ -831,24 +836,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_28hyogo.pdf',
-            employeeHealthInsuranceRate: 5_175,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_750,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.12% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_28hyogo.pdf',
-            employeeHealthInsuranceRate: 5_060,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_600,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.12% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/28hyogo_7_1.pdf',
-            employeeHealthInsuranceRate: 5_080,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_800,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.16% / 2
       ],
@@ -857,24 +862,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_29nara.pdf',
-            employeeHealthInsuranceRate: 5_070,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_700,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.91% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_29nara.pdf',
-            employeeHealthInsuranceRate: 4_955,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.91% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/29nara_7.pdf',
-            employeeHealthInsuranceRate: 5_010,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_100,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.02% / 2
       ],
@@ -883,24 +888,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_30wakayama.pdf',
-            employeeHealthInsuranceRate: 5_145,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_450,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.06% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_30wakayama.pdf',
-            employeeHealthInsuranceRate: 5_030,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_300,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.06% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/30wakayama_7.pdf',
-            employeeHealthInsuranceRate: 5_095,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_950,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.19% / 2
       ],
@@ -911,24 +916,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_31tottori.pdf',
-            employeeHealthInsuranceRate: 5_045,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_450,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.86% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_31tottori.pdf',
-            employeeHealthInsuranceRate: 4_930,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_300,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.86% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/31tottori_7.pdf',
-            employeeHealthInsuranceRate: 4_965,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_650,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.93% / 2
       ],
@@ -937,24 +942,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_32shimane.pdf',
-            employeeHealthInsuranceRate: 5_085,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_850,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.94% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_32shimane.pdf',
-            employeeHealthInsuranceRate: 4_970,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_700,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.94% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/32shimane_7.pdf',
-            employeeHealthInsuranceRate: 4_970,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_700,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.94% / 2
       ],
@@ -963,24 +968,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_33okayama.pdf',
-            employeeHealthInsuranceRate: 5_140,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.05% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_33okayama.pdf',
-            employeeHealthInsuranceRate: 5_025,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_250,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.05% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/33okayama_7_1.pdf',
-            employeeHealthInsuranceRate: 5_085,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_850,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.17% / 2
       ],
@@ -989,24 +994,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_34hiroshima.pdf',
-            employeeHealthInsuranceRate: 5_005,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_050,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.78% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_34hiroshima.pdf',
-            employeeHealthInsuranceRate: 4_890,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_900,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.78% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/34hiroshima_7.pdf',
-            employeeHealthInsuranceRate: 4_985,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 49_850,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.97% / 2
       ],
@@ -1015,24 +1020,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_35yamaguchi.pdf',
-            employeeHealthInsuranceRate: 5_190,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_900,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.15% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_35yamaguchi.pdf',
-            employeeHealthInsuranceRate: 5_075,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_750,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.15% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/35yamaguchi_7.pdf',
-            employeeHealthInsuranceRate: 5_180,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 51_800,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.36% / 2
       ],
@@ -1043,24 +1048,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_36tokushima.pdf',
-            employeeHealthInsuranceRate: 5_235,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 52_350,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.24% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_36tokushima.pdf',
-            employeeHealthInsuranceRate: 5_120,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_200,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.24% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/36tokushima_7.pdf',
-            employeeHealthInsuranceRate: 5_235,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 52_350,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.47% / 2
       ],
@@ -1069,24 +1074,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_37kagawa.pdf',
-            employeeHealthInsuranceRate: 5_125,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_250,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.02% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_37kagawa.pdf',
-            employeeHealthInsuranceRate: 5_010,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_100,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.02% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/37kagawa_7.pdf',
-            employeeHealthInsuranceRate: 5_105,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 51_050,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.21% / 2
       ],
@@ -1095,24 +1100,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_38ehime.pdf',
-            employeeHealthInsuranceRate: 5_105,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_050,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.98% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_38ehime.pdf',
-            employeeHealthInsuranceRate: 4_990,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 49_900,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.98% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/38ehime_7.pdf',
-            employeeHealthInsuranceRate: 5_090,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_900,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.18% / 2
       ],
@@ -1121,24 +1126,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_39kouchi.pdf',
-            employeeHealthInsuranceRate: 5_140,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.05% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_39kouchi.pdf',
-            employeeHealthInsuranceRate: 5_025,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_250,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.05% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/39kouchi_7.pdf',
-            employeeHealthInsuranceRate: 5_065,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_650,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.13% / 2
       ],
@@ -1149,24 +1154,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_40fukuoka.pdf',
-            employeeHealthInsuranceRate: 5_170,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_700,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.11% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_40fukuoka.pdf',
-            employeeHealthInsuranceRate: 5_055,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.11% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/40fukuoka_7.pdf',
-            employeeHealthInsuranceRate: 5_155,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 51_550,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.31% / 2
       ],
@@ -1175,24 +1180,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_41saga.pdf',
-            employeeHealthInsuranceRate: 5_390,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 53_900,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.55% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_41saga.pdf',
-            employeeHealthInsuranceRate: 5_275,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 52_750,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.55% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/41saga_7.pdf',
-            employeeHealthInsuranceRate: 5_390,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 53_900,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.78% / 2
       ],
@@ -1201,24 +1206,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_42nagasaki.pdf',
-            employeeHealthInsuranceRate: 5_145,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_450,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.06% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_42nagasaki.pdf',
-            employeeHealthInsuranceRate: 5_030,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_300,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.06% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/42nagasaki_7.pdf',
-            employeeHealthInsuranceRate: 5_205,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 52_050,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.41% / 2
       ],
@@ -1227,24 +1232,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_43kumamotoi.pdf',
-            employeeHealthInsuranceRate: 5_155,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.08% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_43kumamotoi.pdf',
-            employeeHealthInsuranceRate: 5_040,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.08% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/43kumamoto_7.pdf',
-            employeeHealthInsuranceRate: 5_060,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_600,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.12% / 2
       ],
@@ -1253,24 +1258,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_44oita.pdf',
-            employeeHealthInsuranceRate: 5_155,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_550,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.08% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_44oita.pdf',
-            employeeHealthInsuranceRate: 5_040,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_400,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.08% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/44oita_7.pdf',
-            employeeHealthInsuranceRate: 5_125,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 51_250,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.25% / 2
       ],
@@ -1279,24 +1284,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_45miyazaki.pdf',
-            employeeHealthInsuranceRate: 5_000,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_000,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.77% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_45miyazaki.pdf',
-            employeeHealthInsuranceRate: 4_885,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_850,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.77% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/45miyazaki_7.pdf',
-            employeeHealthInsuranceRate: 5_045,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 50_450,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.09% / 2
       ],
@@ -1305,24 +1310,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_46kagoshima.pdf',
-            employeeHealthInsuranceRate: 5_180,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 51_800,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (10.13% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_46kagoshima.pdf',
-            employeeHealthInsuranceRate: 5_065,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 50_650,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 10.13% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/46kagoshima_7_1.pdf',
-            employeeHealthInsuranceRate: 5_155,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 51_550,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 10.31% / 2
       ],
@@ -1331,24 +1336,24 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_47okinawa.pdf',
-            employeeHealthInsuranceRate: 4_835,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 48_350,
+            employeeLongTermCareRate: 8_100,
           },
         }, // (9.44% + 0.23%) / 2
         {
           effectiveFrom: { year: 2026, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/R8_47okinawa.pdf',
-            employeeHealthInsuranceRate: 4_720,
-            employeeLongTermCareRate: 810,
+            employeeHealthInsuranceRate: 47_200,
+            employeeLongTermCareRate: 8_100,
           },
         }, // 9.44% / 2
         {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://www.kyoukaikenpo.or.jp/assets/47okinawa_7.pdf',
-            employeeHealthInsuranceRate: 4_720,
-            employeeLongTermCareRate: 795,
+            employeeHealthInsuranceRate: 47_200,
+            employeeLongTermCareRate: 7_950,
           },
         }, // 9.44% / 2
       ],
@@ -1372,8 +1377,8 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://kenpo.rakuten.or.jp/member/outline/files/fee.pdf',
-            employeeHealthInsuranceRate: 4_815, // 4.815%
-            employeeLongTermCareRate: 1_000, // 1.0%
+            employeeHealthInsuranceRate: 48_150, // 4.815%
+            employeeLongTermCareRate: 10_000, // 1.0%
           },
         },
         // FY2025 (April 2025)
@@ -1381,8 +1386,8 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://kenpo.rakuten.or.jp/member/outline/files/fee.pdf',
-            employeeHealthInsuranceRate: 4_700, // 4.7% (total 9.4% split evenly)
-            employeeLongTermCareRate: 1_000, // 1.0% (total 2.0% split evenly)
+            employeeHealthInsuranceRate: 47_000, // 4.7% (total 9.4% split evenly)
+            employeeLongTermCareRate: 10_000, // 1.0% (total 2.0% split evenly)
           },
         },
       ],
@@ -1399,9 +1404,9 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2026, month: 4 },
           rates: {
             source: 'https://kempo.recruit.co.jp/member/info/pdf/r8_fee.pdf',
-            employeeHealthInsuranceRate: 4_465, // 4.465%
-            employerHealthInsuranceRate: 4_765, // 4.765%
-            employeeLongTermCareRate: 1_000, // 1.0%
+            employeeHealthInsuranceRate: 44_650, // 4.465%
+            employerHealthInsuranceRate: 47_650, // 4.765%
+            employeeLongTermCareRate: 10_000, // 1.0%
           },
         },
         // FY2025 (April 2025)
@@ -1409,9 +1414,9 @@ export const PROVIDER_DEFINITIONS = {
           effectiveFrom: { year: 2025, month: 3 },
           rates: {
             source: 'https://kempo.recruit.co.jp/member/info/pdf/r7_fee.pdf',
-            employeeHealthInsuranceRate: 4_350, // 4.35%
-            employerHealthInsuranceRate: 4_650, // 4.65%
-            employeeLongTermCareRate: 1_000, // 1.0%
+            employeeHealthInsuranceRate: 43_500, // 4.35%
+            employerHealthInsuranceRate: 46_500, // 4.65%
+            employeeLongTermCareRate: 10_000, // 1.0%
           },
         },
       ],
@@ -1429,9 +1434,9 @@ export const PROVIDER_DEFINITIONS = {
           rates: {
             source:
               'https://www.shoken-kenpo.or.jp/member/outline/files/hokenryou_getsugaku_2026.pdf',
-            employeeHealthInsuranceRate: 3_415, // 3.415%
-            employerHealthInsuranceRate: 5_215, // 5.215%
-            employeeLongTermCareRate: 830, // 0.83%
+            employeeHealthInsuranceRate: 34_150, // 3.415%
+            employerHealthInsuranceRate: 52_150, // 5.215%
+            employeeLongTermCareRate: 8_300, // 0.83%
           },
         },
         // FY2025 (April 2025)
@@ -1440,9 +1445,9 @@ export const PROVIDER_DEFINITIONS = {
           rates: {
             source:
               'https://www.shoken-kenpo.or.jp/member/outline/files/hokenryou_getsugaku_2025.pdf',
-            employeeHealthInsuranceRate: 3_300, // 3.3% (total 8.4% split 33/51)
-            employerHealthInsuranceRate: 5_100, // 5.1%
-            employeeLongTermCareRate: 830, // 0.83% (total 1.66% split evenly)
+            employeeHealthInsuranceRate: 33_000, // 3.3% (total 8.4% split 33/51)
+            employerHealthInsuranceRate: 51_000, // 5.1%
+            employeeLongTermCareRate: 8_300, // 0.83% (total 1.66% split evenly)
           },
         },
       ],
