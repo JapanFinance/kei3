@@ -117,8 +117,9 @@ export interface EmploymentInsuranceBreakdown {
 
 /**
  * The employee's employment insurance premium on one month's wage, which is modelled as one
- * twelfth of the annual wage: one of the year's twelve shares of the rate, so nothing is divided
- * before the rounding.
+ * twelfth of the annual wage. The division by twelve is given to the rate rather than taken on
+ * the wage first, so an annual wage that is not twelve whole yen apiece still rounds from an
+ * exact product.
  */
 export const calculateMonthlyEmploymentInsurancePremium = (
   annualWage: number,

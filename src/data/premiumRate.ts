@@ -66,9 +66,12 @@ export class PremiumRate {
   }
 
   /**
-   * The premium on `amount`, rounded to whole yen by 50銭以下切り捨て、50銭超切り上げ. `shares`
-   * divides the rate, for a premium split between the employee and the employer (2) or charged
-   * on one month of an annual amount (12), without a division before the rounding.
+   * The premium on `amount`, rounded to whole yen by 50銭以下切り捨て、50銭超切り上げ.
+   *
+   * `shares` is the number of equal parts this premium is one of: 2 for the half (折半額) an
+   * employee pays of a premium they share with their employer, 12 for one month of an annual
+   * amount. It divides the scale, which comes to the same number as dividing the amount or the
+   * premium, and leaves the numerator whole, so the rounding still sees an exact tie.
    */
   premiumOn(amount: number, shares: number = 1): number {
     return roundSocialInsurancePremium(amount * this.#units, this.#scale * shares);
