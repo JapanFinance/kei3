@@ -3,6 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 
+import { percent } from '../data/employeesHealthInsurance/providerRateData';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -677,8 +678,8 @@ describe('calculateHealthInsuranceBonusBreakdown details', () => {
   // LTC Rate: 1.59% -> Employee: 0.795%
 
   const rates = {
-    employeeHealthInsuranceRate: 49_550,
-    employeeLongTermCareRate: 7_950,
+    employeeHealthInsuranceRate: percent(4.955),
+    employeeLongTermCareRate: percent(0.795),
   };
 
   it('returns correct breakdown for single bonus below cap', () => {

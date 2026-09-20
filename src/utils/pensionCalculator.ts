@@ -3,6 +3,7 @@
 
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
+import { perMilleOf } from '../data/rateUnits';
 import type { BonusIncomeStream } from '../types/tax';
 import { roundSocialInsurancePremium } from './taxCalculations';
 
@@ -14,11 +15,14 @@ export type { StandardMonthlyRemunerationBracket };
  */
 export const EMPLOYEES_PENSION_RATE_SCALE = 1_000;
 
+/** The employees' pension rate as the statute writes it: perMille(183) is 1000分の183. */
+const perMille = perMilleOf(EMPLOYEES_PENSION_RATE_SCALE);
+
 /**
  * Employees' pension insurance rate (厚生年金保険料率)
  * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
  */
-export const EMPLOYEES_PENSION_RATE = 183; // 18.3%
+export const EMPLOYEES_PENSION_RATE = perMille(183);
 
 /**
  * Employees' pension insurance SMR brackets

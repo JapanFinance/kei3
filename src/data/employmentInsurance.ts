@@ -1,6 +1,8 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { perMilleOf } from './rateUnits';
+
 /**
  * Employment insurance (雇用保険) premium rates for general businesses (一般の事業).
  * Employee portion only (労働者負担).
@@ -21,6 +23,9 @@ export interface EmploymentInsuranceRatePeriod {
  */
 export const EMPLOYMENT_INSURANCE_RATE_SCALE = 10_000;
 
+/** An employment insurance rate as the MHLW publishes it: perMille(5.5) is 5.5/1,000. */
+const perMille = perMilleOf(EMPLOYMENT_INSURANCE_RATE_SCALE);
+
 /**
  * Time-series of employment insurance rates, sorted newest-first.
  * Each entry defines the employee rate starting from the given date.
@@ -28,11 +33,11 @@ export const EMPLOYMENT_INSURANCE_RATE_SCALE = 10_000;
 export const EMPLOYMENT_INSURANCE_RATES: EmploymentInsuranceRatePeriod[] = [
   // FY2026 (令和8年度): April 2026 – March 2027
   // source: https://www.mhlw.go.jp/content/001672589.pdf
-  { effectiveFrom: { year: 2026, month: 3 }, rate: 50 }, // 5/1,000
+  { effectiveFrom: { year: 2026, month: 3 }, rate: perMille(5) },
 
   // FY2025 (令和7年度): April 2025 – March 2026
   // source: https://www.mhlw.go.jp/content/001401966.pdf
-  { effectiveFrom: { year: 2025, month: 3 }, rate: 55 }, // 5.5/1,000
+  { effectiveFrom: { year: 2025, month: 3 }, rate: perMille(5.5) },
 ];
 
 if (import.meta.env.DEV) {
