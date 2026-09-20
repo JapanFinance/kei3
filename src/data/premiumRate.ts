@@ -15,7 +15,7 @@
  * Throws if `units` is negative, NaN or infinite, since no premium can be.
  * @see https://www.nenkin.go.jp/service/kounen/hokenryo/nofu/20121026.html
  */
-export const roundSocialInsurancePremium = (units: number, scale: number): number => {
+const roundSocialInsurancePremium = (units: number, scale: number): number => {
   // Negated so that NaN, which fails every comparison, is rejected too.
   if (!(units >= 0 && units < Infinity)) {
     throw new Error(`Premium amount must be non-negative and finite: ${units}`);

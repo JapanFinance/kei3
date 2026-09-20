@@ -10,7 +10,7 @@ import {
   getRegionalRatesForMonth,
 } from '../data/employeesHealthInsurance/providerRates';
 import { perMille } from '../data/employmentInsurance';
-import { roundSocialInsurancePremium } from '../data/premiumRate';
+import { PremiumRate, percentTo } from '../data/premiumRate';
 import {
   calculateEmployeesHealthInsuranceBonusBreakdown,
   calculateHealthInsuranceBreakdown,
@@ -22,30 +22,34 @@ import {
 } from '../utils/taxCalculations';
 
 describe('Social Insurance Rounding', () => {
-  describe('roundSocialInsurancePremium', () => {
+  describe('PremiumRate.premiumOn', () => {
     it('rounds 0.50 yen down and more than 0.50 yen up', () => {
-      expect(roundSocialInsurancePremium(915, 10)).toBe(91);
-      expect(roundSocialInsurancePremium(9151, 100)).toBe(92);
-      expect(roundSocialInsurancePremium(91_500_001, 1_000_000)).toBe(92);
+      // 9.15% of 1,000 yen is 91.50 yen, and a rate a ten-millionth higher is above the tie.
+      expect(percentTo(4)(9.15).premiumOn(1000)).toBe(91);
+      expect(percentTo(4)(9.1501).premiumOn(1000)).toBe(92);
+      expect(percentTo(7)(9.1500001).premiumOn(1000)).toBe(92);
     });
 
     it('rounds an amount below 0.50 yen to positive zero', () => {
-      expect(roundSocialInsurancePremium(0, 100_000)).toBe(0);
-      expect(roundSocialInsurancePremium(3, 10)).toBe(0);
-      expect(Object.is(roundSocialInsurancePremium(3, 10), 0)).toBe(true);
+      expect(percentTo(4)(0).premiumOn(100_000)).toBe(0);
+      expect(percentTo(4)(0.03).premiumOn(1000)).toBe(0);
+      expect(Object.is(percentTo(4)(0.03).premiumOn(1000), 0)).toBe(true);
     });
 
     it('rounds exactly up to 2^53', () => {
-      expect(roundSocialInsurancePremium(2 ** 53 - 1, 2)).toBe(2 ** 52 - 1);
-      expect(roundSocialInsurancePremium(2 ** 53 - 3, 2)).toBe(2 ** 52 - 2);
-      expect(roundSocialInsurancePremium(2 ** 53 - 1, 100_000)).toBe(90_071_992_547);
+      // A whole rate over a scale of 1, so that the product is the amount itself.
+      const whole = PremiumRate.ofUnits(1, 1);
+      expect(whole.premiumOn(2 ** 53 - 1, 2)).toBe(2 ** 52 - 1);
+      expect(whole.premiumOn(2 ** 53 - 3, 2)).toBe(2 ** 52 - 2);
+      expect(PremiumRate.ofUnits(1, 100_000).premiumOn(2 ** 53 - 1)).toBe(90_071_992_547);
     });
 
     it('throws for a negative, NaN or infinite amount', () => {
-      expect(() => roundSocialInsurancePremium(-3, 10)).toThrow('must be non-negative');
-      expect(() => roundSocialInsurancePremium(-500, 1)).toThrow('must be non-negative');
-      expect(() => roundSocialInsurancePremium(Number.NaN, 1)).toThrow('must be non-negative');
-      expect(() => roundSocialInsurancePremium(Infinity, 1)).toThrow('must be non-negative');
+      const rate = percentTo(4)(5);
+      expect(() => rate.premiumOn(-3)).toThrow('must be non-negative');
+      expect(() => rate.premiumOn(-500)).toThrow('must be non-negative');
+      expect(() => rate.premiumOn(Number.NaN)).toThrow('must be non-negative');
+      expect(() => rate.premiumOn(Infinity)).toThrow('must be non-negative');
     });
   });
 
