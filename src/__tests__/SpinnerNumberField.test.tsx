@@ -160,6 +160,16 @@ describe('SpinnerNumberField', () => {
     expect(input).toHaveAttribute('inputmode', 'numeric');
   });
 
+  it('drops the decimal places of an amount', () => {
+    const mockOnChange = vi.fn();
+
+    render(<SpinnerNumberField value={0} onChange={mockOnChange} label="Test Amount" />);
+
+    fireEvent.change(screen.getByLabelText('Test Amount'), { target: { value: '¥300,000.5' } });
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(300000);
+  });
+
   it('drops decimal places beyond decimalScale', () => {
     const mockOnChange = vi.fn();
 
