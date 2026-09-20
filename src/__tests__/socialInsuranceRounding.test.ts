@@ -16,10 +16,7 @@ import {
   calculateHealthInsuranceBreakdown,
 } from '../utils/healthInsuranceCalculator';
 import { calculatePensionBonusBreakdown } from '../utils/pensionCalculator';
-import {
-  calculateBonusEmploymentInsurancePremium,
-  calculateMonthlyEmploymentInsurancePremium,
-} from '../utils/taxCalculations';
+import { calculateMonthlyEmploymentInsurancePremium } from '../utils/taxCalculations';
 
 describe('Social Insurance Rounding', () => {
   describe('PremiumRate.premiumOn', () => {
@@ -164,7 +161,7 @@ describe('Social Insurance Rounding', () => {
     it('rounds an exact 0.50 yen tie down', () => {
       // 301,000 yen a month × 5.5/1,000 = 1,655.50
       expect(calculateMonthlyEmploymentInsurancePremium(12 * 301_000, perMille(5.5))).toBe(1_655);
-      expect(calculateBonusEmploymentInsurancePremium(301_000, perMille(5.5))).toBe(1_655);
+      expect(perMille(5.5).premiumOn(301_000)).toBe(1_655);
     });
 
     it('takes one twelfth of the annual wage without rounding the division first', () => {

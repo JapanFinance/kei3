@@ -125,12 +125,6 @@ export const calculateMonthlyEmploymentInsurancePremium = (
   rate: PremiumRate,
 ): number => rate.premiumOn(annualWage, 12);
 
-/** The employee's employment insurance premium on a bonus. */
-export const calculateBonusEmploymentInsurancePremium = (
-  bonusAmount: number,
-  rate: PremiumRate,
-): number => rate.premiumOn(bonusAmount);
-
 /**
  * Calculates employment insurance premiums breakdown based on income.
  * The rate may vary by month within a calendar year (fiscal year changes in April).
@@ -159,7 +153,7 @@ const calculateEmploymentInsuranceBreakdown = (
   // Calculate on bonuses — use the rate for the month the bonus is paid
   for (const bonus of bonuses) {
     const rate = getEmploymentInsuranceRate(year, bonus.month);
-    const bonusPremium = calculateBonusEmploymentInsurancePremium(bonus.amount, rate);
+    const bonusPremium = rate.premiumOn(bonus.amount);
 
     bonusPortion += bonusPremium;
     annualPremium += bonusPremium;

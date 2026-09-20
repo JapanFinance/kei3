@@ -7,10 +7,7 @@ import React from 'react';
 import { getEmploymentInsuranceRate } from '../../../data/employmentInsurance';
 import type { BonusIncomeStream } from '../../../types/tax';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
-import {
-  calculateBonusEmploymentInsurancePremium,
-  calculateMonthlyEmploymentInsurancePremium,
-} from '../../../utils/taxCalculations';
+import { calculateMonthlyEmploymentInsurancePremium } from '../../../utils/taxCalculations';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
 const cellStyle = { padding: '2px 8px 2px 0' } as const;
@@ -91,7 +88,7 @@ interface BonusTooltipProps {
 const BonusBreakdownTooltip: React.FC<BonusTooltipProps> = ({ bonuses, year }) => {
   const rows = bonuses.map(bonus => {
     const rate = getEmploymentInsuranceRate(year, bonus.month);
-    const premium = calculateBonusEmploymentInsurancePremium(bonus.amount, rate);
+    const premium = rate.premiumOn(bonus.amount);
     return { month: bonus.month, amount: bonus.amount, rate, premium };
   });
 
