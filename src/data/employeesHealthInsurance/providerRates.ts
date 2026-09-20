@@ -61,8 +61,8 @@ export function getCustomProviderRates(
   customRates: CustomEmployeesHealthInsuranceRates | undefined,
 ): EmployeeRates {
   return {
-    employeeHealthInsuranceRate: percent.rounded(customRates?.healthInsuranceRate ?? 0),
-    employeeLongTermCareRate: percent.rounded(customRates?.longTermCareRate ?? 0),
+    employeeHealthInsuranceRate: percent.entered(customRates?.healthInsuranceRate ?? 0),
+    employeeLongTermCareRate: percent.entered(customRates?.longTermCareRate ?? 0),
   };
 }
 

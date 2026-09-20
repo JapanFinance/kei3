@@ -84,30 +84,33 @@ export class PremiumRate {
 }
 
 /**
- * Reads rates written in one unit. Calling it rejects, in development, a rate with more decimal
- * places than the scale holds; {@link RateReader.rounded} accepts one, for a rate a person typed
- * into the form rather than one curated here.
+ * Reads rates written in one unit, rounding each to the decimal places the unit holds.
+ *
+ * Calling it reads a rate curated in this repository, and rejects in development one written
+ * with more decimal places than that, since rounding a published rate away would be a
+ * transcription error nobody would see. {@link RateReader.entered} reads a rate a person entered
+ * instead, which has to be accepted whatever its decimals are.
  */
 export interface RateReader {
   (value: number): PremiumRate;
-  rounded(value: number): PremiumRate;
+  entered(value: number): PremiumRate;
 }
 
 const rateReader = (writtenScale: number, decimals: number, writtenUnit: string): RateReader => {
   const unitsPerWritten = 10 ** decimals;
   const scale = writtenScale * unitsPerWritten;
-  const rounded = (value: number): PremiumRate =>
+  const entered = (value: number): PremiumRate =>
     PremiumRate.ofUnits(Math.round(value * unitsPerWritten), scale);
-  const read = (value: number): PremiumRate => {
+  const curated = (value: number): PremiumRate => {
     const units = value * unitsPerWritten;
     if (import.meta.env.DEV && Math.abs(units - Math.round(units)) > 1e-6) {
       throw new Error(
         `The rate ${value}${writtenUnit} has more decimal places than its scale holds`,
       );
     }
-    return rounded(value);
+    return entered(value);
   };
-  return Object.assign(read, { rounded });
+  return Object.assign(curated, { entered });
 };
 
 /**
