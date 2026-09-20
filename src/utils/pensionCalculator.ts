@@ -3,16 +3,13 @@
 
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
-import { perMilleOf } from '../data/premiumRate';
+import { perMilleTo } from '../data/premiumRate';
 import type { BonusIncomeStream } from '../types/tax';
 
 export type { StandardMonthlyRemunerationBracket };
 
-/** The unit the employees' pension rate is held in: 1/1,000, as the statute writes it. */
-const EMPLOYEES_PENSION_RATE_SCALE = 1_000;
-
-/** The employees' pension rate as the statute writes it: perMille(183) is 1000分の183. */
-const perMille = perMilleOf(EMPLOYEES_PENSION_RATE_SCALE);
+/** The employees' pension rate as the statute writes it, whole: perMille(183) is 1000分の183. */
+const perMille = perMilleTo(0);
 
 /**
  * Employees' pension insurance rate (厚生年金保険料率)

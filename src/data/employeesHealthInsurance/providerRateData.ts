@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Prefecture } from '../prefectures';
-import { percentOf, type PremiumRate } from '../premiumRate';
+import { percentTo, type PremiumRate } from '../premiumRate';
 
 /**
  * Decimal places of a percentage that a health insurance premium rate can have. Four, because a
@@ -12,11 +12,8 @@ import { percentOf, type PremiumRate } from '../premiumRate';
  */
 export const HEALTH_INSURANCE_RATE_PERCENT_DECIMALS = 4;
 
-/** The unit a health insurance rate is held in: 1/1,000,000, that is 0.0001%. */
-const HEALTH_INSURANCE_RATE_SCALE = 100 * 10 ** HEALTH_INSURANCE_RATE_PERCENT_DECIMALS;
-
 /** A health insurance rate as the percentage its provider publishes: percent(5.075) is 5.075%. */
-export const percent = percentOf(HEALTH_INSURANCE_RATE_SCALE);
+export const percent = percentTo(HEALTH_INSURANCE_RATE_PERCENT_DECIMALS);
 
 /**
  * Regional rate variations for a provider

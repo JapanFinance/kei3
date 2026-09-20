@@ -10,8 +10,8 @@ import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 
 // Mock the provider data (time-series structure: regions map to arrays of rate periods)
 vi.mock('../data/employeesHealthInsurance/providerRateData', async importOriginal => {
-  const { percentOf } = await import('../data/premiumRate');
-  const percent = percentOf(1_000_000);
+  const { percentTo } = await import('../data/premiumRate');
+  const percent = percentTo(4);
   const PROVIDER_DEFINITIONS = {
     KyokaiKenpo: {
       providerName: 'Kyokai Kenpo',
@@ -54,8 +54,8 @@ vi.mock('../data/employeesHealthInsurance/providerRateData', async importOrigina
 
 // Mock the rate lookup to use the mocked data
 vi.mock('../data/employeesHealthInsurance/providerRates', async importOriginal => {
-  const { percentOf } = await import('../data/premiumRate');
-  const percent = percentOf(1_000_000);
+  const { percentTo } = await import('../data/premiumRate');
+  const percent = percentTo(4);
   return {
     ...(await importOriginal<typeof import('../data/employeesHealthInsurance/providerRates')>()),
     getRegionalRatesForMonth: (providerId: string) => {

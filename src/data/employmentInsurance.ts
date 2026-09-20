@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { perMilleOf, type PremiumRate } from './premiumRate';
+import { perMilleTo, type PremiumRate } from './premiumRate';
 
 /**
  * Employment insurance (雇用保険) premium rates for general businesses (一般の事業).
@@ -17,11 +17,11 @@ export interface EmploymentInsuranceRatePeriod {
   rate: PremiumRate;
 }
 
-/** The unit an employment insurance rate is held in: 1/10,000, that is 0.1/1,000. */
-const EMPLOYMENT_INSURANCE_RATE_SCALE = 10_000;
-
-/** An employment insurance rate as the MHLW publishes it: perMille(5.5) is 5.5/1,000. */
-export const perMille = perMilleOf(EMPLOYMENT_INSURANCE_RATE_SCALE);
+/**
+ * An employment insurance rate as the MHLW publishes it, to one decimal place: perMille(5.5) is
+ * 5.5/1,000.
+ */
+export const perMille = perMilleTo(1);
 
 /**
  * Time-series of employment insurance rates, sorted newest-first.

@@ -31,7 +31,7 @@ export const roundSocialInsurancePremium = (units: number, scale: number): numbe
  * premium, a whole-yen amount times a rate, is an exact integer product rather than a binary
  * fraction. Callers work with the rate itself and never see the scale.
  *
- * Read a rate with {@link percentOf} or {@link perMilleOf} in the unit its source publishes. The
+ * Read a rate with {@link percentTo} or {@link perMilleTo} in the unit its source publishes. The
  * decimal in the source only picks the integer: 5.075 is the double 5.0749999999999998, and times
  * 10,000 it lands 1.2e-10 from 50,750, far nearer that integer than any other.
  */
@@ -90,7 +90,9 @@ export interface RateReader {
   rounded(value: number): PremiumRate;
 }
 
-const rateReader = (scale: number, unitsPerWritten: number, writtenUnit: string): RateReader => {
+const rateReader = (writtenScale: number, decimals: number, writtenUnit: string): RateReader => {
+  const unitsPerWritten = 10 ** decimals;
+  const scale = writtenScale * unitsPerWritten;
   const rounded = (value: number): PremiumRate =>
     PremiumRate.ofUnits(Math.round(value * unitsPerWritten), scale);
   const read = (value: number): PremiumRate => {
@@ -105,8 +107,14 @@ const rateReader = (scale: number, unitsPerWritten: number, writtenUnit: string)
   return Object.assign(read, { rounded });
 };
 
-/** Reads a rate written as a percentage: with a scale of 1,000,000, 5.075 is 50,750 units. */
-export const percentOf = (scale: number) => rateReader(scale, scale / 100, '%');
+/**
+ * Reads a rate written as a percentage to `decimals` decimal places: read to four, 5.075% is
+ * 50,750 units of 0.0001%.
+ */
+export const percentTo = (decimals: number) => rateReader(100, decimals, '%');
 
-/** Reads a rate written per 1,000 (1000分の): with a scale of 10,000, 5.5 is 55 units. */
-export const perMilleOf = (scale: number) => rateReader(scale, scale / 1000, '/1,000');
+/**
+ * Reads a rate written per 1,000 (1000分の) to `decimals` decimal places: read to one, 5.5/1,000
+ * is 55 units of 0.1/1,000.
+ */
+export const perMilleTo = (decimals: number) => rateReader(1000, decimals, '/1,000');
