@@ -926,4 +926,5 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   );
 };
 
-export default TakeHomeChart;
+// App's urgent render passes the previous deferred inputs unchanged; memo lets it skip the chart.
+export default React.memo(TakeHomeChart);
