@@ -369,6 +369,11 @@ export interface TakeHomeInputs {
   personalCircumstances: PersonalCircumstancesInput;
 }
 
+/**
+ * The employee rates entered for a custom health insurance provider, as the percentages the form
+ * holds them: 4.755 is 4.755%. {@link getCustomProviderRates} reads them into premium rates, to the
+ * decimal places the form accepts.
+ */
 export interface CustomEmployeesHealthInsuranceRates {
   healthInsuranceRate: number;
   longTermCareRate: number;
