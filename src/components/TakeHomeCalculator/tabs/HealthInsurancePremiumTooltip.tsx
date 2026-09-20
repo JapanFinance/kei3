@@ -12,7 +12,11 @@ import {
   EHI_SMR_BRACKETS,
   type StandardMonthlyRemunerationBracket,
 } from '../../../data/employeesHealthInsurance/smrBrackets';
-import { getNHIParamsForMonth } from '../../../data/nationalHealthInsurance/nhiParamsData';
+import {
+  getNHIParamsForMonth,
+  nhiParamsDiffer,
+  type NHIParamsField,
+} from '../../../data/nationalHealthInsurance/nhiParamsData';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -32,10 +36,10 @@ const PORTION_CONFIG: Record<
   NHIPortionType,
   {
     label: string;
-    rateKey: keyof NationalHealthInsuranceRegionParams;
-    perCapitaKey: keyof NationalHealthInsuranceRegionParams;
-    householdFlatKey: keyof NationalHealthInsuranceRegionParams;
-    capKey: keyof NationalHealthInsuranceRegionParams;
+    rateKey: NHIParamsField;
+    perCapitaKey: NHIParamsField;
+    householdFlatKey: NHIParamsField;
+    capKey: NHIParamsField;
   }
 > = {
   medical: {
@@ -81,10 +85,10 @@ function calculatePortionForFY(
   final: number;
 } {
   const config = PORTION_CONFIG[portion];
-  const rate = params[config.rateKey] as number | undefined;
-  const perCapita = (params[config.perCapitaKey] as number | undefined) ?? 0;
-  const householdFlat = (params[config.householdFlatKey] as number | undefined) ?? 0;
-  const cap = params[config.capKey] as number | undefined;
+  const rate = params[config.rateKey];
+  const perCapita = params[config.perCapitaKey] ?? 0;
+  const householdFlat = params[config.householdFlatKey] ?? 0;
+  const cap = params[config.capKey];
 
   if (!rate || !cap) {
     return { incomeBasedAmount: 0, perCapita: 0, householdFlat: 0, uncapped: 0, cap: 0, final: 0 };
@@ -195,7 +199,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   const nhiTaxableIncome = Math.max(0, results.totalNetIncome - currFYData.nhiStandardDeduction);
 
   // Check if this portion has rates in the current FY data
-  const currRate = currFYData[config.rateKey] as number | undefined;
+  const currRate = currFYData[config.rateKey];
   if (!currRate) {
     return (
       <Box>
@@ -204,22 +208,19 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     );
   }
 
-  // Determine if rates are blended across fiscal years for this portion
-  const prevRate = prevFYData ? (prevFYData[config.rateKey] as number | undefined) : undefined;
+  // Show both fiscal years only when this portion's amount can differ between them. The
+  // calculator blends every portion whenever any parameter differs, but a portion whose own
+  // parameters are unchanged blends to its single-year amount.
+  const prevRate = prevFYData ? prevFYData[config.rateKey] : undefined;
   const ratesBlended =
     prevFYData &&
-    prevFYData !== currFYData &&
-    // Portion is newly introduced (exists in current FY but not previous)
-    ((!prevRate && currRate) ||
-      // Both FYs have the portion but parameters differ
-      (prevRate &&
-        (prevRate !== currRate ||
-          (prevFYData[config.perCapitaKey] as number | undefined) !==
-            (currFYData[config.perCapitaKey] as number | undefined) ||
-          (prevFYData[config.capKey] as number | undefined) !==
-            (currFYData[config.capKey] as number | undefined) ||
-          (prevFYData[config.householdFlatKey] as number | undefined) !==
-            (currFYData[config.householdFlatKey] as number | undefined))));
+    nhiParamsDiffer(prevFYData, currFYData, [
+      config.rateKey,
+      config.perCapitaKey,
+      config.householdFlatKey,
+      config.capKey,
+      'nhiStandardDeduction',
+    ]);
 
   // For blended calculation, we need NHI taxable income from each FY's deduction
   // (in practice, the deduction is usually the same, but use each FY's value for correctness)
@@ -398,16 +399,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
       );
     }
 
-    const ratesBlended =
-      prevFYData &&
-      prevFYData !== currFYData &&
-      (prevFYData.medicalRate !== regionData.medicalRate ||
-        prevFYData.supportRate !== regionData.supportRate ||
-        prevFYData.medicalCap !== regionData.medicalCap ||
-        prevFYData.supportCap !== regionData.supportCap ||
-        prevFYData.ltcRateForEligible !== regionData.ltcRateForEligible ||
-        prevFYData.childSupportRate !== regionData.childSupportRate ||
-        prevFYData.childSupportCap !== regionData.childSupportCap);
+    const ratesBlended = prevFYData && nhiParamsDiffer(prevFYData, regionData);
 
     return (
       <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 420 } }}>
