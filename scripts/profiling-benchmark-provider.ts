@@ -8,6 +8,9 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { Session } from 'node:inspector/promises';
 
+// Tinybench is left out of package.json on purpose, so that this import resolves to the
+// copy Vitest installs. The types below require that copy, because Vitest depends on one
+// exact Tinybench version and types BenchmarkProvider against it.
 import { Bench } from 'tinybench';
 import type { BenchmarkProvider } from 'vitest';
 
