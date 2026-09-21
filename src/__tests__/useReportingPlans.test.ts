@@ -15,6 +15,7 @@ import {
   type TakeHomeInputs,
   type WithholdingAccountIncomeStream,
 } from '../types/tax';
+import { countPlans, deriveReportingUnits } from '../utils/reportingPlanner';
 
 const account = (
   overrides: Partial<WithholdingAccountIncomeStream> & Pick<WithholdingAccountIncomeStream, 'id'>,
@@ -114,27 +115,38 @@ describe('useReportingPlans', () => {
     expect(result.current.progress).toBeUndefined();
   });
 
-  it('falls back to a bounded search when budgetMs is 0', async () => {
-    const { result } = renderPlans(severalUnitsInputs, true, { budgetMs: 0 });
+  it('falls back to a bounded search once the first chunk predicts an overrun', async () => {
+    const { result } = renderPlans(severalUnitsInputs, true, { budgetMs: -1, chunkMs: 0 });
 
-    // bounded is decided synchronously, before any async work runs.
-    expect(result.current.bounded).toBe(true);
-    expect(result.current.boundedEstimate?.count).toBeGreaterThan(0);
-    expect(result.current.rows?.find(row => row.key === 'best')?.label).toBe('Best found');
+    // Nothing is decided before the first chunk has run.
+    expect(result.current.bounded).toBe(false);
+    expect(result.current.rows?.find(row => row.key === 'best')?.label).toBe('Best');
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });
+    expect(result.current.bounded).toBe(true);
+    expect(result.current.boundedEstimate?.count).toBe(
+      result.current.rows ? countPlans(deriveReportingUnits(severalUnitsInputs.incomeStreams)) : 0,
+    );
+    expect(result.current.rows?.find(row => row.key === 'best')?.label).toBe('Best found');
     // The search still only ever shows exact engine results.
     expect(result.current.rows).toBeDefined();
   });
 
-  it('shows progress only when the predicted time is above the threshold', () => {
-    const forced = renderPlans(smallInputs, true, { progressThresholdMs: -1 });
+  it('shows progress only once the search has run longer than the threshold', async () => {
+    const forced = renderPlans(smallInputs, true, { chunkMs: 0, progressThresholdMs: -1 });
     expect(forced.result.current.showProgress).toBe(true);
     expect(forced.result.current.progress).toBeDefined();
 
-    const suppressed = renderPlans(smallInputs, true, { progressThresholdMs: 1_000_000_000 });
+    const suppressed = renderPlans(smallInputs, true, {
+      chunkMs: 0,
+      progressThresholdMs: 1_000_000_000,
+    });
+    expect(suppressed.result.current.showProgress).toBe(false);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
     expect(suppressed.result.current.showProgress).toBe(false);
     expect(suppressed.result.current.progress).toBeUndefined();
   });

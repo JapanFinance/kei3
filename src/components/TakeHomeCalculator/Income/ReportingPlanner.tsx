@@ -20,7 +20,7 @@ import type { PlanFigures } from '../../../utils/reportingPlanner';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import ReferenceTable from '../../ui/ReferenceTable';
 import { DetailedTooltip } from '../../ui/Tooltips';
-import { type ReportingRow, useReportingPlans } from './useReportingPlans';
+import { type ReportingRow, type SearchProgress, useReportingPlans } from './useReportingPlans';
 
 interface ReportingPlannerProps {
   /** The calculation inputs behind the income modal's streams. */
@@ -81,11 +81,22 @@ const cardTitle = (row: ReportingRow): string => {
 const instructionFor = (row: ReportingRow): string =>
   row.key === 'best' && !row.canApply ? CURRENT_KEEPS_MOST : row.instruction;
 
-const RowProgress: React.FC<{ progress: { done: number; count: number } }> = ({ progress }) => (
-  <Box sx={{ maxWidth: 200, mt: 0.5 }}>
-    <LinearProgress variant="determinate" value={(progress.done / progress.count) * 100} />
+/**
+ * The search indicator, at the top of the panel so it is in view right after expanding: a
+ * determinate bar with "done of count" while the search is exhaustive, an indeterminate one with
+ * the plans checked so far once it has fallen back to descent, whose length is not known ahead.
+ */
+const SearchIndicator: React.FC<{ progress: SearchProgress }> = ({ progress }) => (
+  <Box sx={{ mb: 1.5 }}>
+    {progress.count === undefined ? (
+      <LinearProgress />
+    ) : (
+      <LinearProgress variant="determinate" value={(progress.done / progress.count) * 100} />
+    )}
     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-      {formatNumber(progress.done)} of {formatNumber(progress.count)}
+      {progress.count === undefined
+        ? `Searching: ${formatNumber(progress.done)} plans checked`
+        : `Searching: ${formatNumber(progress.done)} of ${formatNumber(progress.count)} plans`}
     </Typography>
   </Box>
 );
@@ -169,6 +180,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                 )}
               </DetailedTooltip>
             </Typography>
+            {showProgress && progress && <SearchIndicator progress={progress} />}
             {isMobile ? (
               <Stack spacing={1.5}>
                 {rows.map(row => (
@@ -193,9 +205,6 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                         formatJPY(row.evaluated.figures[column.key]),
                       ])}
                     />
-                    {row.key === 'best' && showProgress && progress && (
-                      <RowProgress progress={progress} />
-                    )}
                     {instructionFor(row) && (
                       <Typography
                         variant="body2"
@@ -246,7 +255,6 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                     )}
                   />
                 </Box>
-                {showProgress && progress && <RowProgress progress={progress} />}
                 <Stack spacing={0.75} sx={{ mt: 1.5 }}>
                   {rows.map(row => (
                     <Box key={row.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>

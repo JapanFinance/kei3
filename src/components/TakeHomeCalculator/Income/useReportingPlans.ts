@@ -24,19 +24,28 @@ import {
 } from '../../../utils/reportingPlanner';
 
 export interface UseReportingPlansOptions {
-  /** Predicted search time, in ms, an exhaustive search is allowed before descent takes over. */
+  /**
+   * Predicted time, in ms, an exhaustive search is allowed before descent takes over; predicted
+   * from the throughput of its first chunk.
+   */
   budgetMs?: number;
-  /** Predicted search time, in ms, above which the Best row shows a progress bar. */
+  /** How long, in ms, a search runs before the progress indicator appears. */
   progressThresholdMs?: number;
   /** How long, in ms, the search runs before yielding to the event loop. */
   chunkMs?: number;
 }
 
-const DEFAULT_BUDGET_MS = 2_000;
+const DEFAULT_BUDGET_MS = 5_000;
 const DEFAULT_PROGRESS_THRESHOLD_MS = 150;
 const DEFAULT_CHUNK_MS = 30;
 
 export type UniformRowKey = 'withheldOnly' | 'separate' | 'aggregate';
+
+/** Plans evaluated so far; `count` is the total while the search is exhaustive, absent in descent. */
+export interface SearchProgress {
+  done: number;
+  count?: number;
+}
 export type ReportingRowKey = 'current' | 'best' | UniformRowKey;
 
 export interface ReportingRow {
@@ -55,8 +64,8 @@ export interface UseReportingPlansResult {
   bestPlan: EvaluatedPlan | undefined;
   /** The once-stated note for entries that always have to be reported (7.3.4). */
   mandatoryNote: string | undefined;
-  progress: { done: number; count: number } | undefined;
-  /** True only while an exhaustive search is predicted to take long enough to be worth showing. */
+  progress: SearchProgress | undefined;
+  /** True while a search has run longer than the threshold and is still running. */
   showProgress: boolean;
   /** True once the search had to fall back to coordinate descent instead of running exhaustively. */
   bounded: boolean;
@@ -91,9 +100,10 @@ const yieldToEventLoop = (): Promise<void> => {
 /**
  * Searches the reporting plans for the investment entries in `inputs` while `expanded` is true
  * (7.3.3): runs in an effect, never during render. Current and the uniform plans render at once
- * (at most a handful of engine runs); their wall time predicts how long every feasible plan would
- * take. Within `budgetMs` that runs exhaustively; otherwise a coordinate descent from the best
- * uniform plan bounds the search instead. Both are chunked by `chunkMs` and yield to the event
+ * (at most a handful of engine runs). The exhaustive search then starts, and the throughput of its
+ * first chunk predicts how long every feasible plan would take: within `budgetMs` it runs on;
+ * otherwise a coordinate descent from the best plan found so far bounds the search instead. Both
+ * are chunked by `chunkMs` and yield to the event
  * loop between chunks so the panel and the rest of the app stay responsive, and both abort — via a
  * generation counter bumped on every effect start and cleanup — the moment `inputs` changes or the
  * panel collapses, so an in-flight search never writes a stale result.
@@ -134,9 +144,7 @@ export function useReportingPlans(
         ? withheldOnlyPlan(inputs, units)
         : allReportedPlan(inputs, units, key);
 
-    // Step 1 (7.3.3): Current and the uniform plans, timed together to price one engine run on
-    // this device.
-    const runStart = performance.now();
+    // Step 1 (7.3.3): Current and the uniform plans, synchronously, so their rows render at once.
     const current: PlanEvaluation = {
       plan: currentPlan(inputs),
       evaluated: evaluatePlan(inputs, currentPlan(inputs)),
@@ -147,20 +155,18 @@ export function useReportingPlans(
         return [key, { plan, evaluated: evaluatePlan(inputs, plan) }];
       }),
     );
-    const elapsedMs = performance.now() - runStart;
-    const perRunMs = elapsedMs / (1 + uniformKeys.length);
 
     let best = [...uniformEvaluations.values()].reduce(
       (soFar, candidate) => (isBetterPlan(candidate, soFar, inputs, units) ? candidate : soFar),
       current,
     );
 
-    // Step 2: predict the exhaustive search's cost and choose exhaustive search or descent.
     const count = countPlans(units);
-    const predictedMs = count * perRunMs;
-    const bounded = predictedMs > budgetMs;
-    const showProgress = !bounded && predictedMs > progressThresholdMs;
-    const boundedEstimate = bounded ? { count, predictedMs } : undefined;
+    // Decided after the first chunk of the exhaustive search, from its measured throughput: the
+    // first few engine runs after the panel opens are cold and run ten times slower than warm
+    // ones, so a prediction from them alone would overstate the search by as much.
+    let bounded = false;
+    let boundedEstimate: { count: number; predictedMs: number } | undefined;
 
     const buildRows = (bestSoFar: PlanEvaluation): ReportingRow[] => [
       {
@@ -189,25 +195,30 @@ export function useReportingPlans(
       }),
     ];
 
-    // `done` is the progress to show; undefined once the search is over or when it was never
-    // worth showing, so the bar disappears when the Best row is final.
-    const publish = (bestSoFar: PlanEvaluation, done: number | undefined) => {
+    // `progress` is what the indicator shows while the search runs: the plans evaluated so far,
+    // with the total while the search is exhaustive; undefined once the search is over, so the
+    // indicator disappears when the Best row is final.
+    const publish = (bestSoFar: PlanEvaluation, progress: SearchProgress | undefined) => {
       setResult({
         rows: buildRows(bestSoFar),
         bestPlan: bestSoFar.evaluated,
         mandatoryNote,
-        progress: done === undefined ? undefined : { done, count },
-        showProgress: done !== undefined,
+        progress,
+        showProgress: progress !== undefined,
         bounded,
         boundedEstimate,
       });
     };
 
-    publish(best, showProgress ? 0 : undefined);
+    publish(best, undefined);
 
     void (async () => {
+      const searchStart = performance.now();
       let done = 0;
-      let chunkStart = performance.now();
+      let chunkStart = searchStart;
+      // The indicator appears once the search has run longer than the threshold and stays until
+      // the search ends, so a short search never flickers one in.
+      let showProgress = false;
 
       // Records one evaluated candidate, advances `best`, and yields once `chunkMs` of work has
       // elapsed, publishing the progress so far. Returns false once this run is no longer current
@@ -216,21 +227,37 @@ export function useReportingPlans(
         if (!isCurrentGeneration()) return false;
         done++;
         if (isBetterPlan(candidate, best, inputs, units)) best = candidate;
-        if (performance.now() - chunkStart < chunkMs) return true;
-        publish(best, showProgress ? done : undefined);
+        const now = performance.now();
+        if (now - chunkStart < chunkMs) return true;
+        if (now - searchStart > progressThresholdMs) showProgress = true;
+        publish(best, showProgress ? { done, ...(bounded ? {} : { count }) } : undefined);
         await yieldToEventLoop();
         chunkStart = performance.now();
+        yielded = true;
         return isCurrentGeneration();
       };
 
-      if (!bounded) {
-        for (const plan of generatePlans(inputs.incomeStreams, units)) {
-          if (!isCurrentGeneration()) return;
-          const candidate: PlanEvaluation = { plan, evaluated: evaluatePlan(inputs, plan) };
-          // eslint-disable-next-line no-await-in-loop -- deliberately sequential, chunked by a running clock
-          if (!(await recordAndMaybeYield(candidate))) return;
+      let yielded = false;
+      let decided = false;
+      for (const plan of generatePlans(inputs.incomeStreams, units)) {
+        if (!isCurrentGeneration()) return;
+        const candidate: PlanEvaluation = { plan, evaluated: evaluatePlan(inputs, plan) };
+        // eslint-disable-next-line no-await-in-loop -- deliberately sequential, chunked by a running clock
+        if (!(await recordAndMaybeYield(candidate))) return;
+        // Once the first chunk has yielded, its throughput is known: predict the whole search
+        // from it, once, and bound the search if it would overrun the budget.
+        if (!decided && yielded) {
+          decided = true;
+          const predictedMs = ((chunkStart - searchStart) / done) * count;
+          if (predictedMs > budgetMs) {
+            bounded = true;
+            boundedEstimate = { count, predictedMs };
+            break;
+          }
         }
-      } else {
+      }
+
+      if (bounded) {
         const search = descendFromPlan(inputs, units, best);
         for (let step = search.next(); !step.done; step = search.next()) {
           if (!isCurrentGeneration()) return;

@@ -237,7 +237,7 @@ describe('ReportingPlanner', () => {
     expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument();
   });
 
-  it('shows a determinate progress bar on the Best row only while the search reports progress', async () => {
+  it('shows a determinate search indicator while an exhaustive search reports progress', async () => {
     setResult({
       showProgress: true,
       progress: { done: 4, count: 10 },
@@ -249,7 +249,23 @@ describe('ReportingPlanner', () => {
 
     const progressbar = screen.getByRole('progressbar');
     expect(progressbar).toHaveAttribute('aria-valuenow', '40');
-    expect(screen.getByText('4 of 10')).toBeInTheDocument();
+    expect(screen.getByText('Searching: 4 of 10 plans')).toBeInTheDocument();
+  });
+
+  it('shows an indeterminate search indicator with the count so far once the search is bounded', async () => {
+    setResult({
+      showProgress: true,
+      progress: { done: 250 },
+      bounded: true,
+      boundedEstimate: { count: 16_352, predictedMs: 40_000 },
+      rows: [row({ key: 'current', label: 'Current' }), row({ key: 'best', label: 'Best found' })],
+    });
+
+    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
+    await expandPanel();
+
+    expect(screen.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
+    expect(screen.getByText('Searching: 250 plans checked')).toBeInTheDocument();
   });
 
   it('renders one two-column block per plan on a phone screen', async () => {
