@@ -11,7 +11,6 @@ import {
   percent,
 } from '../../../data/employeesHealthInsurance/providerRateData';
 import {
-  calculateEmployeeHealthInsurancePremium,
   getCustomProviderRates,
   getEmployeePremiumRate,
   getRegionalRatesForMonth,
@@ -481,11 +480,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
     const includeLTC: boolean = isLongTermCareCategory2Insured(inputs.ageRange);
     const finalRate = getEmployeePremiumRate(rates, includeLTC);
-    const totalPremium = calculateEmployeeHealthInsurancePremium(
-      standardMonthlyRemuneration,
-      rates,
-      includeLTC,
-    );
+    const totalPremium = finalRate.premiumOn(standardMonthlyRemuneration);
 
     // Check if rates differ across the 12 months of the year
     const monthlyRates: { rate: PremiumRate; premium: number }[] = [];
@@ -496,11 +491,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
         const monthRates = getRegionalRatesForMonth(provider, region, year, m);
         if (monthRates) {
           const r = getEmployeePremiumRate(monthRates, includeLTC);
-          const p = calculateEmployeeHealthInsurancePremium(
-            standardMonthlyRemuneration,
-            monthRates,
-            includeLTC,
-          );
+          const p = r.premiumOn(standardMonthlyRemuneration);
           monthlyRates.push({ rate: r, premium: p });
           if (m > 0 && !r.equals(monthlyRates[0]!.rate)) ratesVary = true;
         }

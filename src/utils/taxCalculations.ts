@@ -143,11 +143,19 @@ const calculateEmploymentInsuranceBreakdown = (
   let annualPremium = 0;
   let bonusPortion = 0;
 
-  // Calculate on regular monthly salary — each month may have a different rate
+  // Calculate on regular monthly salary — the rate may change during the year, and every month
+  // of one rate period shares the rate object the lookup returns, so the premium is computed once
+  // per period.
   if (salaryIncome > 0) {
+    let premiumRate: PremiumRate | undefined;
+    let premium = 0;
     for (let month = 0; month < 12; month++) {
       const rate = getEmploymentInsuranceRate(year, month);
-      annualPremium += calculateMonthlyEmploymentInsurancePremium(salaryIncome, rate);
+      if (rate !== premiumRate) {
+        premium = calculateMonthlyEmploymentInsurancePremium(salaryIncome, rate);
+        premiumRate = rate;
+      }
+      annualPremium += premium;
     }
   }
 

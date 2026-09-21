@@ -1,9 +1,10 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { RegionalRates } from '../data/employeesHealthInsurance/providerRateData';
 import {
-  calculateEmployeeHealthInsurancePremium,
   getCustomProviderRates,
+  getEmployeePremiumRate,
   getRegionalRatesForMonth,
   type EmployeeRates,
 } from '../data/employeesHealthInsurance/providerRates';
@@ -92,11 +93,10 @@ export function calculateHealthInsuranceBreakdown(
       const staticRates = getCustomProviderRates(customRates);
 
       // Custom rates don't vary by month
-      const monthlyPremium = calculateEmployeeHealthInsurancePremium(
-        smrBracket.smrAmount,
+      const monthlyPremium = getEmployeePremiumRate(
         staticRates,
         isSubjectToLongTermCarePremium,
-      );
+      ).premiumOn(smrBracket.smrAmount);
       let totalPremium = monthlyPremium * 12;
       let bonusPortion = 0;
 
@@ -114,16 +114,22 @@ export function calculateHealthInsuranceBreakdown(
       return { total: totalPremium, bonusPortion };
     }
 
-    // Calculate per-month premiums — rate may differ by month within a calendar year
+    // Calculate per-month premiums — rates may differ by month within a calendar year, and every
+    // month of one rate period shares the rates object the lookup returns, so the premium is
+    // computed once per period.
     let totalPremium = 0;
+    let periodRates: RegionalRates | undefined;
+    let premium = 0;
     for (let month = 0; month < 12; month++) {
       const monthRates = getRegionalRatesForMonth(provider, region, year, month);
       if (monthRates) {
-        totalPremium += calculateEmployeeHealthInsurancePremium(
-          smrBracket.smrAmount,
-          monthRates,
-          isSubjectToLongTermCarePremium,
-        );
+        if (monthRates !== periodRates) {
+          premium = getEmployeePremiumRate(monthRates, isSubjectToLongTermCarePremium).premiumOn(
+            smrBracket.smrAmount,
+          );
+          periodRates = monthRates;
+        }
+        totalPremium += premium;
       }
     }
 
@@ -223,7 +229,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
       continue;
     }
 
-    const premium = calculateEmployeeHealthInsurancePremium(standardBonusAmount, rates, includeLTC);
+    const premium = getEmployeePremiumRate(rates, includeLTC).premiumOn(standardBonusAmount);
 
     breakdown.push({
       month: bonus.month,

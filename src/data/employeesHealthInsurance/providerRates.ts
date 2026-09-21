@@ -80,17 +80,6 @@ export function getEmployeePremiumRate(
 }
 
 /**
- * The employee's premium on a standard monthly remuneration or standard bonus amount.
- */
-export function calculateEmployeeHealthInsurancePremium(
-  standardAmount: number,
-  rates: EmployeeRates,
-  includeLongTermCare: boolean,
-): number {
-  return getEmployeePremiumRate(rates, includeLongTermCare).premiumOn(standardAmount);
-}
-
-/**
  * Get all available regions for a specific provider
  */
 export function getAvailableRegions(providerId: string): string[] {
