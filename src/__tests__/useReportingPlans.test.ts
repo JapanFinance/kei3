@@ -15,7 +15,7 @@ import {
   type TakeHomeInputs,
   type WithholdingAccountIncomeStream,
 } from '../types/tax';
-import { countPlans, deriveReportingUnits } from '../utils/reportingPlanner';
+import { countPlans, deriveReportingUnits, samePlan } from '../utils/reportingPlanner';
 
 const account = (
   overrides: Partial<WithholdingAccountIncomeStream> & Pick<WithholdingAccountIncomeStream, 'id'>,
@@ -91,6 +91,30 @@ describe('useReportingPlans', () => {
     vi.useRealTimers();
   });
 
+  it('shows each distinct plan once, naming it for the uniform plan it equals and tagging its roles', async () => {
+    // Three gain-only accounts, all withheld: Current is the withheld-only plan, so the two share
+    // one row, and whichever plan is best is tagged rather than repeated.
+    const { result } = renderPlans(severalUnitsInputs, true, { chunkMs: 0 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+    const rows = result.current.rows!;
+    const units = deriveReportingUnits(severalUnitsInputs.incomeStreams);
+
+    rows.forEach((row, i) =>
+      rows.slice(i + 1).forEach(other => {
+        expect(samePlan(units, row.evaluated, other.evaluated)).toBe(false);
+      }),
+    );
+    expect(rows.filter(row => row.roles.includes('current'))).toHaveLength(1);
+    expect(rows.filter(row => row.roles.includes('best'))).toHaveLength(1);
+    const currentRow = rows.find(row => row.roles.includes('current'))!;
+    expect(currentRow.key).toBe('withheldOnly');
+    expect(currentRow.label).toBe('All withheld only');
+    expect(currentRow.canApply).toBe(false);
+    expect(rows.filter(row => row.canApply)).toHaveLength(rows.length - 1);
+  });
+
   it('does nothing until expanded', () => {
     const { result } = renderPlans(smallInputs, false);
     expect(result.current.rows).toBeUndefined();
@@ -120,7 +144,7 @@ describe('useReportingPlans', () => {
 
     // Nothing is decided before the first chunk has run.
     expect(result.current.bounded).toBe(false);
-    expect(result.current.rows?.find(row => row.key === 'best')?.label).toBe('Best');
+    expect(result.current.rows?.some(row => row.roles.includes('best'))).toBe(true);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -129,7 +153,7 @@ describe('useReportingPlans', () => {
     expect(result.current.boundedEstimate?.count).toBe(
       result.current.rows ? countPlans(deriveReportingUnits(severalUnitsInputs.incomeStreams)) : 0,
     );
-    expect(result.current.rows?.find(row => row.key === 'best')?.label).toBe('Best found');
+    expect(result.current.rows?.some(row => row.roles.includes('best'))).toBe(true);
     // The search still only ever shows exact engine results.
     expect(result.current.rows).toBeDefined();
   });

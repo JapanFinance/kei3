@@ -58,14 +58,18 @@ const evaluated = (
   figures: figures(overrides),
 });
 
-const row = (overrides: Partial<ReportingRow>): ReportingRow => ({
-  key: 'current',
-  label: 'Current',
-  evaluated: evaluated([streamA]),
-  changes: [],
-  canApply: false,
-  ...overrides,
-});
+const row = (overrides: Partial<ReportingRow>): ReportingRow => {
+  const key = overrides.key ?? 'current';
+  return {
+    key,
+    label: 'Current',
+    roles: key === 'current' || key === 'best' ? [key] : [],
+    evaluated: evaluated([streamA]),
+    changes: [],
+    canApply: false,
+    ...overrides,
+  };
+};
 
 const inputs: TakeHomeInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -226,8 +230,14 @@ describe('ReportingPlanner', () => {
   it('says the current choices already keep the most when Best equals Current, and offers no Apply for it', async () => {
     setResult({
       rows: [
-        row({ key: 'current', label: 'Current' }),
-        row({ key: 'best', label: 'Best', canApply: false, changes: ['should not be shown'] }),
+        // One row for both: the plan found to keep the most is the current one.
+        row({
+          key: 'current',
+          label: 'Current',
+          roles: ['current', 'best'],
+          canApply: false,
+          changes: ['should not be shown'],
+        }),
       ],
     });
 
@@ -237,6 +247,31 @@ describe('ReportingPlanner', () => {
     expect(screen.getByText('The current choices already keep the most.')).toBeInTheDocument();
     expect(screen.queryByText('should not be shown')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument();
+  });
+
+  it('tags a uniform plan that is both Current and Best instead of repeating it', async () => {
+    mockedUseMediaQuery.mockReturnValue(true);
+    setResult({
+      rows: [
+        row({
+          key: 'withheldOnly',
+          label: 'All withheld only',
+          roles: ['current', 'best'],
+          canApply: false,
+        }),
+        row({ key: 'separate', label: 'All reported, separate (申告分離課税)', canApply: true }),
+      ],
+    });
+
+    render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
+    await expandPanel();
+
+    expect(screen.getAllByRole('table')).toHaveLength(2);
+    expect(screen.getByText('All withheld only')).toBeInTheDocument();
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Best')).toBeInTheDocument();
+    expect(screen.getByText('The current choices already keep the most.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Apply' })).toHaveLength(1);
   });
 
   it('shows a determinate search indicator while an exhaustive search reports progress', async () => {

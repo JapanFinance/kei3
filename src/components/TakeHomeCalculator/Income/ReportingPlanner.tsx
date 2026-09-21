@@ -7,6 +7,7 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
@@ -20,7 +21,12 @@ import type { PlanFigures } from '../../../utils/reportingPlanner';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import ReferenceTable from '../../ui/ReferenceTable';
 import { DetailedTooltip } from '../../ui/Tooltips';
-import { type ReportingRow, type SearchProgress, useReportingPlans } from './useReportingPlans';
+import {
+  type PlanRole,
+  type ReportingRow,
+  type SearchProgress,
+  useReportingPlans,
+} from './useReportingPlans';
 
 interface ReportingPlannerProps {
   /** The calculation inputs behind the income modal's streams. */
@@ -76,6 +82,9 @@ const cardTitle = (row: ReportingRow): string => {
       return row.label;
   }
 };
+
+/** Whether the row is the plan found to keep the most, whichever name it goes by. */
+const isBest = (row: ReportingRow): boolean => row.roles.includes('best');
 
 /**
  * What applying the Best plan would change, as a list, or the note that nothing would: Current
@@ -146,6 +155,23 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
     onReportedDividendsTaxationChange?.(row.evaluated.election);
   };
 
+  const roleLabel = (role: PlanRole): string =>
+    role === 'current' ? 'Current' : bounded ? 'Best found' : 'Best';
+  // The parts the row plays that its name does not already say, as chips beside the name.
+  const roleTags = (row: ReportingRow) =>
+    row.roles
+      .filter(role => role !== row.key)
+      .map(role => (
+        <Chip
+          key={role}
+          size="small"
+          variant="outlined"
+          color={role === 'best' ? 'primary' : 'default'}
+          label={roleLabel(role)}
+          sx={{ ml: 1, verticalAlign: 'middle' }}
+        />
+      ));
+
   const applyButton = (row: ReportingRow) =>
     row.canApply ? (
       <Button size="small" variant="outlined" onClick={() => applyRow(row)}>
@@ -211,20 +237,25 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                     key={row.key}
                     sx={{
                       border: 1,
-                      borderColor: row.key === 'best' ? 'primary.main' : 'divider',
+                      borderColor: isBest(row) ? 'primary.main' : 'divider',
                       borderRadius: 1,
                       p: 1,
                     }}
                   >
                     <ReferenceTable
-                      caption={cardTitle(row)}
+                      caption={
+                        <>
+                          {cardTitle(row)}
+                          {roleTags(row)}
+                        </>
+                      }
                       headers={[]}
                       rows={FIGURE_COLUMNS.map(column => [
                         column.label,
                         formatJPY(row.evaluated.figures[column.key]),
                       ])}
                     />
-                    {row.key === 'best' && (
+                    {isBest(row) && (
                       <Box
                         sx={{
                           mt: 1,
@@ -259,9 +290,21 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                         <Box
                           key={row.key}
                           component="span"
-                          sx={{ fontWeight: row.key === 'best' ? 700 : undefined }}
+                          sx={{ fontWeight: isBest(row) ? 700 : undefined }}
                         >
                           {columnLabel(row)}
+                          {row.roles.filter(role => role !== row.key).length > 0 && (
+                            <Typography
+                              variant="caption"
+                              component="span"
+                              sx={{ display: 'block', fontWeight: 400, color: 'text.secondary' }}
+                            >
+                              {row.roles
+                                .filter(role => role !== row.key)
+                                .map(roleLabel)
+                                .join(', ')}
+                            </Typography>
+                          )}
                         </Box>
                       )),
                     )}
@@ -274,14 +317,15 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                 </Box>
                 <Stack spacing={1} sx={{ mt: 1.5 }}>
                   {rows
-                    .filter(row => row.key === 'best' || row.canApply)
+                    .filter(row => isBest(row) || row.canApply)
                     .map(row => (
                       <Box key={row.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="body2">
                             <strong>{row.label}</strong>
+                            {roleTags(row)}
                           </Typography>
-                          {row.key === 'best' && <BestChanges row={row} />}
+                          {isBest(row) && <BestChanges row={row} />}
                         </Box>
                         {applyButton(row)}
                       </Box>

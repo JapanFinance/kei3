@@ -345,27 +345,34 @@ export const reportedUnitCount = (
   }).length;
 
 /**
+ * Whether two plans are the same choice: every optional unit set the same way and, when a
+ * dividend is reported, the same election (with none reported the election has no effect).
+ * Compares flags directly rather than through a unit's `states` index, so it still answers
+ * correctly when an entry is in a state {@link deriveReportingUnits} prunes from the search
+ * (dominated, but not invalid).
+ */
+export const samePlan = (
+  units: readonly ReportingUnit[],
+  a: ReportingPlan,
+  b: ReportingPlan,
+): boolean => {
+  const sameFlags = units.every(unit =>
+    unitFlagsEqual(a.streams[unit.streamIndex]!, b.streams[unit.streamIndex]!),
+  );
+  if (!sameFlags) return false;
+  if (!planReportsDividend(units, a.streams)) return true;
+  return a.election === b.election;
+};
+
+/**
  * Whether `plan` sets every unit exactly as the entries and the election already stand — the
- * tie-break's "then Current" (7.3.3), and what decides the Best row's "already keep the most"
- * message and whether Apply is offered on it. Compares flags directly rather than through a
- * unit's `states` index, so it still answers correctly when the current entries are themselves in
- * a state {@link deriveReportingUnits} prunes from the search (dominated, but not invalid).
+ * tie-break's "then Current" (7.3.3), and what decides whether Apply is offered.
  */
 export const planMatchesCurrent = (
   units: readonly ReportingUnit[],
   plan: ReportingPlan,
   inputs: TakeHomeInputs,
-): boolean => {
-  const currentStreams = inputs.incomeStreams;
-  const sameFlags = units.every(unit =>
-    unitFlagsEqual(plan.streams[unit.streamIndex]!, currentStreams[unit.streamIndex]!),
-  );
-  if (!sameFlags) return false;
-  if (!planReportsDividend(units, plan.streams)) return true;
-  return (
-    plan.election === (inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION)
-  );
-};
+): boolean => samePlan(units, plan, currentPlan(inputs));
 
 /** The comparison figures for one engine result — see {@link PlanFigures}. */
 const figuresOf = (results: TakeHomeResults): PlanFigures => {

@@ -16,7 +16,7 @@ import {
   hasOptionalUnit,
   isBetterPlan,
   mandatoryReportingNote,
-  planMatchesCurrent,
+  samePlan,
   withheldOnlyPlan,
   type EvaluatedPlan,
   type PlanEvaluation,
@@ -48,13 +48,24 @@ export interface SearchProgress {
 }
 export type ReportingRowKey = 'current' | 'best' | UniformRowKey;
 
+/** A part a distinct plan plays: the entries as they stand, or the plan found to keep the most. */
+export type PlanRole = 'current' | 'best';
+
+/**
+ * One distinct plan. Current, Best and the uniform plans often coincide — a new user's entries
+ * are all withheld, so Current is "All withheld only", and after Apply Current is Best — and a
+ * plan shown twice under two names reads as two plans, so equal plans share one row: the row
+ * is named for the uniform plan when one is among them, and `roles` carries the parts it plays.
+ */
 export interface ReportingRow {
+  /** The uniform plan's key when the row is one, else which of Current or Best it is. */
   key: ReportingRowKey;
   label: string;
+  roles: PlanRole[];
   evaluated: EvaluatedPlan;
   /** What applying the plan changes about the current entries (7.3.4); empty for Current. */
   changes: string[];
-  /** Whether Apply should be offered for this row. */
+  /** Whether Apply should be offered for this row: every row but the current plan's. */
   canApply: boolean;
 }
 
@@ -168,32 +179,44 @@ export function useReportingPlans(
     let bounded = false;
     let boundedEstimate: { count: number; predictedMs: number } | undefined;
 
-    const buildRows = (bestSoFar: PlanEvaluation): ReportingRow[] => [
-      {
-        key: 'current',
-        label: 'Current',
-        evaluated: current.evaluated,
-        changes: [],
-        canApply: false,
-      },
-      {
-        key: 'best',
-        label: bounded ? 'Best found' : 'Best',
-        evaluated: bestSoFar.evaluated,
-        changes: planChanges(bestSoFar.plan, current.plan, units),
-        canApply: !planMatchesCurrent(units, bestSoFar.plan, inputs),
-      },
-      ...uniformKeys.map(key => {
-        const evaluation = uniformEvaluations.get(key)!;
-        return {
+    const buildRows = (bestSoFar: PlanEvaluation): ReportingRow[] => {
+      const members: { key: ReportingRowKey; evaluation: PlanEvaluation }[] = [
+        { key: 'current', evaluation: current },
+        { key: 'best', evaluation: bestSoFar },
+        ...uniformKeys.map(key => ({ key, evaluation: uniformEvaluations.get(key)! })),
+      ];
+      const rows: ReportingRow[] = [];
+      for (const { key, evaluation } of members) {
+        const isRole = key === 'current' || key === 'best';
+        const existing = rows.find(row => samePlan(units, row.evaluated, evaluation.plan));
+        if (existing) {
+          if (isRole) {
+            existing.roles.push(key);
+            existing.canApply = existing.canApply && key !== 'current';
+          } else {
+            // A uniform plan names the row; Current or Best it equals becomes a tag on it.
+            existing.key = key;
+            existing.label = UNIFORM_ROW_LABELS[key];
+          }
+          continue;
+        }
+        rows.push({
           key,
-          label: UNIFORM_ROW_LABELS[key],
+          label: isRole
+            ? key === 'current'
+              ? 'Current'
+              : bounded
+                ? 'Best found'
+                : 'Best'
+            : UNIFORM_ROW_LABELS[key],
+          roles: isRole ? [key] : [],
           evaluated: evaluation.evaluated,
           changes: planChanges(evaluation.plan, current.plan, units),
-          canApply: true,
-        };
-      }),
-    ];
+          canApply: key !== 'current',
+        });
+      }
+      return rows;
+    };
 
     // `progress` is what the indicator shows while the search runs: the plans evaluated so far,
     // with the total while the search is exhaustive; undefined once the search is over, so the
