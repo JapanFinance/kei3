@@ -64,6 +64,7 @@ export const makeTakeHomeResults = (overrides: Partial<TakeHomeResults> = {}): T
   additionalDeductions: { national: 0, residence: 0, items: [] },
   dcPlanContributions: 0,
   salaryIncome: 0,
+  bonusIncome: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
   region: 'Tokyo',
   ageRange: 'age20to39',

@@ -1618,6 +1618,8 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
 
     // 6,000,000 + 1,000,000 + 4,000,000 = 11,000,000
     expect(result.grossEmploymentIncome).toBe(11_000_000);
+    expect(result.salaryIncome).toBe(6_000_000);
+    expect(result.bonusIncome).toBe(1_000_000);
 
     // The tooltip derives 給与所得控除 as gross − net − adjustment. With the canonical gross this is
     // the real (capped) deduction and is never negative.

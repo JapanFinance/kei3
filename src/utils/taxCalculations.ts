@@ -264,6 +264,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   furusatoNozei: calculateFurusatoNozeiDetails(0, NON_TAXABLE_RESIDENCE_TAX_DETAIL),
   dcPlanContributions: 0,
   salaryIncome: 0,
+  bonusIncome: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
   region: 'Tokyo',
   ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
@@ -280,6 +281,8 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
 interface IncomeBreakdown {
   salaryIncome: number;
   bonusIncome: BonusIncomeStream[];
+  /** The amounts of {@link bonusIncome} added up. */
+  totalBonusIncome: number;
   /**
    * 給与等の収入金額: salary, bonuses and stock compensation. A commuting allowance is wholly
    * non-taxable up to {@link COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP}, which is the most this
@@ -361,8 +364,8 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     }
   }
 
-  const grossEmploymentIncome =
-    salaryIncome + bonusIncome.reduce((sum, b) => sum + b.amount, 0) + stockCompensationIncome;
+  const totalBonusIncome = bonusIncome.reduce((sum, b) => sum + b.amount, 0);
+  const grossEmploymentIncome = salaryIncome + totalBonusIncome + stockCompensationIncome;
   const totalAnnualIncome =
     grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
@@ -371,6 +374,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   return {
     salaryIncome,
     bonusIncome,
+    totalBonusIncome,
     grossEmploymentIncome,
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
     netBusinessAndMiscIncome,
@@ -447,6 +451,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const {
     salaryIncome,
     bonusIncome,
+    totalBonusIncome,
     grossEmploymentIncome,
     netBusinessAndMiscIncome,
     blueFilerDeduction,
@@ -793,6 +798,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     ...(longTermCareCategory1Estimate && { longTermCareCategory1Estimate }),
     // Context needed for cap detection
     salaryIncome,
+    bonusIncome: totalBonusIncome,
     healthInsuranceProvider: inputs.healthInsuranceProvider,
     region: inputs.region,
     ageRange: inputs.ageRange,

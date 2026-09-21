@@ -54,6 +54,7 @@ const mockResults: TakeHomeResults = {
   nhiElderlySupportPortion: 50_000,
   nhiLongTermCarePortion: 0,
   salaryIncome: 0,
+  bonusIncome: 0,
   grossEmploymentIncome: 0,
   additionalDeductions: { national: 0, residence: 0, items: [] },
 };
@@ -173,10 +174,11 @@ describe('Blue-Filer Deduction Display', () => {
       ],
     };
 
-    // Results don't matter much for this display test as logic is in component using inputs
+    // The tab shows the salary the calculation charged the premiums on, not the entered streams.
     const mixedResults: TakeHomeResults = {
       ...mockResults,
       annualIncome: 5_000_000,
+      salaryIncome: 3_000_000,
       healthInsuranceProvider: 'KyokaiKenpo',
     };
 
