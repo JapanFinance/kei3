@@ -7,6 +7,7 @@ import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   generateChartData,
+  getChartOptions,
   scaleIncomeStreamsToIncome,
   type ChartCalculationContext,
 } from '../utils/chartConfig';
@@ -188,5 +189,15 @@ describe('generateChartData with investment income', () => {
 
   it('leaves every dataset identical to the same sweep without it', () => {
     expect(generateChartData(range, investmentContext)).toEqual(generateChartData(range, context));
+  });
+});
+
+describe('getChartOptions animation', () => {
+  it('leaves the Chart.js animation defaults in place by default', () => {
+    expect(getChartOptions(range, 3_000_000, 4_000_000)).not.toHaveProperty('animation');
+  });
+
+  it('turns every animation off when animate is false', () => {
+    expect(getChartOptions(range, 3_000_000, 4_000_000, true, false).animation).toBe(false);
   });
 });

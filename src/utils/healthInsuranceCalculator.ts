@@ -1,13 +1,19 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { RegionalRates } from '../data/employeesHealthInsurance/providerRateData';
 import {
-  calculateMonthlyEmployeePremium,
+  getCustomProviderRates,
+  getEmployeePremiumRate,
   getRegionalRatesForMonth,
+  type EmployeeRates,
 } from '../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+import {
+  getNHIParamsForMonth,
+  nhiParamsDiffer,
+} from '../data/nationalHealthInsurance/nhiParamsData';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type {
   ProviderRegion,
@@ -21,8 +27,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
-import type { BonusIncomeStream } from '../types/tax';
-import { roundSocialInsurancePremium } from './taxCalculations';
+import type { BonusIncomeStream, CustomEmployeesHealthInsuranceRates } from '../types/tax';
 
 /**
  * Breakdown of National Health Insurance premium components
@@ -52,7 +57,7 @@ export function calculateHealthInsuranceBreakdown(
   provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-  customRates?: { healthRate: number; ltcRate: number },
+  customRates?: CustomEmployeesHealthInsuranceRates,
   bonuses: BonusIncomeStream[] = [],
 ): HealthInsuranceBreakdown {
   if (annualIncome < 0) {
@@ -85,19 +90,13 @@ export function calculateHealthInsuranceBreakdown(
         // Fallback if custom rates are missing but provider is custom
         return { total: 0, bonusPortion: 0 };
       }
-      const staticRates = {
-        employeeHealthInsuranceRate: customRates.healthRate / 100,
-        employeeLongTermCareRate: customRates.ltcRate / 100,
-        employerHealthInsuranceRate: 0,
-        employerLongTermCareRate: 0,
-      };
+      const staticRates = getCustomProviderRates(customRates);
 
       // Custom rates don't vary by month
-      const monthlyPremium = calculateMonthlyEmployeePremium(
-        smrBracket.smrAmount,
+      const monthlyPremium = getEmployeePremiumRate(
         staticRates,
         isSubjectToLongTermCarePremium,
-      );
+      ).premiumOn(smrBracket.smrAmount);
       let totalPremium = monthlyPremium * 12;
       let bonusPortion = 0;
 
@@ -115,16 +114,22 @@ export function calculateHealthInsuranceBreakdown(
       return { total: totalPremium, bonusPortion };
     }
 
-    // Calculate per-month premiums — rate may differ by month within a calendar year
+    // Calculate per-month premiums — rates may differ by month within a calendar year, and every
+    // month of one rate period shares the rates object the lookup returns, so the premium is
+    // computed once per period.
     let totalPremium = 0;
+    let periodRates: RegionalRates | undefined;
+    let premium = 0;
     for (let month = 0; month < 12; month++) {
       const monthRates = getRegionalRatesForMonth(provider, region, year, month);
       if (monthRates) {
-        totalPremium += calculateMonthlyEmployeePremium(
-          smrBracket.smrAmount,
-          monthRates,
-          isSubjectToLongTermCarePremium,
-        );
+        if (monthRates !== periodRates) {
+          premium = getEmployeePremiumRate(monthRates, isSubjectToLongTermCarePremium).premiumOn(
+            smrBracket.smrAmount,
+          );
+          periodRates = monthRates;
+        }
+        totalPremium += premium;
       }
     }
 
@@ -174,9 +179,7 @@ export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
  */
 export function calculateEmployeesHealthInsuranceBonusBreakdown(
   bonuses: BonusIncomeStream[],
-  providerOrRates:
-    | string
-    | { employeeHealthInsuranceRate: number; employeeLongTermCareRate: number },
+  providerOrRates: string | EmployeeRates,
   regionOrLTC: string | boolean,
   year: number,
   isSubjectToLongTermCarePremium?: boolean,
@@ -226,9 +229,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
       continue;
     }
 
-    const rate =
-      rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
-    const premium = roundSocialInsurancePremium(standardBonusAmount * rate);
+    const premium = getEmployeePremiumRate(rates, includeLTC).premiumOn(standardBonusAmount);
 
     breakdown.push({
       month: bonus.month,
@@ -261,7 +262,7 @@ export function calculateHealthInsurancePremium(
   provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-  customRates?: { healthRate: number; ltcRate: number },
+  customRates?: CustomEmployeesHealthInsuranceRates,
   bonuses: BonusIncomeStream[] = [],
 ): number {
   return calculateHealthInsuranceBreakdown(
@@ -390,30 +391,7 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
 
   // If both fiscal years have the same params (no rate change), use single calculation
   // to avoid rounding artifacts from the blending arithmetic.
-  if (!prevFYParams || prevFYParams === currFYParams) {
-    return calculateNationalHealthInsurancePremiumBreakdown(
-      annualIncome,
-      isSubjectToLongTermCarePremium,
-      currFYParams,
-    );
-  }
-
-  // Check if the params are actually different by comparing key rate fields
-  const paramsMatch =
-    prevFYParams.medicalRate === currFYParams.medicalRate &&
-    prevFYParams.supportRate === currFYParams.supportRate &&
-    prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
-    prevFYParams.supportPerCapita === currFYParams.supportPerCapita &&
-    prevFYParams.medicalCap === currFYParams.medicalCap &&
-    prevFYParams.supportCap === currFYParams.supportCap &&
-    prevFYParams.ltcRateForEligible === currFYParams.ltcRateForEligible &&
-    prevFYParams.ltcPerCapitaForEligible === currFYParams.ltcPerCapitaForEligible &&
-    prevFYParams.ltcCapForEligible === currFYParams.ltcCapForEligible &&
-    prevFYParams.childSupportRate === currFYParams.childSupportRate &&
-    prevFYParams.childSupportPerCapita === currFYParams.childSupportPerCapita &&
-    prevFYParams.childSupportCap === currFYParams.childSupportCap;
-
-  if (paramsMatch) {
+  if (!prevFYParams || !nhiParamsDiffer(prevFYParams, currFYParams)) {
     return calculateNationalHealthInsurancePremiumBreakdown(
       annualIncome,
       isSubjectToLongTermCarePremium,

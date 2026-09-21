@@ -1109,9 +1109,20 @@ const allNHIRegions: Record<string, NHIRegionDefinition> = {
   // Add more regions/municipalities as needed
 };
 
+const periodsByRegion = Object.fromEntries(
+  Object.entries(allNHIRegions).map(([regionKey, { regionName, periods }]) => [
+    regionKey,
+    periods.map(({ effectiveFrom, params }) => ({
+      effectiveFrom,
+      params: { regionName, ...params },
+    })),
+  ]),
+);
+
 /**
  * Returns the applicable NHI parameters for a given region, year, and month.
  * Finds the most recent rate period whose effective date is on or before the given date.
+ * Every month of one rate period returns the same object.
  *
  * @param region Region key (e.g., 'Tokyo', 'Osaka')
  * @param year Calendar year
@@ -1122,24 +1133,69 @@ export function getNHIParamsForMonth(
   year: number,
   month: number,
 ): NationalHealthInsuranceRegionParams | undefined {
-  const regionDef = allNHIRegions[region];
-  if (!regionDef || regionDef.periods.length === 0) {
+  const periods = periodsByRegion[region];
+  if (!periods || periods.length === 0) {
     console.warn(`National Health Insurance parameters not found for region: ${region}`);
     return undefined;
   }
 
-  for (const period of regionDef.periods) {
-    const { effectiveFrom } = period;
+  for (const { effectiveFrom, params } of periods) {
     if (
       year > effectiveFrom.year ||
       (year === effectiveFrom.year && month >= effectiveFrom.month)
     ) {
-      return { regionName: regionDef.regionName, ...period.params };
+      return params;
     }
   }
   // Fallback to the oldest known rate
-  const oldest = regionDef.periods[regionDef.periods.length - 1]!;
-  return { regionName: regionDef.regionName, ...oldest.params };
+  return periods[periods.length - 1]!.params;
+}
+
+/** The {@link NationalHealthInsuranceRegionParams} fields that enter the premium calculation. */
+export type NHIParamsField = {
+  [K in keyof NationalHealthInsuranceRegionParams]-?: NonNullable<
+    NationalHealthInsuranceRegionParams[K]
+  > extends number
+    ? K
+    : never;
+}[keyof NationalHealthInsuranceRegionParams];
+
+const ALL_NHI_PARAMS_FIELDS = Object.keys({
+  medicalRate: true,
+  supportRate: true,
+  ltcRateForEligible: true,
+  medicalPerCapita: true,
+  supportPerCapita: true,
+  ltcPerCapitaForEligible: true,
+  medicalHouseholdFlat: true,
+  supportHouseholdFlat: true,
+  ltcHouseholdFlatForEligible: true,
+  medicalCap: true,
+  supportCap: true,
+  ltcCapForEligible: true,
+  childSupportRate: true,
+  childSupportPerCapita: true,
+  childSupportHouseholdFlat: true,
+  childSupportCap: true,
+  nhiStandardDeduction: true,
+} satisfies Record<NHIParamsField, true>) as NHIParamsField[];
+
+/**
+ * Whether two sets of NHI parameters give different premiums, which decides whether a calendar
+ * year blends its two fiscal years. A missing field counts as 0, as it does in the calculation.
+ *
+ * @param fields The fields to compare; every field that enters the calculation by default.
+ */
+export function nhiParamsDiffer(
+  a: NationalHealthInsuranceRegionParams,
+  b: NationalHealthInsuranceRegionParams,
+  fields: readonly NHIParamsField[] = ALL_NHI_PARAMS_FIELDS,
+): boolean {
+  if (a === b) return false;
+  for (const field of fields) {
+    if ((a[field] ?? 0) !== (b[field] ?? 0)) return true;
+  }
+  return false;
 }
 
 /**

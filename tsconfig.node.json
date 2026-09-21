@@ -23,5 +23,11 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "changelogDate.ts"]
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "vitest.bench.config.ts",
+    "scripts/profiling-benchmark-provider.ts",
+    "changelogDate.ts"
+  ]
 }

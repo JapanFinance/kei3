@@ -9,6 +9,7 @@
     "no-restricted-imports": ["error", { "patterns": [{ "regex": "^@mui/[^/]+$" }] }],
     "local/license-header": "error",
     "local/no-jsx-unicode-escape": "error",
+    "local/no-object-literal-accessor": "error",
     "react/exhaustive-deps": "warn",
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",

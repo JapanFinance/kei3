@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
+import { getCustomProviderRates } from '../../../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -24,7 +25,7 @@ import {
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
-import { annualIncomeStreamAmount, monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
+import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   calculatePensionBonusBreakdown,
   findPensionBracket,
@@ -105,13 +106,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     const region = inputs.region;
 
     if (provider === CUSTOM_PROVIDER_ID) {
-      const rates = {
-        employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
-        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100,
-      };
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
-        rates,
+        getCustomProviderRates(inputs.customEHIRates),
         includeLTC,
         inputs.incomeYear,
       );
@@ -210,14 +207,18 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     .filter(s => s.type === 'bonus')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  const monthlyCommutingAllowance = inputs.incomeStreams
+  const annualCommutingAllowance = inputs.incomeStreams
     .filter(s => s.type === 'commutingAllowance')
-    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0);
+    .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0);
 
-  // Calculate Raw Monthly Remuneration (Salary + Commuting)
-  const rawMonthlyRemuneration = inputs.incomeStreams
-    .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0);
+  // What the premiums are charged on, for every figure on this tab and the tooltips it opens:
+  // summed over the year and divided once, as the engine divides it. Adding a twelfth of each
+  // income stream instead can land just under a bracket bound and show a grade the premiums were
+  // not charged on: three yearly streams of 560,000, 194,000 and 2,000 come to 62,999.99999999999
+  // a month rather than 63,000, which is grade 58,000 rather than 68,000.
+  const annualRemuneration = salaryIncome + annualCommutingAllowance;
+  const monthlyCommutingAllowance = annualCommutingAllowance / 12;
+  const rawMonthlyRemuneration = annualRemuneration / 12;
 
   // Find SMR Brackets
   const healthSMR = findSMRBracket(rawMonthlyRemuneration).smrAmount;
@@ -329,6 +330,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               <DetailedTooltip title="Health Insurance Premium" icon={SIMPLE_TOOLTIP_ICON}>
                 <HealthInsurancePremiumTooltip
                   inputs={inputs}
+                  monthlyRemuneration={rawMonthlyRemuneration}
                   standardMonthlyRemuneration={healthSMR}
                 />
               </DetailedTooltip>
@@ -471,6 +473,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   <DetailedTooltip title="Health Insurance Premium">
                     <HealthInsurancePremiumTooltip
                       inputs={inputs}
+                      monthlyRemuneration={rawMonthlyRemuneration}
                       standardMonthlyRemuneration={healthSMR}
                     />
                   </DetailedTooltip>
@@ -535,6 +538,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   <DetailedTooltip title="Pension Contribution">
                     <PensionPremiumTooltip
                       inputs={inputs}
+                      monthlyRemuneration={rawMonthlyRemuneration}
                       standardMonthlyRemuneration={pensionSMR}
                     />
                   </DetailedTooltip>
@@ -641,10 +645,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             )}
             type="indented"
             labelSuffix={
-              <SalaryBreakdownTooltip
-                monthlyIncome={rawMonthlyRemuneration}
-                year={inputs.incomeYear}
-              />
+              <SalaryBreakdownTooltip annualWage={annualRemuneration} year={inputs.incomeYear} />
             }
           />
           {results.employmentInsuranceOnBonus !== undefined &&
