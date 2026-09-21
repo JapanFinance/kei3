@@ -45,7 +45,7 @@ const CURRENT_KEEPS_MOST = 'The current choices already keep the most.';
 /**
  * The short column heading for a plan in the desktop table, where the full row labels would
  * wrap several times: the uniform plans are named by their election, matching the election
- * toggle's "Separate"/"Progressive"; Current and Best keep their labels.
+ * toggle's "Separate"/"Aggregate"; Current and Best keep their labels.
  */
 const columnLabel = (row: ReportingRow): string => {
   switch (row.key) {
@@ -54,7 +54,7 @@ const columnLabel = (row: ReportingRow): string => {
     case 'separate':
       return 'Separate';
     case 'aggregate':
-      return 'Progressive';
+      return 'Aggregate';
     default:
       return row.label;
   }
@@ -219,7 +219,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
               </>
             )}
             <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
-              This year only. The progressive-taxation (総合課税) rows apply no dividend tax credit
+              This year only. The aggregate-taxation (総合課税) rows apply no dividend tax credit
               (配当控除, not modelled yet), so for a dividend from a Japanese company they
               understate what is kept. Carrying a loss forward (繰越控除), the foreign tax credit
               (外国税額控除), and the rule that lets an employee skip filing when other income is

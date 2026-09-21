@@ -586,15 +586,15 @@ describe('describePlan', () => {
     ]);
     const units = deriveReportingUnits(inputs.incomeStreams);
     const withheldSeparate = withheldOnlyPlan(inputs, units);
-    const withheldProgressive: ReportingPlan = { ...withheldSeparate, election: 'aggregate' };
+    const withheldAggregate: ReportingPlan = { ...withheldSeparate, election: 'aggregate' };
 
     expect(describePlan(withheldSeparate, units)).toBe(
       'Account 1 (sales -¥80,000, dividends ¥160,000): leave both to withholding. ' +
         'Reported dividends are taxed under Separate taxation (申告分離課税).',
     );
-    expect(describePlan(withheldProgressive, units)).toBe(
+    expect(describePlan(withheldAggregate, units)).toBe(
       'Account 1 (sales -¥80,000, dividends ¥160,000): leave both to withholding. ' +
-        'Reported dividends are taxed under Progressive taxation (総合課税).',
+        'Reported dividends are taxed under Aggregate taxation (総合課税).',
     );
   });
 

@@ -194,7 +194,7 @@ describe('IncomeStreamForm', () => {
         onCancel={mockOnCancel}
       />,
     );
-    expect(screen.getByText(/Taxed as progressive \(総合課税\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Taxed as aggregate \(総合課税\)/)).toBeInTheDocument();
     expect(screen.getByText(/the 配当控除 is not modelled yet/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));

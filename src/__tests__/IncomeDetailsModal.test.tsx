@@ -626,7 +626,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    expect(screen.getByRole('group', { name: 'Reported dividends' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reported dividends taxation' })).toBeInTheDocument();
   });
 
   it('describes each entry by its election and account, and footers the reported total without a withheld line', () => {
@@ -718,7 +718,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
 
     expect(screen.getByText('Reported')).toBeInTheDocument();
     expect(screen.getByText('Withheld only')).toBeInTheDocument();
-    expect(screen.queryByText(/progressive|separate/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/aggregate|separate/i)).not.toBeInTheDocument();
     expect(screen.getByText('Subtotal: ¥700,000')).toBeInTheDocument();
     expect(
       screen.getByText(/Withheld only: ¥300,000 − ¥60,945 tax = ¥239,055/),
@@ -769,7 +769,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
     // With no reported dividend there is nothing the election applies to.
-    expect(screen.queryByRole('group', { name: 'Reported dividends' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Reported dividends taxation' })).toBeNull();
 
     rerender(
       <IncomeDetailsModal
@@ -780,15 +780,17 @@ describe('IncomeDetailsModal - Investment Income', () => {
         onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
       />,
     );
-    const group = screen.getByRole('group', { name: 'Reported dividends' });
+    const group = screen.getByRole('group', { name: 'Reported dividends taxation' });
     expect(within(group).getByRole('button', { name: 'Separate' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     // The statutory notes sit behind the label's tooltip rather than under the control.
-    expect(screen.getByRole('button', { name: 'reported dividends info' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'reported dividends taxation info' }),
+    ).toBeInTheDocument();
 
-    await user.click(within(group).getByRole('button', { name: 'Progressive' }));
+    await user.click(within(group).getByRole('button', { name: 'Aggregate' }));
     expect(onReportedDividendsTaxationChange).toHaveBeenCalledWith('aggregate');
 
     // Without a way to change it the election is not offered, and the entries still say which
@@ -802,7 +804,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
         reportedDividendsTaxation="aggregate"
       />,
     );
-    expect(screen.queryByRole('group', { name: 'Reported dividends' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Reported dividends taxation' })).toBeNull();
     expect(screen.getByText('Reported')).toBeInTheDocument();
     expect(screen.getByText('Withheld only')).toBeInTheDocument();
   });

@@ -215,11 +215,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         }}
       >
         <FormLabel sx={{ ...variantLabelSx, mb: 0 }}>
-          <span id="reported-dividends-taxation-label">Reported dividends</span>
+          <span id="reported-dividends-taxation-label">Reported dividends taxation</span>
           <DetailedTooltip
-            title="Reported Dividends"
+            title="Reported Dividends Taxation"
             icon={SIMPLE_TOOLTIP_ICON}
-            iconAriaLabel="reported dividends info"
+            iconAriaLabel="reported dividends taxation info"
           >
             <Typography sx={{ display: 'block', mb: 1 }}>
               One election covers every dividend reported for the year (措法8条の4②): 申告分離課税
@@ -232,11 +232,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               loss from a qualifying sale set against them (損益通算).
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
-              <strong>Progressive (総合課税)</strong> counts them as 配当所得 in 総所得金額, taxed
-              in the progressive brackets and at the 10% residence-tax rate with the other income.
-              The 配当控除 (所法92条) is not modelled yet, so the tax is overstated for a dividend
-              from a domestic company; no capital loss is set against them; 特定公社債の利子 cannot
-              be taxed this way.
+              <strong>Aggregate (総合課税)</strong> counts them as 配当所得 in 総所得金額, taxed in
+              the progressive brackets and at the 10% residence-tax rate with the other income. The
+              配当控除 (所法92条) is not modelled yet, so the tax is overstated for a dividend from
+              a domestic company; no capital loss is set against them; 特定公社債の利子 cannot be
+              taxed this way.
             </Typography>
             <Typography sx={{ display: 'block' }}>
               Either way the amount enters 合計所得金額 and every figure keyed to it, and since
@@ -257,7 +257,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           sx={variantToggleGroupSx}
         >
           <ToggleButton value="separate">Separate</ToggleButton>
-          <ToggleButton value="aggregate">Progressive</ToggleButton>
+          <ToggleButton value="aggregate">Aggregate</ToggleButton>
         </ToggleButtonGroup>
       </Box>
     ) : null;

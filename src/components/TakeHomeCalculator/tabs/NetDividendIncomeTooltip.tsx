@@ -14,7 +14,7 @@ interface NetDividendIncomeTooltipProps {
 }
 
 /**
- * Tooltip for the "Net Dividend Income (reported, progressive)" row: dividends reported under
+ * Tooltip for the "Net Dividend Income (reported, aggregate)" row: dividends reported under
  * 総合課税 are 配当所得 inside 総所得金額 and are taxed with the other income. Renders its own
  * DetailedTooltip trigger, so callers place it directly after the row label. Shared by the
  * Taxes and Social Insurance tabs.

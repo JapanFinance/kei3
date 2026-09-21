@@ -470,11 +470,11 @@ export const descend = (
   return step.value;
 };
 
-// English names matching the election toggle in IncomeDetailsModal.tsx ("Separate"/"Progressive"),
+// English names matching the election toggle in IncomeDetailsModal.tsx ("Separate"/"Aggregate"),
 // paired with the statutory terms.
 const ELECTION_LABEL: Record<ReportedDividendsTaxation, string> = {
   separate: 'Separate taxation (申告分離課税)',
-  aggregate: 'Progressive taxation (総合課税)',
+  aggregate: 'Aggregate taxation (総合課税)',
 };
 
 /** One-based position of `streams[streamIndex]` among the entries sharing its type. */

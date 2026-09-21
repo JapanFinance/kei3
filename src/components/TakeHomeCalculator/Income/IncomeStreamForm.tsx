@@ -506,7 +506,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               <FormHelperText>
                 {reportedDividendsTaxation === 'separate'
                   ? 'Taxed as separate (申告分離課税), the election set for all reported dividends in the income list.'
-                  : 'Taxed as progressive (総合課税), the election set for all reported dividends in the income list; the 配当控除 is not modelled yet.'}
+                  : 'Taxed as aggregate (総合課税), the election set for all reported dividends in the income list; the 配当控除 is not modelled yet.'}
               </FormHelperText>
             )}
           </FormControl>

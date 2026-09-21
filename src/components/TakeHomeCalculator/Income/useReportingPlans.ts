@@ -77,7 +77,7 @@ const EMPTY_RESULT: UseReportingPlansResult = {
 const UNIFORM_ROW_LABELS: Record<UniformRowKey, string> = {
   withheldOnly: 'All withheld only',
   separate: 'All reported, separate (申告分離課税)',
-  aggregate: 'All reported, progressive (総合課税)',
+  aggregate: 'All reported, aggregate (総合課税)',
 };
 
 /** `scheduler.yield()` where available (not in jsdom); a same-tick `setTimeout` otherwise. */

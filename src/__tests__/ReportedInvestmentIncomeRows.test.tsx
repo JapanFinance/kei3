@@ -193,7 +193,7 @@ describe.each([
   it('lists them on a row of their own, inside the 合計所得金額 subtotal', () => {
     render(<Tab results={props.results} inputs={props.inputs} />);
 
-    const label = screen.getByText('Net Dividend Income (reported, progressive)');
+    const label = screen.getByText('Net Dividend Income (reported, aggregate)');
     expect(within(label.closest('div')!.parentElement!).getByText('¥400,000')).toBeInTheDocument();
     const tooltip = tooltipTitled('Dividends Reported under 総合課税');
     expect(tooltip).toBeDefined();
@@ -223,7 +223,7 @@ describe('TaxesTab with dividends reported under 総合課税 alone', () => {
       />,
     );
 
-    expect(screen.getByText('Net Dividend Income (reported, progressive)')).toBeInTheDocument();
+    expect(screen.getByText('Net Dividend Income (reported, aggregate)')).toBeInTheDocument();
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.queryByText('Net Investment Income (reported)')).not.toBeInTheDocument();
     expect(screen.queryByText('Taxable Investment Income (reported)')).not.toBeInTheDocument();

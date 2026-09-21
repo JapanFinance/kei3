@@ -101,7 +101,7 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
         <ResultRow
           label={
             <span>
-              Net Dividend Income (reported, progressive)
+              Net Dividend Income (reported, aggregate)
               <NetDividendIncomeTooltip amount={aggregateDividends} />
             </span>
           }
