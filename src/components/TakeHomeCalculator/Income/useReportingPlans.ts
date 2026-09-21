@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import type { TakeHomeInputs } from '../../../types/tax';
 import {
@@ -25,19 +26,30 @@ import {
 
 export interface UseReportingPlansOptions {
   /**
-   * Predicted time, in ms, an exhaustive search is allowed before descent takes over; predicted
-   * from the throughput of its first chunk.
+   * Predicted engine time, in ms, an exhaustive search is allowed before descent takes over;
+   * predicted from the throughput measured over its first `predictAfterMs` of engine time.
    */
   budgetMs?: number;
   /** How long, in ms, a search runs before the progress indicator appears. */
   progressThresholdMs?: number;
   /** How long, in ms, the search runs before yielding to the event loop. */
   chunkMs?: number;
+  /**
+   * How much engine time, in ms, the search measures before predicting the whole from it. The
+   * first calls after the panel opens are cold and run several times slower than warm ones, so
+   * a prediction from too little work errs far on the slow side.
+   */
+  predictAfterMs?: number;
 }
 
 const DEFAULT_BUDGET_MS = 5_000;
 const DEFAULT_PROGRESS_THRESHOLD_MS = 150;
 const DEFAULT_CHUNK_MS = 30;
+const DEFAULT_PREDICT_AFTER_MS = 100;
+const MIN_CHUNKS_MEASURED = 3;
+// Progress is published (a React render of the panel) far less often than the search yields:
+// under a throttled CPU a render per 30 ms chunk more than doubled a long search's wall time.
+const PUBLISH_INTERVAL_MS = 250;
 
 export type UniformRowKey = 'withheldOnly' | 'separate' | 'aggregate';
 
@@ -100,13 +112,13 @@ const UNIFORM_ROW_LABELS: Record<UniformRowKey, string> = {
   aggregate: 'All reported, aggregate taxation (総合課税)',
 };
 
-/** `scheduler.yield()` where available (not in jsdom); a same-tick `setTimeout` otherwise. */
-const yieldToEventLoop = (): Promise<void> => {
-  const withScheduler = globalThis as { scheduler?: { yield?: () => Promise<void> } };
-  return withScheduler.scheduler?.yield
-    ? withScheduler.scheduler.yield()
-    : new Promise(resolve => setTimeout(resolve, 0));
-};
+/**
+ * Lets the browser run what is waiting — above all React's render of the progress just published.
+ * A `setTimeout` rather than `scheduler.yield()`: the latter's continuation is scheduled ahead of
+ * ordinary tasks, so React's render task never got a turn until the search was over and the
+ * indicator never appeared (measured in Chrome under CPU throttling, 2026-09-21).
+ */
+const yieldToEventLoop = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 /**
  * Searches the reporting plans for the investment entries in `inputs` while `expanded` is true
@@ -127,6 +139,7 @@ export function useReportingPlans(
   const budgetMs = options?.budgetMs ?? DEFAULT_BUDGET_MS;
   const progressThresholdMs = options?.progressThresholdMs ?? DEFAULT_PROGRESS_THRESHOLD_MS;
   const chunkMs = options?.chunkMs ?? DEFAULT_CHUNK_MS;
+  const predictAfterMs = options?.predictAfterMs ?? DEFAULT_PREDICT_AFTER_MS;
 
   const generationRef = useRef(0);
   const [result, setResult] = useState<UseReportingPlansResult>(EMPTY_RESULT);
@@ -239,9 +252,22 @@ export function useReportingPlans(
       const searchStart = performance.now();
       let done = 0;
       let chunkStart = searchStart;
+      // Engine time only: the yields are left out, because what runs during them — above all
+      // the first paint of the whole panel, which the first yield lets through — dwarfs a chunk
+      // of engine work under a throttled CPU, and charging it to the search predicted ten
+      // seconds for a hundred plans that took milliseconds.
+      let workMs = 0;
+      // The cheapest chunk's cost per plan: the first calls of a session run many times slower
+      // than warm ones (the JIT warms up over the first hundred or so, and a garbage collection
+      // can land in the first chunk), so an average over the first chunks predicts a search
+      // several times too long; the fastest chunk is the nearest thing to the steady-state cost.
+      let msPerPlan = Infinity;
+      let chunkFirstDone = 0;
+      let chunksMeasured = 0;
       // The indicator appears once the search has run longer than the threshold and stays until
       // the search ends, so a short search never flickers one in.
       let showProgress = false;
+      let lastPublishAt = searchStart;
 
       // Records one evaluated candidate, advances `best`, and yields once `chunkMs` of work has
       // elapsed, publishing the progress so far. Returns false once this run is no longer current
@@ -252,10 +278,23 @@ export function useReportingPlans(
         if (isBetterPlan(candidate, best, inputs, units)) best = candidate;
         const now = performance.now();
         if (now - chunkStart < chunkMs) return true;
+        workMs += now - chunkStart;
+        msPerPlan = Math.min(msPerPlan, (now - chunkStart) / (done - chunkFirstDone));
+        const wasShowing = showProgress;
         if (now - searchStart > progressThresholdMs) showProgress = true;
-        publish(best, showProgress ? { done, ...(bounded ? {} : { count }) } : undefined);
+        if (showProgress !== wasShowing || now - lastPublishAt >= PUBLISH_INTERVAL_MS) {
+          lastPublishAt = now;
+          // Rendered synchronously: left to the scheduler, React's render task lost the race
+          // against this search's own timer task under a throttled CPU and the indicator stayed
+          // hidden for seconds.
+          flushSync(() =>
+            publish(best, showProgress ? { done, ...(bounded ? {} : { count }) } : undefined),
+          );
+        }
         await yieldToEventLoop();
         chunkStart = performance.now();
+        chunkFirstDone = done;
+        chunksMeasured++;
         yielded = true;
         return isCurrentGeneration();
       };
@@ -267,11 +306,18 @@ export function useReportingPlans(
         const candidate: PlanEvaluation = { plan, evaluated: evaluatePlan(inputs, plan) };
         // eslint-disable-next-line no-await-in-loop -- deliberately sequential, chunked by a running clock
         if (!(await recordAndMaybeYield(candidate))) return;
-        // Once the first chunk has yielded, its throughput is known: predict the whole search
-        // from it, once, and bound the search if it would overrun the budget.
-        if (!decided && yielded) {
+        // Once enough engine time has been measured, over enough chunks that one bad chunk (the
+        // session's first plans have taken 65 ms each under a throttled CPU) cannot decide by
+        // itself, the throughput predicts the whole search, once, and bounds the search if it
+        // would overrun the budget.
+        if (
+          !decided &&
+          yielded &&
+          workMs >= predictAfterMs &&
+          chunksMeasured >= MIN_CHUNKS_MEASURED
+        ) {
           decided = true;
-          const predictedMs = ((chunkStart - searchStart) / done) * count;
+          const predictedMs = msPerPlan * count;
           if (predictedMs > budgetMs) {
             bounded = true;
             boundedEstimate = { count, predictedMs };
@@ -302,7 +348,7 @@ export function useReportingPlans(
     return () => {
       generationRef.current += 1;
     };
-  }, [inputs, expanded, budgetMs, progressThresholdMs, chunkMs]);
+  }, [inputs, expanded, budgetMs, progressThresholdMs, chunkMs, predictAfterMs]);
 
   return expanded ? result : EMPTY_RESULT;
 }

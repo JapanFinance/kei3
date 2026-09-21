@@ -140,7 +140,11 @@ describe('useReportingPlans', () => {
   });
 
   it('falls back to a bounded search once the first chunk predicts an overrun', async () => {
-    const { result } = renderPlans(severalUnitsInputs, true, { budgetMs: -1, chunkMs: 0 });
+    const { result } = renderPlans(severalUnitsInputs, true, {
+      budgetMs: -1,
+      chunkMs: 0,
+      predictAfterMs: 0,
+    });
 
     // Nothing is decided before the first chunk has run.
     expect(result.current.bounded).toBe(false);
