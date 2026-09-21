@@ -595,6 +595,8 @@ export function calculateFurusatoNozeiDetails(
       incomeTaxReduction: 0,
       residenceTaxDonationBasicDeduction: 0,
       residenceTaxSpecialDeduction: 0,
+      municipalTaxCredit: 0,
+      prefecturalTaxCredit: 0,
       outOfPocketCost: 0,
       residenceTaxReduction: 0,
     };
@@ -644,6 +646,13 @@ export function calculateFurusatoNozeiDetails(
     Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetailsForFinal.prefecturalProportion);
 
   const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
+  // Each level's share of the credit, rounded up to the yen
+  const municipalTaxCredit = Math.ceil(
+    furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.cityProportion,
+  );
+  const prefecturalTaxCredit = Math.ceil(
+    furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.prefecturalProportion,
+  );
   // City/prefectural income-based residence tax, pre-rounding, with the home loan credit
   // spillover removed first, then the furusato tax credit subtracted. When there is no home
   // loan credit, appliedHomeLoanCreditToResidenceTax is 0, the spillover term drops out, and
@@ -653,26 +662,14 @@ export function calculateFurusatoNozeiDetails(
     residenceTaxDetailsForCap.city.cityAdjustmentCredit -
     appliedHomeLoanCreditToResidenceTax * residenceTaxDetailsForCap.cityProportion;
   const cityIncomeTaxWithFurusato =
-    Math.floor(
-      Math.max(
-        0,
-        beforeCityIncomeTax -
-          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.cityProportion),
-      ) / 100,
-    ) * 100;
+    Math.floor(Math.max(0, beforeCityIncomeTax - municipalTaxCredit) / 100) * 100;
   const beforePrefectureIncomeTax =
     residenceTaxDetailsForCap.prefecture.prefecturalTaxableIncome *
       residenceTaxDetailsForCap.residenceTaxRate -
     residenceTaxDetailsForCap.prefecture.prefecturalAdjustmentCredit -
     appliedHomeLoanCreditToResidenceTax * residenceTaxDetailsForCap.prefecturalProportion;
   const prefectureIncomeTaxWithFurusato =
-    Math.floor(
-      Math.max(
-        0,
-        beforePrefectureIncomeTax -
-          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.prefecturalProportion),
-      ) / 100,
-    ) * 100;
+    Math.floor(Math.max(0, beforePrefectureIncomeTax - prefecturalTaxCredit) / 100) * 100;
   const residenceTaxDifference =
     residenceTaxDetailsForFinal.totalResidenceTax -
     (cityIncomeTaxWithFurusato +
@@ -684,6 +681,8 @@ export function calculateFurusatoNozeiDetails(
     incomeTaxReduction,
     residenceTaxDonationBasicDeduction,
     residenceTaxSpecialDeduction,
+    municipalTaxCredit,
+    prefecturalTaxCredit,
     residenceTaxReduction: residenceTaxDifference,
     outOfPocketCost: finalLimit - residenceTaxDifference - incomeTaxReduction,
   };
