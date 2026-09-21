@@ -50,6 +50,43 @@ Run the test suite:
 npm test
 ```
 
+### Benchmarking and profiling
+
+`src/__tests__/calculateTaxes.bench.ts` times the tax calculation on the typical inputs in
+`src/__tests__/fixtures/engineScenarios.ts`. Each scenario runs in a new Node process, so the
+code that V8 optimizes for one scenario cannot change the timings of another. The benchmark is
+not part of `npm test` or CI, because timings on shared machines vary too much to pass or fail
+on. Run it on demand:
+
+```bash
+npm run bench
+```
+
+To measure a change, save a baseline from `main` and compare the branch with it on the same
+machine. The baseline is written to `bench-baseline/`, which git ignores, so it stays in place
+when switching commits:
+
+```bash
+git switch --detach origin/main
+npm run bench:baseline
+git switch -
+npm run bench:compare
+```
+
+Each scenario then shows a `baseline` row beside the new result. Differences of a few percent are
+within run-to-run noise. The `min` column varies least between runs; rerun when a result is in
+doubt.
+
+To see where the time goes, run the benchmark under V8's CPU profiler. It writes a profile of each
+scenario's measured iterations, without the warm-up, to `profiles/<scenario>.cpuprofile`; open it
+in Chrome DevTools (Performance panel, "Load profile") or VS Code. `-t` limits the run to the
+scenarios whose names match. The timings printed in this mode include the profiler's overhead.
+
+```bash
+npm run profile
+npm run profile -- -t chart-sweep
+```
+
 ### Linting
 
 Check code quality:

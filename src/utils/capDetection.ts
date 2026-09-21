@@ -1,11 +1,12 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { getRegionalRatesForMonth } from '../data/employeesHealthInsurance/providerRates';
+import { EHI_SMR_BRACKETS } from '../data/employeesHealthInsurance/smrBrackets';
 import {
-  generateHealthInsurancePremiumTable,
-  generatePremiumTableFromRates,
-} from '../data/employeesHealthInsurance/providerRates';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+  getNHIParamsForMonth,
+  nhiParamsDiffer,
+} from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
@@ -120,30 +121,17 @@ function checkHealthInsuranceCap(
   const provider = results.healthInsuranceProvider;
 
   if (isEmployeeHealthProvider(provider) || provider === CUSTOM_PROVIDER_ID) {
-    // Employee Health Insurance - check if in highest bracket
-    let premiumTable;
-    if (provider === CUSTOM_PROVIDER_ID) {
-      if (!results.customEHIRates) {
-        return { capped: false };
-      }
-      const customRates = {
-        employeeHealthInsuranceRate: results.customEHIRates.healthInsuranceRate / 100,
-        employeeLongTermCareRate: results.customEHIRates.longTermCareRate / 100,
-        employerHealthInsuranceRate: 0,
-        employerLongTermCareRate: 0,
-      };
-      premiumTable = generatePremiumTableFromRates(customRates);
-    } else {
-      // Month is immaterial here — cap detection reads the (year-invariant) SMR bracket structure,
-      // not the premium values — so April (fiscal-year start) stands in for the income year.
-      premiumTable = generateHealthInsurancePremiumTable(provider, year, 3, results.region);
-    }
-
-    if (!premiumTable || premiumTable.length === 0) {
+    // The SMR brackets are the same for every provider and year, so only the premium needs
+    // rates, and a provider without rates for the region has no premium to cap.
+    const hasRates =
+      provider === CUSTOM_PROVIDER_ID
+        ? results.customEHIRates !== undefined
+        : getRegionalRatesForMonth(provider, results.region, year, 3) !== undefined;
+    if (!hasRates) {
       return { capped: false };
     }
 
-    const lastBracket = premiumTable[premiumTable.length - 1];
+    const lastBracket = EHI_SMR_BRACKETS[EHI_SMR_BRACKETS.length - 1];
     if (!lastBracket) {
       return { capped: false };
     }
@@ -186,6 +174,8 @@ function checkHealthInsuranceCap(
         return { capped: false };
       }
 
+      const blended = prevFYParams !== undefined && nhiParamsDiffer(prevFYParams, currFYParams);
+
       // Helper: check if a portion is capped in both FYs.
       // For portions that didn't exist in the previous FY (e.g., child support),
       // the prev FY contribution is always 0 and trivially "capped".
@@ -194,7 +184,7 @@ function checkHealthInsuranceCap(
         prevCap: number | undefined,
         currCap: number,
       ): boolean => {
-        if (!prevFYParams || prevFYParams === currFYParams) {
+        if (!blended) {
           // No blending — single FY, just compare against current cap
           return portionAmount === currCap;
         }

@@ -3,7 +3,23 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest';
 
-import { formatMonthShort } from '../utils/formatters';
+import { formatMonthShort, formatPercent, formatYenCompact } from '../utils/formatters';
+
+describe('formatPercent', () => {
+  it('uses the maximum fraction digits of each call', () => {
+    expect(formatPercent(0.091555, 2)).toBe('9.16%');
+    expect(formatPercent(0.091555)).toBe('9.156%');
+    expect(formatPercent(0.091555, 2)).toBe('9.16%');
+  });
+});
+
+describe('formatYenCompact', () => {
+  it('uses the locale of each call', () => {
+    expect(formatYenCompact(1_234_567)).toBe('¥1.2M');
+    expect(formatYenCompact(1_234_567, 'ja-JP')).toBe('￥123万');
+    expect(formatYenCompact(1_234_567)).toBe('¥1.2M');
+  });
+});
 
 describe('formatMonthShort', () => {
   afterEach(() => {

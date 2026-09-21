@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
@@ -124,6 +124,24 @@ describe('SocialInsuranceTab', () => {
 
     // Verify Table is present title
     expect(screen.getByText('Employees Pension (厚生年金) SMR Table')).toBeInTheDocument();
+  });
+
+  it('grades the remuneration on the yearly total, not the sum of its twelfths', () => {
+    // 560,000 + 194,000 + 2,000 is 756,000 a year, which is 63,000 a month: the first month of
+    // grade 68,000. Dividing each stream first gives 62,999.99999999999, one grade lower.
+    const severalStreamsInputs = {
+      ...mockInputs,
+      incomeStreams: [
+        { id: '1', type: 'salary', amount: 560000, frequency: 'annual' },
+        { id: '2', type: 'salary', amount: 194000, frequency: 'annual' },
+        { id: '3', type: 'commutingAllowance', amount: 2000, frequency: 'annual' },
+      ],
+    } as TakeHomeInputs;
+
+    render(<SocialInsuranceTab inputs={severalStreamsInputs} results={mockResults} />);
+
+    const smrRow = screen.getAllByText('Standard Monthly Remuneration')[0]!.parentElement!;
+    expect(within(smrRow).getByText('¥68,000')).toBeInTheDocument();
   });
 
   it('handles high income caps correctly (Health vs Pension SMR)', () => {

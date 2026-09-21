@@ -3,16 +3,19 @@
 
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
+import { perMilleTo } from '../data/premiumRate';
 import type { BonusIncomeStream } from '../types/tax';
-import { roundSocialInsurancePremium } from './taxCalculations';
 
 export type { StandardMonthlyRemunerationBracket };
+
+/** The employees' pension rate as the statute writes it, whole: perMille(183) is 1000分の183. */
+const perMille = perMilleTo(0);
 
 /**
  * Employees' pension insurance rate (厚生年金保険料率)
  * Source: https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku/ryogakuhyo/index.html
  */
-export const EMPLOYEES_PENSION_RATE = 0.183; // 18.3%
+export const EMPLOYEES_PENSION_RATE = perMille(183);
 
 /**
  * Employees' pension insurance SMR brackets
@@ -67,6 +70,15 @@ export function findPensionBracket(monthlyIncome: number): StandardMonthlyRemune
 }
 
 /**
+ * The employees' pension premium on a standard monthly remuneration or standard bonus amount:
+ * the half amount (折半額) that the employee pays, or the full amount (全額).
+ */
+export const calculateEmployeesPensionPremium = (
+  standardAmount: number,
+  isHalfAmount: boolean = true,
+): number => EMPLOYEES_PENSION_RATE.premiumOn(standardAmount, isHalfAmount ? 2 : 1);
+
+/**
  * Breakdown of Pension premium components
  */
 export interface PensionBreakdown {
@@ -95,8 +107,7 @@ export function calculatePensionBreakdown(
   // negative income.
   const bracket = findPensionBracket(monthlyIncome);
 
-  const fullPremium = bracket.smrAmount * EMPLOYEES_PENSION_RATE;
-  const monthlyAmount = roundSocialInsurancePremium(isHalfAmount ? fullPremium / 2 : fullPremium);
+  const monthlyAmount = calculateEmployeesPensionPremium(bracket.smrAmount, isHalfAmount);
 
   let totalPremium = monthlyAmount * 12;
   let bonusPortion = 0;
@@ -133,7 +144,6 @@ export function calculatePensionBonusBreakdown(
     return [];
   }
 
-  const effectiveRate = isHalfAmount ? EMPLOYEES_PENSION_RATE / 2 : EMPLOYEES_PENSION_RATE;
   const breakdown: PensionBonusBreakdownItem[] = [];
 
   // Group bonuses by month (0-11)
@@ -153,7 +163,7 @@ export function calculatePensionBonusBreakdown(
     const standardBonusAmount = Math.min(roundedBonusAmount, 1_500_000);
 
     // 3. Calculate premium
-    const premium = roundSocialInsurancePremium(standardBonusAmount * effectiveRate);
+    const premium = calculateEmployeesPensionPremium(standardBonusAmount, isHalfAmount);
 
     breakdown.push({
       month,
