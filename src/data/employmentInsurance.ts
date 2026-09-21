@@ -1,6 +1,8 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { perMilleTo, type PremiumRate } from './premiumRate';
+
 /**
  * Employment insurance (雇用保険) premium rates for general businesses (一般の事業).
  * Employee portion only (労働者負担).
@@ -11,9 +13,15 @@
 export interface EmploymentInsuranceRatePeriod {
   /** The date from which this rate applies (inclusive). Month is 0-indexed (0=Jan, 3=Apr). */
   effectiveFrom: { year: number; month: number };
-  /** Employee premium rate as a decimal (e.g., 0.005 for 0.50%) */
-  rate: number;
+  /** Employee premium rate */
+  rate: PremiumRate;
 }
+
+/**
+ * An employment insurance rate as the MHLW publishes it, to one decimal place: perMille(5.5) is
+ * 5.5/1,000.
+ */
+export const perMille = perMilleTo(1);
 
 /**
  * Time-series of employment insurance rates, sorted newest-first.
@@ -22,11 +30,11 @@ export interface EmploymentInsuranceRatePeriod {
 export const EMPLOYMENT_INSURANCE_RATES: EmploymentInsuranceRatePeriod[] = [
   // FY2026 (令和8年度): April 2026 – March 2027
   // source: https://www.mhlw.go.jp/content/001672589.pdf
-  { effectiveFrom: { year: 2026, month: 3 }, rate: 0.005 }, // 5/1,000
+  { effectiveFrom: { year: 2026, month: 3 }, rate: perMille(5) },
 
   // FY2025 (令和7年度): April 2025 – March 2026
   // source: https://www.mhlw.go.jp/content/001401966.pdf
-  { effectiveFrom: { year: 2025, month: 3 }, rate: 0.0055 }, // 5.5/1,000
+  { effectiveFrom: { year: 2025, month: 3 }, rate: perMille(5.5) },
 ];
 
 if (import.meta.env.DEV) {
@@ -49,7 +57,7 @@ if (import.meta.env.DEV) {
  * @param year Calendar year
  * @param month 0-indexed month (0=Jan, 11=Dec)
  */
-export const getEmploymentInsuranceRate = (year: number, month: number): number => {
+export const getEmploymentInsuranceRate = (year: number, month: number): PremiumRate => {
   for (const period of EMPLOYMENT_INSURANCE_RATES) {
     const { effectiveFrom } = period;
     if (

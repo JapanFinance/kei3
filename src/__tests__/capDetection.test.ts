@@ -3,7 +3,11 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import {
+  CUSTOM_PROVIDER_ID,
+  DEFAULT_PROVIDER,
+  NATIONAL_HEALTH_INSURANCE_ID,
+} from '../types/healthInsurance';
 import { detectCaps } from '../utils/capDetection';
 import {
   calculateLatterStageElderlyPremium,
@@ -128,6 +132,64 @@ describe('detectCaps', () => {
     const caps = detectCaps(results, TEST_INCOME_YEAR, breakdown);
 
     expect(caps.healthInsuranceBonusCapped).toBe(false);
+  });
+});
+
+describe("detectCaps for Employees' Health Insurance", () => {
+  // The top SMR bracket (grade 50) starts at a monthly remuneration of ¥1,355,000.
+  const TOP_BRACKET_ANNUAL_SALARY = 1_355_000 * 12;
+  const CUSTOM_RATES = { healthInsuranceRate: 5, longTermCareRate: 0.8 };
+
+  it('reports the cap from the first yen of the top bracket', () => {
+    const atBound = makeTakeHomeResults({ salaryIncome: TOP_BRACKET_ANNUAL_SALARY });
+    const justBelow = makeTakeHomeResults({ salaryIncome: TOP_BRACKET_ANNUAL_SALARY - 12 });
+
+    expect(detectCaps(atBound, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(true);
+    expect(detectCaps(justBelow, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
+  });
+
+  it('counts the commuting allowance toward the top bracket', () => {
+    const results = makeTakeHomeResults({
+      salaryIncome: TOP_BRACKET_ANNUAL_SALARY - 120_000,
+      commutingAllowance: 120_000,
+    });
+
+    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(true);
+  });
+
+  it('reports no cap when the provider has no rates for the region', () => {
+    const results = makeTakeHomeResults({
+      salaryIncome: TOP_BRACKET_ANNUAL_SALARY * 2,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'NoSuchRegion',
+    });
+
+    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
+  });
+
+  it('uses the same top bracket for custom rates', () => {
+    const atBound = makeTakeHomeResults({
+      salaryIncome: TOP_BRACKET_ANNUAL_SALARY,
+      healthInsuranceProvider: CUSTOM_PROVIDER_ID,
+      customEHIRates: CUSTOM_RATES,
+    });
+    const justBelow = makeTakeHomeResults({
+      salaryIncome: TOP_BRACKET_ANNUAL_SALARY - 12,
+      healthInsuranceProvider: CUSTOM_PROVIDER_ID,
+      customEHIRates: CUSTOM_RATES,
+    });
+
+    expect(detectCaps(atBound, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(true);
+    expect(detectCaps(justBelow, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
+  });
+
+  it('reports no cap for the custom provider when no custom rates are set', () => {
+    const results = makeTakeHomeResults({
+      salaryIncome: TOP_BRACKET_ANNUAL_SALARY * 2,
+      healthInsuranceProvider: CUSTOM_PROVIDER_ID,
+    });
+
+    expect(detectCaps(results, TEST_INCOME_YEAR).healthInsuranceCapped).toBe(false);
   });
 });
 
