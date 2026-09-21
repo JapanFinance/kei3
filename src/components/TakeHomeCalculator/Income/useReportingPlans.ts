@@ -231,22 +231,27 @@ export function useReportingPlans(
       return rows;
     };
 
-    // `progress` is what the indicator shows while the search runs: the plans evaluated so far,
-    // with the total while the search is exhaustive; undefined once the search is over, so the
-    // indicator disappears when the Best row is final.
-    const publish = (bestSoFar: PlanEvaluation, progress: SearchProgress | undefined) => {
+    const publishRows = (bestSoFar: PlanEvaluation) => {
       setResult({
         rows: buildRows(bestSoFar),
         bestPlan: bestSoFar.evaluated,
         mandatoryNote,
-        progress,
-        showProgress: progress !== undefined,
+        progress: undefined,
+        showProgress: false,
         bounded,
         boundedEstimate,
       });
     };
 
-    publish(best, undefined);
+    // Progress is published on its own, keeping the `rows` reference: the rows are rebuilt only
+    // when a better plan has turned up, and the plan table is memoised on them, so a progress
+    // publish re-renders only the indicator.
+    const publishProgress = (progress: SearchProgress | undefined) =>
+      setResult(previous => ({ ...previous, progress, showProgress: progress !== undefined }));
+
+    publishRows(best);
+    let publishedBest = best;
+    let publishedBounded = bounded;
 
     void (async () => {
       const searchStart = performance.now();
@@ -287,9 +292,16 @@ export function useReportingPlans(
           // Rendered synchronously: left to the scheduler, React's render task lost the race
           // against this search's own timer task under a throttled CPU and the indicator stayed
           // hidden for seconds.
-          flushSync(() =>
-            publish(best, showProgress ? { done, ...(bounded ? {} : { count }) } : undefined),
-          );
+          flushSync(() => {
+            if (best !== publishedBest || bounded !== publishedBounded) {
+              publishedBest = best;
+              publishedBounded = bounded;
+              publishRows(best);
+            }
+            // The plans evaluated so far, with the total while the search is exhaustive; undefined
+            // once the search is over, so the indicator disappears when the Best row is final.
+            publishProgress(showProgress ? { done, ...(bounded ? {} : { count }) } : undefined);
+          });
         }
         await yieldToEventLoop();
         chunkStart = performance.now();
@@ -342,7 +354,7 @@ export function useReportingPlans(
       }
 
       if (!isCurrentGeneration()) return;
-      publish(best, undefined);
+      publishRows(best);
     })();
 
     return () => {

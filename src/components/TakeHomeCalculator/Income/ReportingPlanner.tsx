@@ -13,7 +13,7 @@ import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { IncomeStream, ReportedDividendsTaxation, TakeHomeInputs } from '../../../types/tax';
 import { formatJPY, formatNumber } from '../../../utils/formatters';
@@ -129,6 +129,156 @@ const SearchIndicator: React.FC<{ progress: SearchProgress }> = ({ progress }) =
   </Box>
 );
 
+interface PlanRowsProps {
+  rows: ReportingRow[];
+  isMobile: boolean;
+  bounded: boolean;
+  onApply: (row: ReportingRow) => void;
+}
+
+/**
+ * The plans as a table (desktop) or cards (phone). Memoised: while a search runs, the hook
+ * publishes progress every 250 ms, and re-rendering these rows each time, under a throttled CPU,
+ * cost more than the search itself; their props change only when a better plan turns up.
+ */
+const PlanRows = React.memo(function PlanRows({ rows, isMobile, bounded, onApply }: PlanRowsProps) {
+  const roleLabel = (role: PlanRole): string =>
+    role === 'current' ? 'Current' : bounded ? 'Best found' : 'Best';
+  // The parts the row plays that its name does not already say, as chips beside the name.
+  const roleTags = (row: ReportingRow) =>
+    row.roles
+      .filter(role => role !== row.key)
+      .map(role => (
+        <Chip
+          key={role}
+          size="small"
+          variant="outlined"
+          color={role === 'best' ? 'primary' : 'default'}
+          label={roleLabel(role)}
+          sx={{ ml: 1, verticalAlign: 'middle' }}
+        />
+      ));
+
+  const applyButton = (row: ReportingRow) =>
+    row.canApply ? (
+      <Button size="small" variant="outlined" onClick={() => onApply(row)}>
+        Apply
+      </Button>
+    ) : undefined;
+
+  return (
+    <>
+      {isMobile ? (
+        <Stack spacing={1.5}>
+          {rows.map(row => (
+            // One card per plan: the figures under the plan's name as the table's caption,
+            // then (for Best) what applying it changes, and Apply, framed so the text
+            // reads as part of the plan rather than of the next one. The Best card is outlined in the primary
+            // colour so it stands out among the references.
+            <Box
+              key={row.key}
+              sx={{
+                border: 1,
+                borderColor: isBest(row) ? 'primary.main' : 'divider',
+                borderRadius: 1,
+                p: 1,
+              }}
+            >
+              <ReferenceTable
+                caption={
+                  <>
+                    {cardTitle(row)}
+                    {roleTags(row)}
+                  </>
+                }
+                headers={[]}
+                rows={FIGURE_COLUMNS.map(column => [
+                  column.label,
+                  formatJPY(row.evaluated.figures[column.key]),
+                ])}
+              />
+              {isBest(row) && (
+                <Box
+                  sx={{
+                    mt: 1,
+                    pt: 1,
+                    // Lines up with the table text, which sits inside the cells' padding.
+                    px: 0.75,
+                    borderTop: 1,
+                    borderColor: 'divider',
+                  }}
+                >
+                  <BestChanges row={row} />
+                </Box>
+              )}
+              {applyButton(row) && <Box sx={{ mt: 1, px: 0.75 }}>{applyButton(row)}</Box>}
+            </Box>
+          ))}
+        </Stack>
+      ) : (
+        <>
+          {/* Six columns fit the dialog only at this size, with the figure names wrapping. */}
+          <Box
+            sx={{
+              overflowX: 'auto',
+              fontSize: '0.8rem',
+              '& td, & th': { whiteSpace: 'nowrap' },
+              '& td:first-of-type': { whiteSpace: 'normal' },
+            }}
+          >
+            <ReferenceTable
+              headers={([''] as React.ReactNode[]).concat(
+                rows.map(row => (
+                  <Box
+                    key={row.key}
+                    component="span"
+                    sx={{ fontWeight: isBest(row) ? 700 : undefined }}
+                  >
+                    {columnLabel(row)}
+                    {row.roles.filter(role => role !== row.key).length > 0 && (
+                      <Typography
+                        variant="caption"
+                        component="span"
+                        sx={{ display: 'block', fontWeight: 400, color: 'text.secondary' }}
+                      >
+                        {row.roles
+                          .filter(role => role !== row.key)
+                          .map(roleLabel)
+                          .join(', ')}
+                      </Typography>
+                    )}
+                  </Box>
+                )),
+              )}
+              rows={FIGURE_COLUMNS.map(column =>
+                ([column.label] as React.ReactNode[]).concat(
+                  rows.map(row => formatJPY(row.evaluated.figures[column.key])),
+                ),
+              )}
+            />
+          </Box>
+          <Stack spacing={1} sx={{ mt: 1.5 }}>
+            {rows
+              .filter(row => isBest(row) || row.canApply)
+              .map(row => (
+                <Box key={row.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2">
+                      <strong>{row.label}</strong>
+                      {roleTags(row)}
+                    </Typography>
+                    {isBest(row) && <BestChanges row={row} />}
+                  </Box>
+                  {applyButton(row)}
+                </Box>
+              ))}
+          </Stack>
+        </>
+      )}
+    </>
+  );
+});
+
 /**
  * Searches the ways to report the capital-gains and dividends entries that are not already fixed
  * — one election per account and per domestic dividend — and shows, for each, the same figures
@@ -150,34 +300,16 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
   const { rows, mandatoryNote, progress, showProgress, bounded, boundedEstimate } =
     useReportingPlans(inputs, expanded);
 
-  const applyRow = (row: ReportingRow) => {
-    onStreamsChange(row.evaluated.streams);
-    onReportedDividendsTaxationChange?.(row.evaluated.election);
-  };
-
-  const roleLabel = (role: PlanRole): string =>
-    role === 'current' ? 'Current' : bounded ? 'Best found' : 'Best';
-  // The parts the row plays that its name does not already say, as chips beside the name.
-  const roleTags = (row: ReportingRow) =>
-    row.roles
-      .filter(role => role !== row.key)
-      .map(role => (
-        <Chip
-          key={role}
-          size="small"
-          variant="outlined"
-          color={role === 'best' ? 'primary' : 'default'}
-          label={roleLabel(role)}
-          sx={{ ml: 1, verticalAlign: 'middle' }}
-        />
-      ));
-
-  const applyButton = (row: ReportingRow) =>
-    row.canApply ? (
-      <Button size="small" variant="outlined" onClick={() => applyRow(row)}>
-        Apply
-      </Button>
-    ) : undefined;
+  // The latest handlers behind one stable callback, so the memoised plan rows are not
+  // re-rendered by a new function identity on every render of the dialog.
+  const handlers = useRef({ onStreamsChange, onReportedDividendsTaxationChange });
+  useEffect(() => {
+    handlers.current = { onStreamsChange, onReportedDividendsTaxationChange };
+  });
+  const onApply = useCallback((row: ReportingRow) => {
+    handlers.current.onStreamsChange(row.evaluated.streams);
+    handlers.current.onReportedDividendsTaxationChange?.(row.evaluated.election);
+  }, []);
 
   return (
     <Accordion
@@ -226,113 +358,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
               </DetailedTooltip>
             </Typography>
             {showProgress && progress && <SearchIndicator progress={progress} />}
-            {isMobile ? (
-              <Stack spacing={1.5}>
-                {rows.map(row => (
-                  // One card per plan: the figures under the plan's name as the table's caption,
-                  // then (for Best) what applying it changes, and Apply, framed so the text
-                  // reads as part of the plan rather than of the next one. The Best card is outlined in the primary
-                  // colour so it stands out among the references.
-                  <Box
-                    key={row.key}
-                    sx={{
-                      border: 1,
-                      borderColor: isBest(row) ? 'primary.main' : 'divider',
-                      borderRadius: 1,
-                      p: 1,
-                    }}
-                  >
-                    <ReferenceTable
-                      caption={
-                        <>
-                          {cardTitle(row)}
-                          {roleTags(row)}
-                        </>
-                      }
-                      headers={[]}
-                      rows={FIGURE_COLUMNS.map(column => [
-                        column.label,
-                        formatJPY(row.evaluated.figures[column.key]),
-                      ])}
-                    />
-                    {isBest(row) && (
-                      <Box
-                        sx={{
-                          mt: 1,
-                          pt: 1,
-                          // Lines up with the table text, which sits inside the cells' padding.
-                          px: 0.75,
-                          borderTop: 1,
-                          borderColor: 'divider',
-                        }}
-                      >
-                        <BestChanges row={row} />
-                      </Box>
-                    )}
-                    {applyButton(row) && <Box sx={{ mt: 1, px: 0.75 }}>{applyButton(row)}</Box>}
-                  </Box>
-                ))}
-              </Stack>
-            ) : (
-              <>
-                {/* Six columns fit the dialog only at this size, with the figure names wrapping. */}
-                <Box
-                  sx={{
-                    overflowX: 'auto',
-                    fontSize: '0.8rem',
-                    '& td, & th': { whiteSpace: 'nowrap' },
-                    '& td:first-of-type': { whiteSpace: 'normal' },
-                  }}
-                >
-                  <ReferenceTable
-                    headers={([''] as React.ReactNode[]).concat(
-                      rows.map(row => (
-                        <Box
-                          key={row.key}
-                          component="span"
-                          sx={{ fontWeight: isBest(row) ? 700 : undefined }}
-                        >
-                          {columnLabel(row)}
-                          {row.roles.filter(role => role !== row.key).length > 0 && (
-                            <Typography
-                              variant="caption"
-                              component="span"
-                              sx={{ display: 'block', fontWeight: 400, color: 'text.secondary' }}
-                            >
-                              {row.roles
-                                .filter(role => role !== row.key)
-                                .map(roleLabel)
-                                .join(', ')}
-                            </Typography>
-                          )}
-                        </Box>
-                      )),
-                    )}
-                    rows={FIGURE_COLUMNS.map(column =>
-                      ([column.label] as React.ReactNode[]).concat(
-                        rows.map(row => formatJPY(row.evaluated.figures[column.key])),
-                      ),
-                    )}
-                  />
-                </Box>
-                <Stack spacing={1} sx={{ mt: 1.5 }}>
-                  {rows
-                    .filter(row => isBest(row) || row.canApply)
-                    .map(row => (
-                      <Box key={row.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2">
-                            <strong>{row.label}</strong>
-                            {roleTags(row)}
-                          </Typography>
-                          {isBest(row) && <BestChanges row={row} />}
-                        </Box>
-                        {applyButton(row)}
-                      </Box>
-                    ))}
-                </Stack>
-              </>
-            )}
+            <PlanRows rows={rows} isMobile={isMobile} bounded={bounded} onApply={onApply} />
             <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
               This year only. The aggregate-taxation (総合課税) rows apply no dividend tax credit
               (配当控除, not modelled yet), so for a dividend from a Japanese company they
