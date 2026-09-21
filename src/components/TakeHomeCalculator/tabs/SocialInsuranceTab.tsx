@@ -25,7 +25,7 @@ import {
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
-import { annualIncomeStreamAmount, monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
+import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   calculatePensionBonusBreakdown,
   findPensionBracket,
@@ -207,14 +207,20 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     .filter(s => s.type === 'bonus')
     .reduce((sum, s) => sum + s.amount, 0);
 
-  const monthlyCommutingAllowance = inputs.incomeStreams
-    .filter(s => s.type === 'commutingAllowance')
-    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0);
+  const monthlyCommutingAllowance =
+    inputs.incomeStreams
+      .filter(s => s.type === 'commutingAllowance')
+      .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0) / 12;
 
-  // Calculate Raw Monthly Remuneration (Salary + Commuting)
-  const rawMonthlyRemuneration = inputs.incomeStreams
-    .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0);
+  // Raw monthly remuneration (salary + commuting), divided once as the premiums are charged.
+  // Dividing each stream and adding the twelfths can land just under a bracket bound and show a
+  // grade the premiums were not charged on: three annual streams of 560,000, 194,000 and 2,000
+  // come to 62,999.99999999999 a month rather than 63,000, which is grade 58,000 rather than
+  // 68,000.
+  const rawMonthlyRemuneration =
+    inputs.incomeStreams
+      .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
+      .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0) / 12;
 
   // Find SMR Brackets
   const healthSMR = findSMRBracket(rawMonthlyRemuneration).smrAmount;

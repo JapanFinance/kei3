@@ -36,7 +36,7 @@ import {
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
-import { monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
+import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
 import SMRTableTooltip from './SMRTableTooltip';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
@@ -569,7 +569,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                 {formatJPY(
                   inputs.incomeStreams
                     .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-                    .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0),
+                    .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0) / 12,
                 )}
               </Typography>
             </Box>
