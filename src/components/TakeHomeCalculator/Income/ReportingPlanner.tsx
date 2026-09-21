@@ -37,7 +37,7 @@ const FIGURE_COLUMNS: readonly { key: keyof PlanFigures; label: string }[] = [
   { key: 'residenceTax', label: 'Residence tax' },
   { key: 'socialInsurance', label: 'Social insurance' },
   { key: 'furusatoNozeiLimit', label: 'Furusato limit' },
-  { key: 'totalIncome', label: 'Total income (合計所得金額)' },
+  { key: 'totalIncome', label: 'Net income (合計所得金額)' },
 ];
 
 const CURRENT_KEEPS_MOST = 'The current choices already keep the most.';
@@ -55,6 +55,23 @@ const columnLabel = (row: ReportingRow): string => {
       return 'Separate';
     case 'aggregate':
       return 'Aggregate';
+    default:
+      return row.label;
+  }
+};
+
+/**
+ * The phone card's title: the full row labels for the uniform plans wrap at 375 px, so they
+ * shorten to "All" plus the election, the way the desktop columns do.
+ */
+const cardTitle = (row: ReportingRow): string => {
+  switch (row.key) {
+    case 'withheldOnly':
+      return 'All withheld only';
+    case 'separate':
+      return 'All separate (申告分離課税)';
+    case 'aggregate':
+      return 'All aggregate (総合課税)';
     default:
       return row.label;
   }
@@ -155,9 +172,22 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
             {isMobile ? (
               <Stack spacing={1.5}>
                 {rows.map(row => (
-                  <Box key={row.key}>
+                  // One card per plan: the figures under the plan's name as the table's caption,
+                  // then what to do and Apply, framed so the instruction reads as part of the
+                  // plan rather than of the next one. The Best card is outlined in the primary
+                  // colour so it stands out among the references.
+                  <Box
+                    key={row.key}
+                    sx={{
+                      border: 1,
+                      borderColor: row.key === 'best' ? 'primary.main' : 'divider',
+                      borderRadius: 1,
+                      p: 1,
+                    }}
+                  >
                     <ReferenceTable
-                      headers={[row.label, '']}
+                      caption={cardTitle(row)}
+                      headers={[]}
                       rows={FIGURE_COLUMNS.map(column => [
                         column.label,
                         formatJPY(row.evaluated.figures[column.key]),
@@ -167,11 +197,22 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                       <RowProgress progress={progress} />
                     )}
                     {instructionFor(row) && (
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          mt: 1,
+                          pt: 1,
+                          // Lines up with the table text, which sits inside the cells' padding.
+                          px: 0.75,
+                          borderTop: 1,
+                          borderColor: 'divider',
+                          color: 'text.secondary',
+                        }}
+                      >
                         {instructionFor(row)}
                       </Typography>
                     )}
-                    {applyButton(row) && <Box sx={{ mt: 0.5 }}>{applyButton(row)}</Box>}
+                    {applyButton(row) && <Box sx={{ mt: 1, px: 0.75 }}>{applyButton(row)}</Box>}
                   </Box>
                 ))}
               </Stack>
