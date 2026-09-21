@@ -6,6 +6,7 @@ import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
+import type { PremiumRate } from '../data/premiumRate';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent } from '../types/dependents';
 import {
@@ -63,23 +64,6 @@ import {
 } from './residenceTax';
 
 /**
- * Rounds a premium to whole yen by the rule for a premium deducted from pay:
- * - 0.50 yen or less rounds down
- * - more than 0.50 yen rounds up
- *
- * Throws if the amount is negative or NaN, since no premium can be.
- * @see https://www.nenkin.go.jp/service/kounen/hokenryo/nofu/20121026.html
- */
-export const roundSocialInsurancePremium = (amount: number): number => {
-  // Negated so that NaN, which fails every comparison, is rejected too.
-  if (!(amount >= 0)) {
-    throw new Error(`Premium amount must be non-negative: ${amount}`);
-  }
-  const yen = Math.floor(amount);
-  return amount - yen > 0.5 ? yen + 1 : yen;
-};
-
-/**
  * Composes the taxpayer's 所得金額調整控除（子ども・特別障害者等を有する者等）: the salary-based
  * amount ({@link calculateIncomeAdjustmentDeductionAmount}), gated on eligibility. The statute
  * lists three qualifying conditions; イ is the taxpayer being a 特別障害者 themselves, and ロ and
@@ -132,6 +116,17 @@ export interface EmploymentInsuranceBreakdown {
 }
 
 /**
+ * The employee's employment insurance premium on one month's wage, which is modelled as one
+ * twelfth of the annual wage. The division by twelve is given to the rate rather than taken on
+ * the wage first, so an annual wage that is not twelve whole yen apiece still rounds from an
+ * exact product.
+ */
+export const calculateMonthlyEmploymentInsurancePremium = (
+  annualWage: number,
+  rate: PremiumRate,
+): number => rate.premiumOn(annualWage, 12);
+
+/**
  * Calculates employment insurance premiums breakdown based on income.
  * The rate may vary by month within a calendar year (fiscal year changes in April).
  */
@@ -150,17 +145,16 @@ const calculateEmploymentInsuranceBreakdown = (
 
   // Calculate on regular monthly salary — each month may have a different rate
   if (salaryIncome > 0) {
-    const monthlySalary = salaryIncome / 12;
     for (let month = 0; month < 12; month++) {
       const rate = getEmploymentInsuranceRate(year, month);
-      annualPremium += roundSocialInsurancePremium(monthlySalary * rate);
+      annualPremium += calculateMonthlyEmploymentInsurancePremium(salaryIncome, rate);
     }
   }
 
   // Calculate on bonuses — use the rate for the month the bonus is paid
   for (const bonus of bonuses) {
     const rate = getEmploymentInsuranceRate(year, bonus.month);
-    const bonusPremium = roundSocialInsurancePremium(bonus.amount * rate);
+    const bonusPremium = rate.premiumOn(bonus.amount);
 
     bonusPortion += bonusPremium;
     annualPremium += bonusPremium;
@@ -533,12 +527,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         inputs.healthInsuranceProvider,
         incomeYear,
         inputs.region,
-        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID && inputs.customEHIRates
-          ? {
-              healthRate: inputs.customEHIRates.healthInsuranceRate,
-              ltcRate: inputs.customEHIRates.longTermCareRate,
-            }
-          : undefined,
+        inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? inputs.customEHIRates : undefined,
         bonusIncome,
       );
       healthInsurance = hiResult.total;

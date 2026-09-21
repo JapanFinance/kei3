@@ -6,12 +6,20 @@
  * Works directly with provider rate data without intermediate transformations
  */
 
-import { roundSocialInsurancePremium } from '../../utils/taxCalculations';
+import type { CustomEmployeesHealthInsuranceRates } from '../../types/tax';
+import type { PremiumRate } from '../premiumRate';
 import {
   PROVIDER_DEFINITIONS,
   getProviderDefinition,
+  percent,
   type RegionalRates,
 } from './providerRateData';
+
+/** The rates that an employee's premium is calculated with. */
+export type EmployeeRates = Pick<
+  RegionalRates,
+  'employeeHealthInsuranceRate' | 'employeeLongTermCareRate'
+>;
 
 /**
  * Returns the applicable regional rates for a given provider, region, year, and month.
@@ -45,17 +53,41 @@ export function getRegionalRatesForMonth(
 }
 
 /**
- * Calculate monthly premium for an employee based on SMR and regional rates
+ * The custom provider's employee rates, from the percentages entered in the form. A percentage
+ * finer than the rate scale is rounded to it, which the form does not allow but other callers
+ * could. Missing rates count as 0%, as the form shows them.
  */
-export function calculateMonthlyEmployeePremium(
-  smrAmount: number,
-  regionalRates: RegionalRates,
+export function getCustomProviderRates(
+  customRates: CustomEmployeesHealthInsuranceRates | undefined,
+): EmployeeRates {
+  return {
+    employeeHealthInsuranceRate: percent.entered(customRates?.healthInsuranceRate ?? 0),
+    employeeLongTermCareRate: percent.entered(customRates?.longTermCareRate ?? 0),
+  };
+}
+
+/**
+ * The employee's premium rate: health insurance, plus long-term care for a Category 2 insured
+ * person (ages 40-64).
+ */
+export function getEmployeePremiumRate(
+  rates: EmployeeRates,
+  includeLongTermCare: boolean,
+): PremiumRate {
+  return includeLongTermCare
+    ? rates.employeeHealthInsuranceRate.plus(rates.employeeLongTermCareRate)
+    : rates.employeeHealthInsuranceRate;
+}
+
+/**
+ * The employee's premium on a standard monthly remuneration or standard bonus amount.
+ */
+export function calculateEmployeeHealthInsurancePremium(
+  standardAmount: number,
+  rates: EmployeeRates,
   includeLongTermCare: boolean,
 ): number {
-  const rate =
-    regionalRates.employeeHealthInsuranceRate +
-    (includeLongTermCare ? regionalRates.employeeLongTermCareRate : 0);
-  return roundSocialInsurancePremium(smrAmount * rate);
+  return getEmployeePremiumRate(rates, includeLongTermCare).premiumOn(standardAmount);
 }
 
 /**
