@@ -5,7 +5,6 @@ import { describe, it, expect } from 'vitest';
 
 import { percent } from '../data/employeesHealthInsurance/providerRateData';
 import {
-  calculateEmployeeHealthInsurancePremium,
   getCustomProviderRates,
   getEmployeePremiumRate,
   getRegionalRatesForMonth,
@@ -114,9 +113,7 @@ describe('Social Insurance Rounding', () => {
         employeeLongTermCareRate: percent(0),
       };
 
-      expect(
-        calculateEmployeeHealthInsurancePremium(410_000, getEmployeePremiumRate(rates, false)),
-      ).toBe(20_315);
+      expect(getEmployeePremiumRate(rates, false).premiumOn(410_000)).toBe(20_315);
     });
 
     // In binary floating point, 150000 * 0.05075 is 7612.500000000001, and
@@ -124,15 +121,11 @@ describe('Social Insurance Rounding', () => {
     it('rounds an exact 0.50 yen tie down where the product in binary lies above it', () => {
       // Kanagawa from the May 2026 paycheck: 150,000 × 5.075% = 7,612.50
       const kanagawa = getRegionalRatesForMonth('KyokaiKenpo', 'Kanagawa', 2026, 4)!;
-      expect(
-        calculateEmployeeHealthInsurancePremium(150_000, getEmployeePremiumRate(kanagawa, false)),
-      ).toBe(7_612);
+      expect(getEmployeePremiumRate(kanagawa, false).premiumOn(150_000)).toBe(7_612);
 
       // Iwate, ages 40-64, April 2026 paycheck: 110,000 × (4.755% + 0.81%) = 6,121.50
       const iwate = getRegionalRatesForMonth('KyokaiKenpo', 'Iwate', 2026, 3)!;
-      expect(
-        calculateEmployeeHealthInsurancePremium(110_000, getEmployeePremiumRate(iwate, true)),
-      ).toBe(6_121);
+      expect(getEmployeePremiumRate(iwate, true).premiumOn(110_000)).toBe(6_121);
     });
 
     it('sums the tie months into the annual premium', () => {
@@ -152,9 +145,7 @@ describe('Social Insurance Rounding', () => {
       // 190,000 × (4.755% + 0.81%) = 10,573.50
       const rates = getCustomProviderRates({ healthInsuranceRate: 4.755, longTermCareRate: 0.81 });
 
-      expect(
-        calculateEmployeeHealthInsurancePremium(190_000, getEmployeePremiumRate(rates, true)),
-      ).toBe(10_573);
+      expect(getEmployeePremiumRate(rates, true).premiumOn(190_000)).toBe(10_573);
     });
 
     it('keeps a custom rate with four decimal places exact', () => {
@@ -162,9 +153,7 @@ describe('Social Insurance Rounding', () => {
       const rates = getCustomProviderRates({ healthInsuranceRate: 3.9947, longTermCareRate: 0.9 });
 
       expect(rates.employeeHealthInsuranceRate.equals(percent(3.9947))).toBe(true);
-      expect(
-        calculateEmployeeHealthInsurancePremium(500_000, getEmployeePremiumRate(rates, false)),
-      ).toBe(19_973);
+      expect(getEmployeePremiumRate(rates, false).premiumOn(500_000)).toBe(19_973);
     });
   });
 

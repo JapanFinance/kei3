@@ -3,7 +3,6 @@
 
 import type { RegionalRates } from '../data/employeesHealthInsurance/providerRateData';
 import {
-  calculateEmployeeHealthInsurancePremium,
   getCustomProviderRates,
   getEmployeePremiumRate,
   getRegionalRatesForMonth,
@@ -94,10 +93,10 @@ export function calculateHealthInsuranceBreakdown(
       const staticRates = getCustomProviderRates(customRates);
 
       // Custom rates don't vary by month
-      const monthlyPremium = calculateEmployeeHealthInsurancePremium(
-        smrBracket.smrAmount,
-        getEmployeePremiumRate(staticRates, isSubjectToLongTermCarePremium),
-      );
+      const monthlyPremium = getEmployeePremiumRate(
+        staticRates,
+        isSubjectToLongTermCarePremium,
+      ).premiumOn(smrBracket.smrAmount);
       let totalPremium = monthlyPremium * 12;
       let bonusPortion = 0;
 
@@ -125,9 +124,8 @@ export function calculateHealthInsuranceBreakdown(
       const monthRates = getRegionalRatesForMonth(provider, region, year, month);
       if (monthRates) {
         if (monthRates !== periodRates) {
-          premium = calculateEmployeeHealthInsurancePremium(
+          premium = getEmployeePremiumRate(monthRates, isSubjectToLongTermCarePremium).premiumOn(
             smrBracket.smrAmount,
-            getEmployeePremiumRate(monthRates, isSubjectToLongTermCarePremium),
           );
           periodRates = monthRates;
         }
@@ -231,10 +229,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
       continue;
     }
 
-    const premium = calculateEmployeeHealthInsurancePremium(
-      standardBonusAmount,
-      getEmployeePremiumRate(rates, includeLTC),
-    );
+    const premium = getEmployeePremiumRate(rates, includeLTC).premiumOn(standardBonusAmount);
 
     breakdown.push({
       month: bonus.month,
