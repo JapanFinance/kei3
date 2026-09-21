@@ -263,7 +263,8 @@ const applyUniformState = (
 };
 
 /**
- * Every optional unit left withheld, everything else as entered. Meaningless when
+ * Every optional unit left withheld, everything else as entered, under the election in force
+ * (it still taxes any dividend that has to be reported). Meaningless when
  * {@link hasOptionalUnit} is false — the caller omits the row in that case.
  */
 export const withheldOnlyPlan = (
@@ -271,7 +272,7 @@ export const withheldOnlyPlan = (
   units: readonly ReportingUnit[],
 ): ReportingPlan => ({
   streams: applyUniformState(inputs.incomeStreams, units, unit => unit.states[0]!),
-  election: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  election: inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION,
 });
 
 /** Every optional unit reporting everything it can, taxed under `election`. */
@@ -486,46 +487,42 @@ const positionAmongSameType = (streams: readonly IncomeStream[], streamIndex: nu
   return position;
 };
 
-const unitInstruction = (
-  streams: readonly IncomeStream[],
-  streamIndex: number,
-  election: ReportedDividendsTaxation,
-): string => {
+const unitInstruction = (streams: readonly IncomeStream[], streamIndex: number): string => {
   const stream = streams[streamIndex]!;
   if (stream.type === 'withholdingAccount') {
     const label = `Account ${positionAmongSameType(streams, streamIndex)}`;
     const detail = `sales ${formatJPY(stream.capitalGains)}, dividends ${formatJPY(stream.dividends)}`;
     const action =
       stream.reportsCapitalGains && stream.reportsDividends
-        ? `report both, dividends under ${ELECTION_LABEL[election]}`
+        ? 'report both'
         : stream.reportsCapitalGains
           ? 'report the sale; leave the dividends to withholding'
           : stream.reportsDividends
-            ? `leave the sale to withholding; report the dividends under ${ELECTION_LABEL[election]}`
+            ? 'leave the sale to withholding; report the dividends'
             : 'leave both to withholding';
     return `${label} (${detail}): ${action}.`;
   }
   // 'dividends' — the only other stream type deriveReportingUnits gives a unit to.
   const dividend = stream as DividendsIncomeStream;
   const label = `Dividends ${positionAmongSameType(streams, streamIndex)}`;
-  const action = dividend.isReported
-    ? `report under ${ELECTION_LABEL[election]}`
-    : 'leave to withholding';
+  const action = dividend.isReported ? 'report' : 'leave to withholding';
   return `${label} (${formatJPY(dividend.amount)}): ${action}.`;
 };
 
 /**
  * The plan's instruction line (7.3.4): one phrase per optional unit, in entry order, naming the
- * entry by its position among same-type entries and its amounts. When no unit is optional but
- * the plan still reports a dividend (one paid abroad, say), the election is the only choice
- * left, so the line names it instead; empty when there is nothing to choose at all.
+ * entry by its position among same-type entries and its amounts, then — whenever the plan
+ * reports any dividend, a fixed one included — one sentence naming the election, since the
+ * election is made once for every reported dividend and can be the only thing two plans differ
+ * in (a dividend paid abroad is reported in every plan, but taxed under either election).
+ * Empty when there is nothing to choose at all.
  */
 export const describePlan = (plan: ReportingPlan, units: readonly ReportingUnit[]): string => {
   const phrases = units
     .filter(unit => unit.states.length > 1)
-    .map(unit => unitInstruction(plan.streams, unit.streamIndex, plan.election));
-  if (phrases.length === 0 && planReportsDividend(units, plan.streams)) {
-    return `Reported dividends are taxed under ${ELECTION_LABEL[plan.election]}.`;
+    .map(unit => unitInstruction(plan.streams, unit.streamIndex));
+  if (planReportsDividend(units, plan.streams)) {
+    phrases.push(`Reported dividends are taxed under ${ELECTION_LABEL[plan.election]}.`);
   }
   return phrases.join(' ');
 };

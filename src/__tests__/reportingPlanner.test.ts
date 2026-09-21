@@ -566,16 +566,55 @@ describe('describePlan', () => {
     const plan: ReportingPlan = { streams: inputs.incomeStreams, election: 'separate' };
 
     const text = describePlan(plan, units);
-    expect(text).toContain('Account 1');
-    expect(text).toContain('sales -¥500,000');
-    expect(text).toContain('dividends ¥800,000');
-    expect(text).toContain('report both');
-    expect(text).toContain('申告分離課税');
-    expect(text).toContain('Dividends 1');
-    expect(text).toContain('leave to withholding');
+    expect(text).toBe(
+      'Account 1 (sales -¥500,000, dividends ¥800,000): report both. ' +
+        'Dividends 1 (¥300,000): leave to withholding. ' +
+        'Reported dividends are taxed under Separate taxation (申告分離課税).',
+    );
   });
 
-  it('is empty when no unit is optional', () => {
+  it('names the election when the only reported dividend is a fixed one, so two plans that differ in nothing else read differently', () => {
+    const abroad = dividend({
+      id: 'd',
+      paymentChannel: 'abroad',
+      isReported: true,
+      amount: 500_000,
+    });
+    const inputs = salaryInputs([
+      account({ id: 'a', capitalGains: -80_000, dividends: 160_000 }),
+      abroad,
+    ]);
+    const units = deriveReportingUnits(inputs.incomeStreams);
+    const withheldSeparate = withheldOnlyPlan(inputs, units);
+    const withheldProgressive: ReportingPlan = { ...withheldSeparate, election: 'aggregate' };
+
+    expect(describePlan(withheldSeparate, units)).toBe(
+      'Account 1 (sales -¥80,000, dividends ¥160,000): leave both to withholding. ' +
+        'Reported dividends are taxed under Separate taxation (申告分離課税).',
+    );
+    expect(describePlan(withheldProgressive, units)).toBe(
+      'Account 1 (sales -¥80,000, dividends ¥160,000): leave both to withholding. ' +
+        'Reported dividends are taxed under Progressive taxation (総合課税).',
+    );
+  });
+
+  it('keeps the election in force for the withheld-only plan', () => {
+    const abroad = dividend({
+      id: 'd',
+      paymentChannel: 'abroad',
+      isReported: true,
+      amount: 500_000,
+    });
+    const inputs = {
+      ...salaryInputs([account({ id: 'a', capitalGains: -80_000, dividends: 160_000 }), abroad]),
+      reportedDividendsTaxation: 'aggregate' as const,
+    };
+    expect(withheldOnlyPlan(inputs, deriveReportingUnits(inputs.incomeStreams)).election).toBe(
+      'aggregate',
+    );
+  });
+
+  it('is empty when no unit is optional and nothing reports a dividend', () => {
     const inputs = salaryInputs([outsideSale('g')]);
     const units = deriveReportingUnits(inputs.incomeStreams);
     expect(describePlan(currentPlan(inputs), units)).toBe('');
