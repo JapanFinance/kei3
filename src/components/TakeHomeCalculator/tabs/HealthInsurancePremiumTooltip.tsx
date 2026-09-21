@@ -683,7 +683,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                             <tr key={idx}>
                               <td style={{ padding: '2px 8px 2px 0' }}>{monthLabel}</td>
                               <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
-                                {formatPercent(g.rate.toFraction())}
+                                {g.rate.toPercent()}
                               </td>
                               <td style={{ padding: '2px 8px 2px 0', textAlign: 'right' }}>
                                 {formatJPY(g.premium)}
@@ -744,7 +744,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
                     ×
                   </Box>
-                  {formatPercent(finalRate.toFraction())}
+                  {finalRate.toPercent()}
                   <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
                     =
                   </Box>
@@ -759,8 +759,8 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
 
         {includeLTC && (
           <Typography variant="caption" sx={{ color: 'text.secondary', mt: -0.5 }}>
-            Rate breakdown: Health {formatPercent(rates.employeeHealthInsuranceRate.toFraction())} +
-            LTC {formatPercent(rates.employeeLongTermCareRate.toFraction())}
+            Rate breakdown: Health {rates.employeeHealthInsuranceRate.toPercent()} + LTC{' '}
+            {rates.employeeLongTermCareRate.toPercent()}
           </Typography>
         )}
 

@@ -18,7 +18,7 @@ import type { PremiumRate } from '../../../data/premiumRate';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
-import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
+import { formatJPY, formatMonthShort } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 
 interface HealthInsuranceBonusTooltipProps {
@@ -110,7 +110,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                       </Box>
                     )}
                   </td>
-                  <td>{formatPercent(getRateForMonth(item.month).toFraction())}</td>
+                  <td>{getRateForMonth(item.month).toPercent()}</td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
                 </tr>
               ))}

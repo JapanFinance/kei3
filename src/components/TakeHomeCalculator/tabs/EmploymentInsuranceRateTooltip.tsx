@@ -6,7 +6,7 @@ import React from 'react';
 
 import { getEmploymentInsuranceRate } from '../../../data/employmentInsurance';
 import type { BonusIncomeStream } from '../../../types/tax';
-import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
+import { formatJPY, formatMonthShort } from '../../../utils/formatters';
 import { calculateMonthlyEmploymentInsurancePremium } from '../../../utils/taxCalculations';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
@@ -63,7 +63,7 @@ const SalaryBreakdownTooltip: React.FC<SalaryTooltipProps> = ({ annualWage, year
             <tr key={month}>
               <td style={cellStyle}>{formatMonthShort(month)}</td>
               <td style={rightCellStyle}>{formatJPY(Math.round(annualWage / 12))}</td>
-              <td style={rightCellStyle}>{formatPercent(rate.toFraction(), 2)}</td>
+              <td style={rightCellStyle}>{rate.toPercent(2)}</td>
               <td style={rightCellStyle}>{formatJPY(premium)}</td>
             </tr>
           ))}
@@ -113,7 +113,7 @@ const BonusBreakdownTooltip: React.FC<BonusTooltipProps> = ({ bonuses, year }) =
             <tr key={i}>
               <td style={cellStyle}>{formatMonthShort(month)}</td>
               <td style={rightCellStyle}>{formatJPY(amount)}</td>
-              <td style={rightCellStyle}>{formatPercent(rate.toFraction(), 2)}</td>
+              <td style={rightCellStyle}>{rate.toPercent(2)}</td>
               <td style={rightCellStyle}>{formatJPY(premium)}</td>
             </tr>
           ))}

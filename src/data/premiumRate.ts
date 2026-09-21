@@ -1,6 +1,8 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { formatPercent } from '../utils/formatters';
+
 /**
  * Rounds a premium of `units / scale` yen to whole yen by the rule for a premium deducted from
  * pay:
@@ -77,9 +79,18 @@ export class PremiumRate {
     return roundSocialInsurancePremium(amount * this.#units, this.#scale * shares);
   }
 
-  /** The rate as a fraction, for display: a rate of 5.075% is 0.05075. */
-  toFraction(): number {
-    return this.#units / this.#scale;
+  /**
+   * This rate divided into `parts` equal parts, exactly: the employees' pension rate of
+   * 1000分の183 divided into two is the 9.15% an employee pays of what they and their employer
+   * pay together.
+   */
+  dividedBy(parts: number): PremiumRate {
+    return new PremiumRate(this.#units, this.#scale * parts);
+  }
+
+  /** The rate as a percentage, to at most `decimals` decimal places: 5.075% reads "5.075%". */
+  toPercent(decimals?: number): string {
+    return formatPercent(this.#units / this.#scale, decimals);
   }
 }
 

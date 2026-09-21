@@ -8,7 +8,7 @@ import React from 'react';
 
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
-import { formatJPY, formatPercent } from '../../../utils/formatters';
+import { formatJPY } from '../../../utils/formatters';
 import { monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   EMPLOYEES_PENSION_BRACKETS,
@@ -71,7 +71,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
     return baseSummary;
   };
 
-  const employeeRate = EMPLOYEES_PENSION_RATE.toFraction() / 2;
+  const employeeRate = EMPLOYEES_PENSION_RATE.dividedBy(2);
   const totalPremium = calculateEmployeesPensionPremium(standardMonthlyRemuneration);
 
   return (
@@ -149,7 +149,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
             <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
               ×
             </Box>
-            {formatPercent(employeeRate)}
+            {employeeRate.toPercent()}
             <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
               =
             </Box>
@@ -164,7 +164,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
         variant="caption"
         sx={{ color: 'text.secondary', fontStyle: 'italic', display: 'block', mb: 1 }}
       >
-        The employer also pays {formatPercent(employeeRate)}.
+        The employer also pays {employeeRate.toPercent()}.
       </Typography>
 
       <SMRTableTooltip
