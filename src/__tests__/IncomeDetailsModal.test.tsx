@@ -853,7 +853,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     // kept 4,739,798, 申告分離課税 (Current, the election in force, and the "all reported"
     // row) kept 4,739,848, 総合課税 kept 4,748,648 — the best of the four, so it is also Best.
     expect(await screen.findByText('Current')).toBeInTheDocument();
-    expect(screen.getByText('Best')).toBeInTheDocument();
+    expect(screen.getAllByText('Best').length).toBeGreaterThan(0);
     expect(screen.getByText('¥4,739,798')).toBeInTheDocument();
     expect(screen.getAllByText('¥4,739,848')).not.toHaveLength(0);
     expect(screen.getAllByText('¥4,748,648')).not.toHaveLength(0);

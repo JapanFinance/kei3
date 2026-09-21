@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PROVIDER } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import {
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -20,7 +20,9 @@ import {
   currentPlan,
   deriveReportingUnits,
   descend,
-  describePlan,
+  drainDescent,
+  multiStartDescent,
+  planChanges,
   evaluatePlan,
   generatePlans,
   hasOptionalUnit,
@@ -551,29 +553,47 @@ describe('evaluatePlan', () => {
   });
 });
 
-describe('describePlan', () => {
-  it('names each optional unit by position and amount, stating the election only for dividends', () => {
-    const accountStream = account({
-      id: 'a',
-      capitalGains: -500_000,
-      dividends: 800_000,
-      reportsCapitalGains: true,
-      reportsDividends: true,
-    });
-    const dividendStream = dividend({ id: 'd', amount: 300_000, isReported: false });
-    const inputs = salaryInputs([accountStream, dividendStream]);
-    const units = deriveReportingUnits(inputs.incomeStreams);
-    const plan: ReportingPlan = { streams: inputs.incomeStreams, election: 'separate' };
+describe('planChanges', () => {
+  const accountStream = account({
+    id: 'a',
+    capitalGains: -500_000,
+    dividends: 800_000,
+    reportsCapitalGains: true,
+    reportsDividends: true,
+  });
+  const dividendStream = dividend({ id: 'd', amount: 300_000, isReported: false });
 
-    const text = describePlan(plan, units);
-    expect(text).toBe(
-      'Account 1 (sales -¥500,000, dividends ¥800,000): report both. ' +
-        'Dividends 1 (¥300,000): leave to withholding. ' +
-        'Reported dividends are taxed under Separate taxation (申告分離課税).',
-    );
+  it('lists only the entries the plan sets differently, and the election when it newly matters', () => {
+    const inputs = salaryInputs([
+      { ...accountStream, reportsCapitalGains: false, reportsDividends: false },
+      dividendStream,
+    ]);
+    const units = deriveReportingUnits(inputs.incomeStreams);
+    const plan: ReportingPlan = {
+      streams: [inputs.incomeStreams[0]!, accountStream, dividendStream],
+      election: 'separate',
+    };
+
+    expect(planChanges(plan, currentPlan(inputs), units)).toEqual([
+      'Account 1 (sales -¥500,000, dividends ¥800,000): report both the sales and the dividends.',
+      'Reported dividends taxed under Separate taxation (申告分離課税).',
+    ]);
   });
 
-  it('names the election when the only reported dividend is a fixed one, so two plans that differ in nothing else read differently', () => {
+  it('omits the election when the current entries already report a dividend under it', () => {
+    const inputs = salaryInputs([accountStream, dividendStream]);
+    const units = deriveReportingUnits(inputs.incomeStreams);
+    const plan: ReportingPlan = {
+      streams: [inputs.incomeStreams[0]!, accountStream, { ...dividendStream, isReported: true }],
+      election: 'separate',
+    };
+
+    expect(planChanges(plan, currentPlan(inputs), units)).toEqual([
+      'Dividends 1 (¥300,000): report.',
+    ]);
+  });
+
+  it('names the election alone when it is the only difference, a fixed dividend being reported in every plan', () => {
     const abroad = dividend({
       id: 'd',
       paymentChannel: 'abroad',
@@ -588,14 +608,10 @@ describe('describePlan', () => {
     const withheldSeparate = withheldOnlyPlan(inputs, units);
     const withheldAggregate: ReportingPlan = { ...withheldSeparate, election: 'aggregate' };
 
-    expect(describePlan(withheldSeparate, units)).toBe(
-      'Account 1 (sales -¥80,000, dividends ¥160,000): leave both to withholding. ' +
-        'Reported dividends are taxed under Separate taxation (申告分離課税).',
-    );
-    expect(describePlan(withheldAggregate, units)).toBe(
-      'Account 1 (sales -¥80,000, dividends ¥160,000): leave both to withholding. ' +
-        'Reported dividends are taxed under Aggregate taxation (総合課税).',
-    );
+    expect(planChanges(withheldSeparate, currentPlan(inputs), units)).toEqual([]);
+    expect(planChanges(withheldAggregate, currentPlan(inputs), units)).toEqual([
+      'Reported dividends taxed under Aggregate taxation (総合課税).',
+    ]);
   });
 
   it('keeps the election in force for the withheld-only plan', () => {
@@ -614,10 +630,64 @@ describe('describePlan', () => {
     );
   });
 
-  it('is empty when no unit is optional and nothing reports a dividend', () => {
-    const inputs = salaryInputs([outsideSale('g')]);
+  it('is empty when the plan is the current one', () => {
+    const inputs = salaryInputs([accountStream, dividendStream, outsideSale('g')]);
     const units = deriveReportingUnits(inputs.incomeStreams);
-    expect(describePlan(currentPlan(inputs), units)).toBe('');
+    expect(planChanges(currentPlan(inputs), currentPlan(inputs), units)).toEqual([]);
+  });
+});
+
+describe('multiStartDescent', () => {
+  // A case from the random-scenario measurement where descent from the best uniform plan stops
+  // short: the optimum reports the loss account (both figures), the gain account's dividends
+  // only and one of the two dividend entries, under 申告分離課税, while the current election is
+  // 総合課税 — two things have to change together, which a single-step descent never does.
+  const inputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { id: 'b', type: 'business', amount: 6_000_000, blueFilerDeduction: 650_000 },
+      account({ id: 'a1', capitalGains: 3_000_000, dividends: 500_000 }),
+      account({ id: 'a2', capitalGains: -600_000, dividends: 40_000 }),
+      dividend({ id: 'd1', amount: 150_000 }),
+      dividend({ id: 'd2', amount: 150_000 }),
+    ],
+    reportedDividendsTaxation: 'aggregate',
+    ageRange: 'age20to39',
+    healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  };
+  const units = deriveReportingUnits(inputs.incomeStreams);
+  const evalOf = (plan: ReportingPlan): PlanEvaluation => ({
+    plan,
+    evaluated: evaluatePlan(inputs, plan),
+  });
+  const starts = [
+    evalOf(currentPlan(inputs)),
+    evalOf(withheldOnlyPlan(inputs, units)),
+    evalOf(allReportedPlan(inputs, units, 'separate')),
+    evalOf(allReportedPlan(inputs, units, 'aggregate')),
+  ];
+  const bestStart = starts.reduce((best, candidate) =>
+    isBetterPlan(candidate, best, inputs, units) ? candidate : best,
+  );
+  let optimum: PlanEvaluation | undefined;
+  for (const plan of generatePlans(inputs.incomeStreams, units)) {
+    const candidate = evalOf(plan);
+    if (!optimum || isBetterPlan(candidate, optimum, inputs, units)) optimum = candidate;
+  }
+
+  it('reaches the enumerated optimum where descent from the best uniform plan alone stops short', () => {
+    expect(descend(inputs, units, bestStart).evaluated.figures.kept).toBeLessThan(
+      optimum!.evaluated.figures.kept,
+    );
+    const found = drainDescent(multiStartDescent(inputs, units, starts));
+    expect(found.evaluated.figures.kept).toBe(optimum!.evaluated.figures.kept);
+    expect(found.plan.election).toBe('separate');
   });
 });
 

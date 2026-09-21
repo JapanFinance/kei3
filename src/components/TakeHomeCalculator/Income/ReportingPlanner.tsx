@@ -69,17 +69,36 @@ const cardTitle = (row: ReportingRow): string => {
     case 'withheldOnly':
       return 'All withheld only';
     case 'separate':
-      return 'All separate (申告分離課税)';
+      return 'All reported, separate taxation';
     case 'aggregate':
-      return 'All aggregate (総合課税)';
+      return 'All reported, aggregate taxation';
     default:
       return row.label;
   }
 };
 
-/** The Best row's instruction: the special "already keeps the most" line once it equals Current. */
-const instructionFor = (row: ReportingRow): string =>
-  row.key === 'best' && !row.canApply ? CURRENT_KEEPS_MOST : row.instruction;
+/**
+ * What applying the Best plan would change, as a list, or the note that nothing would: Current
+ * needs no text (the entry cards above show its choices) and a uniform plan's name says what it
+ * sets, so only Best carries instructions, and only for the entries it changes.
+ */
+const BestChanges: React.FC<{ row: ReportingRow }> = ({ row }) =>
+  row.canApply ? (
+    <>
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        Changes from the current entries:
+      </Typography>
+      <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary', typography: 'body2' }}>
+        {row.changes.map(change => (
+          <li key={change}>{change}</li>
+        ))}
+      </Box>
+    </>
+  ) : (
+    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+      {CURRENT_KEEPS_MOST}
+    </Typography>
+  );
 
 /**
  * The search indicator, at the top of the panel so it is in view right after expanding: a
@@ -114,7 +133,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
 }) => {
   const theme = useTheme();
   // The dialog is about 550px wide, which fits a column per plan but not a column per figure,
-  // so plans are the columns and the instruction lines sit under the table. A phone screen fits
+  // so plans are the columns and Best's change list sits under the table. A phone screen fits
   // neither, so each plan gets its own two-column table there, as the comparison this replaces
   // did for each election.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -185,8 +204,8 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
               <Stack spacing={1.5}>
                 {rows.map(row => (
                   // One card per plan: the figures under the plan's name as the table's caption,
-                  // then what to do and Apply, framed so the instruction reads as part of the
-                  // plan rather than of the next one. The Best card is outlined in the primary
+                  // then (for Best) what applying it changes, and Apply, framed so the text
+                  // reads as part of the plan rather than of the next one. The Best card is outlined in the primary
                   // colour so it stands out among the references.
                   <Box
                     key={row.key}
@@ -205,9 +224,8 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                         formatJPY(row.evaluated.figures[column.key]),
                       ])}
                     />
-                    {instructionFor(row) && (
-                      <Typography
-                        variant="body2"
+                    {row.key === 'best' && (
+                      <Box
                         sx={{
                           mt: 1,
                           pt: 1,
@@ -215,11 +233,10 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                           px: 0.75,
                           borderTop: 1,
                           borderColor: 'divider',
-                          color: 'text.secondary',
                         }}
                       >
-                        {instructionFor(row)}
-                      </Typography>
+                        <BestChanges row={row} />
+                      </Box>
                     )}
                     {applyButton(row) && <Box sx={{ mt: 1, px: 0.75 }}>{applyButton(row)}</Box>}
                   </Box>
@@ -255,15 +272,20 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                     )}
                   />
                 </Box>
-                <Stack spacing={0.75} sx={{ mt: 1.5 }}>
-                  {rows.map(row => (
-                    <Box key={row.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <Typography variant="body2" sx={{ flex: 1 }}>
-                        <strong>{row.label}:</strong> {instructionFor(row)}
-                      </Typography>
-                      {applyButton(row)}
-                    </Box>
-                  ))}
+                <Stack spacing={1} sx={{ mt: 1.5 }}>
+                  {rows
+                    .filter(row => row.key === 'best' || row.canApply)
+                    .map(row => (
+                      <Box key={row.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2">
+                            <strong>{row.label}</strong>
+                          </Typography>
+                          {row.key === 'best' && <BestChanges row={row} />}
+                        </Box>
+                        {applyButton(row)}
+                      </Box>
+                    ))}
                 </Stack>
               </>
             )}

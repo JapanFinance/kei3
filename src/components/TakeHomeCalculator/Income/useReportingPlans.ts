@@ -9,8 +9,8 @@ import {
   countPlans,
   currentPlan,
   deriveReportingUnits,
-  descendFromPlan,
-  describePlan,
+  multiStartDescent,
+  planChanges,
   evaluatePlan,
   generatePlans,
   hasOptionalUnit,
@@ -52,8 +52,8 @@ export interface ReportingRow {
   key: ReportingRowKey;
   label: string;
   evaluated: EvaluatedPlan;
-  /** One instruction line (7.3.4); empty when the plan has no unit left to choose. */
-  instruction: string;
+  /** What applying the plan changes about the current entries (7.3.4); empty for Current. */
+  changes: string[];
   /** Whether Apply should be offered for this row. */
   canApply: boolean;
 }
@@ -85,8 +85,8 @@ const EMPTY_RESULT: UseReportingPlansResult = {
 
 const UNIFORM_ROW_LABELS: Record<UniformRowKey, string> = {
   withheldOnly: 'All withheld only',
-  separate: 'All reported, separate (申告分離課税)',
-  aggregate: 'All reported, aggregate (総合課税)',
+  separate: 'All reported, separate taxation (申告分離課税)',
+  aggregate: 'All reported, aggregate taxation (総合課税)',
 };
 
 /** `scheduler.yield()` where available (not in jsdom); a same-tick `setTimeout` otherwise. */
@@ -173,14 +173,14 @@ export function useReportingPlans(
         key: 'current',
         label: 'Current',
         evaluated: current.evaluated,
-        instruction: describePlan(current.plan, units),
+        changes: [],
         canApply: false,
       },
       {
         key: 'best',
         label: bounded ? 'Best found' : 'Best',
         evaluated: bestSoFar.evaluated,
-        instruction: describePlan(bestSoFar.plan, units),
+        changes: planChanges(bestSoFar.plan, current.plan, units),
         canApply: !planMatchesCurrent(units, bestSoFar.plan, inputs),
       },
       ...uniformKeys.map(key => {
@@ -189,7 +189,7 @@ export function useReportingPlans(
           key,
           label: UNIFORM_ROW_LABELS[key],
           evaluated: evaluation.evaluated,
-          instruction: describePlan(evaluation.plan, units),
+          changes: planChanges(evaluation.plan, current.plan, units),
           canApply: true,
         };
       }),
@@ -258,7 +258,13 @@ export function useReportingPlans(
       }
 
       if (bounded) {
-        const search = descendFromPlan(inputs, units, best);
+        // From the best plan found so far, Current and each uniform plan; multiStartDescent adds
+        // the other election to each start that reports a dividend.
+        const search = multiStartDescent(inputs, units, [
+          best,
+          current,
+          ...uniformEvaluations.values(),
+        ]);
         for (let step = search.next(); !step.done; step = search.next()) {
           if (!isCurrentGeneration()) return;
           // eslint-disable-next-line no-await-in-loop -- the descent generator is stateful, driven one step per iteration

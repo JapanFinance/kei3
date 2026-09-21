@@ -456,19 +456,57 @@ export function* descendFromPlan(
   }
 }
 
-/** Drains {@link descendFromPlan} synchronously, for a caller that has no need to chunk it. */
-export const descend = (
+/**
+ * Coordinate descent from every start in turn ({@link descendFromPlan}), each start also tried
+ * under the other election when it reports a dividend. A single-step descent never flips the
+ * election together with an entry, and the optima it misses mostly need both: on 1,500 random
+ * scenarios small enough to enumerate, descent from the best uniform plan alone missed the
+ * optimum in 15% of them and from every uniform plan and Current under both elections in 3.7%,
+ * with the mean shortfall falling from ¥9,644 to ¥1,533. Yields every candidate it evaluates,
+ * for a caller that chunks the work; returns the best plan found.
+ */
+export function* multiStartDescent(
   inputs: TakeHomeInputs,
   units: readonly ReportingUnit[],
-  start: PlanEvaluation,
-): PlanEvaluation => {
-  const search = descendFromPlan(inputs, units, start);
+  starts: readonly PlanEvaluation[],
+): Generator<PlanEvaluation, PlanEvaluation> {
+  let best = starts[0]!;
+  for (const start of starts) {
+    if (isBetterPlan(start, best, inputs, units)) best = start;
+    const variants = [start];
+    if (planReportsDividend(units, start.plan.streams)) {
+      const plan: ReportingPlan = {
+        streams: start.plan.streams,
+        election: otherElection(start.plan.election),
+      };
+      const flipped: PlanEvaluation = { plan, evaluated: evaluatePlan(inputs, plan) };
+      yield flipped;
+      if (isBetterPlan(flipped, best, inputs, units)) best = flipped;
+      variants.push(flipped);
+    }
+    for (const variant of variants) {
+      const result = yield* descendFromPlan(inputs, units, variant);
+      if (isBetterPlan(result, best, inputs, units)) best = result;
+    }
+  }
+  return best;
+}
+
+/** Drains a descent generator synchronously, for a caller that has no need to chunk it. */
+export const drainDescent = (search: Generator<PlanEvaluation, PlanEvaluation>): PlanEvaluation => {
   let step = search.next();
   while (!step.done) {
     step = search.next();
   }
   return step.value;
 };
+
+/** Drains {@link descendFromPlan} synchronously, for a caller that has no need to chunk it. */
+export const descend = (
+  inputs: TakeHomeInputs,
+  units: readonly ReportingUnit[],
+  start: PlanEvaluation,
+): PlanEvaluation => drainDescent(descendFromPlan(inputs, units, start));
 
 // English names matching the election toggle in IncomeDetailsModal.tsx ("Separate"/"Aggregate"),
 // paired with the statutory terms.
@@ -487,44 +525,58 @@ const positionAmongSameType = (streams: readonly IncomeStream[], streamIndex: nu
   return position;
 };
 
-const unitInstruction = (streams: readonly IncomeStream[], streamIndex: number): string => {
+/** The entry's name for an instruction: its position among same-type entries and its amounts. */
+const unitName = (streams: readonly IncomeStream[], streamIndex: number): string => {
   const stream = streams[streamIndex]!;
+  const position = positionAmongSameType(streams, streamIndex);
   if (stream.type === 'withholdingAccount') {
-    const label = `Account ${positionAmongSameType(streams, streamIndex)}`;
-    const detail = `sales ${formatJPY(stream.capitalGains)}, dividends ${formatJPY(stream.dividends)}`;
-    const action =
-      stream.reportsCapitalGains && stream.reportsDividends
-        ? 'report both'
-        : stream.reportsCapitalGains
-          ? 'report the sale; leave the dividends to withholding'
-          : stream.reportsDividends
-            ? 'leave the sale to withholding; report the dividends'
-            : 'leave both to withholding';
-    return `${label} (${detail}): ${action}.`;
+    return `Account ${position} (sales ${formatJPY(stream.capitalGains)}, dividends ${formatJPY(stream.dividends)})`;
   }
   // 'dividends' — the only other stream type deriveReportingUnits gives a unit to.
-  const dividend = stream as DividendsIncomeStream;
-  const label = `Dividends ${positionAmongSameType(streams, streamIndex)}`;
-  const action = dividend.isReported ? 'report' : 'leave to withholding';
-  return `${label} (${formatJPY(dividend.amount)}): ${action}.`;
+  return `Dividends ${position} (${formatJPY((stream as DividendsIncomeStream).amount)})`;
+};
+
+/** What the entry is set to under a plan, as an instruction. */
+const unitTarget = (stream: IncomeStream): string => {
+  if (stream.type === 'withholdingAccount') {
+    return stream.reportsCapitalGains && stream.reportsDividends
+      ? 'report both the sales and the dividends'
+      : stream.reportsCapitalGains
+        ? 'report the sales only'
+        : stream.reportsDividends
+          ? 'report the dividends only'
+          : 'leave both to withholding';
+  }
+  return (stream as DividendsIncomeStream).isReported ? 'report' : 'leave to withholding';
 };
 
 /**
- * The plan's instruction line (7.3.4): one phrase per optional unit, in entry order, naming the
- * entry by its position among same-type entries and its amounts, then — whenever the plan
- * reports any dividend, a fixed one included — one sentence naming the election, since the
- * election is made once for every reported dividend and can be the only thing two plans differ
- * in (a dividend paid abroad is reported in every plan, but taxed under either election).
- * Empty when there is nothing to choose at all.
+ * What applying `plan` would change about the entries as they stand in `current` (7.3.4): one
+ * line per optional entry whose reporting differs, naming the entry and what it is set to, and
+ * one line for the election when the plan reports a dividend and either the election differs
+ * or no dividend was reported before (when the election had no effect). Entries that stay as
+ * they are get no line; empty when the plan is the current one.
  */
-export const describePlan = (plan: ReportingPlan, units: readonly ReportingUnit[]): string => {
-  const phrases = units
+export const planChanges = (
+  plan: ReportingPlan,
+  current: ReportingPlan,
+  units: readonly ReportingUnit[],
+): string[] => {
+  const changes = units
     .filter(unit => unit.states.length > 1)
-    .map(unit => unitInstruction(plan.streams, unit.streamIndex));
-  if (planReportsDividend(units, plan.streams)) {
-    phrases.push(`Reported dividends are taxed under ${ELECTION_LABEL[plan.election]}.`);
+    .filter(
+      unit => !unitFlagsEqual(plan.streams[unit.streamIndex]!, current.streams[unit.streamIndex]!),
+    )
+    .map(
+      unit =>
+        `${unitName(plan.streams, unit.streamIndex)}: ${unitTarget(plan.streams[unit.streamIndex]!)}.`,
+    );
+  const electionMatters = planReportsDividend(units, plan.streams);
+  const electionMattered = planReportsDividend(units, current.streams);
+  if (electionMatters && (!electionMattered || plan.election !== current.election)) {
+    changes.push(`Reported dividends taxed under ${ELECTION_LABEL[plan.election]}.`);
   }
-  return phrases.join(' ');
+  return changes;
 };
 
 /**

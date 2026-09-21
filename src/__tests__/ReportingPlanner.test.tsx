@@ -62,7 +62,7 @@ const row = (overrides: Partial<ReportingRow>): ReportingRow => ({
   key: 'current',
   label: 'Current',
   evaluated: evaluated([streamA]),
-  instruction: '',
+  changes: [],
   canApply: false,
   ...overrides,
 });
@@ -117,7 +117,7 @@ describe('ReportingPlanner', () => {
           key: 'best',
           label: 'Best',
           canApply: true,
-          instruction: 'Account 1 (sales ¥500,000, dividends ¥0): report both under 申告分離課税.',
+          changes: ['Account 1 (sales ¥500,000, dividends ¥0): report the sales only.'],
           evaluated: evaluated([{ ...streamA, reportsCapitalGains: true }], {
             kept: 1_100_000,
             totalIncome: 5_500_000,
@@ -136,13 +136,15 @@ describe('ReportingPlanner', () => {
     await expandPanel();
 
     expect(screen.getByText('Current')).toBeInTheDocument();
-    expect(screen.getByText('Best')).toBeInTheDocument();
+    // The table's column heading and the change list's title both read "Best".
+    expect(screen.getAllByText('Best').length).toBeGreaterThan(0);
     expect(screen.getByText('¥1,000,000')).toBeInTheDocument();
     expect(screen.getByText('¥1,100,000')).toBeInTheDocument();
     expect(screen.getByText('¥5,000,000')).toBeInTheDocument();
     expect(screen.getByText('¥5,500,000')).toBeInTheDocument();
+    expect(screen.getByText('Changes from the current entries:')).toBeInTheDocument();
     expect(
-      screen.getByText('Account 1 (sales ¥500,000, dividends ¥0): report both under 申告分離課税.'),
+      screen.getByText('Account 1 (sales ¥500,000, dividends ¥0): report the sales only.'),
     ).toBeInTheDocument();
   });
 
@@ -207,7 +209,7 @@ describe('ReportingPlanner', () => {
           key: 'best',
           label: 'Best found',
           canApply: true,
-          instruction: 'Account 1 (...): report.',
+          changes: ['Account 1 (...): report.'],
         }),
       ],
     });
@@ -215,7 +217,7 @@ describe('ReportingPlanner', () => {
     render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
     await expandPanel();
 
-    expect(screen.getByText('Best found')).toBeInTheDocument();
+    expect(screen.getAllByText('Best found').length).toBeGreaterThan(0);
     expect(screen.getByText(/The search was bounded/)).toBeInTheDocument();
     expect(screen.getByText(/12,345 plans/)).toBeInTheDocument();
     expect(screen.getByText(/3\.5 seconds/)).toBeInTheDocument();
@@ -225,7 +227,7 @@ describe('ReportingPlanner', () => {
     setResult({
       rows: [
         row({ key: 'current', label: 'Current' }),
-        row({ key: 'best', label: 'Best', canApply: false, instruction: 'should not be shown' }),
+        row({ key: 'best', label: 'Best', canApply: false, changes: ['should not be shown'] }),
       ],
     });
 
