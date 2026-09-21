@@ -9,7 +9,6 @@ import React from 'react';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   EMPLOYEES_PENSION_BRACKETS,
   EMPLOYEES_PENSION_RATE,
@@ -20,11 +19,14 @@ import SMRTableTooltip from './SMRTableTooltip';
 
 interface PensionPremiumTooltipProps {
   inputs: TakeHomeInputs;
+  /** The remuneration the premium was charged on, before it was graded. */
+  monthlyRemuneration: number;
   standardMonthlyRemuneration: number;
 }
 
 const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
   inputs,
+  monthlyRemuneration,
   standardMonthlyRemuneration,
 }) => {
   if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
@@ -105,11 +107,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
               Monthly Remuneration
             </Typography>
             <Typography variant="caption" sx={{ fontWeight: 500 }}>
-              {formatJPY(
-                inputs.incomeStreams
-                  .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-                  .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0) / 12,
-              )}
+              {formatJPY(monthlyRemuneration)}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

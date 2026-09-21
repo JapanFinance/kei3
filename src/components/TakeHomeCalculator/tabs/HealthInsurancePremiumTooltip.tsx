@@ -36,7 +36,6 @@ import {
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
-import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
 import SMRTableTooltip from './SMRTableTooltip';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
@@ -375,11 +374,14 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
 
 interface HealthInsurancePremiumTooltipProps {
   inputs: TakeHomeInputs;
+  /** The remuneration the premium was charged on, before it was graded. */
+  monthlyRemuneration: number;
   standardMonthlyRemuneration: number;
 }
 
 const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps> = ({
   inputs,
+  monthlyRemuneration,
   standardMonthlyRemuneration,
 }) => {
   const provider = inputs.healthInsuranceProvider;
@@ -566,11 +568,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                 Monthly Remuneration
               </Typography>
               <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                {formatJPY(
-                  inputs.incomeStreams
-                    .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-                    .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0) / 12,
-                )}
+                {formatJPY(monthlyRemuneration)}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
