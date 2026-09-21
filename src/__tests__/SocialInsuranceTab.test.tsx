@@ -7,6 +7,7 @@ import { vi, describe, it, expect, beforeAll } from 'vitest';
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import type { CommutingAllowanceIncomeStream, TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { calculateTaxes } from '../utils/taxCalculations';
 import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 // Mock DetailedTooltip to render children directly for easier testing
@@ -67,6 +68,7 @@ describe('SocialInsuranceTab', () => {
     totalNetIncome: 4200000,
     residenceTaxBasicDeduction: 430000,
     salaryIncome: 6000000,
+    commutingAllowance: 240000,
     grossEmploymentIncome: 6000000,
   });
 
@@ -138,10 +140,43 @@ describe('SocialInsuranceTab', () => {
       ],
     } as TakeHomeInputs;
 
-    render(<SocialInsuranceTab inputs={severalStreamsInputs} results={mockResults} />);
+    render(
+      <SocialInsuranceTab
+        inputs={severalStreamsInputs}
+        results={calculateTaxes(severalStreamsInputs)}
+      />,
+    );
 
     const smrRow = screen.getAllByText('Standard Monthly Remuneration')[0]!.parentElement!;
     expect(within(smrRow).getByText('¥68,000')).toBeInTheDocument();
+  });
+
+  /** The text of the whole result row whose label is `label`: the label and its value. */
+  const resultRowText = (label: string) =>
+    screen.getByText(label).closest('div')!.parentElement!.textContent;
+
+  it('shows the salary and commuting allowance the calculation charged, not the entered streams', () => {
+    // The entered streams say 520,000 a month; the results say 63,000. The tab and the tooltips it
+    // opens show the results, so nothing on the tab can disagree with the premiums beside it.
+    const results = { ...mockResults, salaryIncome: 754_000, commutingAllowance: 2_000 };
+
+    render(<SocialInsuranceTab inputs={mockInputs} results={results} />);
+
+    expect(resultRowText('Annual Salary Income')).toContain('¥754,000');
+    expect(screen.getByText('Total:').nextElementSibling).toHaveTextContent('¥63,000');
+    expect(screen.queryByText('¥520,000')).not.toBeInTheDocument();
+    const smrRow = screen.getAllByText('Standard Monthly Remuneration')[0]!.parentElement!;
+    expect(within(smrRow).getByText('¥68,000')).toBeInTheDocument();
+  });
+
+  it('shows the bonus total the calculation summed', () => {
+    render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
+    expect(screen.queryByText('Annual Bonus Income')).not.toBeInTheDocument();
+
+    render(
+      <SocialInsuranceTab inputs={mockInputs} results={{ ...mockResults, bonusIncome: 900_000 }} />,
+    );
+    expect(resultRowText('Annual Bonus Income')).toContain('¥900,000');
   });
 
   it('handles high income caps correctly (Health vs Pension SMR)', () => {
@@ -154,7 +189,9 @@ describe('SocialInsuranceTab', () => {
 
     // 800k falls into Grade 39 (770k-810k) -> SMR 790k
     // Pension Caps at Grade 32 (635k+) -> SMR 650k
-    render(<SocialInsuranceTab inputs={highIncomeInputs} results={mockResults} />);
+    render(
+      <SocialInsuranceTab inputs={highIncomeInputs} results={calculateTaxes(highIncomeInputs)} />,
+    );
 
     // 1. Check Health Insurance Tooltip -> Should show SMR 790,000
     expect(screen.getAllByText(/Grade:/i).length).toBeGreaterThan(0);
@@ -225,7 +262,12 @@ describe('SocialInsuranceTab', () => {
       incomeStreams: [{ id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }],
     } as TakeHomeInputs;
 
-    render(<SocialInsuranceTab inputs={noCommutingInputs} results={mockResults} />);
+    render(
+      <SocialInsuranceTab
+        inputs={noCommutingInputs}
+        results={{ ...mockResults, commutingAllowance: 0 }}
+      />,
+    );
 
     // Breakdown should be present
     expect(screen.getByText('Breakdown')).toBeInTheDocument();
@@ -446,11 +488,11 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
 });
 
 /**
- * The tab derives a monthly remuneration from the entered income streams and looks up the
- * standard remuneration (標準報酬月額) band from it. A commuting allowance entered per three
- * months, per six months or per year has to be divided down to a month first, so these cases
- * put the result on each side of a band boundary at every frequency, including the amounts
- * whose division does not terminate in binary.
+ * The tab divides the calculation's yearly salary and commuting allowance down to a monthly
+ * remuneration and looks up the standard remuneration (標準報酬月額) band from it. A commuting
+ * allowance entered per three months, per six months or per year reaches the calculation as a
+ * yearly amount, so these cases put the result on each side of a band boundary at every
+ * frequency, including the amounts whose division does not terminate in binary.
  */
 describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
   const baseInputs: TakeHomeInputs = {
@@ -465,24 +507,6 @@ describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
     manualSocialInsuranceAmount: 0,
     incomeYear: 2025,
   };
-
-  const baseResults: TakeHomeResults = makeTakeHomeResults({
-    annualIncome: 6_000_000,
-    healthInsurance: 300_000,
-    pensionPayments: 500_000,
-    employmentInsurance: 30_000,
-    nationalIncomeTax: 100_000,
-    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 200_000 }),
-    takeHomeIncome: 4_870_000,
-    healthInsuranceProvider: 'KyokaiKenpo',
-    region: 'Tokyo',
-    ageRange: 'age40to59',
-    hasEmploymentIncome: true,
-    totalNetIncome: 4_200_000,
-    residenceTaxBasicDeduction: 430_000,
-    salaryIncome: 6_000_000,
-    grossEmploymentIncome: 6_000_000,
-  });
 
   interface BandCase {
     /** Frequency the commuting allowance is entered at. */
@@ -672,7 +696,7 @@ describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
         ],
       };
 
-      render(<SocialInsuranceTab inputs={inputs} results={baseResults} />);
+      render(<SocialInsuranceTab inputs={inputs} results={calculateTaxes(inputs)} />);
 
       expect(breakdownValue('Monthly Commuting Allowance:')).toBe(monthlyCommuting);
       expect(breakdownValue('Total:')).toBe(remuneration);

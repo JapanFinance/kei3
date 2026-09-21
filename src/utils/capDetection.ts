@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { getRegionalRatesForMonth } from '../data/employeesHealthInsurance/providerRates';
-import { EHI_SMR_BRACKETS } from '../data/employeesHealthInsurance/smrBrackets';
+import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import {
   getNHIParamsForMonth,
   nhiParamsDiffer,
@@ -21,7 +21,7 @@ import {
   isSubjectToNationalPension,
 } from '../types/taxpayerAge';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
-import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
+import { findPensionBracket } from './pensionCalculator';
 
 export interface CapStatus {
   healthInsuranceCapped: boolean;
@@ -47,8 +47,8 @@ export function detectCaps(
   year: number,
   healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[],
 ): CapStatus {
-  // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
-  // instead of total annual income which might include business/misc income or bonuses.
+  // The remuneration the premiums were graded on: salary and commuting allowance over the year,
+  // divided once, as the calculation divides them. Business income and bonuses are not part of it.
   const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowance ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
@@ -80,7 +80,8 @@ export function detectCaps(
 }
 
 /**
- * Checks if pension contributions are at the maximum
+ * Whether the pension premium is charged on the top grade, which has no upper bound: the same
+ * lookup the premium calculation graded the remuneration with.
  */
 function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number): boolean {
   if (isNationalPension) {
@@ -88,15 +89,7 @@ function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number
     return false;
   }
 
-  // For employee pension, check if we're in the highest bracket
-  const lastBracket = EMPLOYEES_PENSION_BRACKETS[EMPLOYEES_PENSION_BRACKETS.length - 1];
-  if (!lastBracket) {
-    return false;
-  }
-  return (
-    monthlyRemuneration >= lastBracket.minIncomeInclusive &&
-    lastBracket.maxIncomeExclusive === Infinity
-  );
+  return findPensionBracket(monthlyRemuneration).maxIncomeExclusive === Infinity;
 }
 
 /**
@@ -131,15 +124,8 @@ function checkHealthInsuranceCap(
       return { capped: false };
     }
 
-    const lastBracket = EHI_SMR_BRACKETS[EHI_SMR_BRACKETS.length - 1];
-    if (!lastBracket) {
-      return { capped: false };
-    }
-    const capped =
-      monthlyRemuneration >= lastBracket.minIncomeInclusive &&
-      lastBracket.maxIncomeExclusive === Infinity;
-
-    return { capped };
+    // The top grade has no upper bound; the lookup is the one the premium calculation used.
+    return { capped: findSMRBracket(monthlyRemuneration).maxIncomeExclusive === Infinity };
   }
 
   switch (provider) {

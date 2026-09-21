@@ -56,6 +56,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     nhiLongTermCarePortion: breakdown.longTermCarePortion,
     nhiChildSupportPortion: breakdown.childSupportPortion,
     salaryIncome: 0,
+    bonusIncome: 0,
     grossEmploymentIncome: 0,
     additionalDeductions: { national: 0, residence: 0, items: [] },
   };

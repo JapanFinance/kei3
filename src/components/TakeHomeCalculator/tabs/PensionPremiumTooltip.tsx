@@ -33,13 +33,10 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
     throw new Error('Wrong tooltip used for National Health Insurance');
   }
 
-  // Find the current row for the user's income
+  // The row of the grade the premium was charged on; every grade has its own amount.
   const currentRow =
-    EMPLOYEES_PENSION_BRACKETS.find(
-      bracket =>
-        standardMonthlyRemuneration >= bracket.minIncomeInclusive &&
-        standardMonthlyRemuneration < bracket.maxIncomeExclusive,
-    ) || null; // Force null if undefined
+    EMPLOYEES_PENSION_BRACKETS.find(bracket => bracket.smrAmount === standardMonthlyRemuneration) ||
+    null;
 
   const getIncomeRange = (row: StandardMonthlyRemunerationBracket) => {
     return `${formatJPY(row.minIncomeInclusive)} - ${row.maxIncomeExclusive === Infinity ? '∞' : formatJPY(row.maxIncomeExclusive)}`;

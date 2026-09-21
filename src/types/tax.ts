@@ -505,6 +505,8 @@ export interface TakeHomeResults {
   longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
+  /** The bonus streams' amounts added up. 0 when there are none. */
+  bonusIncome: number;
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
   ageRange: TaxpayerAgeRange;

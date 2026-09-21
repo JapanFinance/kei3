@@ -25,7 +25,6 @@ import {
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
-import { annualIncomeStreamAmount } from '../../../utils/incomeStreams';
 import {
   calculatePensionBonusBreakdown,
   findPensionBracket,
@@ -193,34 +192,23 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     );
   }
 
-  // Calculate specifically for display purposes
-  const salaryIncome =
-    inputs.incomeStreams.length > 0
-      ? inputs.incomeStreams
-          .filter(s => s.type === 'salary')
-          .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0)
-      : results.hasEmploymentIncome
-        ? results.annualIncome
-        : 0;
+  // The amounts the premiums were charged on, from the calculation that charged them rather than
+  // from the income streams it was given, so that every figure on this tab and in the tooltips it
+  // opens is the calculation's own.
+  const salaryIncome = results.salaryIncome;
+  const bonusIncome = results.bonusIncome;
+  const annualCommutingAllowance = results.commutingAllowance ?? 0;
 
-  const bonusIncome = inputs.incomeStreams
-    .filter(s => s.type === 'bonus')
-    .reduce((sum, s) => sum + s.amount, 0);
-
-  const annualCommutingAllowance = inputs.incomeStreams
-    .filter(s => s.type === 'commutingAllowance')
-    .reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0);
-
-  // What the premiums are charged on, for every figure on this tab and the tooltips it opens:
-  // summed over the year and divided once, as the engine divides it. Adding a twelfth of each
-  // income stream instead can land just under a bracket bound and show a grade the premiums were
-  // not charged on: three yearly streams of 560,000, 194,000 and 2,000 come to 62,999.99999999999
-  // a month rather than 63,000, which is grade 58,000 rather than 68,000.
+  // The remuneration is summed over the year and divided once, as the calculation divides it.
+  // Adding a twelfth of each income stream instead can land just under a bracket bound and show
+  // a grade the premiums were not charged on: three yearly streams of 560,000, 194,000 and 2,000
+  // come to 62,999.99999999999 a month rather than 63,000, which is grade 58,000 rather than
+  // 68,000.
   const annualRemuneration = salaryIncome + annualCommutingAllowance;
   const monthlyCommutingAllowance = annualCommutingAllowance / 12;
   const rawMonthlyRemuneration = annualRemuneration / 12;
 
-  // Find SMR Brackets
+  // The grades the premiums were charged on, from the lookups the calculation used.
   const healthSMR = findSMRBracket(rawMonthlyRemuneration).smrAmount;
   const pensionSMR = findPensionBracket(rawMonthlyRemuneration).smrAmount;
 
