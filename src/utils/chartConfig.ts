@@ -70,10 +70,6 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
   },
 };
 
-export interface ChartCalculationContext extends TakeHomeInputs {
-  isEmploymentIncome: boolean;
-}
-
 /**
  * Streams carried through the chart sweep at their entered amount instead of being scaled
  * with the swept income: everything that is not earned income ({@link isEarnedIncomeStream}).
@@ -150,7 +146,7 @@ export const scaleIncomeStreamsToIncome = (
 
 export const generateChartData = (
   chartRange: ChartRange,
-  currentInputs: ChartCalculationContext,
+  currentInputs: TakeHomeInputs,
 ): ChartData<'bar' | 'line'> => {
   // Create income points based on the current range. Points below the income the sweep holds
   // constant are left out: no earned income could bring the total that low.
@@ -290,7 +286,10 @@ export const generateChartData = (
       type: 'bar' as const,
       stack: 'stack0',
     },
-    ...(currentInputs.isEmploymentIncome
+    // Shown wherever the calculation charges the premium at some point of the sweep, which it
+    // does on a commuting allowance with no salary or bonus entered; without the bar the stack
+    // would fall short of the income by the premium.
+    ...(resultsAndCaps.some(({ result }) => (result.employmentInsurance ?? 0) > 0)
       ? [
           {
             label: 'Employment Insurance',

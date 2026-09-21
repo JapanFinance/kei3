@@ -146,7 +146,6 @@ ChartJS.register(
 interface TakeHomeChartProps {
   currentIncome: number;
   incomeYear: number;
-  isEmploymentIncome: boolean;
   ageRange: TaxpayerAgeRange;
   longTermCareCategory1ManualEntry?: boolean;
   longTermCareCategory1Premium: number;
@@ -236,7 +235,6 @@ const getQuintileBand = (income: number, boundaries: readonly number[]): { label
 const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   currentIncome,
   incomeYear,
-  isEmploymentIncome,
   ageRange,
   longTermCareCategory1ManualEntry,
   longTermCareCategory1Premium,
@@ -359,7 +357,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       return { datasets: [] };
     }
     return generateChartData(chartRange, {
-      isEmploymentIncome,
       incomeYear,
       ageRange,
       longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
@@ -385,7 +382,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   }, [
     isChartDisabled,
     chartRange,
-    isEmploymentIncome,
     incomeYear,
     ageRange,
     longTermCareCategory1ManualEntry,
@@ -451,7 +447,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 // generateChartData does, so the cap badge matches the bars exactly.
                 const taxInputs = {
                   incomeYear,
-                  isEmploymentIncome,
                   ageRange,
                   longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
                   longTermCareCategory1Premium,
@@ -500,7 +495,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     incomeYear,
     useCompactLabelFormat,
     animateChart,
-    isEmploymentIncome,
     ageRange,
     longTermCareCategory1ManualEntry,
     longTermCareCategory1Premium,

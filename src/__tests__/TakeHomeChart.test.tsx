@@ -17,7 +17,6 @@ const baseProps: React.ComponentProps<typeof TakeHomeChart> = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   currentIncome: 5_000_000,
   incomeYear: 2026,
-  isEmploymentIncome: true,
   ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
   longTermCareCategory1Premium: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
