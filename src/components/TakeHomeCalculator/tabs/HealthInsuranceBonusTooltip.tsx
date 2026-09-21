@@ -5,12 +5,20 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
-import { getProviderDefinition } from '../../../data/employeesHealthInsurance/providerRateData';
-import { getRegionalRatesForMonth } from '../../../data/employeesHealthInsurance/providerRates';
+import {
+  getProviderDefinition,
+  percent,
+} from '../../../data/employeesHealthInsurance/providerRateData';
+import {
+  getCustomProviderRates,
+  getEmployeePremiumRate,
+  getRegionalRatesForMonth,
+} from '../../../data/employeesHealthInsurance/providerRates';
+import type { PremiumRate } from '../../../data/premiumRate';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
-import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
+import { formatJPY, formatMonthShort } from '../../../utils/formatters';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from '../../../utils/healthInsuranceCalculator';
 
 interface HealthInsuranceBonusTooltipProps {
@@ -48,15 +56,12 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   }
 
   // Look up the applicable rate for a given bonus month
-  const getRateForMonth = (month: number): number => {
-    if (provider === CUSTOM_PROVIDER_ID) {
-      let rate = (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100;
-      if (includeLTC) rate += (inputs.customEHIRates?.longTermCareRate ?? 0) / 100;
-      return rate;
-    }
-    const rates = getRegionalRatesForMonth(provider, region, year, month);
-    if (!rates) return 0;
-    return rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
+  const getRateForMonth = (month: number): PremiumRate => {
+    const rates =
+      provider === CUSTOM_PROVIDER_ID
+        ? getCustomProviderRates(inputs.customEHIRates)
+        : getRegionalRatesForMonth(provider, region, year, month);
+    return rates ? getEmployeePremiumRate(rates, includeLTC) : percent(0);
   };
 
   return (
@@ -105,7 +110,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
                       </Box>
                     )}
                   </td>
-                  <td>{formatPercent(getRateForMonth(item.month))}</td>
+                  <td>{getRateForMonth(item.month).toPercent()}</td>
                   <td style={{ fontWeight: 600 }}>{formatJPY(item.premium)}</td>
                 </tr>
               ))}

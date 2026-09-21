@@ -8,23 +8,25 @@ import React from 'react';
 
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
-import { formatJPY, formatPercent } from '../../../utils/formatters';
-import { monthlyIncomeStreamAmount } from '../../../utils/incomeStreams';
+import { formatJPY } from '../../../utils/formatters';
 import {
   EMPLOYEES_PENSION_BRACKETS,
   EMPLOYEES_PENSION_RATE,
+  calculateEmployeesPensionPremium,
   type StandardMonthlyRemunerationBracket,
 } from '../../../utils/pensionCalculator';
-import { roundSocialInsurancePremium } from '../../../utils/taxCalculations';
 import SMRTableTooltip from './SMRTableTooltip';
 
 interface PensionPremiumTooltipProps {
   inputs: TakeHomeInputs;
+  /** The remuneration the premium was charged on, before it was graded. */
+  monthlyRemuneration: number;
   standardMonthlyRemuneration: number;
 }
 
 const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
   inputs,
+  monthlyRemuneration,
   standardMonthlyRemuneration,
 }) => {
   if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
@@ -71,8 +73,8 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
     return baseSummary;
   };
 
-  const employeeRate = EMPLOYEES_PENSION_RATE / 2;
-  const totalPremium = roundSocialInsurancePremium(standardMonthlyRemuneration * employeeRate);
+  const employeeRate = EMPLOYEES_PENSION_RATE.dividedBy(2);
+  const totalPremium = calculateEmployeesPensionPremium(standardMonthlyRemuneration);
 
   return (
     <Box sx={{ minWidth: { xs: 0, sm: 400 }, maxWidth: { xs: '100vw', sm: 500 } }}>
@@ -105,11 +107,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
               Monthly Remuneration
             </Typography>
             <Typography variant="caption" sx={{ fontWeight: 500 }}>
-              {formatJPY(
-                inputs.incomeStreams
-                  .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-                  .reduce((sum, s) => sum + monthlyIncomeStreamAmount(s), 0),
-              )}
+              {formatJPY(monthlyRemuneration)}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -149,7 +147,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
             <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
               ×
             </Box>
-            {formatPercent(employeeRate)}
+            {employeeRate.toPercent()}
             <Box component="span" sx={{ mx: 1, color: 'text.secondary' }}>
               =
             </Box>
@@ -164,7 +162,7 @@ const PensionPremiumTooltip: React.FC<PensionPremiumTooltipProps> = ({
         variant="caption"
         sx={{ color: 'text.secondary', fontStyle: 'italic', display: 'block', mb: 1 }}
       >
-        The employer also pays {formatPercent(employeeRate)}.
+        The employer also pays {employeeRate.toPercent()}.
       </Typography>
 
       <SMRTableTooltip

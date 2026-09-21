@@ -758,8 +758,8 @@ function calculateSpouseDeduction(
 interface MainDeduction {
   /**
    * The totals field this deduction accumulates into. Derived from the results shape, minus
-   * `total` (a getter, not assignable) and `disabilityDeduction` (accumulated separately —
-   * 障害者控除 is not a main deduction).
+   * `total` (the sum of the other fields, stored after every dependent is processed) and
+   * `disabilityDeduction` (accumulated separately — 障害者控除 is not a main deduction).
    */
   field: Exclude<keyof DependentDeductionResults['nationalTax'], 'total' | 'disabilityDeduction'>;
   type: DeductionType;
@@ -820,6 +820,13 @@ function determineMainDeduction(
   return null;
 }
 
+const sumDeductions = (deductions: DependentDeductionResults['nationalTax']): number =>
+  deductions.dependentDeduction +
+  deductions.spouseDeduction +
+  deductions.spouseSpecialDeduction +
+  deductions.specificRelativeDeduction +
+  deductions.disabilityDeduction;
+
 /**
  * Calculate all dependent-related deductions
  *
@@ -842,15 +849,7 @@ export function calculateDependentDeductions(
       spouseSpecialDeduction: 0,
       specificRelativeDeduction: 0,
       disabilityDeduction: 0,
-      get total() {
-        return (
-          this.dependentDeduction +
-          this.spouseDeduction +
-          this.spouseSpecialDeduction +
-          this.specificRelativeDeduction +
-          this.disabilityDeduction
-        );
-      },
+      total: 0,
     },
     residenceTax: {
       dependentDeduction: 0,
@@ -858,15 +857,7 @@ export function calculateDependentDeductions(
       spouseSpecialDeduction: 0,
       specificRelativeDeduction: 0,
       disabilityDeduction: 0,
-      get total() {
-        return (
-          this.dependentDeduction +
-          this.spouseDeduction +
-          this.spouseSpecialDeduction +
-          this.specificRelativeDeduction +
-          this.disabilityDeduction
-        );
-      },
+      total: 0,
     },
     breakdown: [],
   };
@@ -925,5 +916,7 @@ export function calculateDependentDeductions(
     }
   }
 
+  results.nationalTax.total = sumDeductions(results.nationalTax);
+  results.residenceTax.total = sumDeductions(results.residenceTax);
   return results;
 }
