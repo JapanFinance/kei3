@@ -31,3 +31,7 @@ size-report.json
 
 # Lighthouse results (summary + HTML report) written during CI
 lighthouse-results/
+
+# Engine benchmark baseline and CPU profiles (npm run bench:baseline, npm run profile)
+bench-baseline/
+*.cpuprofile

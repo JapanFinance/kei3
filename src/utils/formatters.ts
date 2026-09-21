@@ -1,12 +1,15 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-export const formatJPY = (amount: number) => {
-  return new Intl.NumberFormat('en-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(amount);
-};
+// Creating and first using a formatter costs 30 to 70 times as much as reusing it.
+const JPY_FORMATTER = new Intl.NumberFormat('en-JP', {
+  style: 'currency',
+  currency: 'JPY',
+});
+const YEN_COMPACT_FORMATTERS = new Map<string, Intl.NumberFormat>();
+const PERCENT_FORMATTERS = new Map<number, Intl.NumberFormat>();
+
+export const formatJPY = (amount: number) => JPY_FORMATTER.format(amount);
 
 /**
  * Format a number with grouped thousands and no currency sign (e.g. 1234567 -> "1,234,567").
@@ -15,12 +18,17 @@ export const formatJPY = (amount: number) => {
 export const formatNumber = (n: number): string => n.toLocaleString('en');
 
 export const formatYenCompact = (amount: number, locale: string = 'en-US') => {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'JPY',
-    notation: 'compact',
-    compactDisplay: 'short',
-  }).format(amount);
+  let formatter = YEN_COMPACT_FORMATTERS.get(locale);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'JPY',
+      notation: 'compact',
+      compactDisplay: 'short',
+    });
+    YEN_COMPACT_FORMATTERS.set(locale, formatter);
+  }
+  return formatter.format(amount);
 };
 
 /**
@@ -29,12 +37,21 @@ export const formatYenCompact = (amount: number, locale: string = 'en-US') => {
  * @param decimals Maximum number of fraction digits. Defaults to 3.
  */
 export const formatPercent = (rate: number, decimals: number = 3) => {
-  return new Intl.NumberFormat('en-JP', {
-    style: 'percent',
-    minimumFractionDigits: 1,
-    maximumFractionDigits: decimals,
-  }).format(rate);
+  let formatter = PERCENT_FORMATTERS.get(decimals);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat('en-JP', {
+      style: 'percent',
+      minimumFractionDigits: 1,
+      maximumFractionDigits: decimals,
+    });
+    PERCENT_FORMATTERS.set(decimals, formatter);
+  }
+  return formatter.format(rate);
 };
+
+// Date#toLocaleString with options builds a new formatter on every call, so build each one once.
+const monthShortFormat = new Intl.DateTimeFormat('en', { month: 'short' });
+const monthLongFormat = new Intl.DateTimeFormat('en', { month: 'long' });
 
 /**
  * Format a zero-based month index (0 = January) as its short English name.
@@ -48,7 +65,7 @@ export const formatPercent = (rate: number, decimals: number = 3) => {
  * month's length (e.g. the 31st with February), so avoid that pattern here.
  */
 export const formatMonthShort = (monthIndex: number): string =>
-  new Date(2000, monthIndex, 1).toLocaleString('en', { month: 'short' });
+  monthShortFormat.format(new Date(2000, monthIndex, 1));
 
 /**
  * Format a zero-based month index (0 = January) as its full English name.
@@ -62,4 +79,4 @@ export const formatMonthShort = (monthIndex: number): string =>
  * month's length (e.g. the 31st with February), so avoid that pattern here.
  */
 export const formatMonthLong = (monthIndex: number): string =>
-  new Date(2000, monthIndex, 1).toLocaleString('en', { month: 'long' });
+  monthLongFormat.format(new Date(2000, monthIndex, 1));

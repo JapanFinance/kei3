@@ -32,6 +32,31 @@ describe('SpinnerNumberField', () => {
     expect(mockOnChange).toHaveBeenCalledWith(789000);
   });
 
+  it('does not report a change of the value prop back through onChange', () => {
+    const mockOnChange = vi.fn();
+
+    const { rerender } = render(
+      <SpinnerNumberField value={100000} onChange={mockOnChange} label="Test Amount" />,
+    );
+    rerender(<SpinnerNumberField value={250000} onChange={mockOnChange} label="Test Amount" />);
+
+    expect(screen.getByLabelText('Test Amount').getAttribute('value')).toBe('¥250,000');
+    expect(mockOnChange).not.toHaveBeenCalled();
+  });
+
+  it('still reports a value prop below min as the clamped value', () => {
+    const mockOnChange = vi.fn();
+
+    const { rerender } = render(
+      <SpinnerNumberField value={1000} onChange={mockOnChange} label="Test Amount" min={500} />,
+    );
+    rerender(
+      <SpinnerNumberField value={100} onChange={mockOnChange} label="Test Amount" min={500} />,
+    );
+
+    expect(mockOnChange).toHaveBeenCalledExactlyOnceWith(500);
+  });
+
   it('handles up and down arrow keys for increment/decrement', () => {
     const mockOnChange = vi.fn();
 
@@ -133,5 +158,34 @@ describe('SpinnerNumberField', () => {
 
     // Should have inputMode="numeric" attribute for mobile keyboards
     expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('drops the decimal places of an amount', () => {
+    const mockOnChange = vi.fn();
+
+    render(<SpinnerNumberField value={0} onChange={mockOnChange} label="Test Amount" />);
+
+    fireEvent.change(screen.getByLabelText('Test Amount'), { target: { value: '¥300,000.5' } });
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(300000);
+  });
+
+  it('drops decimal places beyond decimalScale', () => {
+    const mockOnChange = vi.fn();
+
+    render(
+      <SpinnerNumberField
+        value={0}
+        onChange={mockOnChange}
+        label="Rate"
+        prefix=""
+        suffix="%"
+        decimalScale={3}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '5.0755%' } });
+
+    expect(mockOnChange).toHaveBeenLastCalledWith(5.075);
   });
 });

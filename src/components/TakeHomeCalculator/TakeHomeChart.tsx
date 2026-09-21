@@ -325,6 +325,12 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   const useCompactLabelFormat = useMediaQuery(theme.breakpoints.down('md'));
 
+  // Below md the page is a single column with the chart under the form and the results, so the
+  // chart is off-screen while the inputs change. Chart.js still redraws an off-screen canvas on
+  // every frame of its 1 s update animation, so there the chart is drawn once per update, and
+  // its tooltips appear without a transition.
+  const animateChart = useMediaQuery(theme.breakpoints.up('md'));
+
   const chartRef = useRef<ChartJS<'bar' | 'line'>>(null);
 
   // Generate chart data using the utility function
@@ -382,6 +388,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       currentIncome,
       distribution.median,
       useCompactLabelFormat,
+      animateChart,
     );
 
     // Enhance tooltips to include percentile and cap information
@@ -458,6 +465,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     currentIncome,
     incomeYear,
     useCompactLabelFormat,
+    animateChart,
     isEmploymentIncome,
     ageRange,
     longTermCareCategory1ManualEntry,
@@ -926,4 +934,5 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   );
 };
 
-export default TakeHomeChart;
+// App's urgent render passes the previous deferred inputs unchanged; memo lets it skip the chart.
+export default React.memo(TakeHomeChart);

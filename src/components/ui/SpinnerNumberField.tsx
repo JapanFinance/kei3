@@ -26,6 +26,8 @@ interface SpinnerNumberFieldProps {
   suffix?: string;
   min?: number;
   max?: number;
+  /** Most decimal places the field accepts. Amounts are whole yen, so none by default. */
+  decimalScale?: number;
   helperText?: React.ReactNode;
   error?: boolean;
   /** Shows the value without allowing edits; the spinner buttons are dropped rather than shown inert. */
@@ -46,6 +48,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   suffix = '',
   min = 0,
   max,
+  decimalScale = 0,
   helperText,
   error,
   disabled,
@@ -58,6 +61,9 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
     if (typeof min === 'number') clampedValue = Math.max(min, clampedValue);
     if (typeof max === 'number') clampedValue = Math.min(max, clampedValue);
 
+    // NumericFormat reports every change of the value prop back through onValueChange, so
+    // without this check each change from outside the field would be dispatched a second time.
+    if (clampedValue === value) return;
     onChange(clampedValue);
   };
 
@@ -108,6 +114,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       prefix={prefix}
       suffix={suffix}
       allowNegative={min < 0}
+      decimalScale={decimalScale}
       {...(label && { label })}
       {...(helperText && { helperText })}
       {...(error && { error })}
