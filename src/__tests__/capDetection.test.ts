@@ -214,6 +214,10 @@ describe('NHI cap detection with real calculator output', () => {
       nhiElderlySupportPortion: breakdown.elderlySupportPortion,
       nhiLongTermCarePortion: breakdown.longTermCarePortion,
       nhiChildSupportPortion: breakdown.childSupportPortion,
+      nhiMedicalCapped: breakdown.medicalCapped,
+      nhiElderlySupportCapped: breakdown.elderlySupportCapped,
+      nhiLongTermCareCapped: breakdown.longTermCareCapped,
+      nhiChildSupportCapped: breakdown.childSupportCapped,
       ageRange: 'age20to39' as const,
     });
 
@@ -241,6 +245,10 @@ describe('NHI cap detection with real calculator output', () => {
       nhiElderlySupportPortion: breakdown.elderlySupportPortion,
       nhiLongTermCarePortion: breakdown.longTermCarePortion,
       nhiChildSupportPortion: breakdown.childSupportPortion,
+      nhiMedicalCapped: breakdown.medicalCapped,
+      nhiElderlySupportCapped: breakdown.elderlySupportCapped,
+      nhiLongTermCareCapped: breakdown.longTermCareCapped,
+      nhiChildSupportCapped: breakdown.childSupportCapped,
       ageRange: 'age40to59' as const,
     });
 
@@ -269,6 +277,10 @@ describe('NHI cap detection with real calculator output', () => {
       nhiElderlySupportPortion: breakdown.elderlySupportPortion,
       nhiLongTermCarePortion: breakdown.longTermCarePortion,
       nhiChildSupportPortion: breakdown.childSupportPortion,
+      nhiMedicalCapped: breakdown.medicalCapped,
+      nhiElderlySupportCapped: breakdown.elderlySupportCapped,
+      nhiLongTermCareCapped: breakdown.longTermCareCapped,
+      nhiChildSupportCapped: breakdown.childSupportCapped,
       ageRange: 'age20to39' as const,
     });
 

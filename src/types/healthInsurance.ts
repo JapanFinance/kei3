@@ -155,8 +155,6 @@ export interface NationalHealthInsuranceRegionParams {
   childSupportPerCapita?: number; // 子ども・子育て支援納付金分均等割額 (e.g., 73 JPY)
   childSupportHouseholdFlat?: number; // 子ども・子育て支援納付金分平等割額
   childSupportCap?: number; // 子ども・子育て支援納付金分賦課限度額 (e.g., 30,000 JPY)
-  // Standard deduction used for calculating NHI taxable income (e.g., 430,000 JPY, often same as residence tax basic deduction)
-  nhiStandardDeduction: number;
 }
 
 /**
