@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-18
+
+### Updated
+
+- The income details dialog's investment-income comparison is now a reporting planner. It searches the ways to report the withholding designated accounts and domestic dividend entries that are not already fixed — one election per account ([措法37条の11の5](https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11_5), [37条の11の6](https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11_6)) and one per dividend entry — and shows, next to the entries as they stand, the plan found to keep the most this year, plus three references that set every such entry the same way: withheld only, all reported under 申告分離課税, and all reported under 総合課税. Each row shows take-home, income tax, residence tax, social insurance, the furusato nozei limit and 合計所得金額, together with what to change and an Apply button that sets every entry and the election to that row's choices. A sale outside a withholding designated account and a dividend paid abroad ([措令4条の3②](https://laws.e-gov.go.jp/law/332CO0000000043#Mp-Ch_2-Se_1-At_4_3)) always have to be reported, in every plan alike. With few enough entries the search checks every combination; with more, it improves the best uniform plan one entry at a time instead and says so, since checking every combination would take too long.
+
 ## 2026-09-17
 
 ### Updated

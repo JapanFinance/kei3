@@ -54,7 +54,7 @@ import {
   type IncomeCategoryKey,
 } from './incomeStreamCatalog';
 import { IncomeStreamForm } from './IncomeStreamForm';
-import InvestmentTreatmentComparison from './InvestmentTreatmentComparison';
+import { ReportingPlanner } from './ReportingPlanner';
 import { variantLabelSx, variantToggleGroupSx } from './variantControlStyles';
 
 interface IncomeDetailsModalProps {
@@ -510,7 +510,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           )}
         </Stack>
         {category.key === 'investment' && calculationInputs && hasListedShareStream && (
-          <InvestmentTreatmentComparison inputs={calculationInputs} />
+          <ReportingPlanner
+            inputs={calculationInputs}
+            onStreamsChange={onStreamsChange}
+            onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
+          />
         )}
       </Box>
     );

@@ -807,7 +807,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(screen.getByText('Withheld only')).toBeInTheDocument();
   });
 
-  it('offers the treatment comparison with calculation inputs and a listed-share entry, computing it on expand', async () => {
+  it('offers the reporting planner with calculation inputs and a listed-share entry, computing it on expand', async () => {
     const user = userEvent.setup();
     const streams: IncomeStream[] = [
       { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
@@ -843,17 +843,19 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    const toggle = screen.getByRole('button', { name: /compare tax treatments/i });
-    expect(screen.queryByText('Take-home')).not.toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: /compare reporting plans/i });
+    expect(screen.queryByText('Current')).not.toBeInTheDocument();
     await user.click(toggle);
 
-    // The three elections of the engine tests: 申告分離課税 is the one in force.
-    expect(screen.getByText('Take-home')).toBeInTheDocument();
-    expect(screen.getByText('(current)')).toBeInTheDocument();
+    // The engine tests' three elections, now rows instead of columns: 申告不要 (withheld only)
+    // kept 4,739,798, 申告分離課税 (Current, the election in force, and the "all reported"
+    // row) kept 4,739,848, 総合課税 kept 4,748,648 — the best of the four, so it is also Best.
+    expect(await screen.findByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Best')).toBeInTheDocument();
     expect(screen.getByText('¥4,739,798')).toBeInTheDocument();
-    expect(screen.getByText('¥4,739,848')).toBeInTheDocument();
-    expect(screen.getByText('¥4,748,648')).toBeInTheDocument();
-    expect(screen.getByText(/no 配当控除, which is not modelled yet/)).toBeInTheDocument();
+    expect(screen.getAllByText('¥4,739,848')).not.toHaveLength(0);
+    expect(screen.getAllByText('¥4,748,648')).not.toHaveLength(0);
+    expect(screen.getByText(/配当控除, not modelled yet/)).toBeInTheDocument();
 
     rerender(
       <IncomeDetailsModal
@@ -864,7 +866,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
     expect(
-      screen.queryByRole('button', { name: /compare tax treatments/i }),
+      screen.queryByRole('button', { name: /compare reporting plans/i }),
     ).not.toBeInTheDocument();
   });
 
