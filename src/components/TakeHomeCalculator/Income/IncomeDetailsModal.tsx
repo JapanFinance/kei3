@@ -519,23 +519,16 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="span">
             Income/Benefit Details
           </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.25 }}>
-            <Chip
-              label={`Total: ${formatJPY(totalIncome)}`}
-              color="primary"
-              variant="outlined"
-              sx={{ fontWeight: 'bold' }}
-            />
-            {subtotals.investment !== 0 && (
-              <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                Investment: {formatJPY(subtotals.investment)}
-              </Typography>
-            )}
-          </Box>
+          <Chip
+            label={`Total: ${formatJPY(totalIncome)}`}
+            color="primary"
+            variant="outlined"
+            sx={{ fontWeight: 'bold' }}
+          />
         </Box>
       </DialogTitle>
       <DialogContent dividers>

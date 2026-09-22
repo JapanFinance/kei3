@@ -520,8 +520,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(
       screen.getByText(/Withheld only: ¥1,200,000 − ¥243,780 tax = ¥956,220/),
     ).toBeInTheDocument();
-    // The header caption mirrors the category subtotal.
-    expect(screen.getByText('Investment: ¥1,200,000')).toBeInTheDocument();
+    // The title bar carries the total alone; the investment figure lives on its group.
+    expect(screen.queryByText(/^Investment: /)).not.toBeInTheDocument();
   });
 
   it("shows an account's card total, its sales/dividends caption, and its per-flag description", () => {
