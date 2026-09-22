@@ -101,15 +101,15 @@ const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({
         sources={[
           {
             href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
-            label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+            label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
           },
           {
             href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
-            label: '配当金を受け取ったとき(配当所得) - NTA',
+            label: 'Dividend income (配当所得) - NTA',
           },
           {
             href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm',
-            label: '上場株式等に係る譲渡損失の損益通算及び繰越控除 - NTA',
+            label: 'Offsetting and carrying forward listed-share losses (損益通算・繰越控除) - NTA',
           },
         ]}
       />

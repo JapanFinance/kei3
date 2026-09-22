@@ -529,11 +529,11 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       sources={[
                         {
                           href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
-                          label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+                          label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
                         },
                         {
                           href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
-                          label: '配当金を受け取ったとき(配当所得) - NTA',
+                          label: 'Dividend income (配当所得) - NTA',
                         },
                       ]}
                     />
@@ -1108,15 +1108,15 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     sources={[
                       {
                         href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
-                        label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+                        label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
                       },
                       {
                         href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
-                        label: '配当金を受け取ったとき(配当所得) - NTA',
+                        label: 'Dividend income (配当所得) - NTA',
                       },
                       {
                         href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
-                        label: '利息を受け取ったとき(利子所得) - NTA',
+                        label: 'Interest income (利子所得) - NTA',
                       },
                     ]}
                   />

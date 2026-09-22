@@ -51,9 +51,7 @@ describe('IncomeStreamForm', () => {
       <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
     expect(screen.getByText(/Copy the two figures from the account's/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/nets a capital loss for the year against the dividends/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Capital losses are combined with the dividends/)).toBeInTheDocument();
 
     // The in-account netting belongs to the withholding account alone; the other two forms say
     // what withholding, if any, applies to them.
@@ -61,16 +59,20 @@ describe('IncomeStreamForm', () => {
     expect(
       screen.getByText(/No tax is withheld on a sale outside a withholding designated account/),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/nets a capital loss for the year/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Capital losses are combined with the dividends/),
+    ).not.toBeInTheDocument();
 
     rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
     expect(screen.getByText(/A dividend paid in Japan has 20.315% withheld/)).toBeInTheDocument();
-    expect(screen.queryByText(/nets a capital loss for the year/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Capital losses are combined with the dividends/),
+    ).not.toBeInTheDocument();
   });
 
   it('shows the deposit-interest guidance box', () => {
     render(<IncomeStreamForm type="interest" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.getByText(/does not affect 合計所得金額/)).toBeInTheDocument();
+    expect(screen.getByText(/does not affect total net income/)).toBeInTheDocument();
   });
 
   it('accepts a capital-gains loss as a negative amount and saves it unchanged', () => {
@@ -172,35 +174,19 @@ describe('IncomeStreamForm', () => {
     );
   });
 
-  it('names the election set for all reported dividends once a dividend is reported', () => {
-    // 措法8条の4② makes the election one for every reported dividend, so the form only says
-    // which one applies; the default is 申告分離課税.
-    const { rerender } = render(
-      <IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />,
-    );
-
+  it('explains the disabled Withheld only button only for a dividend paid abroad', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
     expect(
-      screen.queryByText(/the election set for all reported dividends/),
+      screen.queryByText('A dividend paid abroad has to be reported.'),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Reported' }));
-    expect(screen.getByText(/Taxed as separate \(申告分離課税\)/)).toBeInTheDocument();
-    expect(screen.queryByText(/the 配当控除 is not modelled yet/)).not.toBeInTheDocument();
 
-    rerender(
-      <IncomeStreamForm
-        type="dividends"
-        reportedDividendsTaxation="aggregate"
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />,
-    );
-    expect(screen.getByText(/Taxed as aggregate \(総合課税\)/)).toBeInTheDocument();
-    expect(screen.getByText(/the 配当控除 is not modelled yet/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Abroad' }));
+    expect(screen.getByText('A dividend paid abroad has to be reported.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-    expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'dividends', isReported: true }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'In Japan' }));
+    expect(
+      screen.queryByText('A dividend paid abroad has to be reported.'),
+    ).not.toBeInTheDocument();
   });
 
   it('saves a dividend as reported when Reported is chosen', () => {
@@ -304,7 +290,7 @@ describe('IncomeStreamForm', () => {
       'true',
     );
     expect(
-      screen.getByText(/Reporting this account's loss puts its dividends on the return as well/),
+      screen.getByText(/Reporting this account's loss requires reporting its dividends as well/),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));

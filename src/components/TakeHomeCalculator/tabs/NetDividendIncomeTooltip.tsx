@@ -38,11 +38,11 @@ const NetDividendIncomeTooltip: React.FC<NetDividendIncomeTooltipProps> = ({ amo
       sources={[
         {
           href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
-          label: '配当金を受け取ったとき(配当所得) - NTA',
+          label: 'Dividend income (配当所得) - NTA',
         },
         {
           href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1250.htm',
-          label: '配当所得があるとき(配当控除) - NTA',
+          label: 'Dividend tax credit (配当控除) - NTA',
         },
       ]}
     />

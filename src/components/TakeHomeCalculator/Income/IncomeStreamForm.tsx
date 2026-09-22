@@ -23,11 +23,9 @@ import React, { useState } from 'react';
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
 import {
-  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   type CapitalGainsIncomeStream,
   type IncomeStream,
   type IncomeStreamType,
-  type ReportedDividendsTaxation,
 } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import { getFrequencyAnnualMultiplier } from '../../../utils/incomeStreams';
@@ -48,12 +46,53 @@ interface IncomeStreamFormProps {
   initialData?: IncomeStream;
   onSave: (stream: IncomeStream) => void;
   onCancel: () => void;
-  /**
-   * The election in force for every reported dividend, so the form can say how a dividend it
-   * reports will be taxed. Made in the income list, not here; the default when omitted.
-   */
-  reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
 }
+
+// A figure's amount beside its reporting choice; the toggle wraps under the amount on a phone.
+const figureRowSx = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  columnGap: 2,
+  rowGap: 1,
+};
+const figureFieldSx = { flex: '1 1 220px' };
+
+const NTA_TAX_ANSWERS = {
+  saleOfShares: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+    label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
+  },
+  dividendIncome: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+    label: 'Dividend income (配当所得) - NTA',
+  },
+  separateTaxationOfDividends: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1331.htm',
+    label:
+      'Separate taxation of listed-share dividends (上場株式等の配当等に係る申告分離課税制度) - NTA',
+  },
+  lossOffset: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm',
+    label: 'Offsetting and carrying forward listed-share losses (損益通算・繰越控除) - NTA',
+  },
+  designatedAccounts: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',
+    label: 'The designated account system (特定口座制度) - NTA',
+  },
+};
+
+// Each listed-share form links only the pages behind the choices it offers.
+const LISTED_SHARE_SOURCES = {
+  withholdingAccount: [
+    NTA_TAX_ANSWERS.designatedAccounts,
+    NTA_TAX_ANSWERS.saleOfShares,
+    NTA_TAX_ANSWERS.dividendIncome,
+    NTA_TAX_ANSWERS.lossOffset,
+  ],
+  capitalGains: [NTA_TAX_ANSWERS.saleOfShares, NTA_TAX_ANSWERS.lossOffset],
+  dividends: [NTA_TAX_ANSWERS.dividendIncome, NTA_TAX_ANSWERS.separateTaxationOfDividends],
+};
 
 const guidanceBoxSx = {
   p: 1.5,
@@ -69,7 +108,6 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   initialData,
   onSave,
   onCancel,
-  reportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
 }) => {
   const info = INCOME_STREAM_CATALOG[type];
   const [amount, setAmount] = useState<number>(
@@ -330,14 +368,15 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   <strong>Listed (上場株式等)</strong> covers shares traded on an exchange, along
-                  with 公募株式投資信託 and 特定公社債. These are taxed apart from the progressive
-                  brackets at a flat rate.
+                  with publicly offered stock investment trusts (公募株式投資信託) and specified
+                  bonds (特定公社債) such as government bonds and listed corporate bonds. Gains and
+                  dividends on them are separately taxed at a flat rate.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Other (一般株式等)</strong> is everything else — 措法37条の10① defines it
-                  as 株式等 other than 上場株式等, which is mostly but not only unlisted shares. It
-                  is not currently supported: it is a separate class that cannot be offset against
-                  listed amounts, and its dividends are taxed at the progressive rates instead.
+                  <strong>Other (一般株式等)</strong> is every other share or fund, mostly unlisted
+                  shares. It is not supported yet: it is a separate income class whose losses and
+                  gains cannot be combined with listed amounts, and its dividends are always taxed
+                  in aggregate.
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -380,22 +419,19 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               component="div"
               sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
             >
-              <span>
-                A sale outside a withholding designated account is always reported. That account has
-                its own entry type.
-              </span>
+              <span>A sale outside a withholding designated account is always reported.</span>
               <DetailedTooltip
                 title="Account"
                 icon={SIMPLE_TOOLTIP_ICON}
                 iconAriaLabel="account info"
               >
                 <Typography sx={{ display: 'block' }}>
-                  A 特定口座（源泉徴収なし）and a 一般口座 are one option here because the tax
-                  cannot tell them apart — they differ only in who computes the figures. A foreign
-                  account is its own option because a sale there is not 売委託 to a licensed
-                  金融商品取引業者, which 措法37条の12の2② requires of a loss before it can offset
-                  配当等 or be carried forward: a loss in a foreign account is netted against the
-                  year's other reported gains and no further.
+                  A designated account without withholding (特定口座（源泉徴収なし）) and a general
+                  account (一般口座) are one option here because they have the same tax treatment. A
+                  foreign account is its own option because a sale there is not made through a
+                  broker licensed in Japan (金融商品取引業者), which the law requires of a loss for
+                  it to offset dividends or be carried forward (措法37条の12の2②). A loss in a
+                  foreign account only offsets the year's other reported gains.
                 </Typography>
               </DetailedTooltip>
             </FormHelperText>
@@ -414,12 +450,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   <strong>In Japan</strong> means paid in Japan, or paid abroad through a Japanese
                   broker that handles the payment (支払の取扱者). Japanese tax was withheld, so the
-                  dividend may be left to withholding per payment (措法8条の5, 9条の2⑤).
+                  dividend may be left to withholding per payment.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
                   <strong>Abroad</strong> means received outside Japan with no Japanese handler — a
                   foreign brokerage account, for example. Such a dividend cannot be left to
-                  withholding (措令4条の3②五・六), so it has to be reported.
+                  withholding, so it has to be reported.
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -452,35 +488,19 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 iconAriaLabel="reporting info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Withheld only (申告不要)</strong> means the 20.315% the payer withholds
-                  settles the tax in full. The amount stays off the return, so it changes no
-                  aggregate — not 合計所得金額, health-insurance premiums, the basic deduction,
-                  spouse or dependent eligibility, residence-tax exemption, or the furusato nozei
-                  limit. It is a choice per payment (措法8条の5, 37条の11の5).
-                </Typography>
-                <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Reported</strong> puts the amount on the return, where it enters
-                  合計所得金額 — and so every figure keyed to it. Tax the payer withheld on a
-                  reported amount is credited at filing, so it is not shown. A share sale is then
-                  taxed under 申告分離課税 (措法37条の11): the same 15.315% and 5% through the
-                  return, after any deductions the other income could not use, with a loss set
-                  against the year's other reported gains and then, where the sale qualifies,
-                  against reported dividends (損益通算). Carrying a loss forward (繰越控除) is not
-                  modelled.
-                </Typography>
-                <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Reported dividends</strong> are taxed under one election for all of them,
-                  made in the Investment Income list: 申告分離課税, the same 15.315% and 5% apart
-                  from the brackets, or 総合課税, in the progressive brackets and at the 10%
-                  residence rate with the other income. 措法8条の4② allows no mix of the two on one
-                  return. The 配当控除 (所法92条) that offsets part of the 総合課税 tax for a
-                  dividend from a domestic company is not modelled yet, and only 配当等 proper —
-                  剰余金の配当 and 公募株式投資信託の分配金 — can be taxed that way;
-                  特定公社債の利子 cannot.
+                  <strong>Withheld only (申告不要)</strong> means the 20.315% the payer withheld
+                  settles the tax. The dividend stays off the return and out of total net income
+                  (合計所得金額).
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  Since 令和6年度 the residence tax follows the election made for income tax
-                  (地方税法32条⑬, 313条⑬).
+                  <strong>Reported</strong> puts the dividend on the return, where it counts toward
+                  total net income (合計所得金額) and everything keyed to it, from the basic
+                  deduction and dependent eligibility to National Health Insurance premiums and the
+                  furusato nozei limit. The tax withheld is credited at filing. Reported dividends
+                  are taxed under the election made in the income list, separate or aggregate
+                  taxation. Reporting can be beneficial when the other income cannot use all the
+                  deductions, or, under separate taxation, when a reported loss can be set against
+                  the dividend.
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -502,12 +522,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               </ToggleButton>
               <ToggleButton value="reported">Reported</ToggleButton>
             </ToggleButtonGroup>
-            {isReported && (
-              <FormHelperText>
-                {reportedDividendsTaxation === 'separate'
-                  ? 'Taxed as separate (申告分離課税), the election set for all reported dividends in the income list.'
-                  : 'Taxed as aggregate (総合課税), the election set for all reported dividends in the income list; the 配当控除 is not modelled yet.'}
-              </FormHelperText>
+            {paymentChannel === 'abroad' && (
+              <FormHelperText>A dividend paid abroad has to be reported.</FormHelperText>
             )}
           </FormControl>
         )}
@@ -522,9 +538,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 iconAriaLabel="interest payer info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>In Japan</strong> means a 一般利子等 payment received here, such as
-                  interest on a deposit held in Japan. 措法3条① settles it by withholding at source,
-                  with no election and nothing to report.
+                  <strong>In Japan</strong> means interest received here, such as on a deposit held
+                  in Japan. The tax is settled by withholding at source (源泉分離課税), with no
+                  election and nothing to report (措法3条①).
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
                   <strong>Outside Japan</strong> is not currently supported. No Japanese tax is
@@ -717,92 +733,102 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
 
           {type === 'withholdingAccount' && (
+            // One group per figure of the account's annual transaction report: the amount and
+            // its reporting choice side by side (the choice is made per figure, 措法37条の11の5①
+            // and 37条の11の6⑨), the helper text under the pair at the group's full width.
             <Stack spacing={2}>
-              <SpinnerNumberField
-                inputProps={{ autoFocus: true }}
-                label={info.amountLabel}
-                value={accountCapitalGains}
-                onChange={val => setAccountCapitalGains(val)}
-                sx={{ width: '100%' }}
-                helperText={info.amountHelperText}
-                {...(info.min !== undefined && { min: info.min })}
-              />
-              <SpinnerNumberField
-                label="Dividends Received into the Account (配当等)"
-                value={accountDividends}
-                onChange={val => setAccountDividends(val)}
-                sx={{ width: '100%' }}
-                helperText="Before withholding, from the same report. Dividends taken by bank transfer or dividend receipt (配当金領収証) go in a Dividends entry."
-              />
-              <FormControl fullWidth>
-                <FormLabel sx={variantLabelSx}>
-                  <span id="account-sales-reporting-label">Sales</span>
-                  <DetailedTooltip
-                    title="Reporting"
-                    icon={SIMPLE_TOOLTIP_ICON}
-                    iconAriaLabel="reporting info"
-                  >
-                    <Typography sx={{ display: 'block', mb: 1 }}>
-                      Whether this account's sales and dividends go on the return is chosen per
-                      account (措法37条の11の5①, 37条の11の6⑨), separate from every other account.
-                    </Typography>
-                    <Typography sx={{ display: 'block', mb: 1 }}>
-                      Whatever is left to withholding is netted within the account first — a loss
-                      offsets the dividends before the tax is calculated, the way the broker does at
-                      year end (措法37条の11の6⑥⑦).
-                    </Typography>
-                    <Typography sx={{ display: 'block', mb: 1 }}>
-                      Reporting puts the amount on the return, where it enters total income
-                      (合計所得金額) — and so every figure keyed to it. Reported dividends are taxed
-                      under the one election made for all reported dividends in the income list.
-                    </Typography>
-                    <Typography sx={{ display: 'block' }}>
-                      Tax withheld on a reported amount is credited at filing, so it is not shown
-                      separately.
-                    </Typography>
-                  </DetailedTooltip>
-                </FormLabel>
-                <ToggleButtonGroup
-                  value={reportsCapitalGains ? 'reported' : 'withheldOnly'}
-                  exclusive
-                  onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
-                    if (newValue) {
-                      setReportsCapitalGains(newValue === 'reported');
-                    }
-                  }}
-                  aria-labelledby="account-sales-reporting-label"
-                  size="small"
-                  sx={variantToggleGroupSx}
+              <Typography variant="body2" component="div">
+                Copy the two figures from the account's annual transaction report
+                (特定口座年間取引報告書), and choose whether to report each on a tax return.
+                <DetailedTooltip
+                  title="Reporting"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                  iconAriaLabel="reporting info"
                 >
-                  <ToggleButton value="withheldOnly">Withheld only</ToggleButton>
-                  <ToggleButton value="reported">Reported</ToggleButton>
-                </ToggleButtonGroup>
+                  <Typography sx={{ display: 'block', mb: 1 }}>
+                    Whether a withholding designated account's sales and dividends go on a tax
+                    return is chosen per such account, separate from every other account.
+                  </Typography>
+                  <Typography sx={{ display: 'block', mb: 1 }}>
+                    Reporting includes the figure on the tax return, where it counts toward total
+                    net income (合計所得金額) and everything based on it, from the basic deduction
+                    and dependent eligibility to National Health Insurance premiums and the furusato
+                    nozei limit. A reported loss offsets the year's other reported gains and, under
+                    separate taxation, the reported dividends. All reported dividends follow the one
+                    election for separate or aggregate taxation, made in the income list.
+                  </Typography>
+                  <Typography sx={{ display: 'block' }}>
+                    Tax withheld on a reported amount is credited at filing.
+                  </Typography>
+                </DetailedTooltip>
+              </Typography>
+              <FormControl fullWidth>
+                <FormLabel id="account-sales-reporting-label" sx={variantLabelSx}>
+                  Sales
+                </FormLabel>
+                <Box sx={figureRowSx}>
+                  <SpinnerNumberField
+                    inputProps={{ autoFocus: true, 'aria-describedby': 'account-sales-help' }}
+                    label={info.amountLabel}
+                    value={accountCapitalGains}
+                    onChange={val => setAccountCapitalGains(val)}
+                    sx={figureFieldSx}
+                    {...(info.min !== undefined && { min: info.min })}
+                  />
+                  <ToggleButtonGroup
+                    value={reportsCapitalGains ? 'reported' : 'withheldOnly'}
+                    exclusive
+                    onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
+                      if (newValue) {
+                        setReportsCapitalGains(newValue === 'reported');
+                      }
+                    }}
+                    aria-labelledby="account-sales-reporting-label"
+                    size="small"
+                    sx={variantToggleGroupSx}
+                  >
+                    <ToggleButton value="withheldOnly">Withheld only</ToggleButton>
+                    <ToggleButton value="reported">Reported</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+                <FormHelperText id="account-sales-help">{info.amountHelperText}</FormHelperText>
               </FormControl>
               <FormControl fullWidth>
                 <FormLabel id="account-dividends-reporting-label" sx={variantLabelSx}>
                   Dividends
                 </FormLabel>
-                <ToggleButtonGroup
-                  value={dividendsForced || reportsDividends ? 'reported' : 'withheldOnly'}
-                  exclusive
-                  onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
-                    if (newValue) {
-                      setReportsDividends(newValue === 'reported');
-                    }
-                  }}
-                  aria-labelledby="account-dividends-reporting-label"
-                  size="small"
-                  sx={variantToggleGroupSx}
-                >
-                  <ToggleButton value="withheldOnly" disabled={dividendsForced}>
-                    Withheld only
-                  </ToggleButton>
-                  <ToggleButton value="reported">Reported</ToggleButton>
-                </ToggleButtonGroup>
+                <Box sx={figureRowSx}>
+                  <SpinnerNumberField
+                    inputProps={{ 'aria-describedby': 'account-dividends-help' }}
+                    label="Dividends Received into the Account (配当等)"
+                    value={accountDividends}
+                    onChange={val => setAccountDividends(val)}
+                    sx={figureFieldSx}
+                  />
+                  <ToggleButtonGroup
+                    value={dividendsForced || reportsDividends ? 'reported' : 'withheldOnly'}
+                    exclusive
+                    onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
+                      if (newValue) {
+                        setReportsDividends(newValue === 'reported');
+                      }
+                    }}
+                    aria-labelledby="account-dividends-reporting-label"
+                    size="small"
+                    sx={variantToggleGroupSx}
+                  >
+                    <ToggleButton value="withheldOnly" disabled={dividendsForced}>
+                      Withheld only
+                    </ToggleButton>
+                    <ToggleButton value="reported">Reported</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+                <FormHelperText id="account-dividends-help">
+                  Enter the total amount before withholding.
+                </FormHelperText>
                 {dividendsForced && (
                   <FormHelperText>
-                    Reporting this account's loss puts its dividends on the return as well
-                    (措法37条の11の6⑩).
+                    Reporting this account's loss requires reporting its dividends as well.
                   </FormHelperText>
                 )}
               </FormControl>
@@ -827,51 +853,18 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
           {(type === 'withholdingAccount' || type === 'capitalGains' || type === 'dividends') && (
             <Box sx={guidanceBoxSx}>
-              {type === 'withholdingAccount' && (
-                <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                  Copy the two figures from the account's annual transaction report
-                  (特定口座年間取引報告書).
-                </Typography>
-              )}
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
                 {type === 'withholdingAccount' &&
-                  'In a withholding designated account the broker withholds 20.315% — 15.315% income tax including the reconstruction surtax, and 5% residence tax — and nets a capital loss for the year against the dividends paid into the account before withholding, as it does at year end. A reported amount is taxed at the same rates through the return instead, alongside the other income.'}
+                  'In a withholding designated account the broker withholds 20.315% (15.315% income tax and 5% residence tax). Capital losses are combined with the dividends paid into the account before withholding.'}
                 {type === 'capitalGains' &&
-                  'No tax is withheld on a sale outside a withholding designated account, so it is reported and taxed through the return at 15.315% income tax including the reconstruction surtax, and 5% residence tax, alongside the other income.'}
+                  'No tax is withheld on a sale outside a withholding designated account, so it is reported and taxed through the return at 15.315% income tax including the reconstruction surtax, and 5% residence tax.'}
                 {type === 'dividends' &&
-                  'A dividend paid in Japan has 20.315% withheld — 15.315% income tax including the reconstruction surtax, and 5% residence tax — which settles the tax unless the dividend is reported. A reported dividend is taxed through the return instead, alongside the other income.'}
+                  'A dividend paid in Japan has 20.315% withheld (15.315% income tax and 5% residence tax), which settles the tax unless the dividend is reported.'}
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                Do not include NISA (非課税) amounts.
+                Do not include tax-free NISA dividends or capital gains.
               </Typography>
-              <SourceLinks
-                sources={[
-                  {
-                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
-                    label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
-                  },
-                  {
-                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
-                    label: '配当金を受け取ったとき(配当所得) - NTA',
-                  },
-                  {
-                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm',
-                    label: '上場株式等に係る譲渡損失の損益通算及び繰越控除 - NTA',
-                  },
-                  {
-                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',
-                    label: '特定口座制度 - NTA',
-                  },
-                  ...(type === 'dividends'
-                    ? [
-                        {
-                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1250.htm',
-                          label: '配当所得があるとき(配当控除) - NTA',
-                        },
-                      ]
-                    : []),
-                ]}
-              />
+              <SourceLinks sources={LISTED_SHARE_SOURCES[type]} />
             </Box>
           )}
 
@@ -879,19 +872,22 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             <Box sx={guidanceBoxSx}>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
                 Taxed at source at 20.315% (源泉分離課税) and not reported on a tax return, so it
-                does not affect 合計所得金額 or anything that depends on it.
+                does not affect total net income (合計所得金額) or anything that depends on it.
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                This covers 利子所得 only — the interest on 公社債 and 預貯金, and distributions
-                from 合同運用信託, 公社債投資信託 and 公募公社債等運用投資信託 (所法23条①). Interest
-                on money lent privately is 雑所得 rather than 利子所得: nothing is withheld from it
-                and it has to be reported, so enter it as Miscellaneous income instead.
+                This covers interest income (利子所得) as the law defines it (所法23条①): interest
+                on bonds (公社債) and deposits (預貯金), and distributions from jointly operated
+                money trusts (合同運用信託), bond investment trusts (公社債投資信託) and publicly
+                offered bond investment trusts (公募公社債等運用投資信託). Interest on money lent
+                privately is miscellaneous income (雑所得) rather than interest income: nothing is
+                withheld from it and it has to be reported, so enter it as Miscellaneous income
+                instead.
               </Typography>
               <SourceLinks
                 sources={[
                   {
                     href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
-                    label: '利息を受け取ったとき(利子所得) - NTA',
+                    label: 'Interest income (利子所得) - NTA',
                   },
                 ]}
               />

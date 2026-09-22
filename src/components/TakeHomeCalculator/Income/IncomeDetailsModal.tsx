@@ -222,9 +222,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             iconAriaLabel="reported dividends taxation info"
           >
             <Typography sx={{ display: 'block', mb: 1 }}>
-              One election covers every dividend reported for the year (措法8条の4②): 申告分離課税
-              or 総合課税, never a mix. Dividends left to the tax withheld at source (申告不要) are
-              outside it.
+              One election covers every dividend reported for the year (措法8条の4②): separate
+              taxation (申告分離課税) or aggregate taxation (総合課税), never a mix. Dividends left
+              to the tax withheld at source (申告不要) are outside it.
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
               <strong>Separate (申告分離課税)</strong> taxes them at 15.315% and 5% apart from the
@@ -232,11 +232,12 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               loss from a qualifying sale set against them (損益通算).
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
-              <strong>Aggregate (総合課税)</strong> counts them as 配当所得 in 総所得金額, taxed in
-              the progressive brackets and at the 10% residence-tax rate with the other income. The
-              配当控除 (所法92条) is not modelled yet, so the tax is overstated for a dividend from
-              a domestic company; no capital loss is set against them; 特定公社債の利子 cannot be
-              taxed this way.
+              <strong>Aggregate (総合課税)</strong> counts them as dividend income (配当所得) in the
+              aggregate income (総所得金額), taxed in the progressive brackets and at the 10%
+              residence-tax rate with the other income. The dividend tax credit (配当控除, 所法92条)
+              is not modelled yet, so the tax is overstated for a dividend from a domestic company.
+              No capital loss is set against them. Interest on specified bonds (特定公社債の利子)
+              cannot be taxed this way.
             </Typography>
             <Typography sx={{ display: 'block' }}>
               Either way the amount enters 合計所得金額 and every figure keyed to it, and since
@@ -544,12 +545,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </DialogTitle>
       <DialogContent dividers>
         {view.kind === 'add' ? (
-          <IncomeStreamForm
-            type={view.type}
-            onSave={handleSaveStream}
-            onCancel={showList}
-            reportedDividendsTaxation={reportedDividendsTaxation}
-          />
+          <IncomeStreamForm type={view.type} onSave={handleSaveStream} onCancel={showList} />
         ) : view.kind === 'edit' ? (
           <IncomeStreamForm
             key={view.stream.id}
@@ -557,7 +553,6 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             initialData={view.stream}
             onSave={handleSaveStream}
             onCancel={showList}
-            reportedDividendsTaxation={reportedDividendsTaxation}
           />
         ) : (
           <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>
