@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-22
+
+### Updated
+
+- Investment income left to the tax withheld at source (申告不要) now counts in annual income and take-home pay, as money received, with the 20.315% withheld on it counted with the income tax and residence tax; before, it sat outside both. The Summary tab therefore adds no row for it, the input form no longer lists it under the income total, the chart holds it constant across the income range like other investment income, and the Taxes tab shows the withheld amounts as a row under each tax in place of a separate section at the end. The taxable amount of investment income reported under 申告分離課税 moved from rows of its own into the tooltips of the 15% income-tax row and the income-based residence-tax row.
+
 ## 2026-09-21
 
 ### Fixed

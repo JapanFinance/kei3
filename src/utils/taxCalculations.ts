@@ -310,8 +310,8 @@ interface IncomeBreakdown {
   /**
    * Earned income only (employment + business/misc + public pension). Investment income is
    * gathered separately in {@link investment}, {@link reportedInvestment} and
-   * {@link aggregateDividends}; the reported parts join this in TakeHomeResults.annualIncome,
-   * the withheld part never does — see {@link isInvestmentIncomeStream}.
+   * {@link aggregateDividends}; all of it joins this in TakeHomeResults.annualIncome — see
+   * {@link isInvestmentIncomeStream}.
    */
   totalAnnualIncome: number;
   commutingAllowance: number;
@@ -635,12 +635,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     return DEFAULT_TAKE_HOME_RESULTS;
   }
 
-  // The income the return covers (see TakeHomeResults.annualIncome): the earned income plus the
-  // investment income reported under 申告分離課税 or 総合課税 as entered, matching
-  // totalAnnualIncomeFromStreams on the input side. Computed from the streams rather than read
-  // from inputs.annualIncome for consistency.
+  // Annual income (see TakeHomeResults.annualIncome): the earned income plus every investment
+  // amount as entered, whether settled by withholding or reported under 申告分離課税 or 総合課税,
+  // matching totalAnnualIncomeFromStreams on the input side. Computed from the streams rather
+  // than read from inputs.annualIncome for consistency.
   const annualIncome =
     totalAnnualIncome +
+    grossInvestmentIncome +
     reportedInvestment.capitalGains +
     reportedInvestment.dividends +
     aggregateDividends;
@@ -931,11 +932,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeYear,
   );
   const totalSocialsAndTax =
-    nationalIncomeTax + residenceTax.totalResidenceTax + socialInsuranceDeduction;
-  // Take-home is what is left of the income the tax system counts. 申告不要 investment income
-  // enters no aggregate and changes no assessed figure, so like a 通勤手当 it stays out of this
-  // total and is reported beside it, through results.investmentIncome; reported investment
-  // income is inside annualIncome and taxed above, so it is inside this total.
+    nationalIncomeTax +
+    residenceTax.totalResidenceTax +
+    withheldInvestmentTax.total +
+    socialInsuranceDeduction;
+  // Take-home is what is left of the income after social insurance and every tax on it, whether
+  // assessed through the return or withheld at source: 申告不要 investment income is inside
+  // annualIncome, and the tax withheld on it comes off here like any other tax.
   const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
   const furusatoNozeiLimit = calculateFurusatoNozeiDetails(

@@ -15,7 +15,7 @@ interface NetInvestmentIncomeTooltipProps {
 }
 
 /**
- * Tooltip for the "Net Investment Income (reported)" row: shows how the amounts reported under
+ * Tooltip for the "Net Investment Income (separate)" row: shows how the amounts reported under
  * 申告分離課税 net into the figure that enters 合計所得金額. Renders its own DetailedTooltip
  * trigger, so callers place it directly after the row label. Shared by the Taxes and Social
  * Insurance tabs.
@@ -81,7 +81,7 @@ const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({
             </tr>
           )}
           <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Investment Income:</td>
+            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Investment Income (separate):</td>
             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
               {formatJPY(netIncome)}
             </td>

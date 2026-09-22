@@ -1029,11 +1029,9 @@ describe('Investment Income Integration', () => {
     );
   };
 
-  it('adds an Investment Income header row once a listed-dividends stream is entered', async () => {
+  it('counts a withheld-only dividend in the income total, with no row of its own', async () => {
     const user = userEvent.setup();
     render(<TestWrapper />);
-
-    expect(screen.queryByText('Investment Income (withheld only)')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
     await user.click(screen.getByRole('button', { name: /add investment income/i }));
@@ -1044,14 +1042,12 @@ describe('Investment Income Integration', () => {
     await user.click(screen.getByRole('button', { name: /add/i }));
     await user.click(screen.getByRole('button', { name: /close/i }));
 
-    // Gross, before the 20.315% withheld at source.
-    const investmentIncomeRow = screen.getByText(
-      'Investment Income (withheld only)',
-    ).parentElement!;
-    expect(within(investmentIncomeRow).getByText('¥300,000')).toBeInTheDocument();
+    // Gross, before the 20.315% withheld at source: 5,000,000 + 300,000.
+    expect(screen.queryByText('Investment Income (withheld only)')).not.toBeInTheDocument();
+    expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
   }, 10_000);
 
-  it('adds no such row for a dividend reported under 申告分離課税, which joins the income total', async () => {
+  it('counts a dividend reported under 申告分離課税 in the income total the same way', async () => {
     const user = userEvent.setup();
     render(<TestWrapper />);
 
@@ -1064,8 +1060,6 @@ describe('Investment Income Integration', () => {
     await user.click(screen.getByRole('button', { name: /add/i }));
     await user.click(screen.getByRole('button', { name: /close/i }));
 
-    expect(screen.queryByText('Investment Income (withheld only)')).not.toBeInTheDocument();
-    // The header total is the income on the return: 5,000,000 + 300,000.
     expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
   }, 10_000);
 });

@@ -377,9 +377,8 @@ export const planMatchesCurrent = (
 /** The comparison figures for one engine result — see {@link PlanFigures}. */
 const figuresOf = (results: TakeHomeResults): PlanFigures => {
   const withheld = results.investmentIncome?.withheld ?? { national: 0, residence: 0, total: 0 };
-  const withheldGross = results.investmentIncome?.grossTotal ?? 0;
   return {
-    kept: results.takeHomeIncome + withheldGross - withheld.total,
+    kept: results.takeHomeIncome,
     incomeTax: results.nationalIncomeTax + withheld.national,
     residenceTax: results.residenceTax.totalResidenceTax + withheld.residence,
     socialInsurance:

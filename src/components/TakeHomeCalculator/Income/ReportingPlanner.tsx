@@ -343,12 +343,6 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
                   the rest set every such entry the same way. The Apply buttons set every entry and
                   the election to that plan's choices.
                 </Typography>
-                <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Take-home</strong> here is take-home pay plus, for an amount left to
-                  withholding, that amount net of the tax withheld at source; that withheld tax is
-                  counted in the tax figures instead. Every plan therefore compares the same money,
-                  while the take-home pay on the Summary tab leaves out withheld-only income.
-                </Typography>
                 {mandatoryNote && (
                   <Typography sx={{ display: 'block' }}>{mandatoryNote}</Typography>
                 )}
