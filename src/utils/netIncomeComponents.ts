@@ -68,6 +68,8 @@ export interface NetIncomeComponents {
   netPublicPensionIncome: number;
   /** 配当所得 reported under 総合課税 — see {@link NetIncomeComposition.aggregateDividendIncome}. */
   aggregateDividendIncome: number;
+  /** 利子所得 paid outside Japan — see {@link NetIncomeComposition.aggregateInterestIncome}. */
+  aggregateInterestIncome: number;
   /**
    * 総所得金額: the net components above plus the other net income taxed in the brackets
    * (所法22条②一).
@@ -108,6 +110,14 @@ export interface NetIncomeComposition {
    */
   aggregateDividendIncome?: number | undefined;
   /**
+   * 利子所得 paid outside Japan: 措法3条① settles by 源泉分離課税 only the 一般利子等
+   * 国内において支払を受けるべき, so interest with no Japanese payer has no Japanese tax
+   * withheld and 所法22条②一 counts it in 総所得金額 like any other 利子所得. Taken as the whole
+   * receipt (所法23条②, which allows no deduction). Kept apart from {@link otherNetIncome} so the
+   * display can name it. Absent means none.
+   */
+  aggregateInterestIncome?: number | undefined;
+  /**
    * Investment income reported under 申告分離課税, after 損益通算. Part of 合計所得金額 but not
    * of 総所得金額 (措法8条の4③一, 37条の10⑥一 as 37条の11⑥ applies it). Absent means none.
    */
@@ -130,6 +140,7 @@ export const composeNetIncomeComponents = ({
   recipientAgeRange,
   otherNetIncome,
   aggregateDividendIncome = 0,
+  aggregateInterestIncome = 0,
   separateNetIncome = NO_SEPARATE_NET_INCOME,
   year,
 }: NetIncomeComposition): NetIncomeComponents => {
@@ -139,7 +150,7 @@ export const composeNetIncomeComponents = ({
 
   // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
   // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額),
-  // which includes the 配当所得 in 総所得金額 and the 申告分離課税 amounts (所法2条1項30号 as
+  // which includes the 配当所得 and 利子所得 in 総所得金額 and the 申告分離課税 amounts (所法2条1項30号 as
   // 措法8条の4③一 and 37条の10⑥一 read it). Without pension income the 給与+年金 adjustment
   // below cannot apply, so 給与所得 enters the band test before that adjustment but after the
   // 子ども・特別障害者等 variant.
@@ -149,6 +160,7 @@ export const composeNetIncomeComponents = ({
     netEmploymentIncomeBeforePensionAdjustment +
       otherNetIncome +
       aggregateDividendIncome +
+      aggregateInterestIncome +
       separateNetIncomeTotal,
     year,
   );
@@ -160,7 +172,11 @@ export const composeNetIncomeComponents = ({
   const netEmploymentIncome =
     netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
   const aggregateNetIncome =
-    netEmploymentIncome + netPublicPensionIncome + otherNetIncome + aggregateDividendIncome;
+    netEmploymentIncome +
+    netPublicPensionIncome +
+    otherNetIncome +
+    aggregateDividendIncome +
+    aggregateInterestIncome;
 
   return {
     netEmploymentIncome,
@@ -168,6 +184,7 @@ export const composeNetIncomeComponents = ({
     pensionIncomeAdjustmentDeduction,
     netPublicPensionIncome,
     aggregateDividendIncome,
+    aggregateInterestIncome,
     aggregateNetIncome,
     separateNetIncome,
     totalNetIncome: aggregateNetIncome + separateNetIncomeTotal,

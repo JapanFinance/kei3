@@ -6,8 +6,8 @@ import React from 'react';
 import type { TakeHomeInputs, TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { ResultRow } from '../ResultRow';
+import NetAggregateInvestmentIncomeTooltip from './NetAggregateInvestmentIncomeTooltip';
 import NetBusinessAndMiscIncomeTooltip from './NetBusinessAndMiscIncomeTooltip';
-import NetDividendIncomeTooltip from './NetDividendIncomeTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import NetInvestmentIncomeTooltip from './NetInvestmentIncomeTooltip';
 import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
@@ -19,7 +19,7 @@ interface IncomeOverviewRowsProps {
 
 /**
  * The per-category net income rows (給与所得, 事業所得・雑所得, 公的年金等に係る雑所得, the
- * 総合課税 dividends, and the 申告分離課税 investment income) that open the Taxes and Social
+ * 総合課税 investment income, and the 申告分離課税 investment income) that open the Taxes and Social
  * Insurance tabs, each with its calculation tooltip, followed by the 合計所得金額 subtotal when
  * more than one category is present.
  */
@@ -32,12 +32,17 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
   const hasBusinessOrMiscIncome = grossBusinessAndMiscIncome > 0;
   const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
   const aggregateDividends = results.investmentIncome?.aggregateDividends;
+  const aggregateInterest = results.investmentIncome?.aggregateInterest;
+  // 配当所得 and the 利子所得 paid outside Japan are both inside 総所得金額 and taxed in the
+  // brackets, so they share one row rather than adding a second one.
+  const hasAggregateInvestmentIncome =
+    aggregateDividends !== undefined || aggregateInterest !== undefined;
   const reportedInvestment = results.investmentIncome?.reported;
   const presentIncomeComponents = [
     hasEmploymentIncome,
     hasBusinessOrMiscIncome,
     hasPublicPensionIncome,
-    aggregateDividends !== undefined,
+    hasAggregateInvestmentIncome,
     reportedInvestment !== undefined,
   ].filter(Boolean).length;
 
@@ -97,15 +102,18 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
         />
       )}
 
-      {aggregateDividends !== undefined && (
+      {hasAggregateInvestmentIncome && (
         <ResultRow
           label={
             <span>
-              Net Dividend Income (aggregate)
-              <NetDividendIncomeTooltip amount={aggregateDividends} />
+              Net Investment Income (aggregate)
+              <NetAggregateInvestmentIncomeTooltip
+                dividends={aggregateDividends}
+                interest={aggregateInterest}
+              />
             </span>
           }
-          value={formatJPY(aggregateDividends)}
+          value={formatJPY((aggregateDividends ?? 0) + (aggregateInterest ?? 0))}
           type="default"
         />
       )}

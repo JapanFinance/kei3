@@ -111,17 +111,44 @@ describe('IncomeStreamForm', () => {
     expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ shareType: 'listed' }));
   });
 
-  it('offers only interest paid in Japan', () => {
+  it('defaults interest to paid in Japan, which is settled by withholding', () => {
     render(<IncomeStreamForm type="interest" onSave={mockOnSave} onCancel={mockOnCancel} />);
 
     expect(screen.getByRole('button', { name: 'In Japan' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'Outside Japan' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Outside Japan' })).toBeEnabled();
+    expect(
+      screen.getByText(/Interest paid in Japan is taxed at source at 20.315%/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Enter the amount before withholding.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ payerDomicile: 'domestic' }));
+  });
+
+  it('saves interest paid outside Japan, changing the guidance and the amount helper', () => {
+    render(<IncomeStreamForm type="interest" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Outside Japan' }));
+
+    expect(screen.getByRole('button', { name: 'Outside Japan' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(
+      screen.getByText(/Interest paid outside Japan has no Japanese tax withheld/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Interest paid in Japan is taxed at source at 20.315%/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Enter the amount in yen, before any foreign tax withheld.'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ payerDomicile: 'foreign' }));
   });
 
   it('offers only accounts outside a withholding account, with no reporting toggle for a sale', async () => {

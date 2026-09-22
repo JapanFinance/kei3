@@ -190,13 +190,17 @@ describe.each([
   ['TaxesTab', TaxesTab, withAggregateDividends({ results, inputs })],
   ['SocialInsuranceTab', SocialInsuranceTab, withAggregateDividends(onNhi)],
 ] as const)('%s dividends reported under 総合課税', (_name, Tab, props) => {
-  it('lists them on a row of their own, inside the 合計所得金額 subtotal', () => {
+  it('lists them on the aggregate row, inside the 合計所得金額 subtotal', () => {
     render(<Tab results={props.results} inputs={props.inputs} />);
 
-    const label = screen.getByText('Net Dividend Income (aggregate)');
+    const label = screen.getByText('Net Investment Income (aggregate)');
     expect(within(label.closest('div')!.parentElement!).getByText('¥400,000')).toBeInTheDocument();
-    const tooltip = tooltipTitled('Dividends Reported under Aggregate Taxation');
+    const tooltip = tooltipTitled('Investment Income under Aggregate Taxation');
     expect(tooltip).toBeDefined();
+    expect(within(tooltip!).getByText('Dividends (配当所得):')).toBeInTheDocument();
+    expect(
+      within(tooltip!).queryByText('Interest paid outside Japan (利子所得):'),
+    ).not.toBeInTheDocument();
     expect(
       within(tooltip!).getByText(/dividend tax credit \(配当控除, 所法92条.*not modelled yet/),
     ).toBeInTheDocument();
@@ -207,7 +211,7 @@ describe.each([
 });
 
 describe('TaxesTab with dividends reported under 総合課税 alone', () => {
-  it('shows the dividend row and the 合計所得金額 subtotal with no 申告分離課税 rows', () => {
+  it('shows the aggregate row and the 合計所得金額 subtotal with no 申告分離課税 rows', () => {
     render(
       <TaxesTab
         results={{
@@ -225,11 +229,76 @@ describe('TaxesTab with dividends reported under 総合課税 alone', () => {
       />,
     );
 
-    expect(screen.getByText('Net Dividend Income (aggregate)')).toBeInTheDocument();
+    expect(screen.getByText('Net Investment Income (aggregate)')).toBeInTheDocument();
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.queryByText('Net Investment Income (separate)')).not.toBeInTheDocument();
     expect(screen.queryByText('Taxable Investment Income (reported)')).not.toBeInTheDocument();
     expect(screen.queryByText('Tax on Investment Income (separate)')).not.toBeInTheDocument();
+  });
+});
+
+// Interest paid outside Japan is 利子所得 in 総所得金額 like a 総合課税 dividend, so it
+// shares that one row instead of adding a second.
+describe('TaxesTab with interest paid outside Japan', () => {
+  const aggregateOnly = (
+    amounts: { aggregateDividends?: number; aggregateInterest?: number },
+    totalNetIncome: number,
+  ): TakeHomeResults => ({
+    ...results,
+    totalNetIncome,
+    investmentIncome: {
+      gross: { capitalGains: 0, dividends: 0, interest: 0 },
+      grossTotal: 0,
+      withheld: { national: 0, residence: 0, total: 0 },
+      ...amounts,
+    },
+    residenceTax: makeResidenceTaxDetails(residenceTaxOnEarnedIncome),
+  });
+
+  it('shows it on the aggregate row alone, with only the interest part in the tooltip', () => {
+    render(
+      <TaxesTab
+        results={aggregateOnly({ aggregateInterest: 100_000 }, 3_660_000)}
+        inputs={inputs}
+      />,
+    );
+
+    const label = screen.getByText('Net Investment Income (aggregate)');
+    expect(within(label.closest('div')!.parentElement!).getByText('¥100,000')).toBeInTheDocument();
+    const tooltip = tooltipTitled('Investment Income under Aggregate Taxation');
+    expect(
+      within(tooltip!).getByText('Interest paid outside Japan (利子所得):'),
+    ).toBeInTheDocument();
+    expect(within(tooltip!).queryByText('Dividends (配当所得):')).not.toBeInTheDocument();
+    expect(
+      within(tooltip!).getByText(/whole amount is interest income \(利子所得, 所法23条\)/),
+    ).toBeInTheDocument();
+    expect(within(tooltip!).queryByText(/dividend tax credit \(配当控除/)).not.toBeInTheDocument();
+  });
+
+  it('adds it to the dividends on the same row rather than a second one', () => {
+    render(
+      <TaxesTab
+        results={aggregateOnly(
+          { aggregateDividends: 400_000, aggregateInterest: 100_000 },
+          4_060_000,
+        )}
+        inputs={inputs}
+      />,
+    );
+
+    expect(screen.getAllByText('Net Investment Income (aggregate)')).toHaveLength(1);
+    const label = screen.getByText('Net Investment Income (aggregate)');
+    expect(within(label.closest('div')!.parentElement!).getByText('¥500,000')).toBeInTheDocument();
+    const tooltip = tooltipTitled('Investment Income under Aggregate Taxation');
+    expect(within(tooltip!).getByText('Dividends (配当所得):')).toBeInTheDocument();
+    expect(within(tooltip!).getByText('¥400,000')).toBeInTheDocument();
+    expect(
+      within(tooltip!).getByText('Interest paid outside Japan (利子所得):'),
+    ).toBeInTheDocument();
+    expect(within(tooltip!).getByText('¥100,000')).toBeInTheDocument();
+    expect(within(tooltip!).getByText('Net Investment Income (aggregate):')).toBeInTheDocument();
+    expect(within(tooltip!).getByText('¥500,000')).toBeInTheDocument();
   });
 });
 
@@ -316,6 +385,26 @@ describe('SocialInsuranceTab with reported investment income on NHI', () => {
     expect(
       screen.getByText(
         /Includes ¥300,000 of investment income reported under 申告分離課税 and ¥400,000 of dividends reported under 総合課税, which is part of the 総所得金額等/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('names the interest paid outside Japan too', () => {
+    const props = withAggregateDividends(onNhi);
+    render(
+      <SocialInsuranceTab
+        results={{
+          ...props.results,
+          totalNetIncome: 4_360_000,
+          investmentIncome: { ...props.results.investmentIncome!, aggregateInterest: 100_000 },
+        }}
+        inputs={props.inputs}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /and ¥400,000 of dividends reported under 総合課税 and ¥100,000 of interest paid outside Japan, which is part of the 総所得金額等/,
       ),
     ).toBeInTheDocument();
   });
