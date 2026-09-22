@@ -263,7 +263,7 @@ const PlanRows = React.memo(function PlanRows({ rows, isMobile, bounded, onApply
               .map(row => (
                 <Box key={row.key} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                   <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2">
+                    <Typography variant="body2" component="div">
                       <strong>{row.label}</strong>
                       {roleTags(row)}
                     </Typography>
@@ -320,7 +320,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
     >
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Typography variant="body2" sx={{ fontWeight: 600 }}>
-          Compare reporting plans
+          Optimize reporting options
         </Typography>
       </AccordionSummary>
       <AccordionDetails>
@@ -331,47 +331,44 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
               component="div"
               sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}
             >
-              <span>Ways to report the capital-gains and dividends entries.</span>
+              <span>Ways to report the capital-gains and dividends.</span>
               <DetailedTooltip
                 title="Reporting Plans"
                 icon={SIMPLE_TOOLTIP_ICON}
                 iconAriaLabel="reporting plans info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  Each plan is one way to set the entries that are not fixed already, one election
-                  per withholding designated account and per domestic-dividend entry: Current is the
-                  entries as they stand, Best is the plan found to keep the most, and the rest set
-                  every such entry the same way. Apply sets every entry and the election to that
-                  plan&apos;s choices.
+                  Each plan is one set of choices for the entries that are not fixed already.
+                  Current is the entries as they stand, Best is the plan found to keep the most, and
+                  the rest set every such entry the same way. The Apply buttons set every entry and
+                  the election to that plan's choices.
                 </Typography>
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   <strong>Take-home</strong> here is take-home pay plus, for an amount left to
                   withholding, that amount net of the tax withheld at source; that withheld tax is
-                  counted in the tax rows instead. Every row therefore compares the same money,
-                  while the summary keeps withheld-only income on its own row.
+                  counted in the tax figures instead. Every plan therefore compares the same money,
+                  while the take-home pay on the Summary tab leaves out withheld-only income.
                 </Typography>
                 {mandatoryNote && (
-                  <Typography sx={{ display: 'block' }}>
-                    {mandatoryNote.replace(/\.$/, '')} (措法37条の11の5①, 措令4条の3②).
-                  </Typography>
+                  <Typography sx={{ display: 'block' }}>{mandatoryNote}</Typography>
                 )}
               </DetailedTooltip>
             </Typography>
             {showProgress && progress && <SearchIndicator progress={progress} />}
             <PlanRows rows={rows} isMobile={isMobile} bounded={bounded} onApply={onApply} />
             <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
-              This year only. The aggregate-taxation (総合課税) rows apply no dividend tax credit
+              The plans electing aggregate taxation for dividends apply no dividend tax credit
               (配当控除, not modelled yet), so for a dividend from a Japanese company they
-              understate what is kept. Carrying a loss forward (繰越控除), the foreign tax credit
-              (外国税額控除), and the rule that lets an employee skip filing when other income is
-              ¥200,000 or less are not modelled either. Entries that have to be reported stay
-              reported in every plan.
+              understate what could be kept. Carrying a loss forward (繰越控除), the foreign tax
+              credit (外国税額控除), and the rule that lets an employee skip filing an income tax
+              return when other income is ¥200,000 or less are not modelled either. Entries that
+              have to be reported stay reported in every plan.
               {bounded && boundedEstimate && (
                 <>
                   {' '}
                   The search was bounded: {formatNumber(boundedEstimate.count)} plans would have
                   taken about {(boundedEstimate.predictedMs / 1000).toFixed(1)} seconds here, so the
-                  planner improved the best uniform plan one entry at a time.
+                  planner may not have found the best plan.
                 </>
               )}
             </Typography>

@@ -195,9 +195,11 @@ describe.each([
 
     const label = screen.getByText('Net Dividend Income (reported, aggregate)');
     expect(within(label.closest('div')!.parentElement!).getByText('¥400,000')).toBeInTheDocument();
-    const tooltip = tooltipTitled('Dividends Reported under 総合課税');
+    const tooltip = tooltipTitled('Dividends Reported under Aggregate Taxation');
     expect(tooltip).toBeDefined();
-    expect(within(tooltip!).getByText(/配当控除 \(所法92条.*not modelled yet/)).toBeInTheDocument();
+    expect(
+      within(tooltip!).getByText(/dividend tax credit \(配当控除, 所法92条.*not modelled yet/),
+    ).toBeInTheDocument();
     expect(screen.getByText('Net Investment Income (reported)')).toBeInTheDocument();
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.getAllByText('¥4,260,000').length).toBeGreaterThanOrEqual(1);

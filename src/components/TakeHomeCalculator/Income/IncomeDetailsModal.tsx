@@ -222,26 +222,21 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             iconAriaLabel="reported dividends taxation info"
           >
             <Typography sx={{ display: 'block', mb: 1 }}>
-              One election covers every dividend reported for the year (措法8条の4②): separate
-              taxation (申告分離課税) or aggregate taxation (総合課税), never a mix. Dividends left
-              to the tax withheld at source (申告不要) are outside it.
+              This election covers all dividends reported for the year: separate taxation
+              (申告分離課税) or aggregate taxation (総合課税), never a mix. Dividends left to the
+              tax withheld at source (申告不要) are unaffected by it.
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
-              <strong>Separate (申告分離課税)</strong> taxes them at 15.315% and 5% apart from the
-              brackets, after any deductions the other income could not use, with a reported capital
-              loss from a qualifying sale set against them (損益通算).
+              <strong>Separate (申告分離課税)</strong> taxes them at a flat 15.315% and 5%, after
+              any deductions the other income could not use, and after offsetting reported capital
+              losses from a qualifying sale.
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
-              <strong>Aggregate (総合課税)</strong> counts them as dividend income (配当所得) in the
-              aggregate income (総所得金額), taxed in the progressive brackets and at the 10%
-              residence-tax rate with the other income. The dividend tax credit (配当控除, 所法92条)
-              is not modelled yet, so the tax is overstated for a dividend from a domestic company.
-              No capital loss is set against them. Interest on specified bonds (特定公社債の利子)
-              cannot be taxed this way.
-            </Typography>
-            <Typography sx={{ display: 'block' }}>
-              Either way the amount enters 合計所得金額 and every figure keyed to it, and since
-              令和6年度 the residence tax follows the income-tax election (地方税法32条⑬, 313条⑬).
+              <strong>Aggregate (総合課税)</strong> combines dividend income (配当所得) with other
+              aggregate income, taxed in the progressive income tax brackets and at the 10%
+              residence-tax rate. Capital losses cannot offset dividends taxed in aggregate. The
+              dividend tax credit (配当控除) is not modelled yet, so the tax is overstated for a
+              dividend from a Japanese company.
             </Typography>
           </DetailedTooltip>
         </FormLabel>

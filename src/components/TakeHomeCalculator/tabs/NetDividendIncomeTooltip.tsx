@@ -20,19 +20,21 @@ interface NetDividendIncomeTooltipProps {
  * Taxes and Social Insurance tabs.
  */
 const NetDividendIncomeTooltip: React.FC<NetDividendIncomeTooltipProps> = ({ amount }) => (
-  <DetailedTooltip title="Dividends Reported under 総合課税">
+  <DetailedTooltip title="Dividends Reported under Aggregate Taxation">
     <Typography variant="body2" sx={{ mb: 1 }}>
-      {formatJPY(amount)} of dividends reported under 総合課税 are 配当所得 (所法24条) inside
-      総所得金額 (所法22条②一): they enter 合計所得金額 and are taxed in the progressive brackets
-      and at the 10% residence rate together with the other income. The amount is the dividends as
-      entered; the 負債利子 offset of 所法24条② is not modelled.
+      {formatJPY(amount)} of dividends reported under aggregate taxation (総合課税) are dividend
+      income (配当所得, 所法24条) inside the aggregate income (総所得金額, 所法22条②一): they count
+      toward total net income (合計所得金額) and are taxed in the progressive brackets and at the
+      10% residence rate together with the other income. The amount is the dividends as entered; the
+      deduction for interest on money borrowed to buy the shares (負債利子, 所法24条②) is not
+      modelled.
     </Typography>
     <Typography variant="body2" sx={{ mb: 1 }}>
-      The 配当控除 (所法92条, 地方税法附則5条) that offsets part of that tax for a dividend from a
-      domestic company is not modelled yet, so the tax shown is overstated for those. No capital
-      loss is set against a dividend reported this way: 措法37条の12の2 nets a loss only against
-      dividends reported under 申告分離課税. The 20.315% withheld at source is credited on the
-      return and is not shown as a refund.
+      The dividend tax credit (配当控除, 所法92条, 地方税法附則5条) that offsets part of that tax
+      for a dividend from a domestic company is not modelled yet, so the tax shown is overstated for
+      those. No capital loss is set against a dividend reported this way: the law nets a loss only
+      against dividends reported under separate taxation (申告分離課税, 措法37条の12の2). The
+      20.315% withheld at source is credited on the return and is not shown as a refund.
     </Typography>
     <SourceLinks
       sources={[

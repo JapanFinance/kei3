@@ -99,7 +99,7 @@ const setResult = (result: Partial<UseReportingPlansResult>) => {
 
 const expandPanel = async () => {
   const user = userEvent.setup();
-  await user.click(screen.getByRole('button', { name: /compare reporting plans/i }));
+  await user.click(screen.getByRole('button', { name: /optimize reporting options/i }));
   return user;
 };
 
@@ -336,7 +336,7 @@ describe('ReportingPlanner', () => {
   it('shows nothing while the search has not produced rows yet', () => {
     setResult({ rows: undefined });
     render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /compare reporting plans/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /optimize reporting options/i })).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });

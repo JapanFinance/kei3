@@ -845,7 +845,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    const toggle = screen.getByRole('button', { name: /compare reporting plans/i });
+    const toggle = screen.getByRole('button', { name: /optimize reporting options/i });
     expect(screen.queryByText('Current')).not.toBeInTheDocument();
     await user.click(toggle);
 
@@ -868,7 +868,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
     expect(
-      screen.queryByRole('button', { name: /compare reporting plans/i }),
+      screen.queryByRole('button', { name: /optimize reporting options/i }),
     ).not.toBeInTheDocument();
   });
 

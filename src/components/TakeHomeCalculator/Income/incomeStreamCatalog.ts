@@ -168,7 +168,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'investment',
     chipLabel: 'INTEREST',
     amountLabel: 'Gross Interest',
-    amountHelperText: '預貯金の利子 and 一般公社債の利子, before withholding.',
+    amountHelperText: 'Enter the amount before withholding.',
   },
 };
 

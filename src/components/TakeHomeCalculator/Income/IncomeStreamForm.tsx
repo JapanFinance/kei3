@@ -538,14 +538,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 iconAriaLabel="interest payer info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>In Japan</strong> means interest received here, such as on a deposit held
-                  in Japan. The tax is settled by withholding at source (源泉分離課税), with no
-                  election and nothing to report (措法3条①).
+                  <strong>In Japan</strong> means interest received in a Japanese account, such as
+                  on a deposit held at a bank in Japan. The tax is settled by withholding at source,
+                  with no election and nothing to report.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
                   <strong>Outside Japan</strong> is not currently supported. No Japanese tax is
-                  withheld, so the interest has to be reported and is taxed at the progressive
-                  rates.
+                  withheld, so the interest has to be reported and is subject to aggregate taxation.
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -871,17 +870,16 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           {type === 'interest' && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                Taxed at source at 20.315% (源泉分離課税) and not reported on a tax return, so it
-                does not affect total net income (合計所得金額) or anything that depends on it.
+                Interest paid in Japan is taxed at source at 20.315% and not reported on a tax
+                return, so it does not affect total net income (合計所得金額) or anything that
+                depends on it.
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                This covers interest income (利子所得) as the law defines it (所法23条①): interest
-                on bonds (公社債) and deposits (預貯金), and distributions from jointly operated
-                money trusts (合同運用信託), bond investment trusts (公社債投資信託) and publicly
-                offered bond investment trusts (公募公社債等運用投資信託). Interest on money lent
-                privately is miscellaneous income (雑所得) rather than interest income: nothing is
-                withheld from it and it has to be reported, so enter it as Miscellaneous income
-                instead.
+                This covers interest income (利子所得) as the law defines it: interest on bonds
+                (公社債) and deposits (預貯金), and distributions from jointly operated money trusts
+                (合同運用信託), bond investment trusts (公社債投資信託) and publicly offered bond
+                investment trusts (公募公社債等運用投資信託). Interest on money lent privately
+                should be reported as miscellaneous income (雑所得) rather than interest income.
               </Typography>
               <SourceLinks
                 sources={[
