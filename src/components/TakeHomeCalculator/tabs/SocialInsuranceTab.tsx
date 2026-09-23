@@ -91,6 +91,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const isLatterStage = inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID;
   // NHI and the 後期高齢者医療制度 both assess premiums on net income rather than SMR.
   const isIncomeBasedProvider = isNationalHealthInsurance || isLatterStage;
+  // Both assess it after the 地方税法 basic deduction, which steps down above ¥24,000,000 of
+  // 合計所得金額 (see premiumCalculationBase in healthInsuranceCalculator).
+  const premiumBaseDeduction = results.residenceTaxBasicDeduction ?? 0;
   const includeLTC = isLongTermCareCategory2Insured(inputs.ageRange);
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
@@ -235,14 +238,12 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <IncomeOverviewRows results={results} inputs={inputs} />
           <ResultRow
             label="Basic Deduction"
-            value={formatJPY(-results.residenceTaxBasicDeduction!)}
+            value={formatJPY(-premiumBaseDeduction)}
             type="default"
           />
           <ResultRow
             label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
-            value={formatJPY(
-              Math.max(0, results.totalNetIncome - results.residenceTaxBasicDeduction!),
-            )}
+            value={formatJPY(Math.max(0, results.totalNetIncome - premiumBaseDeduction))}
             type="subtotal"
           />
         </>

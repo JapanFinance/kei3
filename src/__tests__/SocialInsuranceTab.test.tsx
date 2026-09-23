@@ -36,6 +36,10 @@ beforeAll(() => {
   Element.prototype.scrollTo = vi.fn();
 });
 
+/** The text of the whole result row whose label is `label`: the label and its value. */
+const resultRowText = (label: string) =>
+  screen.getByText(label).closest('div')!.parentElement!.textContent;
+
 describe('SocialInsuranceTab', () => {
   const mockInputs: TakeHomeInputs = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -151,10 +155,6 @@ describe('SocialInsuranceTab', () => {
     expect(within(smrRow).getByText('¥68,000')).toBeInTheDocument();
   });
 
-  /** The text of the whole result row whose label is `label`: the label and its value. */
-  const resultRowText = (label: string) =>
-    screen.getByText(label).closest('div')!.parentElement!.textContent;
-
   it('shows the salary and commuting allowance the calculation charged, not the entered streams', () => {
     // The entered streams say 520,000 a month; the results say 63,000. The tab and the tooltips it
     // opens show the results, so nothing on the tab can disagree with the premiums beside it.
@@ -204,6 +204,36 @@ describe('SocialInsuranceTab', () => {
     // Check for capped value
     expect(screen.getAllByText('¥650,000').length).toBeGreaterThan(0);
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
+  });
+
+  it('assesses National Health Insurance after the stepped residence tax basic deduction', () => {
+    // 国民健康保険法施行令第29条の7第2項第4号 points at the 地方税法 basic deduction, which is
+    // ¥150,000 at ¥25,000,000 of 合計所得金額; the calculation applies the same figure.
+    const inputs = {
+      ...mockInputs,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      incomeStreams: [{ id: 'b1', type: 'business' as const, amount: 25_000_000 }],
+    };
+    const results = {
+      ...mockResults,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      salaryIncome: 0,
+      commutingAllowance: 0,
+      netBusinessAndMiscIncome: 25_000_000,
+      totalNetIncome: 25_000_000,
+      residenceTaxBasicDeduction: 150_000,
+      nhiMedicalPortion: 670_000,
+      nhiElderlySupportPortion: 260_000,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(resultRowText('Basic Deduction')).toContain('-¥150,000');
+    expect(resultRowText('NHI Calculation Base')).toContain('¥24,850,000');
   });
 
   it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
@@ -324,6 +354,24 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(screen.getAllByText('¥401,500').length).toBeGreaterThan(0);
     expect(screen.getByText(/enrollment ends at age 70 and National Pension/)).toBeInTheDocument();
     expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
+  });
+
+  it('assesses the 後期高齢者医療 premium after the residence tax basic deduction', () => {
+    // Unlike National Health Insurance, this premium takes the 地方税法 deduction, which steps
+    // down above ¥24,000,000 of net income.
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          totalNetIncome: 25_000_000,
+          residenceTaxBasicDeduction: 150_000,
+        }}
+      />,
+    );
+
+    expect(resultRowText('Basic Deduction')).toContain('-¥150,000');
+    expect(resultRowText('Premium Calculation Base')).toContain('¥24,850,000');
   });
 
   it('renders the 第1号 long-term care premium row and includes it in the total at 75+', () => {

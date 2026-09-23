@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { percent } from '../data/employeesHealthInsurance/providerRateData';
+import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -14,6 +15,9 @@ import {
   calculateHealthInsurancePremium,
   calculateHealthInsuranceBreakdown,
   calculateEmployeesHealthInsuranceBonusBreakdown,
+  calculateNationalHealthInsurancePortion,
+  calculateNationalHealthInsurancePremiumWithBreakdown,
+  premiumCalculationBase,
 } from '../utils/healthInsuranceCalculator';
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
@@ -910,5 +914,96 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
         'Tokyo-Nakano',
       ),
     ).toBe(948_000);
+  });
+});
+
+describe('NHI portions and the capped flags', () => {
+  // Chiyoda FY2025 caps its medical portion at 660,000 and FY2026 at 670,000. Between ¥8,377,000
+  // and ¥8,717,000 of income the FY2025 portion is at its cap and the FY2026 one is not.
+  const region = 'Tokyo-Chiyoda';
+  const prevFY = getNHIParamsForMonth(region, 2026, 0)!;
+  const currFY = getNHIParamsForMonth(region, 2026, 3)!;
+
+  it('reports a portion as levied only where its parameters exist', () => {
+    // Nakano introduced the child support portion in FY2026.
+    const nakano2025 = getNHIParamsForMonth('Tokyo-Nakano', 2026, 0)!;
+    const nakano2026 = getNHIParamsForMonth('Tokyo-Nakano', 2026, 3)!;
+    const base = premiumCalculationBase(5_000_000);
+
+    expect(calculateNationalHealthInsurancePortion(base, nakano2025, 'childSupport')).toBe(
+      undefined,
+    );
+    const portion = calculateNationalHealthInsurancePortion(base, nakano2026, 'childSupport')!;
+    expect(portion.rate).toBe(nakano2026.childSupportRate);
+    expect(portion.cap).toBe(nakano2026.childSupportCap);
+    expect(portion.uncapped).toBe(portion.incomeBased + portion.perCapita + portion.householdFlat);
+    expect(portion.premium).toBe(Math.min(portion.uncapped, portion.cap));
+    expect(portion.amount).toBe(Math.round(portion.premium));
+    expect(portion.capped).toBe(false);
+  });
+
+  it('reduces the base by the stepped residence tax basic deduction, never below zero', () => {
+    // 地方税法第314条の2第2項, which the NHI rules point at: ¥430,000 up to ¥24,000,000 of
+    // 合計所得金額, then ¥290,000, ¥150,000 and nothing above ¥25,000,000.
+    expect(premiumCalculationBase(5_000_000)).toBe(4_570_000);
+    expect(premiumCalculationBase(100_000)).toBe(0);
+    expect(premiumCalculationBase(24_200_000)).toBe(23_910_000);
+    expect(premiumCalculationBase(25_000_000)).toBe(24_850_000);
+    expect(premiumCalculationBase(26_000_000)).toBe(26_000_000);
+  });
+
+  it('marks a fiscal year portion capped from the first yen at its 賦課限度額', () => {
+    const base = premiumCalculationBase(8_377_000);
+    expect(calculateNationalHealthInsurancePortion(base, prevFY, 'medical')!.capped).toBe(true);
+    expect(calculateNationalHealthInsurancePortion(base, currFY, 'medical')!.capped).toBe(false);
+  });
+
+  it('marks a blended portion capped only when every fiscal year that levies it is capped', () => {
+    const prevOnly = calculateNationalHealthInsurancePremiumWithBreakdown(
+      8_377_000,
+      false,
+      2026,
+      region,
+    );
+    expect(prevOnly.medicalPortion).toBeLessThan(667_000);
+    expect(prevOnly.medicalCapped).toBe(false);
+
+    const both = calculateNationalHealthInsurancePremiumWithBreakdown(
+      8_718_000,
+      false,
+      2026,
+      region,
+    );
+    expect(both.medicalPortion).toBe(667_000);
+    expect(both.medicalCapped).toBe(true);
+    expect(both.elderlySupportCapped).toBe(false);
+  });
+
+  it('judges a portion the previous fiscal year did not levy on the current one alone', () => {
+    // Nakano FY2025 has no child support portion; at ¥20,000,000 the FY2026 one is at its cap.
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      20_000_000,
+      false,
+      2026,
+      'Tokyo-Nakano',
+    );
+    expect(breakdown.childSupportPortion).toBe(21_000);
+    expect(breakdown.childSupportCapped).toBe(true);
+    // Not levied at this age, so nothing is capped.
+    expect(breakdown.longTermCarePortion).toBe(0);
+    expect(breakdown.longTermCareCapped).toBe(false);
+  });
+
+  it('reports no caps at moderate income', () => {
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      5_000_000,
+      true,
+      2026,
+      region,
+    );
+    expect(breakdown.medicalCapped).toBe(false);
+    expect(breakdown.elderlySupportCapped).toBe(false);
+    expect(breakdown.longTermCareCapped).toBe(false);
+    expect(breakdown.childSupportCapped).toBe(false);
   });
 });
