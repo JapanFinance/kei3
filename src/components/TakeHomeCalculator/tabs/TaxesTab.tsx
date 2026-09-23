@@ -171,14 +171,14 @@ const WithheldInvestmentTaxTooltip: React.FC<{
     <Box>
       <Typography variant="body2" sx={{ mb: 1 }}>
         Investment income left to withholding (申告不要): the payer withholds 15.315% income tax and
-        5% residence tax, which settles the tax in full. The amount is on no tax return and in no
-        assessed figure above, and the tax withheld counts with the assessed tax of the same kind
-        here and on the Summary tab.
+        5% residence tax, which settles the tax in full. The amount is not reported on a tax return
+        and is in no assessed figure above.
       </Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        In a withholding designated account the year's net loss on sales is netted against the
+        In a withholding designated account, the year's net loss on sales is offset against the
         dividends received into the account before withholding, so a loss can bring the tax on the
-        dividends down to nothing.
+        dividends down to nothing. Accounts are not combined with each other, so a loss left over in
+        one account does not reduce the tax on dividends in another.
       </Typography>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
         <tbody>
@@ -524,24 +524,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Tax on Investment Income (separate)
-                <DetailedTooltip title="Income Tax on Reported Investment Income">
+                <DetailedTooltip title="Income Tax on Investment Income under Separate Taxation">
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      15% of the taxable investment income, apart from the progressive brackets
-                      (措法8条の4①, 37条の11①). The taxable amount is the net investment income
-                      reported under 申告分離課税 less any deductions the other income could not
-                      use: the deductions come off taxable income first, and only what is left over
-                      comes off this amount (措法8条の4③, 37条の11⑥). The reconstruction surtax
-                      below applies to this and the base income tax together. In a withholding
-                      designated account the 15.315% already withheld is credited against the total
-                      on the return.
+                      A flat 15% of the taxable investment income. The taxable amount is the net
+                      investment income reported under separate taxation, less any income deductions
+                      too large for the other income to absorb. The deductions are subtracted from
+                      the other income first, as in the Taxable Income row above, and only the part
+                      left over is subtracted from the investment income. The reconstruction surtax
+                      below applies to this and the base income tax together.
                     </Typography>
                     <table
                       style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}
                     >
                       <tbody>
                         <tr>
-                          <td style={{ padding: '2px 0' }}>Net investment income (reported):</td>
+                          <td style={{ padding: '2px 0' }}>Net investment income (separate):</td>
                           <td style={{ padding: '2px 0', textAlign: 'right' }}>
                             {formatJPY(
                               reportedInvestment.netIncome.capitalGains +
@@ -879,12 +877,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       This portion is calculated as a percentage of taxable income and split between
                       municipal and prefectural governments.
                       {residenceSeparate &&
-                        ' Investment income reported under 申告分離課税 is taxed at 5% within the same portion: the net amount reported, less any deductions the other income could not use, floored to ¥1,000 (地方税法附則第33条の2, 第35条の2の2).'}
+                        ' Investment income reported under separate taxation is taxed at 5% within the same portion: the net amount reported, less any deductions the other income could not use, floored to ¥1,000.'}
                     </Typography>
                     {residenceSeparate && (
                       <Box sx={{ mb: 1 }}>
                         <HighlightedRowValue
-                          label="Taxable investment income (reported)"
+                          label="Taxable investment income (separate)"
                           value={
                             residenceSeparate.taxableCapitalGains +
                             residenceSeparate.taxableDividends
@@ -893,12 +891,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       </Box>
                     )}
                     <ReferenceTable
-                      headers={['Component', 'Rate']}
+                      headers={['Component', 'Rate (separate)']}
                       rows={
                         residenceSeparate
                           ? [
-                              ['Municipal Tax (市町村民税)', '6% (3% on investment income)'],
-                              ['Prefectural Tax (都道府県民税)', '4% (2% on investment income)'],
+                              ['Municipal Tax (市町村民税)', '6% (3%)'],
+                              ['Prefectural Tax (都道府県民税)', '4% (2%)'],
                               [<strong>Total</strong>, <strong>10% (5%)</strong>],
                             ]
                           : [

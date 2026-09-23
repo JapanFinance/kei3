@@ -96,9 +96,9 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   </Typography>
                   {results.investmentIncome?.reported && (
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Investment income reported under 申告分離課税 raises the limit through the
-                      residence tax it adds; with no other taxable income the limit is set from its
-                      own 15% rate.
+                      Investment income reported under separate taxation (申告分離課税) raises the
+                      limit through the residence tax it adds; with no other taxable income the
+                      limit is set from its own 15% rate.
                     </Typography>
                   )}
                   <Typography variant="body2">

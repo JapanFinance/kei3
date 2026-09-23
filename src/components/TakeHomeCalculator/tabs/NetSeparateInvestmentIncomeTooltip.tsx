@@ -10,7 +10,7 @@ import { formatJPY } from '../../../utils/formatters';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
-interface NetInvestmentIncomeTooltipProps {
+interface NetSeparateInvestmentIncomeTooltipProps {
   reported: ReportedInvestmentIncome;
 }
 
@@ -20,11 +20,13 @@ interface NetInvestmentIncomeTooltipProps {
  * trigger, so callers place it directly after the row label. Shared by the Taxes and Social
  * Insurance tabs.
  */
-const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({ reported }) => {
+const NetSeparateInvestmentIncomeTooltip: React.FC<NetSeparateInvestmentIncomeTooltipProps> = ({
+  reported,
+}) => {
   const netIncome = reported.netIncome.capitalGains + reported.netIncome.dividends;
 
   return (
-    <DetailedTooltip title="Reported Investment Income Details">
+    <DetailedTooltip title="Investment Income under Separate Taxation">
       <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
         Calculation Breakdown
       </Typography>
@@ -55,7 +57,7 @@ const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({
           )}
           {reported.lossOffsetAgainstDividends > 0 && (
             <tr>
-              <td style={{ padding: '2px 0' }}>Loss offset against dividends (損益通算):</td>
+              <td style={{ padding: '2px 0' }}>Loss subtracted from dividends (損益通算):</td>
               <Box
                 component="td"
                 sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
@@ -90,12 +92,19 @@ const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({
       </table>
 
       <Typography variant="body2" sx={{ mb: 1 }}>
-        Investment income reported under 申告分離課税 is part of total net income (合計所得金額), so
-        it counts toward the basic deduction, spouse and dependent eligibility, residence-tax
-        exemption and National Health Insurance, but it is taxed apart from the progressive brackets
-        at 15% income tax and 5% residence tax. A capital loss is first set against the year's other
-        reported gains; what remains offsets reported dividends only where the sale settled in a
-        Japanese account.
+        Investment income reported under separate taxation (申告分離課税) is part of total net
+        income (合計所得金額), so it counts toward the basic deduction, spouse and dependent
+        eligibility, residence-tax exemption and National Health Insurance, but tax on it is
+        calculated separate from other income at a flat 15% income tax and 5% residence tax.
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        A capital loss is first subtracted from the year's other reported capital gains. Any loss
+        that remains reduces reported dividends only if the shares were sold through a Japanese
+        broker.
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Tax another country withholds on a foreign company's dividends is eligible for the foreign
+        tax credit (外国税額控除), which the calculator does not currently support.
       </Typography>
       <SourceLinks
         sources={[
@@ -117,4 +126,4 @@ const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({
   );
 };
 
-export default NetInvestmentIncomeTooltip;
+export default NetSeparateInvestmentIncomeTooltip;

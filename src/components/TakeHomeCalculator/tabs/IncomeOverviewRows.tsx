@@ -9,8 +9,8 @@ import { ResultRow } from '../ResultRow';
 import NetAggregateInvestmentIncomeTooltip from './NetAggregateInvestmentIncomeTooltip';
 import NetBusinessAndMiscIncomeTooltip from './NetBusinessAndMiscIncomeTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
-import NetInvestmentIncomeTooltip from './NetInvestmentIncomeTooltip';
 import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
+import NetSeparateInvestmentIncomeTooltip from './NetSeparateInvestmentIncomeTooltip';
 
 interface IncomeOverviewRowsProps {
   results: TakeHomeResults;
@@ -123,7 +123,7 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
           label={
             <span>
               Net Investment Income (separate)
-              <NetInvestmentIncomeTooltip reported={reportedInvestment} />
+              <NetSeparateInvestmentIncomeTooltip reported={reportedInvestment} />
             </span>
           }
           value={formatJPY(

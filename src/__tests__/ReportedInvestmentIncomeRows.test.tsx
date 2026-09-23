@@ -160,22 +160,23 @@ describe.each([
     render(<Tab results={props.results} inputs={props.inputs} />);
 
     expect(screen.getByText('Net Investment Income (separate)')).toBeInTheDocument();
-    const tooltip = tooltipTitled('Reported Investment Income Details');
+    const tooltip = tooltipTitled('Investment Income under Separate Taxation');
     expect(tooltip).toBeDefined();
     // The −500,000 appears as the year's net capital gains and again as the offset.
     expect(within(tooltip!).getAllByText('-¥500,000')).toHaveLength(2);
     expect(within(tooltip!).getByText('¥800,000')).toBeInTheDocument();
     expect(
-      within(tooltip!).getByText('Loss offset against dividends (損益通算):'),
+      within(tooltip!).getByText('Loss subtracted from dividends (損益通算):'),
     ).toBeInTheDocument();
     expect(within(tooltip!).getByText('¥300,000')).toBeInTheDocument();
+    expect(within(tooltip!).getByText(/foreign tax credit \(外国税額控除\)/)).toBeInTheDocument();
 
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.getAllByText('¥3,860,000').length).toBeGreaterThanOrEqual(1);
   });
 });
 
-// 400,000 of dividends reported under 総合課税 beside the 申告分離課税 amounts above: 配当所得 in
+// 400,000 of dividends under aggregate taxation beside the 申告分離課税 amounts above: 配当所得 in
 // 総所得金額, so 合計所得金額 is 3,860,000 + 400,000.
 const withAggregateDividends = <T extends { results: TakeHomeResults }>(props: T): T => ({
   ...props,
@@ -202,8 +203,9 @@ describe.each([
       within(tooltip!).queryByText('Interest paid outside Japan (利子所得):'),
     ).not.toBeInTheDocument();
     expect(
-      within(tooltip!).getByText(/dividend tax credit \(配当控除, 所法92条.*not modelled yet/),
+      within(tooltip!).getByText(/dividend tax credit \(配当控除\).*not supported yet/),
     ).toBeInTheDocument();
+    expect(within(tooltip!).getByText(/foreign tax credit \(外国税額控除\)/)).toBeInTheDocument();
     expect(screen.getByText('Net Investment Income (separate)')).toBeInTheDocument();
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.getAllByText('¥4,260,000').length).toBeGreaterThanOrEqual(1);
@@ -271,8 +273,12 @@ describe('TaxesTab with interest paid outside Japan', () => {
     ).toBeInTheDocument();
     expect(within(tooltip!).queryByText('Dividends (配当所得):')).not.toBeInTheDocument();
     expect(
-      within(tooltip!).getByText(/whole amount is interest income \(利子所得, 所法23条\)/),
+      within(tooltip!).getByText(
+        /whole amount is interest income that counts toward total net income/,
+      ),
     ).toBeInTheDocument();
+    // The foreign tax credit note applies to dividends and interest alike, so it shows either way.
+    expect(within(tooltip!).getByText(/foreign tax credit \(外国税額控除\)/)).toBeInTheDocument();
     expect(within(tooltip!).queryByText(/dividend tax credit \(配当控除/)).not.toBeInTheDocument();
   });
 
@@ -314,13 +320,13 @@ describe('TaxesTab with reported investment income', () => {
       .closest('div')!.parentElement!;
     expect(within(taxRow).getByText('¥45,000')).toBeInTheDocument();
     expect(
-      within(tooltipTitled('Income Tax on Reported Investment Income')!).getByText(
+      within(tooltipTitled('Income Tax on Investment Income under Separate Taxation')!).getByText(
         'Taxable (¥1,000 floor):',
       ),
     ).toBeInTheDocument();
     expect(
       within(tooltipTitled('Income-based Residence Tax')!).getByText(
-        /^Taxable investment income \(reported\):/,
+        /^Taxable investment income \(separate\):/,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText('Municipal portion, investment income (3%)')).toBeInTheDocument();
@@ -369,27 +375,9 @@ describe('TaxesTab with reported investment income', () => {
 });
 
 describe('SocialInsuranceTab with reported investment income on NHI', () => {
-  it('names the reported amount inside the NHI calculation base', () => {
-    render(<SocialInsuranceTab results={onNhi.results} inputs={onNhi.inputs} />);
-
-    expect(screen.getByText('NHI Calculation Base')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Includes ¥300,000 of investment income reported under 申告分離課税/),
-    ).toBeInTheDocument();
-  });
-
-  it('names the dividends reported under 総合課税 beside them', () => {
-    const props = withAggregateDividends(onNhi);
-    render(<SocialInsuranceTab results={props.results} inputs={props.inputs} />);
-
-    expect(
-      screen.getByText(
-        /Includes ¥300,000 of investment income reported under 申告分離課税 and ¥400,000 of dividends reported under 総合課税, which is part of the 総所得金額等/,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('names the interest paid outside Japan too', () => {
+  // The investment rows and Total Net Income sit directly above the base, so the base row adds
+  // no tooltip restating them.
+  it('derives the NHI calculation base from Total Net Income with no restating tooltip', () => {
     const props = withAggregateDividends(onNhi);
     render(
       <SocialInsuranceTab
@@ -402,11 +390,11 @@ describe('SocialInsuranceTab with reported investment income on NHI', () => {
       />,
     );
 
-    expect(
-      screen.getByText(
-        /and ¥400,000 of dividends reported under 総合課税 and ¥100,000 of interest paid outside Japan, which is part of the 総所得金額等/,
-      ),
-    ).toBeInTheDocument();
+    // 4,360,000 total net income − 430,000 basic deduction.
+    const baseRow = screen.getByText('NHI Calculation Base').closest('div')!.parentElement!;
+    expect(within(baseRow).getByText('¥3,930,000')).toBeInTheDocument();
+    expect(within(baseRow).queryByTestId('info-tooltip')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Includes /)).not.toBeInTheDocument();
   });
 });
 
@@ -415,7 +403,9 @@ describe('FurusatoNozeiTab with reported investment income', () => {
     render(<FurusatoNozeiTab results={results} />);
 
     expect(
-      screen.getByText(/Investment income reported under 申告分離課税 raises the limit/),
+      screen.getByText(
+        /Investment income reported under separate taxation \(申告分離課税\) raises the limit/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -423,7 +413,9 @@ describe('FurusatoNozeiTab with reported investment income', () => {
     render(<FurusatoNozeiTab results={{ ...results, investmentIncome: undefined }} />);
 
     expect(
-      screen.queryByText(/Investment income reported under 申告分離課税 raises the limit/),
+      screen.queryByText(
+        /Investment income reported under separate taxation \(申告分離課税\) raises the limit/,
+      ),
     ).not.toBeInTheDocument();
   });
 });

@@ -95,33 +95,31 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
       {dividends !== undefined && (
         <>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            {formatJPY(dividends)} of dividends reported under aggregate taxation (総合課税) are
-            dividend income (配当所得, 所法24条) inside the aggregate income (総所得金額,
-            所法22条②一): they count toward total net income (合計所得金額) and are taxed in the
-            progressive brackets and at the 10% residence rate together with the other income. The
-            amount is the dividends as entered; the deduction for interest on money borrowed to buy
-            the shares (負債利子, 所法24条②) is not modelled.
+            Dividends reported under aggregate taxation (総合課税) count toward total net income
+            (合計所得金額) and are taxed in the progressive brackets and at the 10% residence tax
+            rate together with other income.
           </Typography>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            The dividend tax credit (配当控除, 所法92条, 地方税法附則5条) that offsets part of that
-            tax for a dividend from a domestic company is not modelled yet, so the tax shown is
-            overstated for those. No capital loss is set against a dividend reported this way: the
-            law nets a loss only against dividends reported under separate taxation (申告分離課税,
-            措法37条の12の2). The 20.315% withheld at source is credited on the return and is not
-            shown as a refund.
+            The dividend tax credit (配当控除) that offsets part of that tax for a dividend from a
+            Japanese company is not supported yet, so the tax shown is overstated for those. Capital
+            losses cannot offset dividends subject to aggregate taxation.
           </Typography>
         </>
       )}
 
       {interest !== undefined && (
         <Typography variant="body2" sx={{ mb: 1 }}>
-          {formatJPY(interest)} of interest paid outside Japan had no Japanese tax withheld on it,
-          so the whole amount is interest income (利子所得, 所法23条) inside the aggregate income
-          (総所得金額, 所法22条②一): it counts toward total net income (合計所得金額) and is taxed
-          in the progressive brackets and at the 10% residence rate together with the other income.
-          Foreign tax withheld on it is not modelled (the foreign tax credit, 外国税額控除).
+          Interest paid outside Japan had no Japanese tax withheld on it, so the whole amount is
+          interest income that counts toward total net income (合計所得金額) and is taxed in the
+          progressive brackets and at the 10% residence rate together with the other income.
         </Typography>
       )}
+
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Tax another country withholds, such as on a foreign company's dividends or a foreign bank's
+        interest, is eligible for the foreign tax credit (外国税額控除), which the calculator does
+        not currently support.
+      </Typography>
 
       <SourceLinks sources={sources} />
     </DetailedTooltip>
