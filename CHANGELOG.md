@@ -4,6 +4,10 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ## 2026-09-22
 
+### New
+
+- Interest paid outside Japan, on a deposit at a foreign bank for example, can now be entered: the Interest entry's Outside Japan option is enabled. No Japanese tax is withheld on such interest, so it goes on the tax return as [interest income (利子所得)](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm) and is taxed with the other income under aggregate taxation (総合課税), counting toward total net income (合計所得金額) and everything keyed to it, from the basic deduction to National Health Insurance premiums. The foreign tax withheld on it is not modelled (no foreign tax credit, 外国税額控除).
+
 ### Updated
 
 - Investment income left to the tax withheld at source (申告不要) now counts in annual income and take-home pay, as money received, with the 20.315% withheld on it counted with the income tax and residence tax; before, it sat outside both. The Summary tab therefore adds no row for it, the input form no longer lists it under the income total, the chart holds it constant across the income range like other investment income, and the Taxes tab shows the withheld amounts as a row under each tax in place of a separate section at the end. The taxable amount of investment income reported under 申告分離課税 moved from rows of its own into the tooltips of the 15% income-tax row and the income-based residence-tax row.

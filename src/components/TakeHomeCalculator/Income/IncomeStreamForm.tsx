@@ -160,6 +160,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   );
   const [error, setError] = useState<string | null>(null);
 
+  // The catalog's helper text covers interest paid in Japan; interest paid outside Japan has no
+  // Japanese withholding to be "before", and the taxpayer converts the receipt themselves.
+  const amountHelperText =
+    type === 'interest' && payerDomicile === 'foreign'
+      ? 'Enter the amount in yen, before any foreign tax withheld.'
+      : info.amountHelperText;
+
   // 措法37条の11の6⑩: a reported loss that reduced the account's dividend withholding drags the
   // dividends onto the return regardless of the toggle below.
   const dividendsForced = withholdingAccountDividendsMustBeReported({
@@ -543,8 +550,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   with no election and nothing to report.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Outside Japan</strong> is not currently supported. No Japanese tax is
-                  withheld, so the interest has to be reported and is subject to aggregate taxation.
+                  <strong>Outside Japan</strong> means received with no Japanese payer or handler,
+                  interest on a deposit at a foreign bank for example. No Japanese tax is withheld,
+                  so the interest is reported and taxed with the other income under aggregate
+                  taxation (総合課税).
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -562,9 +571,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               sx={variantToggleGroupSx}
             >
               <ToggleButton value="domestic">In Japan</ToggleButton>
-              <ToggleButton value="foreign" disabled>
-                Outside Japan
-              </ToggleButton>
+              <ToggleButton value="foreign">Outside Japan</ToggleButton>
             </ToggleButtonGroup>
           </FormControl>
         )}
@@ -725,7 +732,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               value={amount}
               onChange={val => setAmount(val)}
               sx={{ width: '100%' }}
-              helperText={error || info.amountHelperText}
+              helperText={error || amountHelperText}
               error={!!error}
               {...(info.min !== undefined && { min: info.min })}
             />
@@ -870,9 +877,9 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           {type === 'interest' && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                Interest paid in Japan is taxed at source at 20.315% and not reported on a tax
-                return, so it does not affect total net income (合計所得金額) or anything that
-                depends on it.
+                {payerDomicile === 'domestic'
+                  ? 'Interest paid in Japan is taxed at source at 20.315% and not reported on a tax return, so it does not affect total net income (合計所得金額) or anything that depends on it.'
+                  : 'Interest paid outside Japan has no Japanese tax withheld: the whole amount is interest income (利子所得) on the tax return, taxed in the progressive brackets and at the 10% residence-tax rate with the other income, so it counts toward total net income (合計所得金額) and everything keyed to it. Enter the amount in yen. Foreign tax withheld on it is not modelled (the foreign tax credit, 外国税額控除).'}
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                 This covers interest income (利子所得) as the law defines it: interest on bonds
