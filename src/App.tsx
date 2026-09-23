@@ -12,7 +12,11 @@ import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
 import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
 import type { TakeHomeFormState } from './types/tax';
-import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
+import {
+  DEFAULT_INCOME_YEAR,
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+} from './types/tax';
 import { DEFAULT_TAXPAYER_AGE_RANGE } from './types/taxpayerAge';
 import { useLoadMilestone } from './utils/loadMilestones';
 import { calculateTaxes } from './utils/taxCalculations';
@@ -92,6 +96,7 @@ function App() {
       },
     ],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
     ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
@@ -218,6 +223,7 @@ function App() {
             manualSocialInsuranceEntry={deferredInputs.manualSocialInsuranceEntry}
             manualSocialInsuranceAmount={deferredInputs.manualSocialInsuranceAmount}
             incomeStreams={deferredInputs.incomeStreams}
+            reportedDividendsTaxation={deferredInputs.reportedDividendsTaxation}
             lifeInsurance={deferredInputs.lifeInsurance}
             earthquakeInsurance={deferredInputs.earthquakeInsurance}
             medicalExpenses={deferredInputs.medicalExpenses}

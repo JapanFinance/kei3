@@ -14,21 +14,26 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormLabel from '@mui/material/FormLabel';
 import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useEffect, useRef, useState } from 'react';
 
-import type {
-  IncomeStream,
-  IncomeStreamType,
-  InvestmentTaxTreatment,
-  TakeHomeResults,
+import {
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  type IncomeStream,
+  type IncomeStreamType,
+  type ReportedDividendsTaxation,
+  type TakeHomeInputs,
+  type TakeHomeResults,
 } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
@@ -38,6 +43,8 @@ import {
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
 import { hasInvestmentIncome } from '../../../utils/investmentIncome';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import {
   INCOME_CATEGORIES,
   INCOME_STREAM_CATALOG,
@@ -47,12 +54,26 @@ import {
   type IncomeCategoryKey,
 } from './incomeStreamCatalog';
 import { IncomeStreamForm } from './IncomeStreamForm';
+import InvestmentTreatmentComparison from './InvestmentTreatmentComparison';
+import { variantLabelSx, variantToggleGroupSx } from './variantControlStyles';
 
 interface IncomeDetailsModalProps {
   open: boolean;
   onClose: () => void;
   streams: IncomeStream[];
   onStreamsChange: (streams: IncomeStream[]) => void;
+  /**
+   * The election that taxes every reported dividend among {@link streams}
+   * ({@link ReportedDividendsTaxation}); the default when omitted. Changed through
+   * {@link onReportedDividendsTaxationChange}, without which the control is not shown.
+   */
+  reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
+  onReportedDividendsTaxationChange?: ((election: ReportedDividendsTaxation) => void) | undefined;
+  /**
+   * The full calculation inputs {@link streams} belong to, for the comparison of the listed-share
+   * elections at the foot of the investment group. When omitted the comparison is not offered.
+   */
+  calculationInputs?: TakeHomeInputs | undefined;
   /**
    * Net public pension income (公的年金等に係る雑所得) for {@link streams}, so the group can show
    * what the 公的年金等控除 takes off the gross. Depends on the taxpayer's age and other income as
@@ -76,18 +97,14 @@ type ModalView =
 
 const addButtonId = (category: IncomeCategoryKey) => `add-${category}-income`;
 
-/** The election, as the entry's form labels it. */
-const TAX_TREATMENT_LABELS: Record<InvestmentTaxTreatment, string> = {
-  withheldOnly: 'Withheld only',
-  separate: 'Reported (separate)',
-  aggregate: 'Reported (progressive)',
-};
-
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   open,
   onClose,
   streams,
   onStreamsChange,
+  reportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  onReportedDividendsTaxationChange,
+  calculationInputs,
   netPublicPensionIncome,
   investmentIncome,
 }) => {
@@ -155,7 +172,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       case 'stockCompensation':
         return stream.issuerDomicile === 'foreign' ? 'Foreign' : 'Domestic';
       case 'capitalGains':
-        return `${TAX_TREATMENT_LABELS[stream.taxTreatment]}${
+        return `${stream.isReported ? 'Reported' : 'Withheld only'}${
           stream.account === 'foreign'
             ? ', foreign account'
             : stream.account === 'domesticNoWithholding'
@@ -163,11 +180,76 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               : ''
         }`;
       case 'dividends':
-        return TAX_TREATMENT_LABELS[stream.taxTreatment];
+        return stream.isReported ? 'Reported' : 'Withheld only';
       default:
         return null;
     }
   };
+
+  const hasReportedDividend = streams.some(s => s.type === 'dividends' && s.isReported);
+
+  // 措法8条の4② makes the 申告分離課税 election one for every reported dividend of the year, so
+  // it is made here for the group rather than on each entry.
+  const reportedDividendsTaxationControl =
+    hasReportedDividend && onReportedDividendsTaxationChange ? (
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          columnGap: 2,
+          rowGap: 0.5,
+          px: 0.5,
+        }}
+      >
+        <FormLabel sx={{ ...variantLabelSx, mb: 0 }}>
+          <span id="reported-dividends-taxation-label">Reported dividends</span>
+          <DetailedTooltip
+            title="Reported Dividends"
+            icon={SIMPLE_TOOLTIP_ICON}
+            iconAriaLabel="reported dividends info"
+          >
+            <Typography sx={{ display: 'block', mb: 1 }}>
+              One election covers every dividend reported for the year (措法8条の4②): 申告分離課税
+              or 総合課税, never a mix. Dividends left to the tax withheld at source (申告不要) are
+              outside it.
+            </Typography>
+            <Typography sx={{ display: 'block', mb: 1 }}>
+              <strong>Separate (申告分離課税)</strong> taxes them at 15.315% and 5% apart from the
+              brackets, after any deductions the other income could not use, with a reported capital
+              loss from a qualifying sale set against them (損益通算).
+            </Typography>
+            <Typography sx={{ display: 'block', mb: 1 }}>
+              <strong>Progressive (総合課税)</strong> counts them as 配当所得 in 総所得金額, taxed
+              in the progressive brackets and at the 10% residence-tax rate with the other income.
+              The 配当控除 (所法92条) is not modelled yet, so the tax is overstated for a dividend
+              from a domestic company; no capital loss is set against them; 特定公社債の利子 cannot
+              be taxed this way.
+            </Typography>
+            <Typography sx={{ display: 'block' }}>
+              Either way the amount enters 合計所得金額 and every figure keyed to it, and since
+              令和6年度 the residence tax follows the income-tax election (地方税法32条⑬, 313条⑬).
+            </Typography>
+          </DetailedTooltip>
+        </FormLabel>
+        <ToggleButtonGroup
+          value={reportedDividendsTaxation}
+          exclusive
+          onChange={(_, newValue: ReportedDividendsTaxation | null) => {
+            if (newValue) {
+              onReportedDividendsTaxationChange(newValue);
+            }
+          }}
+          aria-labelledby="reported-dividends-taxation-label"
+          size="small"
+          sx={variantToggleGroupSx}
+        >
+          <ToggleButton value="separate">Separate</ToggleButton>
+          <ToggleButton value="aggregate">Progressive</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+    ) : null;
 
   // A category's subtotal is the income of that classification, so the commuting allowance —
   // which sits in the employment group but reimburses a cost rather than paying for work — is
@@ -209,35 +291,40 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </>
     );
 
-  // Withheld at source under 申告不要 (源泉徴収あり特定口座) — see calculateWithheldInvestmentTax.
-  // The reported amounts are taxed with the other income, so they carry no figure of their own
-  // here.
+  // What the final withholding under 申告不要 leaves of the withheld-only entries (see
+  // calculateWithheldInvestmentTax), and the total on the return. Tax withheld on a reported
+  // amount is credited at filing, so it carries no figure here.
+  const reportedInvestmentTotal =
+    investmentIncome === undefined
+      ? 0
+      : (investmentIncome.reported
+          ? investmentIncome.reported.gross.capitalGains + investmentIncome.reported.gross.dividends
+          : 0) + (investmentIncome.aggregateDividends ?? 0);
   const investmentSubtotalFooter =
     investmentIncome === undefined ? null : (
       <>
         {hasInvestmentIncome(investmentIncome.gross) && (
-          <>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Withheld at Source (源泉徴収): -{formatJPY(investmentIncome.withheld.total)}
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Net Investment Income:{' '}
-              {formatJPY(investmentIncome.grossTotal - investmentIncome.withheld.total)}
-            </Typography>
-          </>
-        )}
-        {investmentIncome.reported && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Reported (申告分離課税):{' '}
-            {formatJPY(
-              investmentIncome.reported.gross.capitalGains +
-                investmentIncome.reported.gross.dividends,
-            )}
-            , taxed with the other income
+            Withheld only: {formatJPY(investmentIncome.grossTotal)}
+            {investmentIncome.withheld.total === 0
+              ? ', no tax withheld'
+              : ` − ${formatJPY(investmentIncome.withheld.total)} tax = ${formatJPY(
+                  investmentIncome.grossTotal - investmentIncome.withheld.total,
+                )}`}
+          </Typography>
+        )}
+        {(investmentIncome.reported || investmentIncome.aggregateDividends !== undefined) && (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Reported on the return: {formatJPY(reportedInvestmentTotal)}
           </Typography>
         )}
       </>
     );
+
+  // The comparison is offered once a capital-gains or dividends entry exists to elect on.
+  const hasListedShareStream = streams.some(
+    s => s.type === 'capitalGains' || s.type === 'dividends',
+  );
 
   const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
     publicPension: publicPensionSubtotalFooter,
@@ -306,7 +393,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   alignItems: 'center',
                 }}
               >
-                <Box>
+                <Box sx={{ minWidth: 0 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Chip
                       label={INCOME_STREAM_CATALOG[stream.type].chipLabel}
@@ -349,7 +436,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                     </Typography>
                   )}
                 </Box>
-                <Box>
+                <Box sx={{ display: 'flex', flexShrink: 0, ml: 1 }}>
                   <IconButton
                     onClick={() => setView({ kind: 'edit', stream })}
                     color="primary"
@@ -370,6 +457,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               </CardContent>
             </Card>
           ))}
+          {category.key === 'investment' && reportedDividendsTaxationControl}
           {groupStreams.length > 0 && (
             <Box
               sx={{
@@ -391,6 +479,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             </Box>
           )}
         </Stack>
+        {category.key === 'investment' && calculationInputs && hasListedShareStream && (
+          <InvestmentTreatmentComparison inputs={calculationInputs} />
+        )}
       </Box>
     );
   };
@@ -410,7 +501,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               sx={{ fontWeight: 'bold' }}
             />
             {subtotals.investment !== 0 && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
                 Investment: {formatJPY(subtotals.investment)}
               </Typography>
             )}
@@ -419,7 +510,12 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </DialogTitle>
       <DialogContent dividers>
         {view.kind === 'add' ? (
-          <IncomeStreamForm type={view.type} onSave={handleSaveStream} onCancel={showList} />
+          <IncomeStreamForm
+            type={view.type}
+            onSave={handleSaveStream}
+            onCancel={showList}
+            reportedDividendsTaxation={reportedDividendsTaxation}
+          />
         ) : view.kind === 'edit' ? (
           <IncomeStreamForm
             key={view.stream.id}
@@ -427,6 +523,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             initialData={view.stream}
             onSave={handleSaveStream}
             onCancel={showList}
+            reportedDividendsTaxation={reportedDividendsTaxation}
           />
         ) : (
           <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>
