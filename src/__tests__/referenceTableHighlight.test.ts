@@ -137,9 +137,10 @@ describe('getEmploymentIncomeDeductionHighlightIndex', () => {
     ).toBe(4);
   });
 
-  it('treats the flat-floor + transition span as row 0 (2026: 2,200,000)', () => {
-    const flatUpperBound = 2_200_000;
-    // 2,190,999 (flat floor) and 2,199,999 (transition) both fall in the "Up to 2,200,000" row.
+  it('treats the flat-floor + transition span as row 0 (2026: up to 2,199,999)', () => {
+    const flatUpperBound = 2_199_999;
+    // 2,190,999 (flat floor) and 2,199,999 (last transition value) both fall in the "Up to
+    // 2,199,999" row; 2,200,000 is the first gross the 30% formula applies to.
     expect(
       getEmploymentIncomeDeductionHighlightIndex(2_190_999, flatUpperBound, standardTiers),
     ).toBe(0);
@@ -148,9 +149,6 @@ describe('getEmploymentIncomeDeductionHighlightIndex', () => {
     ).toBe(0);
     expect(
       getEmploymentIncomeDeductionHighlightIndex(2_200_000, flatUpperBound, standardTiers),
-    ).toBe(0);
-    expect(
-      getEmploymentIncomeDeductionHighlightIndex(2_200_001, flatUpperBound, standardTiers),
     ).toBe(1);
   });
 });

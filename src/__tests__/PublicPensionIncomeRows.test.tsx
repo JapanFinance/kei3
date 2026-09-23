@@ -115,6 +115,7 @@ describe.each(tabs)('%s public pension income rows', (_name, Tab) => {
       <Tab
         results={pensionResults({
           annualIncome: 4_400_000,
+          grossBusinessAndMiscIncome: 2_000_000,
           netBusinessAndMiscIncome: 2_000_000,
           totalNetIncome: 3_300_000,
         })}
