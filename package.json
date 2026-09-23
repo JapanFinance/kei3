@@ -49,7 +49,7 @@
     "lint-staged": "^17.5.1",
     "oxfmt": "0.68.0",
     "oxlint": "^1.83.0",
-    "oxlint-tsgolint": "^7.0.2001",
+    "oxlint-tsgolint": "^7.0.2002",
     "rollup-plugin-visualizer": "^7.1.1",
     "typescript": "~7.0.2",
     "vite": "^8.3.0",
