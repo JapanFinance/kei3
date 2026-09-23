@@ -2,11 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Withholding rates for investment income taxed 申告不要 (not on the return), indexed by
- * income year. The rates have been unchanged since the 上場株式等 regime's 2014-01-01 start
- * (the 2013-12-31 sunset of the 10% 軽減税率); a new period is added only if that changes.
+ * Tax rates on investment income, indexed by income year: the rates withheld at source on
+ * amounts that are 申告不要 (not on the return), and the rates the return assesses on amounts
+ * reported under 申告分離課税. The rates have been unchanged since the 上場株式等 regime's
+ * 2014-01-01 start (the 2013-12-31 sunset of the 10% 軽減税率); a new period is added only if
+ * that changes.
  *
  * Sources:
+ * - 上場株式等の配当等・譲渡所得等 reported under 申告分離課税, 道府県民税 2% + 市町村民税 3%:
+ *   地方税法附則第33条の2第1項・第5項, 附則第35条の2の2第1項・第5項
+ *   https://laws.e-gov.go.jp/law/325AC0000000226
  * - 上場株式等の譲渡所得等 15%: 租税特別措置法第37条の11第1項
  *   https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11
  * - 上場株式等の配当等 15%: 租税特別措置法第8条の4第1項
@@ -24,26 +29,42 @@
  * - 利子割 5%: 地方税法第71条の6
  *   https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_4-Di_1-At_71_6
  *
- * Combined rates: national 15.315% = 15% + (15% × 2.1%); residence 5% (no surtax).
+ * Combined withholding rates: national 15.315% = 15% + (15% × 2.1%); residence 5% (no surtax).
  * Verified that plain `amount * rate` followed by `Math.floor` matches exact rational
  * arithmetic for every whole-yen amount from ¥0 to ¥50,000,000 at both 0.15315 and 0.05 — no
  * integer-scaled arithmetic is needed for these particular rates.
+ *
+ * The assessed rates are the statute's own figures: the return applies the 復興特別所得税 to the
+ * whole 基準所得税額 at once, and the 住民税 splits its 5% into the 市町村民税 and 道府県民税
+ * 所得割, each floored to ¥100 together with the 所得割 on 課税総所得金額.
  */
 
 export interface InvestmentIncomeTaxRatePeriod {
   /** The income year (calendar year) from which these rates apply (inclusive). */
   effectiveYear: number;
-  /** 所得税 rate on 上場株式等の譲渡所得等 and 配当等, including the 復興特別所得税 fold-in. */
+  /**
+   * 所得税 withheld on 上場株式等の譲渡所得等 and 配当等 that are 申告不要, including the
+   * 復興特別所得税 fold-in.
+   */
   listedNationalRate: number;
-  /** 住民税 rate (配当割・株式等譲渡所得割 combined) on the same. */
+  /** 住民税 withheld (配当割・株式等譲渡所得割) on the same. */
   listedResidenceRate: number;
   /** 所得税 rate on 一般利子等 (源泉分離課税), including the 復興特別所得税 fold-in. */
   interestNationalRate: number;
   /** 住民税 rate (利子割) on the same. */
   interestResidenceRate: number;
+  /**
+   * 所得税 the return assesses on 上場株式等の譲渡所得等 and 配当等 reported under 申告分離課税
+   * (措法37条の11①, 8条の4①), before the 復興特別所得税.
+   */
+  listedAssessedNationalRate: number;
+  /** 市町村民税所得割 on the same (地方税法附則第35条の2の2第5項, 第33条の2第5項). */
+  listedAssessedMunicipalRate: number;
+  /** 道府県民税所得割 on the same (地方税法附則第35条の2の2第1項, 第33条の2第1項). */
+  listedAssessedPrefecturalRate: number;
 }
 
-/** Time-series of investment-income withholding rates, sorted newest-first. */
+/** Time-series of investment-income tax rates, sorted newest-first. */
 export const INVESTMENT_INCOME_TAX_RATE_PERIODS: ReadonlyArray<InvestmentIncomeTaxRatePeriod> = [
   {
     effectiveYear: 2014,
@@ -51,6 +72,9 @@ export const INVESTMENT_INCOME_TAX_RATE_PERIODS: ReadonlyArray<InvestmentIncomeT
     listedResidenceRate: 0.05,
     interestNationalRate: 0.15315,
     interestResidenceRate: 0.05,
+    listedAssessedNationalRate: 0.15,
+    listedAssessedMunicipalRate: 0.03,
+    listedAssessedPrefecturalRate: 0.02,
   },
 ];
 

@@ -128,6 +128,14 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   // account to choose.
   const canLeaveOffReturn = type !== 'capitalGains' || account === 'specifiedWithholding';
 
+  const handleAccountChange = (newAccount: CapitalGainsIncomeStream['account']) => {
+    setAccount(newAccount);
+    // Moving the sale out of the withholding account takes 申告不要 off the table.
+    if (newAccount !== 'specifiedWithholding' && taxTreatment === 'withheldOnly') {
+      setTaxTreatment('separate');
+    }
+  };
+
   const validate = (): boolean => {
     if (type === 'commutingAllowance') {
       const monthlyAmount = (amount * getFrequencyAnnualMultiplier(frequency)) / 12;
@@ -341,17 +349,15 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               labelId="share-account-label"
               value={account}
               label="Account"
-              onChange={e => setAccount(e.target.value)}
+              onChange={e => handleAccountChange(e.target.value)}
             >
               <MenuItem value="specifiedWithholding">
                 Withholding account (特定口座（源泉徴収あり）)
               </MenuItem>
-              <MenuItem value="domesticNoWithholding" disabled>
+              <MenuItem value="domesticNoWithholding">
                 Domestic account without withholding (特定口座（源泉徴収なし）・一般口座)
               </MenuItem>
-              <MenuItem value="foreign" disabled>
-                Foreign account
-              </MenuItem>
+              <MenuItem value="foreign">Foreign account</MenuItem>
             </Select>
             <FormHelperText
               component="div"
@@ -373,7 +379,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   cannot tell them apart — they differ only in who computes the figures. A foreign
                   account is its own option because a sale there is not 売委託 to a licensed
                   金融商品取引業者, which 措法37条の12の2② requires of a loss before it can offset
-                  配当等 or be carried forward. Neither is modelled yet.
+                  配当等 or be carried forward: a loss in a foreign account is netted against the
+                  year's other reported gains and no further.
                 </Typography>
               </DetailedTooltip>
             </FormHelperText>
@@ -396,10 +403,17 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   spouse or dependent eligibility, residence-tax exemption, or the furusato nozei
                   limit.
                 </Typography>
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Reported (separate, 申告分離課税)</strong> puts the amount on the return.
+                  It enters 合計所得金額 — and so every figure keyed to it — and is taxed at the
+                  same 15.315% and 5% through the return, after any deductions the other income
+                  could not use and, for a dividend, after a reported capital loss is set against it
+                  (損益通算). Reporting is what makes that offset available; carrying a loss forward
+                  (繰越控除) is not modelled.
+                </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Reported</strong> — 申告分離課税, or 総合課税 for a dividend — is what
-                  makes 損益通算 and 繰越控除 available, and for a dividend the 配当控除, at the
-                  cost of entering those aggregates. Reporting is not modelled yet.
+                  <strong>Reported (progressive, 総合課税)</strong> taxes a dividend in the brackets
+                  with the 配当控除. It is not modelled yet.
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -419,9 +433,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               <ToggleButton value="withheldOnly" disabled={!canLeaveOffReturn}>
                 Withheld only
               </ToggleButton>
-              <ToggleButton value="separate" disabled>
-                Reported (separate)
-              </ToggleButton>
+              <ToggleButton value="separate">Reported (separate)</ToggleButton>
               {type === 'dividends' && (
                 <ToggleButton value="aggregate" disabled>
                   Reported (progressive)
@@ -651,9 +663,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           {(type === 'capitalGains' || type === 'dividends') && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                The broker withholds 20.315% — 15.315% income tax including 復興特別所得税, and 5%
-                residence tax. A capital loss for the year is netted against dividends within the
-                account before withholding, as the broker does at year end.
+                In a withholding account the broker withholds 20.315% — 15.315% income tax including
+                復興特別所得税, and 5% residence tax — and nets a capital loss for the year against
+                the dividends paid into the account before withholding, as it does at year end. A
+                reported amount is taxed at the same rates through the return instead, alongside the
+                other income.
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                 Do not include NISA (非課税) amounts.
@@ -667,6 +681,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   {
                     href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
                     label: '配当金を受け取ったとき(配当所得) - NTA',
+                  },
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm',
+                    label: '上場株式等に係る譲渡損失の損益通算及び繰越控除 - NTA',
                   },
                   {
                     href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',

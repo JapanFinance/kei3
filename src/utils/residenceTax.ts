@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import {
@@ -15,6 +16,8 @@ import type {
   NonTaxableResidenceTaxStatus,
   PersonalCircumstancesInput,
   ResidenceTaxDetails,
+  ResidenceTaxSeparateDetails,
+  SeparateNetIncome,
 } from '../types/tax';
 import { EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
@@ -22,8 +25,14 @@ import {
   calculateDependentTotalNetIncome,
   getDependentEligibilityMax,
 } from './dependentDeductions';
+import {
+  applyDeductionSpillover,
+  floorTaxableIncome,
+  NO_SEPARATE_NET_INCOME,
+  type IncomeClassAmounts,
+} from './investmentIncome';
 import { calculatePersonalDeductions } from './personalDeductions';
-import { calculateNationalIncomeTax } from './taxCalculations';
+import { calculateNationalIncomeTaxBase, calculateReconstructionSurtax } from './taxCalculations';
 
 const RESIDENCE_TAX_RATE = 0.1;
 const CITY_TAX_PROPORTION = 0.6;
@@ -167,6 +176,10 @@ export function isDependentResidenceTaxable(dependent: Dependent, year: number):
  *   remaining {@link nonTaxableStatusFor} exemptions and the 人的控除 this function deducts and
  *   feeds into the 調整控除
  * @param taxCredit - Tax credit amount
+ * @param separateNetIncome - Investment income reported under 申告分離課税, already inside
+ *   `netIncome` (合計所得金額). Taxed at 3% + 2% apart from the 6% + 4% on 課税総所得金額
+ *   (地方税法附則第33条の2, 第35条の2の2), but subject to the same exemption limits, which are
+ *   judged on the inclusive `netIncome`.
  */
 export const calculateResidenceTax = (
   netIncome: number,
@@ -176,6 +189,7 @@ export const calculateResidenceTax = (
   ageRange: TaxpayerAgeRange,
   personalCircumstances: PersonalCircumstancesInput = EMPTY_PERSONAL_CIRCUMSTANCES,
   taxCredit: number = 0,
+  separateNetIncome: SeparateNetIncome = NO_SEPARATE_NET_INCOME,
 ): ResidenceTaxDetails => {
   const nonTaxableStatus = nonTaxableStatusFor(ageRange, personalCircumstances, netIncome);
   if (nonTaxableStatus) {
@@ -221,25 +235,34 @@ export const calculateResidenceTax = (
 
   const basicDeduction = calculateResidenceTaxBasicDeduction(netIncome);
 
-  // Calculate taxable income using residence tax deductions
-  const dependentDeductionsResidenceTaxTotal = dependentDeductions.residenceTax.total;
-  const taxableIncome =
-    Math.floor(
-      Math.max(
-        0,
-        netIncome -
-          nonBasicDeductions -
-          basicDeduction -
-          dependentDeductionsResidenceTaxTotal -
-          personalDeductions.residence,
-      ) / 1000,
-    ) * 1000;
+  // The 所得控除 come off 総所得金額 first, and what they cannot absorb off the 申告分離課税
+  // classes (地方税法附則第33条の2第3項第3号, 第35条の2第4項第3号 as 第35条の2の2第4項 applies
+  // it); each class is then floored to ¥1,000.
+  const separateNetIncomeTotal = separateNetIncome.dividends + separateNetIncome.capitalGains;
+  const classes = applyDeductionSpillover(
+    {
+      aggregate: netIncome - separateNetIncomeTotal,
+      dividends: separateNetIncome.dividends,
+      capitalGains: separateNetIncome.capitalGains,
+    },
+    nonBasicDeductions +
+      basicDeduction +
+      dependentDeductions.residenceTax.total +
+      personalDeductions.residence,
+  );
+  const taxableIncome = floorTaxableIncome(classes.aggregate);
+  const taxableDividends = floorTaxableIncome(classes.dividends);
+  const taxableCapitalGains = floorTaxableIncome(classes.capitalGains);
+  const rates = getInvestmentIncomeTaxRates(year);
+  const separateTaxableIncome = taxableDividends + taxableCapitalGains;
+  const separateCityIncomeTax = separateTaxableIncome * rates.listedAssessedMunicipalRate;
+  const separatePrefecturalIncomeTax = separateTaxableIncome * rates.listedAssessedPrefecturalRate;
 
   const personalDeductionDifference =
     calculateStatutoryPersonalDeductionDifference(dependentDeductions, netIncome) +
     personalDeductions.statutoryDifference;
 
-  // 調整控除額 (adjustment credit)
+  // 調整控除額 (adjustment credit) — on 課税総所得金額 alone (地方税法第314条の6).
   const adjustmentCredit = calculateAdjustmentCredit(
     netIncome,
     taxableIncome,
@@ -248,18 +271,38 @@ export const calculateResidenceTax = (
   const cityAdjustmentCredit = adjustmentCredit * CITY_TAX_PROPORTION;
   const prefecturalAdjustmentCredit = adjustmentCredit * PREFECTURAL_TAX_PROPORTION;
 
+  // Each side's 所得割 — the 6%/4% on 課税総所得金額 and the 3%/2% on the 申告分離課税 classes
+  // together — is floored to ¥100 once, after the credits.
   const cityIncomeTax =
     Math.floor(
-      Math.max(0, taxableIncome * 0.06 - cityAdjustmentCredit - taxCredit * CITY_TAX_PROPORTION) /
-        100,
+      Math.max(
+        0,
+        taxableIncome * 0.06 +
+          separateCityIncomeTax -
+          cityAdjustmentCredit -
+          taxCredit * CITY_TAX_PROPORTION,
+      ) / 100,
     ) * 100;
   const prefecturalIncomeTax =
     Math.floor(
       Math.max(
         0,
-        taxableIncome * 0.04 - prefecturalAdjustmentCredit - taxCredit * PREFECTURAL_TAX_PROPORTION,
+        taxableIncome * 0.04 +
+          separatePrefecturalIncomeTax -
+          prefecturalAdjustmentCredit -
+          taxCredit * PREFECTURAL_TAX_PROPORTION,
       ) / 100,
     ) * 100;
+
+  const separate: ResidenceTaxSeparateDetails | undefined =
+    separateNetIncomeTotal > 0
+      ? {
+          taxableDividends,
+          taxableCapitalGains,
+          cityIncomeTax: separateCityIncomeTax,
+          prefecturalIncomeTax: separatePrefecturalIncomeTax,
+        }
+      : undefined;
 
   return {
     taxableIncome,
@@ -283,6 +326,7 @@ export const calculateResidenceTax = (
     perCapitaTax,
     forestEnvironmentTax,
     totalResidenceTax: cityIncomeTax + prefecturalIncomeTax + perCapitaTax,
+    ...(separate && { separate }),
   };
 };
 
@@ -578,6 +622,10 @@ const donationBasicDeductionRate = 0.1;
  * @param residenceTaxDetailsForFinal - Residence tax details POST home loan credit — used for the totalResidenceTax baseline. Defaults to `residenceTaxDetailsForCap`.
  * @param appliedHomeLoanCreditToResidenceTax - Home loan credit spillover applied to residence tax (yen). Defaults to 0.
  * @param remainingIncomeTax - Optional cap on the income-tax refund portion (post home loan credit).
+ * @param reported - Investment income reported under 申告分離課税, when there is any: the
+ *   national taxable classes before rounding, for the income-tax reduction to follow the 15% path
+ *   once the donation has used up 課税総所得金額, and the income year for that rate. The
+ *   residence-tax side is read from `residenceTaxDetailsForCap.separate`.
  * @returns The various details of the Furusato Nozei deduction, including the limit, out-of-pocket cost, and tax reductions.
  * @see https://kaikei7.com/furusato_nouzei_keisan/
  * @see https://kaikei7.com/furusato_nouzei_onestop/
@@ -588,24 +636,51 @@ export function calculateFurusatoNozeiDetails(
   residenceTaxDetailsForFinal: ResidenceTaxDetails = residenceTaxDetailsForCap,
   appliedHomeLoanCreditToResidenceTax: number = 0,
   remainingIncomeTax?: number,
+  reported?: { nationalTaxable: SeparateNetIncome; year: number },
 ): FurusatoNozeiDetails {
-  if (taxableIncomeForNationalIncomeTax <= 0 || residenceTaxDetailsForCap.taxableIncome <= 0) {
-    return {
-      limit: 0,
-      incomeTaxReduction: 0,
-      residenceTaxDonationBasicDeduction: 0,
-      residenceTaxSpecialDeduction: 0,
-      outOfPocketCost: 0,
-      residenceTaxReduction: 0,
-    };
+  const nationalClasses: IncomeClassAmounts = {
+    aggregate: taxableIncomeForNationalIncomeTax,
+    dividends: reported?.nationalTaxable.dividends ?? 0,
+    capitalGains: reported?.nationalTaxable.capitalGains ?? 0,
+  };
+  const noLimit: FurusatoNozeiDetails = {
+    limit: 0,
+    incomeTaxReduction: 0,
+    residenceTaxDonationBasicDeduction: 0,
+    residenceTaxSpecialDeduction: 0,
+    outOfPocketCost: 0,
+    residenceTaxReduction: 0,
+  };
+  // Checked before the residence details are read: the zero-income default result is built
+  // while this module and taxCalculations.ts are still loading each other, with the residence
+  // details not yet defined.
+  if (nationalClasses.aggregate + nationalClasses.dividends + nationalClasses.capitalGains <= 0) {
+    return noLimit;
   }
-  // 調整控除後・住宅ローン控除前の所得割 — the base for the 20% special-deduction cap.
+  const residenceSeparate = residenceTaxDetailsForCap.separate;
+  const residenceSeparateTaxableIncome = residenceSeparate
+    ? residenceSeparate.taxableDividends + residenceSeparate.taxableCapitalGains
+    : 0;
+  if (residenceTaxDetailsForCap.taxableIncome + residenceSeparateTaxableIncome <= 0) {
+    return noLimit;
+  }
+  // The rate itself is only reached with reported income; 0 keeps the arithmetic below exact
+  // when there is none.
+  const separateNationalRate = reported
+    ? getInvestmentIncomeTaxRates(reported.year).listedAssessedNationalRate
+    : 0;
+
+  // 調整控除後・住宅ローン控除前の所得割 — the base for the 20% special-deduction cap. It includes
+  // the 所得割 on reported investment income (地方税法附則第33条の2第3項第4号, 第35条の2第4項
+  // 第4号 as 第35条の2の2第4項 applies it, which read 「所得割の額」 in 第37条の2 as the sum).
   const residentTaxAmountForIncomePortion =
     residenceTaxDetailsForCap.totalResidenceTax - residenceTaxDetailsForCap.perCapitaTax;
 
   // Special deduction rate for resident tax (特例控除割合)
   const specialDeductionRate = getSpecialDeductionMultiplier(
-    residenceTaxDetailsForCap.taxableIncome - residenceTaxDetailsForCap.personalDeductionDifference,
+    residenceTaxDetailsForCap.taxableIncome,
+    residenceTaxDetailsForCap.personalDeductionDifference,
+    residenceSeparateTaxableIncome > 0 ? separateNationalRate : undefined,
   );
 
   // The deduction breakdown:
@@ -622,15 +697,17 @@ export function calculateFurusatoNozeiDetails(
 
   // Statutory cap: donation cannot exceed 30% of resident tax taxable income
   // This will always be higher than the 20% cap for the special deduction
-  const statutoryCap = residenceTaxDetailsForCap.taxableIncome * 0.3;
+  const statutoryCap =
+    (residenceTaxDetailsForCap.taxableIncome + residenceSeparateTaxableIncome) * 0.3;
 
   // Final limit is the lower of the two, rounded down to the nearest 1,000 yen
   const finalLimit = Math.floor(Math.min(furusatoNozeiLimit, statutoryCap) / 1000) * 1000;
   const deductibleDonation = Math.max(finalLimit - FURUSATO_OUT_OF_POCKET_COST, 0);
   // const incomeTaxReduction = deductibleDonation * (1 - specialDeductionRate - donationBasicDeductionRate);
   let incomeTaxReduction = calculateIncomeTaxReduction(
-    taxableIncomeForNationalIncomeTax,
+    nationalClasses,
     deductibleDonation,
+    separateNationalRate,
   );
   // When the home loan tax credit reduces the actual income tax paid, the income-tax
   // refund portion of furusato can only be claimed up to the remaining income tax.
@@ -647,9 +724,11 @@ export function calculateFurusatoNozeiDetails(
   // City/prefectural income-based residence tax, pre-rounding, with the home loan credit
   // spillover removed first, then the furusato tax credit subtracted. When there is no home
   // loan credit, appliedHomeLoanCreditToResidenceTax is 0, the spillover term drops out, and
-  // this reduces to the residence income-based portion minus the furusato credit.
+  // this reduces to the residence income-based portion minus the furusato credit. The 所得割
+  // on reported investment income is part of each side.
   const beforeCityIncomeTax =
-    residenceTaxDetailsForCap.city.cityTaxableIncome * residenceTaxDetailsForCap.residenceTaxRate -
+    residenceTaxDetailsForCap.city.cityTaxableIncome * residenceTaxDetailsForCap.residenceTaxRate +
+    (residenceSeparate?.cityIncomeTax ?? 0) -
     residenceTaxDetailsForCap.city.cityAdjustmentCredit -
     appliedHomeLoanCreditToResidenceTax * residenceTaxDetailsForCap.cityProportion;
   const cityIncomeTaxWithFurusato =
@@ -662,7 +741,8 @@ export function calculateFurusatoNozeiDetails(
     ) * 100;
   const beforePrefectureIncomeTax =
     residenceTaxDetailsForCap.prefecture.prefecturalTaxableIncome *
-      residenceTaxDetailsForCap.residenceTaxRate -
+      residenceTaxDetailsForCap.residenceTaxRate +
+    (residenceSeparate?.prefecturalIncomeTax ?? 0) -
     residenceTaxDetailsForCap.prefecture.prefecturalAdjustmentCredit -
     appliedHomeLoanCreditToResidenceTax * residenceTaxDetailsForCap.prefecturalProportion;
   const prefectureIncomeTaxWithFurusato =
@@ -689,26 +769,54 @@ export function calculateFurusatoNozeiDetails(
   };
 }
 
+/**
+ * National income tax on the taxable classes: the brackets on 課税総所得金額 plus the flat
+ * `separateNationalRate` on the 申告分離課税 classes, the 復興特別所得税 on both, floored to
+ * ¥100 — the same steps calculateTaxes takes.
+ */
+function nationalIncomeTaxOnClasses(classes: IncomeClassAmounts, separateNationalRate: number) {
+  const base =
+    calculateNationalIncomeTaxBase(floorTaxableIncome(classes.aggregate)) +
+    (floorTaxableIncome(classes.dividends) + floorTaxableIncome(classes.capitalGains)) *
+      separateNationalRate;
+  return Math.floor((base + calculateReconstructionSurtax(base)) / 100) * 100;
+}
+
+/**
+ * How much the 寄附金控除 (an 所得控除) lowers the income tax. Like every 所得控除 it comes off
+ * 課税総所得金額 first and off the 申告分離課税 classes only once that is used up
+ * ({@link applyDeductionSpillover}), so with reported investment income the reduction follows
+ * the 15% path from that point.
+ */
 function calculateIncomeTaxReduction(
-  taxableIncome: number,
+  classes: IncomeClassAmounts,
   furusatoNozeiDeduction: number,
+  separateNationalRate: number,
 ): number {
-  const incomeTaxBefore = calculateNationalIncomeTax(Math.floor(taxableIncome / 1000) * 1000);
-  const incomeTaxAfter = calculateNationalIncomeTax(
-    Math.floor((taxableIncome - furusatoNozeiDeduction) / 1000) * 1000,
+  const incomeTaxBefore = nationalIncomeTaxOnClasses(classes, separateNationalRate);
+  const incomeTaxAfter = nationalIncomeTaxOnClasses(
+    applyDeductionSpillover(classes, furusatoNozeiDeduction),
+    separateNationalRate,
   );
 
   return incomeTaxBefore - incomeTaxAfter;
 }
 
 /**
- * Returns the 特例控除割合 for the band that `taxableIncome` falls in.
+ * Returns the 特例控除割合 for the taxpayer.
  *
  * The bands and ratios are the statute's own table (第37条の2第11項第一号: 195万円以下 →
- * 100分の85, …, 4,000万円超 → 100分の45), where each ratio equals 90% minus the band's rate below.
- * 附則第5条の6 replaces each ratio for 平成26年度〜令和20年度 (2014–2038) with the value that folds
- * in the 復興特別所得税 factor (100分の85 → 100分の84.895, which equals 90% − 5% × 1.021), so this
- * function computes the replaced ratio as 1 − donationBasicDeductionRate − (band rate × 1.021).
+ * 100分の85, …, 4,000万円超 → 100分の45) over 課税総所得金額 less the 人的控除差調整額, where each
+ * ratio equals 90% minus the band's rate below. 附則第5条の6 replaces each ratio for
+ * 平成26年度〜令和20年度 (2014–2038) with the value that folds in the 復興特別所得税 factor
+ * (100分の85 → 100分の84.895, which equals 90% − 5% × 1.021), so this function computes the
+ * replaced ratio as 1 − donationBasicDeductionRate − (band rate × 1.021).
+ *
+ * When there is no 課税総所得金額, or the 人的控除差調整額 exceeds it, and investment income is
+ * reported under 申告分離課税, 附則第5条の5第1項第5号 sets the ratio to 100分の75 instead —
+ * 100分の74.685 after 附則第5条の6 — which is the same computation at that income's own 15%
+ * rate. (Without reported income that case is 100分の90 under 第37条の2第11項第二号, which is
+ * not modelled: the band table is applied as if the adjusted figure were in its lowest band.)
  *
  * Deliberately not derived from NATIONAL_INCOME_TAX_BRACKETS: the statute defines this table
  * itself and does not reference 所得税法, so the two tables only coincide under current law. They
@@ -717,19 +825,30 @@ function calculateIncomeTaxReduction(
  * tax either way at that point, but a different marginal rate). If the income tax brackets are
  * reformed, this table changes only when 地方税法 itself is amended.
  *
- * @param taxableIncome taxable income for residence tax minus the personal deduction difference (住民税の課税総所得金額 - 人的控除差調整額)
+ * @param taxableIncome 住民税の課税総所得金額
+ * @param personalDeductionDifference 人的控除差調整額
+ * @param separateNationalRate the 所得税 rate on the reported investment income, when there is
+ *   any with a taxable amount left after the 所得控除; undefined otherwise
  * @returns 特例控除割合
  * @see 地方税法第37条の2第11項第一号（道府県民税）・第314条の7第11項第一号（市町村民税）
+ * @see 地方税法附則第5条の5第1項第五号（分離課税所得がある場合の特例控除額の特例）
  * @see 地方税法附則第5条の6（復興特別所得税分の読替え、平成26年度〜令和20年度）
  */
-function getSpecialDeductionMultiplier(taxableIncome: number): number {
+function getSpecialDeductionMultiplier(
+  taxableIncome: number,
+  personalDeductionDifference: number,
+  separateNationalRate: number | undefined,
+): number {
+  const adjustedTaxableIncome = taxableIncome - personalDeductionDifference;
   let incomeTaxRate: number;
-  if (taxableIncome <= 1950000) incomeTaxRate = 0.05;
-  else if (taxableIncome <= 3300000) incomeTaxRate = 0.1;
-  else if (taxableIncome <= 6950000) incomeTaxRate = 0.2;
-  else if (taxableIncome <= 9000000) incomeTaxRate = 0.23;
-  else if (taxableIncome <= 18000000) incomeTaxRate = 0.33;
-  else if (taxableIncome <= 40000000) incomeTaxRate = 0.4;
+  if (separateNationalRate !== undefined && (taxableIncome <= 0 || adjustedTaxableIncome < 0)) {
+    incomeTaxRate = separateNationalRate;
+  } else if (adjustedTaxableIncome <= 1950000) incomeTaxRate = 0.05;
+  else if (adjustedTaxableIncome <= 3300000) incomeTaxRate = 0.1;
+  else if (adjustedTaxableIncome <= 6950000) incomeTaxRate = 0.2;
+  else if (adjustedTaxableIncome <= 9000000) incomeTaxRate = 0.23;
+  else if (adjustedTaxableIncome <= 18000000) incomeTaxRate = 0.33;
+  else if (adjustedTaxableIncome <= 40000000) incomeTaxRate = 0.4;
   else incomeTaxRate = 0.45; // Over 40 million
 
   incomeTaxRate *= 1.021; // 附則第5条の6 read-replacement: fold the 復興特別所得税 factor into the ratio

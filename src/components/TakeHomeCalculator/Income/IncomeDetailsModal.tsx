@@ -24,7 +24,12 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useEffect, useRef, useState } from 'react';
 
-import type { IncomeStream, IncomeStreamType, TakeHomeResults } from '../../../types/tax';
+import type {
+  IncomeStream,
+  IncomeStreamType,
+  InvestmentTaxTreatment,
+  TakeHomeResults,
+} from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
   annualIncomeStreamAmount,
@@ -32,6 +37,7 @@ import {
   getCommutingAllowanceAnnualAmount,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
+import { hasInvestmentIncome } from '../../../utils/investmentIncome';
 import {
   INCOME_CATEGORIES,
   INCOME_STREAM_CATALOG,
@@ -69,6 +75,13 @@ type ModalView =
   | { kind: 'edit'; stream: IncomeStream };
 
 const addButtonId = (category: IncomeCategoryKey) => `add-${category}-income`;
+
+/** The election, as the entry's form labels it. */
+const TAX_TREATMENT_LABELS: Record<InvestmentTaxTreatment, string> = {
+  withheldOnly: 'Withheld only',
+  separate: 'Reported (separate)',
+  aggregate: 'Reported (progressive)',
+};
 
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   open,
@@ -141,6 +154,16 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return formatMonthLong(stream.month);
       case 'stockCompensation':
         return stream.issuerDomicile === 'foreign' ? 'Foreign' : 'Domestic';
+      case 'capitalGains':
+        return `${TAX_TREATMENT_LABELS[stream.taxTreatment]}${
+          stream.account === 'foreign'
+            ? ', foreign account'
+            : stream.account === 'domesticNoWithholding'
+              ? ', no withholding'
+              : ''
+        }`;
+      case 'dividends':
+        return TAX_TREATMENT_LABELS[stream.taxTreatment];
       default:
         return null;
     }
@@ -187,16 +210,32 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     );
 
   // Withheld at source under 申告不要 (源泉徴収あり特定口座) — see calculateWithheldInvestmentTax.
+  // The reported amounts are taxed with the other income, so they carry no figure of their own
+  // here.
   const investmentSubtotalFooter =
     investmentIncome === undefined ? null : (
       <>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          Withheld at Source (源泉徴収): -{formatJPY(investmentIncome.withheld.total)}
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          Net Investment Income:{' '}
-          {formatJPY(investmentIncome.grossTotal - investmentIncome.withheld.total)}
-        </Typography>
+        {hasInvestmentIncome(investmentIncome.gross) && (
+          <>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              Withheld at Source (源泉徴収): -{formatJPY(investmentIncome.withheld.total)}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              Net Investment Income:{' '}
+              {formatJPY(investmentIncome.grossTotal - investmentIncome.withheld.total)}
+            </Typography>
+          </>
+        )}
+        {investmentIncome.reported && (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Reported (申告分離課税):{' '}
+            {formatJPY(
+              investmentIncome.reported.gross.capitalGains +
+                investmentIncome.reported.gross.dividends,
+            )}
+            , taxed with the other income
+          </Typography>
+        )}
       </>
     );
 
