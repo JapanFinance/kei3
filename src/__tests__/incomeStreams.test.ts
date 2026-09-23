@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+  annualIncomeContribution,
   annualIncomeStreamAmount,
-  countsTowardAnnualIncome,
   dependentTestAnnualIncome,
   isEarnedIncomeStream,
   monthlyIncomeStreamAmount,
@@ -34,16 +34,17 @@ describe('totalAnnualIncomeFromStreams', () => {
         { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
         {
           id: 'g1',
-          type: 'capitalGains',
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          isReported: false,
-          amount: 2_000_000,
+          type: 'withholdingAccount',
+          capitalGains: 2_000_000,
+          dividends: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
         },
         {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
+          paymentChannel: 'domestic',
           isReported: false,
           amount: 300_000,
         },
@@ -61,13 +62,13 @@ describe('totalAnnualIncomeFromStreams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'foreign',
-          isReported: true,
           amount: -200_000,
         },
         {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
+          paymentChannel: 'domestic',
           isReported: true,
           amount: 300_000,
         },
@@ -86,6 +87,7 @@ describe('dependentTestAnnualIncome', () => {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
+          paymentChannel: 'domestic',
           isReported: true,
           amount: 300_000,
         },
@@ -93,6 +95,7 @@ describe('dependentTestAnnualIncome', () => {
           id: 'd2',
           type: 'dividends',
           shareType: 'listed',
+          paymentChannel: 'domestic',
           isReported: false,
           amount: 300_000,
         },
@@ -109,40 +112,40 @@ describe('dependentTestAnnualIncome', () => {
       amount: 1_000_000,
       frequency: 'annual' as const,
     };
-    const gains = (
-      id: string,
-      amount: number,
-      account: 'specifiedWithholding' | 'foreign',
-      isReported: boolean,
-    ) => ({
-      id,
-      type: 'capitalGains' as const,
-      shareType: 'listed' as const,
-      account,
-      amount,
-      isReported,
-    });
 
     // +500,000 in a withholding account and −200,000 in a foreign one: the year's gains are 300,000.
     expect(
       dependentTestAnnualIncome([
         salary,
-        gains('g1', 500_000, 'specifiedWithholding', false),
-        gains('g2', -200_000, 'foreign', true),
+        {
+          id: 'g1',
+          type: 'withholdingAccount',
+          capitalGains: 500_000,
+          dividends: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        },
+        {
+          id: 'g2',
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'foreign',
+          amount: -200_000,
+        },
       ]),
     ).toBe(1_300_000);
 
-    // A losing year adds nothing and is not netted against the dividends.
+    // A losing year adds nothing and is not netted against the dividends of the same account.
     expect(
       dependentTestAnnualIncome([
         salary,
-        gains('g1', -500_000, 'specifiedWithholding', false),
         {
-          id: 'd1',
-          type: 'dividends',
-          shareType: 'listed',
-          isReported: false,
-          amount: 300_000,
+          id: 'g1',
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 300_000,
+          reportsCapitalGains: false,
+          reportsDividends: false,
         },
       ]),
     ).toBe(1_300_000);
@@ -186,6 +189,7 @@ describe('isEarnedIncomeStream', () => {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: true,
         amount: 1,
       }),
@@ -212,68 +216,70 @@ describe('annualIncomeStreamAmount', () => {
   });
 });
 
-describe('countsTowardAnnualIncome', () => {
+describe('annualIncomeContribution', () => {
   it('includes investment income once it is reported', () => {
     expect(
-      countsTowardAnnualIncome({
+      annualIncomeContribution({
         id: 'g1',
         type: 'capitalGains',
         shareType: 'listed',
         account: 'domesticNoWithholding',
-        isReported: true,
         amount: 10_000,
       }),
-    ).toBe(true);
+    ).toBe(10_000);
     expect(
-      countsTowardAnnualIncome({
+      annualIncomeContribution({
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: true,
         amount: 10_000,
       }),
-    ).toBe(true);
+    ).toBe(10_000);
   });
 
   it('excludes the commuting allowance (a reimbursement) and investment income settled by withholding', () => {
     expect(
-      countsTowardAnnualIncome({
+      annualIncomeContribution({
         id: 'c1',
         type: 'commutingAllowance',
         amount: 10_000,
         frequency: 'monthly',
       }),
-    ).toBe(false);
+    ).toBe(0);
     expect(
-      countsTowardAnnualIncome({
+      annualIncomeContribution({
         id: 'g1',
-        type: 'capitalGains',
-        shareType: 'listed',
-        account: 'specifiedWithholding',
-        isReported: false,
-        amount: -10_000,
+        type: 'withholdingAccount',
+        capitalGains: -10_000,
+        dividends: 0,
+        reportsCapitalGains: false,
+        reportsDividends: false,
       }),
-    ).toBe(false);
+    ).toBe(0);
     expect(
-      countsTowardAnnualIncome({
+      annualIncomeContribution({
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
+        paymentChannel: 'domestic',
         isReported: false,
         amount: 10_000,
       }),
-    ).toBe(false);
+    ).toBe(0);
     expect(
-      countsTowardAnnualIncome({
+      annualIncomeContribution({
         id: 'i1',
         type: 'interest',
         payerDomicile: 'domestic',
         amount: 10_000,
       }),
-    ).toBe(false);
+    ).toBe(0);
+    // A monthly amount contributes its annualized total, not the entered amount.
     expect(
-      countsTowardAnnualIncome({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
-    ).toBe(true);
+      annualIncomeContribution({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
+    ).toBe(120_000);
   });
 });
 

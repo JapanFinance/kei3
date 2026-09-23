@@ -30,19 +30,18 @@ const dividends = (
 ): TakeHomeInputs['incomeStreams'][number] => ({
   type: 'dividends',
   shareType: 'listed',
+  paymentChannel: 'domestic',
   isReported,
   amount,
   id: 'dividends',
 });
 const gains = (
-  account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign',
-  isReported: boolean,
+  account: 'domesticNoWithholding' | 'foreign',
   amount: number,
 ): TakeHomeInputs['incomeStreams'][number] => ({
   type: 'capitalGains',
   shareType: 'listed',
   account,
-  isReported,
   amount,
   id: 'gains',
 });
@@ -53,7 +52,6 @@ describe('compareInvestmentTreatments', () => {
 
     expect(columns.map(c => c.key)).toEqual(['withheldOnly', 'separate', 'aggregate']);
     expect(columns.map(c => c.isCurrent)).toEqual([false, true, false]);
-    expect(columns.every(c => c.unavailableReason === undefined)).toBe(true);
 
     // 申告不要: 15.315% and 5% withheld on the 1,000,000 (153,150 and 50,000) are counted with
     // the assessed tax, and the dividends net of them with take-home; nothing else moves.
@@ -89,25 +87,35 @@ describe('compareInvestmentTreatments', () => {
       reportedDividendsTaxation: 'aggregate',
     });
     expect(columns.map(c => c.isCurrent)).toEqual([false, false, true]);
-    expect(columns[2]!.figures?.incomeTax).toBe(186_000);
+    expect(columns[2]!.figures.incomeTax).toBe(186_000);
     // The 申告分離課税 column is computed under its own election, whatever is in force.
-    expect(columns[1]!.figures?.incomeTax).toBe(244_800);
+    expect(columns[1]!.figures.incomeTax).toBe(244_800);
   });
 
-  it('marks 申告不要 unavailable for a sale outside a withholding account, and no column current for mixed elections', () => {
+  it('always reports a sale outside a withholding account, and can still leave a domestic dividend withheld', () => {
     const columns = compareInvestmentTreatments(
-      salaryInputs([gains('foreign', true, 500_000), dividends(false)]),
+      salaryInputs([gains('foreign', 500_000), dividends(false)]),
     );
 
-    expect(columns[0]!.figures).toBeUndefined();
-    expect(columns[0]!.unavailableReason).toMatch(/措法37条の11の5/);
-    expect(columns.map(c => c.isCurrent)).toEqual([false, false, false]);
+    // The dividend's withheld-only state already matches column 0's election, so it is current
+    // even though the capital-gains entry is always reported.
+    expect(columns.map(c => c.isCurrent)).toEqual([true, false, false]);
+
+    // Column 0: the foreign-account gain is always reported, taxed apart from the withheld
+    // dividend. 所得税 base = baseline 89,850 + 15% of 500,000 (75,000) = 164,850 × 1.021 →
+    // 168,311.85 → floored to 168,300; plus the 153,150 withheld on the dividend = 321,450.
+    // 住民税: reporting 500,000 adds 3%+2% = 25,000 to the baseline 243,100 → 268,100; plus the
+    // 50,000 withheld on the dividend = 318,100. (Reporting the gain does not cross a 基礎控除
+    // bracket: 合計所得金額 3,560,000 + 500,000 = 4,060,000 stays under 2026's 4,890,000 top of
+    // the 104万 tier, so the aggregate bracket tax is unchanged from the baseline.)
+    expect(columns[0]!.figures.incomeTax).toBe(168_300 + 153_150);
+    expect(columns[0]!.figures.residenceTax).toBe(268_100 + 50_000);
 
     // The 総合課税 column keeps the sale under 申告分離課税: 合計所得金額 5,060,000 → 基礎控除
     // 670,000; 課税総所得金額 3,167,000 → 219,200, plus 15% of 500,000 → 294,200 → 300,300; 住民税
     // 217,900 + 145,200 + 5,000.
-    expect(columns[2]!.figures?.incomeTax).toBe(300_300);
-    expect(columns[2]!.figures?.residenceTax).toBe(368_100);
+    expect(columns[2]!.figures.incomeTax).toBe(300_300);
+    expect(columns[2]!.figures.residenceTax).toBe(368_100);
   });
 
   it('leaves interest as entered in every column, counting its withholding with the tax', () => {

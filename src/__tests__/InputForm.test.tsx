@@ -442,6 +442,7 @@ describe('Dependent Coverage UI Behavior', () => {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
+          paymentChannel: 'domestic',
           isReported: false,
           amount: 100_000,
         },
@@ -468,11 +469,11 @@ describe('Dependent Coverage UI Behavior', () => {
         { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
         {
           id: 'g1',
-          type: 'capitalGains',
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          isReported: false,
-          amount,
+          type: 'withholdingAccount',
+          capitalGains: amount,
+          dividends: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
         },
       ],
     });
@@ -1036,7 +1037,7 @@ describe('Investment Income Integration', () => {
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
     await user.click(screen.getByRole('button', { name: /add investment income/i }));
-    await user.click(screen.getByRole('menuitem', { name: /^dividends$/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
 
     const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
     await user.type(amountInput, '300000');
@@ -1056,7 +1057,7 @@ describe('Investment Income Integration', () => {
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
     await user.click(screen.getByRole('button', { name: /add investment income/i }));
-    await user.click(screen.getByRole('menuitem', { name: /^dividends$/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
 
     await user.type(screen.getByRole('textbox', { name: /gross dividends/i }), '300000');
     await user.click(screen.getByRole('button', { name: 'Reported' }));
