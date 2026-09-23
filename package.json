@@ -45,7 +45,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "chrome-launcher": "^1.2.1",
     "jsdom": "^30.0.1",
-    "lighthouse": "13.4.1",
+    "lighthouse": "13.5.0",
     "lint-staged": "^17.5.1",
     "oxfmt": "0.68.0",
     "oxlint": "^1.83.0",
