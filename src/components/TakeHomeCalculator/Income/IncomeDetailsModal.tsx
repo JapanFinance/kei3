@@ -54,7 +54,7 @@ import {
   type IncomeCategoryKey,
 } from './incomeStreamCatalog';
 import { IncomeStreamForm } from './IncomeStreamForm';
-import InvestmentTreatmentComparison from './InvestmentTreatmentComparison';
+import { ReportingPlanner } from './ReportingPlanner';
 import { variantLabelSx, variantToggleGroupSx } from './variantControlStyles';
 
 interface IncomeDetailsModalProps {
@@ -215,32 +215,28 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         }}
       >
         <FormLabel sx={{ ...variantLabelSx, mb: 0 }}>
-          <span id="reported-dividends-taxation-label">Reported dividends</span>
+          <span id="reported-dividends-taxation-label">Reported dividends taxation</span>
           <DetailedTooltip
-            title="Reported Dividends"
+            title="Reported Dividends Taxation"
             icon={SIMPLE_TOOLTIP_ICON}
-            iconAriaLabel="reported dividends info"
+            iconAriaLabel="reported dividends taxation info"
           >
             <Typography sx={{ display: 'block', mb: 1 }}>
-              One election covers every dividend reported for the year (措法8条の4②): 申告分離課税
-              or 総合課税, never a mix. Dividends left to the tax withheld at source (申告不要) are
-              outside it.
+              This election covers all dividends reported for the year: separate taxation
+              (申告分離課税) or aggregate taxation (総合課税), never a mix. Dividends left to the
+              tax withheld at source (申告不要) are unaffected by it.
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
-              <strong>Separate (申告分離課税)</strong> taxes them at 15.315% and 5% apart from the
-              brackets, after any deductions the other income could not use, with a reported capital
-              loss from a qualifying sale set against them (損益通算).
+              <strong>Separate (申告分離課税)</strong> taxes them at a flat 15.315% and 5%, after
+              any deductions the other income could not use, and after offsetting reported capital
+              losses from a qualifying sale.
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
-              <strong>Progressive (総合課税)</strong> counts them as 配当所得 in 総所得金額, taxed
-              in the progressive brackets and at the 10% residence-tax rate with the other income.
-              The 配当控除 (所法92条) is not modelled yet, so the tax is overstated for a dividend
-              from a domestic company; no capital loss is set against them; 特定公社債の利子 cannot
-              be taxed this way.
-            </Typography>
-            <Typography sx={{ display: 'block' }}>
-              Either way the amount enters 合計所得金額 and every figure keyed to it, and since
-              令和6年度 the residence tax follows the income-tax election (地方税法32条⑬, 313条⑬).
+              <strong>Aggregate (総合課税)</strong> combines dividend income (配当所得) with other
+              aggregate income, taxed in the progressive income tax brackets and at the 10%
+              residence-tax rate. Capital losses cannot offset dividends taxed in aggregate. The
+              dividend tax credit (配当控除) is not modelled yet, so the tax is overstated for a
+              dividend from a Japanese company.
             </Typography>
           </DetailedTooltip>
         </FormLabel>
@@ -257,7 +253,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           sx={variantToggleGroupSx}
         >
           <ToggleButton value="separate">Separate</ToggleButton>
-          <ToggleButton value="aggregate">Progressive</ToggleButton>
+          <ToggleButton value="aggregate">Aggregate</ToggleButton>
         </ToggleButtonGroup>
       </Box>
     ) : null;
@@ -510,7 +506,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
           )}
         </Stack>
         {category.key === 'investment' && calculationInputs && hasListedShareStream && (
-          <InvestmentTreatmentComparison inputs={calculationInputs} />
+          <ReportingPlanner
+            inputs={calculationInputs}
+            onStreamsChange={onStreamsChange}
+            onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
+          />
         )}
       </Box>
     );
@@ -519,33 +519,21 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="span">
             Income/Benefit Details
           </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.25 }}>
-            <Chip
-              label={`Total: ${formatJPY(totalIncome)}`}
-              color="primary"
-              variant="outlined"
-              sx={{ fontWeight: 'bold' }}
-            />
-            {subtotals.investment !== 0 && (
-              <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                Investment: {formatJPY(subtotals.investment)}
-              </Typography>
-            )}
-          </Box>
+          <Chip
+            label={`Total: ${formatJPY(totalIncome)}`}
+            color="primary"
+            variant="outlined"
+            sx={{ fontWeight: 'bold' }}
+          />
         </Box>
       </DialogTitle>
       <DialogContent dividers>
         {view.kind === 'add' ? (
-          <IncomeStreamForm
-            type={view.type}
-            onSave={handleSaveStream}
-            onCancel={showList}
-            reportedDividendsTaxation={reportedDividendsTaxation}
-          />
+          <IncomeStreamForm type={view.type} onSave={handleSaveStream} onCancel={showList} />
         ) : view.kind === 'edit' ? (
           <IncomeStreamForm
             key={view.stream.id}
@@ -553,7 +541,6 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             initialData={view.stream}
             onSave={handleSaveStream}
             onCancel={showList}
-            reportedDividendsTaxation={reportedDividendsTaxation}
           />
         ) : (
           <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>

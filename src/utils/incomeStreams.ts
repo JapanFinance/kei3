@@ -38,19 +38,12 @@ interface IncomeStreamBehavior<T extends IncomeStreamType> {
    */
   isEarnedIncome: boolean;
   /**
-   * The part of the stream's annual amount that is income on the return (see
-   * TakeHomeResults.annualIncome in tax.ts): the income the return covers. Earned income
-   * contributes all of it; investment income contributes the part that is reported rather than
-   * settled by withholding, since only then does the tax system count it
-   * (TakeHomeResults.investmentIncome is where the withheld amounts are reported instead).
-   */
-  annualIncomeContribution: (stream: IncomeStreamOfType[T]) => number;
-  /**
-   * Whether streams of this type contribute to their category's subtotal in the income modal.
-   * True for everything except a reimbursement (通勤手当), which sits in the employment category
-   * for entry but is not income of that category either. Distinct from
-   * {@link annualIncomeContribution}: withheld investment income is real income of its own
-   * category even though it contributes nothing to annual income.
+   * Whether streams of this type are income: they count toward annual income (see
+   * TakeHomeResults.annualIncome in tax.ts) and toward their category's subtotal in the income
+   * modal. False only for a reimbursement (通勤手当), which sits in the employment category for
+   * entry but is not income of that category either. Investment income counts whether it is
+   * reported or settled by withholding: it is money received either way, and the tax withheld
+   * on it is a tax like any other.
    */
   countsTowardCategorySubtotal: boolean;
   /** The amount the stream represents over a year, from however its amount is entered. */
@@ -80,7 +73,6 @@ const earned = <T extends IncomeStreamType>(
   annualAmount: IncomeStreamBehavior<T>['annualAmount'],
 ): IncomeStreamBehavior<T> => ({
   isEarnedIncome: true,
-  annualIncomeContribution: annualAmount,
   countsTowardCategorySubtotal: true,
   annualAmount,
 });
@@ -90,7 +82,7 @@ const earned = <T extends IncomeStreamType>(
  * {@link IncomeStream} does not compile until its behaviour is declared here — in particular
  * a type whose amount is entered per period cannot silently annualize at face value.
  *
- * Read through {@link isEarnedIncomeStream}, {@link annualIncomeContribution} and
+ * Read through {@link isEarnedIncomeStream}, {@link countsTowardCategorySubtotal} and
  * {@link annualIncomeStreamAmount}.
  */
 const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T> } = {
@@ -103,7 +95,6 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
   // A commuting allowance (通勤手当) reimburses a cost rather than paying for work.
   commutingAllowance: {
     isEarnedIncome: false,
-    annualIncomeContribution: () => 0,
     countsTowardCategorySubtotal: false,
     annualAmount: s => s.amount * getFrequencyAnnualMultiplier(s.frequency),
   },
@@ -111,8 +102,6 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
   // dividends are on the return (措法37条の11の5①, 37条の11の6⑨).
   withholdingAccount: {
     isEarnedIncome: false,
-    annualIncomeContribution: s =>
-      (s.reportsCapitalGains ? s.capitalGains : 0) + (s.reportsDividends ? s.dividends : 0),
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.capitalGains + s.dividends,
   },
@@ -121,13 +110,11 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
   // category either way. A sale outside a withholding account is always reported.
   capitalGains: {
     isEarnedIncome: false,
-    annualIncomeContribution: s => s.amount,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
   },
   dividends: {
     isEarnedIncome: false,
-    annualIncomeContribution: s => (s.isReported ? s.amount : 0),
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
   },
@@ -135,7 +122,6 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
   // reported.
   interest: {
     isEarnedIncome: false,
-    annualIncomeContribution: s => (s.payerDomicile !== 'domestic' ? s.amount : 0),
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
   },
@@ -145,21 +131,12 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
 export const isEarnedIncomeStream = (stream: IncomeStream): stream is EarnedIncomeStream =>
   INCOME_STREAM_BEHAVIOR[stream.type].isEarnedIncome;
 
-// Taking the discriminant and the stream as correlated parameters is what lets TypeScript
-// check the indexed call; reading INCOME_STREAM_BEHAVIOR[stream.type] inline does not.
-const annualIncomeContributionOf = <T extends IncomeStreamType>(
-  type: T,
-  stream: IncomeStreamOfType[T],
-): number => INCOME_STREAM_BEHAVIOR[type].annualIncomeContribution(stream);
-
-/** The part of `stream`'s annual amount that contributes to {@link totalAnnualIncomeFromStreams}. */
-export const annualIncomeContribution = (stream: IncomeStream): number =>
-  annualIncomeContributionOf(stream.type, stream);
-
-/** Whether `stream` contributes to its category's subtotal in the income modal. */
+/** Whether `stream` is income — see {@link IncomeStreamBehavior.countsTowardCategorySubtotal}. */
 export const countsTowardCategorySubtotal = (stream: IncomeStream): boolean =>
   INCOME_STREAM_BEHAVIOR[stream.type].countsTowardCategorySubtotal;
 
+// Taking the discriminant and the stream as correlated parameters is what lets TypeScript
+// check the indexed call; reading INCOME_STREAM_BEHAVIOR[stream.type] inline does not.
 const annualAmountOf = <T extends IncomeStreamType>(
   type: T,
   stream: IncomeStreamOfType[T],
@@ -168,6 +145,13 @@ const annualAmountOf = <T extends IncomeStreamType>(
 /** The amount `stream` represents over a year. */
 export const annualIncomeStreamAmount = (stream: IncomeStream): number =>
   annualAmountOf(stream.type, stream);
+
+/**
+ * The part of `stream`'s annual amount that contributes to {@link totalAnnualIncomeFromStreams}:
+ * all of it when the stream is income, nothing for a reimbursement.
+ */
+export const annualIncomeContribution = (stream: IncomeStream): number =>
+  countsTowardCategorySubtotal(stream) ? annualIncomeStreamAmount(stream) : 0;
 
 /**
  * The amount `stream` represents in a month, from however its amount is entered: its
@@ -185,7 +169,7 @@ export const getCommutingAllowanceAnnualAmount = (stream: CommutingAllowanceInco
  * {@link annualIncomeContribution}. Each stream's entered amount is already at the level this
  * total is defined at (see TakeHomeResults.annualIncome in tax.ts): gross for employment and
  * public pension income, after 必要経費 for business and miscellaneous income, as entered for
- * reported investment income.
+ * investment income, whether reported or settled by withholding.
  */
 export function totalAnnualIncomeFromStreams(streams: readonly IncomeStream[]): number {
   return streams.reduce((sum, s) => sum + annualIncomeContribution(s), 0);
