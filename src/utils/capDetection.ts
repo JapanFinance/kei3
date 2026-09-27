@@ -4,10 +4,6 @@
 import { getRegionalRatesForMonth } from '../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import {
-  getNHIParamsForMonth,
-  nhiParamsDiffer,
-} from '../data/nationalHealthInsurance/nhiParamsData';
-import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
   DEPENDENT_COVERAGE_ID,
@@ -15,11 +11,7 @@ import {
   isEmployeeHealthProvider,
 } from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
-import {
-  isLongTermCareCategory2Insured,
-  isSubjectToEmployeesPension,
-  isSubjectToNationalPension,
-} from '../types/taxpayerAge';
+import { isSubjectToEmployeesPension, isSubjectToNationalPension } from '../types/taxpayerAge';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
 import { findPensionBracket } from './pensionCalculator';
 
@@ -137,86 +129,16 @@ function checkHealthInsuranceCap(
       // fiscal years' caps are already at hand.
       return { capped: results.latterStageMedicalCapped === true };
     case NATIONAL_HEALTH_INSURANCE_ID: {
-      if (
-        results.nhiMedicalPortion === undefined ||
-        results.nhiElderlySupportPortion === undefined
-      ) {
-        // This shouldn't happen anymore since all context is in results
-        console.warn('NHI component data missing in results:', {
-          nhiMedicalPortion: results.nhiMedicalPortion,
-          nhiElderlySupportPortion: results.nhiElderlySupportPortion,
-          nhiLongTermCarePortion: results.nhiLongTermCarePortion,
-        });
-        return { capped: false };
-      }
-
-      // Look up rates for both fiscal years that overlap this calendar year.
-      // A portion is truly "capped" (won't increase with more income) only when
-      // it's at the cap in *both* fiscal years. If only one FY is capped, the
-      // other FY's portion could still grow.
-      const prevFYParams = getNHIParamsForMonth(results.region, year, 0); // Jan → previous FY
-      const currFYParams = getNHIParamsForMonth(results.region, year, 3); // Apr → current FY
-      if (!currFYParams) {
-        return { capped: false };
-      }
-
-      const blended = prevFYParams !== undefined && nhiParamsDiffer(prevFYParams, currFYParams);
-
-      // Helper: check if a portion is capped in both FYs.
-      // For portions that didn't exist in the previous FY (e.g., child support),
-      // the prev FY contribution is always 0 and trivially "capped".
-      const isCappedInBothFYs = (
-        portionAmount: number,
-        prevCap: number | undefined,
-        currCap: number,
-      ): boolean => {
-        if (!blended) {
-          // No blending — single FY, just compare against current cap
-          return portionAmount === currCap;
-        }
-        // Blended: compute what the blended amount would be if both FYs are at their caps
-        const prevCapValue = prevCap ?? 0; // undefined means portion didn't exist → 0
-        const blendedCap = Math.round((prevCapValue * 3) / 10 + (currCap * 7) / 10);
-        return portionAmount >= blendedCap;
-      };
-
-      const medicalCapped = isCappedInBothFYs(
-        results.nhiMedicalPortion,
-        prevFYParams?.medicalCap,
-        currFYParams.medicalCap,
-      );
-      const supportCapped = isCappedInBothFYs(
-        results.nhiElderlySupportPortion,
-        prevFYParams?.supportCap,
-        currFYParams.supportCap,
-      );
-
-      let ltcCapped = false;
-      if (
-        results.nhiLongTermCarePortion !== undefined &&
-        isLongTermCareCategory2Insured(results.ageRange) &&
-        currFYParams.ltcCapForEligible
-      ) {
-        ltcCapped = isCappedInBothFYs(
-          results.nhiLongTermCarePortion,
-          prevFYParams?.ltcCapForEligible,
-          currFYParams.ltcCapForEligible,
-        );
-      }
-
-      let childSupportCapped = false;
-      if (results.nhiChildSupportPortion !== undefined && currFYParams.childSupportCap) {
-        childSupportCapped = isCappedInBothFYs(
-          results.nhiChildSupportPortion,
-          prevFYParams?.childSupportCap,
-          currFYParams.childSupportCap,
-        );
-      }
-
-      const anyCapped = medicalCapped || supportCapped || ltcCapped || childSupportCapped;
+      // Whether a portion has stopped rising with income is decided where the premium is
+      // calculated, which holds both fiscal years' 賦課限度額 (see
+      // calculateNationalHealthInsurancePremiumWithBreakdown), as it is for 後期高齢者医療.
+      const medicalCapped = results.nhiMedicalCapped === true;
+      const supportCapped = results.nhiElderlySupportCapped === true;
+      const ltcCapped = results.nhiLongTermCareCapped === true;
+      const childSupportCapped = results.nhiChildSupportCapped === true;
 
       return {
-        capped: anyCapped,
+        capped: medicalCapped || supportCapped || ltcCapped || childSupportCapped,
         details: {
           medicalCapped,
           supportCapped,
