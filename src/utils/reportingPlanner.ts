@@ -56,7 +56,7 @@ export interface ReportingPlan {
  * which every side effect of reporting is keyed to.
  */
 export interface PlanFigures {
-  /** Take-home pay plus the withheld-only investment income net of the tax withheld on it. */
+  /** Take-home pay: {@link TakeHomeResults.takeHomeIncome}. */
   kept: number;
   /** 所得税 the return assesses plus the 所得税 withheld at source. */
   incomeTax: number;
@@ -377,7 +377,11 @@ export const planMatchesCurrent = (
 
 /** The comparison figures for one engine result — see {@link PlanFigures}. */
 const figuresOf = (results: TakeHomeResults): PlanFigures => {
-  const withheld = results.investmentIncome?.withheld ?? { national: 0, residence: 0, total: 0 };
+  const withheld = results.investmentIncome?.withheld?.tax ?? {
+    national: 0,
+    residence: 0,
+    total: 0,
+  };
   return {
     kept: results.takeHomeIncome,
     incomeTax: results.nationalIncomeTax + withheld.national,

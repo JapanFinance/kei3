@@ -109,9 +109,11 @@ export interface IncomeClassAmounts {
  * classes in the order the return applies them: 総所得金額 first, then what it could not absorb
  * from the 上場株式等に係る配当所得等の金額, then from the 上場株式等に係る譲渡所得等の金額.
  * 措法8条の4③三 and 37条の10⑥五 (as 37条の11⑥ applies it) read the 分離 classes into
- * 所法72条〜87条 alongside 総所得金額; the order between the two 分離 classes follows the
- * 確定申告書第三表, and does not change the tax, since both are taxed at the same rates. No
- * class goes below zero.
+ * 所法72条〜87条 alongside 総所得金額, but the statute does not order the two classes against
+ * each other. The order is the one 措置法通達31・32共-4 sets, which 37の10・37の11共-5 applies to
+ * the 所得控除 as well; the 通達 also accepts a taxpayer's return that deducts in a different
+ * order among these classes. Both classes are taxed at the same rates, so the order changes the
+ * tax only through the ¥1,000 floor each class's taxable amount gets. No class goes below zero.
  */
 export const applyDeductionSpillover = (
   classes: IncomeClassAmounts,

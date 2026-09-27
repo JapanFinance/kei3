@@ -42,7 +42,6 @@ import {
   getCommutingAllowanceAnnualAmount,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
-import { hasInvestmentIncome } from '../../../utils/investmentIncome';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import {
@@ -303,30 +302,33 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   // What the final withholding under 申告不要 leaves of the withheld-only entries (see
   // calculateWithheldInvestmentTax), and the total on the return. Tax withheld on a reported
   // amount is credited at filing, so it carries no figure here.
+  const withheldInvestment = investmentIncome?.withheld;
+  const reportedInvestment = investmentIncome?.reported;
   const reportedInvestmentTotal =
-    investmentIncome === undefined
-      ? 0
-      : (investmentIncome.reported
-          ? investmentIncome.reported.gross.capitalGains + investmentIncome.reported.gross.dividends
-          : 0) +
-        (investmentIncome.aggregateDividends ?? 0) +
-        (investmentIncome.aggregateInterest ?? 0);
+    (reportedInvestment?.separate
+      ? reportedInvestment.separate.gross.capitalGains + reportedInvestment.separate.gross.dividends
+      : 0) +
+    (reportedInvestment?.aggregate
+      ? reportedInvestment.aggregate.dividends + reportedInvestment.aggregate.interest
+      : 0);
   const investmentSubtotalFooter =
     investmentIncome === undefined ? null : (
       <>
-        {hasInvestmentIncome(investmentIncome.gross) && (
+        {withheldInvestment && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Withheld only: {formatJPY(investmentIncome.grossTotal)}
-            {investmentIncome.withheld.total === 0
+            Withheld only: {formatJPY(withheldInvestment.received)}
+            {withheldInvestment.tax.total === 0
               ? ', no tax withheld'
-              : ` − ${formatJPY(investmentIncome.withheld.total)} tax = ${formatJPY(
-                  investmentIncome.grossTotal - investmentIncome.withheld.total,
-                )}`}
+              : ` − ${formatJPY(withheldInvestment.tax.total)} tax${
+                  // Accounts do not net with each other, so a loss left in one account can leave
+                  // the taxed amount above the net received; naming it keeps the line readable.
+                  withheldInvestment.taxedAmount !== withheldInvestment.received
+                    ? ` on ${formatJPY(withheldInvestment.taxedAmount)}`
+                    : ''
+                } = ${formatJPY(withheldInvestment.received - withheldInvestment.tax.total)}`}
           </Typography>
         )}
-        {(investmentIncome.reported ||
-          investmentIncome.aggregateDividends !== undefined ||
-          investmentIncome.aggregateInterest !== undefined) && (
+        {reportedInvestment && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Reported on the return: {formatJPY(reportedInvestmentTotal)}
           </Typography>
