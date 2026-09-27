@@ -97,6 +97,9 @@ describe('getInvestmentIncomeTaxRates', () => {
         listedResidenceRate: 0.05,
         interestNationalRate: 0.15315,
         interestResidenceRate: 0.05,
+        listedAssessedNationalRate: 0.15,
+        listedAssessedMunicipalRate: 0.03,
+        listedAssessedPrefecturalRate: 0.02,
       });
     }
   });
