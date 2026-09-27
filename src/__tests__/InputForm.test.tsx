@@ -18,6 +18,7 @@ import {
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { calculateTaxes } from '../utils/taxCalculations';
 
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
@@ -916,6 +917,61 @@ describe('Commuting Allowance Integration', () => {
     expect(screen.getByText('Total Nontaxable Benefits')).toBeInTheDocument();
     // ... but it is excluded from the total annual income, which stays ¥5,000,000.
     expect(within(totalIncomeRow()).getByText('¥5,000,000')).toBeInTheDocument();
+  }, 10_000);
+});
+
+describe('Investment Income Integration', () => {
+  // Real reducer and calculateTaxes, mirroring how App.tsx derives investmentIncome from the
+  // streams, so the header row's presence and value depend on the actual engine output.
+  const TestWrapper = () => {
+    const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      annualIncome: 5000000,
+      incomeYear: 2026,
+      incomeMode: 'advanced',
+      incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
+      savedIncomeStreams: [],
+      longTermCareCategory1ManualEntry: false,
+      longTermCareCategory1Premium: 0,
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dcPlanContributions: 0,
+      dependents: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    });
+    const results = calculateTaxes(inputs);
+
+    return (
+      <TakeHomeInputForm
+        inputs={inputs}
+        dispatch={dispatch}
+        investmentIncome={results.investmentIncome}
+      />
+    );
+  };
+
+  it('adds an Investment Income header row once a listed-dividends stream is entered', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper />);
+
+    expect(screen.queryByText('Investment Income (taxed separately)')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends$/i }));
+
+    const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
+    await user.type(amountInput, '300000');
+    await user.click(screen.getByRole('button', { name: /add/i }));
+    await user.click(screen.getByRole('button', { name: /close/i }));
+
+    // Gross, before the 20.315% withheld at source.
+    const investmentIncomeRow = screen.getByText(
+      'Investment Income (taxed separately)',
+    ).parentElement!;
+    expect(within(investmentIncomeRow).getByText('¥300,000')).toBeInTheDocument();
   }, 10_000);
 });
 
