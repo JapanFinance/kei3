@@ -8,7 +8,7 @@ import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNoze
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import TaxesTab from '../components/TakeHomeCalculator/tabs/TaxesTab';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
-import type { ReportedInvestmentIncome, TakeHomeInputs, TakeHomeResults } from '../types/tax';
+import type { SeparateTaxationIncome, TakeHomeInputs, TakeHomeResults } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   makeFurusatoNozeiDetails,
@@ -44,8 +44,8 @@ beforeAll(() => {
 
 // The 損益通算 case of the engine tests: a −500,000 loss in a 特定口座 and 800,000 of dividends,
 // both reported, beside a 5,000,000 salary.
-const reported: ReportedInvestmentIncome = {
-  gross: { capitalGains: -500_000, qualifyingCapitalLosses: 500_000, dividends: 800_000 },
+const separate: SeparateTaxationIncome = {
+  gross: { capitalGains: -500_000, dividends: 800_000 },
   lossOffsetAgainstDividends: 500_000,
   unabsorbedQualifyingLoss: 0,
   nonQualifyingLoss: 0,
@@ -136,10 +136,7 @@ const results: TakeHomeResults = makeTakeHomeResults({
     outOfPocketCost: 5_200,
   }),
   investmentIncome: {
-    gross: { capitalGains: 0, dividends: 0, interest: 0 },
-    grossTotal: 0,
-    withheld: { national: 0, residence: 0, total: 0 },
-    reported,
+    reported: { separate },
   },
 });
 
@@ -183,7 +180,9 @@ const withAggregateDividends = <T extends { results: TakeHomeResults }>(props: T
   results: {
     ...props.results,
     totalNetIncome: 4_260_000,
-    investmentIncome: { ...props.results.investmentIncome!, aggregateDividends: 400_000 },
+    investmentIncome: {
+      reported: { separate, aggregate: { dividends: 400_000, interest: 0 } },
+    },
   },
 });
 
@@ -220,10 +219,7 @@ describe('TaxesTab with dividends reported under 総合課税 alone', () => {
           ...results,
           totalNetIncome: 3_960_000,
           investmentIncome: {
-            gross: { capitalGains: 0, dividends: 0, interest: 0 },
-            grossTotal: 0,
-            withheld: { national: 0, residence: 0, total: 0 },
-            aggregateDividends: 400_000,
+            reported: { aggregate: { dividends: 400_000, interest: 0 } },
           },
           residenceTax: makeResidenceTaxDetails(residenceTaxOnEarnedIncome),
         }}
@@ -243,16 +239,13 @@ describe('TaxesTab with dividends reported under 総合課税 alone', () => {
 // shares that one row instead of adding a second.
 describe('TaxesTab with interest paid outside Japan', () => {
   const aggregateOnly = (
-    amounts: { aggregateDividends?: number; aggregateInterest?: number },
+    aggregate: { dividends: number; interest: number },
     totalNetIncome: number,
   ): TakeHomeResults => ({
     ...results,
     totalNetIncome,
     investmentIncome: {
-      gross: { capitalGains: 0, dividends: 0, interest: 0 },
-      grossTotal: 0,
-      withheld: { national: 0, residence: 0, total: 0 },
-      ...amounts,
+      reported: { aggregate },
     },
     residenceTax: makeResidenceTaxDetails(residenceTaxOnEarnedIncome),
   });
@@ -260,7 +253,7 @@ describe('TaxesTab with interest paid outside Japan', () => {
   it('shows it on the aggregate row alone, with only the interest part in the tooltip', () => {
     render(
       <TaxesTab
-        results={aggregateOnly({ aggregateInterest: 100_000 }, 3_660_000)}
+        results={aggregateOnly({ dividends: 0, interest: 100_000 }, 3_660_000)}
         inputs={inputs}
       />,
     );
@@ -285,10 +278,7 @@ describe('TaxesTab with interest paid outside Japan', () => {
   it('adds it to the dividends on the same row rather than a second one', () => {
     render(
       <TaxesTab
-        results={aggregateOnly(
-          { aggregateDividends: 400_000, aggregateInterest: 100_000 },
-          4_060_000,
-        )}
+        results={aggregateOnly({ dividends: 400_000, interest: 100_000 }, 4_060_000)}
         inputs={inputs}
       />,
     );
@@ -305,6 +295,45 @@ describe('TaxesTab with interest paid outside Japan', () => {
     expect(within(tooltip!).getByText('¥100,000')).toBeInTheDocument();
     expect(within(tooltip!).getByText('Net Investment Income (aggregate):')).toBeInTheDocument();
     expect(within(tooltip!).getByText('¥500,000')).toBeInTheDocument();
+  });
+});
+
+describe('TaxesTab with investment income left to withholding in two accounts', () => {
+  // Account 1: max(0, −18,000 + 8,000) = 0; account 2: 10,000. The pooled gross amounts net to 0,
+  // so the tooltip lists each account at its own base and the taxed amount the rates apply to:
+  // floor(10,000 × 15.315%) = 1,531 and 10,000 × 5% = 500.
+  it('lists each account at its own base so the rows add up to the taxed amount', () => {
+    render(
+      <TaxesTab
+        results={{
+          ...results,
+          investmentIncome: {
+            withheld: {
+              accounts: [
+                { position: 1, capitalGains: -18_000, dividends: 8_000, base: 0 },
+                { position: 2, capitalGains: 0, dividends: 10_000, base: 10_000 },
+              ],
+              dividends: 0,
+              interest: 0,
+              received: 0,
+              taxedAmount: 10_000,
+              tax: { national: 1_531, residence: 500, total: 2_031 },
+            },
+          },
+        }}
+        inputs={inputs}
+      />,
+    );
+
+    const tooltip = tooltipTitled('Tax Withheld on Investment Income')!;
+    const amountOf = (label: string) =>
+      within(within(tooltip).getByText(label).closest('tr')!).getAllByRole('cell')[1]!.textContent;
+    expect(amountOf('Account 1 (sales -¥18,000, dividends ¥8,000):')).toBe('¥0');
+    expect(amountOf('Account 2 (dividends ¥10,000):')).toBe('¥10,000');
+    expect(amountOf('Taxed amount:')).toBe('¥10,000');
+    expect(amountOf('Income tax withheld (15.315%):')).toBe('¥1,531');
+    expect(amountOf('Residence tax withheld (5%):')).toBe('¥500');
+    expect(within(tooltip).queryByText('Capital gains:')).not.toBeInTheDocument();
   });
 });
 
@@ -350,10 +379,15 @@ describe('TaxesTab with reported investment income', () => {
         results={{
           ...results,
           investmentIncome: {
-            gross: { capitalGains: 0, dividends: 0, interest: 100_000 },
-            grossTotal: 100_000,
-            withheld: { national: 15_315, residence: 5_000, total: 20_315 },
-            reported,
+            withheld: {
+              accounts: [],
+              dividends: 0,
+              interest: 100_000,
+              received: 100_000,
+              taxedAmount: 100_000,
+              tax: { national: 15_315, residence: 5_000, total: 20_315 },
+            },
+            reported: { separate },
           },
         }}
         inputs={inputs}
@@ -384,7 +418,12 @@ describe('SocialInsuranceTab with reported investment income on NHI', () => {
         results={{
           ...props.results,
           totalNetIncome: 4_360_000,
-          investmentIncome: { ...props.results.investmentIncome!, aggregateInterest: 100_000 },
+          investmentIncome: {
+            reported: {
+              ...props.results.investmentIncome!.reported,
+              aggregate: { dividends: 400_000, interest: 100_000 },
+            },
+          },
         }}
         inputs={props.inputs}
       />,

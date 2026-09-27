@@ -94,7 +94,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     Actual limits may vary depending on the applicable deductions and municipality.
                   </Typography>
-                  {results.investmentIncome?.reported && (
+                  {results.investmentIncome?.reported?.separate && (
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       Investment income reported under separate taxation (申告分離課税) raises the
                       limit through the residence tax it adds; with no other taxable income the

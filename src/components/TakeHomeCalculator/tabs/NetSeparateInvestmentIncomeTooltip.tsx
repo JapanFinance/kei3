@@ -5,13 +5,13 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
-import type { ReportedInvestmentIncome } from '../../../types/tax';
+import type { SeparateTaxationIncome } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface NetSeparateInvestmentIncomeTooltipProps {
-  reported: ReportedInvestmentIncome;
+  separate: SeparateTaxationIncome;
 }
 
 /**
@@ -21,9 +21,9 @@ interface NetSeparateInvestmentIncomeTooltipProps {
  * Insurance tabs.
  */
 const NetSeparateInvestmentIncomeTooltip: React.FC<NetSeparateInvestmentIncomeTooltipProps> = ({
-  reported,
+  separate,
 }) => {
-  const netIncome = reported.netIncome.capitalGains + reported.netIncome.dividends;
+  const netIncome = separate.netIncome.capitalGains + separate.netIncome.dividends;
 
   return (
     <DetailedTooltip title="Investment Income under Separate Taxation">
@@ -39,46 +39,46 @@ const NetSeparateInvestmentIncomeTooltip: React.FC<NetSeparateInvestmentIncomeTo
         }}
       >
         <tbody>
-          {reported.gross.capitalGains !== 0 && (
+          {separate.gross.capitalGains !== 0 && (
             <tr>
               <td style={{ padding: '2px 0' }}>Capital Gains (net for the year):</td>
               <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                {formatJPY(reported.gross.capitalGains)}
+                {formatJPY(separate.gross.capitalGains)}
               </td>
             </tr>
           )}
-          {reported.gross.dividends !== 0 && (
+          {separate.gross.dividends !== 0 && (
             <tr>
               <td style={{ padding: '2px 0' }}>Dividends:</td>
               <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                {formatJPY(reported.gross.dividends)}
+                {formatJPY(separate.gross.dividends)}
               </td>
             </tr>
           )}
-          {reported.lossOffsetAgainstDividends > 0 && (
+          {separate.lossOffsetAgainstDividends > 0 && (
             <tr>
               <td style={{ padding: '2px 0' }}>Loss subtracted from dividends (損益通算):</td>
               <Box
                 component="td"
                 sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
               >
-                -{formatJPY(reported.lossOffsetAgainstDividends)}
+                -{formatJPY(separate.lossOffsetAgainstDividends)}
               </Box>
             </tr>
           )}
-          {reported.unabsorbedQualifyingLoss > 0 && (
+          {separate.unabsorbedQualifyingLoss > 0 && (
             <tr>
               <td style={{ padding: '2px 0' }}>Loss left over (not carried forward here):</td>
               <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                {formatJPY(reported.unabsorbedQualifyingLoss)}
+                {formatJPY(separate.unabsorbedQualifyingLoss)}
               </td>
             </tr>
           )}
-          {reported.nonQualifyingLoss > 0 && (
+          {separate.nonQualifyingLoss > 0 && (
             <tr>
               <td style={{ padding: '2px 0' }}>Foreign-account loss, offsetting nothing:</td>
               <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                {formatJPY(reported.nonQualifyingLoss)}
+                {formatJPY(separate.nonQualifyingLoss)}
               </td>
             </tr>
           )}

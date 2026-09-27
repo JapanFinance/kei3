@@ -5,16 +5,14 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
+import type { AggregateTaxationIncome } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import type { Source } from '../../ui/SourceLinks';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface NetAggregateInvestmentIncomeTooltipProps {
-  /** Dividends reported under aggregate taxation (総合課税), as entered. Absent when none. */
-  dividends?: number | undefined;
-  /** Interest paid outside Japan, as entered. Absent when none. */
-  interest?: number | undefined;
+  aggregate: AggregateTaxationIncome;
 }
 
 const CELL_SX = { padding: '2px 0' };
@@ -27,11 +25,11 @@ const TOTAL_CELL_SX = { padding: '4px 0', fontWeight: 600 };
  * the row label. Shared by the Taxes and Social Insurance tabs.
  */
 const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncomeTooltipProps> = ({
-  dividends,
-  interest,
+  aggregate,
 }) => {
+  const { dividends, interest } = aggregate;
   const sources: Source[] = [];
-  if (dividends !== undefined) {
+  if (dividends > 0) {
     sources.push(
       {
         href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
@@ -43,7 +41,7 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
       },
     );
   }
-  if (interest !== undefined) {
+  if (interest > 0) {
     sources.push({
       href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
       label: 'Interest income (利子所得) - NTA',
@@ -61,7 +59,7 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
         }}
       >
         <tbody>
-          {dividends !== undefined && (
+          {dividends > 0 && (
             <tr>
               <Box component="td" sx={CELL_SX}>
                 Dividends (配当所得):
@@ -71,7 +69,7 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
               </Box>
             </tr>
           )}
-          {interest !== undefined && (
+          {interest > 0 && (
             <tr>
               <Box component="td" sx={CELL_SX}>
                 Interest paid outside Japan (利子所得):
@@ -86,13 +84,13 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
               Net Investment Income (aggregate):
             </Box>
             <Box component="td" sx={{ ...TOTAL_CELL_SX, textAlign: 'right' }}>
-              {formatJPY((dividends ?? 0) + (interest ?? 0))}
+              {formatJPY(dividends + interest)}
             </Box>
           </Box>
         </tbody>
       </table>
 
-      {dividends !== undefined && (
+      {dividends > 0 && (
         <>
           <Typography variant="body2" sx={{ mb: 1 }}>
             Dividends reported under aggregate taxation (総合課税) count toward total net income
@@ -107,7 +105,7 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
         </>
       )}
 
-      {interest !== undefined && (
+      {interest > 0 && (
         <Typography variant="body2" sx={{ mb: 1 }}>
           Interest paid outside Japan had no Japanese tax withheld on it, so the whole amount is
           interest income that counts toward total net income (合計所得金額) and is taxed in the

@@ -2413,9 +2413,14 @@ describe('calculateTaxes with investment income streams', () => {
 
     // base = max(0, 1,000,000 + 200,000) = 1,200,000; 15.315% = 183,780; 5% = 60,000
     expect(result.investmentIncome).toEqual({
-      gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
-      grossTotal: 1_200_000,
-      withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+      withheld: {
+        accounts: [{ position: 1, capitalGains: 1_000_000, dividends: 200_000, base: 1_200_000 }],
+        dividends: 0,
+        interest: 0,
+        received: 1_200_000,
+        taxedAmount: 1_200_000,
+        tax: { national: 183_780, residence: 60_000, total: 243_780 },
+      },
     });
     // The 1,200,000 is income received; the 243,780 withheld on it is a tax like any other.
     expect(result.annualIncome).toBe(baseline.annualIncome + 1_200_000);
@@ -2437,7 +2442,7 @@ describe('calculateTaxes with investment income streams', () => {
       ]),
     );
 
-    expect(result.investmentIncome?.withheld.total).toBe(0);
+    expect(result.investmentIncome?.withheld?.tax.total).toBe(0);
     // The net loss of 200,000 is money gone, so it lowers take-home with nothing withheld.
     expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 200_000);
   });
@@ -2458,7 +2463,7 @@ describe('calculateTaxes with investment income streams', () => {
     );
 
     // base = 300,000; national = 45,945; residence = 15,000; total = 60,945
-    expect(result.investmentIncome?.withheld.total).toBe(60_945);
+    expect(result.investmentIncome?.withheld?.tax.total).toBe(60_945);
     expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 300_000 - 60_945);
   });
 
@@ -2486,7 +2491,7 @@ describe('calculateTaxes with investment income streams', () => {
 
     expect(result.healthInsurance).toBe(baseline.healthInsurance);
     expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
-    expect(result.investmentIncome?.withheld).toEqual({
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
       national: 15_315,
       residence: 5_000,
       total: 20_315,
@@ -2509,10 +2514,16 @@ describe('calculateTaxes with investment income streams', () => {
       ]),
     );
 
+    // The loss has no dividends in its account to net against, so the base is max(0, −300,000).
     expect(result.investmentIncome).toEqual({
-      gross: { capitalGains: -300_000, dividends: 0, interest: 0 },
-      grossTotal: -300_000,
-      withheld: { national: 0, residence: 0, total: 0 },
+      withheld: {
+        accounts: [{ position: 1, capitalGains: -300_000, dividends: 0, base: 0 }],
+        dividends: 0,
+        interest: 0,
+        received: -300_000,
+        taxedAmount: 0,
+        tax: { national: 0, residence: 0, total: 0 },
+      },
     });
     expect(result.annualIncome).toBe(baseline.annualIncome - 300_000);
     expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 300_000);
@@ -2534,7 +2545,7 @@ describe('calculateTaxes with investment income streams', () => {
     );
 
     // 1,234,567 * 0.15315 = 189,073.93...; 1,234,567 * 0.05 = 61,728.35
-    expect(result.investmentIncome?.withheld).toEqual({
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
       national: 189_073,
       residence: 61_728,
       total: 250_801,
@@ -2591,7 +2602,7 @@ describe('calculateTaxes with investment income streams', () => {
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
     // base = 1,000,000; national = 153,150; residence = 50,000
-    expect(result.investmentIncome?.withheld.total).toBe(203_150);
+    expect(result.investmentIncome?.withheld?.tax.total).toBe(203_150);
     expect(result.takeHomeIncome).toBe(1_000_000 - 203_150);
   });
 
@@ -2694,11 +2705,9 @@ describe('calculateTaxes with interest paid outside Japan', () => {
     expect(result.annualIncome).toBe(5_100_000);
     expect(result.totalNetIncome).toBe(3_660_000);
     expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
+    // Nothing is left to withholding, so only the reported part is present.
     expect(result.investmentIncome).toEqual({
-      gross: { capitalGains: 0, dividends: 0, interest: 0 },
-      grossTotal: 0,
-      withheld: { national: 0, residence: 0, total: 0 },
-      aggregateInterest: 100_000,
+      reported: { aggregate: { dividends: 0, interest: 100_000 } },
     });
 
     // 課税総所得金額 3,660,000 − 722,252 − 1,040,000 = 1,897,748 → 1,897,000, in the 5% bracket:
@@ -2766,8 +2775,8 @@ describe('calculateTaxes with interest paid outside Japan', () => {
     // 均等割 = 59,500.
     expect(result.annualIncome).toBe(1_000_000);
     expect(result.totalNetIncome).toBe(1_000_000);
-    expect(result.investmentIncome?.aggregateInterest).toBe(1_000_000);
-    expect(result.investmentIncome?.withheld.total).toBe(0);
+    expect(result.investmentIncome?.reported?.aggregate?.interest).toBe(1_000_000);
+    expect(result.investmentIncome?.withheld).toBeUndefined();
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.totalResidenceTax).toBe(59_500);
     expect(result.takeHomeIncome).toBe(940_500);
@@ -2836,10 +2845,19 @@ describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
 
     // base = max(0, −500,000 + 300,000) + max(0, 0 + 600,000) = 0 + 600,000 = 600,000;
     // 600,000 × 15.315% = 91,890; 600,000 × 5% = 30,000.
+    // Each account's own base, so the taxed 600,000 differs from the 400,000 received.
     expect(result.investmentIncome).toEqual({
-      gross: { capitalGains: -500_000, dividends: 900_000, interest: 0 },
-      grossTotal: 400_000,
-      withheld: { national: 91_890, residence: 30_000, total: 121_890 },
+      withheld: {
+        accounts: [
+          { position: 1, capitalGains: -500_000, dividends: 300_000, base: 0 },
+          { position: 2, capitalGains: 0, dividends: 600_000, base: 600_000 },
+        ],
+        dividends: 0,
+        interest: 0,
+        received: 400_000,
+        taxedAmount: 600_000,
+        tax: { national: 91_890, residence: 30_000, total: 121_890 },
+      },
     });
     expect(result.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
     expect(result.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
@@ -2853,15 +2871,53 @@ describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
     // stays in the account (base max(0, −500,000) = 0), so the return taxes the 800,000 whole.
     const result = calculateTaxes(salaryInputs([account(-500_000, 800_000, false, true)]));
 
-    expect(result.investmentIncome?.withheld).toEqual({ national: 0, residence: 0, total: 0 });
-    expect(result.investmentIncome?.reported).toMatchObject({
-      gross: { capitalGains: 0, qualifyingCapitalLosses: 0, dividends: 800_000 },
+    expect(result.investmentIncome?.withheld?.tax).toEqual({ national: 0, residence: 0, total: 0 });
+    expect(result.investmentIncome?.reported?.separate).toMatchObject({
+      gross: { capitalGains: 0, dividends: 800_000 },
       lossOffsetAgainstDividends: 0,
       taxable: { capitalGains: 0, dividends: 800_000 },
       nationalIncomeTaxBase: 120_000,
     });
     // 5,000,000 + 800,000 reported − 500,000 lost in the account.
     expect(result.annualIncome).toBe(5_300_000);
+  });
+
+  it('taxes each account on its own base when a loss in one exceeds its dividends', () => {
+    // Account 1: max(0, −18,000 + 8,000) = 0; account 2: max(0, 0 + 10,000) = 10,000. The pooled
+    // gross amounts net to 0, but the rates apply to 10,000: floor(10,000 × 15.315%) = 1,531 and
+    // 10,000 × 5% = 500.
+    const result = calculateTaxes(
+      salaryInputs([
+        account(-18_000, 8_000, false, false, 'a'),
+        account(0, 10_000, false, false, 'b'),
+      ]),
+    );
+
+    expect(result.investmentIncome?.withheld?.received).toBe(0);
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
+      national: 1_531,
+      residence: 500,
+      total: 2_031,
+    });
+    expect(result.investmentIncome?.withheld?.accounts).toEqual([
+      { position: 1, capitalGains: -18_000, dividends: 8_000, base: 0 },
+      { position: 2, capitalGains: 0, dividends: 10_000, base: 10_000 },
+    ]);
+    expect(result.investmentIncome?.withheld?.taxedAmount).toBe(10_000);
+  });
+
+  it('numbers accounts among all account entries and leaves out a fully reported one', () => {
+    // Account 1 is reported in full, so nothing of it is withheld; account 2 keeps its number.
+    const result = calculateTaxes(
+      salaryInputs([
+        account(1_000_000, 0, true, false, 'a'),
+        account(0, 50_000, false, false, 'b'),
+      ]),
+    );
+
+    expect(result.investmentIncome?.withheld?.accounts).toEqual([
+      { position: 2, capitalGains: 0, dividends: 50_000, base: 50_000 },
+    ]);
   });
 
   it('has to report the dividends when a reported loss reduced their withholding (措法37条の11の6⑩)', () => {
@@ -2874,8 +2930,8 @@ describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
     // The migrated 損益通算 case.
     const result = calculateTaxes(salaryInputs([account(-500_000, 800_000, true, true)]));
 
-    expect(result.investmentIncome?.reported).toEqual({
-      gross: { capitalGains: -500_000, qualifyingCapitalLosses: 500_000, dividends: 800_000 },
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: -500_000, dividends: 800_000 },
       lossOffsetAgainstDividends: 500_000,
       unabsorbedQualifyingLoss: 0,
       nonQualifyingLoss: 0,
@@ -2894,21 +2950,20 @@ describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
   it('reports a gain alone, leaving the dividends withheld', () => {
     const result = calculateTaxes(salaryInputs([account(1_000_000, 200_000, true, false)]));
 
-    expect(result.investmentIncome?.reported?.taxable).toEqual({
+    expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
       capitalGains: 1_000_000,
       dividends: 0,
     });
-    expect(result.investmentIncome?.gross).toEqual({
-      capitalGains: 0,
-      dividends: 200_000,
-      interest: 0,
-    });
+    // The sales are reported, so only the dividends are left to withholding.
+    expect(result.investmentIncome?.withheld?.accounts).toEqual([
+      { position: 1, capitalGains: 0, dividends: 200_000, base: 200_000 },
+    ]);
     // 89,850 + 15% of 1,000,000 (150,000) = 239,850; × 1.021 = 244,886.85 → 244,800.
     expect(result.nationalIncomeTax).toBe(244_800);
     // 243,100 + 3%/2% of 1,000,000 (30,000 + 20,000) = 293,100.
     expect(result.residenceTax.totalResidenceTax).toBe(293_100);
     // base = 200,000; national = 30,630; residence = 10,000.
-    expect(result.investmentIncome?.withheld).toEqual({
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
       national: 30_630,
       residence: 10_000,
       total: 40_630,
@@ -2969,8 +3024,8 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     expect(result.annualIncome).toBe(6_000_000);
     expect(result.totalNetIncome).toBe(4_560_000);
     expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
-    expect(result.investmentIncome?.reported).toEqual({
-      gross: { capitalGains: 0, qualifyingCapitalLosses: 0, dividends: 1_000_000 },
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: 0, dividends: 1_000_000 },
       lossOffsetAgainstDividends: 0,
       unabsorbedQualifyingLoss: 0,
       nonQualifyingLoss: 0,
@@ -2997,7 +3052,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     expect(result.residenceTax.totalResidenceTax).toBe(293_100);
     // Nothing is withheld: the amount is assessed on the return, and take-home covers it:
     // 6,000,000 − 244,800 − 293,100 − 722,252.
-    expect(result.investmentIncome?.withheld).toEqual({ national: 0, residence: 0, total: 0 });
+    expect(result.investmentIncome?.withheld).toBeUndefined();
     expect(result.takeHomeIncome).toBe(4_739_848);
   });
 
@@ -3017,11 +3072,11 @@ describe('calculateTaxes with investment income reported under 申告分離課�
       salaryInputs([reportedGains(1_000_000, 'domesticNoWithholding')]),
     );
 
-    expect(result.investmentIncome?.reported?.taxable).toEqual({
+    expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
       capitalGains: 1_000_000,
       dividends: 0,
     });
-    expect(result.investmentIncome?.reported?.nationalIncomeTaxBase).toBe(150_000);
+    expect(result.investmentIncome?.reported?.separate?.nationalIncomeTaxBase).toBe(150_000);
     expect(result.residenceTax.separate?.taxableCapitalGains).toBe(1_000_000);
     expect(result.nationalIncomeTax).toBe(244_800);
     expect(result.residenceTax.totalResidenceTax).toBe(293_100);
@@ -3097,7 +3152,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
       // the dividends (措法8条の4③三): 1,000,000 − 459,413 = 540,587 → 540,000 × 15% = 81,000;
       // 復興税 1,701 → 82,700.
       expect(result.taxableIncomeForNationalIncomeTax).toBe(0);
-      expect(result.investmentIncome?.reported?.taxable).toEqual({
+      expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
         capitalGains: 0,
         dividends: 540_000,
       });
@@ -3243,7 +3298,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
       ]),
     );
 
-    expect(result.investmentIncome?.reported).toMatchObject({
+    expect(result.investmentIncome?.reported?.separate).toMatchObject({
       lossOffsetAgainstDividends: 300_000,
       unabsorbedQualifyingLoss: 200_000,
       netIncome: { capitalGains: 0, dividends: 0 },
@@ -3272,8 +3327,8 @@ describe('calculateTaxes with investment income reported under 申告分離課�
       ]),
     );
 
-    expect(result.investmentIncome?.reported).toEqual({
-      gross: { capitalGains: -1_500_000, qualifyingCapitalLosses: 500_000, dividends: 1_000_000 },
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: -1_500_000, dividends: 1_000_000 },
       lossOffsetAgainstDividends: 500_000,
       unabsorbedQualifyingLoss: 0,
       nonQualifyingLoss: 1_000_000,
@@ -3298,7 +3353,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     });
 
     expect(result.nationalIncomeTaxBase).toBe(26_100);
-    expect(result.investmentIncome?.reported?.nationalIncomeTaxBase).toBe(150_000);
+    expect(result.investmentIncome?.reported?.separate?.nationalIncomeTaxBase).toBe(150_000);
     // 176,100 comes off the whole 所得税額; the spillover is 5% of the 522,000 課税総所得金額
     // (地方税法附則第5条の4第1項), not of the classes together; 97,800 goes unused.
     expect(result.homeLoanTaxCredit).toMatchObject({
@@ -3354,17 +3409,22 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
     ];
     const elected = calculateTaxes(salaryInputs(streams));
     expect(elected.investmentIncome).toEqual({
-      gross: { capitalGains: 0, dividends: 300_000, interest: 0 },
-      grossTotal: 300_000,
-      withheld: { national: 45_945, residence: 15_000, total: 60_945 },
-      aggregateDividends: 1_000_000,
+      withheld: {
+        accounts: [],
+        dividends: 300_000,
+        interest: 0,
+        received: 300_000,
+        taxedAmount: 300_000,
+        tax: { national: 45_945, residence: 15_000, total: 60_945 },
+      },
+      reported: { aggregate: { dividends: 1_000_000, interest: 0 } },
     });
     expect(elected.nationalIncomeTax).toBe(186_000);
 
     const { reportedDividendsTaxation: _unused, ...withoutElection } = salaryInputs(streams);
     const separate = calculateTaxes(withoutElection);
-    expect(separate.investmentIncome?.aggregateDividends).toBeUndefined();
-    expect(separate.investmentIncome?.reported?.taxable).toEqual({
+    expect(separate.investmentIncome?.reported?.aggregate).toBeUndefined();
+    expect(separate.investmentIncome?.reported?.separate?.taxable).toEqual({
       capitalGains: 0,
       dividends: 1_000_000,
     });
@@ -3380,10 +3440,7 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
     expect(result.totalNetIncome).toBe(4_560_000);
     expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
     expect(result.investmentIncome).toEqual({
-      gross: { capitalGains: 0, dividends: 0, interest: 0 },
-      grossTotal: 0,
-      withheld: { national: 0, residence: 0, total: 0 },
-      aggregateDividends: 1_000_000,
+      reported: { aggregate: { dividends: 1_000_000, interest: 0 } },
     });
     // 課税総所得金額 4,560,000 − 722,252 − 1,040,000 = 2,797,748 → 2,797,000; in the 10% bracket
     // 279,700 − 97,500 = 182,200; with the 2.1% 復興特別所得税 186,026.2 → 186,000.
@@ -3425,8 +3482,8 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
 
     // The loss is a qualifying 上場株式等に係る譲渡損失の金額 with no 申告分離課税 dividends to
     // offset, so it is left over in full and the 配当所得 is taxed as if it were not there.
-    expect(result.investmentIncome?.reported).toEqual({
-      gross: { capitalGains: -400_000, qualifyingCapitalLosses: 400_000, dividends: 0 },
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: -400_000, dividends: 0 },
       lossOffsetAgainstDividends: 0,
       unabsorbedQualifyingLoss: 400_000,
       nonQualifyingLoss: 0,
@@ -3434,7 +3491,7 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
       taxable: { capitalGains: 0, dividends: 0 },
       nationalIncomeTaxBase: 0,
     });
-    expect(result.investmentIncome?.aggregateDividends).toBe(1_000_000);
+    expect(result.investmentIncome?.reported?.aggregate?.dividends).toBe(1_000_000);
     expect(result.totalNetIncome).toBe(4_560_000);
     expect(result.nationalIncomeTax).toBe(186_000);
     expect(result.residenceTax.totalResidenceTax).toBe(343_100);
@@ -3462,11 +3519,11 @@ describe('calculateTaxes with dividends reported under 総合課税', () => {
     // 102,200; plus 15% of 500,000 = 75,000; 177,200 × 1.021 = 180,921.2 → 180,900.
     expect(result.totalNetIncome).toBe(4_260_000);
     expect(result.taxableIncomeForNationalIncomeTax).toBe(1_997_000);
-    expect(result.investmentIncome?.reported?.taxable).toEqual({
+    expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
       capitalGains: 500_000,
       dividends: 0,
     });
-    expect(result.investmentIncome?.aggregateDividends).toBe(200_000);
+    expect(result.investmentIncome?.reported?.aggregate?.dividends).toBe(200_000);
     expect(result.nationalIncomeTax).toBe(180_900);
     // 住民税: 3,760,000 − 722,252 − 430,000 = 2,607,748 → 2,607,000: 156,420 / 104,280, plus
     // 15,000 / 10,000 on the gain, less 1,500 / 1,000 → 169,900 / 113,200; plus 5,000 = 288,100.

@@ -28,6 +28,7 @@ import {
   type ReportedInvestmentAmounts,
   type TakeHomeInputs,
   type TakeHomeResults,
+  type WithheldInvestmentIncome,
 } from '../types/tax';
 import {
   type TaxpayerAgeRange,
@@ -328,6 +329,14 @@ interface IncomeBreakdown {
    * outside such an account.
    */
   listedWithholdingBase: number;
+  /**
+   * {@link listedWithholdingBase} and the interest base entry by entry, for the displays that
+   * show what the withholding was charged on.
+   */
+  withheldBase: Pick<
+    WithheldInvestmentIncome,
+    'accounts' | 'dividends' | 'interest' | 'taxedAmount'
+  >;
   /** Investment-income amounts reported under 申告分離課税, as entered. */
   reportedInvestment: ReportedInvestmentAmounts;
   /** 配当等 reported under 総合課税, as entered — the 配当所得 that joins 総所得金額. */
@@ -364,6 +373,9 @@ const calculateIncomeBreakdown = (
   let dividends = 0;
   let interest = 0;
   let listedWithholdingBase = 0;
+  const withheldAccounts: WithheldInvestmentIncome['accounts'] = [];
+  let withheldDividendsOutsideAccounts = 0;
+  let accountPosition = 0;
   let reportedCapitalGains = 0;
   let reportedQualifyingCapitalLosses = 0;
   let reportedDividends = 0;
@@ -449,7 +461,17 @@ const calculateIncomeBreakdown = (
         const unreportedDividends = income.reportsDividends ? 0 : income.dividends;
         capitalGains += unreportedGains;
         dividends += unreportedDividends;
-        listedWithholdingBase += withholdingAccountBase(unreportedGains, unreportedDividends);
+        accountPosition++;
+        const accountBase = withholdingAccountBase(unreportedGains, unreportedDividends);
+        listedWithholdingBase += accountBase;
+        if (unreportedGains !== 0 || unreportedDividends !== 0) {
+          withheldAccounts.push({
+            position: accountPosition,
+            capitalGains: unreportedGains,
+            dividends: unreportedDividends,
+            base: accountBase,
+          });
+        }
         if (income.reportsCapitalGains) {
           reportedCapitalGains += income.capitalGains;
           // A 特定口座 is held at a licensed 金融商品取引業者, so its loss qualifies.
@@ -489,6 +511,7 @@ const calculateIncomeBreakdown = (
         if (!income.isReported) {
           dividends += income.amount;
           listedWithholdingBase += income.amount;
+          withheldDividendsOutsideAccounts += income.amount;
           break;
         }
         addReportedDividends(income.amount);
@@ -545,6 +568,12 @@ const calculateIncomeBreakdown = (
     investment,
     grossInvestmentIncome,
     listedWithholdingBase,
+    withheldBase: {
+      accounts: withheldAccounts,
+      dividends: withheldDividendsOutsideAccounts,
+      interest,
+      taxedAmount: listedWithholdingBase + interest,
+    },
     reportedInvestment,
     aggregateDividends,
     aggregateInterest,
@@ -635,6 +664,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     investment,
     grossInvestmentIncome,
     listedWithholdingBase,
+    withheldBase,
     reportedInvestment,
     aggregateDividends,
     aggregateInterest,
@@ -1008,22 +1038,35 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       aggregateDividends > 0 ||
       aggregateInterest > 0) && {
       investmentIncome: {
-        gross: investment,
-        grossTotal: grossInvestmentIncome,
-        withheld: withheldInvestmentTax,
-        ...(hasReportedInvestment && {
-          reported: {
-            gross: reportedInvestment,
-            lossOffsetAgainstDividends: reportedInvestmentClassification.lossOffsetAgainstDividends,
-            unabsorbedQualifyingLoss: reportedInvestmentClassification.unabsorbedQualifyingLoss,
-            nonQualifyingLoss: reportedInvestmentClassification.nonQualifyingLoss,
-            netIncome: separateNetIncome,
-            taxable: taxableSeparateIncome,
-            nationalIncomeTaxBase: separateNationalIncomeTaxBase,
+        ...(hasInvestmentIncome(investment) && {
+          withheld: {
+            ...withheldBase,
+            received: grossInvestmentIncome,
+            tax: withheldInvestmentTax,
           },
         }),
-        ...(aggregateDividends > 0 && { aggregateDividends }),
-        ...(aggregateInterest > 0 && { aggregateInterest }),
+        ...((hasReportedInvestment || aggregateDividends > 0 || aggregateInterest > 0) && {
+          reported: {
+            ...(hasReportedInvestment && {
+              separate: {
+                gross: {
+                  capitalGains: reportedInvestment.capitalGains,
+                  dividends: reportedInvestment.dividends,
+                },
+                lossOffsetAgainstDividends:
+                  reportedInvestmentClassification.lossOffsetAgainstDividends,
+                unabsorbedQualifyingLoss: reportedInvestmentClassification.unabsorbedQualifyingLoss,
+                nonQualifyingLoss: reportedInvestmentClassification.nonQualifyingLoss,
+                netIncome: separateNetIncome,
+                taxable: taxableSeparateIncome,
+                nationalIncomeTaxBase: separateNationalIncomeTaxBase,
+              },
+            }),
+            ...((aggregateDividends > 0 || aggregateInterest > 0) && {
+              aggregate: { dividends: aggregateDividends, interest: aggregateInterest },
+            }),
+          },
+        }),
       },
     }),
     totalNetIncome: netIncome,
