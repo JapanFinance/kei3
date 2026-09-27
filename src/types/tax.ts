@@ -938,7 +938,7 @@ export interface TakeHomeResults {
    * and residence tax figures are already net of. Present whenever there is creditable foreign
    * tax, even when every credit is 0.
    */
-  foreignTaxCredit?: ForeignTaxCreditResult;
+  foreignTaxCredit?: ForeignTaxCreditResult | undefined;
   /**
    * Foreign tax paid for the year: the creditable foreign tax
    * ({@link ForeignTaxCreditResult.foreignTax}) plus the foreign tax on dividends left to
