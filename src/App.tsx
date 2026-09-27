@@ -229,6 +229,7 @@ function App() {
             medicalExpenses={deferredInputs.medicalExpenses}
             personalCircumstances={deferredInputs.personalCircumstances}
             homeLoanTaxCredit={deferredInputs.homeLoanTaxCredit}
+            foreignTaxCredit={deferredInputs.foreignTaxCredit}
           />
         </Suspense>
 

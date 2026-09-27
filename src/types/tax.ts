@@ -88,11 +88,23 @@ export interface WithholdingAccountIncomeStream {
   /** 譲渡損益 for the year, net of costs; negative for a net loss. */
   capitalGains: number;
   /**
-   * 配当等 received into the account (源泉徴収選択口座内配当等), before withholding. Dividends on
-   * the same shares taken by bank transfer or 配当金領収証 are outside the account and belong in
-   * a {@link DividendsIncomeStream}.
+   * 配当等 received into the account (源泉徴収選択口座内配当等), before withholding, foreign tax
+   * included. Dividends on the same shares taken by bank transfer or 配当金領収証 are outside the
+   * account and belong in a {@link DividendsIncomeStream}.
    */
   dividends: number;
+  /**
+   * The part of {@link dividends} on the report's 国外株式又は国外投資信託等 row, foreign tax
+   * included: dividends from companies and funds established outside Japan, which are
+   * foreign-source income (所法95条④七).
+   */
+  foreignDividends: number;
+  /**
+   * The report's 外国所得税の額 column: foreign tax withheld on {@link foreignDividends}. The broker
+   * charges the Japanese withholding on the dividends after it (措法9条の2③) and nets the year's
+   * loss against that amount (措法37条の11の6⑥).
+   */
+  foreignTax: number;
   /** Whether the account's sales are on the return; false is 申告不要 (措法37条の11の5①). */
   reportsCapitalGains: boolean;
   /**
@@ -131,11 +143,12 @@ export interface CapitalGainsIncomeStream extends BaseIncomeStream {
 }
 
 /**
- * 配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
- * 特定公社債の利子, received outside a 特定口座（源泉徴収あり）— a dividend received into such an
- * account is a {@link WithholdingAccountIncomeStream} instead. Under 申告分離課税 the 損益通算 of
- * 措法37条の12の2① nets a qualifying reported loss against this; under 総合課税 nothing nets
- * against it — 措法37条の12の2① offsets a loss only against the 配当所得等 that elected 措法8条の4.
+ * 配当等: gross dividends, before every tax withheld on them in Japan or abroad, including
+ * 公募株式投資信託の分配金 and 特定公社債の利子, received outside a 特定口座（源泉徴収あり）— a
+ * dividend received into such an account is a {@link WithholdingAccountIncomeStream} instead. Under
+ * 申告分離課税 the 損益通算 of 措法37条の12の2① nets a qualifying reported loss against this; under
+ * 総合課税 nothing nets against it — 措法37条の12の2① offsets a loss only against the 配当所得等
+ * that elected 措法8条の4.
  */
 export interface DividendsIncomeStream extends BaseIncomeStream {
   type: 'dividends';
@@ -161,6 +174,23 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
    * 収入金額 less the 負債利子 on money borrowed to buy the shares, which is not modelled).
    */
   isReported: boolean;
+  /**
+   * Where the company or fund paying the dividend is established. 'foreign' is a company or fund
+   * established outside Japan, whose dividend is foreign-source income (所法95条④七) and can have
+   * foreign tax withheld ({@link foreignTax}). A Japanese fund that invests abroad is 'domestic':
+   * its distributions are not foreign-source, and the foreign tax its holdings paid is relieved
+   * inside the distribution by a different credit (分配時調整外国税相当額控除, 所法93条), which is
+   * not modelled.
+   */
+  issuerDomicile: 'domestic' | 'foreign';
+  /**
+   * Foreign tax (外国所得税) withheld abroad on the dividend, inside {@link amount}; 0 unless
+   * {@link issuerDomicile} is 'foreign'. Left to withholding, the Japanese withholding is charged
+   * on the dividend after it (措法9条の2③) and it is not credited; reported, it is credited within
+   * the limits of the foreign tax credit, see
+   * {@link import("../utils/foreignTaxCredit").calculateForeignTaxCredit}.
+   */
+  foreignTax: number;
 }
 
 /**
@@ -181,10 +211,16 @@ export interface InterestIncomeStream extends BaseIncomeStream {
    * - `foreign` — received with no Japanese payer or 支払の取扱者, interest on a deposit at a
    *   foreign bank for example. 措法3条① does not reach it, so nothing is withheld in Japan and
    *   所法22条②一 counts the whole receipt (所法23条②) in 総所得金額, taxed in the progressive
-   *   brackets and at the 住民税 所得割 rate with the other income. The foreign tax withheld on
-   *   it is not modelled (外国税額控除, 所法95条).
+   *   brackets and at the 住民税 所得割 rate with the other income. Interest on a foreign bond or
+   *   a deposit abroad is foreign-source income (所法95条④六), so the foreign tax withheld on it
+   *   ({@link foreignTax}) is credited within the limits of the foreign tax credit (外国税額控除).
    */
   payerDomicile: 'domestic' | 'foreign';
+  /**
+   * Foreign tax (外国所得税) withheld abroad on the interest, inside {@link amount}; 0 unless
+   * {@link payerDomicile} is 'foreign'.
+   */
+  foreignTax: number;
 }
 
 export type IncomeStream =
@@ -323,9 +359,12 @@ export interface WithheldAccountBase {
   capitalGains: number;
   /** The account's dividends left to withholding; 0 when the dividends are reported. */
   dividends: number;
+  /** Foreign tax withheld on {@link dividends}; absent when 0 or when the dividends are reported. */
+  foreignTax?: number;
   /**
-   * {@link import("../utils/investmentIncome").withholdingAccountBase} of the two: the loss is
-   * netted against the dividends in the same account only, never below zero.
+   * {@link import("../utils/investmentIncome").withholdingAccountBase} of the three: the dividends
+   * after the foreign tax, with the loss netted against them in the same account only, never
+   * below zero.
    */
   base: number;
 }
@@ -339,16 +378,34 @@ export interface WithheldAccountBase {
 export interface WithheldInvestmentIncome {
   /** The withholding designated accounts with an amount left to withholding, in entry order. */
   accounts: WithheldAccountBase[];
-  /** Dividends left to withholding outside a withholding designated account; taxed in full. */
+  /**
+   * Dividends left to withholding outside a withholding designated account, gross; taxed after
+   * the foreign tax, {@link dividendsForeignTax}.
+   */
   dividends: number;
+  /**
+   * Foreign tax withheld on {@link dividends}: the Japanese withholding is charged on the
+   * dividends after it (措法9条の2③). Absent when 0.
+   */
+  dividendsForeignTax?: number;
   /** Interest paid in Japan; taxed in full. */
   interest: number;
   /**
    * Every amount left to withholding, summed as received: the accounts' sales and dividends plus
-   * {@link dividends} and {@link interest}. Negative when a loss exceeds the rest.
+   * {@link dividends} and {@link interest}, foreign tax included. Negative when a loss exceeds the
+   * rest.
    */
   received: number;
-  /** The accounts' bases plus {@link dividends} and {@link interest}: what the rates apply to. */
+  /**
+   * The foreign tax withheld on the dividends left to withholding, in the accounts and outside
+   * them. It is not credited against Japanese tax (措令4条の5⑫) and comes off take-home with the
+   * other taxes. Absent when 0.
+   */
+  foreignTax?: number;
+  /**
+   * The accounts' bases plus {@link dividends} after {@link dividendsForeignTax} and
+   * {@link interest}: what the rates apply to.
+   */
   taxedAmount: number;
   tax: WithheldInvestmentTax;
 }
@@ -362,7 +419,8 @@ export interface AggregateTaxationIncome {
   dividends: number;
   /**
    * 利子所得 paid outside Japan: no Japanese tax was withheld on it, so the whole receipt is
-   * reported. The foreign tax withheld on it is not supported.
+   * reported. The foreign tax withheld on it is credited through
+   * {@link TakeHomeResults.foreignTaxCredit}.
    */
   interest: number;
 }
@@ -431,6 +489,74 @@ export interface HomeLoanTaxCreditResult {
   };
   /** Human-readable warnings: out-of-period, income exceeds limit, etc. */
   warnings: ReadonlyArray<string>;
+}
+
+/**
+ * Foreign tax for the foreign tax credit (外国税額控除) that is not on an investment entry; the
+ * foreign-tax fields of the dividend, interest and withholding account entries count on their
+ * own. Named like {@link HomeLoanTaxCreditInput}, whose input and result share one field name.
+ */
+export interface ForeignTaxCreditInput {
+  /**
+   * Creditable 外国所得税 that became payable this year and is not on an investment entry: tax
+   * withheld abroad on a foreign pension, on pay for work done abroad, or on business or
+   * miscellaneous income, or tax paid with a foreign return filed this year. Foreign tax counts in
+   * the year it becomes payable: for withholding the payment date, for a return the filing date.
+   * For a US citizen, only the part of the US tax the Japan–US tax treaty lets Japan credit.
+   */
+  foreignTax: number;
+  /**
+   * The foreign-source net income (所得) the tax was charged on that is not already in an
+   * investment entry: a foreign pension's share of the net pension income, the share of net
+   * employment income for work done abroad, a business's foreign-source net income. It only sets
+   * the limit.
+   */
+  foreignSourceIncome: number;
+}
+
+/** One amount per tax the foreign tax credit comes off, in the order the credit is applied. */
+export interface ForeignTaxCreditAmounts {
+  /** 所得税 (所法95条①). */
+  incomeTax: number;
+  /** 復興特別所得税 (復興財確法14条①). */
+  reconstructionSurtax: number;
+  /** 道府県民税 (地方税法37条の3). */
+  prefecture: number;
+  /** 市町村民税 (地方税法314条の8). */
+  city: number;
+}
+
+/**
+ * The foreign tax credit (外国税額控除) for the year — see
+ * {@link import("../utils/foreignTaxCredit").calculateForeignTaxCredit} for the rules.
+ */
+export interface ForeignTaxCreditResult {
+  /** F: the creditable foreign tax, on the reported entries plus the amount entered by hand. */
+  foreignTax: number;
+  /** The foreign-source income of the reported entries plus the amount entered by hand. */
+  foreignSourceIncome: number;
+  /** A, 調整国外所得金額: {@link foreignSourceIncome} capped at {@link totalIncome}. */
+  adjustedForeignSourceIncome: number;
+  /**
+   * T, 所得総額: the year's income before carried-forward losses, the separately taxed classes
+   * included. No carry-forward is modelled, so this is {@link TakeHomeResults.totalNetIncome}.
+   */
+  totalIncome: number;
+  /** B, 所得税額: after the home loan tax credit, before the 復興特別所得税. */
+  incomeTax: number;
+  /** The part of {@link foreignTax} entered by hand; absent when none was. */
+  manualForeignTax?: number;
+  /** The part of {@link foreignSourceIncome} entered by hand; absent when none was. */
+  manualForeignSourceIncome?: number;
+  /** 控除限度額 for each tax. */
+  limit: ForeignTaxCreditAmounts;
+  /**
+   * What is credited against each tax. The residence parts are before the cap at each side's
+   * 所得割; {@link ResidenceTaxDetails.foreignTaxCredit} holds what the 所得割 absorbed.
+   */
+  credit: ForeignTaxCreditAmounts;
+  /** 控除限度超過額: foreign tax above every limit. It carries forward in law, not modelled. */
+  excess: number;
 }
 
 /**
@@ -650,6 +776,8 @@ export interface TakeHomeFormState {
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
   savedIncomeStreams: IncomeStream[];
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  /** See {@link TakeHomeInputs.foreignTaxCredit}. */
+  foreignTaxCredit?: ForeignTaxCreditInput | undefined;
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
@@ -683,6 +811,11 @@ export interface TakeHomeInputs {
    */
   incomeYear: number;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  /**
+   * Foreign tax entered by hand for the foreign tax credit, beside the foreign tax on the
+   * investment entries. Absent means none.
+   */
+  foreignTaxCredit?: ForeignTaxCreditInput | undefined;
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
@@ -706,10 +839,11 @@ export interface TakeHomeResults {
    * stock compensation gross; public pension gross, before the 公的年金等控除; business and
    * miscellaneous income after 必要経費 but before the 青色申告特別控除; and investment income
    * as entered, whether reported under 申告分離課税 or 総合課税 or settled by withholding under
-   * 申告不要 (so a 譲渡損失 reduces it). A commuting allowance is excluded as a cost
-   * reimbursement. {@link takeHomeIncome} is this amount minus social insurance and every tax on
-   * it, assessed through the return or withheld at source — see {@link investmentIncome} for the
-   * withheld tax.
+   * 申告不要 (so a 譲渡損失 reduces it), gross of any foreign tax. A commuting allowance is
+   * excluded as a cost reimbursement. {@link takeHomeIncome} is this amount minus social insurance
+   * and every tax on it, assessed through the return, withheld at source or paid abroad — see
+   * {@link investmentIncome} for the tax withheld at source and {@link foreignTaxPaid} for the
+   * foreign tax.
    *
    * The same definition is used by the 国民生活基礎調査 figure behind the chart's median and
    * percentile bands, which the survey's 用語の説明 (2025 edition, item 13「所得の種類」,
@@ -799,6 +933,20 @@ export interface TakeHomeResults {
   taxableIncomeForResidenceTax?: number | undefined;
   furusatoNozei: FurusatoNozeiDetails;
   homeLoanTaxCredit?: HomeLoanTaxCreditResult;
+  /**
+   * The foreign tax credit (外国税額控除), a 税額控除 against the whole return that the income tax
+   * and residence tax figures are already net of. Present whenever there is creditable foreign
+   * tax, even when every credit is 0.
+   */
+  foreignTaxCredit?: ForeignTaxCreditResult | undefined;
+  /**
+   * Foreign tax paid for the year: the creditable foreign tax
+   * ({@link ForeignTaxCreditResult.foreignTax}) plus the foreign tax on dividends left to
+   * withholding ({@link WithheldInvestmentIncome.foreignTax}). A tax like any other, it is
+   * subtracted in {@link takeHomeIncome}. Kept here rather than under {@link investmentIncome}
+   * because the amount entered by hand can exist with no investment income. Absent when 0.
+   */
+  foreignTaxPaid?: number;
   additionalDeductions: AdditionalDeductionsResult;
   /**
    * 障害者控除・寡婦控除・ひとり親控除 for the taxpayer themselves. Absent when none applies, so
@@ -813,11 +961,21 @@ export interface TakeHomeResults {
    * calculation (already computed for the furusato 20% cap) so the Taxes-tab rows reconcile exactly.
    */
   residenceTaxIncomeBasedBeforeHomeLoanCredit?: number | undefined;
+  /**
+   * Residence tax income-based portion (所得割), both sides floored, after the home loan credit
+   * and before the foreign tax credit, for display: the Taxes tab shows the foreign tax credit as
+   * its own line and needs the figure it comes off. Present only when the credit reduced a 所得割.
+   */
+  residenceTaxIncomeBasedBeforeForeignTaxCredit?: number | undefined;
   dcPlanContributions: number;
   // Dependent deductions
   dependentDeductions?: DependentDeductionResults;
   // Income tax breakdown
   nationalIncomeTaxBase?: number | undefined;
+  /**
+   * 復興特別所得税 before the foreign tax credit: 2.1% of the 所得税額 after the home loan credit,
+   * floored to the yen as on the return.
+   */
   reconstructionSurtax?: number | undefined;
   // National Health Insurance breakdown (only for non-employment income)
   nhiMedicalPortion?: number | undefined;
@@ -887,7 +1045,33 @@ export interface ResidenceTaxDetails {
    * reported.
    */
   separate?: ResidenceTaxSeparateDetails;
+  /**
+   * The foreign tax credit each side's 所得割 absorbed: the credit capped at that side's 所得割
+   * after the 調整控除 and the home loan credit, before the ¥100 floor. {@link city} and
+   * {@link prefecture} are already net of it. Present only when an amount was applied.
+   */
+  foreignTaxCredit?: Pick<ForeignTaxCreditAmounts, 'city' | 'prefecture'>;
 }
+
+/**
+ * The 税額控除 that come off the residence tax 所得割 after the 調整控除, in the order the
+ * calculation applies them: the home loan credit's spillover, split 60/40 between the sides, then
+ * the foreign tax credit (地方税法37条の3, 314条の8), one amount per side.
+ */
+export interface ResidenceTaxCredits {
+  /** The home loan tax credit's spillover to residence tax. */
+  homeLoan: number;
+  /** The foreign tax credit for each side, before the cap at that side's 所得割. */
+  foreignTax?: Pick<ForeignTaxCreditAmounts, 'city' | 'prefecture'>;
+}
+
+/**
+ * No residence-tax credit. Kept here rather than in residenceTax.ts: that module and
+ * taxCalculations.ts import each other, and the zero-income default result runs the furusato
+ * calculation while the two are still loading, so a default parameter value defined in either of
+ * them could still be uninitialised when it is read.
+ */
+export const NO_RESIDENCE_TAX_CREDITS: ResidenceTaxCredits = { homeLoan: 0 };
 
 /**
  * The 分離課税 part of the 所得割 (地方税法附則第33条の2, 第35条の2の2): 3% 市町村民税 + 2%

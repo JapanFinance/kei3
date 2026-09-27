@@ -45,6 +45,14 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const estimatedValueOfGifts = Math.round(
     results.furusatoNozei.limit * FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE,
   );
+  const foreignTaxCredit = results.foreignTaxCredit?.credit;
+  const hasForeignTaxCredit =
+    foreignTaxCredit !== undefined &&
+    foreignTaxCredit.incomeTax +
+      foreignTaxCredit.reconstructionSurtax +
+      foreignTaxCredit.prefecture +
+      foreignTaxCredit.city >
+      0;
 
   return (
     <Box>
@@ -131,6 +139,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
         <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
           Tax Reductions (at limit)
         </Typography>
+        {hasForeignTaxCredit && (
+          <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+            A donation also lowers the foreign tax credit limits, which is not taken into account
+            here, so the reductions shown may be slightly high.
+          </Typography>
+        )}
 
         <ResultRow
           label={

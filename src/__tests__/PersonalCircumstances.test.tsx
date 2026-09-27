@@ -25,6 +25,7 @@ const renderModal = (
       dcPlanContributions={0}
       onDcPlanContributionsChange={vi.fn()}
       onHomeLoanTaxCreditChange={vi.fn()}
+      onForeignTaxCreditChange={vi.fn()}
       lifeInsurance={EMPTY_ADDITIONAL_DEDUCTION_INPUTS.lifeInsurance}
       onLifeInsuranceChange={vi.fn()}
       earthquakeInsurance={EMPTY_ADDITIONAL_DEDUCTION_INPUTS.earthquakeInsurance}

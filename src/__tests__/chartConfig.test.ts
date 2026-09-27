@@ -182,10 +182,12 @@ describe('generateChartData with investment income', () => {
         type: 'withholdingAccount',
         capitalGains: 1_000_000,
         dividends: 0,
+        foreignDividends: 0,
+        foreignTax: 0,
         reportsCapitalGains: false,
         reportsDividends: false,
       },
-      { id: 'i', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
+      { id: 'i', type: 'interest', payerDomicile: 'domestic', amount: 100_000, foreignTax: 0 },
     ],
   };
 
@@ -229,6 +231,8 @@ describe('generateChartData with investment income reported under 申告分離�
     shareType: 'listed' as const,
     paymentChannel: 'domestic' as const,
     isReported: true as const,
+    issuerDomicile: 'domestic' as const,
+    foreignTax: 0,
     amount: 1_000_000,
   };
   const reportedContext: ChartCalculationContext = {
@@ -295,6 +299,76 @@ describe('generateChartData with investment income reported under 申告分離�
         ]);
       });
     });
+  });
+});
+
+describe('generateChartData with foreign tax', () => {
+  // The foreign tax cases of taxCalculations.test.ts, whose taxpayer is 20-39. The foreign tax
+  // paid is a tax on the income the x-axis sweeps, so it rides in the income tax bar with the
+  // assessed tax, and the bars still stack to the income.
+  const stacksToIncomeWithForeignTaxInIncomeTaxBar = (
+    chartContext: ChartCalculationContext,
+    foreignTaxPaid: number,
+  ) => {
+    const { datasets } = generateChartData({ min: 1_000_000, max: 6_000_000 }, chartContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+    const incomeTax = pointsOf(datasets.find(d => d.label === 'Income Tax')!);
+
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+
+      const result = calculateTaxes({
+        ...chartContext,
+        incomeStreams: scaleIncomeStreamsToIncome(chartContext.incomeStreams, point.x),
+      });
+      expect(result.foreignTaxPaid, `income ${point.x}`).toBe(foreignTaxPaid);
+      expect(incomeTax[i]!.y, `income ${point.x}`).toBe(result.nationalIncomeTax + foreignTaxPaid);
+    });
+    return incomeTax;
+  };
+
+  it('holds a foreign dividend and its foreign tax across the sweep', () => {
+    // Case A: 1,000,000 from a foreign company with 100,000 of foreign tax, reported under
+    // 申告分離課税.
+    const incomeTax = stacksToIncomeWithForeignTaxInIncomeTaxBar(
+      {
+        ...context,
+        ageRange: 'age20to39',
+        incomeStreams: [
+          { id: 's', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+          {
+            id: 'd',
+            type: 'dividends',
+            shareType: 'listed',
+            paymentChannel: 'domestic',
+            isReported: true,
+            issuerDomicile: 'foreign',
+            foreignTax: 100_000,
+            amount: 1_000_000,
+          },
+        ],
+      },
+      100_000,
+    );
+    // At 6,000,000 the salary is the 5,000,000 entered: case A's 191,100 + 100,000.
+    expect(incomeTax.find(p => p.x === 6_000_000)?.y).toBe(291_100);
+  });
+
+  it('holds foreign tax entered by hand constant across the sweep', () => {
+    // Case K: 20,000 of foreign tax on 500,000 of foreign-source income, entered by hand.
+    const incomeTax = stacksToIncomeWithForeignTaxInIncomeTaxBar(
+      {
+        ...context,
+        ageRange: 'age20to39',
+        incomeStreams: [{ id: 's', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+        foreignTaxCredit: { foreignTax: 20_000, foreignSourceIncome: 500_000 },
+      },
+      20_000,
+    );
+    // At 5,000,000: case K's 78,800 + 20,000.
+    expect(incomeTax.find(p => p.x === 5_000_000)?.y).toBe(98_800);
   });
 });
 

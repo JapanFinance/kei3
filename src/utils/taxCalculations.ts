@@ -20,12 +20,15 @@ import {
 } from '../types/healthInsurance';
 import {
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  NO_RESIDENCE_TAX_CREDITS,
   type BonusIncomeStream,
+  type ForeignTaxCreditResult,
   type IncomeStream,
   type InvestmentIncomeAmounts,
   type PersonalCircumstancesInput,
   type ReportedDividendsTaxation,
   type ReportedInvestmentAmounts,
+  type ResidenceTaxCredits,
   type TakeHomeInputs,
   type TakeHomeResults,
   type WithheldInvestmentIncome,
@@ -44,6 +47,7 @@ import {
   calculateDependentDeductions,
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
+import { calculateForeignTaxCredit, foreignTaxEntryError } from './foreignTaxCredit';
 import {
   calculateHealthInsuranceBreakdown,
   calculateLatterStageElderlyPremium,
@@ -329,7 +333,7 @@ interface IncomeBreakdown {
   /**
    * The base the 20.315% listed-share withholding rate applies to: every withholding account's
    * {@link import("./investmentIncome").withholdingAccountBase}, plus the dividends withheld
-   * outside such an account.
+   * outside such an account, all net of the foreign tax withheld on the dividends (措法9条の2③).
    */
   listedWithholdingBase: number;
   /**
@@ -338,8 +342,22 @@ interface IncomeBreakdown {
    */
   withheldBase: Pick<
     WithheldInvestmentIncome,
-    'accounts' | 'dividends' | 'interest' | 'taxedAmount'
+    'accounts' | 'dividends' | 'dividendsForeignTax' | 'interest' | 'foreignTax' | 'taxedAmount'
   >;
+  /**
+   * Foreign-source income (所法95条④六・七) on the reported entries: interest paid outside Japan
+   * and dividends from foreign companies and funds, gross. A reported loss netted against the
+   * dividends does not reduce it: the loss is not foreign-source, so it lowers 所得総額 instead.
+   */
+  foreignSourceIncome: number;
+  /** Foreign tax on the reported entries: what the foreign tax credit can credit. */
+  creditableForeignTax: number;
+  /**
+   * Foreign tax on the dividends left to withholding, in the accounts and outside them. The
+   * Japanese withholding is charged on the dividends after it, and it is never credited
+   * (措令4条の5⑫).
+   */
+  withheldForeignTax: number;
   /** Investment-income amounts reported under 申告分離課税, as entered. */
   reportedInvestment: ReportedInvestmentAmounts;
   /** 配当等 reported under 総合課税, as entered — the 配当所得 that joins 総所得金額. */
@@ -378,12 +396,16 @@ const calculateIncomeBreakdown = (
   let listedWithholdingBase = 0;
   const withheldAccounts: WithheldInvestmentIncome['accounts'] = [];
   let withheldDividendsOutsideAccounts = 0;
+  let withheldDividendsForeignTax = 0;
+  let withheldForeignTax = 0;
   let accountPosition = 0;
   let reportedCapitalGains = 0;
   let reportedQualifyingCapitalLosses = 0;
   let reportedDividends = 0;
   let aggregateDividends = 0;
   let aggregateInterest = 0;
+  let foreignSourceIncome = 0;
+  let creditableForeignTax = 0;
   let processedBusinessIncome = false;
 
   // 措法8条の4② makes the 申告分離課税/総合課税 election one for every reported dividend of the
@@ -450,6 +472,10 @@ const calculateIncomeBreakdown = (
         grossPublicPensionIncome += income.amount;
         break;
       case 'withholdingAccount': {
+        const foreignTaxError = foreignTaxEntryError(income);
+        if (foreignTaxError) {
+          throw new Error(foreignTaxError);
+        }
         if (income.dividends < 0) {
           throw new Error('Dividends cannot be negative.');
         }
@@ -462,16 +488,23 @@ const calculateIncomeBreakdown = (
         // (withholdingAccountBase), the way the broker nets them before withholding.
         const unreportedGains = income.reportsCapitalGains ? 0 : income.capitalGains;
         const unreportedDividends = income.reportsDividends ? 0 : income.dividends;
+        const unreportedForeignTax = income.reportsDividends ? 0 : income.foreignTax;
         capitalGains += unreportedGains;
         dividends += unreportedDividends;
+        withheldForeignTax += unreportedForeignTax;
         accountPosition++;
-        const accountBase = withholdingAccountBase(unreportedGains, unreportedDividends);
+        const accountBase = withholdingAccountBase(
+          unreportedGains,
+          unreportedDividends,
+          unreportedForeignTax,
+        );
         listedWithholdingBase += accountBase;
         if (unreportedGains !== 0 || unreportedDividends !== 0) {
           withheldAccounts.push({
             position: accountPosition,
             capitalGains: unreportedGains,
             dividends: unreportedDividends,
+            ...(unreportedForeignTax > 0 && { foreignTax: unreportedForeignTax }),
             base: accountBase,
           });
         }
@@ -484,6 +517,8 @@ const calculateIncomeBreakdown = (
         }
         if (income.reportsDividends) {
           addReportedDividends(income.dividends);
+          foreignSourceIncome += income.foreignDividends;
+          creditableForeignTax += income.foreignTax;
         }
         break;
       }
@@ -499,7 +534,11 @@ const calculateIncomeBreakdown = (
           reportedQualifyingCapitalLosses -= income.amount;
         }
         break;
-      case 'dividends':
+      case 'dividends': {
+        const foreignTaxError = foreignTaxEntryError(income);
+        if (foreignTaxError) {
+          throw new Error(foreignTaxError);
+        }
         if (income.shareType !== 'listed') {
           throw new Error('Dividends on 一般株式等 are not currently supported.');
         }
@@ -512,14 +551,27 @@ const calculateIncomeBreakdown = (
           );
         }
         if (!income.isReported) {
+          // The amount stays gross as received; the withholding is charged after the foreign
+          // tax (措法9条の2③).
           dividends += income.amount;
-          listedWithholdingBase += income.amount;
+          listedWithholdingBase += income.amount - income.foreignTax;
           withheldDividendsOutsideAccounts += income.amount;
+          withheldDividendsForeignTax += income.foreignTax;
+          withheldForeignTax += income.foreignTax;
           break;
         }
         addReportedDividends(income.amount);
+        if (income.issuerDomicile === 'foreign') {
+          foreignSourceIncome += income.amount;
+          creditableForeignTax += income.foreignTax;
+        }
         break;
-      case 'interest':
+      }
+      case 'interest': {
+        const foreignTaxError = foreignTaxEntryError(income);
+        if (foreignTaxError) {
+          throw new Error(foreignTaxError);
+        }
         if (income.amount < 0) {
           throw new Error('Interest cannot be negative.');
         }
@@ -530,8 +582,11 @@ const calculateIncomeBreakdown = (
           interest += income.amount;
         } else {
           aggregateInterest += income.amount;
+          foreignSourceIncome += income.amount;
+          creditableForeignTax += income.foreignTax;
         }
         break;
+      }
       default: {
         const unhandled: never = income;
         throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
@@ -575,12 +630,17 @@ const calculateIncomeBreakdown = (
     withheldBase: {
       accounts: withheldAccounts,
       dividends: withheldDividendsOutsideAccounts,
+      ...(withheldDividendsForeignTax > 0 && { dividendsForeignTax: withheldDividendsForeignTax }),
       interest,
+      ...(withheldForeignTax > 0 && { foreignTax: withheldForeignTax }),
       taxedAmount: listedWithholdingBase + interest,
     },
     reportedInvestment,
     aggregateDividends,
     aggregateInterest,
+    foreignSourceIncome,
+    creditableForeignTax,
+    withheldForeignTax,
   };
 };
 
@@ -673,6 +733,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     reportedInvestment,
     aggregateDividends,
     aggregateInterest,
+    foreignSourceIncome,
+    creditableForeignTax,
+    withheldForeignTax,
   } = incomeBreakdown;
 
   const hasReportedInvestment = hasReportedInvestmentIncome(reportedInvestment);
@@ -926,8 +989,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
   // Home loan tax credit (住宅ローン控除): applied first to the base income tax,
   // then spilled over to residence tax up to the cap.
-  // Calling residence tax with appliedToResidenceTax = 0 first gives us the
-  // pre-credit residence tax, needed for the furusato 20% special-deduction cap.
+  // Calling residence tax with no credits first gives us the pre-credit residence tax, needed
+  // for the furusato 20% special-deduction cap.
   const preCreditResidenceTax = calculateResidenceTax(
     netIncome,
     socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
@@ -935,7 +998,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeYear,
     inputs.ageRange,
     inputs.personalCircumstances,
-    0,
+    NO_RESIDENCE_TAX_CREDITS,
     separateNetIncome,
   );
 
@@ -953,51 +1016,102 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       )
     : undefined;
 
-  // Reconstruction surtax (復興特別所得税) is 2.1% of the base income tax AFTER tax credits.
-  const baseIncomeTaxAfterCredit = Math.max(
-    0,
-    nationalIncomeTaxBase +
-      separateNationalIncomeTaxBase -
-      (homeLoanTaxCreditResult?.appliedToIncomeTax ?? 0),
+  // 所得税額 after the home loan credit (B): the base the 復興特別所得税 and the foreign tax credit
+  // limits are measured on. The bracket arithmetic is float, so it is rounded to the whole yen it
+  // stands for.
+  const incomeTaxAfterHomeLoanCredit = Math.round(
+    Math.max(
+      0,
+      nationalIncomeTaxBase +
+        separateNationalIncomeTaxBase -
+        (homeLoanTaxCreditResult?.appliedToIncomeTax ?? 0),
+    ),
   );
-  const reconstructionSurtax = calculateReconstructionSurtax(baseIncomeTaxAfterCredit);
-  const nationalIncomeTax =
-    Math.floor((baseIncomeTaxAfterCredit + reconstructionSurtax) / 100) * 100;
+  // 復興特別所得税 (R): 2.1% of B, before the foreign tax credit (復興財確法10条①一, 13条),
+  // floored to the yen as on the return.
+  const reconstructionSurtax = Math.floor((incomeTaxAfterHomeLoanCredit * 21) / 1000);
 
-  const residenceTax =
-    homeLoanTaxCreditResult && homeLoanTaxCreditResult.appliedToResidenceTax > 0
-      ? calculateResidenceTax(
-          netIncome,
-          socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
-          dependentDeductions,
-          incomeYear,
-          inputs.ageRange,
-          inputs.personalCircumstances,
-          homeLoanTaxCreditResult.appliedToResidenceTax,
-          separateNetIncome,
-        )
-      : preCreditResidenceTax;
+  const manualForeignTax = inputs.foreignTaxCredit?.foreignTax ?? 0;
+  const manualForeignSourceIncome = inputs.foreignTaxCredit?.foreignSourceIncome ?? 0;
+  if (manualForeignTax < 0 || manualForeignSourceIncome < 0) {
+    throw new Error('Foreign tax and foreign-source income cannot be negative.');
+  }
+  const foreignTax = creditableForeignTax + manualForeignTax;
+  const foreignTaxCredit: ForeignTaxCreditResult | undefined =
+    foreignTax > 0
+      ? {
+          ...calculateForeignTaxCredit({
+            incomeTax: incomeTaxAfterHomeLoanCredit,
+            reconstructionSurtax,
+            totalIncome: netIncome,
+            foreignSourceIncome: foreignSourceIncome + manualForeignSourceIncome,
+            foreignTax,
+          }),
+          ...(manualForeignTax > 0 && { manualForeignTax }),
+          ...(manualForeignSourceIncome > 0 && { manualForeignSourceIncome }),
+        }
+      : undefined;
+  const nationalIncomeTax =
+    Math.floor(
+      (incomeTaxAfterHomeLoanCredit +
+        reconstructionSurtax -
+        (foreignTaxCredit?.credit.incomeTax ?? 0) -
+        (foreignTaxCredit?.credit.reconstructionSurtax ?? 0)) /
+        100,
+    ) * 100;
+
+  // A home loan spillover means the home loan credit took all of B, which leaves no foreign tax
+  // credit limit and so no residence foreign tax credit: at most one of the two is ever passed
+  // here, and the residence tax is never computed a third time.
+  const homeLoanResidenceCredit = homeLoanTaxCreditResult?.appliedToResidenceTax ?? 0;
+  const foreignResidenceCredit =
+    foreignTaxCredit && (foreignTaxCredit.credit.city > 0 || foreignTaxCredit.credit.prefecture > 0)
+      ? { city: foreignTaxCredit.credit.city, prefecture: foreignTaxCredit.credit.prefecture }
+      : undefined;
+  const residenceTaxCredits: ResidenceTaxCredits | undefined =
+    homeLoanResidenceCredit > 0 || foreignResidenceCredit
+      ? {
+          homeLoan: homeLoanResidenceCredit,
+          ...(foreignResidenceCredit && { foreignTax: foreignResidenceCredit }),
+        }
+      : undefined;
+  const residenceTax = residenceTaxCredits
+    ? calculateResidenceTax(
+        netIncome,
+        socialInsuranceDeduction + idecoDeduction + additionalDeductions.residence,
+        dependentDeductions,
+        incomeYear,
+        inputs.ageRange,
+        inputs.personalCircumstances,
+        residenceTaxCredits,
+        separateNetIncome,
+      )
+    : preCreditResidenceTax;
 
   // Calculate totals
   const withheldInvestmentTax = calculateWithheldInvestmentTax(
     { listed: listedWithholdingBase, interest: investment.interest },
     incomeYear,
   );
+  // The foreign tax is taken as paid in the year: withheld abroad on the entries, and the amount
+  // entered by hand.
+  const foreignTaxPaid = foreignTax + withheldForeignTax;
   const totalSocialsAndTax =
     nationalIncomeTax +
     residenceTax.totalResidenceTax +
     withheldInvestmentTax.total +
+    foreignTaxPaid +
     socialInsuranceDeduction;
   // Take-home is what is left of the income after social insurance and every tax on it, whether
-  // assessed through the return or withheld at source: 申告不要 investment income is inside
-  // annualIncome, and the tax withheld on it comes off here like any other tax.
+  // assessed through the return, withheld at source or paid abroad: investment income is inside
+  // annualIncome gross, and the tax withheld on it comes off here like any other tax.
   const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
   const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
     nationalTaxableClasses.aggregate,
     preCreditResidenceTax,
     residenceTax,
-    homeLoanTaxCreditResult?.appliedToResidenceTax ?? 0,
+    residenceTaxCredits ?? NO_RESIDENCE_TAX_CREDITS,
     nationalIncomeTax,
     hasReportedInvestment
       ? {
@@ -1081,6 +1195,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     taxableIncomeForResidenceTax,
     furusatoNozei: furusatoNozeiLimit,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
+    ...(foreignTaxCredit && { foreignTaxCredit }),
+    ...(foreignTaxPaid > 0 && { foreignTaxPaid }),
     additionalDeductions,
     ...(personalDeductions.items.length > 0 && { personalDeductions }),
     // Residence income-based portion (所得割) BEFORE the home loan spillover, so the
@@ -1091,6 +1207,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           preCreditResidenceTax.city.cityIncomeTax +
           preCreditResidenceTax.prefecture.prefecturalIncomeTax,
       }),
+    // The same for the foreign tax credit. It never meets a home loan spillover (see above), so
+    // the 所得割 before it is the pre-credit one.
+    ...(residenceTax.foreignTaxCredit && {
+      residenceTaxIncomeBasedBeforeForeignTaxCredit:
+        preCreditResidenceTax.city.cityIncomeTax +
+        preCreditResidenceTax.prefecture.prefecturalIncomeTax,
+    }),
     dcPlanContributions: inputs.dcPlanContributions,
     // Income tax breakdown
     nationalIncomeTaxBase: hasNationalIncomeTaxBase ? nationalIncomeTaxBase : undefined,
@@ -1120,3 +1243,18 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     }),
   };
 };
+
+/**
+ * All the income tax paid for the year: the 所得税 and 復興特別所得税 the return assesses, the
+ * 所得税 withheld on investment income left to withholding, and the foreign tax paid
+ * ({@link TakeHomeResults.foreignTaxPaid}), which the foreign tax credit already took off the
+ * assessed figure as far as its limits allow.
+ */
+export const incomeTaxPaid = (results: TakeHomeResults): number =>
+  results.nationalIncomeTax +
+  (results.investmentIncome?.withheld?.tax.national ?? 0) +
+  (results.foreignTaxPaid ?? 0);
+
+/** All the residence tax paid for the year: assessed, and withheld on investment income. */
+export const residenceTaxPaid = (results: TakeHomeResults): number =>
+  results.residenceTax.totalResidenceTax + (results.investmentIncome?.withheld?.tax.residence ?? 0);

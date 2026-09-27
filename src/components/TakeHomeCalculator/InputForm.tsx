@@ -45,6 +45,7 @@ import type {
   TakeHomeResults,
   IncomeMode,
   IncomeStream,
+  ForeignTaxCreditInput,
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
   LifeInsuranceInput,
@@ -163,6 +164,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   const handleHomeLoanTaxCreditChange = (newInput: HomeLoanTaxCreditInput | undefined) => {
     dispatch({ type: 'setField', field: 'homeLoanTaxCredit', value: newInput });
+  };
+
+  const handleForeignTaxCreditChange = (newInput: ForeignTaxCreditInput | undefined) => {
+    dispatch({ type: 'setField', field: 'foreignTaxCredit', value: newInput });
   };
 
   const handleDcPlanContributionsChange = (value: number) => {
@@ -863,8 +868,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             Additional Deductions &amp; Credits
             <SimpleTooltip>
               Income deductions (所得控除, e.g. iDeCo or 小規模企業共済) and tax credits (税額控除,
-              e.g. home loan tax credit). These affect income tax, residence tax, and the furusato
-              nozei limit.
+              e.g. the home loan tax credit or the foreign tax credit). These affect income tax,
+              residence tax, and the furusato nozei limit.
             </SimpleTooltip>
           </Typography>
           <Button
@@ -883,6 +888,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
+              if (inputs.foreignTaxCredit && inputs.foreignTaxCredit.foreignTax > 0)
+                parts.push(`Foreign tax credit ${formatJPY(inputs.foreignTaxCredit.foreignTax)}`);
               personalDeductions?.items.forEach(item => {
                 parts.push(
                   `${getPersonalDeductionInfo(inputs.incomeYear)[item.key].name} ${formatJPY(item.national)}`,
@@ -962,6 +969,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         homeLoanTaxCredit={inputs.homeLoanTaxCredit}
         onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
         homeLoanTaxCreditResult={homeLoanTaxCreditResult}
+        foreignTaxCredit={inputs.foreignTaxCredit}
+        onForeignTaxCreditChange={handleForeignTaxCreditChange}
         lifeInsurance={inputs.lifeInsurance}
         onLifeInsuranceChange={handleLifeInsuranceChange}
         earthquakeInsurance={inputs.earthquakeInsurance}

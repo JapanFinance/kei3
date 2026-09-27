@@ -33,15 +33,28 @@ describe('hasInvestmentIncome', () => {
 describe('withholdingAccountBase', () => {
   // 措法37条の11の6⑥: a same-account 譲渡損 nets against 配当等 before withholding.
   it('nets a capital loss against dividends down to zero when the loss is larger', () => {
-    expect(withholdingAccountBase(-500_000, 300_000)).toBe(0);
+    expect(withholdingAccountBase(-500_000, 300_000, 0)).toBe(0);
   });
 
   it('nets a capital loss against dividends, leaving only the remainder', () => {
-    expect(withholdingAccountBase(-500_000, 800_000)).toBe(300_000);
+    expect(withholdingAccountBase(-500_000, 800_000, 0)).toBe(300_000);
   });
 
   it('is the sum of the two when the gain is positive', () => {
-    expect(withholdingAccountBase(1_000_000, 200_000)).toBe(1_200_000);
+    expect(withholdingAccountBase(1_000_000, 200_000, 0)).toBe(1_200_000);
+  });
+
+  // 措法9条の2③: the withholding is on the dividends after the foreign tax, and 措法37条の11の6⑥
+  // nets the loss against that amount.
+  it('charges the dividends after the foreign tax withheld on them', () => {
+    // 800,000 − 50,000 = 750,000.
+    expect(withholdingAccountBase(0, 800_000, 50_000)).toBe(750_000);
+  });
+
+  it('nets a loss against the dividends after the foreign tax', () => {
+    // −500,000 + 800,000 − 50,000 = 250,000; with a −800,000 loss, max(0, −50,000) = 0.
+    expect(withholdingAccountBase(-500_000, 800_000, 50_000)).toBe(250_000);
+    expect(withholdingAccountBase(-800_000, 800_000, 50_000)).toBe(0);
   });
 });
 
