@@ -69,10 +69,6 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
   },
 };
 
-export interface ChartCalculationContext extends TakeHomeInputs {
-  isEmploymentIncome: boolean;
-}
-
 /**
  * Stream types carried through the chart sweep at their entered amount instead of being
  * scaled with the swept income. The sweep scales exactly what the swept total is made of,
@@ -125,7 +121,7 @@ export const scaleIncomeStreamsToIncome = (
 
 export const generateChartData = (
   chartRange: ChartRange,
-  currentInputs: ChartCalculationContext,
+  currentInputs: TakeHomeInputs,
 ): ChartData<'bar' | 'line'> => {
   // Create income points based on the current range
   const step = 1000000; // 1 million yen
@@ -240,7 +236,10 @@ export const generateChartData = (
       type: 'bar' as const,
       stack: 'stack0',
     },
-    ...(currentInputs.isEmploymentIncome
+    // Shown wherever the calculation charges the premium at some point of the sweep, which it
+    // does on a commuting allowance with no salary or bonus entered; without the bar the stack
+    // would fall short of the income by the premium.
+    ...(resultsAndCaps.some(({ result }) => (result.employmentInsurance ?? 0) > 0)
       ? [
           {
             label: 'Employment Insurance',
