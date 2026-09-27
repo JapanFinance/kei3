@@ -66,6 +66,12 @@ export const getIncomeCategory = (key: IncomeCategoryKey): IncomeCategory =>
 
 export interface IncomeStreamTypeInfo {
   label: string;
+  /**
+   * A second, smaller line under {@link label} where the type is offered and in its form's
+   * heading: the official term for it, or what it covers. Kept out of the label so that the label
+   * fits a phone screen.
+   */
+  labelDetail?: string;
   category: IncomeCategoryKey;
   /** Uppercase badge on a stream in the list; its colour comes from the category. */
   chipLabel: string;
@@ -131,8 +137,19 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     amountHelperText:
       'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.',
   },
+  withholdingAccount: {
+    label: 'Withholding Designated Account',
+    labelDetail: '特定口座（源泉徴収あり）',
+    category: 'investment',
+    chipLabel: 'ACCOUNT',
+    amountLabel: 'Net Capital Gains (譲渡損益)',
+    amountHelperText:
+      "The net gain or loss on sales for the year, from the account's annual transaction report (特定口座年間取引報告書); enter a loss as a negative amount.",
+    min: Number.MIN_SAFE_INTEGER,
+  },
   capitalGains: {
-    label: 'Capital Gains (Shares)',
+    label: 'Capital Gains',
+    labelDetail: 'Other accounts',
     category: 'investment',
     chipLabel: 'CAPITAL GAINS',
     amountLabel: 'Net Capital Gains',
@@ -142,11 +159,12 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   },
   dividends: {
     label: 'Dividends',
+    labelDetail: 'Other accounts',
     category: 'investment',
     chipLabel: 'DIVIDEND',
     amountLabel: 'Gross Dividends',
     amountHelperText:
-      'Before withholding; includes 公募株式投資信託の分配金 and 特定公社債の利子. Exclude NISA amounts.',
+      "Before withholding. Dividends received into a withholding designated account go in that account's entry. Exclude NISA amounts.",
   },
   interest: {
     label: 'Interest',

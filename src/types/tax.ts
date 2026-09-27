@@ -76,12 +76,39 @@ export type ReportedDividendsTaxation = 'separate' | 'aggregate';
 export const DEFAULT_REPORTED_DIVIDENDS_TAXATION: ReportedDividendsTaxation = 'separate';
 
 /**
- * 株式等に係る譲渡所得等の金額 for the year in one account, net of acquisition and transfer
- * costs. {@link BaseIncomeStream.amount} may be negative (譲渡損失). Under 申告不要 a loss is
- * netted against the dividends of the same 源泉徴収あり特定口座 before withholding, as the
- * broker does at year end; under 申告分離課税 it is netted against the year's other reported
- * gains, and what remains is 損益通算 against reported dividends only where the sale qualifies
- * — see {@link account}.
+ * One 特定口座（源泉徴収あり）for the year, as its 特定口座年間取引報告書 states it. The account is
+ * the unit the law uses: 申告不要 is chosen per account for its sales (措法37条の11の5①) and for
+ * the dividends received into it (措法37条の11の6⑨), and the broker nets the year's loss against
+ * those dividends before withholding (⑥⑦).
+ */
+export interface WithholdingAccountIncomeStream {
+  id: string;
+  type: 'withholdingAccount';
+  /** 譲渡損益 for the year, net of costs; negative for a net loss. */
+  capitalGains: number;
+  /**
+   * 配当等 received into the account (源泉徴収選択口座内配当等), before withholding. Dividends on
+   * the same shares taken by bank transfer or 配当金領収証 are outside the account and belong in
+   * a {@link DividendsIncomeStream}.
+   */
+  dividends: number;
+  /** Whether the account's sales are on the return; false is 申告不要 (措法37条の11の5①). */
+  reportsCapitalGains: boolean;
+  /**
+   * Whether the account's dividends are on the return. Has to be true when a reported loss
+   * reduced their withholding (措法37条の11の6⑩) — see
+   * {@link import("../utils/investmentReporting").withholdingAccountDividendsMustBeReported}.
+   */
+  reportsDividends: boolean;
+}
+
+/**
+ * 株式等に係る譲渡所得等の金額 for the year from a sale outside a 特定口座（源泉徴収あり）, net of
+ * acquisition and transfer costs. {@link BaseIncomeStream.amount} may be negative (譲渡損失). Such
+ * a sale is always reported: 措法37条の11の5① grants 申告不要 only to a 源泉徴収選択口座, which is
+ * a {@link WithholdingAccountIncomeStream} instead. A reported loss here is netted against the
+ * year's other reported gains, and what remains is 損益通算 against reported dividends only where
+ * the sale qualifies — see {@link account}.
  */
 export interface CapitalGainsIncomeStream extends BaseIncomeStream {
   type: 'capitalGains';
@@ -92,32 +119,22 @@ export interface CapitalGainsIncomeStream extends BaseIncomeStream {
    */
   shareType: 'listed' | 'other';
   /**
-   * The account the shares were sold from, in the three variants the tax turns on.
-   * 措法37条の11の5 grants 申告不要 only for a 源泉徴収選択口座 — the 特定口座 whose holder
-   * elected withholding — so a sale anywhere else is reported. A sale outside Japan is not
-   * 売委託 to a licensed 金融商品取引業者, which 措法37条の12の2②一〜三 requires of a loss
-   * before it is 上場株式等に係る譲渡損失の金額, so a loss in a 'foreign' account nets against
-   * the year's other reported gains and no further: it neither offsets 配当等 nor carries
-   * forward. A 特定口座（源泉徴収なし）and a 一般口座 differ only in who computes the figures,
-   * so they share an option.
+   * The account the shares were sold from. A sale outside Japan is not 売委託 to a licensed
+   * 金融商品取引業者, which 措法37条の12の2②一〜三 requires of a loss before it is
+   * 上場株式等に係る譲渡損失の金額, so a loss in a 'foreign' account nets against the year's
+   * other reported gains and no further: it neither offsets 配当等 nor carries forward. A
+   * 特定口座（源泉徴収なし）and a 一般口座 differ only in who computes the figures, so they share
+   * an option.
    */
-  account: 'specifiedWithholding' | 'domesticNoWithholding' | 'foreign';
-  /**
-   * Whether the sale goes on the return. False is 申告不要 — the 20.315% withheld is the whole
-   * liability and the amount enters no aggregate — and is only valid with a 'specifiedWithholding'
-   * {@link account}. True is 申告分離課税, the one reported treatment of a share sale
-   * (措法37条の11①).
-   */
-  isReported: boolean;
+  account: 'domesticNoWithholding' | 'foreign';
 }
 
 /**
  * 配当等: gross dividends before withholding, including 公募株式投資信託の分配金 and
- * 特定公社債の利子. Under 申告不要 (国内で源泉徴収済みのもの) a same-year loss on
- * {@link CapitalGainsIncomeStream} is netted against this within one 源泉徴収あり特定口座
- * before withholding; under 申告分離課税 the 損益通算 of 措法37条の12の2① applies instead; under
- * 総合課税 nothing nets against it — 措法37条の12の2① offsets a loss only against the
- * 配当所得等 that elected 措法8条の4.
+ * 特定公社債の利子, received outside a 特定口座（源泉徴収あり）— a dividend received into such an
+ * account is a {@link WithholdingAccountIncomeStream} instead. Under 申告分離課税 the 損益通算 of
+ * 措法37条の12の2① nets a qualifying reported loss against this; under 総合課税 nothing nets
+ * against it — 措法37条の12の2① offsets a loss only against the 配当所得等 that elected 措法8条の4.
  */
 export interface DividendsIncomeStream extends BaseIncomeStream {
   type: 'dividends';
@@ -128,12 +145,19 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
    */
   shareType: 'listed' | 'other';
   /**
+   * Where the dividend is paid. 'domestic' is paid in Japan, or paid abroad through a Japanese
+   * broker acting as 支払の取扱者, so Japanese tax was withheld and 申告不要 is available per
+   * payment (措法8条の5①④, 9条の2⑤). 'abroad' is received outside Japan with no Japanese
+   * handler — a foreign brokerage account, for example — which 措令4条の3②五・六 exclude from
+   * 申告不要, so {@link isReported} has to be true.
+   */
+  paymentChannel: 'domestic' | 'abroad';
+  /**
    * Whether the dividend goes on the return. False is 申告不要, which 措法8条の5 grants per
-   * payment on the withholding alone — so a dividend needs no particular account for it and there
-   * is no account field here. True puts it on the return, where it is taxed under the election
-   * made once for every reported dividend, {@link ReportedDividendsTaxation}. The amount is taken
-   * as the 配当所得 (所法24条②: 収入金額 less the 負債利子 on money borrowed to buy the shares,
-   * which is not modelled).
+   * payment on the withholding alone, only for a 'domestic' {@link paymentChannel}. True puts it
+   * on the return, where it is taxed under the election made once for every reported dividend,
+   * {@link ReportedDividendsTaxation}. The amount is taken as the 配当所得 (所法24条②:
+   * 収入金額 less the 負債利子 on money borrowed to buy the shares, which is not modelled).
    */
   isReported: boolean;
 }
@@ -164,6 +188,7 @@ export type IncomeStream =
   | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
   | StockCompensationIncomeStream
+  | WithholdingAccountIncomeStream
   | CapitalGainsIncomeStream
   | DividendsIncomeStream
   | InterestIncomeStream;
@@ -172,19 +197,28 @@ export type IncomeStreamType = IncomeStream['type'];
 
 /**
  * Whether `stream` is one of the investment-income types. These are never earned income — see
- * {@link import("../utils/incomeStreams").countsTowardAnnualIncome} — and, except for a
+ * {@link import("../utils/incomeStreams").annualIncomeContribution} — and, except for a
  * dividend reported under 総合課税, are taxed separately from the progressive brackets, see
  * {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
  */
 export const isInvestmentIncomeStream = (
   stream: IncomeStream,
-): stream is CapitalGainsIncomeStream | DividendsIncomeStream | InterestIncomeStream =>
-  stream.type === 'capitalGains' || stream.type === 'dividends' || stream.type === 'interest';
+): stream is
+  | WithholdingAccountIncomeStream
+  | CapitalGainsIncomeStream
+  | DividendsIncomeStream
+  | InterestIncomeStream =>
+  stream.type === 'withholdingAccount' ||
+  stream.type === 'capitalGains' ||
+  stream.type === 'dividends' ||
+  stream.type === 'interest';
 
 /**
  * Gross investment-income amounts for the year that are settled by withholding and stay off
  * the return, before that withholding: 上場株式等 under 申告不要 for {@link capitalGains} and
- * {@link dividends}, and 国内において支払を受ける一般利子等 for {@link interest}.
+ * {@link dividends} — including the unreported parts of a
+ * {@link WithholdingAccountIncomeStream} — and 国内において支払を受ける一般利子等 for
+ * {@link interest}.
  */
 export interface InvestmentIncomeAmounts {
   /** See {@link CapitalGainsIncomeStream}; may be negative. */
