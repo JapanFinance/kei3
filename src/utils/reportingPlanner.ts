@@ -30,8 +30,8 @@ export interface ReportingUnitState {
 /**
  * One entry among {@link TakeHomeInputs.incomeStreams} whose reporting the planner can vary — a
  * withholding account or a domestic dividend. A sale outside a withholding account (always
- * reported, 措法37条の11の5①) and interest (never reported) carry no unit, since neither ever
- * varies; see {@link deriveReportingUnits}.
+ * reported, 措法37条の11の5①) and interest (settled by where it is paid, with no election) carry
+ * no unit, since neither ever varies; see {@link deriveReportingUnits}.
  */
 export interface ReportingUnit {
   /** Index into the plan's `streams` array this unit patches. */
@@ -165,7 +165,8 @@ const dividendsStates = (dividend: DividendsIncomeStream): ReportingUnitState[] 
 /**
  * One {@link ReportingUnit} per withholding account or dividend entry among `streams`. A sale
  * outside a withholding account and interest carry no unit: neither entry's reporting ever
- * varies, so the search never branches on them.
+ * varies, so the search never branches on them. Interest is reported when it is paid outside
+ * Japan and never otherwise, which is the entry's own field rather than a choice.
  */
 export const deriveReportingUnits = (streams: readonly IncomeStream[]): ReportingUnit[] => {
   const units: ReportingUnit[] = [];

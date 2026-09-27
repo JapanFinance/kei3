@@ -73,6 +73,13 @@ const domesticInterest = (id: string, amount = 100_000): InterestIncomeStream =>
   amount,
 });
 
+const foreignInterest = (id: string, amount = 100_000): InterestIncomeStream => ({
+  id,
+  type: 'interest',
+  payerDomicile: 'foreign',
+  amount,
+});
+
 /**
  * A 協会けんぽ Tokyo employee, matching the taxCalculations.test.ts baseline at its default
  * 5,000,000-yen salary.
@@ -159,8 +166,11 @@ describe('deriveReportingUnits', () => {
     expect(deriveReportingUnits([outsideSale('g')])).toHaveLength(0);
   });
 
-  it('gives interest no unit at all: it is never reported', () => {
+  it('gives interest no unit at all, wherever it is paid', () => {
+    // Where interest is paid decides its treatment on its own: paid in Japan it is settled by
+    // withholding, paid outside Japan it is always reported. Neither is a choice to search over.
     expect(deriveReportingUnits([domesticInterest('i')])).toHaveLength(0);
+    expect(deriveReportingUnits([foreignInterest('i')])).toHaveLength(0);
   });
 });
 
@@ -187,6 +197,16 @@ describe('countPlans', () => {
     const units = deriveReportingUnits(streams);
     expect(countPlans(units)).toBe(1);
     expect([...generatePlans(streams, units)]).toHaveLength(1);
+  });
+
+  it('is unchanged by interest paid outside Japan beside an account', () => {
+    const withAccount: IncomeStream[] = [account({ id: 'a', capitalGains: 500_000 })];
+    const withInterest: IncomeStream[] = [...withAccount, foreignInterest('i')];
+
+    expect(countPlans(deriveReportingUnits(withInterest))).toBe(
+      countPlans(deriveReportingUnits(withAccount)),
+    );
+    expect(mandatoryReportingNote(withInterest)).toBe(mandatoryReportingNote(withAccount));
   });
 
   it('doubles a single domestic dividend for the election, but not a withheld one', () => {

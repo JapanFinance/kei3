@@ -2646,14 +2646,151 @@ describe('calculateTaxes with investment income streams', () => {
     ).toThrow(/措令4条の3/);
   });
 
-  it('rejects interest paid outside Japan, which is 総合課税 rather than withheld at source', () => {
+  it('rejects a negative interest amount, paid in Japan or outside it', () => {
     expect(() =>
       calculateTaxes(
-        salaryInputs([
-          { type: 'interest', payerDomicile: 'foreign', amount: 100_000, id: 'interest' },
-        ]),
+        salaryInputs([{ type: 'interest', payerDomicile: 'domestic', amount: -1, id: 'interest' }]),
       ),
-    ).toThrow(/outside Japan/);
+    ).toThrow(/Interest cannot be negative/);
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([{ type: 'interest', payerDomicile: 'foreign', amount: -1, id: 'interest' }]),
+      ),
+    ).toThrow(/Interest cannot be negative/);
+  });
+});
+
+describe('calculateTaxes with interest paid outside Japan', () => {
+  // The same 5,000,000-yen employee, income year 2026: 給与所得 3,560,000; social insurance
+  // 722,252; 所得税 91,700; 住民税 243,100; take-home 3,942,948. 措法3条① settles by
+  // 源泉分離課税 only the 一般利子等 国内において支払を受けるべき, so interest with no Japanese
+  // payer is 利子所得 inside 総所得金額 (所法22条②一) and is taxed with the rest.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  const foreignInterest = (amount: number, id = 'interest') => ({
+    type: 'interest' as const,
+    payerDomicile: 'foreign' as const,
+    amount,
+    id,
+  });
+
+  it('taxes it in the brackets as 利子所得 inside 総所得金額, with nothing withheld', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(salaryInputs([foreignInterest(100_000)]));
+
+    // 合計所得金額 3,560,000 + 100,000 = 3,660,000, still inside the 1,040,000 基礎控除 tier
+    // (up to 4,890,000).
+    expect(result.annualIncome).toBe(5_100_000);
+    expect(result.totalNetIncome).toBe(3_660_000);
+    expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
+    expect(result.investmentIncome).toEqual({
+      gross: { capitalGains: 0, dividends: 0, interest: 0 },
+      grossTotal: 0,
+      withheld: { national: 0, residence: 0, total: 0 },
+      aggregateInterest: 100_000,
+    });
+
+    // 課税総所得金額 3,660,000 − 722,252 − 1,040,000 = 1,897,748 → 1,897,000, in the 5% bracket:
+    // 94,850; with the 2.1% 復興特別所得税 96,841.85 → 96,800.
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(1_897_000);
+    expect(result.nationalIncomeTaxBase).toBe(94_850);
+    expect(result.nationalIncomeTax).toBe(96_800);
+    // 住民税: 3,660,000 − 722,252 − 430,000 = 2,507,748 → 2,507,000. The 調整控除 stays 2,500:
+    // 課税総所得金額 is over 2,000,000, so it is 5% of max(50,000 人的控除差 − (2,507,000 −
+    // 2,000,000), 50,000). 市 150,420 − 1,500 = 148,920 → 148,900; 県 100,280 − 1,000 = 99,280
+    // → 99,200; plus the 5,000 均等割 = 253,100.
+    expect(result.taxableIncomeForResidenceTax).toBe(2_507_000);
+    expect(result.residenceTax.city.cityAdjustmentCredit).toBe(1_500);
+    expect(result.residenceTax.prefecture.prefecturalAdjustmentCredit).toBe(1_000);
+    expect(result.residenceTax.separate).toBeUndefined();
+    expect(result.residenceTax.totalResidenceTax).toBe(253_100);
+
+    // Only the two assessed taxes move: 96,800 − 91,700 and 253,100 − 243,100.
+    expect(baseline.nationalIncomeTax).toBe(91_700);
+    expect(baseline.residenceTax.totalResidenceTax).toBe(243_100);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 100_000 - 5_100 - 10_000);
+    expect(result.takeHomeIncome).toBe(4_027_848);
+  });
+
+  it('raises the National Health Insurance base, unlike the same interest paid in Japan', () => {
+    // 5,000,000 of miscellaneous income in Chiyoda Ward, where the calendar year blends the
+    // FY2025 and FY2026 rate tables (3/10 + 7/10).
+    const nhiInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: [{ type: 'miscellaneous', amount: 5_000_000, id: 'misc' }, ...streams],
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo-Chiyoda',
+    });
+    const baseline = calculateTaxes(nhiInputs());
+    const result = calculateTaxes(nhiInputs([foreignInterest(100_000)]));
+    const domestic = calculateTaxes(
+      nhiInputs([{ type: 'interest', payerDomicile: 'domestic', amount: 100_000, id: 'interest' }]),
+    );
+
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome + 100_000);
+    // NHI base 4,570,000 → 4,670,000 (総所得金額等 less the 430,000 基礎控除). The extra
+    // 100,000 adds, per fiscal year: FY2025 7,710 medical (7.71%) + 2,690 support (2.69%);
+    // FY2026 7,510 medical (7.51%) + 2,800 support (2.8%) + 270 child support (0.27%). Blended,
+    // 3/10 × 10,400 + 7/10 × 10,580 = 3,120 + 7,406 = 10,526.
+    expect(result.healthInsurance - baseline.healthInsurance).toBe(10_526);
+
+    // Interest paid in Japan is settled by the 20.315% withholding and reaches neither figure.
+    expect(domestic.totalNetIncome).toBe(baseline.totalNetIncome);
+    expect(domestic.healthInsurance).toBe(baseline.healthInsurance);
+  });
+
+  it('computes real results for a taxpayer with foreign interest and no other income', () => {
+    const result = calculateTaxes({
+      ...salaryInputs(),
+      incomeStreams: [foreignInterest(1_000_000)],
+      // Manual social insurance keeps the NHI and pension tables out of this case.
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+    });
+
+    // 合計所得金額 1,000,000 (所法23条②: the whole receipt, no deduction). The 1,040,000
+    // 基礎控除 leaves no 課税総所得金額, so no 所得税. 住民税: over the 450,000 非課税限度額
+    // at 1級地, 課税総所得金額 1,000,000 − 430,000 = 570,000 → 市 34,200 / 県 22,800 less the
+    // 1,500 / 1,000 調整控除 (5% of the 50,000 人的控除差) → 32,700 / 21,800; plus the 5,000
+    // 均等割 = 59,500.
+    expect(result.annualIncome).toBe(1_000_000);
+    expect(result.totalNetIncome).toBe(1_000_000);
+    expect(result.investmentIncome?.aggregateInterest).toBe(1_000_000);
+    expect(result.investmentIncome?.withheld.total).toBe(0);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(59_500);
+    expect(result.takeHomeIncome).toBe(940_500);
+  });
+
+  it('counts it in the 公的年金等控除 band base (所法35条④一) and in 総所得金額', () => {
+    const components = calculateNetIncomeComponents(
+      [{ type: 'publicPension', amount: 3_000_000, id: 'pension' }, foreignInterest(10_500_000)],
+      2026,
+      'age65to69',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+    );
+
+    // 公的年金等に係る雑所得以外の合計所得金額 of 10,500,000 is over 10,000,000, so the 65+
+    // deduction is 300,000 + 25% × (3,000,000 − 500,000) = 925,000, raised to its 1,000,000
+    // floor → 雑所得 2,000,000.
+    expect(components.aggregateInterestIncome).toBe(10_500_000);
+    expect(components.netPublicPensionIncome).toBe(2_000_000);
+    expect(components.aggregateNetIncome).toBe(12_500_000);
+    expect(components.totalNetIncome).toBe(12_500_000);
   });
 });
 
