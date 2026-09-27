@@ -12,7 +12,7 @@ import {
 } from '../types/tax';
 import { formatJPY } from './formatters';
 import { withRequiredReporting } from './investmentReporting';
-import { calculateTaxes } from './taxCalculations';
+import { calculateTaxes, incomeTaxPaid, residenceTaxPaid } from './taxCalculations';
 
 /**
  * One reporting choice a {@link ReportingUnit} could be set to.
@@ -58,9 +58,12 @@ export interface ReportingPlan {
 export interface PlanFigures {
   /** Take-home pay: {@link TakeHomeResults.takeHomeIncome}. */
   kept: number;
-  /** 所得税 the return assesses plus the 所得税 withheld at source. */
+  /**
+   * 所得税 the return assesses (after the foreign tax credit), the 所得税 withheld at source, and
+   * the foreign tax paid: {@link incomeTaxPaid}.
+   */
   incomeTax: number;
-  /** 住民税 the return assesses plus the 住民税 withheld at source. */
+  /** 住民税 the return assesses plus the 住民税 withheld at source: {@link residenceTaxPaid}. */
   residenceTax: number;
   socialInsurance: number;
   furusatoNozeiLimit: number;
@@ -376,26 +379,19 @@ export const planMatchesCurrent = (
 ): boolean => samePlan(units, plan, currentPlan(inputs));
 
 /** The comparison figures for one engine result — see {@link PlanFigures}. */
-const figuresOf = (results: TakeHomeResults): PlanFigures => {
-  const withheld = results.investmentIncome?.withheld?.tax ?? {
-    national: 0,
-    residence: 0,
-    total: 0,
-  };
-  return {
-    kept: results.takeHomeIncome,
-    incomeTax: results.nationalIncomeTax + withheld.national,
-    residenceTax: results.residenceTax.totalResidenceTax + withheld.residence,
-    socialInsurance:
-      results.socialInsuranceOverride ??
-      results.healthInsurance +
-        results.pensionPayments +
-        (results.employmentInsurance ?? 0) +
-        (results.longTermCareCategory1Premium ?? 0),
-    furusatoNozeiLimit: results.furusatoNozei.limit,
-    totalIncome: results.totalNetIncome,
-  };
-};
+const figuresOf = (results: TakeHomeResults): PlanFigures => ({
+  kept: results.takeHomeIncome,
+  incomeTax: incomeTaxPaid(results),
+  residenceTax: residenceTaxPaid(results),
+  socialInsurance:
+    results.socialInsuranceOverride ??
+    results.healthInsurance +
+      results.pensionPayments +
+      (results.employmentInsurance ?? 0) +
+      (results.longTermCareCategory1Premium ?? 0),
+  furusatoNozeiLimit: results.furusatoNozei.limit,
+  totalIncome: results.totalNetIncome,
+});
 
 /**
  * Runs `plan` through the engine: applies {@link withRequiredReporting} to every stream (a

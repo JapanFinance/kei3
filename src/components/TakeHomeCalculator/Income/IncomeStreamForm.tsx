@@ -27,6 +27,7 @@ import {
   type IncomeStream,
   type IncomeStreamType,
 } from '../../../types/tax';
+import { foreignTaxEntryError } from '../../../utils/foreignTaxCredit';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import { getFrequencyAnnualMultiplier } from '../../../utils/incomeStreams';
 import { withholdingAccountDividendsMustBeReported } from '../../../utils/investmentReporting';
@@ -80,6 +81,10 @@ const NTA_TAX_ANSWERS = {
     href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',
     label: 'The designated account system (特定口座制度) - NTA',
   },
+  foreignTaxCredit: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm',
+    label: 'Foreign tax credit (外国税額控除) - NTA',
+  },
 };
 
 // Each listed-share form links only the pages behind the choices it offers.
@@ -89,10 +94,19 @@ const LISTED_SHARE_SOURCES = {
     NTA_TAX_ANSWERS.saleOfShares,
     NTA_TAX_ANSWERS.dividendIncome,
     NTA_TAX_ANSWERS.lossOffset,
+    NTA_TAX_ANSWERS.foreignTaxCredit,
   ],
   capitalGains: [NTA_TAX_ANSWERS.saleOfShares, NTA_TAX_ANSWERS.lossOffset],
-  dividends: [NTA_TAX_ANSWERS.dividendIncome, NTA_TAX_ANSWERS.separateTaxationOfDividends],
+  dividends: [
+    NTA_TAX_ANSWERS.dividendIncome,
+    NTA_TAX_ANSWERS.separateTaxationOfDividends,
+    NTA_TAX_ANSWERS.foreignTaxCredit,
+  ],
 };
+
+// What happens to foreign tax on a dividend, for the reporting tooltip and the guidance box.
+const FOREIGN_DIVIDEND_TAX_NOTE =
+  'For a dividend from a foreign company or fund left to withholding, the 20.315% is charged on the dividend after the foreign tax, and the foreign tax is not credited (措法9条の2③, 措令4条の5⑫). Reported, the foreign tax is credited against the Japanese income tax and residence tax, up to limits set by the share of foreign-source income in total net income; with no income tax, there is nothing to credit it against. Foreign tax above the limits carries forward for three years in law, which is not supported.';
 
 const guidanceBoxSx = {
   p: 1.5,
@@ -126,9 +140,25 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [blueFilerDeduction, setBlueFilerDeduction] = useState<number>(
     (initialData?.type === 'business' && initialData.blueFilerDeduction) || 0,
   );
+  // Stock compensation offers only a foreign issuer; a dividend starts from a Japanese company.
   const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>(
-    initialData?.type === 'stockCompensation' ? initialData.issuerDomicile : 'foreign',
+    initialData?.type === 'stockCompensation' || initialData?.type === 'dividends'
+      ? initialData.issuerDomicile
+      : type === 'dividends'
+        ? 'domestic'
+        : 'foreign',
   );
+  const [foreignTax, setForeignTax] = useState<number>(
+    initialData?.type === 'dividends' ||
+      initialData?.type === 'interest' ||
+      initialData?.type === 'withholdingAccount'
+      ? initialData.foreignTax
+      : 0,
+  );
+  const [accountForeignDividends, setAccountForeignDividends] = useState<number>(
+    initialData?.type === 'withholdingAccount' ? initialData.foreignDividends : 0,
+  );
+  const [foreignTaxError, setForeignTaxError] = useState<string | null>(null);
   const [shareType, setShareType] = useState<'listed' | 'other'>(
     initialData?.type === 'capitalGains' || initialData?.type === 'dividends'
       ? initialData.shareType
@@ -229,6 +259,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           type,
           capitalGains: accountCapitalGains,
           dividends: accountDividends,
+          foreignDividends: accountForeignDividends,
+          foreignTax,
           reportsCapitalGains,
           reportsDividends: dividendsForced || reportsDividends,
         };
@@ -244,14 +276,34 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           shareType,
           paymentChannel,
           isReported: paymentChannel === 'abroad' || isReported,
+          issuerDomicile,
+          foreignTax: issuerDomicile === 'foreign' ? foreignTax : 0,
         };
         break;
       case 'interest':
-        stream = { id, type, amount, payerDomicile };
+        stream = {
+          id,
+          type,
+          amount,
+          payerDomicile,
+          foreignTax: payerDomicile === 'foreign' ? foreignTax : 0,
+        };
         break;
       default: {
         const unhandled: never = type;
         throw new Error(`Unhandled income stream type: ${String(unhandled)}`);
+      }
+    }
+
+    if (
+      stream.type === 'dividends' ||
+      stream.type === 'interest' ||
+      stream.type === 'withholdingAccount'
+    ) {
+      const message = foreignTaxEntryError(stream);
+      if (message) {
+        setForeignTaxError(message);
+        return;
       }
     }
 
@@ -408,6 +460,48 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           </FormControl>
         )}
 
+        {type === 'dividends' && (
+          <FormControl fullWidth>
+            <FormLabel id="dividend-issuer-label" sx={variantLabelSx}>
+              <span>Company or fund</span>
+              <DetailedTooltip
+                title="Company or Fund"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="company or fund info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Foreign</strong> is a company or fund established outside Japan: a US
+                  stock, a US-listed ETF, or a foreign ETF listed in Tokyo. Its dividends are
+                  foreign-source income, and the tax withheld on them abroad can be entered with the
+                  amount.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Japanese</strong> includes a Japanese fund that invests abroad. A
+                  different credit (分配時調整外国税相当額控除) reduces the Japanese tax on its
+                  distributions by the foreign tax its holdings paid; that credit is not supported
+                  yet.
+                </Typography>
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={issuerDomicile}
+              exclusive
+              onChange={(_, newValue: 'domestic' | 'foreign' | null) => {
+                if (newValue) {
+                  setIssuerDomicile(newValue);
+                }
+              }}
+              aria-labelledby="dividend-issuer-label"
+              aria-label="company or fund"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="domestic">Japanese</ToggleButton>
+              <ToggleButton value="foreign">Foreign</ToggleButton>
+            </ToggleButtonGroup>
+          </FormControl>
+        )}
+
         {type === 'capitalGains' && (
           <FormControl fullWidth>
             <InputLabel id="share-account-label">Account</InputLabel>
@@ -506,9 +600,17 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   furusato nozei limit. The tax withheld is credited at filing. Reported dividends
                   are taxed under the election made in the income list, separate or aggregate
                   taxation. Reporting can be beneficial when the other income cannot use all the
-                  deductions, or, under separate taxation, when a reported loss can be set against
-                  the dividend.
+                  deductions, or, under separate taxation, when a reported loss can offset the
+                  dividend.
                 </Typography>
+                {issuerDomicile === 'foreign' && (
+                  <>
+                    <Typography sx={{ display: 'block', mt: 1 }}>
+                      {FOREIGN_DIVIDEND_TAX_NOTE}
+                    </Typography>
+                    <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
+                  </>
+                )}
               </DetailedTooltip>
             </FormLabel>
             <ToggleButtonGroup
@@ -738,14 +840,27 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             />
           )}
 
+          {((type === 'dividends' && issuerDomicile === 'foreign') ||
+            (type === 'interest' && payerDomicile === 'foreign')) && (
+            <SpinnerNumberField
+              label="Foreign Tax Withheld (外国所得税)"
+              value={foreignTax}
+              onChange={val => setForeignTax(val)}
+              sx={{ width: '100%', mt: 2 }}
+              helperText={foreignTaxError ?? 'In yen. The gross amount above includes it.'}
+              error={!!foreignTaxError}
+            />
+          )}
+
           {type === 'withholdingAccount' && (
             // One group per figure of the account's annual transaction report: the amount and
             // its reporting choice side by side (the choice is made per figure, 措法37条の11の5①
             // and 37条の11の6⑨), the helper text under the pair at the group's full width.
             <Stack spacing={2}>
               <Typography variant="body2" component="div">
-                Copy the two figures from the account's annual transaction report
-                (特定口座年間取引報告書), and choose whether to report each on a tax return.
+                Copy the figures from the account's annual transaction report
+                (特定口座年間取引報告書), and choose whether to report the sales and the dividends
+                on a tax return.
                 <DetailedTooltip
                   title="Reporting"
                   icon={SIMPLE_TOOLTIP_ICON}
@@ -838,6 +953,34 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   </FormHelperText>
                 )}
               </FormControl>
+              <FormControl fullWidth>
+                {/* The report row's name is on the group rather than the field, whose label is too
+                    narrow for it when the two fields share a row. */}
+                <FormLabel id="account-foreign-label" sx={variantLabelSx}>
+                  Foreign shares and funds (国外株式又は国外投資信託等)
+                </FormLabel>
+                <Box role="group" aria-labelledby="account-foreign-label" sx={figureRowSx}>
+                  <SpinnerNumberField
+                    inputProps={{ 'aria-describedby': 'account-foreign-help' }}
+                    label="Foreign Dividends"
+                    value={accountForeignDividends}
+                    onChange={val => setAccountForeignDividends(val)}
+                    sx={figureFieldSx}
+                  />
+                  <SpinnerNumberField
+                    inputProps={{ 'aria-describedby': 'account-foreign-help' }}
+                    label="Foreign Tax (外国所得税の額)"
+                    value={foreignTax}
+                    onChange={val => setForeignTax(val)}
+                    sx={figureFieldSx}
+                  />
+                </Box>
+                <FormHelperText id="account-foreign-help">
+                  The part of the dividends above from foreign companies and funds, foreign tax
+                  included, and the foreign tax withheld on it.
+                </FormHelperText>
+                {foreignTaxError && <FormHelperText error>{foreignTaxError}</FormHelperText>}
+              </FormControl>
             </Stack>
           )}
 
@@ -867,6 +1010,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 {type === 'dividends' &&
                   'A dividend paid in Japan has 20.315% withheld (15.315% income tax and 5% residence tax), which settles the tax unless the dividend is reported.'}
               </Typography>
+              {(type === 'withholdingAccount' ||
+                (type === 'dividends' && issuerDomicile === 'foreign')) && (
+                <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                  {FOREIGN_DIVIDEND_TAX_NOTE}
+                </Typography>
+              )}
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                 Do not include tax-free NISA dividends or capital gains.
               </Typography>
@@ -879,7 +1028,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
                 {payerDomicile === 'domestic'
                   ? 'Interest paid in Japan is taxed at source at 20.315% and not reported on a tax return, so it does not affect total net income (合計所得金額) or anything that depends on it.'
-                  : 'Interest paid outside Japan has no Japanese tax withheld: the whole amount is interest income (利子所得) on the tax return, taxed in the progressive brackets and at the 10% residence-tax rate with the other income, so it counts toward total net income (合計所得金額) and everything keyed to it. Enter the amount in yen. Foreign tax withheld on it is not modelled (the foreign tax credit, 外国税額控除).'}
+                  : 'Interest paid outside Japan has no Japanese tax withheld: the whole amount is interest income (利子所得) on the tax return, taxed in the progressive brackets and at the 10% residence-tax rate with the other income, so it counts toward total net income (合計所得金額) and everything keyed to it. Enter the amount in yen. Tax withheld abroad is credited against the Japanese income tax and residence tax on this interest, up to a limit (the foreign tax credit, 外国税額控除).'}
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                 This covers interest income (利子所得) as the law defines it: interest on bonds
@@ -894,6 +1043,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
                     label: 'Interest income (利子所得) - NTA',
                   },
+                  ...(payerDomicile === 'foreign' ? [NTA_TAX_ANSWERS.foreignTaxCredit] : []),
                 ]}
               />
             </Box>

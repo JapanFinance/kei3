@@ -35,6 +35,8 @@ const streamA: IncomeStream = {
   type: 'withholdingAccount',
   capitalGains: 500_000,
   dividends: 0,
+  foreignDividends: 0,
+  foreignTax: 0,
   reportsCapitalGains: false,
   reportsDividends: false,
 };

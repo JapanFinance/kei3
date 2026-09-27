@@ -73,6 +73,8 @@ describe('withRequiredReporting', () => {
       type: 'withholdingAccount',
       capitalGains: -500_000,
       dividends: 800_000,
+      foreignDividends: 0,
+      foreignTax: 0,
       reportsCapitalGains: true,
       reportsDividends: false,
     };
@@ -85,6 +87,8 @@ describe('withRequiredReporting', () => {
       type: 'withholdingAccount',
       capitalGains: -500_000,
       dividends: 800_000,
+      foreignDividends: 0,
+      foreignTax: 0,
       reportsCapitalGains: false,
       reportsDividends: false,
     };
@@ -98,6 +102,8 @@ describe('withRequiredReporting', () => {
       shareType: 'listed',
       paymentChannel: 'abroad',
       isReported: false,
+      issuerDomicile: 'domestic',
+      foreignTax: 0,
       amount: 1_000_000,
     };
     expect(withRequiredReporting(dividend)).toEqual({ ...dividend, isReported: true });
@@ -110,6 +116,8 @@ describe('withRequiredReporting', () => {
       shareType: 'listed',
       paymentChannel: 'domestic',
       isReported: false,
+      issuerDomicile: 'domestic',
+      foreignTax: 0,
       amount: 1_000_000,
     };
     expect(withRequiredReporting(dividend)).toBe(dividend);

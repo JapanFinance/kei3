@@ -26,6 +26,7 @@ import type {
 } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { NON_TAXABLE_STATUS_INCOME_LIMIT } from '../../../utils/residenceTax';
+import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import ReferenceTable from '../../ui/ReferenceTable';
 import SourceLinks from '../../ui/SourceLinks';
@@ -33,6 +34,7 @@ import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
 import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
+import { ForeignTaxCreditTooltip, ForeignTaxPaidTooltip } from './ForeignTaxCreditTooltips';
 import IncomeOverviewRows from './IncomeOverviewRows';
 import {
   buildNationalBasicDeductionRows,
@@ -159,18 +161,23 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
 
 const INCOME_BASED_SPLIT_ID = 'residence-tax-income-based-split';
 
+/** A credit shown as a reduction, with a zero shown as ¥0 rather than as a negative zero. */
+const formatReduction = (amount: number): string => formatJPY(amount > 0 ? -amount : 0);
+
 /**
  * The amounts the withholding is charged on, as label and amount pairs: each withholding designated
- * account at its own base (its loss netted against its own dividends, never below zero), then the
- * dividends outside an account and the interest, each taxed in full. Listing the accounts one by
- * one is what makes the rows add up to the taxed amount when a loss in one account exceeds its
- * dividends while another account has dividends.
+ * account at its own base (its dividends after the foreign tax, with its loss netted against them,
+ * never below zero), then the dividends outside an account less the foreign tax withheld on them,
+ * and the interest, taxed in full. Listing the accounts one by one is what makes the rows add up
+ * to the taxed amount when a loss in one account exceeds its dividends while another account has
+ * dividends.
  */
 const withheldBaseRows = (base: WithheldInvestmentIncome): [label: string, amount: number][] => {
   const accountLabel = (account: WithheldInvestmentIncome['accounts'][number]) =>
     `Account ${account.position} (${[
       account.capitalGains !== 0 && `sales ${formatJPY(account.capitalGains)}`,
       account.dividends !== 0 && `dividends ${formatJPY(account.dividends)}`,
+      account.foreignTax && `foreign tax ${formatJPY(account.foreignTax)}`,
     ]
       .filter(Boolean)
       .join(', ')})`;
@@ -178,6 +185,9 @@ const withheldBaseRows = (base: WithheldInvestmentIncome): [label: string, amoun
     ...base.accounts.map((account): [string, number] => [accountLabel(account), account.base]),
     ...(base.dividends !== 0
       ? [['Dividends (other accounts)', base.dividends] as [string, number]]
+      : []),
+    ...(base.dividendsForeignTax
+      ? [['Less foreign tax on those dividends', -base.dividendsForeignTax] as [string, number]]
       : []),
     ...(base.interest !== 0 ? [['Interest paid in Japan', base.interest] as [string, number]] : []),
   ];
@@ -204,6 +214,13 @@ const WithheldInvestmentTaxTooltip: React.FC<{
         dividends down to nothing. Accounts are not combined with each other, so a loss left over in
         one account does not reduce the tax on dividends in another.
       </Typography>
+      {withheld.foreignTax !== undefined && (
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          On dividends from a foreign company or fund, the withholding is charged on the dividends
+          after the foreign tax withheld abroad (措法9条の2③). Left to withholding, that foreign tax
+          is not credited against Japanese tax (措令4条の5⑫).
+        </Typography>
+      )}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
         <tbody>
           {withheldBaseRows(withheld).map(([label, amount]) => (
@@ -269,13 +286,20 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
   // Investment income reported under 申告分離課税 is taxed inside the calculation below; the
   // amounts left to withholding are settled by the tax withheld at source, which is shown as a
-  // row of its own under each tax and counted in that tax's total, as on the Summary tab.
+  // row of its own under each tax and counted in that tax's total, as on the Summary tab. The
+  // foreign tax paid is a row of its own under income tax in the same way.
   const separateInvestment = results.investmentIncome?.reported?.separate;
   const withheldInvestment = results.investmentIncome?.withheld;
   const withheldNational = withheldInvestment?.tax.national ?? 0;
   const withheldResidence = withheldInvestment?.tax.residence ?? 0;
-  const totalIncomeTax = results.nationalIncomeTax + withheldNational;
-  const totalResidenceTax = results.residenceTax.totalResidenceTax + withheldResidence;
+  const foreignTaxCredit = results.foreignTaxCredit;
+  // The Foreign Tax Credit rows appear whenever foreign tax was paid, even when none of it is
+  // credited, so a figure entered in the hope of a credit is always answered; with no foreign tax
+  // they stay out of the way.
+  const showForeignTaxCredit = results.foreignTaxPaid !== undefined;
+  const withheldForeignTax = withheldInvestment?.foreignTax;
+  const totalIncomeTax = incomeTaxPaid(results);
+  const totalResidenceTax = residenceTaxPaid(results);
   const totalTaxes = totalIncomeTax + totalResidenceTax;
   const residenceSeparate = results.residenceTax.separate;
 
@@ -296,19 +320,22 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
       ? getNationalIncomeTaxBracketHighlightIndex(results.taxableIncomeForNationalIncomeTax)
       : undefined;
 
-  // Residence income-based portion (所得割). When a home loan credit spills over to
-  // residence tax, show the portion BEFORE the spillover and the spillover as its own
-  // row so the line items sum to the total (otherwise the portion is already net of it).
+  // Residence income-based portion (所得割). When a home loan credit spills over to residence tax
+  // or the foreign tax credit reduces it, show the portion BEFORE those credits and each credit as
+  // its own row so the line items sum to the total (otherwise the portion is already net of
+  // them). The reductions are exact differences of the floored portions, so the rows reconcile.
   const residenceIncomeBasedPost =
     results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax;
-  const residenceIncomeBasedPre =
-    results.residenceTaxIncomeBasedBeforeHomeLoanCredit ?? residenceIncomeBasedPost;
-  const hasHomeLoanResidenceSpillover = (results.homeLoanTaxCredit?.appliedToResidenceTax ?? 0) > 0;
-  const residenceIncomeBasedDisplayed = hasHomeLoanResidenceSpillover
-    ? residenceIncomeBasedPre
-    : residenceIncomeBasedPost;
-  // Exact reduction (pre − post) so the displayed rows reconcile to the total.
-  const homeLoanResidenceReduction = residenceIncomeBasedPre - residenceIncomeBasedPost;
+  const residenceIncomeBasedBeforeForeignTaxCredit =
+    results.residenceTaxIncomeBasedBeforeForeignTaxCredit ?? residenceIncomeBasedPost;
+  const residenceIncomeBasedDisplayed =
+    results.residenceTaxIncomeBasedBeforeHomeLoanCredit ??
+    residenceIncomeBasedBeforeForeignTaxCredit;
+  const homeLoanResidenceReduction =
+    residenceIncomeBasedDisplayed - residenceIncomeBasedBeforeForeignTaxCredit;
+  const foreignTaxResidenceReduction =
+    residenceIncomeBasedBeforeForeignTaxCredit - residenceIncomeBasedPost;
+  const residenceForeignTaxCredit = results.residenceTax.foreignTaxCredit;
 
   return (
     <Box>
@@ -678,14 +705,14 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       復興特別所得税
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A temporary surtax of 2.1% applied to the base income tax remaining after tax
-                      credits such as the home loan tax credit (基準所得税額). Originally introduced
-                      to help fund reconstruction efforts after the 2011 Great East Japan Earthquake
-                      and tsunami.
+                      A temporary surtax of 2.1% on the base income tax after the home loan tax
+                      credit and before the foreign tax credit (基準所得税額), rounded down to the
+                      yen. Originally introduced to help fund reconstruction efforts after the 2011
+                      Great East Japan Earthquake and tsunami.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Rate:</strong> 2.1% of base income tax after tax credits
-                      (基準所得税額)
+                      <strong>Rate:</strong> 2.1% of the base income tax after the home loan tax
+                      credit (基準所得税額)
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Period:</strong> January 1, 2013 - December 31, 2037 (25 years)
@@ -711,6 +738,26 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {showForeignTaxCredit && (
+          <ResultRow
+            label={
+              <span>
+                Foreign Tax Credit
+                <ForeignTaxCreditTooltip
+                  credit={foreignTaxCredit}
+                  part="national"
+                  withheldForeignTax={withheldForeignTax}
+                />
+              </span>
+            }
+            value={formatReduction(
+              (foreignTaxCredit?.credit.incomeTax ?? 0) +
+                (foreignTaxCredit?.credit.reconstructionSurtax ?? 0),
+            )}
+            type="detail"
+          />
+        )}
+
         {withheldInvestment && (
           <ResultRow
             label={
@@ -720,6 +767,23 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </span>
             }
             value={formatJPY(withheldNational)}
+            type="detail"
+          />
+        )}
+
+        {results.foreignTaxPaid !== undefined && (
+          <ResultRow
+            label={
+              <span>
+                Foreign Tax Paid
+                <ForeignTaxPaidTooltip
+                  foreignTaxPaid={results.foreignTaxPaid}
+                  credit={foreignTaxCredit}
+                  withheldForeignTax={withheldForeignTax}
+                />
+              </span>
+            }
+            value={formatJPY(results.foreignTaxPaid)}
             type="detail"
           />
         )}
@@ -734,11 +798,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     {separateInvestment
                       ? 'Total Income Tax = Base Income Tax + Tax on Investment Income (separate) (− Tax Credits) + Reconstruction Surtax'
                       : 'Total Income Tax = Base Income Tax (− Tax Credits) + Reconstruction Surtax'}
+                    {showForeignTaxCredit && ' − Foreign Tax Credit'}
                     {withheldInvestment && ' + Withheld on Investment Income'}
+                    {results.foreignTaxPaid !== undefined && ' + Foreign Tax Paid'}
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Rounding:</strong> The sum of base income tax and surtax is rounded down
-                    to the nearest 100 yen for the final amount.
+                    <strong>Rounding:</strong> The sum of base income tax and surtax, after the tax
+                    credits, is rounded down to the nearest 100 yen for the final amount.
                   </Typography>
                   <SourceLinks
                     sources={[
@@ -977,6 +1043,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     type="detail"
                   />
                 )}
+                {residenceForeignTaxCredit && residenceForeignTaxCredit.city > 0 && (
+                  <ResultRow
+                    label="Foreign tax credit (municipal)"
+                    value={formatJPY(-residenceForeignTaxCredit.city)}
+                    type="detail"
+                  />
+                )}
 
                 <ResultRow
                   label="Prefectural portion (4%)"
@@ -1007,6 +1080,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       </span>
                     }
                     value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)}
+                    type="detail"
+                  />
+                )}
+                {residenceForeignTaxCredit && residenceForeignTaxCredit.prefecture > 0 && (
+                  <ResultRow
+                    label="Foreign tax credit (prefectural)"
+                    value={formatJPY(-residenceForeignTaxCredit.prefecture)}
                     type="detail"
                   />
                 )}
@@ -1072,6 +1152,26 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   </span>
                 }
                 value={formatJPY(-homeLoanResidenceReduction)}
+                type="detail"
+              />
+            )}
+
+            {/* Foreign tax credit (reduces the income-based portion above, after the home loan
+                credit) */}
+            {showForeignTaxCredit && (
+              <ResultRow
+                label={
+                  <span>
+                    Foreign Tax Credit
+                    <ForeignTaxCreditTooltip
+                      credit={foreignTaxCredit}
+                      part="residence"
+                      applied={residenceForeignTaxCredit}
+                      withheldForeignTax={withheldForeignTax}
+                    />
+                  </span>
+                }
+                value={formatReduction(foreignTaxResidenceReduction)}
                 type="detail"
               />
             )}

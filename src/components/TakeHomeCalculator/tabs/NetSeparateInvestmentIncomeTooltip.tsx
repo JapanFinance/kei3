@@ -103,8 +103,9 @@ const NetSeparateInvestmentIncomeTooltip: React.FC<NetSeparateInvestmentIncomeTo
         broker.
       </Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        Tax another country withholds on a foreign company's dividends is eligible for the foreign
-        tax credit (外国税額控除), which the calculator does not currently support.
+        Tax another country withholds on a foreign company's dividends is credited against the
+        Japanese income tax and residence tax up to a limit, through the foreign tax credit
+        (外国税額控除) shown on the Taxes tab.
       </Typography>
       <SourceLinks
         sources={[

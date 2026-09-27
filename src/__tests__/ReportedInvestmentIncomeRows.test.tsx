@@ -63,6 +63,8 @@ const inputs: TakeHomeInputs = {
       type: 'withholdingAccount',
       capitalGains: -500_000,
       dividends: 800_000,
+      foreignDividends: 0,
+      foreignTax: 0,
       reportsCapitalGains: true,
       reportsDividends: true,
     },
@@ -114,7 +116,8 @@ const results: TakeHomeResults = makeTakeHomeResults({
   nationalIncomeTaxBasicDeduction: 1_040_000,
   taxableIncomeForNationalIncomeTax: 1_797_000,
   nationalIncomeTaxBase: 89_850,
-  reconstructionSurtax: 2_831.85,
+  // ⌊134,850 × 2.1%⌋ = ⌊2,831.85⌋: the surtax on the return drops the fraction.
+  reconstructionSurtax: 2_831,
   nationalIncomeTax: 137_600,
   residenceTaxBasicDeduction: 430_000,
   taxableIncomeForResidenceTax: 2_407_000,
@@ -166,7 +169,11 @@ describe.each([
       within(tooltip!).getByText('Loss subtracted from dividends (損益通算):'),
     ).toBeInTheDocument();
     expect(within(tooltip!).getByText('¥300,000')).toBeInTheDocument();
-    expect(within(tooltip!).getByText(/foreign tax credit \(外国税額控除\)/)).toBeInTheDocument();
+    expect(
+      within(tooltip!).getByText(
+        /credited against the Japanese income tax and residence tax up to a limit, through the foreign tax credit \(外国税額控除\)/,
+      ),
+    ).toBeInTheDocument();
 
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.getAllByText('¥3,860,000').length).toBeGreaterThanOrEqual(1);
@@ -204,7 +211,11 @@ describe.each([
     expect(
       within(tooltip!).getByText(/dividend tax credit \(配当控除\).*not supported yet/),
     ).toBeInTheDocument();
-    expect(within(tooltip!).getByText(/foreign tax credit \(外国税額控除\)/)).toBeInTheDocument();
+    expect(
+      within(tooltip!).getByText(
+        /credited against the Japanese income tax and residence tax up to a limit, through the foreign tax credit \(外国税額控除\)/,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText('Net Investment Income (separate)')).toBeInTheDocument();
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.getAllByText('¥4,260,000').length).toBeGreaterThanOrEqual(1);
@@ -271,7 +282,11 @@ describe('TaxesTab with interest paid outside Japan', () => {
       ),
     ).toBeInTheDocument();
     // The foreign tax credit note applies to dividends and interest alike, so it shows either way.
-    expect(within(tooltip!).getByText(/foreign tax credit \(外国税額控除\)/)).toBeInTheDocument();
+    expect(
+      within(tooltip!).getByText(
+        /credited against the Japanese income tax and residence tax up to a limit, through the foreign tax credit \(外国税額控除\)/,
+      ),
+    ).toBeInTheDocument();
     expect(within(tooltip!).queryByText(/dividend tax credit \(配当控除/)).not.toBeInTheDocument();
   });
 
@@ -455,6 +470,291 @@ describe('FurusatoNozeiTab with reported investment income', () => {
       screen.queryByText(
         /Investment income reported under separate taxation \(申告分離課税\) raises the limit/,
       ),
+    ).not.toBeInTheDocument();
+  });
+});
+
+const rowOf = (label: HTMLElement) => label.closest('div')!.parentElement!;
+
+const expectInDocumentOrder = (elements: HTMLElement[]) => {
+  elements.slice(1).forEach((element, i) => {
+    expect(
+      elements[i]!.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+};
+
+// Case E of the foreign tax cases in taxCalculations.test.ts: the account's 800,000 of dividends
+// above are all from foreign companies, with 80,000 of foreign tax. The loss leaves 合計所得金額 at
+// 3,860,000 but not the 800,000 of foreign-source income. B = 89,850 + 45,000 = 134,850,
+// R = ⌊2,831.85⌋ = 2,831; L = ⌊134,850 × 800,000 / 3,860,000⌋ = 27,948, L_R = ⌊2,831 × 800,000 /
+// 3,860,000⌋ = 586, ⌊27,948 × 12%⌋ = 3,353, ⌊27,948 × 18%⌋ = 5,030, all used. Income tax
+// ⌊(134,850 + 2,831 − 27,948 − 586) / 100⌋ × 100 = 109,100; 住民税 市 151,920 − 5,030 = 146,890 →
+// 146,800, 県 101,280 − 3,353 = 97,927 → 97,900, + 5,000 = 249,700.
+const caseELimits = {
+  incomeTax: 27_948,
+  reconstructionSurtax: 586,
+  prefecture: 3_353,
+  city: 5_030,
+};
+const withForeignTax: TakeHomeResults = {
+  ...results,
+  nationalIncomeTax: 109_100,
+  residenceTax: makeResidenceTaxDetails({
+    ...residenceTaxOnEarnedIncome,
+    city: { ...residenceTaxOnEarnedIncome.city, cityIncomeTax: 146_800 },
+    prefecture: { ...residenceTaxOnEarnedIncome.prefecture, prefecturalIncomeTax: 97_900 },
+    totalResidenceTax: 249_700,
+    separate: {
+      taxableDividends: 300_000,
+      taxableCapitalGains: 0,
+      cityIncomeTax: 9_000,
+      prefecturalIncomeTax: 6_000,
+    },
+    foreignTaxCredit: { city: 5_030, prefecture: 3_353 },
+  }),
+  residenceTaxIncomeBasedBeforeForeignTaxCredit: 253_100,
+  foreignTaxCredit: {
+    foreignTax: 80_000,
+    foreignSourceIncome: 800_000,
+    adjustedForeignSourceIncome: 800_000,
+    totalIncome: 3_860_000,
+    incomeTax: 134_850,
+    limit: caseELimits,
+    credit: caseELimits,
+    excess: 43_083,
+  },
+  foreignTaxPaid: 80_000,
+};
+
+describe('TaxesTab with the foreign tax credit', () => {
+  it('shows the credit under each tax and the foreign tax paid in the income tax total', () => {
+    render(<TaxesTab results={withForeignTax} inputs={inputs} />);
+
+    const [incomeTaxCredit, residenceTaxCredit] = screen.getAllByText('Foreign Tax Credit');
+    // 27,948 + 586 off the income tax and the surtax.
+    expect(within(rowOf(incomeTaxCredit!)).getByText('-¥28,534')).toBeInTheDocument();
+    // The floored 所得割 before the credit, 151,900 + 101,200 = 253,100, less the 146,800 +
+    // 97,900 = 244,700 after it.
+    expect(within(rowOf(residenceTaxCredit!)).getByText('-¥8,400')).toBeInTheDocument();
+    expect(
+      within(rowOf(screen.getByText('Foreign Tax Paid'))).getByText('¥80,000'),
+    ).toBeInTheDocument();
+    // 109,100 + 80,000.
+    expect(
+      within(rowOf(screen.getByText('Total Income Tax'))).getByText('¥189,100'),
+    ).toBeInTheDocument();
+    // 189,100 + 249,700.
+    expect(
+      within(rowOf(screen.getByText('Total Taxes'))).getByText('¥438,800'),
+    ).toBeInTheDocument();
+    // What each side's income-based portion absorbed, in its breakdown.
+    expect(
+      within(rowOf(screen.getByText('Foreign tax credit (municipal)'))).getByText('-¥5,030'),
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf(screen.getByText('Foreign tax credit (prefectural)'))).getByText('-¥3,353'),
+    ).toBeInTheDocument();
+  });
+
+  it('places the rows where the calculation applies them', () => {
+    render(<TaxesTab results={withForeignTax} inputs={inputs} />);
+
+    const [incomeTaxCredit, residenceTaxCredit] = screen.getAllByText('Foreign Tax Credit');
+    expectInDocumentOrder([
+      screen.getByText('Reconstruction Surtax'),
+      incomeTaxCredit!,
+      screen.getByText('Foreign Tax Paid'),
+      screen.getByText('Total Income Tax'),
+      screen.getByText('Income-based Portion'),
+      residenceTaxCredit!,
+      screen.getByText('Per Capita Portion'),
+      screen.getByText('Total Residence Tax'),
+    ]);
+  });
+
+  it('shows no foreign tax rows without foreign tax', () => {
+    render(<TaxesTab results={results} inputs={inputs} />);
+
+    expect(screen.queryByText('Foreign Tax Credit')).not.toBeInTheDocument();
+    expect(screen.queryByText('Foreign Tax Paid')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Foreign tax credit \(/)).not.toBeInTheDocument();
+  });
+
+  // Case K of the engine tests: 20,000 of foreign tax on 500,000 of foreign-source income entered
+  // by hand beside the 5,000,000 salary, with no investment entry. B = 89,850, R = 1,886;
+  // L = ⌊89,850 × 500,000 / 3,560,000⌋ = 12,619, L_R = ⌊1,886 × 500,000 / 3,560,000⌋ = 264,
+  // ⌊12,619 × 12%⌋ = 1,514, ⌊12,619 × 18%⌋ = 2,271. Income tax ⌊(89,850 + 1,886 − 12,619 − 264) /
+  // 100⌋ × 100 = 78,800; 住民税 市 142,920 − 2,271 → 140,600, 県 95,280 − 1,514 → 93,700.
+  const caseKLimits = {
+    incomeTax: 12_619,
+    reconstructionSurtax: 264,
+    prefecture: 1_514,
+    city: 2_271,
+  };
+  const earnedIncomeResidenceTax = {
+    ...residenceTaxOnEarnedIncome,
+    city: { ...residenceTaxOnEarnedIncome.city, cityIncomeTax: 142_900 },
+    prefecture: { ...residenceTaxOnEarnedIncome.prefecture, prefecturalIncomeTax: 95_200 },
+    totalResidenceTax: 243_100,
+  };
+  const enteredByHand: TakeHomeResults = {
+    ...results,
+    annualIncome: 5_000_000,
+    totalNetIncome: 3_560_000,
+    investmentIncome: undefined,
+    nationalIncomeTax: 78_800,
+    reconstructionSurtax: 1_886,
+    residenceTax: makeResidenceTaxDetails({
+      ...earnedIncomeResidenceTax,
+      city: { ...earnedIncomeResidenceTax.city, cityIncomeTax: 140_600 },
+      prefecture: { ...earnedIncomeResidenceTax.prefecture, prefecturalIncomeTax: 93_700 },
+      totalResidenceTax: 239_300,
+      foreignTaxCredit: { city: 2_271, prefecture: 1_514 },
+    }),
+    residenceTaxIncomeBasedBeforeForeignTaxCredit: 238_100,
+    foreignTaxCredit: {
+      foreignTax: 20_000,
+      foreignSourceIncome: 500_000,
+      adjustedForeignSourceIncome: 500_000,
+      totalIncome: 3_560_000,
+      incomeTax: 89_850,
+      manualForeignTax: 20_000,
+      manualForeignSourceIncome: 500_000,
+      limit: caseKLimits,
+      credit: caseKLimits,
+      excess: 3_332,
+    },
+    foreignTaxPaid: 20_000,
+  };
+
+  it('shows the rows for foreign tax entered by hand, with no investment income', () => {
+    render(<TaxesTab results={enteredByHand} inputs={inputs} />);
+
+    const [incomeTaxCredit, residenceTaxCredit] = screen.getAllByText('Foreign Tax Credit');
+    // 12,619 + 264; the floored 所得割 238,100 before, 234,300 after.
+    expect(within(rowOf(incomeTaxCredit!)).getByText('-¥12,883')).toBeInTheDocument();
+    expect(within(rowOf(residenceTaxCredit!)).getByText('-¥3,800')).toBeInTheDocument();
+    expect(
+      within(rowOf(screen.getByText('Foreign Tax Paid'))).getByText('¥20,000'),
+    ).toBeInTheDocument();
+    // 78,800 + 20,000.
+    expect(
+      within(rowOf(screen.getByText('Total Income Tax'))).getByText('¥98,800'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Withheld on Investment Income')).not.toBeInTheDocument();
+    expect(screen.queryByText('Net Investment Income (separate)')).not.toBeInTheDocument();
+    // The tooltip names the foreign tax and the foreign-source income entered by hand.
+    expect(
+      within(tooltipTitled('Foreign Tax Credit — Income Tax')!).getAllByText(
+        'Entered in Additional Deductions & Credits:',
+      ),
+    ).toHaveLength(2);
+  });
+
+  it('shows a credit of ¥0 rather than a negative zero when there is no limit', () => {
+    // Case K′: no foreign-source income, so every limit is 0 and the taxes are the baseline's.
+    const zero = { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 };
+    render(
+      <TaxesTab
+        results={{
+          ...enteredByHand,
+          nationalIncomeTax: 91_700,
+          residenceTax: makeResidenceTaxDetails(earnedIncomeResidenceTax),
+          residenceTaxIncomeBasedBeforeForeignTaxCredit: undefined,
+          foreignTaxCredit: {
+            foreignTax: 20_000,
+            foreignSourceIncome: 0,
+            adjustedForeignSourceIncome: 0,
+            totalIncome: 3_560_000,
+            incomeTax: 89_850,
+            manualForeignTax: 20_000,
+            limit: zero,
+            credit: zero,
+            excess: 20_000,
+          },
+        }}
+        inputs={inputs}
+      />,
+    );
+
+    const creditRows = screen.getAllByText('Foreign Tax Credit').map(rowOf);
+    expect(creditRows).toHaveLength(2);
+    for (const row of creditRows) {
+      expect(within(row).getByText('¥0')).toBeInTheDocument();
+      expect(within(row).queryByText('-¥0')).not.toBeInTheDocument();
+    }
+    // 91,700 + 20,000.
+    expect(
+      within(rowOf(screen.getByText('Total Income Tax'))).getByText('¥111,700'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the credit rows at ¥0 when all the foreign tax is on dividends left to withholding', () => {
+    // Case B of the engine tests: a 1,000,000 dividend from a foreign company with 100,000 of
+    // foreign tax, left to withholding beside the 5,000,000 salary. Nothing is creditable
+    // (措令4条の5⑫), so there is no credit result, but foreign tax was entered, so the rows answer
+    // it. Withholding on 1,000,000 − 100,000 = 900,000: ⌊900,000 × 15.315%⌋ = 137,835 and 45,000.
+    render(
+      <TaxesTab
+        results={{
+          ...enteredByHand,
+          annualIncome: 6_000_000,
+          nationalIncomeTax: 91_700,
+          residenceTax: makeResidenceTaxDetails(earnedIncomeResidenceTax),
+          residenceTaxIncomeBasedBeforeForeignTaxCredit: undefined,
+          investmentIncome: {
+            withheld: {
+              accounts: [],
+              dividends: 1_000_000,
+              dividendsForeignTax: 100_000,
+              interest: 0,
+              received: 1_000_000,
+              taxedAmount: 900_000,
+              foreignTax: 100_000,
+              tax: { national: 137_835, residence: 45_000, total: 182_835 },
+            },
+          },
+          foreignTaxCredit: undefined,
+          foreignTaxPaid: 100_000,
+        }}
+        inputs={inputs}
+      />,
+    );
+
+    const creditRows = screen.getAllByText('Foreign Tax Credit').map(rowOf);
+    expect(creditRows).toHaveLength(2);
+    for (const row of creditRows) {
+      expect(within(row).getByText('¥0')).toBeInTheDocument();
+    }
+    // 91,700 + 137,835 + 100,000.
+    expect(
+      within(rowOf(screen.getByText('Total Income Tax'))).getByText('¥329,535'),
+    ).toBeInTheDocument();
+    for (const title of ['Foreign Tax Credit — Income Tax', 'Foreign Tax Credit — Residence Tax']) {
+      expect(
+        within(tooltipTitled(title)!).getByText(
+          /All the foreign tax paid, ¥100,000, is on dividends left to withholding\./,
+        ),
+      ).toBeInTheDocument();
+    }
+  });
+});
+
+describe('FurusatoNozeiTab with the foreign tax credit', () => {
+  it('says the reductions may be slightly high when a credit applies', () => {
+    render(<FurusatoNozeiTab results={withForeignTax} />);
+
+    expect(
+      screen.getByText(/A donation also lowers the foreign tax credit limits/),
+    ).toBeInTheDocument();
+  });
+
+  it('says nothing about it without a credit', () => {
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(
+      screen.queryByText(/A donation also lowers the foreign tax credit limits/),
     ).not.toBeInTheDocument();
   });
 });

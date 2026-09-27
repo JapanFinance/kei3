@@ -12,6 +12,7 @@ import React from 'react';
 
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
+import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
 import { ResultRow } from '../ResultRow';
 import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 
@@ -46,11 +47,9 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       (results.employmentInsurance ?? 0) +
       (results.longTermCareCategory1Premium ?? 0);
   // The tax withheld on investment income left to withholding counts with the assessed tax of
-  // the same kind; the Taxes tab shows the two apart.
-  const withheldInvestmentTax = results.investmentIncome?.withheld?.tax;
-  const incomeTax = results.nationalIncomeTax + (withheldInvestmentTax?.national ?? 0);
-  const residenceTax =
-    results.residenceTax.totalResidenceTax + (withheldInvestmentTax?.residence ?? 0);
+  // the same kind, and the foreign tax paid with the income tax; the Taxes tab shows them apart.
+  const incomeTax = incomeTaxPaid(results);
+  const residenceTax = residenceTaxPaid(results);
   const totalTaxes = incomeTax + residenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage =
