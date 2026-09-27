@@ -7,6 +7,7 @@ import type { TakeHomeInputs, TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { ResultRow } from '../ResultRow';
 import NetBusinessAndMiscIncomeTooltip from './NetBusinessAndMiscIncomeTooltip';
+import NetDividendIncomeTooltip from './NetDividendIncomeTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import NetInvestmentIncomeTooltip from './NetInvestmentIncomeTooltip';
 import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
@@ -17,10 +18,10 @@ interface IncomeOverviewRowsProps {
 }
 
 /**
- * The per-category net income rows (給与所得, 事業所得・雑所得, 公的年金等に係る雑所得, and the
- * 申告分離課税 investment income) that open the Taxes and Social Insurance tabs, each with its
- * calculation tooltip, followed by the 合計所得金額 subtotal when more than one category is
- * present.
+ * The per-category net income rows (給与所得, 事業所得・雑所得, 公的年金等に係る雑所得, the
+ * 総合課税 dividends, and the 申告分離課税 investment income) that open the Taxes and Social
+ * Insurance tabs, each with its calculation tooltip, followed by the 合計所得金額 subtotal when
+ * more than one category is present.
  */
 const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs }) => {
   const grossBusinessAndMiscIncome = inputs.incomeStreams
@@ -30,11 +31,13 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = grossBusinessAndMiscIncome > 0;
   const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
+  const aggregateDividends = results.investmentIncome?.aggregateDividends;
   const reportedInvestment = results.investmentIncome?.reported;
   const presentIncomeComponents = [
     hasEmploymentIncome,
     hasBusinessOrMiscIncome,
     hasPublicPensionIncome,
+    aggregateDividends !== undefined,
     reportedInvestment !== undefined,
   ].filter(Boolean).length;
 
@@ -90,6 +93,19 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
             </span>
           }
           value={formatJPY(results.netPublicPensionIncome ?? 0)}
+          type="default"
+        />
+      )}
+
+      {aggregateDividends !== undefined && (
+        <ResultRow
+          label={
+            <span>
+              Net Dividend Income (reported, progressive)
+              <NetDividendIncomeTooltip amount={aggregateDividends} />
+            </span>
+          }
+          value={formatJPY(aggregateDividends)}
           type="default"
         />
       )}

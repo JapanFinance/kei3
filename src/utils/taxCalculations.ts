@@ -18,14 +18,16 @@ import {
   isEmployeeHealthProvider,
   type LongTermCareCategory1Estimate,
 } from '../types/healthInsurance';
-import type {
-  BonusIncomeStream,
-  IncomeStream,
-  InvestmentIncomeAmounts,
-  PersonalCircumstancesInput,
-  ReportedInvestmentAmounts,
-  TakeHomeInputs,
-  TakeHomeResults,
+import {
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  type BonusIncomeStream,
+  type IncomeStream,
+  type InvestmentIncomeAmounts,
+  type PersonalCircumstancesInput,
+  type ReportedDividendsTaxation,
+  type ReportedInvestmentAmounts,
+  type TakeHomeInputs,
+  type TakeHomeResults,
 } from '../types/tax';
 import {
   type TaxpayerAgeRange,
@@ -305,9 +307,9 @@ interface IncomeBreakdown {
   blueFilerDeduction: number;
   /**
    * Earned income only (employment + business/misc + public pension). Investment income is
-   * gathered separately in {@link investment} and {@link reportedInvestment}; the reported part
-   * joins this in TakeHomeResults.annualIncome, the withheld part never does — see
-   * {@link isInvestmentIncomeStream}.
+   * gathered separately in {@link investment}, {@link reportedInvestment} and
+   * {@link aggregateDividends}; the reported parts join this in TakeHomeResults.annualIncome,
+   * the withheld part never does — see {@link isInvestmentIncomeStream}.
    */
   totalAnnualIncome: number;
   commutingAllowance: number;
@@ -319,13 +321,22 @@ interface IncomeBreakdown {
   grossInvestmentIncome: number;
   /** Investment-income amounts reported under 申告分離課税, as entered. */
   reportedInvestment: ReportedInvestmentAmounts;
+  /** 配当等 reported under 総合課税, as entered — the 配当所得 that joins 総所得金額. */
+  aggregateDividends: number;
 }
 
 /**
  * Processes income streams to categorize them and calculate totals.
  * This is used by both the main tax calculation and the net income calculation.
+ *
+ * @param reportedDividendsTaxation  The one election that taxes every reported dividend
+ *   ({@link ReportedDividendsTaxation}): it decides whether a reported dividend joins the
+ *   申告分離課税 classes or 総所得金額.
  */
-const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdown => {
+const calculateIncomeBreakdown = (
+  incomeStreams: IncomeStream[],
+  reportedDividendsTaxation: ReportedDividendsTaxation,
+): IncomeBreakdown => {
   let salaryIncome = 0;
   const bonusIncome: BonusIncomeStream[] = [];
   let netBusinessAndMiscIncomeBeforeBlueFilerDeduction = 0;
@@ -340,6 +351,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
   let reportedCapitalGains = 0;
   let reportedQualifyingCapitalLosses = 0;
   let reportedDividends = 0;
+  let aggregateDividends = 0;
   let processedBusinessIncome = false;
 
   for (const income of incomeStreams) {
@@ -392,7 +404,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         }
         // Negative (譲渡損失) is expected in either bucket: see calculateWithheldInvestmentTax's
         // in-account netting and classifyReportedInvestmentIncome's 損益通算.
-        if (income.taxTreatment === 'withheldOnly') {
+        if (!income.isReported) {
           if (income.account !== 'specifiedWithholding') {
             throw new Error(
               'Only a sale in a 特定口座（源泉徴収あり）can be left off the return (措法37条の11の5).',
@@ -410,16 +422,26 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
         if (income.shareType !== 'listed') {
           throw new Error('Dividends on 一般株式等 are not currently supported.');
         }
-        if (income.taxTreatment === 'aggregate') {
-          throw new Error('Reporting dividends under 総合課税 is not currently supported.');
-        }
         if (income.amount < 0) {
           throw new Error('Dividends cannot be negative.');
         }
-        if (income.taxTreatment === 'withheldOnly') {
+        if (!income.isReported) {
           dividends += income.amount;
-        } else {
-          reportedDividends += income.amount;
+          break;
+        }
+        switch (reportedDividendsTaxation) {
+          case 'separate':
+            reportedDividends += income.amount;
+            break;
+          case 'aggregate':
+            // 配当所得 in 総所得金額 (所法22条②一), kept apart from reportedDividends: 措法37条の
+            // 12の2① nets a loss only against the 配当所得等 that elected 措法8条の4.
+            aggregateDividends += income.amount;
+            break;
+          default: {
+            const unhandled: never = reportedDividendsTaxation;
+            throw new Error(`Unhandled dividend election: ${JSON.stringify(unhandled)}`);
+          }
         }
         break;
       case 'interest':
@@ -471,6 +493,7 @@ const calculateIncomeBreakdown = (incomeStreams: IncomeStream[]): IncomeBreakdow
     investment,
     grossInvestmentIncome,
     reportedInvestment,
+    aggregateDividends,
   };
 };
 
@@ -500,6 +523,7 @@ const composeTaxpayerNetIncomeComponents = (
     grossPublicPensionIncome,
     recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
     otherNetIncome: netBusinessAndMiscIncome,
+    aggregateDividendIncome: breakdown.aggregateDividends,
     separateNetIncome: classifyReportedInvestmentIncome(breakdown.reportedInvestment).netIncome,
     year,
   });
@@ -519,6 +543,8 @@ const composeTaxpayerNetIncomeComponents = (
  *                       taxpayer for
  * @param personalCircumstances  The taxpayer's own status, for the 特別障害者 condition of that
  *                       same deduction
+ * @param reportedDividendsTaxation  The election that taxes every reported dividend; the
+ *                       default when the caller has none
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
@@ -526,9 +552,10 @@ export const calculateNetIncomeComponents = (
   ageRange: TaxpayerAgeRange,
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
+  reportedDividendsTaxation: ReportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
 ): NetIncomeComponents =>
   composeTaxpayerNetIncomeComponents(
-    calculateIncomeBreakdown(incomeStreams),
+    calculateIncomeBreakdown(incomeStreams, reportedDividendsTaxation),
     year,
     ageRange,
     dependents,
@@ -536,7 +563,10 @@ export const calculateNetIncomeComponents = (
   );
 
 export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
-  const incomeBreakdown = calculateIncomeBreakdown(inputs.incomeStreams);
+  const incomeBreakdown = calculateIncomeBreakdown(
+    inputs.incomeStreams,
+    inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  );
   const {
     salaryIncome,
     bonusIncome,
@@ -551,19 +581,28 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     investment,
     grossInvestmentIncome,
     reportedInvestment,
+    aggregateDividends,
   } = incomeBreakdown;
 
   const hasReportedInvestment = hasReportedInvestmentIncome(reportedInvestment);
-  if (totalAnnualIncome <= 0 && !hasInvestmentIncome(investment) && !hasReportedInvestment) {
+  if (
+    totalAnnualIncome <= 0 &&
+    !hasInvestmentIncome(investment) &&
+    !hasReportedInvestment &&
+    aggregateDividends === 0
+  ) {
     return DEFAULT_TAKE_HOME_RESULTS;
   }
 
   // The income the return covers (see TakeHomeResults.annualIncome): the earned income plus the
-  // investment income reported under 申告分離課税 as entered, matching
+  // investment income reported under 申告分離課税 or 総合課税 as entered, matching
   // totalAnnualIncomeFromStreams on the input side. Computed from the streams rather than read
   // from inputs.annualIncome for consistency.
   const annualIncome =
-    totalAnnualIncome + reportedInvestment.capitalGains + reportedInvestment.dividends;
+    totalAnnualIncome +
+    reportedInvestment.capitalGains +
+    reportedInvestment.dividends +
+    aggregateDividends;
 
   // Whether the person is employed at all, which a commuting allowance alone attests to even
   // though none of it is 給与等の収入金額 — social insurance is charged on it either way.
@@ -900,7 +939,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       grossPublicPensionIncome,
       netPublicPensionIncome,
     }),
-    ...((hasInvestmentIncome(investment) || hasReportedInvestment) && {
+    ...((hasInvestmentIncome(investment) || hasReportedInvestment || aggregateDividends > 0) && {
       investmentIncome: {
         gross: investment,
         grossTotal: grossInvestmentIncome,
@@ -916,6 +955,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
             nationalIncomeTaxBase: separateNationalIncomeTaxBase,
           },
         }),
+        ...(aggregateDividends > 0 && { aggregateDividends }),
       },
     }),
     totalNetIncome: netIncome,
