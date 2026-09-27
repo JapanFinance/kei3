@@ -85,8 +85,8 @@ const isPassThroughStream = (stream: IncomeStream): boolean => !isEarnedIncomeSt
 
 /**
  * The part of the annual income total that the sweep holds constant: pass-through streams that
- * nonetheless count toward annual income, which is investment income reported under
- * 申告分離課税. A swept income below this amount cannot be reached by scaling the earned
+ * nonetheless count toward annual income, which is investment income, reported or settled by
+ * withholding. A swept income below this amount cannot be reached by scaling the earned
  * streams, so the sweep starts here.
  */
 export const heldIncomeInSweep = (streams: readonly IncomeStream[]): number =>
@@ -178,7 +178,7 @@ export const generateChartData = (
         business: 0,
         miscellaneous: 0,
         publicPension: 0,
-        reportedInvestment: 0,
+        investment: 0,
       };
       calcStreams.forEach(s => {
         switch (s.type) {
@@ -197,15 +197,13 @@ export const generateChartData = (
           case 'publicPension':
             groups.publicPension += annualIncomeStreamAmount(s);
             break;
-          // Investment income is in the breakdown only when it is part of the income: the
-          // reported amounts, held constant across the sweep. What is withheld at source stays
-          // outside the income, like the commuting allowance; stock compensation has no row of
-          // its own.
+          // Investment income is held constant across the sweep, reported or not; stock
+          // compensation has no row of its own and a commuting allowance is not income.
           case 'withholdingAccount':
           case 'capitalGains':
           case 'dividends':
           case 'interest':
-            groups.reportedInvestment += annualIncomeContribution(s);
+            groups.investment += annualIncomeContribution(s);
             break;
           case 'commutingAllowance':
           case 'stockCompensation':
@@ -225,8 +223,8 @@ export const generateChartData = (
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
       if (groups.publicPension > 0)
         breakdown.push({ label: 'Public Pension Income', amount: groups.publicPension });
-      if (groups.reportedInvestment !== 0)
-        breakdown.push({ label: 'Reported Investment Income', amount: groups.reportedInvestment });
+      if (groups.investment !== 0)
+        breakdown.push({ label: 'Investment Income', amount: groups.investment });
     }
 
     const result = calculateTaxes(inputsForCalc);
@@ -313,11 +311,13 @@ export const generateChartData = (
       type: 'bar' as const,
       stack: 'stack0',
     },
+    // The tax bars carry the tax withheld on investment income beside the assessed tax, so the
+    // bars stack to the income and the take-home bar is the take-home pay of the summary tab.
     {
       label: 'Income Tax',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.nationalIncomeTax,
+        y: result.nationalIncomeTax + (result.investmentIncome?.withheld.national ?? 0),
         breakdown,
       })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
@@ -329,7 +329,9 @@ export const generateChartData = (
       label: 'Residence Tax',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.residenceTax.totalResidenceTax,
+        y:
+          result.residenceTax.totalResidenceTax +
+          (result.investmentIncome?.withheld.residence ?? 0),
         breakdown,
       })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',

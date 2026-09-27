@@ -2,12 +2,24 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-09-22
+
+### Updated
+
+- Investment income left to the tax withheld at source (申告不要) now counts in annual income and take-home pay, as money received, with the 20.315% withheld on it counted with the income tax and residence tax; before, it sat outside both. The Summary tab therefore adds no row for it, the input form no longer lists it under the income total, the chart holds it constant across the income range like other investment income, and the Taxes tab shows the withheld amounts as a row under each tax in place of a separate section at the end. The taxable amount of investment income reported under 申告分離課税 moved from rows of its own into the tooltips of the 15% income-tax row and the income-based residence-tax row.
+
 ## 2026-09-21
 
 ### Fixed
 
 - Fixed employee health insurance premiums that were ¥1 too high for some rates. A premium that ends in exactly 0.50 yen is rounded down (50銭以下切り捨て), but in rare cases it was incorrectly being rounded up. Premiums on bonuses were affected in the same way. Amounts are now entered in whole yen, and custom provider rates accept up to four decimal places (for example, 3.9947%). A custom rate entered with more than four decimal places is rounded to four.
 - Fixed the Social Insurance tab showing the wrong standard monthly remuneration (標準報酬月額) grade when three or more income streams were entered and their total landed exactly on a grade boundary. This was a display bug in the tooltip and did not affect the calculated premiums.
+
+## 2026-09-18
+
+### Updated
+
+- The income details dialog's investment-income comparison is now a reporting planner. It searches the ways to report the withholding designated accounts and domestic dividend entries that are not already fixed — one election per account ([措法37条の11の5](https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11_5), [37条の11の6](https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11_6)) and one per dividend entry — and shows, next to the entries as they stand, the plan found to keep the most this year, plus three references that set every such entry the same way: withheld only, all reported under 申告分離課税, and all reported under 総合課税. Each row shows take-home, income tax, residence tax, social insurance, the furusato nozei limit and 合計所得金額, together with what to change and an Apply button that sets every entry and the election to that row's choices. A sale outside a withholding designated account and a dividend paid abroad ([措令4条の3②](https://laws.e-gov.go.jp/law/332CO0000000043#Mp-Ch_2-Se_1-At_4_3)) always have to be reported, in every plan alike. With few enough entries the search checks every combination; with more, it improves the best uniform plan one entry at a time instead and says so, since checking every combination would take too long.
 
 ## 2026-09-17
 

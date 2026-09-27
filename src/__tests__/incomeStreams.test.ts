@@ -28,7 +28,7 @@ describe('totalAnnualIncomeFromStreams', () => {
     expect(totalAnnualIncomeFromStreams([])).toBe(0);
   });
 
-  it('excludes investment income settled by withholding, which stays off the return', () => {
+  it('includes investment income settled by withholding, as entered', () => {
     expect(
       totalAnnualIncomeFromStreams([
         { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
@@ -50,7 +50,7 @@ describe('totalAnnualIncomeFromStreams', () => {
         },
         { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
       ]),
-    ).toBe(1_000_000);
+    ).toBe(1_000_000 + 2_000_000 + 300_000 + 100_000);
   });
 
   it('includes investment income reported under 申告分離課税, as entered', () => {
@@ -217,7 +217,7 @@ describe('annualIncomeStreamAmount', () => {
 });
 
 describe('annualIncomeContribution', () => {
-  it('includes investment income once it is reported', () => {
+  it('includes investment income that is reported', () => {
     expect(
       annualIncomeContribution({
         id: 'g1',
@@ -239,7 +239,7 @@ describe('annualIncomeContribution', () => {
     ).toBe(10_000);
   });
 
-  it('excludes the commuting allowance (a reimbursement) and investment income settled by withholding', () => {
+  it('includes investment income settled by withholding and excludes only the commuting allowance', () => {
     expect(
       annualIncomeContribution({
         id: 'c1',
@@ -257,7 +257,7 @@ describe('annualIncomeContribution', () => {
         reportsCapitalGains: false,
         reportsDividends: false,
       }),
-    ).toBe(0);
+    ).toBe(-10_000);
     expect(
       annualIncomeContribution({
         id: 'd1',
@@ -267,7 +267,7 @@ describe('annualIncomeContribution', () => {
         isReported: false,
         amount: 10_000,
       }),
-    ).toBe(0);
+    ).toBe(10_000);
     expect(
       annualIncomeContribution({
         id: 'i1',
@@ -275,7 +275,7 @@ describe('annualIncomeContribution', () => {
         payerDomicile: 'domestic',
         amount: 10_000,
       }),
-    ).toBe(0);
+    ).toBe(10_000);
     // A monthly amount contributes its annualized total, not the entered amount.
     expect(
       annualIncomeContribution({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
