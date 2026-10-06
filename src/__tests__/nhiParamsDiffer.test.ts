@@ -29,7 +29,6 @@ const BASE: NationalHealthInsuranceRegionParams = {
   childSupportPerCapita: 1000,
   childSupportHouseholdFlat: 500,
   childSupportCap: 30000,
-  nhiStandardDeduction: 430000,
 };
 
 // Periods for a region whose FY2026 differs from FY2025 only in the medical household flat.
@@ -70,7 +69,6 @@ describe('nhiParamsDiffer', () => {
     'supportHouseholdFlat',
     'ltcHouseholdFlatForEligible',
     'childSupportHouseholdFlat',
-    'nhiStandardDeduction',
   ])('detects a change in %s alone', field => {
     expect(nhiParamsDiffer(BASE, { ...BASE, [field]: (BASE[field] ?? 0) + 100 })).toBe(true);
   });

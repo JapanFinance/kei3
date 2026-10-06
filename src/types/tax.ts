@@ -484,6 +484,15 @@ export interface TakeHomeResults {
   nhiElderlySupportPortion?: number | undefined;
   nhiLongTermCarePortion?: number | undefined;
   nhiChildSupportPortion?: number | undefined;
+  /**
+   * Whether each National Health Insurance portion has stopped rising with income, which for a
+   * calendar year that blends two fiscal years needs both of them at their 賦課限度額. Decided
+   * where the premium is calculated, as {@link latterStageMedicalCapped} is.
+   */
+  nhiMedicalCapped?: boolean | undefined;
+  nhiElderlySupportCapped?: boolean | undefined;
+  nhiLongTermCareCapped?: boolean | undefined;
+  nhiChildSupportCapped?: boolean | undefined;
   // 後期高齢者医療制度 breakdown (only at ages 75+); the portions sum to healthInsurance
   latterStageMedicalPortion?: number | undefined;
   latterStageChildSupportPortion?: number | undefined;
