@@ -55,12 +55,13 @@ const NetEmploymentIncomeTooltip: React.FC<NetEmploymentIncomeTooltipProps> = ({
     incomeAdjustmentDeduction -
     pensionIncomeAdjustmentDeduction;
 
-  // The effective upper boundary of the flat-floor region (including transition values).
-  // For R8: transitions end at 2,199,999 → standard starts at 2,200,000.
-  // For R7: no transitions → standard starts at flatFloorGrossMaxInclusive + 1.
+  // The last gross (inclusive) of the "Up to" row, which covers the flat-floor region and any
+  // transition values after it; the first standard tier starts one yen above, as it does in
+  // calculateNetEmploymentIncome. For R8 the transitions end at 2,199,999 and the 30% formula
+  // starts at 2,200,000; for R7 there are no transitions and the floor ends at 1,900,000.
   const flatUpperBound =
     period.transitionValues.length > 0
-      ? period.transitionValues[period.transitionValues.length - 1]!.grossMaxInclusive + 1
+      ? period.transitionValues[period.transitionValues.length - 1]!.grossMaxInclusive
       : period.flatFloorGrossMaxInclusive;
 
   // Build rows from standardTiers

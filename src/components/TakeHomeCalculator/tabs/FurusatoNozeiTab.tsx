@@ -205,28 +205,16 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           type="indented"
         />
 
-        {/* Municipal and Prefectural breakdown */}
+        {/* Municipal and Prefectural breakdown, each level's share as the calculation applied it */}
         <ResultRow
           label="Municipal tax credit"
-          value={formatJPY(
-            Math.round(
-              (results.furusatoNozei.residenceTaxDonationBasicDeduction +
-                results.furusatoNozei.residenceTaxSpecialDeduction) *
-                results.residenceTax.cityProportion,
-            ),
-          )}
+          value={formatJPY(results.furusatoNozei.municipalTaxCredit)}
           type="detail"
         />
 
         <ResultRow
           label="Prefectural tax credit"
-          value={formatJPY(
-            Math.round(
-              (results.furusatoNozei.residenceTaxDonationBasicDeduction +
-                results.furusatoNozei.residenceTaxSpecialDeduction) *
-                results.residenceTax.prefecturalProportion,
-            ),
-          )}
+          value={formatJPY(results.furusatoNozei.prefecturalTaxCredit)}
           type="detail"
         />
 
