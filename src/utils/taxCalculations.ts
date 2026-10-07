@@ -312,8 +312,9 @@ interface IncomeBreakdown {
   blueFilerDeduction: number;
   /**
    * Earned income only (employment + business/misc + public pension). Investment income is
-   * gathered separately in {@link investment}, {@link reportedInvestment} and
-   * {@link aggregateDividends}; all of it joins this in TakeHomeResults.annualIncome — see
+   * gathered separately in {@link investment}, {@link reportedInvestment},
+   * {@link aggregateDividends} and {@link aggregateInterest}; all of it joins this in
+   * TakeHomeResults.annualIncome — see
    * {@link isInvestmentIncomeStream}.
    */
   totalAnnualIncome: number;
@@ -334,6 +335,12 @@ interface IncomeBreakdown {
   reportedInvestment: ReportedInvestmentAmounts;
   /** 配当等 reported under 総合課税, as entered — the 配当所得 that joins 総所得金額. */
   aggregateDividends: number;
+  /**
+   * Interest paid outside Japan, as entered — the 利子所得 that joins 総所得金額 because no
+   * Japanese withholding settled it (措法3条① reaches only the 一般利子等
+   * 国内において支払を受けるべき).
+   */
+  aggregateInterest: number;
 }
 
 /**
@@ -364,6 +371,7 @@ const calculateIncomeBreakdown = (
   let reportedQualifyingCapitalLosses = 0;
   let reportedDividends = 0;
   let aggregateDividends = 0;
+  let aggregateInterest = 0;
   let processedBusinessIncome = false;
 
   // 措法8条の4② makes the 申告分離課税/総合課税 election one for every reported dividend of the
@@ -489,13 +497,17 @@ const calculateIncomeBreakdown = (
         addReportedDividends(income.amount);
         break;
       case 'interest':
-        if (income.payerDomicile !== 'domestic') {
-          throw new Error('Interest paid outside Japan is not currently supported.');
-        }
         if (income.amount < 0) {
           throw new Error('Interest cannot be negative.');
         }
-        interest += income.amount;
+        // 措法3条① applies 源泉分離課税 to the 一般利子等 国内において支払を受けるべき only, so
+        // interest paid outside Japan with no Japanese payer or 支払の取扱者 (措法3条の3① covers
+        // the handler case) has nothing withheld and stays under 所法22条②一 with the rest.
+        if (income.payerDomicile === 'domestic') {
+          interest += income.amount;
+        } else {
+          aggregateInterest += income.amount;
+        }
         break;
       default: {
         const unhandled: never = income;
@@ -539,6 +551,7 @@ const calculateIncomeBreakdown = (
     listedWithholdingBase,
     reportedInvestment,
     aggregateDividends,
+    aggregateInterest,
   };
 };
 
@@ -569,6 +582,7 @@ const composeTaxpayerNetIncomeComponents = (
     recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
     otherNetIncome: netBusinessAndMiscIncome,
     aggregateDividendIncome: breakdown.aggregateDividends,
+    aggregateInterestIncome: breakdown.aggregateInterest,
     separateNetIncome: classifyReportedInvestmentIncome(breakdown.reportedInvestment).netIncome,
     year,
   });
@@ -628,6 +642,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     listedWithholdingBase,
     reportedInvestment,
     aggregateDividends,
+    aggregateInterest,
   } = incomeBreakdown;
 
   const hasReportedInvestment = hasReportedInvestmentIncome(reportedInvestment);
@@ -635,7 +650,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     totalAnnualIncome <= 0 &&
     !hasInvestmentIncome(investment) &&
     !hasReportedInvestment &&
-    aggregateDividends === 0
+    aggregateDividends === 0 &&
+    aggregateInterest === 0
   ) {
     return DEFAULT_TAKE_HOME_RESULTS;
   }
@@ -649,7 +665,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     grossInvestmentIncome +
     reportedInvestment.capitalGains +
     reportedInvestment.dividends +
-    aggregateDividends;
+    aggregateDividends +
+    aggregateInterest;
 
   // Whether the person is employed at all, which a commuting allowance alone attests to even
   // though none of it is 給与等の収入金額 — social insurance is charged on it either way.
@@ -991,7 +1008,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       grossPublicPensionIncome,
       netPublicPensionIncome,
     }),
-    ...((hasInvestmentIncome(investment) || hasReportedInvestment || aggregateDividends > 0) && {
+    ...((hasInvestmentIncome(investment) ||
+      hasReportedInvestment ||
+      aggregateDividends > 0 ||
+      aggregateInterest > 0) && {
       investmentIncome: {
         gross: investment,
         grossTotal: grossInvestmentIncome,
@@ -1008,6 +1028,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           },
         }),
         ...(aggregateDividends > 0 && { aggregateDividends }),
+        ...(aggregateInterest > 0 && { aggregateInterest }),
       },
     }),
     totalNetIncome: netIncome,

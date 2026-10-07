@@ -188,6 +188,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return `${stream.isReported ? 'Reported' : 'Withheld only'}${
           stream.paymentChannel === 'abroad' ? ', paid abroad' : ''
         }`;
+      case 'interest':
+        return stream.payerDomicile === 'foreign' ? 'Paid outside Japan' : null;
       default:
         return null;
     }
@@ -306,7 +308,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       ? 0
       : (investmentIncome.reported
           ? investmentIncome.reported.gross.capitalGains + investmentIncome.reported.gross.dividends
-          : 0) + (investmentIncome.aggregateDividends ?? 0);
+          : 0) +
+        (investmentIncome.aggregateDividends ?? 0) +
+        (investmentIncome.aggregateInterest ?? 0);
   const investmentSubtotalFooter =
     investmentIncome === undefined ? null : (
       <>
@@ -320,7 +324,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 )}`}
           </Typography>
         )}
-        {(investmentIncome.reported || investmentIncome.aggregateDividends !== undefined) && (
+        {(investmentIncome.reported ||
+          investmentIncome.aggregateDividends !== undefined ||
+          investmentIncome.aggregateInterest !== undefined) && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Reported on the return: {formatJPY(reportedInvestmentTotal)}
           </Typography>

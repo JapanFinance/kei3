@@ -727,6 +727,35 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(screen.queryByText(/Reported on the return: ¥300,000/)).not.toBeInTheDocument();
   });
 
+  it('marks interest paid outside Japan and footers it as reported on the return', () => {
+    // Interest paid in Japan is settled by withholding and carries no description; interest paid
+    // outside Japan goes on the return, so it joins the reported total.
+    const streams: IncomeStream[] = [
+      { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 50_000 },
+      { id: 'i2', type: 'interest', payerDomicile: 'foreign', amount: 100_000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          gross: { capitalGains: 0, dividends: 0, interest: 50_000 },
+          grossTotal: 50_000,
+          withheld: { national: 7_657, residence: 2_500, total: 10_157 },
+          aggregateInterest: 100_000,
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText('Paid outside Japan')).toHaveLength(1);
+    expect(screen.getByText('Subtotal: ¥150,000')).toBeInTheDocument();
+    expect(screen.getByText(/Withheld only: ¥50,000 − ¥10,157 tax = ¥39,843/)).toBeInTheDocument();
+    expect(screen.getByText(/Reported on the return: ¥100,000/)).toBeInTheDocument();
+  });
+
   it('offers the election for the reported dividends as one control for the group', async () => {
     const user = userEvent.setup();
     const onReportedDividendsTaxationChange = vi.fn();
