@@ -24,7 +24,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useEffect, useRef, useState } from 'react';
 
-import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
+import type { IncomeStream, IncomeStreamType, TakeHomeResults } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
   annualIncomeStreamAmount,
@@ -54,6 +54,13 @@ interface IncomeDetailsModalProps {
    * omitted, the group shows only its gross subtotal.
    */
   netPublicPensionIncome?: number | undefined;
+  /**
+   * Investment income for {@link streams} — gross amounts and tax withheld at source — so the
+   * group can show what 申告不要 withholding takes off the gross. Computed by the caller from
+   * {@link TakeHomeResults.investmentIncome} rather than derived here, matching
+   * {@link netPublicPensionIncome}. Absent when every investment-income amount is 0.
+   */
+  investmentIncome?: TakeHomeResults['investmentIncome'];
 }
 
 type ModalView =
@@ -69,6 +76,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   streams,
   onStreamsChange,
   netPublicPensionIncome,
+  investmentIncome,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -178,8 +186,23 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </>
     );
 
+  // Withheld at source under 申告不要 (源泉徴収あり特定口座) — see calculateWithheldInvestmentTax.
+  const investmentSubtotalFooter =
+    investmentIncome === undefined ? null : (
+      <>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Withheld at Source (源泉徴収): -{formatJPY(investmentIncome.withheld.total)}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Net Investment Income:{' '}
+          {formatJPY(investmentIncome.grossTotal - investmentIncome.withheld.total)}
+        </Typography>
+      </>
+    );
+
   const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
     publicPension: publicPensionSubtotalFooter,
+    investment: investmentSubtotalFooter,
   };
 
   const renderAddButton = (category: IncomeCategory) => {
@@ -336,16 +359,23 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Typography variant="h6" component="span">
             Income/Benefit Details
           </Typography>
-          <Chip
-            label={`Total: ${formatJPY(totalIncome)}`}
-            color="primary"
-            variant="outlined"
-            sx={{ fontWeight: 'bold' }}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.25 }}>
+            <Chip
+              label={`Total: ${formatJPY(totalIncome)}`}
+              color="primary"
+              variant="outlined"
+              sx={{ fontWeight: 'bold' }}
+            />
+            {subtotals.investment !== 0 && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Investment: {formatJPY(subtotals.investment)}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </DialogTitle>
       <DialogContent dividers>

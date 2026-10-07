@@ -22,7 +22,12 @@ import Typography from '@mui/material/Typography';
 import React, { useState } from 'react';
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
-import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
+import type {
+  CapitalGainsIncomeStream,
+  IncomeStream,
+  IncomeStreamType,
+  InvestmentTaxTreatment,
+} from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import { getFrequencyAnnualMultiplier } from '../../../utils/incomeStreams';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
@@ -51,6 +56,31 @@ const guidanceBoxSx = {
   borderColor: 'divider',
 };
 
+const variantToggleGroupSx = {
+  '& .MuiToggleButton-root': {
+    px: 2,
+    py: 0.5,
+    fontSize: '0.85rem',
+    fontWeight: 500,
+  },
+  '& .MuiToggleButton-root.Mui-selected': {
+    bgcolor: 'primary.main',
+    color: 'primary.contrastText',
+    '&:hover': {
+      bgcolor: 'primary.dark',
+    },
+  },
+};
+
+const variantLabelSx = {
+  mb: 0.5,
+  fontWeight: 500,
+  color: 'text.primary',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.5,
+};
+
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   type,
   initialData,
@@ -75,7 +105,28 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [issuerDomicile, setIssuerDomicile] = useState<'foreign' | 'domestic'>(
     initialData?.type === 'stockCompensation' ? initialData.issuerDomicile : 'foreign',
   );
+  const [shareType, setShareType] = useState<'listed' | 'other'>(
+    initialData?.type === 'capitalGains' || initialData?.type === 'dividends'
+      ? initialData.shareType
+      : 'listed',
+  );
+  const [payerDomicile, setPayerDomicile] = useState<'domestic' | 'foreign'>(
+    initialData?.type === 'interest' ? initialData.payerDomicile : 'domestic',
+  );
+  const [account, setAccount] = useState<CapitalGainsIncomeStream['account']>(
+    initialData?.type === 'capitalGains' ? initialData.account : 'specifiedWithholding',
+  );
+  const [taxTreatment, setTaxTreatment] = useState<InvestmentTaxTreatment>(
+    initialData?.type === 'capitalGains' || initialData?.type === 'dividends'
+      ? initialData.taxTreatment
+      : 'withheldOnly',
+  );
   const [error, setError] = useState<string | null>(null);
+
+  // 措法37条の11の5 attaches 申告不要 to the 源泉徴収選択口座, so a sale from any other account
+  // has to be reported. A dividend qualifies on the withholding alone (措法8条の5) and has no
+  // account to choose.
+  const canLeaveOffReturn = type !== 'capitalGains' || account === 'specifiedWithholding';
 
   const validate = (): boolean => {
     if (type === 'commutingAllowance') {
@@ -117,23 +168,18 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       case 'publicPension':
         stream = { id, type, amount };
         break;
-      // Only the supported variant is offered; the selectors that say so arrive with the
-      // rest of the investment-income UI.
       case 'capitalGains':
-        stream = {
-          id,
-          type,
-          amount,
-          shareType: 'listed',
-          account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
-        };
+        if (taxTreatment === 'aggregate') {
+          // 措法37条の11 has no 総合課税 election, so the selector never offers one.
+          throw new Error('総合課税 does not apply to a share sale.');
+        }
+        stream = { id, type, amount, shareType, account, taxTreatment };
         break;
       case 'dividends':
-        stream = { id, type, amount, shareType: 'listed', taxTreatment: 'withheldOnly' };
+        stream = { id, type, amount, shareType, taxTreatment };
         break;
       case 'interest':
-        stream = { id, type, amount, payerDomicile: 'domestic' };
+        stream = { id, type, amount, payerDomicile };
         break;
       default: {
         const unhandled: never = type;
@@ -206,17 +252,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
 
         {type === 'stockCompensation' && (
           <FormControl fullWidth>
-            <FormLabel
-              id="stock-issuer-label"
-              sx={{
-                mb: 0.5,
-                fontWeight: 500,
-                color: 'text.primary',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}
-            >
+            <FormLabel id="stock-issuer-label" sx={variantLabelSx}>
               <span>Stock Issuer</span>
               <DetailedTooltip
                 title="Stock Issuer"
@@ -245,26 +281,194 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               aria-labelledby="stock-issuer-label"
               aria-label="stock compensation issuance"
               size="small"
-              sx={{
-                '& .MuiToggleButton-root': {
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                },
-                '& .MuiToggleButton-root.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                  },
-                },
-              }}
+              sx={variantToggleGroupSx}
             >
               <ToggleButton value="domestic" disabled>
                 Domestic
               </ToggleButton>
               <ToggleButton value="foreign">Foreign</ToggleButton>
+            </ToggleButtonGroup>
+          </FormControl>
+        )}
+
+        {(type === 'capitalGains' || type === 'dividends') && (
+          <FormControl fullWidth>
+            <FormLabel id="share-type-label" sx={variantLabelSx}>
+              <span>Share Type</span>
+              <DetailedTooltip
+                title="Share Type"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="share type info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Listed (上場株式等)</strong> covers shares traded on an exchange, along
+                  with 公募株式投資信託 and 特定公社債. These are taxed apart from the progressive
+                  brackets at a flat rate.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Other (一般株式等)</strong> is everything else — 措法37条の10① defines it
+                  as 株式等 other than 上場株式等, which is mostly but not only unlisted shares. It
+                  is not currently supported: it is a separate class that cannot be offset against
+                  listed amounts, and its dividends are taxed at the progressive rates instead.
+                </Typography>
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={shareType}
+              exclusive
+              onChange={(_, newValue: 'listed' | 'other' | null) => {
+                if (newValue) {
+                  setShareType(newValue);
+                }
+              }}
+              aria-labelledby="share-type-label"
+              aria-label="share type"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="listed">Listed</ToggleButton>
+              <ToggleButton value="other" disabled>
+                Other
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </FormControl>
+        )}
+
+        {type === 'capitalGains' && (
+          <FormControl fullWidth>
+            <InputLabel id="share-account-label">Account</InputLabel>
+            <Select
+              labelId="share-account-label"
+              value={account}
+              label="Account"
+              onChange={e => setAccount(e.target.value)}
+            >
+              <MenuItem value="specifiedWithholding">
+                Withholding account (特定口座（源泉徴収あり）)
+              </MenuItem>
+              <MenuItem value="domesticNoWithholding" disabled>
+                Domestic account without withholding (特定口座（源泉徴収なし）・一般口座)
+              </MenuItem>
+              <MenuItem value="foreign" disabled>
+                Foreign account
+              </MenuItem>
+            </Select>
+            <FormHelperText
+              component="div"
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+            >
+              <span>Only a withholding account can leave the sale off a tax return.</span>
+              <DetailedTooltip
+                title="Account and the Election"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="account info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  措法37条の11の5 lets a share sale stay off the return only where it settles in a
+                  源泉徴収選択口座 — a 特定口座 whose holder elected withholding. A sale anywhere
+                  else has to be reported, which changes 合計所得金額 and everything keyed to it.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  A 特定口座（源泉徴収なし）and a 一般口座 are one option here because the tax
+                  cannot tell them apart — they differ only in who computes the figures. A foreign
+                  account is its own option because a sale there is not 売委託 to a licensed
+                  金融商品取引業者, which 措法37条の12の2② requires of a loss before it can offset
+                  配当等 or be carried forward. Neither is modelled yet.
+                </Typography>
+              </DetailedTooltip>
+            </FormHelperText>
+          </FormControl>
+        )}
+
+        {(type === 'capitalGains' || type === 'dividends') && (
+          <FormControl fullWidth>
+            <FormLabel id="tax-treatment-label" sx={variantLabelSx}>
+              <span>Tax treatment</span>
+              <DetailedTooltip
+                title="Tax Treatment"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="tax treatment info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Withheld only (申告不要)</strong> means the 20.315% the payer withholds
+                  settles the tax in full. The amount stays off the return, so it changes no
+                  aggregate — not 合計所得金額, health-insurance premiums, the basic deduction,
+                  spouse or dependent eligibility, residence-tax exemption, or the furusato nozei
+                  limit.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Reported</strong> — 申告分離課税, or 総合課税 for a dividend — is what
+                  makes 損益通算 and 繰越控除 available, and for a dividend the 配当控除, at the
+                  cost of entering those aggregates. Reporting is not modelled yet.
+                </Typography>
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={taxTreatment}
+              exclusive
+              onChange={(_, newValue: InvestmentTaxTreatment | null) => {
+                if (newValue) {
+                  setTaxTreatment(newValue);
+                }
+              }}
+              aria-labelledby="tax-treatment-label"
+              aria-label="tax treatment"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="withheldOnly" disabled={!canLeaveOffReturn}>
+                Withheld only
+              </ToggleButton>
+              <ToggleButton value="separate" disabled>
+                Reported (separate)
+              </ToggleButton>
+              {type === 'dividends' && (
+                <ToggleButton value="aggregate" disabled>
+                  Reported (progressive)
+                </ToggleButton>
+              )}
+            </ToggleButtonGroup>
+          </FormControl>
+        )}
+
+        {type === 'interest' && (
+          <FormControl fullWidth>
+            <FormLabel id="interest-payer-label" sx={variantLabelSx}>
+              <span>Paid</span>
+              <DetailedTooltip
+                title="Where the Interest Is Paid"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="interest payer info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>In Japan</strong> means a 一般利子等 payment received here, such as
+                  interest on a deposit held in Japan. 措法3条① settles it by withholding at source,
+                  with no election and nothing to report.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Outside Japan</strong> is not currently supported. No Japanese tax is
+                  withheld, so the interest has to be reported and is taxed at the progressive
+                  rates.
+                </Typography>
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={payerDomicile}
+              exclusive
+              onChange={(_, newValue: 'domestic' | 'foreign' | null) => {
+                if (newValue) {
+                  setPayerDomicile(newValue);
+                }
+              }}
+              aria-labelledby="interest-payer-label"
+              aria-label="where the interest is paid"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="domestic">In Japan</ToggleButton>
+              <ToggleButton value="foreign" disabled>
+                Outside Japan
+              </ToggleButton>
             </ToggleButtonGroup>
           </FormControl>
         )}
@@ -441,6 +645,58 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 Annual: {formatJPY(amount * getFrequencyAnnualMultiplier(frequency))}
               </Typography>
+            </Box>
+          )}
+
+          {(type === 'capitalGains' || type === 'dividends') && (
+            <Box sx={guidanceBoxSx}>
+              <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                The broker withholds 20.315% — 15.315% income tax including 復興特別所得税, and 5%
+                residence tax. A capital loss for the year is netted against dividends within the
+                account before withholding, as the broker does at year end.
+              </Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                Do not include NISA (非課税) amounts.
+              </Typography>
+              <SourceLinks
+                sources={[
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+                    label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+                  },
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+                    label: '配当金を受け取ったとき(配当所得) - NTA',
+                  },
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm',
+                    label: '特定口座制度 - NTA',
+                  },
+                ]}
+              />
+            </Box>
+          )}
+
+          {type === 'interest' && (
+            <Box sx={guidanceBoxSx}>
+              <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                Taxed at source at 20.315% (源泉分離課税) and not reported on a tax return, so it
+                does not affect 合計所得金額 or anything that depends on it.
+              </Typography>
+              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                This covers 利子所得 only — the interest on 公社債 and 預貯金, and distributions
+                from 合同運用信託, 公社債投資信託 and 公募公社債等運用投資信託 (所法23条①). Interest
+                on money lent privately is 雑所得 rather than 利子所得: nothing is withheld from it
+                and it has to be reported, so enter it as Miscellaneous income instead.
+              </Typography>
+              <SourceLinks
+                sources={[
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
+                    label: '利息を受け取ったとき(利子所得) - NTA',
+                  },
+                ]}
+              />
             </Box>
           )}
 
