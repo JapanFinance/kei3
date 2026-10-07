@@ -37,6 +37,8 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
   type: 'miscellaneous';
 }
 
+export type PublicPensionTreatyCredit = 'unavailable' | 'available';
+
 /**
  * Public pension income (公的年金等): {@link BaseIncomeStream.amount} is the gross annual
  * amount received (公的年金等の収入金額), before withholding. The public pension deduction (公的年金等控除)
@@ -44,6 +46,29 @@ export interface MiscellaneousIncomeStream extends BaseIncomeStream {
  */
 export interface PublicPensionIncomeStream extends BaseIncomeStream {
   type: 'publicPension';
+  /**
+   * The system paying the pension. 'foreign' is a pension under a foreign country's
+   * social-insurance system; a pension under a Japanese system is 'domestic' even when it is
+   * paid abroad.
+   */
+  payerDomicile: 'domestic' | 'foreign';
+  /**
+   * Whether foreign tax credit in Japan is available for the pension under an
+   * applicable tax treaty or domestic rules. Applies when {@link payerDomicile} is 'foreign'.
+   * - 'unavailable' — Foreign tax credit is unavailable in Japan (the general treaty rule for most
+   *   countries such as the US and UK, as well as cases where the foreign country provides the
+   *   credit). Not foreign-source income for the Foreign Tax Credit limit (所法95条⑥).
+   * - 'available' — The treaty permits the foreign country to tax the pension at source and
+   *   Japan credits the foreign tax (e.g. Canada, Germany, or countries without a treaty).
+   */
+  treatyCredit?: PublicPensionTreatyCredit;
+  /**
+   * Foreign tax (外国所得税) withheld abroad on the pension, inside {@link amount}; 0 unless
+   * {@link payerDomicile} is 'foreign' and {@link treatyCredit} is 'available'. Public pension income
+   * with available foreign tax credit is credited within the limits of the foreign tax credit, see
+   * {@link import("../utils/foreignTaxCredit").calculateForeignTaxCredit}.
+   */
+  foreignTax: number;
 }
 
 export interface StockCompensationIncomeStream extends BaseIncomeStream {
@@ -492,26 +517,18 @@ export interface HomeLoanTaxCreditResult {
 }
 
 /**
- * Foreign tax for the foreign tax credit (外国税額控除) that is not on an investment entry; the
- * foreign-tax fields of the dividend, interest and withholding account entries count on their
- * own. Named like {@link HomeLoanTaxCreditInput}, whose input and result share one field name.
+ * Foreign tax for the foreign tax credit (外国税額控除) that no income entry holds. Tax withheld at
+ * source belongs on the income entry it was withheld from, and the entries also supply the
+ * foreign-source income; this input exists because tax paid with a foreign tax return counts in
+ * the year the return is filed, not in the year of the income it was charged on. Named like
+ * {@link HomeLoanTaxCreditInput}, whose input and result share one field name.
  */
 export interface ForeignTaxCreditInput {
   /**
-   * Creditable 外国所得税 that became payable this year and is not on an investment entry: tax
-   * withheld abroad on a foreign pension, on pay for work done abroad, or on business or
-   * miscellaneous income, or tax paid with a foreign return filed this year. Foreign tax counts in
-   * the year it becomes payable: for withholding the payment date, for a return the filing date.
-   * For a US citizen, only the part of the US tax the Japan–US tax treaty lets Japan credit.
+   * Creditable 外国所得税 paid with a foreign tax return filed this year, a US return for example.
+   * For a US citizen, only the part Article 23(3)(a) of the Japan–US tax treaty lets Japan credit.
    */
   foreignTax: number;
-  /**
-   * The foreign-source net income (所得) the tax was charged on that is not already in an
-   * investment entry: a foreign pension's share of the net pension income, the share of net
-   * employment income for work done abroad, a business's foreign-source net income. It only sets
-   * the limit.
-   */
-  foreignSourceIncome: number;
 }
 
 /** One amount per tax the foreign tax credit comes off, in the order the credit is applied. */
@@ -531,9 +548,15 @@ export interface ForeignTaxCreditAmounts {
  * {@link import("../utils/foreignTaxCredit").calculateForeignTaxCredit} for the rules.
  */
 export interface ForeignTaxCreditResult {
-  /** F: the creditable foreign tax, on the reported entries plus the amount entered by hand. */
+  /**
+   * F: the creditable foreign tax, on the reported entries and the foreign pensions plus the tax
+   * paid with a foreign tax return.
+   */
   foreignTax: number;
-  /** The foreign-source income of the reported entries plus the amount entered by hand. */
+  /**
+   * The foreign-source income of the reported entries and the foreign pensions — see
+   * {@link import("../utils/taxCalculations").foreignPensionSourceIncome} for the pensions' part.
+   */
   foreignSourceIncome: number;
   /** A, 調整国外所得金額: {@link foreignSourceIncome} capped at {@link totalIncome}. */
   adjustedForeignSourceIncome: number;
@@ -544,10 +567,8 @@ export interface ForeignTaxCreditResult {
   totalIncome: number;
   /** B, 所得税額: after the home loan tax credit, before the 復興特別所得税. */
   incomeTax: number;
-  /** The part of {@link foreignTax} entered by hand; absent when none was. */
+  /** The part of {@link foreignTax} paid with a foreign tax return; absent when none was. */
   manualForeignTax?: number;
-  /** The part of {@link foreignSourceIncome} entered by hand; absent when none was. */
-  manualForeignSourceIncome?: number;
   /** 控除限度額 for each tax. */
   limit: ForeignTaxCreditAmounts;
   /**
@@ -812,8 +833,8 @@ export interface TakeHomeInputs {
   incomeYear: number;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   /**
-   * Foreign tax entered by hand for the foreign tax credit, beside the foreign tax on the
-   * investment entries. Absent means none.
+   * Foreign tax paid with a foreign tax return, for the foreign tax credit beside the foreign tax
+   * on the income entries. Absent means none.
    */
   foreignTaxCredit?: ForeignTaxCreditInput | undefined;
   lifeInsurance: LifeInsuranceInput;
@@ -936,7 +957,8 @@ export interface TakeHomeResults {
   /**
    * The foreign tax credit (外国税額控除), a 税額控除 against the whole return that the income tax
    * and residence tax figures are already net of. Present whenever there is creditable foreign
-   * tax, even when every credit is 0.
+   * tax or foreign-source income, even when every credit is 0, so the limit can be shown before
+   * any foreign tax is entered.
    */
   foreignTaxCredit?: ForeignTaxCreditResult | undefined;
   /**
@@ -944,7 +966,8 @@ export interface TakeHomeResults {
    * ({@link ForeignTaxCreditResult.foreignTax}) plus the foreign tax on dividends left to
    * withholding ({@link WithheldInvestmentIncome.foreignTax}). A tax like any other, it is
    * subtracted in {@link takeHomeIncome}. Kept here rather than under {@link investmentIncome}
-   * because the amount entered by hand can exist with no investment income. Absent when 0.
+   * because the tax on a foreign pension or paid with a foreign tax return can exist with no
+   * investment income. Absent when 0.
    */
   foreignTaxPaid?: number;
   additionalDeductions: AdditionalDeductionsResult;

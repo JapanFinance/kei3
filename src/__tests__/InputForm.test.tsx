@@ -903,7 +903,15 @@ describe('TakeHomeInputForm Income Details Modal', () => {
       annualIncome: 2_400_000,
       incomeYear: 2026,
       incomeMode: 'advanced' as const,
-      incomeStreams: [{ id: 'p1', type: 'publicPension' as const, amount: 2_400_000 }],
+      incomeStreams: [
+        {
+          id: 'p1',
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 2_400_000,
+        },
+      ],
       savedIncomeStreams: [],
       reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
@@ -1154,18 +1162,18 @@ describe('Additional Deductions & Credits: foreign tax credit', () => {
     manualSocialInsuranceAmount: 0,
   };
 
-  it('names the foreign tax entered by hand in the button summary', () => {
+  it('names the foreign tax paid with a return in the button summary', () => {
     render(
       <TakeHomeInputForm
         inputs={{
           ...salaryInputs,
-          foreignTaxCredit: { foreignTax: 20_000, foreignSourceIncome: 500_000 },
+          foreignTaxCredit: { foreignTax: 20_000 },
         }}
         dispatch={vi.fn()}
       />,
     );
 
-    expect(screen.getByText('Foreign tax credit ¥20,000')).toBeInTheDocument();
+    expect(screen.getByText('Foreign tax paid with a return ¥20,000')).toBeInTheDocument();
   });
 
   it('dispatches the foreign tax entered in the dialog, in any income mode', async () => {
@@ -1174,14 +1182,14 @@ describe('Additional Deductions & Credits: foreign tax credit', () => {
     render(<TakeHomeInputForm inputs={salaryInputs} dispatch={dispatch} />);
 
     await user.click(screen.getByRole('button', { name: /Add iDeCo/ }));
-    const foreignTax = screen.getByLabelText('Foreign Tax Paid (外国所得税)');
+    const foreignTax = screen.getByLabelText('Foreign Tax Paid with a Tax Return (外国所得税)');
     await user.clear(foreignTax);
     await user.type(foreignTax, '20000');
 
     expect(dispatch).toHaveBeenLastCalledWith({
       type: 'setField',
       field: 'foreignTaxCredit',
-      value: { foreignTax: 20_000, foreignSourceIncome: 0 },
+      value: { foreignTax: 20_000 },
     });
   });
 });

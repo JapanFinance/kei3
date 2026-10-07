@@ -46,6 +46,7 @@ import type {
   IncomeMode,
   IncomeStream,
   ForeignTaxCreditInput,
+  ForeignTaxCreditResult,
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
   LifeInsuranceInput,
@@ -113,6 +114,8 @@ interface TaxInputFormProps {
   dispatch: Dispatch<FormAction>;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  /** Computed foreign tax credit, passed through to the modal for its summary. */
+  foreignTaxCreditResult?: ForeignTaxCreditResult | undefined;
   /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Computed 障害者・寡婦・ひとり親控除, passed through the same way; absent when none applies. */
@@ -128,6 +131,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
   dispatch,
   homeLoanTaxCreditResult,
+  foreignTaxCreditResult,
   additionalDeductions,
   personalDeductions,
   longTermCareCategory1Estimate,
@@ -889,7 +893,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
               if (inputs.foreignTaxCredit && inputs.foreignTaxCredit.foreignTax > 0)
-                parts.push(`Foreign tax credit ${formatJPY(inputs.foreignTaxCredit.foreignTax)}`);
+                parts.push(
+                  `Foreign tax paid with a return ${formatJPY(inputs.foreignTaxCredit.foreignTax)}`,
+                );
               personalDeductions?.items.forEach(item => {
                 parts.push(
                   `${getPersonalDeductionInfo(inputs.incomeYear)[item.key].name} ${formatJPY(item.national)}`,
@@ -971,6 +977,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         homeLoanTaxCreditResult={homeLoanTaxCreditResult}
         foreignTaxCredit={inputs.foreignTaxCredit}
         onForeignTaxCreditChange={handleForeignTaxCreditChange}
+        foreignTaxCreditResult={foreignTaxCreditResult}
+        withheldForeignTax={investmentIncome?.withheld?.foreignTax}
         lifeInsurance={inputs.lifeInsurance}
         onLifeInsuranceChange={handleLifeInsuranceChange}
         earthquakeInsurance={inputs.earthquakeInsurance}

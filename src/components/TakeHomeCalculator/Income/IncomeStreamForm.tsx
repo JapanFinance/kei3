@@ -26,6 +26,7 @@ import {
   type CapitalGainsIncomeStream,
   type IncomeStream,
   type IncomeStreamType,
+  type PublicPensionTreatyCredit,
 } from '../../../types/tax';
 import { foreignTaxEntryError } from '../../../utils/foreignTaxCredit';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
@@ -106,7 +107,7 @@ const LISTED_SHARE_SOURCES = {
 
 // What happens to foreign tax on a dividend, for the reporting tooltip and the guidance box.
 const FOREIGN_DIVIDEND_TAX_NOTE =
-  'For a dividend from a foreign company or fund left to withholding, the 20.315% is charged on the dividend after the foreign tax, and the foreign tax is not credited (措法9条の2③, 措令4条の5⑫). Reported, the foreign tax is credited against the Japanese income tax and residence tax, up to limits set by the share of foreign-source income in total net income; with no income tax, there is nothing to credit it against. Foreign tax above the limits carries forward for three years in law, which is not supported.';
+  'For a dividend from a foreign company or fund left to withholding, the 20.315% is charged on the dividend after the foreign tax, and the foreign tax is not credited (措法9条の2③, 措令4条の5⑫). Reported, the foreign tax is credited against the Japanese income tax and residence tax, up to limits set by the share of foreign-source income in total net income; with no income tax, there is nothing to credit it against. Foreign tax above the limits can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.';
 
 const guidanceBoxSx = {
   p: 1.5,
@@ -151,6 +152,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   const [foreignTax, setForeignTax] = useState<number>(
     initialData?.type === 'dividends' ||
       initialData?.type === 'interest' ||
+      initialData?.type === 'publicPension' ||
       initialData?.type === 'withholdingAccount'
       ? initialData.foreignTax
       : 0,
@@ -165,8 +167,19 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       : 'listed',
   );
   const [payerDomicile, setPayerDomicile] = useState<'domestic' | 'foreign'>(
-    initialData?.type === 'interest' ? initialData.payerDomicile : 'domestic',
+    initialData?.type === 'interest' || initialData?.type === 'publicPension'
+      ? initialData.payerDomicile
+      : 'domestic',
   );
+  const [treatyCredit, setTreatyCredit] = useState<PublicPensionTreatyCredit>(() => {
+    if (initialData?.type === 'publicPension' && initialData.treatyCredit) {
+      return initialData.treatyCredit;
+    }
+    if (initialData?.type === 'publicPension' && initialData.foreignTax > 0) {
+      return 'available';
+    }
+    return 'unavailable';
+  });
   const [account, setAccount] = useState<CapitalGainsIncomeStream['account']>(
     initialData?.type === 'capitalGains' ? initialData.account : 'domesticNoWithholding',
   );
@@ -250,8 +263,17 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         stream = { id, type, amount, issuerDomicile };
         break;
       case 'miscellaneous':
-      case 'publicPension':
         stream = { id, type, amount };
+        break;
+      case 'publicPension':
+        stream = {
+          id,
+          type,
+          amount,
+          payerDomicile,
+          ...(payerDomicile === 'foreign' && { treatyCredit }),
+          foreignTax: payerDomicile === 'foreign' && treatyCredit === 'available' ? foreignTax : 0,
+        };
         break;
       case 'withholdingAccount':
         stream = {
@@ -298,6 +320,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     if (
       stream.type === 'dividends' ||
       stream.type === 'interest' ||
+      stream.type === 'publicPension' ||
       stream.type === 'withholdingAccount'
     ) {
       const message = foreignTaxEntryError(stream);
@@ -678,6 +701,151 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           </FormControl>
         )}
 
+        {type === 'publicPension' && (
+          <FormControl fullWidth>
+            <FormLabel id="pension-payer-label" sx={variantLabelSx}>
+              <span>Paid by</span>
+              <DetailedTooltip
+                title="Pension System"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="pension system info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Foreign system</strong> is a public pension under a foreign country's
+                  social insurance system.
+                </Typography>
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  When a foreign tax credit is available in Japan under a tax treaty or domestic
+                  law, foreign tax withheld is credited against Japanese income tax and residence
+                  tax, up to limits (the foreign tax credit, 外国税額控除). For that limit, the net
+                  income of the foreign pensions is worked out on their own, with a public pension
+                  deduction of their own.
+                </Typography>
+                <Typography sx={{ display: 'block' }}>
+                  <strong>Japanese system</strong> is a pension under a Japanese system, even when
+                  it is paid abroad.
+                </Typography>
+                <SourceLinks
+                  sources={[
+                    NTA_TAX_ANSWERS.foreignTaxCredit,
+                    {
+                      href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
+                      label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
+                    },
+                  ]}
+                />
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={payerDomicile}
+              exclusive
+              onChange={(_, newValue: 'domestic' | 'foreign' | null) => {
+                if (newValue) {
+                  setPayerDomicile(newValue);
+                  if (newValue === 'domestic') {
+                    setForeignTax(0);
+                  }
+                }
+              }}
+              aria-labelledby="pension-payer-label"
+              aria-label="pension system"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="domestic">Japanese system</ToggleButton>
+              <ToggleButton value="foreign">Foreign system</ToggleButton>
+            </ToggleButtonGroup>
+          </FormControl>
+        )}
+
+        {type === 'publicPension' && payerDomicile === 'foreign' && (
+          <FormControl fullWidth>
+            <FormLabel id="pension-treaty-label" sx={variantLabelSx}>
+              <span>Foreign tax credit in Japan</span>
+              <DetailedTooltip
+                title="Foreign Tax Credit on Public Pensions"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="pension treaty info"
+              >
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  Under most tax treaties (e.g. the US, UK, Australia), public pensions are taxable
+                  only in the country of residence (Japan). Any foreign tax paid cannot be credited
+                  in Japan and must be refunded by the foreign authority. For US citizens taxed
+                  under the saving clause, double taxation is relieved on the US return (Form 1116)
+                  rather than in Japan.
+                </Typography>
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Unavailable</strong> — The pension is taxed in Japan with the public
+                  pension deduction (公的年金等控除) and is excluded from foreign-source income for
+                  Japan&apos;s foreign tax credit limit.
+                </Typography>
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  <strong>Available</strong> — Foreign tax can be credited against Japanese tax up
+                  to statutory limits when:
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2.5, mb: 1, '& li': { mb: 0.5 } }}>
+                  <li>
+                    The treaty has no pension clause and the source country taxes the pension (e.g.
+                    Canada&apos;s CPP and OAS, Sweden, Thailand).
+                  </li>
+                  <li>The treaty explicitly permits source-country taxation (e.g. Germany).</li>
+                  <li>
+                    Foreign government or military service pensions where the paying country retains
+                    taxation rights under the treaty (Article 19).
+                  </li>
+                  <li>
+                    Countries or territories without a tax treaty with Japan (e.g. Nepal, Myanmar,
+                    Cambodia, Bolivia, Guam).
+                  </li>
+                </Box>
+                <Typography sx={{ display: 'block' }}>
+                  Pensions that are exempt from Japanese tax under a treaty should not be entered in
+                  this calculator.
+                </Typography>
+                <SourceLinks
+                  sources={[
+                    NTA_TAX_ANSWERS.foreignTaxCredit,
+                    {
+                      href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
+                      label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
+                    },
+                  ]}
+                />
+              </DetailedTooltip>
+            </FormLabel>
+            <ToggleButtonGroup
+              value={treatyCredit}
+              exclusive
+              onChange={(_, newValue: PublicPensionTreatyCredit | null) => {
+                if (newValue) {
+                  setTreatyCredit(newValue);
+                  if (newValue !== 'available') {
+                    setForeignTax(0);
+                  }
+                }
+              }}
+              aria-labelledby="pension-treaty-label"
+              aria-label="foreign tax credit in Japan"
+              size="small"
+              sx={variantToggleGroupSx}
+            >
+              <ToggleButton value="unavailable">Unavailable</ToggleButton>
+              <ToggleButton value="available">Available</ToggleButton>
+            </ToggleButtonGroup>
+            {treatyCredit === 'unavailable' && (
+              <FormHelperText>
+                No tax credit in Japan (e.g. US Social Security, UK State Pension, Australia).
+              </FormHelperText>
+            )}
+            {treatyCredit === 'available' && (
+              <FormHelperText>
+                Foreign tax is credited in Japan (e.g. Canada CPP/OAS, Germany, non-treaty
+                countries).
+              </FormHelperText>
+            )}
+          </FormControl>
+        )}
+
         <Box>
           {type === 'business' && (
             <FormControl fullWidth sx={{ mb: 2 }}>
@@ -841,7 +1009,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           )}
 
           {((type === 'dividends' && issuerDomicile === 'foreign') ||
-            (type === 'interest' && payerDomicile === 'foreign')) && (
+            (type === 'interest' && payerDomicile === 'foreign') ||
+            (type === 'publicPension' &&
+              payerDomicile === 'foreign' &&
+              treatyCredit === 'available')) && (
             <SpinnerNumberField
               label="Foreign Tax Withheld (外国所得税)"
               value={foreignTax}
@@ -1060,7 +1231,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 from defined benefit plans (確定給付企業年金) and defined contribution plans
                 (確定拠出年金, such as iDeCo). Pensions from a foreign social insurance or mutual
                 aid system comparable to the National Pension or Employees' Pension are also
-                included.
+                included: enter each one as its own entry paid by a foreign system.
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                 Disability pensions (障害年金) and survivors' pensions (遺族年金) are non-taxable

@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
 import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNozeiTab';
@@ -373,10 +373,23 @@ describe('TaxesTab with reported investment income', () => {
         /^Taxable investment income \(separate\):/,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText('Municipal portion, investment income (3%)')).toBeInTheDocument();
-    expect(screen.getByText('¥9,000')).toBeInTheDocument();
-    expect(screen.getByText('Prefectural portion, investment income (2%)')).toBeInTheDocument();
-    expect(screen.getByText('¥6,000')).toBeInTheDocument();
+    // The 3%/2% rates on separate income are folded into the single Municipal/Prefectural
+    // portion rows, with the breakdown in each row's own tooltip rather than in its title.
+    const split = expand(screen.getByText('Income-based Portion'));
+    expect(
+      within(rowOf(within(split).getByText('Municipal portion'))).getByText('¥153,420'),
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf(within(split).getByText('Prefectural portion'))).getByText('¥102,280'),
+    ).toBeInTheDocument();
+    const municipalPortionTooltip = tooltipTitled('Municipal Income-based Portion')!;
+    expect(within(municipalPortionTooltip).getByText('6%')).toBeInTheDocument();
+    expect(within(municipalPortionTooltip).getByText('3%')).toBeInTheDocument();
+    expect(within(municipalPortionTooltip).getByText('¥9,000')).toBeInTheDocument();
+    const prefecturalPortionTooltip = tooltipTitled('Prefectural Income-based Portion')!;
+    expect(within(prefecturalPortionTooltip).getByText('4%')).toBeInTheDocument();
+    expect(within(prefecturalPortionTooltip).getByText('2%')).toBeInTheDocument();
+    expect(within(prefecturalPortionTooltip).getByText('¥6,000')).toBeInTheDocument();
   });
 
   it('counts the assessed tax in Total Taxes and shows no withheld rows', () => {
@@ -476,6 +489,20 @@ describe('FurusatoNozeiTab with reported investment income', () => {
 
 const rowOf = (label: HTMLElement) => label.closest('div')!.parentElement!;
 
+/** The amount beside a label in a tooltip's amount table. */
+const amountIn = (tooltip: HTMLElement, label: string) =>
+  within(within(tooltip).getByText(`${label}:`).closest('tr')!).getAllByRole('cell')[1]!
+    .textContent;
+
+/** Expands a disclosure row and returns the region it controls. */
+const expand = (label: HTMLElement) => {
+  const button = label.closest('button')!;
+  expect(button).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(button);
+  expect(button).toHaveAttribute('aria-expanded', 'true');
+  return document.getElementById(button.getAttribute('aria-controls')!)!;
+};
+
 const expectInDocumentOrder = (elements: HTMLElement[]) => {
   elements.slice(1).forEach((element, i) => {
     expect(
@@ -531,12 +558,9 @@ describe('TaxesTab with the foreign tax credit', () => {
   it('shows the credit under each tax and the foreign tax paid in the income tax total', () => {
     render(<TaxesTab results={withForeignTax} inputs={inputs} />);
 
-    const [incomeTaxCredit, residenceTaxCredit] = screen.getAllByText('Foreign Tax Credit');
+    const incomeTaxCredit = screen.getByText('Foreign Tax Credit');
     // 27,948 + 586 off the income tax and the surtax.
-    expect(within(rowOf(incomeTaxCredit!)).getByText('-¥28,534')).toBeInTheDocument();
-    // The floored 所得割 before the credit, 151,900 + 101,200 = 253,100, less the 146,800 +
-    // 97,900 = 244,700 after it.
-    expect(within(rowOf(residenceTaxCredit!)).getByText('-¥8,400')).toBeInTheDocument();
+    expect(within(rowOf(incomeTaxCredit)).getByText('-¥28,534')).toBeInTheDocument();
     expect(
       within(rowOf(screen.getByText('Foreign Tax Paid'))).getByText('¥80,000'),
     ).toBeInTheDocument();
@@ -548,26 +572,129 @@ describe('TaxesTab with the foreign tax credit', () => {
     expect(
       within(rowOf(screen.getByText('Total Taxes'))).getByText('¥438,800'),
     ).toBeInTheDocument();
-    // What each side's income-based portion absorbed, in its breakdown.
+
+    // On the residence side the credit is folded into the Tax credit rows below the portions,
+    // alongside the adjustment credit: 1,500 + 5,030 municipal, 1,000 + 3,353 prefectural.
+    const split = expand(screen.getByText('Income-based Portion'));
     expect(
-      within(rowOf(screen.getByText('Foreign tax credit (municipal)'))).getByText('-¥5,030'),
+      within(rowOf(within(split).getByText('Tax credit (municipal)'))).getByText('-¥6,530'),
     ).toBeInTheDocument();
     expect(
-      within(rowOf(screen.getByText('Foreign tax credit (prefectural)'))).getByText('-¥3,353'),
+      within(rowOf(within(split).getByText('Tax credit (prefectural)'))).getByText('-¥4,353'),
+    ).toBeInTheDocument();
+  });
+
+  it('breaks the income tax credit down into the foreign tax, the income and the two limits', () => {
+    render(<TaxesTab results={withForeignTax} inputs={inputs} />);
+
+    const incomeTaxCredit = screen.getByText('Foreign Tax Credit');
+    const details = expand(incomeTaxCredit);
+    expect(
+      within(rowOf(within(details).getByText('Income tax credit'))).getByText('-¥27,948'),
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf(within(details).getByText('Surtax credit'))).getByText('-¥586'),
+    ).toBeInTheDocument();
+
+    // L = ⌊134,850 × 800,000 / 3,860,000⌋, all of it credited since F = 80,000 is more.
+    const incomeTaxCreditTooltip = tooltipTitled('Income Tax Credit')!;
+    expect(amountIn(incomeTaxCreditTooltip, 'Income tax, after the home loan tax credit')).toBe(
+      '¥134,850',
+    );
+    expect(amountIn(incomeTaxCreditTooltip, 'Foreign-source income')).toBe('¥800,000');
+    expect(amountIn(incomeTaxCreditTooltip, 'Total net income')).toBe('¥3,860,000');
+    expect(amountIn(incomeTaxCreditTooltip, 'Income tax limit')).toBe('¥27,948');
+    expect(amountIn(incomeTaxCreditTooltip, 'Credited against income tax')).toBe('¥27,948');
+    // The account's dividends are all the foreign-source income, below 所得総額, so no cap.
+    expect(
+      within(incomeTaxCreditTooltip).queryByText('Capped foreign-source income:'),
+    ).not.toBeInTheDocument();
+    // All of F came with the income entries, so there is no return breakdown to show.
+    expect(
+      within(incomeTaxCreditTooltip).queryByText('Paid with a foreign tax return:'),
+    ).not.toBeInTheDocument();
+
+    // L_R = ⌊2,831 × 800,000 / 3,860,000⌋ out of the 80,000 − 27,948 = 52,052 left.
+    const surtaxCreditTooltip = tooltipTitled('Surtax Credit')!;
+    expect(amountIn(surtaxCreditTooltip, 'Reconstruction surtax')).toBe('¥2,831');
+    expect(amountIn(surtaxCreditTooltip, 'Surtax limit')).toBe('¥586');
+    expect(amountIn(surtaxCreditTooltip, 'Left after the income tax credit')).toBe('¥52,052');
+    expect(amountIn(surtaxCreditTooltip, 'Credited against the surtax')).toBe('¥586');
+  });
+
+  it('breaks the residence tax credit down into the prefectural and municipal credits', () => {
+    render(<TaxesTab results={withForeignTax} inputs={inputs} />);
+
+    const split = expand(screen.getByText('Income-based Portion'));
+    expect(
+      within(rowOf(within(split).getByText('Tax credit (municipal)'))).getByText('-¥6,530'),
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf(within(split).getByText('Tax credit (prefectural)'))).getByText('-¥4,353'),
+    ).toBeInTheDocument();
+
+    // 80,000 − 27,948 − 586 = 51,466 left; the limit ⌊27,948 × 12%⌋ is the smaller.
+    const prefectural = tooltipTitled('Prefectural Tax Credit')!;
+    expect(amountIn(prefectural, 'Left after income tax and the surtax')).toBe('¥51,466');
+    expect(amountIn(prefectural, 'Limit (12% of ¥27,948)')).toBe('¥3,353');
+    expect(amountIn(prefectural, 'Credit, the smaller of the two')).toBe('¥3,353');
+    // 51,466 − 3,353 = 48,113 left; the limit ⌊27,948 × 18%⌋ is the smaller.
+    const municipal = tooltipTitled('Municipal Tax Credit')!;
+    expect(amountIn(municipal, 'Left after the prefectural credit')).toBe('¥48,113');
+    expect(amountIn(municipal, 'Limit (18% of ¥27,948)')).toBe('¥5,030');
+    expect(amountIn(municipal, 'Credit, the smaller of the two')).toBe('¥5,030');
+    // Each income-based portion absorbed its whole credit.
+    for (const tooltip of [prefectural, municipal]) {
+      expect(within(tooltip).queryByText(/^Capped at/)).not.toBeInTheDocument();
+    }
+    // Each tooltip also shows the adjustment credit sharing the row, and the combined total.
+    expect(within(prefectural).getByText(/Adjustment Credit/)).toBeInTheDocument();
+    expect(within(prefectural).getByText('Prefectural tax credit: ¥4,353')).toBeInTheDocument();
+    expect(within(municipal).getByText('Municipal tax credit: ¥6,530')).toBeInTheDocument();
+  });
+
+  it('shows the portions without the foreign tax, folded into the tax credit rows instead', () => {
+    render(<TaxesTab results={withForeignTax} inputs={inputs} />);
+
+    const split = expand(screen.getByText('Income-based Portion'));
+    expect(within(split).queryByText(/foreign/i)).not.toBeInTheDocument();
+    // 2,407,000 × 6% = 144,420 + the 300,000 dividends' 3% = 9,000.
+    expect(
+      within(rowOf(within(split).getByText('Municipal portion'))).getByText('¥153,420'),
+    ).toBeInTheDocument();
+    // 2,407,000 × 4% = 96,280 + the 300,000 dividends' 2% = 6,000.
+    expect(
+      within(rowOf(within(split).getByText('Prefectural portion'))).getByText('¥102,280'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the foreign tax above every limit in the Foreign Tax Paid tooltip', () => {
+    render(<TaxesTab results={withForeignTax} inputs={inputs} />);
+
+    // 51,466 left for residence tax − 3,353 − 5,030.
+    const tooltip = tooltipTitled('Foreign Tax Paid')!;
+    expect(amountIn(tooltip, 'Not credited this year')).toBe('¥43,083');
+    expect(
+      within(tooltip).getByText(/can be carried forward for up to three years/),
+    ).toBeInTheDocument();
+    expect(
+      within(tooltip).getByText(
+        'Foreign tax and unused limits carried forward from earlier years are not supported.',
+      ),
     ).toBeInTheDocument();
   });
 
   it('places the rows where the calculation applies them', () => {
     render(<TaxesTab results={withForeignTax} inputs={inputs} />);
 
-    const [incomeTaxCredit, residenceTaxCredit] = screen.getAllByText('Foreign Tax Credit');
     expectInDocumentOrder([
       screen.getByText('Reconstruction Surtax'),
-      incomeTaxCredit!,
+      screen.getByText('Foreign Tax Credit'),
       screen.getByText('Foreign Tax Paid'),
       screen.getByText('Total Income Tax'),
       screen.getByText('Income-based Portion'),
-      residenceTaxCredit!,
+      screen.getByText('Tax credit (municipal)'),
+      screen.getByText('Tax credit (prefectural)'),
       screen.getByText('Per Capita Portion'),
       screen.getByText('Total Residence Tax'),
     ]);
@@ -578,131 +705,103 @@ describe('TaxesTab with the foreign tax credit', () => {
 
     expect(screen.queryByText('Foreign Tax Credit')).not.toBeInTheDocument();
     expect(screen.queryByText('Foreign Tax Paid')).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Foreign tax credit \(/)).not.toBeInTheDocument();
+    // The Tax credit rows still show for their ordinary adjustment credit, with no foreign
+    // tax credit section in their tooltip.
+    const split = expand(screen.getByText('Income-based Portion'));
+    within(split).getByText('Tax credit (municipal)');
+    const municipalTooltip = tooltipTitled('Municipal Tax Credit')!;
+    expect(
+      within(municipalTooltip).queryByText('Foreign Tax Credit (外国税額控除)'),
+    ).not.toBeInTheDocument();
   });
 
-  // Case K of the engine tests: 20,000 of foreign tax on 500,000 of foreign-source income entered
-  // by hand beside the 5,000,000 salary, with no investment entry. B = 89,850, R = 1,886;
-  // L = ⌊89,850 × 500,000 / 3,560,000⌋ = 12,619, L_R = ⌊1,886 × 500,000 / 3,560,000⌋ = 264,
-  // ⌊12,619 × 12%⌋ = 1,514, ⌊12,619 × 18%⌋ = 2,271. Income tax ⌊(89,850 + 1,886 − 12,619 − 264) /
-  // 100⌋ × 100 = 78,800; 住民税 市 142,920 − 2,271 → 140,600, 県 95,280 − 1,514 → 93,700.
-  const caseKLimits = {
-    incomeTax: 12_619,
-    reconstructionSurtax: 264,
-    prefecture: 1_514,
-    city: 2_271,
-  };
+  // Case K′ of the engine tests: 20,000 paid with a foreign tax return beside the 5,000,000 salary,
+  // with no income entry that has foreign-source income. There is no limit, so the taxes are the
+  // salary's alone: income tax 91,700 (B 89,850, R ⌊1,886.85⌋ = 1,886) and residence tax 243,100.
+  const zero = { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 };
   const earnedIncomeResidenceTax = {
     ...residenceTaxOnEarnedIncome,
     city: { ...residenceTaxOnEarnedIncome.city, cityIncomeTax: 142_900 },
     prefecture: { ...residenceTaxOnEarnedIncome.prefecture, prefecturalIncomeTax: 95_200 },
     totalResidenceTax: 243_100,
   };
-  const enteredByHand: TakeHomeResults = {
+  const paidWithReturn: TakeHomeResults = {
     ...results,
     annualIncome: 5_000_000,
     totalNetIncome: 3_560_000,
     investmentIncome: undefined,
-    nationalIncomeTax: 78_800,
+    nationalIncomeTax: 91_700,
     reconstructionSurtax: 1_886,
-    residenceTax: makeResidenceTaxDetails({
-      ...earnedIncomeResidenceTax,
-      city: { ...earnedIncomeResidenceTax.city, cityIncomeTax: 140_600 },
-      prefecture: { ...earnedIncomeResidenceTax.prefecture, prefecturalIncomeTax: 93_700 },
-      totalResidenceTax: 239_300,
-      foreignTaxCredit: { city: 2_271, prefecture: 1_514 },
-    }),
-    residenceTaxIncomeBasedBeforeForeignTaxCredit: 238_100,
+    residenceTax: makeResidenceTaxDetails(earnedIncomeResidenceTax),
     foreignTaxCredit: {
       foreignTax: 20_000,
-      foreignSourceIncome: 500_000,
-      adjustedForeignSourceIncome: 500_000,
+      foreignSourceIncome: 0,
+      adjustedForeignSourceIncome: 0,
       totalIncome: 3_560_000,
       incomeTax: 89_850,
       manualForeignTax: 20_000,
-      manualForeignSourceIncome: 500_000,
-      limit: caseKLimits,
-      credit: caseKLimits,
-      excess: 3_332,
+      limit: zero,
+      credit: zero,
+      excess: 20_000,
     },
     foreignTaxPaid: 20_000,
   };
 
-  it('shows the rows for foreign tax entered by hand, with no investment income', () => {
-    render(<TaxesTab results={enteredByHand} inputs={inputs} />);
+  it('shows the rows for tax paid with a return, with no investment income', () => {
+    render(<TaxesTab results={paidWithReturn} inputs={inputs} />);
 
-    const [incomeTaxCredit, residenceTaxCredit] = screen.getAllByText('Foreign Tax Credit');
-    // 12,619 + 264; the floored 所得割 238,100 before, 234,300 after.
-    expect(within(rowOf(incomeTaxCredit!)).getByText('-¥12,883')).toBeInTheDocument();
-    expect(within(rowOf(residenceTaxCredit!)).getByText('-¥3,800')).toBeInTheDocument();
+    // No limit: the credit row reads ¥0, not a negative zero.
+    const incomeTaxCredit = screen.getByText('Foreign Tax Credit');
+    expect(within(rowOf(incomeTaxCredit)).getByText('¥0')).toBeInTheDocument();
+    expect(within(rowOf(incomeTaxCredit)).queryByText('-¥0')).not.toBeInTheDocument();
     expect(
       within(rowOf(screen.getByText('Foreign Tax Paid'))).getByText('¥20,000'),
     ).toBeInTheDocument();
-    // 78,800 + 20,000.
-    expect(
-      within(rowOf(screen.getByText('Total Income Tax'))).getByText('¥98,800'),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Withheld on Investment Income')).not.toBeInTheDocument();
-    expect(screen.queryByText('Net Investment Income (separate)')).not.toBeInTheDocument();
-    // The tooltip names the foreign tax and the foreign-source income entered by hand.
-    expect(
-      within(tooltipTitled('Foreign Tax Credit — Income Tax')!).getAllByText(
-        'Entered in Additional Deductions & Credits:',
-      ),
-    ).toHaveLength(2);
-  });
-
-  it('shows a credit of ¥0 rather than a negative zero when there is no limit', () => {
-    // Case K′: no foreign-source income, so every limit is 0 and the taxes are the baseline's.
-    const zero = { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 };
-    render(
-      <TaxesTab
-        results={{
-          ...enteredByHand,
-          nationalIncomeTax: 91_700,
-          residenceTax: makeResidenceTaxDetails(earnedIncomeResidenceTax),
-          residenceTaxIncomeBasedBeforeForeignTaxCredit: undefined,
-          foreignTaxCredit: {
-            foreignTax: 20_000,
-            foreignSourceIncome: 0,
-            adjustedForeignSourceIncome: 0,
-            totalIncome: 3_560_000,
-            incomeTax: 89_850,
-            manualForeignTax: 20_000,
-            limit: zero,
-            credit: zero,
-            excess: 20_000,
-          },
-        }}
-        inputs={inputs}
-      />,
-    );
-
-    const creditRows = screen.getAllByText('Foreign Tax Credit').map(rowOf);
-    expect(creditRows).toHaveLength(2);
-    for (const row of creditRows) {
-      expect(within(row).getByText('¥0')).toBeInTheDocument();
-      expect(within(row).queryByText('-¥0')).not.toBeInTheDocument();
-    }
     // 91,700 + 20,000.
     expect(
       within(rowOf(screen.getByText('Total Income Tax'))).getByText('¥111,700'),
     ).toBeInTheDocument();
+    expect(screen.queryByText('Withheld on Investment Income')).not.toBeInTheDocument();
+    expect(screen.queryByText('Net Investment Income (separate)')).not.toBeInTheDocument();
+
+    // The eligible foreign tax is all paid with the return, so that is its only part.
+    const details = expand(incomeTaxCredit);
+    expect(
+      within(rowOf(within(details).getByText('Income tax credit'))).getByText('¥0'),
+    ).toBeInTheDocument();
+    expect(
+      within(rowOf(within(details).getByText('Surtax credit'))).getByText('¥0'),
+    ).toBeInTheDocument();
+    const incomeTaxCreditTooltip = tooltipTitled('Income Tax Credit')!;
+    expect(amountIn(incomeTaxCreditTooltip, 'Paid with a foreign tax return')).toBe('¥20,000');
+    expect(amountIn(incomeTaxCreditTooltip, 'Eligible for the credit')).toBe('¥20,000');
+    expect(
+      within(incomeTaxCreditTooltip).queryByText('Entered with income entries:'),
+    ).not.toBeInTheDocument();
+    expect(amountIn(incomeTaxCreditTooltip, 'Income tax limit')).toBe('¥0');
+    expect(within(incomeTaxCreditTooltip).getByText(/the limit is ¥0/)).toBeInTheDocument();
+
+    // The residence side has only the ordinary adjustment credit; nothing was left to credit
+    // there, so the Tax credit tooltips have no foreign tax credit section.
+    const municipalTooltip = tooltipTitled('Municipal Tax Credit')!;
+    expect(
+      within(municipalTooltip).queryByText('Foreign Tax Credit (外国税額控除)'),
+    ).not.toBeInTheDocument();
+
+    // Nothing is credited, so all 20,000 carries forward.
+    expect(amountIn(tooltipTitled('Foreign Tax Paid')!, 'Not credited this year')).toBe('¥20,000');
   });
 
-  it('shows the credit rows at ¥0 when all the foreign tax is on dividends left to withholding', () => {
+  it('shows the credit row at ¥0 when all the foreign tax is on dividends left to withholding', () => {
     // Case B of the engine tests: a 1,000,000 dividend from a foreign company with 100,000 of
     // foreign tax, left to withholding beside the 5,000,000 salary. Nothing is creditable
-    // (措令4条の5⑫), so there is no credit result, but foreign tax was entered, so the rows answer
+    // (措令4条の5⑫), so there is no credit result, but foreign tax was entered, so the row answers
     // it. Withholding on 1,000,000 − 100,000 = 900,000: ⌊900,000 × 15.315%⌋ = 137,835 and 45,000.
     render(
       <TaxesTab
         results={{
-          ...enteredByHand,
+          ...paidWithReturn,
           annualIncome: 6_000_000,
-          nationalIncomeTax: 91_700,
-          residenceTax: makeResidenceTaxDetails(earnedIncomeResidenceTax),
-          residenceTaxIncomeBasedBeforeForeignTaxCredit: undefined,
           investmentIncome: {
             withheld: {
               accounts: [],
@@ -722,22 +821,26 @@ describe('TaxesTab with the foreign tax credit', () => {
       />,
     );
 
-    const creditRows = screen.getAllByText('Foreign Tax Credit').map(rowOf);
-    expect(creditRows).toHaveLength(2);
-    for (const row of creditRows) {
-      expect(within(row).getByText('¥0')).toBeInTheDocument();
-    }
+    const incomeTaxCredit = screen.getByText('Foreign Tax Credit');
+    expect(within(rowOf(incomeTaxCredit)).getByText('¥0')).toBeInTheDocument();
     // 91,700 + 137,835 + 100,000.
     expect(
       within(rowOf(screen.getByText('Total Income Tax'))).getByText('¥329,535'),
     ).toBeInTheDocument();
-    for (const title of ['Foreign Tax Credit — Income Tax', 'Foreign Tax Credit — Residence Tax']) {
-      expect(
-        within(tooltipTitled(title)!).getByText(
-          /All the foreign tax paid, ¥100,000, is on dividends left to withholding\./,
-        ),
-      ).toBeInTheDocument();
-    }
+    expect(
+      within(tooltipTitled('Foreign Tax Credit — Income Tax')!).getByText(
+        /All the foreign tax paid, ¥100,000, is on dividends left to withholding\./,
+      ),
+    ).toBeInTheDocument();
+    // With no figures to break down, the row is not a disclosure.
+    expect(within(rowOf(incomeTaxCredit)).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByText('Income tax credit')).not.toBeInTheDocument();
+
+    // The residence side still has only the ordinary adjustment credit.
+    const municipalTooltip = tooltipTitled('Municipal Tax Credit')!;
+    expect(
+      within(municipalTooltip).queryByText('Foreign Tax Credit (外国税額控除)'),
+    ).not.toBeInTheDocument();
   });
 });
 

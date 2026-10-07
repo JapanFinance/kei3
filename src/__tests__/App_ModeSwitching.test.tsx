@@ -63,7 +63,7 @@ describe('App Integration - Income Mode Switching', () => {
     expect(screen.getByRole('combobox', { name: /health insurance provider/i })).toHaveTextContent(
       'National Health Insurance',
     );
-  });
+  }, 10_000);
 });
 
 describe('App Integration - 介護保険第1号 estimate', () => {

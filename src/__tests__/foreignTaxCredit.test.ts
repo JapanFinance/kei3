@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   DividendsIncomeStream,
   InterestIncomeStream,
+  PublicPensionIncomeStream,
   WithholdingAccountIncomeStream,
 } from '../types/tax';
 import { calculateForeignTaxCredit, foreignTaxEntryError } from '../utils/foreignTaxCredit';
@@ -161,6 +162,17 @@ describe('foreignTaxEntryError', () => {
     foreignTax: 10_000,
     ...overrides,
   });
+  const pension = (
+    overrides: Partial<PublicPensionIncomeStream> = {},
+  ): PublicPensionIncomeStream => ({
+    id: 'p',
+    type: 'publicPension',
+    payerDomicile: 'foreign',
+    treatyCredit: 'available',
+    amount: 2_000_000,
+    foreignTax: 100_000,
+    ...overrides,
+  });
   const account = (
     overrides: Partial<WithholdingAccountIncomeStream> = {},
   ): WithholdingAccountIncomeStream => ({
@@ -179,6 +191,8 @@ describe('foreignTaxEntryError', () => {
     expect(foreignTaxEntryError(dividend())).toBeUndefined();
     expect(foreignTaxEntryError(dividend({ foreignTax: 1_000_000 }))).toBeUndefined();
     expect(foreignTaxEntryError(interest())).toBeUndefined();
+    expect(foreignTaxEntryError(pension())).toBeUndefined();
+    expect(foreignTaxEntryError(pension({ foreignTax: 2_000_000 }))).toBeUndefined();
     expect(foreignTaxEntryError(account())).toBeUndefined();
     expect(
       foreignTaxEntryError(account({ foreignDividends: 800_000, foreignTax: 800_000 })),
@@ -192,6 +206,12 @@ describe('foreignTaxEntryError', () => {
     expect(
       foreignTaxEntryError(interest({ payerDomicile: 'domestic', foreignTax: 0 })),
     ).toBeUndefined();
+    expect(
+      foreignTaxEntryError(pension({ payerDomicile: 'domestic', foreignTax: 0 })),
+    ).toBeUndefined();
+    expect(
+      foreignTaxEntryError(pension({ treatyCredit: 'unavailable', foreignTax: 0 })),
+    ).toBeUndefined();
     expect(foreignTaxEntryError(account({ foreignDividends: 0, foreignTax: 0 }))).toBeUndefined();
   });
 
@@ -200,6 +220,9 @@ describe('foreignTaxEntryError', () => {
       'Foreign tax cannot be negative.',
     );
     expect(foreignTaxEntryError(interest({ foreignTax: -1 }))).toBe(
+      'Foreign tax cannot be negative.',
+    );
+    expect(foreignTaxEntryError(pension({ foreignTax: -1 }))).toBe(
       'Foreign tax cannot be negative.',
     );
     expect(foreignTaxEntryError(account({ foreignTax: -1 }))).toBe(
@@ -222,12 +245,29 @@ describe('foreignTaxEntryError', () => {
     );
   });
 
+  it('rejects foreign tax on a pension from a Japanese system', () => {
+    expect(foreignTaxEntryError(pension({ payerDomicile: 'domestic' }))).toBe(
+      'Foreign tax can be entered only for a pension from a foreign system.',
+    );
+  });
+
+  it('rejects foreign tax on a pension when tax credit is unavailable in Japan under treaty', () => {
+    expect(
+      foreignTaxEntryError(pension({ treatyCredit: 'unavailable', foreignTax: 100_000 })),
+    ).toBe(
+      'Foreign tax can be entered only when a tax credit is available in Japan under a tax treaty.',
+    );
+  });
+
   it('rejects foreign tax above the amount it was withheld from', () => {
     expect(foreignTaxEntryError(dividend({ foreignTax: 1_000_001 }))).toBe(
       'Foreign tax cannot be more than the gross dividend.',
     );
     expect(foreignTaxEntryError(interest({ foreignTax: 100_001 }))).toBe(
       'Foreign tax cannot be more than the gross interest.',
+    );
+    expect(foreignTaxEntryError(pension({ foreignTax: 2_000_001 }))).toBe(
+      'Foreign tax cannot be more than the gross pension.',
     );
   });
 

@@ -7,6 +7,7 @@ import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
 import type { PremiumRate } from '../data/premiumRate';
+import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent } from '../types/dependents';
 import {
@@ -345,9 +346,19 @@ interface IncomeBreakdown {
    * Foreign-source income (所法95条④六・七) on the reported entries: interest paid outside Japan
    * and dividends from foreign companies and funds, gross. A reported loss netted against the
    * dividends does not reduce it: the loss is not foreign-source, so it lowers 所得総額 instead.
+   * The foreign pensions are apart, in {@link grossForeignPublicPensionIncome}.
    */
   foreignSourceIncome: number;
-  /** Foreign tax on the reported entries: what the foreign tax credit can credit. */
+  /**
+   * 公的年金等の収入金額 of the pensions under a foreign system, inside
+   * {@link grossPublicPensionIncome}: foreign-source income (所法95条④十ロ), measured for the
+   * credit limit by {@link foreignPensionSourceIncome}.
+   */
+  grossForeignPublicPensionIncome: number;
+  /**
+   * Foreign tax on the reported entries and the foreign pensions: what the foreign tax credit can
+   * credit.
+   */
   creditableForeignTax: number;
   /**
    * Foreign tax on the dividends left to withholding, in the accounts and outside them. The
@@ -387,6 +398,7 @@ const calculateIncomeBreakdown = (
   let commutingAllowance = 0;
   let stockCompensationIncome = 0;
   let grossPublicPensionIncome = 0;
+  let grossForeignPublicPensionIncome = 0;
   let capitalGains = 0;
   let dividends = 0;
   let interest = 0;
@@ -465,9 +477,22 @@ const calculateIncomeBreakdown = (
         netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
         netBusinessAndMiscIncome += income.amount;
         break;
-      case 'publicPension':
+      case 'publicPension': {
+        const foreignTaxError = foreignTaxEntryError(income);
+        if (foreignTaxError) {
+          throw new Error(foreignTaxError);
+        }
         grossPublicPensionIncome += income.amount;
+        const isForeignTaxable =
+          income.payerDomicile === 'foreign' &&
+          (income.treatyCredit === 'available' ||
+            (income.treatyCredit === undefined && income.foreignTax > 0));
+        if (isForeignTaxable) {
+          grossForeignPublicPensionIncome += income.amount;
+          creditableForeignTax += income.foreignTax;
+        }
         break;
+      }
       case 'withholdingAccount': {
         const foreignTaxError = foreignTaxEntryError(income);
         if (foreignTaxError) {
@@ -635,10 +660,40 @@ const calculateIncomeBreakdown = (
     aggregateDividends,
     aggregateInterest,
     foreignSourceIncome,
+    grossForeignPublicPensionIncome,
     creditableForeignTax,
     withheldForeignTax,
   };
 };
+
+/**
+ * The foreign-source income (国外所得金額) of the pensions under a foreign system. 所令221条の6①
+ * measures it as if only the foreign-source income were taxed, so the 公的年金等控除 is computed on
+ * the foreign pensions' gross alone, with the taxpayer's age, and its band is judged on the other
+ * foreign-source income only, not on the whole 合計所得金額. There is no 所得金額調整控除 in it, as
+ * there is no salary. A small foreign pension can therefore add nothing, even when the pensions
+ * together have net income.
+ *
+ * @param grossForeignPension         公的年金等の収入金額 of the foreign pensions
+ * @param ageRange                    The taxpayer's age range
+ * @param otherForeignSourceIncome    The other foreign-source income, which sets the band
+ * @param year                        Income year for the deduction table lookup
+ * @see https://laws.e-gov.go.jp/law/340CO0000000096#Mp-Pa_2-Ch_3-At_221_6
+ */
+export const foreignPensionSourceIncome = (
+  grossForeignPension: number,
+  ageRange: TaxpayerAgeRange,
+  otherForeignSourceIncome: number,
+  year: number,
+): number =>
+  grossForeignPension > 0
+    ? calculateNetPublicPensionIncome(
+        grossForeignPension,
+        taxpayerAgeRangeBounds(ageRange),
+        otherForeignSourceIncome,
+        year,
+      )
+    : 0;
 
 /**
  * The taxpayer's net income (所得) components, from the categorized gross amounts. Everything the
@@ -728,7 +783,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     reportedInvestment,
     aggregateDividends,
     aggregateInterest,
-    foreignSourceIncome,
+    grossForeignPublicPensionIncome,
     creditableForeignTax,
     withheldForeignTax,
   } = incomeBreakdown;
@@ -1027,23 +1082,29 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const reconstructionSurtax = Math.floor((incomeTaxAfterHomeLoanCredit * 21) / 1000);
 
   const manualForeignTax = inputs.foreignTaxCredit?.foreignTax ?? 0;
-  const manualForeignSourceIncome = inputs.foreignTaxCredit?.foreignSourceIncome ?? 0;
-  if (manualForeignTax < 0 || manualForeignSourceIncome < 0) {
-    throw new Error('Foreign tax and foreign-source income cannot be negative.');
+  if (manualForeignTax < 0) {
+    throw new Error('Foreign tax cannot be negative.');
   }
   const foreignTax = creditableForeignTax + manualForeignTax;
+  const foreignSourceIncome =
+    incomeBreakdown.foreignSourceIncome +
+    foreignPensionSourceIncome(
+      grossForeignPublicPensionIncome,
+      inputs.ageRange,
+      incomeBreakdown.foreignSourceIncome,
+      incomeYear,
+    );
   const foreignTaxCredit: ForeignTaxCreditResult | undefined =
-    foreignTax > 0
+    foreignTax > 0 || foreignSourceIncome > 0
       ? {
           ...calculateForeignTaxCredit({
             incomeTax: incomeTaxAfterHomeLoanCredit,
             reconstructionSurtax,
             totalIncome: netIncome,
-            foreignSourceIncome: foreignSourceIncome + manualForeignSourceIncome,
+            foreignSourceIncome,
             foreignTax,
           }),
           ...(manualForeignTax > 0 && { manualForeignTax }),
-          ...(manualForeignSourceIncome > 0 && { manualForeignSourceIncome }),
         }
       : undefined;
   const nationalIncomeTax =
@@ -1088,8 +1149,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     { listed: listedWithholdingBase, interest: investment.interest },
     incomeYear,
   );
-  // The foreign tax is taken as paid in the year: withheld abroad on the entries, and the amount
-  // entered by hand.
+  // The foreign tax is taken as paid in the year: withheld abroad on the entries, and paid with a
+  // foreign tax return filed in the year.
   const foreignTaxPaid = foreignTax + withheldForeignTax;
   const totalSocialsAndTax =
     nationalIncomeTax +

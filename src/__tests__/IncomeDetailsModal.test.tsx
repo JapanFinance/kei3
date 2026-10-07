@@ -353,8 +353,20 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
   it('displays public pension streams in their own section with a PENSION chip and subtotal', () => {
     const streams: IncomeStream[] = [
-      { id: 'p1', type: 'publicPension', amount: 1_800_000 },
-      { id: 'p2', type: 'publicPension', amount: 600_000 },
+      {
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      },
+      {
+        id: 'p2',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 600_000,
+      },
     ];
 
     render(
@@ -374,7 +386,15 @@ describe('IncomeDetailsModal - Public Pension', () => {
   });
 
   it('keeps the Public Pension option enabled when a pension stream already exists', async () => {
-    const streams: IncomeStream[] = [{ id: 'p1', type: 'publicPension', amount: 1_800_000 }];
+    const streams: IncomeStream[] = [
+      {
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      },
+    ];
 
     render(
       <IncomeDetailsModal
@@ -390,8 +410,20 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
   it('shows the deduction and net alongside the group subtotal, over the combined gross', () => {
     const streams: IncomeStream[] = [
-      { id: 'p1', type: 'publicPension', amount: 1_800_000 },
-      { id: 'p2', type: 'publicPension', amount: 600_000 },
+      {
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      },
+      {
+        id: 'p2',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 600_000,
+      },
     ];
 
     render(
@@ -417,7 +449,15 @@ describe('IncomeDetailsModal - Public Pension', () => {
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[{ id: 'p1', type: 'publicPension', amount: 1_100_000 }]}
+        streams={[
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 1_100_000,
+          },
+        ]}
         onStreamsChange={() => {}}
         netPublicPensionIncome={0}
       />,
@@ -434,7 +474,15 @@ describe('IncomeDetailsModal - Public Pension', () => {
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[{ id: 'p1', type: 'publicPension', amount: 2_400_000 }]}
+        streams={[
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 2_400_000,
+          },
+        ]}
         onStreamsChange={() => {}}
       />,
     );
@@ -1209,6 +1257,36 @@ describe('IncomeDetailsModal - Foreign tax', () => {
     );
     expect(screen.queryByText(/Foreign dividends/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Foreign tax/)).not.toBeInTheDocument();
+  });
+
+  it('describes a pension from a foreign system and shows its foreign tax', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'foreign',
+            foreignTax: 100_000,
+            amount: 2_000_000,
+          },
+          {
+            id: 'p2',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 1_500_000,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getAllByText('Foreign system')).toHaveLength(1);
+    expect(screen.getAllByText(/^Foreign tax/)).toHaveLength(1);
+    expect(screen.getByText('Foreign tax ¥100,000')).toBeInTheDocument();
   });
 });
 

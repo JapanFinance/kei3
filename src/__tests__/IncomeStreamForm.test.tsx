@@ -512,4 +512,146 @@ describe('IncomeStreamForm foreign tax', () => {
       expect.objectContaining({ id: 'd1', issuerDomicile: 'foreign', foreignTax: 30_000 }),
     );
   });
+
+  it('starts a pension on a Japanese system, with no foreign tax field, and saves no foreign tax', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    expect(screen.getByRole('button', { name: 'Japanese system' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByLabelText(FOREIGN_TAX_LABEL)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥1,500,000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'publicPension',
+        amount: 1_500_000,
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+      }),
+    );
+  });
+
+  it('defaults a foreign pension to unavailable tax credit and does not ask for foreign tax', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    expect(screen.getByRole('button', { name: 'Unavailable' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByLabelText(FOREIGN_TAX_LABEL)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥2,000,000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'publicPension',
+        amount: 2_000_000,
+        payerDomicile: 'foreign',
+        treatyCredit: 'unavailable',
+        foreignTax: 0,
+      }),
+    );
+  });
+
+  it('asks for the foreign tax on a pension when tax credit is available under treaty and saves it', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Available' }));
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥2,000,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'publicPension',
+        amount: 2_000_000,
+        payerDomicile: 'foreign',
+        treatyCredit: 'available',
+        foreignTax: 100_000,
+      }),
+    );
+  });
+
+  it('saves no foreign tax once the pension is switched back to a Japanese system', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Available' }));
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥2,000,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Japanese system' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ payerDomicile: 'domestic', foreignTax: 0 }),
+    );
+  });
+
+  it('shows why the foreign tax on a pension cannot be used, and does not save', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Available' }));
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥50,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(screen.getByLabelText(FOREIGN_TAX_LABEL)).toHaveAccessibleDescription(
+      'Foreign tax cannot be more than the gross pension.',
+    );
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it("keeps an edited pension's foreign system and foreign tax", () => {
+    render(
+      <IncomeStreamForm
+        type="publicPension"
+        initialData={{
+          id: 'p1',
+          type: 'publicPension',
+          amount: 2_000_000,
+          payerDomicile: 'foreign',
+          treatyCredit: 'available',
+          foreignTax: 100_000,
+        }}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Foreign system' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Available' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByLabelText(FOREIGN_TAX_LABEL)).toHaveValue('¥100,000');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'p1',
+        payerDomicile: 'foreign',
+        treatyCredit: 'available',
+        foreignTax: 100_000,
+      }),
+    );
+  });
 });

@@ -212,6 +212,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         }${stream.issuerDomicile === 'foreign' ? ', foreign company or fund' : ''}`;
       case 'interest':
         return stream.payerDomicile === 'foreign' ? 'Paid outside Japan' : null;
+      case 'publicPension':
+        return stream.payerDomicile === 'foreign' ? 'Foreign system' : null;
       default:
         return null;
     }
@@ -467,7 +469,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       )}
                     </Typography>
                   )}
-                  {(stream.type === 'dividends' || stream.type === 'interest') &&
+                  {(stream.type === 'dividends' ||
+                    stream.type === 'interest' ||
+                    stream.type === 'publicPension') &&
                     stream.foreignTax > 0 && (
                       <Typography
                         variant="caption"

@@ -33,8 +33,14 @@ import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
-import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
-import { ForeignTaxCreditTooltip, ForeignTaxPaidTooltip } from './ForeignTaxCreditTooltips';
+import {
+  ForeignTaxCreditTooltip,
+  ForeignTaxPaidTooltip,
+  IncomeTaxCreditTooltip,
+  SurtaxCreditTooltip,
+  hasForeignTaxCreditDetails,
+} from './ForeignTaxCreditTooltips';
+import IncomeBasedPortionTooltip from './IncomeBasedPortionTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
 import {
   buildNationalBasicDeductionRows,
@@ -44,6 +50,7 @@ import {
   buildNationalIncomeTaxBracketRows,
   getNationalIncomeTaxBracketHighlightIndex,
 } from './referenceTableHighlight';
+import ResidenceTaxCreditTooltip from './ResidenceTaxCreditTooltip';
 
 interface TaxesTabProps {
   results: TakeHomeResults;
@@ -160,6 +167,7 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
 };
 
 const INCOME_BASED_SPLIT_ID = 'residence-tax-income-based-split';
+const INCOME_TAX_FOREIGN_CREDIT_ID = 'income-tax-foreign-tax-credit-details';
 
 /** A credit shown as a reduction, with a zero shown as ¥0 rather than as a negative zero. */
 const formatReduction = (amount: number): string => formatJPY(amount > 0 ? -amount : 0);
@@ -273,6 +281,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showIncomeBasedSplit, setShowIncomeBasedSplit] = useState(false);
+  const [showIncomeTaxForeignCredit, setShowIncomeTaxForeignCredit] = useState(false);
   const totalSocialInsurance =
     results.socialInsuranceOverride ??
     results.healthInsurance +
@@ -298,6 +307,9 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // they stay out of the way.
   const showForeignTaxCredit = results.foreignTaxPaid !== undefined;
   const withheldForeignTax = withheldInvestment?.foreignTax;
+  const foreignTaxCreditDetails = hasForeignTaxCreditDetails(foreignTaxCredit)
+    ? foreignTaxCredit
+    : undefined;
   const totalIncomeTax = incomeTaxPaid(results);
   const totalResidenceTax = residenceTaxPaid(results);
   const totalTaxes = totalIncomeTax + totalResidenceTax;
@@ -336,6 +348,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const foreignTaxResidenceReduction =
     residenceIncomeBasedBeforeForeignTaxCredit - residenceIncomeBasedPost;
   const residenceForeignTaxCredit = results.residenceTax.foreignTaxCredit;
+  // The Municipal/Prefectural portion rows (and their merged Tax credit rows below) show the
+  // adjustment credit AND the foreign tax credit together, ahead of the Home Loan Tax Credit row,
+  // which differs from the calculation order (adjustment, then home loan, then foreign) but sums
+  // to the same totals either way, since subtraction order doesn't affect the total. So the
+  // header subtotal shown here needs to already be net of the foreign tax credit too, unlike
+  // residenceIncomeBasedDisplayed above.
+  const residenceIncomeBasedAfterTaxCredit =
+    residenceIncomeBasedDisplayed - foreignTaxResidenceReduction;
+  const municipalPortionAggregate = Math.round(results.residenceTax.taxableIncome * 0.06);
+  const municipalPortionSeparate = residenceSeparate
+    ? Math.round(residenceSeparate.cityIncomeTax)
+    : undefined;
+  const municipalPortionGross = municipalPortionAggregate + (municipalPortionSeparate ?? 0);
+  const prefecturalPortionAggregate = Math.round(results.residenceTax.taxableIncome * 0.04);
+  const prefecturalPortionSeparate = residenceSeparate
+    ? Math.round(residenceSeparate.prefecturalIncomeTax)
+    : undefined;
+  const prefecturalPortionGross = prefecturalPortionAggregate + (prefecturalPortionSeparate ?? 0);
 
   return (
     <Box>
@@ -740,15 +770,19 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
         {showForeignTaxCredit && (
           <ResultRow
-            label={
-              <span>
-                Foreign Tax Credit
-                <ForeignTaxCreditTooltip
-                  credit={foreignTaxCredit}
-                  part="national"
-                  withheldForeignTax={withheldForeignTax}
-                />
-              </span>
+            label="Foreign Tax Credit"
+            {...(foreignTaxCreditDetails && {
+              disclosure: {
+                expanded: showIncomeTaxForeignCredit,
+                onToggle: () => setShowIncomeTaxForeignCredit(open => !open),
+                controlsId: INCOME_TAX_FOREIGN_CREDIT_ID,
+              },
+            })}
+            labelSuffix={
+              <ForeignTaxCreditTooltip
+                credit={foreignTaxCredit}
+                withheldForeignTax={withheldForeignTax}
+              />
             }
             value={formatReduction(
               (foreignTaxCredit?.credit.incomeTax ?? 0) +
@@ -756,6 +790,38 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             )}
             type="detail"
           />
+        )}
+        {showForeignTaxCredit && foreignTaxCreditDetails && (
+          <Collapse in={showIncomeTaxForeignCredit} id={INCOME_TAX_FOREIGN_CREDIT_ID}>
+            <Box sx={{ ml: 2, mb: 1 }}>
+              <ResultRow
+                label={
+                  <span>
+                    Income tax credit
+                    <IncomeTaxCreditTooltip
+                      credit={foreignTaxCreditDetails}
+                      withheldForeignTax={withheldForeignTax}
+                    />
+                  </span>
+                }
+                value={formatReduction(foreignTaxCreditDetails.credit.incomeTax)}
+                type="detail"
+              />
+              <ResultRow
+                label={
+                  <span>
+                    Surtax credit
+                    <SurtaxCreditTooltip
+                      credit={foreignTaxCreditDetails}
+                      reconstructionSurtax={results.reconstructionSurtax ?? 0}
+                    />
+                  </span>
+                }
+                value={formatReduction(foreignTaxCreditDetails.credit.reconstructionSurtax)}
+                type="detail"
+              />
+            </Box>
+          </Collapse>
         )}
 
         {withheldInvestment && (
@@ -1006,7 +1072,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   </Box>
                 </DetailedTooltip>
               }
-              value={formatJPY(residenceIncomeBasedDisplayed)}
+              value={formatJPY(residenceIncomeBasedAfterTaxCredit)}
               type="detail"
             />
 
@@ -1014,61 +1080,77 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             <Collapse in={showIncomeBasedSplit} id={INCOME_BASED_SPLIT_ID}>
               <Box sx={{ ml: 2, mb: 1 }}>
                 <ResultRow
-                  label="Municipal portion (6%)"
-                  value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.06))}
+                  label={
+                    <span>
+                      Municipal portion
+                      <IncomeBasedPortionTooltip
+                        level="municipal"
+                        aggregateRatePercent={6}
+                        aggregateAmount={municipalPortionAggregate}
+                        separateRatePercent={3}
+                        separateAmount={municipalPortionSeparate}
+                      />
+                    </span>
+                  }
+                  value={formatJPY(municipalPortionGross)}
                   type="detail"
                 />
-                {residenceSeparate && (
-                  <ResultRow
-                    label="Municipal portion, investment income (3%)"
-                    value={formatJPY(Math.round(residenceSeparate.cityIncomeTax))}
-                    type="detail"
-                  />
-                )}
-                {results.residenceTax.city.cityAdjustmentCredit > 0 && (
+                {(results.residenceTax.city.cityAdjustmentCredit > 0 ||
+                  (residenceForeignTaxCredit?.city ?? 0) > 0) && (
                   <ResultRow
                     label={
                       <span>
                         Tax credit (municipal)
-                        <AdjustmentCreditTooltip
+                        <ResidenceTaxCreditTooltip
                           level="municipal"
                           adjustmentCredit={results.residenceTax.city.cityAdjustmentCredit}
                           personalDeductionDifference={
                             results.residenceTax.personalDeductionDifference
                           }
+                          foreignTaxCredit={
+                            foreignTaxCreditDetails && (residenceForeignTaxCredit?.city ?? 0) > 0
+                              ? {
+                                  credit: foreignTaxCreditDetails,
+                                  applied: residenceForeignTaxCredit?.city ?? 0,
+                                }
+                              : undefined
+                          }
                         />
                       </span>
                     }
-                    value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)}
-                    type="detail"
-                  />
-                )}
-                {residenceForeignTaxCredit && residenceForeignTaxCredit.city > 0 && (
-                  <ResultRow
-                    label="Foreign tax credit (municipal)"
-                    value={formatJPY(-residenceForeignTaxCredit.city)}
+                    value={formatJPY(
+                      -(
+                        results.residenceTax.city.cityAdjustmentCredit +
+                        (residenceForeignTaxCredit?.city ?? 0)
+                      ),
+                    )}
                     type="detail"
                   />
                 )}
 
                 <ResultRow
-                  label="Prefectural portion (4%)"
-                  value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.04))}
+                  label={
+                    <span>
+                      Prefectural portion
+                      <IncomeBasedPortionTooltip
+                        level="prefectural"
+                        aggregateRatePercent={4}
+                        aggregateAmount={prefecturalPortionAggregate}
+                        separateRatePercent={2}
+                        separateAmount={prefecturalPortionSeparate}
+                      />
+                    </span>
+                  }
+                  value={formatJPY(prefecturalPortionGross)}
                   type="detail"
                 />
-                {residenceSeparate && (
-                  <ResultRow
-                    label="Prefectural portion, investment income (2%)"
-                    value={formatJPY(Math.round(residenceSeparate.prefecturalIncomeTax))}
-                    type="detail"
-                  />
-                )}
-                {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
+                {(results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 ||
+                  (residenceForeignTaxCredit?.prefecture ?? 0) > 0) && (
                   <ResultRow
                     label={
                       <span>
                         Tax credit (prefectural)
-                        <AdjustmentCreditTooltip
+                        <ResidenceTaxCreditTooltip
                           level="prefectural"
                           adjustmentCredit={
                             results.residenceTax.prefecture.prefecturalAdjustmentCredit
@@ -1076,17 +1158,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           personalDeductionDifference={
                             results.residenceTax.personalDeductionDifference
                           }
+                          foreignTaxCredit={
+                            foreignTaxCreditDetails &&
+                            (residenceForeignTaxCredit?.prefecture ?? 0) > 0
+                              ? {
+                                  credit: foreignTaxCreditDetails,
+                                  applied: residenceForeignTaxCredit?.prefecture ?? 0,
+                                }
+                              : undefined
+                          }
                         />
                       </span>
                     }
-                    value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)}
-                    type="detail"
-                  />
-                )}
-                {residenceForeignTaxCredit && residenceForeignTaxCredit.prefecture > 0 && (
-                  <ResultRow
-                    label="Foreign tax credit (prefectural)"
-                    value={formatJPY(-residenceForeignTaxCredit.prefecture)}
+                    value={formatJPY(
+                      -(
+                        results.residenceTax.prefecture.prefecturalAdjustmentCredit +
+                        (residenceForeignTaxCredit?.prefecture ?? 0)
+                      ),
+                    )}
                     type="detail"
                   />
                 )}
@@ -1152,26 +1241,6 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   </span>
                 }
                 value={formatJPY(-homeLoanResidenceReduction)}
-                type="detail"
-              />
-            )}
-
-            {/* Foreign tax credit (reduces the income-based portion above, after the home loan
-                credit) */}
-            {showForeignTaxCredit && (
-              <ResultRow
-                label={
-                  <span>
-                    Foreign Tax Credit
-                    <ForeignTaxCreditTooltip
-                      credit={foreignTaxCredit}
-                      part="residence"
-                      applied={residenceForeignTaxCredit}
-                      withheldForeignTax={withheldForeignTax}
-                    />
-                  </span>
-                }
-                value={formatReduction(foreignTaxResidenceReduction)}
                 type="detail"
               />
             )}

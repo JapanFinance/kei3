@@ -112,7 +112,14 @@ export const scaleIncomeStreamsToIncome = (
 
   if (earnedTotal > 0) {
     const ratio = earnedTarget / earnedTotal;
-    return streams.map(s => (isEarnedIncomeStream(s) ? { ...s, amount: s.amount * ratio } : s));
+    return streams.map(s => {
+      if (!isEarnedIncomeStream(s)) return s;
+      // The foreign tax scales with its pension: held constant, it could exceed a scaled-down
+      // pension, which the calculation rejects.
+      return s.type === 'publicPension'
+        ? { ...s, amount: s.amount * ratio, foreignTax: s.foreignTax * ratio }
+        : { ...s, amount: s.amount * ratio };
+    });
   }
 
   // Fallback if the earned streams are 0

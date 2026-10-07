@@ -76,7 +76,15 @@ export const ENGINE_SCENARIOS = {
   'pensioner-65-69': [
     {
       ...EMPLOYEE,
-      incomeStreams: [{ id: 'pension', type: 'publicPension', amount: 2_000_000 }],
+      incomeStreams: [
+        {
+          id: 'pension',
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 2_000_000,
+        },
+      ],
       ageRange: 'age65to69',
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
     },

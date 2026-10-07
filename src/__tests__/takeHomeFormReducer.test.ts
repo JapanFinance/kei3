@@ -519,7 +519,15 @@ describe('takeHomeFormReducer', () => {
 
       const result = takeHomeFormReducer(state, {
         type: 'incomeStreamsChanged',
-        streams: [{ id: 'p1', type: 'publicPension', amount: 2_400_000 }],
+        streams: [
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 2_400_000,
+          },
+        ],
       });
 
       expect(result.annualIncome).toBe(2_400_000);

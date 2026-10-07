@@ -88,7 +88,13 @@ describe('dependentTestAnnualIncome', () => {
     expect(
       dependentTestAnnualIncome([
         { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
-        { id: 'p1', type: 'publicPension', amount: 500_000 },
+        {
+          id: 'p1',
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 500_000,
+        },
         {
           id: 'd1',
           type: 'dividends',
@@ -189,7 +195,15 @@ describe('isEarnedIncomeStream', () => {
     expect(isEarnedIncomeStream({ id: 's1', type: 'salary', amount: 1, frequency: 'annual' })).toBe(
       true,
     );
-    expect(isEarnedIncomeStream({ id: 'p1', type: 'publicPension', amount: 1 })).toBe(true);
+    expect(
+      isEarnedIncomeStream({
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1,
+      }),
+    ).toBe(true);
     expect(
       isEarnedIncomeStream({
         id: 'c1',
@@ -226,9 +240,15 @@ describe('annualIncomeStreamAmount', () => {
   });
 
   it('takes every other type at its entered amount', () => {
-    expect(annualIncomeStreamAmount({ id: 'p1', type: 'publicPension', amount: 1_800_000 })).toBe(
-      1_800_000,
-    );
+    expect(
+      annualIncomeStreamAmount({
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      }),
+    ).toBe(1_800_000);
   });
 });
 

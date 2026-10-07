@@ -6,6 +6,7 @@ import type {
   ForeignTaxCreditAmounts,
   ForeignTaxCreditResult,
   InterestIncomeStream,
+  PublicPensionIncomeStream,
   WithholdingAccountIncomeStream,
 } from '../types/tax';
 
@@ -144,7 +145,11 @@ export const calculateForeignTaxCredit = (
  * calculation, which throws the message, and the entry form, which shows it.
  */
 export const foreignTaxEntryError = (
-  stream: DividendsIncomeStream | InterestIncomeStream | WithholdingAccountIncomeStream,
+  stream:
+    | DividendsIncomeStream
+    | InterestIncomeStream
+    | PublicPensionIncomeStream
+    | WithholdingAccountIncomeStream,
 ): string | undefined => {
   if (stream.foreignTax < 0) return 'Foreign tax cannot be negative.';
   switch (stream.type) {
@@ -162,6 +167,17 @@ export const foreignTaxEntryError = (
       }
       if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
         return 'Foreign tax cannot be more than the gross interest.';
+      }
+      return undefined;
+    case 'publicPension':
+      if (stream.foreignTax > 0 && stream.payerDomicile === 'domestic') {
+        return 'Foreign tax can be entered only for a pension from a foreign system.';
+      }
+      if (stream.foreignTax > 0 && stream.treatyCredit === 'unavailable') {
+        return 'Foreign tax can be entered only when a tax credit is available in Japan under a tax treaty.';
+      }
+      if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
+        return 'Foreign tax cannot be more than the gross pension.';
       }
       return undefined;
     case 'withholdingAccount':

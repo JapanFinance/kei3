@@ -35,6 +35,7 @@ import type { Dependent } from '../../types/dependents';
 import { DISABILITY_LEVELS } from '../../types/dependents';
 import type {
   ForeignTaxCreditInput,
+  ForeignTaxCreditResult,
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
   LifeInsuranceInput,
@@ -87,10 +88,14 @@ interface AdditionalDeductionsModalProps {
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   onHomeLoanTaxCreditChange: (input: HomeLoanTaxCreditInput | undefined) => void;
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
-  /** Foreign tax entered by hand for the foreign tax credit; absent when none is. */
+  /** Foreign tax paid with a foreign tax return; absent when none is. */
   foreignTaxCredit?: ForeignTaxCreditInput | undefined;
-  /** Called with undefined once both amounts are cleared. */
+  /** Called with undefined once the amount is cleared. */
   onForeignTaxCreditChange: (input: ForeignTaxCreditInput | undefined) => void;
+  /** Computed foreign tax credit, for the card's summary; absent with no foreign tax or income. */
+  foreignTaxCreditResult?: ForeignTaxCreditResult | undefined;
+  /** Foreign tax on dividends left to withholding, which the credit cannot use. */
+  withheldForeignTax?: number | undefined;
   lifeInsurance: LifeInsuranceInput;
   onLifeInsuranceChange: (input: LifeInsuranceInput) => void;
   earthquakeInsurance: EarthquakeInsuranceInput;
@@ -185,6 +190,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   homeLoanTaxCreditResult,
   foreignTaxCredit,
   onForeignTaxCreditChange,
+  foreignTaxCreditResult,
+  withheldForeignTax = 0,
   lifeInsurance,
   onLifeInsuranceChange,
   earthquakeInsurance,
@@ -231,16 +238,47 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
     onHomeLoanTaxCreditChange({ ...effectiveHomeLoan, ...patch });
   };
 
-  const effectiveForeignTaxCredit: ForeignTaxCreditInput = foreignTaxCredit ?? {
-    foreignTax: 0,
-    foreignSourceIncome: 0,
-  };
-  const updateForeignTaxCredit = (patch: Partial<ForeignTaxCreditInput>) => {
-    const next = { ...effectiveForeignTaxCredit, ...patch };
-    onForeignTaxCreditChange(
-      next.foreignTax === 0 && next.foreignSourceIncome === 0 ? undefined : next,
-    );
-  };
+  const foreignTaxEnteredWithIncome = foreignTaxCreditResult
+    ? foreignTaxCreditResult.foreignTax - (foreignTaxCreditResult.manualForeignTax ?? 0)
+    : 0;
+  const foreignTaxSummaryRows: { label: string; amount: number; isTotal?: boolean }[] = [
+    ...(foreignTaxEnteredWithIncome > 0
+      ? [{ label: 'Foreign tax entered with income', amount: foreignTaxEnteredWithIncome }]
+      : []),
+    ...(withheldForeignTax > 0
+      ? [{ label: 'On dividends left to withholding, not eligible', amount: withheldForeignTax }]
+      : []),
+    ...(foreignTaxCreditResult?.manualForeignTax
+      ? [{ label: 'Paid with a tax return', amount: foreignTaxCreditResult.manualForeignTax }]
+      : []),
+    ...(foreignTaxCreditResult
+      ? [
+          {
+            label: 'Total eligible foreign tax',
+            amount: foreignTaxCreditResult.foreignTax,
+            isTotal: true,
+          },
+          {
+            label: 'Foreign-source income',
+            amount: foreignTaxCreditResult.adjustedForeignSourceIncome,
+          },
+          {
+            label: 'Credit limit',
+            amount:
+              foreignTaxCreditResult.limit.incomeTax +
+              foreignTaxCreditResult.limit.reconstructionSurtax +
+              foreignTaxCreditResult.limit.prefecture +
+              foreignTaxCreditResult.limit.city,
+          },
+        ]
+      : []),
+  ];
+  const foreignTaxExcessWarning =
+    foreignTaxCreditResult && foreignTaxCreditResult.excess > 0
+      ? foreignTaxCreditResult.adjustedForeignSourceIncome === 0
+        ? `There is no foreign-source income to credit the foreign tax against, so ${formatJPY(foreignTaxCreditResult.excess)} is not credited this year. Foreign-source income comes from income entries: dividends from a foreign company or fund, interest paid outside Japan and pensions from a foreign system. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
+        : `${formatJPY(foreignTaxCreditResult.excess)} of the foreign tax is above the limit and is not credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
+      : undefined;
 
   const lifeInput = lifeInsurance;
   const updateLife = (patch: Partial<LifeInsuranceInput>) => {
@@ -912,29 +950,29 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 >
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Foreign tax (外国所得税) on income from outside Japan is credited against the
-                      Japanese income tax and residence tax, up to limits set by the share of
-                      foreign-source income in total net income.
+                      Foreign tax on foreign-source income is credited against Japanese income tax
+                      and residence tax, up to limits set by the share of foreign-source income in
+                      total net income.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Enter here the foreign tax that is not part of an investment entry: tax
-                      withheld abroad on a foreign pension, on pay for work done abroad, or on
-                      payments from foreign clients, and tax paid with a foreign tax return.
+                      Foreign tax withheld at source is entered with the income it was withheld
+                      from: a dividend from a foreign company or fund, interest paid outside Japan,
+                      etc.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Foreign tax counts in the year it became payable: the payment date for tax
-                      withheld, and the filing date for tax paid with a return. The amount entered
-                      is taken as paid in this year. For a US citizen, a former US citizen or a
-                      long-term US resident, only part of the US tax counts: no more than the tax
-                      the Japan–US tax treaty would let the US charge on the same income of a
-                      resident of Japan without that status (Article 23(3)).
+                      Enter here only tax paid with a foreign tax return. It counts in the year the
+                      return is filed, not in the year of the income it was charged on. Tax treaty
+                      limits apply: tax exceeding a treaty's maximum rate on a given type of income,
+                      or tax paid voluntarily (such as when available treaty relief, exemptions, or
+                      refunds were not claimed), cannot be credited. For example, US tax paid by a
+                      US taxpayer in excess of treaty rates due to citizenship-based taxation cannot
+                      be credited.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Foreign-source income is the net income (所得) the foreign tax was charged on,
-                      after deductions such as the employment income deduction. With no
-                      foreign-source income there is no limit, and nothing is credited. Foreign tax
-                      above the limits carries forward for three years in law, which is not
-                      supported.
+                      With no foreign-source income or no income tax there is no limit, and nothing
+                      is credited. Foreign tax above the limits can be carried forward for up to
+                      three years by attaching the foreign tax credit statement
+                      (外国税額控除に関する明細書) to the tax return each year.
                     </Typography>
                     <SourceLinks
                       sources={[
@@ -947,40 +985,62 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   </Box>
                 </DetailedTooltip>
               </Typography>
-              <FormControl fullWidth>
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                  <FormControl sx={{ flex: '1 1 180px', minWidth: 160 }}>
-                    <SpinnerNumberField
-                      id="foreignTaxPaid"
-                      name="foreignTaxPaid"
-                      value={effectiveForeignTaxCredit.foreignTax}
-                      onChange={value => updateForeignTaxCredit({ foreignTax: value })}
-                      label="Foreign Tax Paid (外国所得税)"
-                      step={1_000}
-                      shiftStep={10_000}
-                      min={0}
-                      inputProps={{ 'aria-describedby': 'foreignTaxCreditHelper' }}
-                    />
-                  </FormControl>
-                  <FormControl sx={{ flex: '1 1 180px', minWidth: 160 }}>
-                    <SpinnerNumberField
-                      id="foreignSourceIncome"
-                      name="foreignSourceIncome"
-                      value={effectiveForeignTaxCredit.foreignSourceIncome}
-                      onChange={value => updateForeignTaxCredit({ foreignSourceIncome: value })}
-                      label="Foreign-Source Income (国外所得金額)"
-                      step={10_000}
-                      shiftStep={100_000}
-                      min={0}
-                      inputProps={{ 'aria-describedby': 'foreignTaxCreditHelper' }}
-                    />
-                  </FormControl>
+              <SpinnerNumberField
+                id="foreignTaxPaid"
+                name="foreignTaxPaid"
+                value={foreignTaxCredit?.foreignTax ?? 0}
+                onChange={value =>
+                  onForeignTaxCreditChange(value === 0 ? undefined : { foreignTax: value })
+                }
+                label="Foreign Tax Paid with a Tax Return (外国所得税)"
+                step={1_000}
+                shiftStep={10_000}
+                min={0}
+                helperText="Only tax paid with a foreign tax return filed this year. Withheld foreign tax is entered with the income it was withheld from."
+              />
+              {foreignTaxSummaryRows.length > 0 && (
+                <Box
+                  component="dl"
+                  sx={{
+                    ...readoutSx,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    columnGap: 2,
+                    rowGap: 0.25,
+                    mb: 0,
+                    '& dd': { m: 0, textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
+                  }}
+                >
+                  {foreignTaxSummaryRows.map(row => (
+                    <React.Fragment key={row.label}>
+                      <dt>{row.isTotal ? <strong>{row.label}</strong> : row.label}</dt>
+                      <dd>
+                        <strong>{formatJPY(row.amount)}</strong>
+                      </dd>
+                    </React.Fragment>
+                  ))}
                 </Box>
-                <FormHelperText id="foreignTaxCreditHelper">
-                  Only foreign tax not entered with an investment entry: foreign tax withheld from a
-                  dividend or interest entry is counted automatically.
-                </FormHelperText>
-              </FormControl>
+              )}
+              {foreignTaxExcessWarning && (
+                <Box
+                  role="alert"
+                  sx={{
+                    p: 1.5,
+                    bgcolor: 'warning.light',
+                    color: 'warning.contrastText',
+                    borderRadius: 1,
+                    mt: 2,
+                    display: 'flex',
+                    gap: 1,
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <WarningIcon sx={{ fontSize: '1.1rem', mt: '1px' }} />
+                  <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                    {foreignTaxExcessWarning}
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Box>
