@@ -63,6 +63,7 @@ describe('TakeHomeInputForm Tests', () => {
     incomeMode: 'salary',
     incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -318,6 +319,7 @@ describe('Dependent Coverage UI Behavior', () => {
     incomeMode: 'salary',
     incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -425,6 +427,75 @@ describe('Dependent Coverage UI Behavior', () => {
       .map(option => option.textContent);
 
     expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it('should NOT include dependent coverage when dividends left off the return carry the 年間収入 over', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        // 100,000 short of the threshold; the dividends are 収入 whether or not they are reported.
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          isReported: false,
+          amount: 100_000,
+        },
+      ],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    const optionTexts = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .map(option => option.textContent);
+
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it("should NOT include dependent coverage when a year's capital gains carry the 年間収入 over, but should for a losing year", async () => {
+    const user = userEvent.setup();
+    const withGains = (amount: number): TakeHomeFormState => ({
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          isReported: false,
+          amount,
+        },
+      ],
+    });
+
+    const { unmount } = render(
+      <TakeHomeInputForm inputs={withGains(100_000)} dispatch={mockDispatch} />,
+    );
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map(option => option.textContent),
+    ).not.toContain('None (dependent of insured employee)');
+    await user.keyboard('{Escape}');
+    unmount();
+
+    render(<TakeHomeInputForm inputs={withGains(-500_000)} dispatch={mockDispatch} />);
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'None (dependent of insured employee)',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('should include dependent coverage for the same salary without a commuting allowance', async () => {
@@ -566,6 +637,7 @@ describe('Age Selection', () => {
     incomeMode: 'salary',
     incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -782,6 +854,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     incomeMode: 'advanced',
     incomeStreams: [],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -827,6 +900,7 @@ describe('TakeHomeInputForm Income Details Modal', () => {
       incomeMode: 'advanced' as const,
       incomeStreams: [{ id: 'p1', type: 'publicPension' as const, amount: 2_400_000 }],
       savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange,
@@ -875,6 +949,7 @@ describe('Commuting Allowance Integration', () => {
       incomeMode: 'advanced',
       incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
       savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
@@ -931,6 +1006,7 @@ describe('Investment Income Integration', () => {
       incomeMode: 'advanced',
       incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
       savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
@@ -956,7 +1032,7 @@ describe('Investment Income Integration', () => {
     const user = userEvent.setup();
     render(<TestWrapper />);
 
-    expect(screen.queryByText('Investment Income (taxed separately)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Investment Income (withheld only)')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
     await user.click(screen.getByRole('button', { name: /add investment income/i }));
@@ -969,7 +1045,7 @@ describe('Investment Income Integration', () => {
 
     // Gross, before the 20.315% withheld at source.
     const investmentIncomeRow = screen.getByText(
-      'Investment Income (taxed separately)',
+      'Investment Income (withheld only)',
     ).parentElement!;
     expect(within(investmentIncomeRow).getByText('¥300,000')).toBeInTheDocument();
   }, 10_000);
@@ -983,11 +1059,11 @@ describe('Investment Income Integration', () => {
     await user.click(screen.getByRole('menuitem', { name: /^dividends$/i }));
 
     await user.type(screen.getByRole('textbox', { name: /gross dividends/i }), '300000');
-    await user.click(screen.getByRole('button', { name: 'Reported (separate)' }));
+    await user.click(screen.getByRole('button', { name: 'Reported' }));
     await user.click(screen.getByRole('button', { name: /add/i }));
     await user.click(screen.getByRole('button', { name: /close/i }));
 
-    expect(screen.queryByText('Investment Income (taxed separately)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Investment Income (withheld only)')).not.toBeInTheDocument();
     // The header total is the income on the return: 5,000,000 + 300,000.
     expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
   }, 10_000);
@@ -1006,6 +1082,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
         { id: '2', type: 'business', amount: 4000000 },
       ],
       savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,

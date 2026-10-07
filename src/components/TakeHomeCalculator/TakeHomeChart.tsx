@@ -38,6 +38,7 @@ import type {
   ChartRange,
   CustomEmployeesHealthInsuranceRates,
   IncomeStream,
+  ReportedDividendsTaxation,
   LifeInsuranceInput,
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
@@ -156,6 +157,8 @@ interface TakeHomeChartProps {
   manualSocialInsuranceEntry?: boolean;
   manualSocialInsuranceAmount?: number;
   incomeStreams?: IncomeStream[];
+  /** The election that taxes every reported dividend in {@link incomeStreams}; the default when omitted. */
+  reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
@@ -238,6 +241,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   manualSocialInsuranceEntry,
   manualSocialInsuranceAmount = 0,
   incomeStreams = [],
+  reportedDividendsTaxation,
   lifeInsurance,
   earthquakeInsurance,
   medicalExpenses,
@@ -346,6 +350,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
         manualSocialInsuranceAmount,
         incomeStreams,
+        reportedDividendsTaxation,
         lifeInsurance,
         earthquakeInsurance,
         medicalExpenses,
@@ -367,6 +372,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       manualSocialInsuranceEntry,
       manualSocialInsuranceAmount,
       incomeStreams,
+      reportedDividendsTaxation,
       lifeInsurance,
       earthquakeInsurance,
       medicalExpenses,
@@ -426,6 +432,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
                   manualSocialInsuranceAmount,
                   incomeStreams: scaleIncomeStreamsToIncome(incomeStreams, income),
+                  reportedDividendsTaxation,
                   lifeInsurance,
                   earthquakeInsurance,
                   medicalExpenses,
@@ -476,6 +483,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     personalCircumstances,
     homeLoanTaxCredit,
     incomeStreams,
+    reportedDividendsTaxation,
     distribution,
     quintileBoundaries,
   ]);
