@@ -5,16 +5,14 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
+import type { AggregateTaxationIncome } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import type { Source } from '../../ui/SourceLinks';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface NetAggregateInvestmentIncomeTooltipProps {
-  /** Dividends reported under aggregate taxation (総合課税), as entered. Absent when none. */
-  dividends?: number | undefined;
-  /** Interest paid outside Japan, as entered. Absent when none. */
-  interest?: number | undefined;
+  aggregate: AggregateTaxationIncome;
 }
 
 const CELL_SX = { padding: '2px 0' };
@@ -27,11 +25,11 @@ const TOTAL_CELL_SX = { padding: '4px 0', fontWeight: 600 };
  * the row label. Shared by the Taxes and Social Insurance tabs.
  */
 const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncomeTooltipProps> = ({
-  dividends,
-  interest,
+  aggregate,
 }) => {
+  const { dividends, interest } = aggregate;
   const sources: Source[] = [];
-  if (dividends !== undefined) {
+  if (dividends > 0) {
     sources.push(
       {
         href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
@@ -43,7 +41,7 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
       },
     );
   }
-  if (interest !== undefined) {
+  if (interest > 0) {
     sources.push({
       href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
       label: 'Interest income (利子所得) - NTA',
@@ -61,7 +59,7 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
         }}
       >
         <tbody>
-          {dividends !== undefined && (
+          {dividends > 0 && (
             <tr>
               <Box component="td" sx={CELL_SX}>
                 Dividends (配当所得):
@@ -71,7 +69,7 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
               </Box>
             </tr>
           )}
-          {interest !== undefined && (
+          {interest > 0 && (
             <tr>
               <Box component="td" sx={CELL_SX}>
                 Interest paid outside Japan (利子所得):
@@ -86,42 +84,40 @@ const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncome
               Net Investment Income (aggregate):
             </Box>
             <Box component="td" sx={{ ...TOTAL_CELL_SX, textAlign: 'right' }}>
-              {formatJPY((dividends ?? 0) + (interest ?? 0))}
+              {formatJPY(dividends + interest)}
             </Box>
           </Box>
         </tbody>
       </table>
 
-      {dividends !== undefined && (
+      {dividends > 0 && (
         <>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            {formatJPY(dividends)} of dividends reported under aggregate taxation (総合課税) are
-            dividend income (配当所得, 所法24条) inside the aggregate income (総所得金額,
-            所法22条②一): they count toward total net income (合計所得金額) and are taxed in the
-            progressive brackets and at the 10% residence rate together with the other income. The
-            amount is the dividends as entered; the deduction for interest on money borrowed to buy
-            the shares (負債利子, 所法24条②) is not modelled.
+            Dividends reported under aggregate taxation (総合課税) count toward total net income
+            (合計所得金額) and are taxed in the progressive brackets and at the 10% residence tax
+            rate together with other income.
           </Typography>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            The dividend tax credit (配当控除, 所法92条, 地方税法附則5条) that offsets part of that
-            tax for a dividend from a domestic company is not modelled yet, so the tax shown is
-            overstated for those. No capital loss is set against a dividend reported this way: the
-            law nets a loss only against dividends reported under separate taxation (申告分離課税,
-            措法37条の12の2). The 20.315% withheld at source is credited on the return and is not
-            shown as a refund.
+            The dividend tax credit (配当控除) that offsets part of that tax for a dividend from a
+            Japanese company is not supported yet, so the tax shown is overstated for those. Capital
+            losses cannot offset dividends subject to aggregate taxation.
           </Typography>
         </>
       )}
 
-      {interest !== undefined && (
+      {interest > 0 && (
         <Typography variant="body2" sx={{ mb: 1 }}>
-          {formatJPY(interest)} of interest paid outside Japan had no Japanese tax withheld on it,
-          so the whole amount is interest income (利子所得, 所法23条) inside the aggregate income
-          (総所得金額, 所法22条②一): it counts toward total net income (合計所得金額) and is taxed
-          in the progressive brackets and at the 10% residence rate together with the other income.
-          Foreign tax withheld on it is not modelled (the foreign tax credit, 外国税額控除).
+          Interest paid outside Japan had no Japanese tax withheld on it, so the whole amount is
+          interest income that counts toward total net income (合計所得金額) and is taxed in the
+          progressive brackets and at the 10% residence rate together with the other income.
         </Typography>
       )}
+
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Tax another country withholds, such as on a foreign company's dividends or a foreign bank's
+        interest, is eligible for the foreign tax credit (外国税額控除), which the calculator does
+        not currently support.
+      </Typography>
 
       <SourceLinks sources={sources} />
     </DetailedTooltip>

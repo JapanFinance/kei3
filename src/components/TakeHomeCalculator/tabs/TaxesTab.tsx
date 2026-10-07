@@ -22,9 +22,9 @@ import type {
   NonTaxableResidenceTaxStatus,
   TakeHomeResults,
   TakeHomeInputs,
+  WithheldInvestmentIncome,
 } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { hasInvestmentIncome } from '../../../utils/investmentIncome';
 import { NON_TAXABLE_STATUS_INCOME_LIMIT } from '../../../utils/residenceTax';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import ReferenceTable from '../../ui/ReferenceTable';
@@ -160,52 +160,74 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
 const INCOME_BASED_SPLIT_ID = 'residence-tax-income-based-split';
 
 /**
+ * The amounts the withholding is charged on, as label and amount pairs: each withholding designated
+ * account at its own base (its loss netted against its own dividends, never below zero), then the
+ * dividends outside an account and the interest, each taxed in full. Listing the accounts one by
+ * one is what makes the rows add up to the taxed amount when a loss in one account exceeds its
+ * dividends while another account has dividends.
+ */
+const withheldBaseRows = (base: WithheldInvestmentIncome): [label: string, amount: number][] => {
+  const accountLabel = (account: WithheldInvestmentIncome['accounts'][number]) =>
+    `Account ${account.position} (${[
+      account.capitalGains !== 0 && `sales ${formatJPY(account.capitalGains)}`,
+      account.dividends !== 0 && `dividends ${formatJPY(account.dividends)}`,
+    ]
+      .filter(Boolean)
+      .join(', ')})`;
+  return [
+    ...base.accounts.map((account): [string, number] => [accountLabel(account), account.base]),
+    ...(base.dividends !== 0
+      ? [['Dividends (other accounts)', base.dividends] as [string, number]]
+      : []),
+    ...(base.interest !== 0 ? [['Interest paid in Japan', base.interest] as [string, number]] : []),
+  ];
+};
+
+/**
  * Tooltip for the two rows of tax withheld on investment income left to withholding: what the
  * withholding settles and the amounts it was taken from. One component for both rows, so the
  * income-tax and residence-tax rows tell the same story.
  */
 const WithheldInvestmentTaxTooltip: React.FC<{
-  investmentIncome: NonNullable<TakeHomeResults['investmentIncome']>;
-}> = ({ investmentIncome }) => (
+  withheld: WithheldInvestmentIncome;
+}> = ({ withheld }) => (
   <DetailedTooltip title="Tax Withheld on Investment Income">
     <Box>
       <Typography variant="body2" sx={{ mb: 1 }}>
         Investment income left to withholding (申告不要): the payer withholds 15.315% income tax and
-        5% residence tax, which settles the tax in full. The amount is on no tax return and in no
-        assessed figure above, and the tax withheld counts with the assessed tax of the same kind
-        here and on the Summary tab.
+        5% residence tax, which settles the tax in full. The amount is not reported on a tax return
+        and is in no assessed figure above.
       </Typography>
       <Typography variant="body2" sx={{ mb: 1 }}>
-        In a withholding designated account the year's net loss on sales is netted against the
+        In a withholding designated account, the year's net loss on sales is offset against the
         dividends received into the account before withholding, so a loss can bring the tax on the
-        dividends down to nothing.
+        dividends down to nothing. Accounts are not combined with each other, so a loss left over in
+        one account does not reduce the tax on dividends in another.
       </Typography>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
         <tbody>
-          {(
-            [
-              ['Capital gains', investmentIncome.gross.capitalGains],
-              ['Dividends', investmentIncome.gross.dividends],
-              ['Interest', investmentIncome.gross.interest],
-            ] as const
-          )
-            .filter(([, amount]) => amount !== 0)
-            .map(([label, amount]) => (
-              <tr key={label}>
-                <td style={{ padding: '2px 0' }}>{label}:</td>
-                <td style={{ padding: '2px 0', textAlign: 'right' }}>{formatJPY(amount)}</td>
-              </tr>
-            ))}
+          {withheldBaseRows(withheld).map(([label, amount]) => (
+            <tr key={label}>
+              <td style={{ padding: '2px 0' }}>{label}:</td>
+              <td style={{ padding: '2px 0', textAlign: 'right' }}>{formatJPY(amount)}</td>
+            </tr>
+          ))}
+          <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+            <td style={{ padding: '4px 0', fontWeight: 600 }}>Taxed amount:</td>
+            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+              {formatJPY(withheld.taxedAmount)}
+            </td>
+          </Box>
           <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
             <td style={{ padding: '4px 0', fontWeight: 600 }}>Income tax withheld (15.315%):</td>
             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-              {formatJPY(investmentIncome.withheld.national)}
+              {formatJPY(withheld.tax.national)}
             </td>
           </Box>
           <tr>
             <td style={{ padding: '4px 0', fontWeight: 600 }}>Residence tax withheld (5%):</td>
             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-              {formatJPY(investmentIncome.withheld.residence)}
+              {formatJPY(withheld.tax.residence)}
             </td>
           </tr>
         </tbody>
@@ -248,13 +270,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // Investment income reported under 申告分離課税 is taxed inside the calculation below; the
   // amounts left to withholding are settled by the tax withheld at source, which is shown as a
   // row of its own under each tax and counted in that tax's total, as on the Summary tab.
-  const reportedInvestment = results.investmentIncome?.reported;
-  const withheldInvestment =
-    results.investmentIncome !== undefined && hasInvestmentIncome(results.investmentIncome.gross)
-      ? results.investmentIncome
-      : undefined;
-  const withheldNational = withheldInvestment?.withheld.national ?? 0;
-  const withheldResidence = withheldInvestment?.withheld.residence ?? 0;
+  const separateInvestment = results.investmentIncome?.reported?.separate;
+  const withheldInvestment = results.investmentIncome?.withheld;
+  const withheldNational = withheldInvestment?.tax.national ?? 0;
+  const withheldResidence = withheldInvestment?.tax.residence ?? 0;
   const totalIncomeTax = results.nationalIncomeTax + withheldNational;
   const totalResidenceTax = results.residenceTax.totalResidenceTax + withheldResidence;
   const totalTaxes = totalIncomeTax + totalResidenceTax;
@@ -519,33 +538,31 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
-        {reportedInvestment && (
+        {separateInvestment && (
           <ResultRow
             label={
               <span>
                 Tax on Investment Income (separate)
-                <DetailedTooltip title="Income Tax on Reported Investment Income">
+                <DetailedTooltip title="Income Tax on Investment Income under Separate Taxation">
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      15% of the taxable investment income, apart from the progressive brackets
-                      (措法8条の4①, 37条の11①). The taxable amount is the net investment income
-                      reported under 申告分離課税 less any deductions the other income could not
-                      use: the deductions come off taxable income first, and only what is left over
-                      comes off this amount (措法8条の4③, 37条の11⑥). The reconstruction surtax
-                      below applies to this and the base income tax together. In a withholding
-                      designated account the 15.315% already withheld is credited against the total
-                      on the return.
+                      A flat 15% of the taxable investment income. The taxable amount is the net
+                      investment income reported under separate taxation, less any income deductions
+                      too large for the other income to absorb. The deductions are subtracted from
+                      the other income first, as in the Taxable Income row above, and only the part
+                      left over is subtracted from the investment income. The reconstruction surtax
+                      below applies to this and the base income tax together.
                     </Typography>
                     <table
                       style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}
                     >
                       <tbody>
                         <tr>
-                          <td style={{ padding: '2px 0' }}>Net investment income (reported):</td>
+                          <td style={{ padding: '2px 0' }}>Net investment income (separate):</td>
                           <td style={{ padding: '2px 0', textAlign: 'right' }}>
                             {formatJPY(
-                              reportedInvestment.netIncome.capitalGains +
-                                reportedInvestment.netIncome.dividends,
+                              separateInvestment.netIncome.capitalGains +
+                                separateInvestment.netIncome.dividends,
                             )}
                           </td>
                         </tr>
@@ -559,10 +576,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           >
                             -
                             {formatJPY(
-                              reportedInvestment.netIncome.capitalGains +
-                                reportedInvestment.netIncome.dividends -
-                                reportedInvestment.taxable.capitalGains -
-                                reportedInvestment.taxable.dividends,
+                              separateInvestment.netIncome.capitalGains +
+                                separateInvestment.netIncome.dividends -
+                                separateInvestment.taxable.capitalGains -
+                                separateInvestment.taxable.dividends,
                             )}
                           </Box>
                         </tr>
@@ -572,15 +589,15 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           </td>
                           <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
                             {formatJPY(
-                              reportedInvestment.taxable.capitalGains +
-                                reportedInvestment.taxable.dividends,
+                              separateInvestment.taxable.capitalGains +
+                                separateInvestment.taxable.dividends,
                             )}
                           </td>
                         </Box>
                         <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
                           <td style={{ padding: '4px 0', fontWeight: 600 }}>Tax at 15%:</td>
                           <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                            {formatJPY(reportedInvestment.nationalIncomeTaxBase)}
+                            {formatJPY(separateInvestment.nationalIncomeTaxBase)}
                           </td>
                         </Box>
                       </tbody>
@@ -601,7 +618,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 </DetailedTooltip>
               </span>
             }
-            value={formatJPY(reportedInvestment.nationalIncomeTaxBase)}
+            value={formatJPY(separateInvestment.nationalIncomeTaxBase)}
             type="detail"
           />
         )}
@@ -699,7 +716,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Withheld on Investment Income
-                <WithheldInvestmentTaxTooltip investmentIncome={withheldInvestment} />
+                <WithheldInvestmentTaxTooltip withheld={withheldInvestment} />
               </span>
             }
             value={formatJPY(withheldNational)}
@@ -714,7 +731,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <DetailedTooltip title="Total Income Tax Calculation">
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    {reportedInvestment
+                    {separateInvestment
                       ? 'Total Income Tax = Base Income Tax + Tax on Investment Income (separate) (− Tax Credits) + Reconstruction Surtax'
                       : 'Total Income Tax = Base Income Tax (− Tax Credits) + Reconstruction Surtax'}
                     {withheldInvestment && ' + Withheld on Investment Income'}
@@ -879,12 +896,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       This portion is calculated as a percentage of taxable income and split between
                       municipal and prefectural governments.
                       {residenceSeparate &&
-                        ' Investment income reported under 申告分離課税 is taxed at 5% within the same portion: the net amount reported, less any deductions the other income could not use, floored to ¥1,000 (地方税法附則第33条の2, 第35条の2の2).'}
+                        ' Investment income reported under separate taxation is taxed at 5% within the same portion: the net amount reported, less any deductions the other income could not use, floored to ¥1,000.'}
                     </Typography>
                     {residenceSeparate && (
                       <Box sx={{ mb: 1 }}>
                         <HighlightedRowValue
-                          label="Taxable investment income (reported)"
+                          label="Taxable investment income (separate)"
                           value={
                             residenceSeparate.taxableCapitalGains +
                             residenceSeparate.taxableDividends
@@ -893,12 +910,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       </Box>
                     )}
                     <ReferenceTable
-                      headers={['Component', 'Rate']}
+                      headers={['Component', 'Rate (separate)']}
                       rows={
                         residenceSeparate
                           ? [
-                              ['Municipal Tax (市町村民税)', '6% (3% on investment income)'],
-                              ['Prefectural Tax (都道府県民税)', '4% (2% on investment income)'],
+                              ['Municipal Tax (市町村民税)', '6% (3%)'],
+                              ['Prefectural Tax (都道府県民税)', '4% (2%)'],
                               [<strong>Total</strong>, <strong>10% (5%)</strong>],
                             ]
                           : [
@@ -1108,7 +1125,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Withheld on Investment Income
-                <WithheldInvestmentTaxTooltip investmentIncome={withheldInvestment} />
+                <WithheldInvestmentTaxTooltip withheld={withheldInvestment} />
               </span>
             }
             value={formatJPY(withheldResidence)}
