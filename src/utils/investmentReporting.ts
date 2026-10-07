@@ -33,3 +33,19 @@ export const withRequiredReporting = (stream: IncomeStream): IncomeStream => {
       return stream;
   }
 };
+
+/**
+ * Forces all investment streams to be reported on the tax return.
+ * Under Special Tax Measures Act Art. 41-19, when the minimum tax on high income applies,
+ * 確定申告不要制度 is disallowed, requiring all investment income to be reported.
+ */
+export const withAllInvestmentReported = (stream: IncomeStream): IncomeStream => {
+  switch (stream.type) {
+    case 'withholdingAccount':
+      return { ...stream, reportsCapitalGains: true, reportsDividends: true };
+    case 'dividends':
+      return { ...stream, isReported: true };
+    default:
+      return stream;
+  }
+};

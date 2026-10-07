@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { PremiumRate } from '../data/premiumRate';
 import type { Dependent, DependentDeductionResults, DisabilityLevel } from './dependents';
 import type { HealthInsuranceProviderId, LongTermCareCategory1Estimate } from './healthInsurance';
 import type { TaxpayerAgeRange } from './taxpayerAge';
@@ -581,6 +582,31 @@ export interface ForeignTaxCreditResult {
 }
 
 /**
+ * Result of the minimum tax on high income taxpayers (特定の基準所得金額の課税の特例 / 租税特別措置法第41条の19).
+ * Corresponds to Form 「特定の基準所得金額の課税の特例に関する適用判定表兼税額計算書」.
+ */
+export interface HighIncomeMinimumTaxResult {
+  /** 基準所得金額: baseline income amount (box ⑬ on NTA calculation sheet). */
+  baselineIncome: number;
+  /** Statutory threshold / deduction (特別控除額: ¥330M in 2025/2026, ¥165M in 2027+). */
+  threshold: number;
+  /** Taxable excess above threshold (box ⑭, floored to ¥1,000). */
+  taxableExcess: number;
+  /** Statutory tax rate (22.5% in 2025/2026, 30.0% in 2027+). */
+  rate: PremiumRate;
+  /** Tax on excess: taxableExcess × rate (box ⑮). */
+  taxOnExcess: number;
+  /** Baseline income tax + surtax without 確定申告不要制度 (box ㉒). */
+  baselineIncomeTax: number;
+  /** Additional income tax under Art. 41-19 (box ㉓, added to box ㊹). */
+  additionalIncomeTax: number;
+  /** Reconstruction surtax on additional tax (Math.floor(additionalIncomeTax × 2.1%)). */
+  additionalReconstructionSurtax: number;
+  /** Total additional tax (additionalIncomeTax + additionalReconstructionSurtax). */
+  totalAdditionalTax: number;
+}
+
+/**
  * User input for the life insurance premium deduction (生命保険料控除). All values are
  * annual premiums paid, in yen. New-contract (新契約) categories are 2012-01-01-onward
  * policies; old-contract (旧契約) categories are pre-2012 policies. 介護医療 has no
@@ -1010,6 +1036,12 @@ export interface TakeHomeResults {
    * floored to the yen as on the return.
    */
   reconstructionSurtax?: number | undefined;
+  /**
+   * The minimum tax on high income taxpayers (特定の基準所得金額の課税の特例 / 租税特別措置法第41条の19).
+   * Present only when the taxpayer's baseline income exceeds the statutory threshold and the
+   * minimum tax calculation results in additional tax.
+   */
+  highIncomeMinimumTax?: HighIncomeMinimumTaxResult | undefined;
   // National Health Insurance breakdown (only for non-employment income)
   nhiMedicalPortion?: number | undefined;
   nhiElderlySupportPortion?: number | undefined;

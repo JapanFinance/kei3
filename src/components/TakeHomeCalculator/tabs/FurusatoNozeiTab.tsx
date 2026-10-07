@@ -381,6 +381,20 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                 is avoided by using the One-Stop system (ワンストップ特例制度).
               </Typography>
             </>
+          ) : results.highIncomeMinimumTax ? (
+            <>
+              <Typography variant="body2">
+                The out-of-pocket cost is higher than the expected ≈2,000 yen because the Minimum
+                Tax on High Income Taxpayers (特定の基準所得金額の課税の特例) sets a statutory tax
+                floor on baseline income. Because baseline income does not subtract donation
+                deductions, any reduction in your baseline income tax is offset yen-for-yen by an
+                increase in the minimum tax addition.
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Note that filing a tax return is required when this minimum tax applies, so the
+                One-Stop system (ワンストップ特例制度) cannot be used.
+              </Typography>
+            </>
           ) : (
             <>
               <Typography variant="body2">

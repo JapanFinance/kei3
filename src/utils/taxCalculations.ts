@@ -3,6 +3,7 @@
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../constants/taxThresholds';
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
+import { getHighIncomeMinimumTaxParams } from '../data/highIncomeMinimumTax';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
@@ -24,6 +25,7 @@ import {
   NO_RESIDENCE_TAX_CREDITS,
   type BonusIncomeStream,
   type ForeignTaxCreditResult,
+  type HighIncomeMinimumTaxResult,
   type IncomeStream,
   type InvestmentIncomeAmounts,
   type PersonalCircumstancesInput,
@@ -57,6 +59,7 @@ import {
   calculateNationalHealthInsurancePremiumWithBreakdown,
   type LatterStageElderlyBreakdown,
 } from './healthInsuranceCalculator';
+import { calculateHighIncomeMinimumTax } from './highIncomeMinimumTax';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { annualIncomeStreamAmount } from './incomeStreams';
 import {
@@ -71,6 +74,7 @@ import {
 } from './investmentIncome';
 import {
   dividendMustBeReported,
+  withAllInvestmentReported,
   withholdingAccountDividendsMustBeReported,
 } from './investmentReporting';
 import {
@@ -1077,7 +1081,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // 所得税額 after the home loan credit (B): the base the 復興特別所得税 and the foreign tax credit
   // limits are measured on. The bracket arithmetic is float, so it is rounded to the whole yen it
   // stands for.
-  const incomeTaxAfterHomeLoanCredit = Math.round(
+  let incomeTaxAfterHomeLoanCredit = Math.round(
     Math.max(
       0,
       nationalIncomeTaxBase +
@@ -1085,8 +1089,56 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         (homeLoanTaxCreditResult?.appliedToIncomeTax ?? 0),
     ),
   );
-  // 復興特別所得税 (R): 2.1% of B, before the foreign tax credit (復興財確法10条①一, 13条),
-  // floored to the yen as on the return.
+
+  const baselineIncome =
+    aggregateNetIncome +
+    separateNetIncome.capitalGains +
+    separateNetIncome.dividends +
+    listedWithholdingBase;
+
+  let highIncomeMinimumTax: HighIncomeMinimumTaxResult | undefined;
+  const minTaxParams = getHighIncomeMinimumTaxParams(incomeYear);
+
+  if (minTaxParams && baselineIncome > minTaxParams.threshold) {
+    const normalReconstructionSurtax = Math.floor((incomeTaxAfterHomeLoanCredit * 21) / 1000);
+    const normalBaselineTax =
+      incomeTaxAfterHomeLoanCredit +
+      normalReconstructionSurtax +
+      Math.floor(listedWithholdingBase * 0.15315);
+
+    const taxableExcess = floorTaxableIncome(baselineIncome - minTaxParams.threshold);
+    const taxOnExcess = minTaxParams.rate.taxOn(taxableExcess);
+
+    if (taxOnExcess > normalBaselineTax) {
+      if (listedWithholdingBase > 0) {
+        // Special Tax Measures Act Art. 41-19 disallows 確定申告不要制度 when the minimum tax applies.
+        // However, under 措法通達41の19-2 (https://www.nta.go.jp/law/tsutatsu/kobetsu/shotoku/sochiho/801226/sinkoku/57/41/20.htm),
+        // if the minimum tax does not result in additional tax when all investment income is reported
+        // (box ㉓ ≤ 0), the measure does not apply and the election not to report remains effective.
+        const fullReportedResult = calculateTaxes({
+          ...inputs,
+          incomeStreams: inputs.incomeStreams.map(withAllInvestmentReported),
+        });
+        if (fullReportedResult.highIncomeMinimumTax !== undefined) {
+          return fullReportedResult;
+        }
+      } else {
+        highIncomeMinimumTax = calculateHighIncomeMinimumTax({
+          baselineIncome,
+          incomeYear,
+          baseIncomeTaxAll: incomeTaxAfterHomeLoanCredit,
+          normalBaselineTax,
+        });
+
+        if (highIncomeMinimumTax) {
+          incomeTaxAfterHomeLoanCredit += highIncomeMinimumTax.additionalIncomeTax;
+        }
+      }
+    }
+  }
+
+  // 復興特別所得税 (R): 2.1% of B (including minimum tax addition when applicable),
+  // before the foreign tax credit (復興財確法10条①一, 13条), floored to the yen as on the return.
   const reconstructionSurtax = Math.floor((incomeTaxAfterHomeLoanCredit * 21) / 1000);
 
   const manualForeignTax = inputs.foreignTaxCredit?.foreignTax ?? 0;
@@ -1288,6 +1340,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     taxableIncomeForResidenceTax,
     furusatoNozei,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
+    ...(highIncomeMinimumTax && { highIncomeMinimumTax }),
     ...(foreignTaxCredit && { foreignTaxCredit }),
     ...(foreignTaxPaid > 0 && { foreignTaxPaid }),
     additionalDeductions,

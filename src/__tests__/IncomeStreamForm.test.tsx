@@ -4,7 +4,10 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { IncomeStreamForm } from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
+import {
+  IncomeStreamForm,
+  MINIMUM_TAX_REPORTING_NOTE,
+} from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
 
 describe('IncomeStreamForm', () => {
   const mockOnSave = vi.fn();
@@ -653,5 +656,169 @@ describe('IncomeStreamForm foreign tax', () => {
         foreignTax: 100_000,
       }),
     );
+  });
+
+  describe('High Income Minimum Tax forced reporting (措法41条の19)', () => {
+    it('forces withholding account sales and dividends to reported when capital gains trigger the minimum tax in 2025', () => {
+      render(
+        <IncomeStreamForm
+          type="withholdingAccount"
+          incomeYear={2025}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+        />,
+      );
+
+      // In 2025, 1.1 billion yen exceeds the ~1.033B minimum tax breakeven point.
+      fireEvent.change(screen.getByLabelText('Net Capital Gains (譲渡損益)'), {
+        target: { value: '¥1,100,000,000' },
+      });
+
+      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(salesGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+
+      const dividendsGroup = within(screen.getByRole('group', { name: 'Dividends' }));
+      expect(dividendsGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(dividendsGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+
+      // Warning helper text explaining why the choice is forced is rendered for each section
+      expect(screen.getAllByText(MINIMUM_TAX_REPORTING_NOTE)).toHaveLength(2);
+
+      // Saving records both as reported
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'withholdingAccount',
+          capitalGains: 1_100_000_000,
+          reportsCapitalGains: true,
+          reportsDividends: true,
+        }),
+      );
+    });
+
+    it('forces withholding account reporting when capital gains trigger the 2027 threshold (350M)', () => {
+      render(
+        <IncomeStreamForm
+          type="withholdingAccount"
+          incomeYear={2027}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText('Net Capital Gains (譲渡損益)'), {
+        target: { value: '¥350,000,000' },
+      });
+
+      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(salesGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getAllByText(MINIMUM_TAX_REPORTING_NOTE)).toHaveLength(2);
+    });
+
+    it('forces dividend reporting when standalone dividends trigger the minimum tax', () => {
+      render(
+        <IncomeStreamForm
+          type="dividends"
+          incomeYear={2025}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText('Gross Dividends'), {
+        target: { value: '¥1,100,000,000' },
+      });
+
+      const reportingGroup = within(screen.getByRole('group', { name: 'Reporting' }));
+      expect(reportingGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(reportingGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getByText(MINIMUM_TAX_REPORTING_NOTE)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'dividends',
+          amount: 1_100_000_000,
+          isReported: true,
+        }),
+      );
+    });
+
+    it('forces reporting when other streams already trigger the minimum tax', () => {
+      render(
+        <IncomeStreamForm
+          type="withholdingAccount"
+          incomeYear={2025}
+          otherStreams={[
+            {
+              id: 'cg1',
+              type: 'capitalGains',
+              amount: 2_000_000_000,
+              shareType: 'listed',
+              account: 'domesticNoWithholding',
+            },
+          ]}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+        />,
+      );
+
+      // Even with a small amount, reporting is forced because total income triggers the minimum tax
+      fireEvent.change(screen.getByLabelText('Net Capital Gains (譲渡損益)'), {
+        target: { value: '¥500,000' },
+      });
+
+      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(salesGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getAllByText(MINIMUM_TAX_REPORTING_NOTE)).toHaveLength(2);
+    });
+
+    it('reverts forced reporting when amount is reduced below the minimum tax trigger', () => {
+      render(
+        <IncomeStreamForm
+          type="withholdingAccount"
+          incomeYear={2025}
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+        />,
+      );
+
+      // Trigger minimum tax
+      fireEvent.change(screen.getByLabelText('Net Capital Gains (譲渡損益)'), {
+        target: { value: '¥1,100,000,000' },
+      });
+      expect(screen.getAllByText(MINIMUM_TAX_REPORTING_NOTE)).toHaveLength(2);
+
+      // Reduce to 50M (below trigger)
+      fireEvent.change(screen.getByLabelText('Net Capital Gains (譲渡損益)'), {
+        target: { value: '¥50,000,000' },
+      });
+
+      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).not.toBeDisabled();
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.queryByText(MINIMUM_TAX_REPORTING_NOTE)).not.toBeInTheDocument();
+    });
   });
 });

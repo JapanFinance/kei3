@@ -50,6 +50,38 @@ describe('Social Insurance Rounding', () => {
     });
   });
 
+  describe('PremiumRate.taxOn', () => {
+    it('floors fractional yen down to the nearest whole yen (1円未満切り捨て)', () => {
+      const rate22_5 = percentTo(1)(22.5);
+      // 1,000 yen × 22.5% = 225 yen
+      expect(rate22_5.taxOn(1000)).toBe(225);
+      // 1,003 yen × 22.5% = 225.675 yen -> floored to 225 (premiumOn would round to 226)
+      expect(rate22_5.taxOn(1003)).toBe(225);
+      // 1,004 yen × 22.5% = 225.900 yen -> floored to 225 (premiumOn would round to 226)
+      expect(rate22_5.taxOn(1004)).toBe(225);
+      // 1,005 yen × 22.5% = 226.125 yen -> floored to 226
+      expect(rate22_5.taxOn(1005)).toBe(226);
+    });
+
+    it('computes exact tax on statutory high income excess amounts', () => {
+      expect(percentTo(1)(22.5).taxOn(723_000_000)).toBe(162_675_000);
+      expect(percentTo(1)(30).taxOn(235_000_000)).toBe(70_500_000);
+    });
+
+    it('returns 0 for zero amount', () => {
+      expect(percentTo(1)(22.5).taxOn(0)).toBe(0);
+      expect(Object.is(percentTo(1)(22.5).taxOn(0), 0)).toBe(true);
+    });
+
+    it('throws for a negative, NaN or infinite amount', () => {
+      const rate = percentTo(1)(22.5);
+      expect(() => rate.taxOn(-1)).toThrow('must be non-negative');
+      expect(() => rate.taxOn(-100)).toThrow('must be non-negative');
+      expect(() => rate.taxOn(Number.NaN)).toThrow('must be non-negative');
+      expect(() => rate.taxOn(Infinity)).toThrow('must be non-negative');
+    });
+  });
+
   describe('Pension Bonus Rounding', () => {
     it('rounds 0.50 yen down', () => {
       // 1,000 yen × 18.3% / 2 = 91.5 yen

@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
 import { IncomeDetailsModal } from '../components/TakeHomeCalculator/Income/IncomeDetailsModal';
+import { MINIMUM_TAX_REPORTING_NOTE } from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
 import {
   EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   type IncomeStream,
@@ -724,6 +725,85 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
     expect(screen.getByText('Dividends reported')).toBeInTheDocument();
+  });
+
+  it('displays Reported for withholding accounts and dividends when minimum tax applies to the calculation inputs', async () => {
+    const user = userEvent.setup();
+    const handleStreamsChange = vi.fn();
+    const streams: IncomeStream[] = [
+      {
+        id: 'cg1',
+        type: 'capitalGains',
+        amount: 2_000_000_000,
+        shareType: 'listed',
+        account: 'domesticNoWithholding',
+      },
+      {
+        id: 'a1',
+        type: 'withholdingAccount',
+        capitalGains: 1_000_000,
+        dividends: 500_000,
+        foreignDividends: 0,
+        foreignTax: 0,
+        reportsCapitalGains: false,
+        reportsDividends: false,
+      },
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 300_000,
+      },
+    ];
+
+    const calculationInputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: streams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2025,
+    };
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={handleStreamsChange}
+        calculationInputs={calculationInputs}
+      />,
+    );
+
+    // Because calculationInputs triggers the minimum tax, the stream cards reflect 'Reported'
+    expect(screen.queryByText('Withheld only')).not.toBeInTheDocument();
+    expect(screen.getByText('Reported, no withholding')).toBeInTheDocument();
+    expect(screen.getAllByText('Reported')).toHaveLength(2);
+
+    // Clicking edit on the withholding account opens the form with forced reporting
+    const editButtons = screen.getAllByRole('button', { name: /edit income/i });
+    // Edit button for withholding account (second stream)
+    expect(editButtons[1]).toBeDefined();
+    await user.click(editButtons[1]!);
+
+    expect(
+      screen.getByRole('heading', { name: 'Edit Withholding Designated Account' }),
+    ).toBeInTheDocument();
+    const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+    expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+    expect(salesGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getAllByText(MINIMUM_TAX_REPORTING_NOTE)).toHaveLength(2);
   });
 
   it('offers the reported-dividends election for an account whose dividends are reported', () => {
