@@ -759,6 +759,27 @@ describe('takeHomeFormReducer', () => {
         NATIONAL_HEALTH_INSURANCE_ID,
       ]);
     });
+
+    it('judges dependent coverage on earned income, leaving reported investment income out', () => {
+      // Salary under the threshold; the reported dividends would carry the annual income over it,
+      // but the 年間収入 test is a social-insurance rule, not a matter of the tax election.
+      const ids = availableProvidersFor({
+        ...baseState,
+        incomeMode: 'advanced',
+        incomeStreams: [
+          { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+          {
+            id: 'd1',
+            type: 'dividends',
+            shareType: 'listed',
+            taxTreatment: 'separate',
+            amount: 1_000_000,
+          },
+        ],
+      }).map(option => option.id);
+
+      expect(ids).toContain(DEPENDENT_COVERAGE_ID);
+    });
   });
 });
 

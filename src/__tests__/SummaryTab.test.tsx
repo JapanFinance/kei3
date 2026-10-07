@@ -56,6 +56,38 @@ describe('SummaryTab with investment income', () => {
 
     expect(withInvestmentIncome()).toEqual(withoutInvestmentIncome);
   });
+
+  // Reported investment income is already inside annual income, the taxes, and take-home, so it
+  // needs no row of its own either.
+  it('adds no row for investment income reported under 申告分離課税', () => {
+    const { asFragment } = render(<SummaryTab results={baseResults} />);
+    const withoutInvestmentIncome = asFragment();
+
+    cleanup();
+    const { asFragment: withReportedIncome } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          investmentIncome: {
+            gross: { capitalGains: 0, dividends: 0, interest: 0 },
+            grossTotal: 0,
+            withheld: { national: 0, residence: 0, total: 0 },
+            reported: {
+              gross: { capitalGains: 0, qualifyingCapitalLosses: 0, dividends: 1_000_000 },
+              lossOffsetAgainstDividends: 0,
+              unabsorbedQualifyingLoss: 0,
+              nonQualifyingLoss: 0,
+              netIncome: { capitalGains: 0, dividends: 1_000_000 },
+              taxable: { capitalGains: 0, dividends: 1_000_000 },
+              nationalIncomeTaxBase: 150_000,
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(withReportedIncome()).toEqual(withoutInvestmentIncome);
+  });
 });
 
 describe('SummaryTab with the 介護保険第1号 premium', () => {
