@@ -33,18 +33,16 @@ describe('SummaryTab annual income header', () => {
 });
 
 describe('SummaryTab with investment income', () => {
-  // 申告不要 investment income enters no aggregate and changes no assessed figure, so it stays
-  // out of take-home and out of this tab entirely — the same treatment a 通勤手当 gets. It is
-  // reported on the input form, in the income modal, and in the Taxes tab instead.
-  it('renders exactly as it would without it', () => {
-    const { asFragment } = render(<SummaryTab results={baseResults} />);
-    const withoutInvestmentIncome = asFragment();
-
-    cleanup();
-    const { asFragment: withInvestmentIncome } = render(
+  // Investment income left to withholding is money received, so it is inside annual income and
+  // take-home, and the tax withheld on it counts with the assessed tax of the same kind; the
+  // Taxes tab shows the two apart. No row of its own.
+  it('counts the tax withheld on 申告不要 income with the income tax and residence tax', () => {
+    render(
       <SummaryTab
         results={{
           ...baseResults,
+          annualIncome: 5_200_000,
+          takeHomeIncome: 3_956_220,
           investmentIncome: {
             gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
             grossTotal: 1_200_000,
@@ -54,7 +52,11 @@ describe('SummaryTab with investment income', () => {
       />,
     );
 
-    expect(withInvestmentIncome()).toEqual(withoutInvestmentIncome);
+    // 100,000 assessed + 183,780 withheld; 200,000 assessed + 60,000 withheld; their sum.
+    expect(screen.getByText(/^¥283,780/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥260,000/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥543,780/)).toBeInTheDocument();
+    expect(screen.queryByText(/Investment Income/)).not.toBeInTheDocument();
   });
 
   // Reported investment income is already inside annual income, the taxes, and take-home, so it

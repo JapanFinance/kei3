@@ -520,8 +520,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(
       screen.getByText(/Withheld only: ¥1,200,000 − ¥243,780 tax = ¥956,220/),
     ).toBeInTheDocument();
-    // The header caption mirrors the category subtotal.
-    expect(screen.getByText('Investment: ¥1,200,000')).toBeInTheDocument();
+    // The title bar carries the total alone; the investment figure lives on its group.
+    expect(screen.queryByText(/^Investment: /)).not.toBeInTheDocument();
   });
 
   it("shows an account's card total, its sales/dividends caption, and its per-flag description", () => {
@@ -626,7 +626,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    expect(screen.getByRole('group', { name: 'Reported dividends' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Reported dividends taxation' })).toBeInTheDocument();
   });
 
   it('describes each entry by its election and account, and footers the reported total without a withheld line', () => {
@@ -718,7 +718,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
 
     expect(screen.getByText('Reported')).toBeInTheDocument();
     expect(screen.getByText('Withheld only')).toBeInTheDocument();
-    expect(screen.queryByText(/progressive|separate/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/aggregate|separate/i)).not.toBeInTheDocument();
     expect(screen.getByText('Subtotal: ¥700,000')).toBeInTheDocument();
     expect(
       screen.getByText(/Withheld only: ¥300,000 − ¥60,945 tax = ¥239,055/),
@@ -769,7 +769,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
     // With no reported dividend there is nothing the election applies to.
-    expect(screen.queryByRole('group', { name: 'Reported dividends' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Reported dividends taxation' })).toBeNull();
 
     rerender(
       <IncomeDetailsModal
@@ -780,15 +780,17 @@ describe('IncomeDetailsModal - Investment Income', () => {
         onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
       />,
     );
-    const group = screen.getByRole('group', { name: 'Reported dividends' });
+    const group = screen.getByRole('group', { name: 'Reported dividends taxation' });
     expect(within(group).getByRole('button', { name: 'Separate' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     // The statutory notes sit behind the label's tooltip rather than under the control.
-    expect(screen.getByRole('button', { name: 'reported dividends info' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'reported dividends taxation info' }),
+    ).toBeInTheDocument();
 
-    await user.click(within(group).getByRole('button', { name: 'Progressive' }));
+    await user.click(within(group).getByRole('button', { name: 'Aggregate' }));
     expect(onReportedDividendsTaxationChange).toHaveBeenCalledWith('aggregate');
 
     // Without a way to change it the election is not offered, and the entries still say which
@@ -802,12 +804,12 @@ describe('IncomeDetailsModal - Investment Income', () => {
         reportedDividendsTaxation="aggregate"
       />,
     );
-    expect(screen.queryByRole('group', { name: 'Reported dividends' })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Reported dividends taxation' })).toBeNull();
     expect(screen.getByText('Reported')).toBeInTheDocument();
     expect(screen.getByText('Withheld only')).toBeInTheDocument();
   });
 
-  it('offers the treatment comparison with calculation inputs and a listed-share entry, computing it on expand', async () => {
+  it('offers the reporting planner with calculation inputs and a listed-share entry, computing it on expand', async () => {
     const user = userEvent.setup();
     const streams: IncomeStream[] = [
       { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
@@ -843,17 +845,19 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    const toggle = screen.getByRole('button', { name: /compare tax treatments/i });
-    expect(screen.queryByText('Take-home')).not.toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: /optimize reporting options/i });
+    expect(screen.queryByText('Current')).not.toBeInTheDocument();
     await user.click(toggle);
 
-    // The three elections of the engine tests: 申告分離課税 is the one in force.
-    expect(screen.getByText('Take-home')).toBeInTheDocument();
-    expect(screen.getByText('(current)')).toBeInTheDocument();
+    // The engine tests' three elections, now rows instead of columns: 申告不要 (withheld only)
+    // kept 4,739,798, 申告分離課税 (Current, the election in force, and the "all reported"
+    // row) kept 4,739,848, 総合課税 kept 4,748,648 — the best of the four, so it is also Best.
+    expect(await screen.findByText('Current')).toBeInTheDocument();
+    expect(screen.getAllByText('Best').length).toBeGreaterThan(0);
     expect(screen.getByText('¥4,739,798')).toBeInTheDocument();
-    expect(screen.getByText('¥4,739,848')).toBeInTheDocument();
-    expect(screen.getByText('¥4,748,648')).toBeInTheDocument();
-    expect(screen.getByText(/no 配当控除, which is not modelled yet/)).toBeInTheDocument();
+    expect(screen.getAllByText('¥4,739,848')).not.toHaveLength(0);
+    expect(screen.getAllByText('¥4,748,648')).not.toHaveLength(0);
+    expect(screen.getByText(/配当控除, not modelled yet/)).toBeInTheDocument();
 
     rerender(
       <IncomeDetailsModal
@@ -864,7 +868,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
     expect(
-      screen.queryByRole('button', { name: /compare tax treatments/i }),
+      screen.queryByRole('button', { name: /optimize reporting options/i }),
     ).not.toBeInTheDocument();
   });
 
