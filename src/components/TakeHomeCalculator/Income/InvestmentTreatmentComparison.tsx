@@ -65,9 +65,8 @@ export const InvestmentTreatmentComparison: React.FC<InvestmentTreatmentComparis
     () => (expanded ? compareInvestmentTreatments(inputs) : undefined),
     [expanded, inputs],
   );
-  const unavailable = columns?.filter(column => column.unavailableReason !== undefined) ?? [];
   const figureCell = (column: InvestmentTreatmentColumn, key: keyof InvestmentTreatmentFigures) =>
-    column.figures ? formatJPY(column.figures[key]) : '—';
+    formatJPY(column.figures[key]);
 
   return (
     <Accordion
@@ -99,6 +98,9 @@ export const InvestmentTreatmentComparison: React.FC<InvestmentTreatmentComparis
                   Each column puts every capital-gains and dividends entry under one election, with
                   everything else as entered. A share sale is 申告分離課税 whenever it is reported
                   (措法37条の11), so it is taxed that way in the 総合課税 column too.
+                </Typography>
+                <Typography sx={{ display: 'block', mb: 1 }}>
+                  Entries that have to be reported stay reported in every column.
                 </Typography>
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   <strong>Take-home</strong> here is take-home pay plus, under 申告不要, the
@@ -136,19 +138,10 @@ export const InvestmentTreatmentComparison: React.FC<InvestmentTreatmentComparis
                 />
               </Box>
             )}
-            {unavailable.map(column => (
-              <Typography
-                key={column.key}
-                variant="caption"
-                sx={{ display: 'block', mt: 1, color: 'text.secondary' }}
-              >
-                {column.label}: not available. {column.unavailableReason}
-              </Typography>
-            ))}
             <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
               Take-home here includes withheld-only investment income net of the tax withheld, so
-              every column counts the same money. The 総合課税 column has no 配当控除, which is not
-              modelled yet.
+              every column counts the same money. Entries that have to be reported stay reported in
+              every column. The 総合課税 column has no 配当控除, which is not modelled yet.
             </Typography>
           </Box>
         )}

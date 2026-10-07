@@ -63,13 +63,18 @@ describe('Income Mode Transitions (State Assertion)', () => {
     return JSON.parse(el.textContent || '{}');
   };
 
+  // Every stream these tests create is a salary or bonus, which always has `amount`; a
+  // WithholdingAccountIncomeStream does not, which is why IncomeStream needs this narrowing.
+  const amountOf = (stream: IncomeStream | undefined): number | undefined =>
+    stream && 'amount' in stream ? stream.amount : undefined;
+
   test('1. Salary -> Advanced (Clean): Should have single stream', () => {
     // Switch to Advanced
     fireEvent.click(screen.getByRole('button', { name: /advanced/i }));
 
     expect(getState().incomeMode).toBe('advanced');
     expect(getState().incomeStreams).toHaveLength(1);
-    expect(getState().incomeStreams[0]?.amount).toBe(5000000);
+    expect(amountOf(getState().incomeStreams[0])).toBe(5000000);
     expect(getState().incomeStreams[0]?.type).toBe('salary');
   });
 
@@ -83,14 +88,14 @@ describe('Income Mode Transitions (State Assertion)', () => {
     expect(getState().incomeMode).toBe('salary');
     expect(getState().annualIncome).toBe(5000000);
     expect(getState().incomeStreams).toHaveLength(1);
-    expect(getState().incomeStreams[0]?.amount).toBe(5000000);
+    expect(amountOf(getState().incomeStreams[0])).toBe(5000000);
     expect(getState().incomeStreams[0]?.type).toBe('salary');
   });
 
   test('3. Advanced -> Salary -> Modify -> Advanced: Should RESET streams to match new total', async () => {
     // 1. To Advanced (Total 5M)
     fireEvent.click(screen.getByRole('button', { name: /advanced/i }));
-    expect(getState().incomeStreams[0]?.amount).toBe(5000000);
+    expect(amountOf(getState().incomeStreams[0])).toBe(5000000);
 
     // 2. To Salary
     fireEvent.click(screen.getByRole('button', { name: /salary/i }));
@@ -106,7 +111,7 @@ describe('Income Mode Transitions (State Assertion)', () => {
     // CRITICAL CHECK: Streams should be reset to single stream of 6M
     const state = getState();
     expect(state.incomeStreams).toHaveLength(1);
-    expect(state.incomeStreams[0]?.amount).toBe(6000000);
+    expect(amountOf(state.incomeStreams[0])).toBe(6000000);
   });
 
   test('4. Advanced -> Salary -> No Change -> Advanced: Should PRESERVE existing streams', () => {
@@ -137,7 +142,7 @@ describe('Income Mode Transitions (State Assertion)', () => {
     expect(getState().incomeMode).toBe('salary');
     expect(getState().annualIncome).toBe(6000000);
     expect(getState().incomeStreams).toHaveLength(1);
-    expect(getState().incomeStreams[0]?.amount).toBe(6000000);
+    expect(amountOf(getState().incomeStreams[0])).toBe(6000000);
     expect(getState().incomeStreams[0]?.type).toBe('salary');
 
     // 2. Switch back to Advanced (No modification to amount)
