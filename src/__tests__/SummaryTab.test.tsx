@@ -98,6 +98,20 @@ describe('SummaryTab with investment income', () => {
   });
 });
 
+describe('SummaryTab with foreign tax', () => {
+  // Foreign tax paid is a tax on the income like any other: it counts with the income tax, which
+  // the foreign tax credit has already reduced, and needs no row of its own.
+  it('folds the foreign tax paid into the income tax', () => {
+    render(<SummaryTab results={{ ...baseResults, foreignTaxPaid: 20_000 }} />);
+
+    // 100,000 assessed + 20,000 foreign tax; 200,000 residence tax; their sum.
+    expect(screen.getByText(/^¥120,000/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥200,000/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥320,000/)).toBeInTheDocument();
+    expect(screen.queryByText(/Foreign/)).not.toBeInTheDocument();
+  });
+});
+
 describe('SummaryTab with the 介護保険第1号 premium', () => {
   it('shows the premium as its own row and includes it in the social insurance total', () => {
     render(<SummaryTab results={{ ...baseResults, longTermCareCategory1Premium: 150_000 }} />);

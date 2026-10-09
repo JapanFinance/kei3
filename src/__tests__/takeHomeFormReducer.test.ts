@@ -519,7 +519,15 @@ describe('takeHomeFormReducer', () => {
 
       const result = takeHomeFormReducer(state, {
         type: 'incomeStreamsChanged',
-        streams: [{ id: 'p1', type: 'publicPension', amount: 2_400_000 }],
+        streams: [
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 2_400_000,
+          },
+        ],
       });
 
       expect(result.annualIncome).toBe(2_400_000);
@@ -790,6 +798,8 @@ describe('takeHomeFormReducer', () => {
               shareType: 'listed',
               paymentChannel: 'domestic',
               isReported,
+              issuerDomicile: 'domestic',
+              foreignTax: 0,
               amount: 300_000,
             },
           ]),
@@ -802,6 +812,8 @@ describe('takeHomeFormReducer', () => {
         type: 'withholdingAccount' as const,
         capitalGains: amount,
         dividends: 0,
+        foreignDividends: 0,
+        foreignTax: 0,
         reportsCapitalGains: false,
         reportsDividends: false,
       });

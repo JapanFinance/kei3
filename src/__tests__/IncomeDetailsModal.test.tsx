@@ -353,8 +353,20 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
   it('displays public pension streams in their own section with a PENSION chip and subtotal', () => {
     const streams: IncomeStream[] = [
-      { id: 'p1', type: 'publicPension', amount: 1_800_000 },
-      { id: 'p2', type: 'publicPension', amount: 600_000 },
+      {
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      },
+      {
+        id: 'p2',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 600_000,
+      },
     ];
 
     render(
@@ -374,7 +386,15 @@ describe('IncomeDetailsModal - Public Pension', () => {
   });
 
   it('keeps the Public Pension option enabled when a pension stream already exists', async () => {
-    const streams: IncomeStream[] = [{ id: 'p1', type: 'publicPension', amount: 1_800_000 }];
+    const streams: IncomeStream[] = [
+      {
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      },
+    ];
 
     render(
       <IncomeDetailsModal
@@ -390,8 +410,20 @@ describe('IncomeDetailsModal - Public Pension', () => {
 
   it('shows the deduction and net alongside the group subtotal, over the combined gross', () => {
     const streams: IncomeStream[] = [
-      { id: 'p1', type: 'publicPension', amount: 1_800_000 },
-      { id: 'p2', type: 'publicPension', amount: 600_000 },
+      {
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      },
+      {
+        id: 'p2',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 600_000,
+      },
     ];
 
     render(
@@ -417,7 +449,15 @@ describe('IncomeDetailsModal - Public Pension', () => {
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[{ id: 'p1', type: 'publicPension', amount: 1_100_000 }]}
+        streams={[
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 1_100_000,
+          },
+        ]}
         onStreamsChange={() => {}}
         netPublicPensionIncome={0}
       />,
@@ -434,7 +474,15 @@ describe('IncomeDetailsModal - Public Pension', () => {
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[{ id: 'p1', type: 'publicPension', amount: 2_400_000 }]}
+        streams={[
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 2_400_000,
+          },
+        ]}
         onStreamsChange={() => {}}
       />,
     );
@@ -485,6 +533,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 300000,
       }),
     ]);
@@ -497,6 +547,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         type: 'withholdingAccount',
         capitalGains: 1_000_000,
         dividends: 200_000,
+        foreignDividends: 0,
+        foreignTax: 0,
         reportsCapitalGains: false,
         reportsDividends: false,
       },
@@ -540,6 +592,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         type: 'withholdingAccount',
         capitalGains: -18_000,
         dividends: 8_000,
+        foreignDividends: 0,
+        foreignTax: 0,
         reportsCapitalGains: false,
         reportsDividends: false,
       },
@@ -548,6 +602,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         type: 'withholdingAccount',
         capitalGains: 0,
         dividends: 10_000,
+        foreignDividends: 0,
+        foreignTax: 0,
         reportsCapitalGains: false,
         reportsDividends: false,
       },
@@ -591,6 +647,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
             type: 'withholdingAccount',
             capitalGains: -500_000,
             dividends: 800_000,
+            foreignDividends: 0,
+            foreignTax: 0,
             reportsCapitalGains: false,
             reportsDividends: false,
           },
@@ -614,6 +672,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
             type: 'withholdingAccount',
             capitalGains: -500_000,
             dividends: 800_000,
+            foreignDividends: 0,
+            foreignTax: 0,
             reportsCapitalGains: true,
             reportsDividends: true,
           },
@@ -633,6 +693,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
             type: 'withholdingAccount',
             capitalGains: 500_000,
             dividends: 0,
+            foreignDividends: 0,
+            foreignTax: 0,
             reportsCapitalGains: true,
             reportsDividends: false,
           },
@@ -652,6 +714,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
             type: 'withholdingAccount',
             capitalGains: 0,
             dividends: 300_000,
+            foreignDividends: 0,
+            foreignTax: 0,
             reportsCapitalGains: false,
             reportsDividends: true,
           },
@@ -673,6 +737,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
             type: 'withholdingAccount',
             capitalGains: 0,
             dividends: 300_000,
+            foreignDividends: 0,
+            foreignTax: 0,
             reportsCapitalGains: false,
             reportsDividends: true,
           },
@@ -700,6 +766,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 300_000,
       },
     ];
@@ -743,6 +811,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 400_000,
       },
       {
@@ -751,6 +821,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 300_000,
       },
     ];
@@ -791,8 +863,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
     // Interest paid in Japan is settled by withholding and carries no description; interest paid
     // outside Japan goes on the return, so it joins the reported total.
     const streams: IncomeStream[] = [
-      { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 50_000 },
-      { id: 'i2', type: 'interest', payerDomicile: 'foreign', amount: 100_000 },
+      { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 50_000, foreignTax: 0 },
+      { id: 'i2', type: 'interest', payerDomicile: 'foreign', amount: 100_000, foreignTax: 0 },
     ];
 
     render(
@@ -831,6 +903,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 300_000,
       },
     ];
@@ -841,6 +915,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 300_000,
       },
       {
@@ -849,6 +925,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 200_000,
       },
     ];
@@ -913,6 +991,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 1_000_000,
       },
     ];
@@ -951,7 +1031,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(screen.getByText('¥4,739,798')).toBeInTheDocument();
     expect(screen.getAllByText('¥4,739,848')).not.toHaveLength(0);
     expect(screen.getAllByText('¥4,748,648')).not.toHaveLength(0);
-    expect(screen.getByText(/配当控除, not modelled yet/)).toBeInTheDocument();
+    expect(screen.getByText(/配当控除, not supported yet/)).toBeInTheDocument();
 
     rerender(
       <IncomeDetailsModal
@@ -978,6 +1058,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
             shareType: 'listed',
             paymentChannel: 'domestic',
             isReported: false,
+            issuerDomicile: 'domestic',
+            foreignTax: 0,
             amount: 200_000,
           },
         ]}
@@ -1000,6 +1082,211 @@ describe('IncomeDetailsModal - Investment Income', () => {
     );
 
     expect(screen.queryByText(/Investment:/)).not.toBeInTheDocument();
+  });
+});
+
+describe('IncomeDetailsModal - Foreign tax', () => {
+  const foreignDividend: IncomeStream = {
+    id: 'd1',
+    type: 'dividends',
+    shareType: 'listed',
+    paymentChannel: 'domestic',
+    isReported: false,
+    issuerDomicile: 'foreign',
+    foreignTax: 100_000,
+    amount: 1_000_000,
+  };
+
+  it('takes the foreign tax off in the withheld-only footer before the Japanese tax', () => {
+    // Case B of the engine tests: 1,000,000 − 100,000 = 900,000 taxed at 20.315%, 137,835 +
+    // 45,000 = 182,835; 1,000,000 − 100,000 − 182,835 = 717,165.
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[foreignDividend]}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          withheld: {
+            accounts: [],
+            dividends: 1_000_000,
+            dividendsForeignTax: 100_000,
+            interest: 0,
+            received: 1_000_000,
+            foreignTax: 100_000,
+            taxedAmount: 900_000,
+            tax: { national: 137_835, residence: 45_000, total: 182_835 },
+          },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        'Withheld only: ¥1,000,000 − ¥100,000 foreign tax − ¥182,835 tax = ¥717,165',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('names the taxed amount when it differs from the amount after the foreign tax', () => {
+    // Account 1: −500,000 + 800,000 − 50,000 foreign tax = 250,000 taxed, ⌊38,287.5⌋ + 12,500 =
+    // 50,787. Account 2's lone −100,000 loss has nothing to net against, so the 200,000 received
+    // less the 50,000 foreign tax, 150,000, is not the 250,000 taxed.
+    const account = (
+      id: string,
+      capitalGains: number,
+      dividends: number,
+      foreignDividends: number,
+      foreignTax: number,
+    ): IncomeStream => ({
+      id,
+      type: 'withholdingAccount',
+      capitalGains,
+      dividends,
+      foreignDividends,
+      foreignTax,
+      reportsCapitalGains: false,
+      reportsDividends: false,
+    });
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          account('a1', -500_000, 800_000, 500_000, 50_000),
+          account('a2', -100_000, 0, 0, 0),
+        ]}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          withheld: {
+            accounts: [
+              {
+                position: 1,
+                capitalGains: -500_000,
+                dividends: 800_000,
+                foreignTax: 50_000,
+                base: 250_000,
+              },
+              { position: 2, capitalGains: -100_000, dividends: 0, base: 0 },
+            ],
+            dividends: 0,
+            interest: 0,
+            received: 200_000,
+            foreignTax: 50_000,
+            taxedAmount: 250_000,
+            tax: { national: 38_287, residence: 12_500, total: 50_787 },
+          },
+        }}
+      />,
+    );
+
+    // 200,000 − 50,000 = 150,000 ≠ 250,000 taxed; 150,000 − 50,787 = 99,213.
+    expect(
+      screen.getByText(
+        'Withheld only: ¥200,000 − ¥50,000 foreign tax − ¥50,787 tax on ¥250,000 = ¥99,213',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('describes a dividend from a foreign company and shows its foreign tax', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          foreignDividend,
+          {
+            id: 'i1',
+            type: 'interest',
+            payerDomicile: 'foreign',
+            foreignTax: 10_000,
+            amount: 100_000,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Withheld only, foreign company or fund')).toBeInTheDocument();
+    expect(screen.getByText('Foreign tax ¥100,000')).toBeInTheDocument();
+    expect(screen.getByText('Foreign tax ¥10,000')).toBeInTheDocument();
+  });
+
+  it("adds an account's foreign dividends and foreign tax to its caption", () => {
+    const { rerender } = render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'a1',
+            type: 'withholdingAccount',
+            capitalGains: 0,
+            dividends: 800_000,
+            foreignDividends: 500_000,
+            foreignTax: 50_000,
+            reportsCapitalGains: false,
+            reportsDividends: false,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText('Foreign dividends ¥500,000')).toBeInTheDocument();
+    expect(screen.getByText('Foreign tax ¥50,000')).toBeInTheDocument();
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'a1',
+            type: 'withholdingAccount',
+            capitalGains: 0,
+            dividends: 800_000,
+            foreignDividends: 0,
+            foreignTax: 0,
+            reportsCapitalGains: false,
+            reportsDividends: false,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+    expect(screen.queryByText(/Foreign dividends/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Foreign tax/)).not.toBeInTheDocument();
+  });
+
+  it('describes a pension from a foreign system and shows its foreign tax', () => {
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={[
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'foreign',
+            foreignTax: 100_000,
+            amount: 2_000_000,
+          },
+          {
+            id: 'p2',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 1_500_000,
+          },
+        ]}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getAllByText('Foreign system')).toHaveLength(1);
+    expect(screen.getAllByText(/^Foreign tax/)).toHaveLength(1);
+    expect(screen.getByText('Foreign tax ¥100,000')).toBeInTheDocument();
   });
 });
 

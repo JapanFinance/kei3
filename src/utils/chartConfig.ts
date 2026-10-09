@@ -12,7 +12,7 @@ import {
   isEarnedIncomeStream,
   totalAnnualIncomeFromStreams,
 } from './incomeStreams';
-import { calculateTaxes } from './taxCalculations';
+import { calculateTaxes, incomeTaxPaid, residenceTaxPaid } from './taxCalculations';
 
 // Create custom plugin for vertical lines
 export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
@@ -112,7 +112,14 @@ export const scaleIncomeStreamsToIncome = (
 
   if (earnedTotal > 0) {
     const ratio = earnedTarget / earnedTotal;
-    return streams.map(s => (isEarnedIncomeStream(s) ? { ...s, amount: s.amount * ratio } : s));
+    return streams.map(s => {
+      if (!isEarnedIncomeStream(s)) return s;
+      // The foreign tax scales with its pension: held constant, it could exceed a scaled-down
+      // pension, which the calculation rejects.
+      return s.type === 'publicPension'
+        ? { ...s, amount: s.amount * ratio, foreignTax: s.foreignTax * ratio }
+        : { ...s, amount: s.amount * ratio };
+    });
   }
 
   // Fallback if the earned streams are 0
@@ -311,13 +318,14 @@ export const generateChartData = (
       type: 'bar' as const,
       stack: 'stack0',
     },
-    // The tax bars carry the tax withheld on investment income beside the assessed tax, so the
-    // bars stack to the income and the take-home bar is the take-home pay of the summary tab.
+    // The tax bars carry the tax withheld on investment income beside the assessed tax, and the
+    // income tax bar the foreign tax paid, so the bars stack to the income and the take-home bar
+    // is the take-home pay of the summary tab.
     {
       label: 'Income Tax',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.nationalIncomeTax + (result.investmentIncome?.withheld?.tax.national ?? 0),
+        y: incomeTaxPaid(result),
         breakdown,
       })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
@@ -329,9 +337,7 @@ export const generateChartData = (
       label: 'Residence Tax',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y:
-          result.residenceTax.totalResidenceTax +
-          (result.investmentIncome?.withheld?.tax.residence ?? 0),
+        y: residenceTaxPaid(result),
         breakdown,
       })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',

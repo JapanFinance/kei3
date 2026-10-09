@@ -444,6 +444,8 @@ describe('Dependent Coverage UI Behavior', () => {
           shareType: 'listed',
           paymentChannel: 'domestic',
           isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
           amount: 100_000,
         },
       ],
@@ -472,6 +474,8 @@ describe('Dependent Coverage UI Behavior', () => {
           type: 'withholdingAccount',
           capitalGains: amount,
           dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
           reportsCapitalGains: false,
           reportsDividends: false,
         },
@@ -899,7 +903,15 @@ describe('TakeHomeInputForm Income Details Modal', () => {
       annualIncome: 2_400_000,
       incomeYear: 2026,
       incomeMode: 'advanced' as const,
-      incomeStreams: [{ id: 'p1', type: 'publicPension' as const, amount: 2_400_000 }],
+      incomeStreams: [
+        {
+          id: 'p1',
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 2_400_000,
+        },
+      ],
       savedIncomeStreams: [],
       reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
@@ -1125,5 +1137,59 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
     // 5. Assert UI Outcome
     // The provider should now be "National Health Insurance"
     expect(providerSelect).toHaveTextContent('National Health Insurance');
+  });
+});
+
+describe('Additional Deductions & Credits: foreign tax credit', () => {
+  const salaryInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    annualIncome: 5_000_000,
+    incomeYear: 2026,
+    incomeMode: 'salary',
+    incomeStreams: [
+      { id: 'simple-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+    ],
+    savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39',
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  it('names the foreign tax paid with a return in the button summary', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={{
+          ...salaryInputs,
+          foreignTaxCredit: { foreignTax: 20_000 },
+        }}
+        dispatch={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Foreign tax paid with a return ¥20,000')).toBeInTheDocument();
+  });
+
+  it('dispatches the foreign tax entered in the dialog, in any income mode', async () => {
+    const user = userEvent.setup();
+    const dispatch = vi.fn();
+    render(<TakeHomeInputForm inputs={salaryInputs} dispatch={dispatch} />);
+
+    await user.click(screen.getByRole('button', { name: /Add iDeCo/ }));
+    const foreignTax = screen.getByLabelText('Foreign Tax Paid with a Tax Return (外国所得税)');
+    await user.clear(foreignTax);
+    await user.type(foreignTax, '20000');
+
+    expect(dispatch).toHaveBeenLastCalledWith({
+      type: 'setField',
+      field: 'foreignTaxCredit',
+      value: { foreignTax: 20_000 },
+    });
   });
 });

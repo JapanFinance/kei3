@@ -23,6 +23,8 @@ const account = (
   type: 'withholdingAccount',
   capitalGains: 0,
   dividends: 0,
+  foreignDividends: 0,
+  foreignTax: 0,
   reportsCapitalGains: false,
   reportsDividends: false,
   ...overrides,
@@ -52,6 +54,8 @@ const smallInputs = salaryInputs([
     shareType: 'listed',
     paymentChannel: 'domestic',
     isReported: false,
+    issuerDomicile: 'domestic',
+    foreignTax: 0,
     amount: 300_000,
   },
 ]);

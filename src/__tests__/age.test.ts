@@ -118,7 +118,15 @@ describe('the 65 boundary of the public pension deduction', () => {
   it('gives the taxpayer and a dependent the same net pension income on either side of it', () => {
     const taxpayerNetPension = (ageRange: 'age60to64' | 'age65to69') =>
       calculateNetIncomeComponents(
-        [{ type: 'publicPension', amount: GROSS_PENSION, id: 'p1' }],
+        [
+          {
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: GROSS_PENSION,
+            id: 'p1',
+          },
+        ],
         YEAR,
         ageRange,
         [],

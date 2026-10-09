@@ -163,6 +163,7 @@ function App() {
             inputs={inputs}
             dispatch={dispatch}
             homeLoanTaxCreditResult={results.homeLoanTaxCredit}
+            foreignTaxCreditResult={results.foreignTaxCredit}
             additionalDeductions={results.additionalDeductions}
             personalDeductions={results.personalDeductions}
             longTermCareCategory1Estimate={results.longTermCareCategory1Estimate}
@@ -229,6 +230,7 @@ function App() {
             medicalExpenses={deferredInputs.medicalExpenses}
             personalCircumstances={deferredInputs.personalCircumstances}
             homeLoanTaxCredit={deferredInputs.homeLoanTaxCredit}
+            foreignTaxCredit={deferredInputs.foreignTaxCredit}
           />
         </Suspense>
 

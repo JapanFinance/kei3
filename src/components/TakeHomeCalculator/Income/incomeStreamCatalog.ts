@@ -161,7 +161,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'investment',
     chipLabel: 'DIVIDEND',
     amountLabel: 'Gross Dividends',
-    amountHelperText: 'Enter the amount before withholding.',
+    amountHelperText: 'Enter the amount in yen, before any tax withheld in Japan or abroad.',
   },
   interest: {
     label: 'Interest',
