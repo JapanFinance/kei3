@@ -350,22 +350,22 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   the donation deduction cannot reduce it further.
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  Any unused foreign tax credit can be carried forward for up to 3 years.
-                  Note that the One-Stop system (ワンストップ特例制度) cannot be used when
-                  claiming the Foreign Tax Credit, as filing a tax return is required.
+                  Any unused foreign tax credit can be carried forward for up to 3 years. Note that
+                  the One-Stop system (ワンストップ特例制度) cannot be used when claiming the
+                  Foreign Tax Credit, as filing a tax return is required.
                 </Typography>
               </>
             ) : (
               <>
                 <Typography variant="body2">
-                  The out-of-pocket cost is higher than the expected ≈2,000 yen. Applying the donation
-                  deduction lowers your Japanese income tax base, which reduces the allowable
-                  Foreign Tax Credit limit.
+                  The out-of-pocket cost is higher than the expected ≈2,000 yen. Applying the
+                  donation deduction lowers your Japanese income tax base, which reduces the
+                  allowable Foreign Tax Credit limit.
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
-                  Any unused foreign tax credit can be carried forward for up to 3 years.
-                  Note that the One-Stop system (ワンストップ特例制度) cannot be used when
-                  claiming the Foreign Tax Credit, as filing a tax return is required.
+                  Any unused foreign tax credit can be carried forward for up to 3 years. Note that
+                  the One-Stop system (ワンストップ特例制度) cannot be used when claiming the
+                  Foreign Tax Credit, as filing a tax return is required.
                 </Typography>
               </>
             )
@@ -373,19 +373,19 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             <>
               <Typography variant="body2">
                 The out-of-pocket cost is higher than the expected ≈2,000 yen because the Home Loan
-                Tax Credit already reduces your Japanese national income tax to ¥0, and any spillover
-                into residence tax has reached its statutory cap.
+                Tax Credit already reduces your Japanese national income tax to ¥0, and any
+                spillover into residence tax has reached its statutory cap.
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                If you are eligible (e.g. year 2+ of mortgage with salary income only), this issue is
-                avoided by using the One-Stop system (ワンストップ特例制度).
+                If you are eligible (e.g. year 2+ of mortgage with salary income only), this issue
+                is avoided by using the One-Stop system (ワンストップ特例制度).
               </Typography>
             </>
           ) : (
             <>
               <Typography variant="body2">
-                The out-of-pocket cost is higher than the expected ≈2,000 yen. This happens when filing
-                a tax return if taxable income changes income tax brackets after applying the
+                The out-of-pocket cost is higher than the expected ≈2,000 yen. This happens when
+                filing a tax return if taxable income changes income tax brackets after applying the
                 Furusato Nozei donation deduction.
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>

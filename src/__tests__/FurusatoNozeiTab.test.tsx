@@ -5,7 +5,11 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNozeiTab';
-import type { ForeignTaxCreditResult, HomeLoanTaxCreditResult, TakeHomeResults } from '../types/tax';
+import type {
+  ForeignTaxCreditResult,
+  HomeLoanTaxCreditResult,
+  TakeHomeResults,
+} from '../types/tax';
 import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 vi.mock('../components/ui/Tooltips', () => ({

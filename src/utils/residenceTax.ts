@@ -687,12 +687,18 @@ export function calculateFurusatoLimit(
 
   const residenceTaxDonationBasicDeduction = deductibleDonation * donationBasicDeductionRate;
   const residenceTaxSpecialDeduction =
-    Math.ceil(deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.cityProportion) +
-    Math.ceil(deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.prefecturalProportion);
+    Math.ceil(
+      deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.cityProportion,
+    ) +
+    Math.ceil(
+      deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.prefecturalProportion,
+    );
 
   const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
   const cityCredit = Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForCap.cityProportion);
-  const prefectureCredit = Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForCap.prefecturalProportion);
+  const prefectureCredit = Math.ceil(
+    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.prefecturalProportion,
+  );
 
   return {
     finalLimit,
@@ -829,7 +835,6 @@ export function calculateFurusatoNozeiDetails(
     outOfPocketCost: limitDetails.finalLimit - residenceTaxDifference - incomeTaxReduction,
   };
 }
-
 
 /**
  * National income tax on the taxable classes: the brackets on 課税総所得金額 plus the flat

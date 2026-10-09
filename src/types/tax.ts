@@ -845,10 +845,12 @@ export interface TakeHomeInputs {
    * Internal simulation parameter: Furusato Nozei donation details used when re-calculating
    * taxes to evaluate exact out-of-pocket cost and tax reductions.
    */
-  furusatoDonation?: {
-    amount: number;
-    residenceCredits: { city: number; prefecture: number };
-  } | undefined;
+  furusatoDonation?:
+    | {
+        amount: number;
+        residenceCredits: { city: number; prefecture: number };
+      }
+    | undefined;
 }
 
 /**
