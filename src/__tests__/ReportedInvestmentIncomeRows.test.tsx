@@ -31,11 +31,7 @@ vi.mock('../components/ui/Tooltips', async () => {
       iconAriaLabel?: string;
     }) => (
       <>
-        <span
-          data-testid="detail-info-tooltip-trigger"
-          title={title}
-          aria-label={iconAriaLabel}
-        >
+        <span data-testid="detail-info-tooltip-trigger" title={title} aria-label={iconAriaLabel}>
           {icon ?? 'ℹ️'}
         </span>
         {createPortal(
@@ -877,7 +873,9 @@ describe('TaxesTab with the foreign tax credit', () => {
       within(tooltip).getByText(/Foreign tax exceeds the allowable Japanese credit limits/),
     ).toBeInTheDocument();
     expect(
-      within(tooltip).getByText(/It can be carried forward for up to three years by attaching the foreign tax credit statement/),
+      within(tooltip).getByText(
+        /It can be carried forward for up to three years by attaching the foreign tax credit statement/,
+      ),
     ).toBeInTheDocument();
   });
 
@@ -899,9 +897,7 @@ describe('TaxesTab with the foreign tax credit', () => {
     expect(trigger).toHaveTextContent('ℹ️');
 
     const tooltip = tooltipTitled('Foreign Tax Credit — Income Tax')!;
-    expect(
-      within(tooltip).queryByText(/is not credited this year/),
-    ).not.toBeInTheDocument();
+    expect(within(tooltip).queryByText(/is not credited this year/)).not.toBeInTheDocument();
   });
 });
 
