@@ -845,19 +845,29 @@ describe('TaxesTab with the foreign tax credit', () => {
 });
 
 describe('FurusatoNozeiTab with the foreign tax credit', () => {
-  it('says the reductions may be slightly high when a credit applies', () => {
-    render(<FurusatoNozeiTab results={withForeignTax} />);
+  it('shows FTC-specific warning when FTC wipes out income tax and suppresses One-Stop recommendation', () => {
+    const wipedOutResults = {
+      ...withForeignTax,
+      nationalIncomeTax: 0,
+      furusatoNozei: {
+        ...withForeignTax.furusatoNozei,
+        incomeTaxReduction: 0,
+        outOfPocketCost: 15_000,
+      },
+    };
+    render(<FurusatoNozeiTab results={wipedOutResults} />);
 
+    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
     expect(
-      screen.getByText(/A donation also lowers the foreign tax credit limits/),
+      screen.getByText(
+        /because the Foreign Tax Credit already reduces your Japanese national income tax to ¥0/,
+      ),
     ).toBeInTheDocument();
-  });
-
-  it('says nothing about it without a credit', () => {
-    render(<FurusatoNozeiTab results={results} />);
-
     expect(
-      screen.queryByText(/A donation also lowers the foreign tax credit limits/),
+      screen.getByText(/One-Stop system.*cannot be used/s),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/This issue is avoided by using the One-Stop system/),
     ).not.toBeInTheDocument();
   });
 });

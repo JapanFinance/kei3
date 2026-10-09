@@ -30,9 +30,11 @@ import {
   type ReportedDividendsTaxation,
   type ReportedInvestmentAmounts,
   type ResidenceTaxCredits,
+  type FurusatoNozeiDetails,
   type TakeHomeInputs,
   type TakeHomeResults,
   type WithheldInvestmentIncome,
+  ZERO_FURUSATO_NOZEI_DETAILS,
 } from '../types/tax';
 import {
   type TaxpayerAgeRange,
@@ -79,9 +81,10 @@ import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncom
 import { calculatePensionBreakdown } from './pensionCalculator';
 import { calculatePersonalDeductions } from './personalDeductions';
 import {
-  calculateFurusatoNozeiDetails,
+  calculateFurusatoLimit,
   calculateResidenceTax,
   countResidenceTaxQualifiedDependents,
+  FURUSATO_OUT_OF_POCKET_COST,
   isDependentResidenceTaxable,
   isResidenceTaxExempt,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
@@ -285,7 +288,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   pensionPayments: 0,
   employmentInsurance: 0,
   takeHomeIncome: 0,
-  furusatoNozei: calculateFurusatoNozeiDetails(0, NON_TAXABLE_RESIDENCE_TAX_DETAIL),
+  furusatoNozei: ZERO_FURUSATO_NOZEI_DETAILS,
   dcPlanContributions: 0,
   salaryIncome: 0,
   healthInsuranceProvider: DEFAULT_PROVIDER,
@@ -985,6 +988,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeYear,
   );
 
+  const furusatoDonationDeduction = inputs.furusatoDonation
+    ? Math.max(0, inputs.furusatoDonation.amount - FURUSATO_OUT_OF_POCKET_COST)
+    : 0;
+
   // The 所得控除 come off 総所得金額 first, and what they cannot absorb off the 申告分離課税
   // classes (措法8条の4③三, 37条の10⑥五 as 37条の11⑥ applies it). Each class is floored to
   // ¥1,000 on its own. Furusato uses the pre-rounding figures (it rounds after subtracting the
@@ -1001,7 +1008,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       additionalDeductions.national +
       personalDeductions.national +
       nationalIncomeTaxBasicDeduction +
-      dependentDeductions.nationalTax.total,
+      dependentDeductions.nationalTax.total +
+      furusatoDonationDeduction,
   );
   const taxableIncomeForNationalIncomeTax = floorTaxableIncome(nationalTaxableClasses.aggregate);
   const taxableSeparateIncome = {
@@ -1124,11 +1132,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     foreignTaxCredit && (foreignTaxCredit.credit.city > 0 || foreignTaxCredit.credit.prefecture > 0)
       ? { city: foreignTaxCredit.credit.city, prefecture: foreignTaxCredit.credit.prefecture }
       : undefined;
+  const furusatoResidenceCredit = inputs.furusatoDonation?.residenceCredits;
   const residenceTaxCredits: ResidenceTaxCredits | undefined =
-    homeLoanResidenceCredit > 0 || foreignResidenceCredit
+    homeLoanResidenceCredit > 0 || foreignResidenceCredit || furusatoResidenceCredit
       ? {
           homeLoan: homeLoanResidenceCredit,
           ...(foreignResidenceCredit && { foreignTax: foreignResidenceCredit }),
+          ...(furusatoResidenceCredit && { furusato: furusatoResidenceCredit }),
         }
       : undefined;
   const residenceTax = residenceTaxCredits
@@ -1163,22 +1173,49 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // annualIncome gross, and the tax withheld on it comes off here like any other tax.
   const takeHomeIncome = annualIncome - totalSocialsAndTax;
 
-  const furusatoNozeiLimit = calculateFurusatoNozeiDetails(
-    nationalTaxableClasses.aggregate,
-    preCreditResidenceTax,
-    residenceTax,
-    residenceTaxCredits ?? NO_RESIDENCE_TAX_CREDITS,
-    nationalIncomeTax,
-    hasReportedInvestment
-      ? {
-          nationalTaxable: {
-            dividends: nationalTaxableClasses.dividends,
-            capitalGains: nationalTaxableClasses.capitalGains,
-          },
-          year: incomeYear,
-        }
-      : undefined,
-  );
+  let furusatoNozei: FurusatoNozeiDetails = ZERO_FURUSATO_NOZEI_DETAILS;
+
+  if (!inputs.furusatoDonation) {
+    const furusatoLimit = calculateFurusatoLimit(
+      nationalTaxableClasses.aggregate,
+      preCreditResidenceTax,
+      hasReportedInvestment
+        ? {
+            nationalTaxable: {
+              dividends: nationalTaxableClasses.dividends,
+              capitalGains: nationalTaxableClasses.capitalGains,
+            },
+            year: incomeYear,
+          }
+        : undefined,
+    );
+
+    if (furusatoLimit.finalLimit > 0) {
+      const withFurusato = calculateTaxes({
+        ...inputs,
+        furusatoDonation: {
+          amount: furusatoLimit.finalLimit,
+          residenceCredits: furusatoLimit.residenceCredits,
+        },
+      });
+
+      const incomeTaxReduction = Math.max(0, nationalIncomeTax - withFurusato.nationalIncomeTax);
+      const residenceTaxReduction = Math.max(
+        0,
+        residenceTax.totalResidenceTax - withFurusato.residenceTax.totalResidenceTax,
+      );
+      const outOfPocketCost = furusatoLimit.finalLimit - incomeTaxReduction - residenceTaxReduction;
+
+      furusatoNozei = {
+        limit: furusatoLimit.finalLimit,
+        incomeTaxReduction,
+        residenceTaxDonationBasicDeduction: furusatoLimit.residenceTaxDonationBasicDeduction,
+        residenceTaxSpecialDeduction: furusatoLimit.residenceTaxSpecialDeduction,
+        residenceTaxReduction,
+        outOfPocketCost,
+      };
+    }
+  }
   const reportedInvestmentClassification = classifyReportedInvestmentIncome(reportedInvestment);
 
   return {
@@ -1249,7 +1286,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     taxableIncomeForNationalIncomeTax,
     residenceTaxBasicDeduction,
     taxableIncomeForResidenceTax,
-    furusatoNozei: furusatoNozeiLimit,
+    furusatoNozei,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
     ...(foreignTaxCredit && { foreignTaxCredit }),
     ...(foreignTaxPaid > 0 && { foreignTaxPaid }),

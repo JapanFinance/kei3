@@ -841,6 +841,14 @@ export interface TakeHomeInputs {
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
   personalCircumstances: PersonalCircumstancesInput;
+  /**
+   * Internal simulation parameter: Furusato Nozei donation details used when re-calculating
+   * taxes to evaluate exact out-of-pocket cost and tax reductions.
+   */
+  furusatoDonation?: {
+    amount: number;
+    residenceCredits: { city: number; prefecture: number };
+  } | undefined;
 }
 
 /**
@@ -1084,6 +1092,8 @@ export interface ResidenceTaxCredits {
   homeLoan: number;
   /** The foreign tax credit for each side, before the cap at that side's 所得割. */
   foreignTax?: Pick<ForeignTaxCreditAmounts, 'city' | 'prefecture'>;
+  /** Furusato Nozei donation tax credit (basic + special) for each side. */
+  furusato?: { city: number; prefecture: number };
 }
 
 /**
@@ -1123,6 +1133,15 @@ export interface FurusatoNozeiDetails {
   outOfPocketCost: number;
   residenceTaxReduction: number;
 }
+
+export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {
+  limit: 0,
+  incomeTaxReduction: 0,
+  residenceTaxDonationBasicDeduction: 0,
+  residenceTaxSpecialDeduction: 0,
+  outOfPocketCost: 0,
+  residenceTaxReduction: 0,
+};
 
 export interface ChartRange {
   min: number;

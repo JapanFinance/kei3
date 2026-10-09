@@ -3875,19 +3875,17 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
 
     it('applies the residence credit after the furusato donation credits', () => {
       // Limit as without the foreign tax (74,000; the 20% cap is on the 所得割 before either
-      // credit), and so the 3,600 income tax reduction. Donation 72,000: 基本控除 7,200; 特例控除
-      // 72,000 × 0.7979 = 57,448.8 → ⌈34,469.28⌉ + ⌈22,979.52⌉ = 34,470 + 22,980 = 57,450; the
-      // donation credits 64,650 split ⌈38,790⌉ / ⌈25,860⌉. 市 172,920 − 38,790 − 9,467 = 124,663 →
-      // 124,600; 県 115,280 − 25,860 − 6,311 = 83,109 → 83,100; 277,300 − (124,600 + 83,100 +
-      // 5,000) = 64,600, the same reduction as without the foreign tax. Out of pocket 74,000 −
-      // 64,600 − 3,600 = 5,800.
+      // credit). A donation lowers the base tax, which also lowers the foreign tax credit limit:
+      // national income tax falls from 191,100 to 188,300 (a 2,800 net reduction, losing 800 of FTC),
+      // and residence tax falls from 277,300 to 213,000 (a 64,300 net reduction, losing 300 of FTC).
+      // Out-of-pocket cost is 74,000 − 64,300 − 2,800 = 6,900.
       expect(result.furusatoNozei).toEqual({
         limit: 74_000,
-        incomeTaxReduction: 3_600,
+        incomeTaxReduction: 2_800,
         residenceTaxDonationBasicDeduction: 7_200,
         residenceTaxSpecialDeduction: 57_450,
-        residenceTaxReduction: 64_600,
-        outOfPocketCost: 5_800,
+        residenceTaxReduction: 64_300,
+        outOfPocketCost: 6_900,
       });
       expect(
         calculateTaxes(salaryInputs([{ ...foreignDividend(true), foreignTax: 0 }])).furusatoNozei
