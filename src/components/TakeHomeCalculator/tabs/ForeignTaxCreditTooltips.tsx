@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
@@ -128,25 +129,66 @@ interface ForeignTaxCreditTooltipProps {
 export const ForeignTaxCreditTooltip: React.FC<ForeignTaxCreditTooltipProps> = ({
   credit,
   withheldForeignTax = 0,
-}) => (
-  <DetailedTooltip title="Foreign Tax Credit — Income Tax">
-    <Box>
-      {!hasForeignTaxCreditDetails(credit) ? (
-        <WithheldForeignTaxNote withheldForeignTax={withheldForeignTax} isAll />
-      ) : (
-        <>
-          <Note>
-            Foreign tax (外国所得税) on income from outside Japan comes off Japanese tax, up to
-            limits, so the same income is not taxed twice. It comes off in this order: income tax,
-            reconstruction surtax, prefectural tax, municipal tax.
-          </Note>
-          <Note>This row is what came off the income tax and the surtax.</Note>
-        </>
-      )}
-      <SourceLinks sources={SOURCES} />
-    </Box>
-  </DetailedTooltip>
-);
+}) => {
+  const hasDetails = hasForeignTaxCreditDetails(credit);
+  const excess = hasDetails ? credit.excess : 0;
+  const hasExcess = excess > 0;
+
+  return (
+    <DetailedTooltip
+      title="Foreign Tax Credit — Income Tax"
+      {...(hasExcess
+        ? {
+            icon: <WarningIcon fontSize="small" color="warning" />,
+            iconAriaLabel: `Foreign tax credit warning: ${formatJPY(excess)} exceeds limits`,
+          }
+        : {
+            iconAriaLabel: 'Foreign tax credit details',
+          })}
+    >
+      <Box>
+        {!hasDetails ? (
+          <WithheldForeignTaxNote withheldForeignTax={withheldForeignTax} isAll />
+        ) : (
+          <>
+            {hasExcess && (
+              <Box
+                role="alert"
+                sx={{
+                  p: 1.5,
+                  mb: 1.5,
+                  bgcolor: 'warning.light',
+                  color: 'warning.contrastText',
+                  borderRadius: 1,
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  ⚠️ {formatJPY(excess)} of foreign tax is not credited this year
+                </Typography>
+                <Note>
+                  {credit.adjustedForeignSourceIncome === 0
+                    ? 'No foreign-source income to credit against (limit is ¥0).'
+                    : credit.incomeTax === 0
+                      ? 'Japanese income tax is ¥0 (limit is ¥0).'
+                      : 'Foreign tax exceeds the allowable Japanese credit limits.'}{' '}
+                  It can be carried forward for up to three years by attaching the foreign tax
+                  credit statement (外国税額控除に関する明細書) to the tax return each year.
+                </Note>
+              </Box>
+            )}
+            <Note>
+              Foreign tax (外国所得税) on income from outside Japan comes off Japanese tax, up to
+              limits, so the same income is not taxed twice. It comes off in this order: income tax,
+              reconstruction surtax, prefectural tax, municipal tax.
+            </Note>
+            <Note>This row is what came off the income tax and the surtax.</Note>
+          </>
+        )}
+        <SourceLinks sources={SOURCES} />
+      </Box>
+    </DetailedTooltip>
+  );
+};
 
 interface CreditFiguresProps {
   credit: ForeignTaxCreditResult;

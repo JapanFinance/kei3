@@ -19,10 +19,24 @@ import {
 vi.mock('../components/ui/Tooltips', async () => {
   const { createPortal } = await import('react-dom');
   return {
-    DetailedTooltip: ({ title, children }: { title: string; children?: React.ReactNode }) => (
+    DetailedTooltip: ({
+      title,
+      children,
+      icon,
+      iconAriaLabel,
+    }: {
+      title: string;
+      children?: React.ReactNode;
+      icon?: React.ReactNode;
+      iconAriaLabel?: string;
+    }) => (
       <>
-        <span data-testid="detail-info-tooltip-trigger" title={title}>
-          ℹ️
+        <span
+          data-testid="detail-info-tooltip-trigger"
+          title={title}
+          aria-label={iconAriaLabel}
+        >
+          {icon ?? 'ℹ️'}
         </span>
         {createPortal(
           <div data-testid="detail-info-tooltip-content" data-title={title}>
@@ -840,6 +854,53 @@ describe('TaxesTab with the foreign tax credit', () => {
     const municipalTooltip = tooltipTitled('Municipal Tax Credit')!;
     expect(
       within(municipalTooltip).queryByText('Foreign Tax Credit (外国税額控除)'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('displays warning icon and excess explanation when foreign tax exceeds the limit', () => {
+    render(<TaxesTab results={withForeignTax} inputs={inputs} />);
+
+    const incomeTaxCredit = screen.getByText('Foreign Tax Credit');
+    const row = rowOf(incomeTaxCredit);
+    const trigger = within(row).getByTestId('detail-info-tooltip-trigger');
+
+    expect(trigger).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('Foreign tax credit warning: ¥43,083 exceeds limits'),
+    );
+
+    const tooltip = tooltipTitled('Foreign Tax Credit — Income Tax')!;
+    expect(
+      within(tooltip).getByText(/¥43,083 of foreign tax is not credited this year/),
+    ).toBeInTheDocument();
+    expect(
+      within(tooltip).getByText(/Foreign tax exceeds the allowable Japanese credit limits/),
+    ).toBeInTheDocument();
+    expect(
+      within(tooltip).getByText(/It can be carried forward for up to three years by attaching the foreign tax credit statement/),
+    ).toBeInTheDocument();
+  });
+
+  it('displays standard info icon and no excess alert when foreign tax is fully credited', () => {
+    const fullyCreditedResults: TakeHomeResults = {
+      ...withForeignTax,
+      foreignTaxCredit: {
+        ...withForeignTax.foreignTaxCredit!,
+        excess: 0,
+      },
+    };
+    render(<TaxesTab results={fullyCreditedResults} inputs={inputs} />);
+
+    const incomeTaxCredit = screen.getByText('Foreign Tax Credit');
+    const row = rowOf(incomeTaxCredit);
+    const trigger = within(row).getByTestId('detail-info-tooltip-trigger');
+
+    expect(trigger).toHaveAttribute('aria-label', 'Foreign tax credit details');
+    expect(trigger).toHaveTextContent('ℹ️');
+
+    const tooltip = tooltipTitled('Foreign Tax Credit — Income Tax')!;
+    expect(
+      within(tooltip).queryByText(/is not credited this year/),
     ).not.toBeInTheDocument();
   });
 });
