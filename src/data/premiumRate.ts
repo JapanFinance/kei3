@@ -80,6 +80,16 @@ export class PremiumRate {
   }
 
   /**
+   * The tax on `amount`, floored to whole yen (1円未満の端数切り捨て).
+   */
+  taxOn(amount: number): number {
+    if (import.meta.env.DEV && !(amount >= 0 && Number.isFinite(amount))) {
+      throw new Error(`Taxable amount must be non-negative and finite: ${amount}`);
+    }
+    return Math.floor((amount * this.#units) / this.#scale);
+  }
+
+  /**
    * This rate divided into `parts` equal parts, exactly: the employees' pension rate of
    * 1000分の183 divided into two is the 9.15% an employee pays of what they and their employer
    * pay together.

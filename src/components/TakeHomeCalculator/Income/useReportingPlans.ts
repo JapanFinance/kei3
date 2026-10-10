@@ -16,6 +16,7 @@ import {
   generatePlans,
   hasOptionalUnit,
   isBetterPlan,
+  isMinimumTaxApplicable,
   mandatoryReportingNote,
   samePlan,
   withheldOnlyPlan,
@@ -157,8 +158,9 @@ export function useReportingPlans(
       };
     }
 
-    const units = deriveReportingUnits(inputs.incomeStreams);
-    const mandatoryNote = mandatoryReportingNote(inputs.incomeStreams);
+    const minimumTaxApplies = isMinimumTaxApplicable(inputs);
+    const units = deriveReportingUnits(inputs.incomeStreams, minimumTaxApplies);
+    const mandatoryNote = mandatoryReportingNote(inputs.incomeStreams, minimumTaxApplies);
 
     const uniformKeys: UniformRowKey[] = hasOptionalUnit(units)
       ? ['withheldOnly', 'separate', 'aggregate']
@@ -181,7 +183,8 @@ export function useReportingPlans(
     );
 
     let best = [...uniformEvaluations.values()].reduce(
-      (soFar, candidate) => (isBetterPlan(candidate, soFar, inputs, units) ? candidate : soFar),
+      (soFar, candidate) =>
+        isBetterPlan(candidate, soFar, inputs, units, minimumTaxApplies) ? candidate : soFar,
       current,
     );
 
@@ -280,7 +283,7 @@ export function useReportingPlans(
       const recordAndMaybeYield = async (candidate: PlanEvaluation): Promise<boolean> => {
         if (!isCurrentGeneration()) return false;
         done++;
-        if (isBetterPlan(candidate, best, inputs, units)) best = candidate;
+        if (isBetterPlan(candidate, best, inputs, units, minimumTaxApplies)) best = candidate;
         const now = performance.now();
         if (now - chunkStart < chunkMs) return true;
         workMs += now - chunkStart;
@@ -341,11 +344,12 @@ export function useReportingPlans(
       if (bounded) {
         // From the best plan found so far, Current and each uniform plan; multiStartDescent adds
         // the other election to each start that reports a dividend.
-        const search = multiStartDescent(inputs, units, [
-          best,
-          current,
-          ...uniformEvaluations.values(),
-        ]);
+        const search = multiStartDescent(
+          inputs,
+          units,
+          [best, current, ...uniformEvaluations.values()],
+          minimumTaxApplies,
+        );
         for (let step = search.next(); !step.done; step = search.next()) {
           if (!isCurrentGeneration()) return;
           // eslint-disable-next-line no-await-in-loop -- the descent generator is stateful, driven one step per iteration

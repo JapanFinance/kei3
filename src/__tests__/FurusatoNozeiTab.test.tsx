@@ -5,12 +5,26 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNozeiTab';
+import { percentTo } from '../data/premiumRate';
 import type {
   ForeignTaxCreditResult,
+  HighIncomeMinimumTaxResult,
   HomeLoanTaxCreditResult,
   TakeHomeResults,
 } from '../types/tax';
 import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
+
+const mockMinimumTax: HighIncomeMinimumTaxResult = {
+  baselineIncome: 353_560_000,
+  threshold: 165_000_000,
+  taxableExcess: 188_560_000,
+  rate: percentTo(1)(30),
+  taxOnExcess: 56_568_000,
+  baselineIncomeTax: 53_788_526,
+  additionalIncomeTax: 2_779_474,
+  additionalReconstructionSurtax: 58_368,
+  totalAdditionalTax: 2_837_842,
+};
 
 vi.mock('../components/ui/Tooltips', () => ({
   SimpleTooltip: () => <div data-testid="info-tooltip" />,
@@ -131,6 +145,37 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     expect(
       screen.getByText(/If you are eligible.*this issue is avoided by using the One-Stop system/s),
     ).toBeInTheDocument();
+  });
+
+  it('displays Minimum Tax warning when minimum tax sets floor and incomeTaxReduction is 0', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      nationalIncomeTax: 56_626_300,
+      highIncomeMinimumTax: mockMinimumTax,
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 4_458_000,
+        incomeTaxReduction: 0,
+        residenceTaxReduction: 4_001_100,
+        outOfPocketCost: 456_900,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /because the Minimum Tax on High Income Taxpayers \(特定の基準所得金額の課税の特例\) sets a statutory tax floor on baseline income/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /any reduction in your baseline income tax is offset yen-for-yen by an increase in the minimum tax addition/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/This issue is avoided by using the One-Stop system/),
+    ).not.toBeInTheDocument();
   });
 
   it('displays Branch 4 fallback warning when standard bracket shift causes high out-of-pocket cost', () => {

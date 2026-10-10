@@ -27,6 +27,7 @@ import {
   generatePlans,
   hasOptionalUnit,
   isBetterPlan,
+  isMinimumTaxApplicable,
   mandatoryReportingNote,
   neighbourPlans,
   withheldOnlyPlan,
@@ -578,7 +579,7 @@ describe('a mixed plan can beat every uniform plan', () => {
 });
 
 describe('isBetterPlan ties', () => {
-  it('prefers fewer reported units, then whichever matches Current, when kept is tied', () => {
+  it('prefers Current, then fewer reported units, when kept is tied', () => {
     const accountA = account({ id: 'a', capitalGains: 500_000, reportsCapitalGains: true });
     const accountB = account({ id: 'b', capitalGains: 500_000 });
     const inputs = salaryInputs([accountA, accountB]);
@@ -610,14 +611,64 @@ describe('isBetterPlan ties', () => {
     // Matches the entries as they stand (A reported, B withheld).
     const onlyAReported: PlanEvaluation = { plan: planWith(true, false), evaluated: fake(1_000) };
     const onlyBReported: PlanEvaluation = { plan: planWith(false, true), evaluated: fake(1_000) };
+    const neitherReported: PlanEvaluation = {
+      plan: planWith(false, false),
+      evaluated: fake(1_000),
+    };
 
-    // Fewer reported units wins outright at the same kept.
+    // Matches Current beats non-current plans even if non-current has fewer reported units (avoiding spurious switch).
     expect(isBetterPlan(onlyAReported, bothReported, inputs, units)).toBe(true);
     expect(isBetterPlan(bothReported, onlyAReported, inputs, units)).toBe(false);
+
+    expect(isBetterPlan(onlyAReported, neitherReported, inputs, units)).toBe(true);
+    expect(isBetterPlan(neitherReported, onlyAReported, inputs, units)).toBe(false);
 
     // Between the two single-reported-unit plans, the one matching Current wins.
     expect(isBetterPlan(onlyAReported, onlyBReported, inputs, units)).toBe(true);
     expect(isBetterPlan(onlyBReported, onlyAReported, inputs, units)).toBe(false);
+
+    // When neither matches Current, fewer reported units wins.
+    expect(isBetterPlan(neitherReported, onlyBReported, inputs, units)).toBe(true);
+    expect(isBetterPlan(onlyBReported, neitherReported, inputs, units)).toBe(false);
+  });
+
+  it('prefers more reported units when high-income minimum tax applies', () => {
+    const accountA = account({ id: 'a', capitalGains: 500_000, reportsCapitalGains: false });
+    const inputs = salaryInputs([accountA]);
+    const units = deriveReportingUnits(inputs.incomeStreams, true);
+    const salaryStream = inputs.incomeStreams[0]!;
+
+    const fake = (kept: number): EvaluatedPlan => ({
+      streams: [],
+      election: 'separate',
+      figures: {
+        kept,
+        incomeTax: 0,
+        residenceTax: 0,
+        socialInsurance: 0,
+        furusatoNozeiLimit: 0,
+        totalIncome: 0,
+      },
+    });
+
+    const reported: PlanEvaluation = {
+      plan: {
+        streams: [salaryStream, { ...accountA, reportsCapitalGains: true }],
+        election: 'separate',
+      },
+      evaluated: fake(1_000),
+    };
+    const withheld: PlanEvaluation = {
+      plan: {
+        streams: [salaryStream, { ...accountA, reportsCapitalGains: false }],
+        election: 'separate',
+      },
+      evaluated: fake(1_000),
+    };
+
+    // Under minimum tax, reporting is mandatory by statute (措法41条の19), so reported beats withheld.
+    expect(isBetterPlan(reported, withheld, inputs, units, true)).toBe(true);
+    expect(isBetterPlan(withheld, reported, inputs, units, true)).toBe(false);
   });
 });
 
@@ -829,5 +880,93 @@ describe('mandatoryReportingNote', () => {
 
   it('is undefined without either', () => {
     expect(mandatoryReportingNote([account({ id: 'a', capitalGains: 500_000 })])).toBeUndefined();
+  });
+
+  it('explains mandatory reporting when minimum tax applies', () => {
+    expect(mandatoryReportingNote([account({ id: 'a', capitalGains: 500_000 })], true)).toBe(
+      'Due to the Minimum Tax on High Income, investment income must be reported on the tax return.',
+    );
+  });
+});
+
+describe('high-income minimum tax (措法41条の19) in reporting planner', () => {
+  it('detects when high-income minimum tax applies to calculation inputs', () => {
+    // 1.1B capital gain triggers minimum tax in 2026 (excess tax > normal tax)
+    const highIncomeInputs = salaryInputs(
+      [account({ id: 'a', capitalGains: 1_100_000_000, reportsCapitalGains: true })],
+      { salary: 0, incomeYear: 2026 },
+    );
+    expect(isMinimumTaxApplicable(highIncomeInputs)).toBe(true);
+
+    const normalInputs = salaryInputs(
+      [account({ id: 'a', capitalGains: 500_000, reportsCapitalGains: true })],
+      { salary: 5_000_000, incomeYear: 2026 },
+    );
+    expect(isMinimumTaxApplicable(normalInputs)).toBe(false);
+  });
+
+  it('restricts reporting unit states to reported-only when minimum tax applies', () => {
+    const mixedAccount = account({
+      id: 'a',
+      capitalGains: 50_000_000,
+      dividends: 10_000_000,
+    });
+    const domesticDiv = dividend({ id: 'd', amount: 5_000_000 });
+    const streams = [mixedAccount, domesticDiv];
+
+    const normalUnits = deriveReportingUnits(streams, false);
+    expect(normalUnits[0]!.states.length).toBe(4);
+    expect(normalUnits[1]!.states.length).toBe(2);
+    expect(hasOptionalUnit(normalUnits)).toBe(true);
+
+    const minTaxUnits = deriveReportingUnits(streams, true);
+    expect(minTaxUnits[0]!.states.length).toBe(1);
+    expect(minTaxUnits[1]!.states.length).toBe(1);
+    expect(hasOptionalUnit(minTaxUnits)).toBe(false);
+
+    // Patched streams under the only state report everything
+    const patchedAccount = minTaxUnits[0]!.states[0]!.apply(
+      mixedAccount,
+    ) as WithholdingAccountIncomeStream;
+    expect(patchedAccount.reportsCapitalGains).toBe(true);
+    expect(patchedAccount.reportsDividends).toBe(true);
+
+    const patchedDividend = minTaxUnits[1]!.states[0]!.apply(domesticDiv) as DividendsIncomeStream;
+    expect(patchedDividend.isReported).toBe(true);
+  });
+
+  it('generates only reported plans when minimum tax applies', () => {
+    const gainAccount = account({ id: 'a', capitalGains: 1_100_000_000 });
+    const inputs = salaryInputs([gainAccount], { salary: 0, incomeYear: 2026 });
+    const units = deriveReportingUnits(inputs.incomeStreams, true);
+
+    const plans = [...generatePlans(inputs.incomeStreams, units)];
+    // Since there are no dividends, only 1 plan (reported, separate taxation) is generated
+    expect(plans).toHaveLength(1);
+    const stream = plans[0]!.streams[1] as WithholdingAccountIncomeStream;
+    expect(stream.reportsCapitalGains).toBe(true);
+  });
+
+  it('calculates taxes with investment reported when evaluatePlan runs under minimum tax', () => {
+    const gainAccount = account({
+      id: 'a',
+      capitalGains: 1_100_000_000,
+      reportsCapitalGains: false,
+    });
+    const inputs = salaryInputs([gainAccount], { salary: 0, incomeYear: 2026 });
+    const planWithheld: ReportingPlan = {
+      streams: inputs.incomeStreams,
+      election: 'separate',
+    };
+    const planReported: ReportingPlan = {
+      streams: [inputs.incomeStreams[0]!, { ...gainAccount, reportsCapitalGains: true }],
+      election: 'separate',
+    };
+
+    const evalWithheld = evaluatePlan(inputs, planWithheld);
+    const evalReported = evaluatePlan(inputs, planReported);
+    // calculateTaxes forces reporting internally under 措法41条の19, so figures match
+    expect(evalWithheld.figures.kept).toBe(evalReported.figures.kept);
+    expect(evalWithheld.figures.incomeTax).toBe(evalReported.figures.incomeTax);
   });
 });

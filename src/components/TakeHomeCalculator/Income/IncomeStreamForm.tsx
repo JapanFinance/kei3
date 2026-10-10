@@ -19,25 +19,33 @@ import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
+import { DEFAULT_PROVIDER } from '../../../types/healthInsurance';
 import {
   type CapitalGainsIncomeStream,
+  DEFAULT_INCOME_YEAR,
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   type IncomeStream,
   type IncomeStreamType,
   type PublicPensionTreatyCredit,
+  type TakeHomeInputs,
 } from '../../../types/tax';
 import { foreignTaxEntryError } from '../../../utils/foreignTaxCredit';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import { getFrequencyAnnualMultiplier } from '../../../utils/incomeStreams';
 import { withholdingAccountDividendsMustBeReported } from '../../../utils/investmentReporting';
+import { calculateTaxes } from '../../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { getIncomeCategory, INCOME_STREAM_CATALOG } from './incomeStreamCatalog';
 import { variantLabelSx, variantToggleGroupSx } from './variantControlStyles';
+
+export const MINIMUM_TAX_REPORTING_NOTE =
+  'Due to the Minimum Tax on High Income, this must be reported on the tax return.';
 
 interface IncomeStreamFormProps {
   /**
@@ -48,6 +56,18 @@ interface IncomeStreamFormProps {
   initialData?: IncomeStream;
   onSave: (stream: IncomeStream) => void;
   onCancel: () => void;
+  /**
+   * Context of other calculations/inputs for detecting when high-income minimum tax applies.
+   */
+  calculationInputs?: TakeHomeInputs | undefined;
+  /**
+   * Other streams in the calculation (excluding the current stream being edited, if editing).
+   */
+  otherStreams?: IncomeStream[] | undefined;
+  /**
+   * Tax year for rule evaluation. Defaults to `calculationInputs?.incomeYear` or `DEFAULT_INCOME_YEAR`.
+   */
+  incomeYear?: number | undefined;
 }
 
 // A figure's amount beside its reporting choice; the toggle wraps under the amount on a phone.
@@ -118,11 +138,16 @@ const guidanceBoxSx = {
   borderColor: 'divider',
 };
 
+const minimumTaxWarningSx = { color: 'warning.main' };
+
 export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   type,
   initialData,
   onSave,
   onCancel,
+  calculationInputs,
+  otherStreams,
+  incomeYear,
 }) => {
   const info = INCOME_STREAM_CATALOG[type];
   const [amount, setAmount] = useState<number>(
@@ -218,6 +243,82 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
     reportsCapitalGains,
   });
 
+  const minimumTaxApplies = useMemo(() => {
+    if (type !== 'withholdingAccount' && type !== 'dividends') {
+      return false;
+    }
+    const baseStreams =
+      otherStreams ?? calculationInputs?.incomeStreams.filter(s => s.id !== initialData?.id) ?? [];
+
+    const draftStream: IncomeStream =
+      type === 'withholdingAccount'
+        ? {
+            id: initialData?.id ?? 'draft',
+            type: 'withholdingAccount',
+            capitalGains: accountCapitalGains,
+            dividends: accountDividends,
+            foreignDividends: accountForeignDividends,
+            foreignTax,
+            reportsCapitalGains: true,
+            reportsDividends: true,
+          }
+        : {
+            id: initialData?.id ?? 'draft',
+            type: 'dividends',
+            amount,
+            shareType,
+            paymentChannel,
+            isReported: true,
+            issuerDomicile,
+            foreignTax: issuerDomicile === 'foreign' ? foreignTax : 0,
+          };
+
+    if (foreignTaxEntryError(draftStream)) {
+      return false;
+    }
+
+    const effectiveIncomeYear = incomeYear ?? calculationInputs?.incomeYear ?? DEFAULT_INCOME_YEAR;
+    const testInputs: TakeHomeInputs = calculationInputs
+      ? {
+          ...calculationInputs,
+          incomeYear: effectiveIncomeYear,
+          incomeStreams: [...baseStreams, draftStream],
+        }
+      : {
+          ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+          incomeStreams: [...baseStreams, draftStream],
+          ageRange: 'age40to59',
+          region: 'Tokyo',
+          healthInsuranceProvider: DEFAULT_PROVIDER,
+          dependents: [],
+          dcPlanContributions: 0,
+          manualSocialInsuranceEntry: false,
+          manualSocialInsuranceAmount: 0,
+          incomeYear: effectiveIncomeYear,
+        };
+
+    try {
+      const results = calculateTaxes(testInputs);
+      return results.highIncomeMinimumTax !== undefined;
+    } catch {
+      return false;
+    }
+  }, [
+    type,
+    otherStreams,
+    calculationInputs,
+    initialData?.id,
+    accountCapitalGains,
+    accountDividends,
+    accountForeignDividends,
+    foreignTax,
+    amount,
+    shareType,
+    paymentChannel,
+    issuerDomicile,
+    incomeYear,
+  ]);
+
   const handlePaymentChannelChange = (newPaymentChannel: 'domestic' | 'abroad') => {
     setPaymentChannel(newPaymentChannel);
     // 措令4条の3②五・六 excludes a dividend paid abroad from 申告不要.
@@ -283,8 +384,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           dividends: accountDividends,
           foreignDividends: accountForeignDividends,
           foreignTax,
-          reportsCapitalGains,
-          reportsDividends: dividendsForced || reportsDividends,
+          reportsCapitalGains: minimumTaxApplies || reportsCapitalGains,
+          reportsDividends: minimumTaxApplies || dividendsForced || reportsDividends,
         };
         break;
       case 'capitalGains':
@@ -297,7 +398,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           amount,
           shareType,
           paymentChannel,
-          isReported: paymentChannel === 'abroad' || isReported,
+          isReported: minimumTaxApplies || paymentChannel === 'abroad' || isReported,
           issuerDomicile,
           foreignTax: issuerDomicile === 'foreign' ? foreignTax : 0,
         };
@@ -637,7 +738,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               </DetailedTooltip>
             </FormLabel>
             <ToggleButtonGroup
-              value={isReported ? 'reported' : 'withheldOnly'}
+              value={
+                minimumTaxApplies || paymentChannel === 'abroad' || isReported
+                  ? 'reported'
+                  : 'withheldOnly'
+              }
               exclusive
               onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
                 if (newValue) {
@@ -649,14 +754,19 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               size="small"
               sx={variantToggleGroupSx}
             >
-              <ToggleButton value="withheldOnly" disabled={paymentChannel === 'abroad'}>
+              <ToggleButton
+                value="withheldOnly"
+                disabled={minimumTaxApplies || paymentChannel === 'abroad'}
+              >
                 Withheld only
               </ToggleButton>
               <ToggleButton value="reported">Reported</ToggleButton>
             </ToggleButtonGroup>
-            {paymentChannel === 'abroad' && (
+            {minimumTaxApplies ? (
+              <FormHelperText sx={minimumTaxWarningSx}>{MINIMUM_TAX_REPORTING_NOTE}</FormHelperText>
+            ) : paymentChannel === 'abroad' ? (
               <FormHelperText>A dividend paid abroad has to be reported.</FormHelperText>
-            )}
+            ) : null}
           </FormControl>
         )}
 
@@ -1068,7 +1178,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     {...(info.min !== undefined && { min: info.min })}
                   />
                   <ToggleButtonGroup
-                    value={reportsCapitalGains ? 'reported' : 'withheldOnly'}
+                    value={minimumTaxApplies || reportsCapitalGains ? 'reported' : 'withheldOnly'}
                     exclusive
                     onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
                       if (newValue) {
@@ -1079,11 +1189,18 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     size="small"
                     sx={variantToggleGroupSx}
                   >
-                    <ToggleButton value="withheldOnly">Withheld only</ToggleButton>
+                    <ToggleButton value="withheldOnly" disabled={minimumTaxApplies}>
+                      Withheld only
+                    </ToggleButton>
                     <ToggleButton value="reported">Reported</ToggleButton>
                   </ToggleButtonGroup>
                 </Box>
                 <FormHelperText id="account-sales-help">{info.amountHelperText}</FormHelperText>
+                {minimumTaxApplies && (
+                  <FormHelperText sx={minimumTaxWarningSx}>
+                    {MINIMUM_TAX_REPORTING_NOTE}
+                  </FormHelperText>
+                )}
               </FormControl>
               <FormControl fullWidth>
                 <FormLabel id="account-dividends-reporting-label" sx={variantLabelSx}>
@@ -1098,7 +1215,11 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     sx={figureFieldSx}
                   />
                   <ToggleButtonGroup
-                    value={dividendsForced || reportsDividends ? 'reported' : 'withheldOnly'}
+                    value={
+                      minimumTaxApplies || dividendsForced || reportsDividends
+                        ? 'reported'
+                        : 'withheldOnly'
+                    }
                     exclusive
                     onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
                       if (newValue) {
@@ -1109,7 +1230,10 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                     size="small"
                     sx={variantToggleGroupSx}
                   >
-                    <ToggleButton value="withheldOnly" disabled={dividendsForced}>
+                    <ToggleButton
+                      value="withheldOnly"
+                      disabled={minimumTaxApplies || dividendsForced}
+                    >
                       Withheld only
                     </ToggleButton>
                     <ToggleButton value="reported">Reported</ToggleButton>
@@ -1118,11 +1242,15 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 <FormHelperText id="account-dividends-help">
                   Enter the total amount before withholding.
                 </FormHelperText>
-                {dividendsForced && (
+                {minimumTaxApplies ? (
+                  <FormHelperText sx={minimumTaxWarningSx}>
+                    {MINIMUM_TAX_REPORTING_NOTE}
+                  </FormHelperText>
+                ) : dividendsForced ? (
                   <FormHelperText>
                     Reporting this account's loss requires reporting its dividends as well.
                   </FormHelperText>
-                )}
+                ) : null}
               </FormControl>
               <FormControl fullWidth>
                 {/* The report row's name is on the group rather than the field, whose label is too
