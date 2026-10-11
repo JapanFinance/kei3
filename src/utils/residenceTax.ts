@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
+import type { PremiumRate } from '../data/premiumRate';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import {
@@ -258,8 +259,9 @@ export const calculateResidenceTax = (
   const taxableCapitalGains = floorTaxableIncome(classes.capitalGains);
   const rates = getInvestmentIncomeTaxRates(year);
   const separateTaxableIncome = taxableDividends + taxableCapitalGains;
-  const separateCityIncomeTax = separateTaxableIncome * rates.listedAssessedMunicipalRate;
-  const separatePrefecturalIncomeTax = separateTaxableIncome * rates.listedAssessedPrefecturalRate;
+  const separateCityIncomeTax = rates.listedReportedMunicipalRate.taxOn(separateTaxableIncome);
+  const separatePrefecturalIncomeTax =
+    rates.listedReportedPrefecturalRate.taxOn(separateTaxableIncome);
 
   const personalDeductionDifference =
     calculateStatutoryPersonalDeductionDifference(dependentDeductions, netIncome) +
@@ -658,8 +660,8 @@ export function calculateFurusatoLimit(
   }
 
   const separateNationalRate = reported
-    ? getInvestmentIncomeTaxRates(reported.year).listedAssessedNationalRate
-    : 0;
+    ? getInvestmentIncomeTaxRates(reported.year).listedReportedNationalRate
+    : undefined;
 
   // 調整控除後・住宅ローン控除前の所得割 — the base for the 20% special-deduction cap. It includes
   // the 所得割 on reported investment income (地方税法附則第33条の2第3項第4号, 第35条の2第4項
@@ -775,8 +777,8 @@ export function calculateFurusatoNozeiDetails(
     capitalGains: reported?.nationalTaxable.capitalGains ?? 0,
   };
   const separateNationalRate = reported
-    ? getInvestmentIncomeTaxRates(reported.year).listedAssessedNationalRate
-    : 0;
+    ? getInvestmentIncomeTaxRates(reported.year).listedReportedNationalRate
+    : undefined;
 
   let incomeTaxReduction = calculateIncomeTaxReduction(
     nationalClasses,
@@ -841,11 +843,15 @@ export function calculateFurusatoNozeiDetails(
  * `separateNationalRate` on the 申告分離課税 classes, the 復興特別所得税 on both, floored to
  * ¥100 — the same steps calculateTaxes takes.
  */
-function nationalIncomeTaxOnClasses(classes: IncomeClassAmounts, separateNationalRate: number) {
-  const base =
-    calculateNationalIncomeTaxBase(floorTaxableIncome(classes.aggregate)) +
-    (floorTaxableIncome(classes.dividends) + floorTaxableIncome(classes.capitalGains)) *
-      separateNationalRate;
+function nationalIncomeTaxOnClasses(
+  classes: IncomeClassAmounts,
+  separateNationalRate: PremiumRate | undefined,
+) {
+  const separateBase =
+    floorTaxableIncome(classes.dividends) + floorTaxableIncome(classes.capitalGains);
+  const separateTax =
+    separateNationalRate && separateBase > 0 ? separateNationalRate.taxOn(separateBase) : 0;
+  const base = calculateNationalIncomeTaxBase(floorTaxableIncome(classes.aggregate)) + separateTax;
   return Math.floor((base + calculateReconstructionSurtax(base)) / 100) * 100;
 }
 
@@ -858,7 +864,7 @@ function nationalIncomeTaxOnClasses(classes: IncomeClassAmounts, separateNationa
 function calculateIncomeTaxReduction(
   classes: IncomeClassAmounts,
   furusatoNozeiDeduction: number,
-  separateNationalRate: number,
+  separateNationalRate: PremiumRate | undefined,
 ): number {
   const incomeTaxBefore = nationalIncomeTaxOnClasses(classes, separateNationalRate);
   const incomeTaxAfter = nationalIncomeTaxOnClasses(
@@ -904,12 +910,12 @@ function calculateIncomeTaxReduction(
 function getSpecialDeductionMultiplier(
   taxableIncome: number,
   personalDeductionDifference: number,
-  separateNationalRate: number | undefined,
+  separateNationalRate: PremiumRate | undefined,
 ): number {
   const adjustedTaxableIncome = taxableIncome - personalDeductionDifference;
   let incomeTaxRate: number;
   if (separateNationalRate !== undefined && (taxableIncome <= 0 || adjustedTaxableIncome < 0)) {
-    incomeTaxRate = separateNationalRate;
+    incomeTaxRate = separateNationalRate.rate;
   } else if (adjustedTaxableIncome <= 1950000) incomeTaxRate = 0.05;
   else if (adjustedTaxableIncome <= 3300000) incomeTaxRate = 0.1;
   else if (adjustedTaxableIncome <= 6950000) incomeTaxRate = 0.2;

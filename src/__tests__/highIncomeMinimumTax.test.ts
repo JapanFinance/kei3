@@ -14,7 +14,12 @@ import {
   EMPTY_PERSONAL_CIRCUMSTANCES,
   type TakeHomeInputs,
 } from '../types/tax';
-import { calculateHighIncomeMinimumTax } from '../utils/highIncomeMinimumTax';
+import {
+  calculateHighIncomeBaselineIncome,
+  calculateHighIncomeMinimumTax,
+  calculateNormalBaselineTax,
+  isHighIncomeMinimumTaxApplicable,
+} from '../utils/highIncomeMinimumTax';
 import { calculateTaxes } from '../utils/taxCalculations';
 
 const createBaseInputs = (overrides: Partial<TakeHomeInputs> = {}): TakeHomeInputs => ({
@@ -83,12 +88,7 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
   // ㉒ = 160,983,622
   // ㉓ = 162,675,000 - 160,983,622 = 1,691,378
   it('exactly reproduces the official NTA example from Form tokutei.pdf', () => {
-    const result = calculateHighIncomeMinimumTax({
-      baselineIncome: 1_053_000_000,
-      incomeYear: 2025,
-      baseIncomeTaxAll: 157_672_500,
-      normalBaselineTax: 160_983_622,
-    });
+    const result = calculateHighIncomeMinimumTax(1_053_000_000, 2025, 157_672_500, 0, 160_983_622);
 
     expect(result).toBeDefined();
     expect(result?.baselineIncome).toBe(1_053_000_000);
@@ -104,21 +104,11 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
 
   it('returns undefined when baseline income is at or below the statutory threshold', () => {
     expect(
-      calculateHighIncomeMinimumTax({
-        baselineIncome: 330_000_000,
-        incomeYear: 2025,
-        baseIncomeTaxAll: 40_000_000,
-        normalBaselineTax: 40_840_000,
-      }),
+      calculateHighIncomeMinimumTax(330_000_000, 2025, 40_000_000, 0, 40_840_000),
     ).toBeUndefined();
 
     expect(
-      calculateHighIncomeMinimumTax({
-        baselineIncome: 200_000_000,
-        incomeYear: 2025,
-        baseIncomeTaxAll: 20_000_000,
-        normalBaselineTax: 20_420_000,
-      }),
+      calculateHighIncomeMinimumTax(200_000_000, 2025, 20_000_000, 0, 20_420_000),
     ).toBeUndefined();
   });
 
@@ -132,12 +122,7 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
     expect(taxOnExcess).toBeLessThan(normalBaselineTax);
 
     expect(
-      calculateHighIncomeMinimumTax({
-        baselineIncome,
-        incomeYear: 2025,
-        baseIncomeTaxAll,
-        normalBaselineTax,
-      }),
+      calculateHighIncomeMinimumTax(baselineIncome, 2025, baseIncomeTaxAll, 0, normalBaselineTax),
     ).toBeUndefined();
   });
 
@@ -148,12 +133,7 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
     // Normal tax = 400M * 15% = 60M; baseIncomeTax = 60M
     // Baseline income tax with surtax = 60M + 1.26M = 61.26M
     // Additional income tax = 70.5M - 61.26M = 9.24M
-    const result = calculateHighIncomeMinimumTax({
-      baselineIncome: 400_000_000,
-      incomeYear: 2027,
-      baseIncomeTaxAll: 60_000_000,
-      normalBaselineTax: 61_260_000,
-    });
+    const result = calculateHighIncomeMinimumTax(400_000_000, 2027, 60_000_000, 0, 61_260_000);
 
     expect(result).toBeDefined();
     expect(result?.threshold).toBe(165_000_000);
@@ -162,6 +142,59 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
     expect(result?.taxOnExcess).toBe(70_500_000);
     expect(result?.baselineIncomeTax).toBe(61_260_000);
     expect(result?.additionalIncomeTax).toBe(9_240_000);
+  });
+
+  it('automatically calculates normalBaselineTax from baseIncomeTax when omitted', () => {
+    // Tokutei example: baseIncomeTax = 157,672,500. Box ㉑ = 3,311,122. Box ㉒ = 160,983,622.
+    const result = calculateHighIncomeMinimumTax(1_053_000_000, 2025, 157_672_500);
+
+    expect(result).toBeDefined();
+    expect(result?.baselineIncomeTax).toBe(160_983_622);
+    expect(result?.additionalIncomeTax).toBe(1_691_378);
+  });
+});
+
+describe('Minimum Tax Helper Functions', () => {
+  it('calculateHighIncomeBaselineIncome correctly sums aggregate, separate, and withholding base', () => {
+    expect(
+      calculateHighIncomeBaselineIncome(
+        3_000_000,
+        { capitalGains: 50_000_000, dividends: 1_000_000_000 },
+        200_000_000,
+      ),
+    ).toBe(1_253_000_000);
+
+    expect(calculateHighIncomeBaselineIncome(50_000_000, { capitalGains: 0, dividends: 0 })).toBe(
+      50_000_000,
+    );
+  });
+
+  it('calculateNormalBaselineTax computes base tax + surtax + withholding tax', () => {
+    // Base 10,000,000 + 2.1% surtax (210,000) = 10,210,000 (no withholding)
+    expect(calculateNormalBaselineTax(10_000_000, 2025)).toBe(10_210_000);
+
+    // With 100,000,000 withholding base: 100M * 15.315% = 15,315,000
+    // Total = 10,210,000 + 15,315,000 = 25,525,000
+    expect(calculateNormalBaselineTax(10_000_000, 2025, 100_000_000)).toBe(25_525_000);
+  });
+
+  it('isHighIncomeMinimumTaxApplicable gates applicability correctly', () => {
+    // Below threshold
+    expect(isHighIncomeMinimumTaxApplicable(300_000_000, 2025, 40_000_000)).toBe(false);
+
+    // Prior to 2025
+    expect(isHighIncomeMinimumTaxApplicable(1_000_000_000, 2024, 100_000_000)).toBe(false);
+
+    // Target tax > normal baseline tax -> true
+    expect(isHighIncomeMinimumTaxApplicable(1_053_000_000, 2025, 157_672_500)).toBe(true);
+
+    // With withholding base: 1.053B baseline, 100M base tax, 500M withholding base -> target tax 162.675M vs normal baseline tax (102.1M + 76.575M = 178.675M) -> false
+    expect(isHighIncomeMinimumTaxApplicable(1_053_000_000, 2025, 100_000_000, 500_000_000)).toBe(
+      false,
+    );
+
+    // High progressive tax exceeding target tax -> false
+    expect(isHighIncomeMinimumTaxApplicable(500_000_000, 2025, 210_000_000)).toBe(false);
   });
 });
 

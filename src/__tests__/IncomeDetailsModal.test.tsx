@@ -788,7 +788,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     expect(screen.getByText('Reported, no withholding')).toBeInTheDocument();
     expect(screen.getAllByText('Reported')).toHaveLength(2);
 
-    // Clicking edit on the withholding account opens the form with forced reporting
+    // Clicking edit on the withholding account opens the form with forced reporting under minimum tax
     const editButtons = screen.getAllByRole('button', { name: /edit income/i });
     // Edit button for withholding account (second stream)
     expect(editButtons[1]).toBeDefined();

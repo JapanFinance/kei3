@@ -98,6 +98,11 @@ export class PremiumRate {
     return new PremiumRate(this.#units, this.#scale * parts);
   }
 
+  /** The rate as a decimal number (e.g. 0.15 for 15%). */
+  get rate(): number {
+    return this.#units / this.#scale;
+  }
+
   /** The rate as a percentage, to at most `decimals` decimal places: 5.075% reads "5.075%". */
   toPercent(decimals?: number): string {
     return formatPercent(this.#units / this.#scale, decimals);

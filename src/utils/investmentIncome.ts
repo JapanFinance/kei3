@@ -49,11 +49,11 @@ export const calculateWithheldInvestmentTax = (
 ): WithheldInvestmentTax => {
   const rates = getInvestmentIncomeTaxRates(year);
 
-  const listedNational = Math.floor(bases.listed * rates.listedNationalRate);
-  const listedResidence = Math.floor(bases.listed * rates.listedResidenceRate);
+  const listedNational = rates.listedWithholdingNationalRate.taxOn(bases.listed);
+  const listedResidence = rates.listedWithholdingResidenceRate.taxOn(bases.listed);
 
-  const interestNational = Math.floor(bases.interest * rates.interestNationalRate);
-  const interestResidence = Math.floor(bases.interest * rates.interestResidenceRate);
+  const interestNational = rates.interestWithholdingNationalRate.taxOn(bases.interest);
+  const interestResidence = rates.interestWithholdingResidenceRate.taxOn(bases.interest);
 
   const national = listedNational + interestNational;
   const residence = listedResidence + interestResidence;
@@ -147,5 +147,6 @@ export const calculateSeparateNationalIncomeTaxBase = (
   taxable: SeparateNetIncome,
   year: number,
 ): number =>
-  (taxable.dividends + taxable.capitalGains) *
-  getInvestmentIncomeTaxRates(year).listedAssessedNationalRate;
+  getInvestmentIncomeTaxRates(year).listedReportedNationalRate.taxOn(
+    taxable.dividends + taxable.capitalGains,
+  );

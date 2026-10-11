@@ -25,7 +25,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
@@ -182,13 +182,24 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   const totalIncome = totalAnnualIncomeFromStreams(streams);
 
   const minimumTaxApplies = useMemo(() => {
-    if (!calculationInputs) return false;
-    try {
-      return calculateTaxes(calculationInputs).highIncomeMinimumTax !== undefined;
-    } catch {
-      return false;
-    }
+    return calculationInputs
+      ? calculateTaxes(calculationInputs).highIncomeMinimumTax !== undefined
+      : false;
   }, [calculationInputs]);
+
+  const checkMinimumTax = useCallback(
+    (draftStream: IncomeStream, excludeId?: string) => {
+      if (!calculationInputs) return false;
+      const baseStreams = streams.filter(s => s.id !== excludeId);
+      return (
+        calculateTaxes({
+          ...calculationInputs,
+          incomeStreams: [...baseStreams, draftStream],
+        }).highIncomeMinimumTax !== undefined
+      );
+    },
+    [calculationInputs, streams],
+  );
 
   const getStreamDescription = (stream: IncomeStream) => {
     switch (stream.type) {
@@ -595,9 +606,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             type={view.type}
             onSave={handleSaveStream}
             onCancel={showList}
-            calculationInputs={calculationInputs}
-            otherStreams={streams}
-            incomeYear={calculationInputs?.incomeYear}
+            isMinimumTaxTriggered={draft => checkMinimumTax(draft)}
           />
         ) : view.kind === 'edit' ? (
           <IncomeStreamForm
@@ -606,9 +615,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             initialData={view.stream}
             onSave={handleSaveStream}
             onCancel={showList}
-            calculationInputs={calculationInputs}
-            otherStreams={streams.filter(s => s.id !== view.stream.id)}
-            incomeYear={calculationInputs?.incomeYear}
+            isMinimumTaxTriggered={draft => checkMinimumTax(draft, view.stream.id)}
           />
         ) : (
           <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>
