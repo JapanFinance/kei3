@@ -89,7 +89,7 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
   // ㉒ = 160,983,622
   // ㉓ = 162,675,000 - 160,983,622 = 1,691,378
   it('exactly reproduces the official NTA example from Form tokutei.pdf', () => {
-    const result = calculateHighIncomeMinimumTax(1_053_000_000, 2025, 157_672_500);
+    const result = calculateHighIncomeMinimumTax(1_053_000_000, 2026, 157_672_500);
 
     expect(result).toBeDefined();
     expect(result?.baselineIncome).toBe(1_053_000_000);
@@ -117,7 +117,7 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
     const baselineTax = baseIncomeTaxAll + RECONSTRUCTION_SURTAX_RATE.taxOn(baseIncomeTaxAll);
     expect(taxOnExcess).toBeLessThan(baselineTax);
 
-    expect(calculateHighIncomeMinimumTax(baselineIncome, 2025, baseIncomeTaxAll)).toBeUndefined();
+    expect(calculateHighIncomeMinimumTax(baselineIncome, 2026, baseIncomeTaxAll)).toBeUndefined();
   });
 
   it('applies 2027 parameters (¥165M threshold, 30% rate)', () => {
@@ -206,7 +206,7 @@ describe('calculateTaxes End-to-End Integration with High Income Minimum Tax', (
       ],
       manualSocialInsuranceEntry: true,
       manualSocialInsuranceAmount: 300_000,
-      incomeYear: 2025,
+      incomeYear: 2026,
     });
 
     const results = calculateTaxes(inputs);
