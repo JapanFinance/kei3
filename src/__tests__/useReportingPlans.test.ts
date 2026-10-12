@@ -313,7 +313,46 @@ describe('useReportingPlans', () => {
     expect(bestRow).toBeDefined();
     expect(bestRow.canApply).toBe(true);
     expect(bestRow.changes).toEqual([
-      'Account 1 (sales ¥1,100,000,000, dividends ¥0): report both the sales and the dividends.',
+      'Account 1 (sales ¥1,100,000,000, dividends ¥0): report the sales only.',
     ]);
+  });
+
+  it('evaluates separate and aggregate taxation when minimum tax applies with dividends', async () => {
+    // 1.5B capital gain triggers minimum tax in 2026, with 1M in dividends
+    const minTaxWithDividendsInputs = salaryInputs(
+      [
+        account({
+          id: 'a',
+          capitalGains: 1_500_000_000,
+          dividends: 1_000_000,
+          reportsCapitalGains: true,
+          reportsDividends: true,
+        }),
+      ],
+      0,
+    );
+
+    const { result } = renderPlans(minTaxWithDividendsInputs, true, { chunkMs: 0 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    const rows = result.current.rows!;
+    expect(rows).toBeDefined();
+
+    // Withheld-only is not offered
+    expect(rows.some(r => r.key === 'withheldOnly')).toBe(false);
+
+    // Both separate and aggregate options are present
+    const separateRow = rows.find(r => r.key === 'separate')!;
+    const aggregateRow = rows.find(r => r.key === 'aggregate')!;
+    expect(separateRow).toBeDefined();
+    expect(aggregateRow).toBeDefined();
+
+    // Separate taxation keeps more take-home than aggregate taxation
+    expect(separateRow.evaluated.figures.kept).toBeGreaterThan(aggregateRow.evaluated.figures.kept);
+
+    // Best plan is separate
+    expect(separateRow.roles).toContain('best');
   });
 });

@@ -631,45 +631,6 @@ describe('isBetterPlan ties', () => {
     expect(isBetterPlan(neitherReported, onlyBReported, inputs, units)).toBe(true);
     expect(isBetterPlan(onlyBReported, neitherReported, inputs, units)).toBe(false);
   });
-
-  it('prefers more reported units when high-income minimum tax applies', () => {
-    const accountA = account({ id: 'a', capitalGains: 500_000, reportsCapitalGains: false });
-    const inputs = salaryInputs([accountA]);
-    const units = deriveReportingUnits(inputs.incomeStreams, true);
-    const salaryStream = inputs.incomeStreams[0]!;
-
-    const fake = (kept: number): EvaluatedPlan => ({
-      streams: [],
-      election: 'separate',
-      figures: {
-        kept,
-        incomeTax: 0,
-        residenceTax: 0,
-        socialInsurance: 0,
-        furusatoNozeiLimit: 0,
-        totalIncome: 0,
-      },
-    });
-
-    const reported: PlanEvaluation = {
-      plan: {
-        streams: [salaryStream, { ...accountA, reportsCapitalGains: true }],
-        election: 'separate',
-      },
-      evaluated: fake(1_000),
-    };
-    const withheld: PlanEvaluation = {
-      plan: {
-        streams: [salaryStream, { ...accountA, reportsCapitalGains: false }],
-        election: 'separate',
-      },
-      evaluated: fake(1_000),
-    };
-
-    // Under minimum tax, reporting is mandatory by statute (措法41条の19), so reported beats withheld.
-    expect(isBetterPlan(reported, withheld, inputs, units, true)).toBe(true);
-    expect(isBetterPlan(withheld, reported, inputs, units, true)).toBe(false);
-  });
 });
 
 describe('neighbourPlans', () => {

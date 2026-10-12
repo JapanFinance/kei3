@@ -123,7 +123,7 @@ const withholdingAccountStates = (
   const hasDividends = account.dividends > 0;
 
   if (minimumTaxApplies) {
-    return [withholdingAccountState(true, true, hasDividends)];
+    return [withholdingAccountState(true, hasDividends, hasDividends)];
   }
 
   if (hasGain && hasDividends) {
@@ -424,36 +424,22 @@ export const evaluatePlan = (inputs: TakeHomeInputs, plan: ReportingPlan): Evalu
 /**
  * Whether the high-income minimum tax (措法41条の19) applies to `inputs`.
  */
-export const isMinimumTaxApplicable = (inputs: TakeHomeInputs): boolean => {
-  try {
-    return calculateTaxes(inputs).highIncomeMinimumTax !== undefined;
-  } catch {
-    return false;
-  }
-};
+export const isMinimumTaxApplicable = (inputs: TakeHomeInputs): boolean =>
+  calculateTaxes(inputs).highIncomeMinimumTax !== undefined;
 
 /**
  * Whether `candidate` should replace `best` as the best plan found so far (7.3.3): a strictly
- * higher `kept` wins outright; a tie prefers whichever already matches the current entries
- * (avoiding suggesting an unnecessary switch when take-home is unchanged), then fewer reported
- * units. Under the high-income minimum tax (措法41条の19), reporting is mandatory, so more reported
- * units is preferred over leaving entries withheld.
+ * higher `kept` wins outright; a tie prefers fewer reported units, then whichever of the two
+ * already matches the current entries.
  */
 export const isBetterPlan = (
   candidate: PlanEvaluation,
   best: PlanEvaluation,
   inputs: TakeHomeInputs,
   units: readonly ReportingUnit[],
-  minimumTaxApplies?: boolean,
 ): boolean => {
   if (candidate.evaluated.figures.kept !== best.evaluated.figures.kept) {
     return candidate.evaluated.figures.kept > best.evaluated.figures.kept;
-  }
-  const minTax = minimumTaxApplies ?? isMinimumTaxApplicable(inputs);
-  if (minTax) {
-    const candidateReported = reportedUnitCount(units, candidate.plan.streams);
-    const bestReported = reportedUnitCount(units, best.plan.streams);
-    if (candidateReported !== bestReported) return candidateReported > bestReported;
   }
   const candidateIsCurrent = planMatchesCurrent(units, candidate.plan, inputs);
   const bestIsCurrent = planMatchesCurrent(units, best.plan, inputs);
@@ -474,9 +460,7 @@ export function* descendFromPlan(
   inputs: TakeHomeInputs,
   units: readonly ReportingUnit[],
   start: PlanEvaluation,
-  minimumTaxApplies?: boolean,
 ): Generator<PlanEvaluation, PlanEvaluation> {
-  const minTax = minimumTaxApplies ?? isMinimumTaxApplicable(inputs);
   let current = start;
   for (;;) {
     let best = current;
@@ -487,7 +471,7 @@ export function* descendFromPlan(
         evaluated: evaluatePlan(inputs, neighbour),
       };
       yield candidate;
-      if (isBetterPlan(candidate, best, inputs, units, minTax)) {
+      if (isBetterPlan(candidate, best, inputs, units)) {
         best = candidate;
         improved = true;
       }
@@ -510,12 +494,10 @@ export function* multiStartDescent(
   inputs: TakeHomeInputs,
   units: readonly ReportingUnit[],
   starts: readonly PlanEvaluation[],
-  minimumTaxApplies?: boolean,
 ): Generator<PlanEvaluation, PlanEvaluation> {
-  const minTax = minimumTaxApplies ?? isMinimumTaxApplicable(inputs);
   let best = starts[0]!;
   for (const start of starts) {
-    if (isBetterPlan(start, best, inputs, units, minTax)) best = start;
+    if (isBetterPlan(start, best, inputs, units)) best = start;
     const variants = [start];
     if (planReportsDividend(units, start.plan.streams)) {
       const plan: ReportingPlan = {
@@ -524,12 +506,12 @@ export function* multiStartDescent(
       };
       const flipped: PlanEvaluation = { plan, evaluated: evaluatePlan(inputs, plan) };
       yield flipped;
-      if (isBetterPlan(flipped, best, inputs, units, minTax)) best = flipped;
+      if (isBetterPlan(flipped, best, inputs, units)) best = flipped;
       variants.push(flipped);
     }
     for (const variant of variants) {
-      const result = yield* descendFromPlan(inputs, units, variant, minTax);
-      if (isBetterPlan(result, best, inputs, units, minTax)) best = result;
+      const result = yield* descendFromPlan(inputs, units, variant);
+      if (isBetterPlan(result, best, inputs, units)) best = result;
     }
   }
   return best;
@@ -549,8 +531,7 @@ export const descend = (
   inputs: TakeHomeInputs,
   units: readonly ReportingUnit[],
   start: PlanEvaluation,
-  minimumTaxApplies?: boolean,
-): PlanEvaluation => drainDescent(descendFromPlan(inputs, units, start, minimumTaxApplies));
+): PlanEvaluation => drainDescent(descendFromPlan(inputs, units, start));
 
 // English names matching the election toggle in IncomeDetailsModal.tsx ("Separate"/"Aggregate"),
 // paired with the statutory terms.
