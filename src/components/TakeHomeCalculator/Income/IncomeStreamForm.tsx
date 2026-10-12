@@ -113,9 +113,9 @@ const LISTED_SHARE_SOURCES = {
   ],
 };
 
-// What happens to foreign tax on a dividend, for the reporting tooltip and the guidance box.
+// What happens to foreign tax on a dividend, for the reporting tooltip and the guidance box (措法9条の2③, 措令4条の5⑫).
 const FOREIGN_DIVIDEND_TAX_NOTE =
-  'For a dividend from a foreign company or fund left to withholding, the 20.315% is charged on the dividend after the foreign tax, and the foreign tax is not credited (措法9条の2③, 措令4条の5⑫). Reported, the foreign tax is credited against the Japanese income tax and residence tax, up to limits set by the share of foreign-source income in total net income; with no income tax, there is nothing to credit it against. Foreign tax above the limits can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.';
+  'For a dividend from a foreign company or fund left to withholding, the 20.315% is charged on the dividend after the foreign tax, and the foreign tax is not credited. Reported, the foreign tax is credited against the Japanese income tax and residence tax, up to limits set by the share of foreign-source income in total net income; with no income tax, there is nothing to credit it against. Foreign tax above the limits can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.';
 
 const guidanceBoxSx = {
   p: 1.5,
@@ -605,13 +605,14 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 icon={SIMPLE_TOOLTIP_ICON}
                 iconAriaLabel="account info"
               >
+                {/* 措法37条の12の2② requires sales to be through a licensed broker in Japan to offset dividends or carry forward */}
                 <Typography sx={{ display: 'block' }}>
                   A designated account without withholding (特定口座（源泉徴収なし）) and a general
                   account (一般口座) are one option here because they have the same tax treatment. A
                   foreign account is its own option because a sale there is not made through a
                   broker licensed in Japan (金融商品取引業者), which the law requires of a loss for
-                  it to offset dividends or be carried forward (措法37条の12の2②). A loss in a
-                  foreign account only offsets the year's other reported gains.
+                  it to offset dividends or be carried forward. A loss in a foreign account only
+                  offsets the year's other reported gains.
                 </Typography>
               </DetailedTooltip>
             </FormHelperText>
@@ -790,15 +791,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   <strong>Japanese system</strong> is a pension under a Japanese system, even when
                   it is paid abroad.
                 </Typography>
-                <SourceLinks
-                  sources={[
-                    NTA_TAX_ANSWERS.foreignTaxCredit,
-                    {
-                      href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
-                      label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
-                    },
-                  ]}
-                />
+                {/* 所得税法第95条 */}
+                <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
               </DetailedTooltip>
             </FormLabel>
             <ToggleButtonGroup
@@ -856,7 +850,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   <li>The treaty explicitly permits source-country taxation (e.g. Germany).</li>
                   <li>
                     Foreign government or military service pensions where the paying country retains
-                    taxation rights under the treaty (Article 19).
+                    taxation rights under the treaty (e.g. government service provisions).
                   </li>
                   <li>
                     Countries or territories without a tax treaty with Japan (e.g. Nepal, Myanmar,
@@ -867,15 +861,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   Pensions that are exempt from Japanese tax under a treaty should not be entered in
                   this calculator.
                 </Typography>
-                <SourceLinks
-                  sources={[
-                    NTA_TAX_ANSWERS.foreignTaxCredit,
-                    {
-                      href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
-                      label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
-                    },
-                  ]}
-                />
+                {/* 所得税法第95条 */}
+                <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
               </DetailedTooltip>
             </FormLabel>
             <ToggleButtonGroup

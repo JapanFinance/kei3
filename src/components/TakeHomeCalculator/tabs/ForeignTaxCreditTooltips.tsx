@@ -20,13 +20,8 @@ const NTA_SOURCE: Source = {
   label: 'Foreign tax credit (外国税額控除) - NTA',
 };
 
-const SOURCES: Source[] = [
-  NTA_SOURCE,
-  {
-    href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
-    label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
-  },
-];
+// Statutory basis: 所得税法第95条
+const SOURCES: Source[] = [NTA_SOURCE];
 
 interface AmountRow {
   label: string;
@@ -92,13 +87,14 @@ const WithheldForeignTaxNote: React.FC<{ withheldForeignTax: number; isAll: bool
   withheldForeignTax,
   isAll,
 }) => (
+  // 措令4条の5⑫, 措法9条の2③
   <Note>
     {isAll
       ? `All the foreign tax paid, ${formatJPY(withheldForeignTax)}, is on dividends left to withholding.`
       : `The ${formatJPY(withheldForeignTax)} of foreign tax on dividends left to withholding is not eligible.`}{' '}
-    Foreign tax on dividends left to withholding is not credited (措令4条の5⑫); instead, the
-    Japanese withholding is charged on the dividends after it (措法9条の2③). Reporting the dividends
-    would let the foreign tax be credited, within the limits.
+    Foreign tax on dividends left to withholding is not credited; instead, the Japanese withholding
+    is charged on the dividends after it. Reporting the dividends would let the foreign tax be
+    credited, within the limits.
   </Note>
 );
 
@@ -451,10 +447,11 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
             statement (外国税額控除に関する明細書) to the tax return each year.
           </Note>
         )}
+        {/* 措令4条の5⑫, 措法9条の2③ */}
         {withheldForeignTax > 0 && (
           <Note>
-            Foreign tax on dividends left to withholding is not credited (措令4条の5⑫); instead, the
-            Japanese withholding is charged on the dividends after it (措法9条の2③).
+            Foreign tax on dividends left to withholding is not credited; instead, the Japanese
+            withholding is charged on the dividends after it.
           </Note>
         )}
         {credit?.manualForeignTax !== undefined && (
