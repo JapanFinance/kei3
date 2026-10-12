@@ -7,6 +7,7 @@ import {
   getHighIncomeMinimumTaxParams,
   HIGH_INCOME_MINIMUM_TAX_PERIODS,
 } from '../data/highIncomeMinimumTax';
+import { RECONSTRUCTION_SURTAX_RATE } from '../data/nationalIncomeTaxBrackets';
 import { percentTo } from '../data/premiumRate';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import {
@@ -88,7 +89,7 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
   // ㉒ = 160,983,622
   // ㉓ = 162,675,000 - 160,983,622 = 1,691,378
   it('exactly reproduces the official NTA example from Form tokutei.pdf', () => {
-    const result = calculateHighIncomeMinimumTax(1_053_000_000, 2025, 157_672_500, 0, 160_983_622);
+    const result = calculateHighIncomeMinimumTax(1_053_000_000, 2025, 157_672_500);
 
     expect(result).toBeDefined();
     expect(result?.baselineIncome).toBe(1_053_000_000);
@@ -103,13 +104,8 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
   });
 
   it('returns undefined when baseline income is at or below the statutory threshold', () => {
-    expect(
-      calculateHighIncomeMinimumTax(330_000_000, 2025, 40_000_000, 0, 40_840_000),
-    ).toBeUndefined();
-
-    expect(
-      calculateHighIncomeMinimumTax(200_000_000, 2025, 20_000_000, 0, 20_420_000),
-    ).toBeUndefined();
+    expect(calculateHighIncomeMinimumTax(330_000_000, 2025, 40_000_000)).toBeUndefined();
+    expect(calculateHighIncomeMinimumTax(200_000_000, 2025, 20_000_000)).toBeUndefined();
   });
 
   it('returns undefined when tax on excess does not exceed baseline income tax', () => {
@@ -118,12 +114,10 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
     const taxableExcess = baselineIncome - 330_000_000; // 170M
     const taxOnExcess = taxableExcess * 0.225; // 38.25M
     const baseIncomeTaxAll = 210_000_000;
-    const normalBaselineTax = Math.floor(baseIncomeTaxAll * 1.021);
-    expect(taxOnExcess).toBeLessThan(normalBaselineTax);
+    const baselineTax = baseIncomeTaxAll + RECONSTRUCTION_SURTAX_RATE.taxOn(baseIncomeTaxAll);
+    expect(taxOnExcess).toBeLessThan(baselineTax);
 
-    expect(
-      calculateHighIncomeMinimumTax(baselineIncome, 2025, baseIncomeTaxAll, 0, normalBaselineTax),
-    ).toBeUndefined();
+    expect(calculateHighIncomeMinimumTax(baselineIncome, 2025, baseIncomeTaxAll)).toBeUndefined();
   });
 
   it('applies 2027 parameters (¥165M threshold, 30% rate)', () => {
@@ -133,7 +127,7 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
     // Normal tax = 400M * 15% = 60M; baseIncomeTax = 60M
     // Baseline income tax with surtax = 60M + 1.26M = 61.26M
     // Additional income tax = 70.5M - 61.26M = 9.24M
-    const result = calculateHighIncomeMinimumTax(400_000_000, 2027, 60_000_000, 0, 61_260_000);
+    const result = calculateHighIncomeMinimumTax(400_000_000, 2027, 60_000_000);
 
     expect(result).toBeDefined();
     expect(result?.threshold).toBe(165_000_000);
@@ -142,15 +136,6 @@ describe('calculateHighIncomeMinimumTax (Statutory Formula)', () => {
     expect(result?.taxOnExcess).toBe(70_500_000);
     expect(result?.baselineIncomeTax).toBe(61_260_000);
     expect(result?.additionalIncomeTax).toBe(9_240_000);
-  });
-
-  it('automatically calculates normalBaselineTax from baseIncomeTax when omitted', () => {
-    // Tokutei example: baseIncomeTax = 157,672,500. Box ㉑ = 3,311,122. Box ㉒ = 160,983,622.
-    const result = calculateHighIncomeMinimumTax(1_053_000_000, 2025, 157_672_500);
-
-    expect(result).toBeDefined();
-    expect(result?.baselineIncomeTax).toBe(160_983_622);
-    expect(result?.additionalIncomeTax).toBe(1_691_378);
   });
 });
 

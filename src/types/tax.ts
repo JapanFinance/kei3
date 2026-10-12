@@ -592,15 +592,15 @@ export interface HighIncomeMinimumTaxResult {
   threshold: number;
   /** Taxable excess above threshold (box ⑭, floored to ¥1,000). */
   taxableExcess: number;
-  /** Statutory tax rate (22.5% in 2025/2026, 30.0% in 2027+). */
+  /** Statutory tax rate on excess (22.5% in 2025/2026, 30.0% in 2027+). */
   rate: PremiumRate;
   /** Tax on excess: taxableExcess × rate (box ⑮). */
   taxOnExcess: number;
   /** Baseline income tax + surtax without 確定申告不要制度 (box ㉒). */
   baselineIncomeTax: number;
-  /** Additional income tax under Art. 41-19 (box ㉓, added to box ㊹). */
+  /** Additional income tax under Art. 41-19 (box ㉓, added to box ㊹ on the tax return). */
   additionalIncomeTax: number;
-  /** Reconstruction surtax on additional tax (Math.floor(additionalIncomeTax × 2.1%)). */
+  /** Reconstruction surtax on additional tax. */
   additionalReconstructionSurtax: number;
   /** Total additional tax (additionalIncomeTax + additionalReconstructionSurtax). */
   totalAdditionalTax: number;

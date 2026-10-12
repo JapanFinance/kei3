@@ -107,10 +107,6 @@ export const HighIncomeMinimumTaxTooltip: React.FC<HighIncomeMinimumTaxTooltipPr
               href: 'https://www.nta.go.jp/taxes/shiraberu/shinkoku/kiwataka/index.htm',
               label: '極めて高い水準の所得に対する負担の適正化措置について - NTA',
             },
-            {
-              href: 'https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/gengaku/01.pdf',
-              label: '適用判定表 兼 税額計算書 (Form 01.pdf) - NTA',
-            },
           ]}
         />
       </Box>

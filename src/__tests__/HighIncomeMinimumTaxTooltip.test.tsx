@@ -85,12 +85,6 @@ describe('HighIncomeMinimumTaxTooltip', () => {
     expect(
       screen.getByRole('link', { name: /極めて高い水準の所得に対する負担の適正化措置について/ }),
     ).toHaveAttribute('href', 'https://www.nta.go.jp/taxes/shiraberu/shinkoku/kiwataka/index.htm');
-    expect(
-      screen.getByRole('link', { name: /適用判定表 兼 税額計算書 \(Form 01\.pdf\)/ }),
-    ).toHaveAttribute(
-      'href',
-      'https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/gengaku/01.pdf',
-    );
   });
 });
 

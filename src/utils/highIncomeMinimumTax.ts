@@ -8,7 +8,7 @@ import type { HighIncomeMinimumTaxResult } from '../types/tax';
 import { floorTaxableIncome } from './investmentIncome';
 
 /**
- * Calculates 基準所得金額 (baseline income amount, box ⑬ on Form 01.pdf).
+ * Calculates 基準所得金額 (baseline income amount, box ⑬ on the form 適用判定表 兼 税額計算書).
  * Sum of aggregate net income (総所得金額) and separate investment income
  * (including amounts eligible for 確定申告不要制度; excluding domestic deposit interest).
  */
@@ -23,7 +23,7 @@ export const calculateHighIncomeBaselineIncome = (
   listedWithholdingBase;
 
 /**
- * Calculates baseline income tax under normal filing (box ⑱ on Form 01.pdf):
+ * Calculates baseline income tax under normal filing (box ⑱ on the form 適用判定表 兼 税額計算書):
  * normal income tax on the return + 2.1% surtax (box ⑯) plus national withholding tax
  * (15.315% including surtax) on amounts left to withholding (box ⑰).
  */
@@ -43,7 +43,7 @@ export const calculateNormalBaselineTax = (
 };
 
 /**
- * Tests whether the Minimum Tax on High Income Taxpayers applies (box ⑲ on Form 01.pdf).
+ * Tests whether the Minimum Tax on High Income Taxpayers applies (box ⑲ on the form 適用判定表 兼 税額計算書).
  *
  * The measure applies when:
  * 1. Statutory parameters exist for the given year (2025+).
@@ -54,29 +54,28 @@ export const calculateNormalBaselineTax = (
  * @param incomeYear Income calendar year
  * @param baseIncomeTax Income tax after home loan credit under normal filing
  * @param listedWithholdingBase National withholding tax base on amounts left to withholding
- * @param normalBaselineTax Optional pre-computed normal baseline tax (box ⑱) if already known
  */
 export const isHighIncomeMinimumTaxApplicable = (
   baselineIncome: number,
   incomeYear: number,
   baseIncomeTax: number,
   listedWithholdingBase: number = 0,
-  normalBaselineTax?: number,
 ): boolean => {
   const params = getHighIncomeMinimumTaxParams(incomeYear);
   if (!params) {
     return false;
   }
 
+  // Box ⑭
   const taxableExcess = floorTaxableIncome(baselineIncome - params.threshold);
   if (taxableExcess <= 0) {
     return false;
   }
 
+  // Box ⑮
   const taxOnExcess = params.rate.taxOn(taxableExcess);
-  const baselineTax =
-    normalBaselineTax ??
-    calculateNormalBaselineTax(baseIncomeTax, incomeYear, listedWithholdingBase);
+  // Box ⑱ 租税特別措置法第41条の19の基準所得税額
+  const baselineTax = calculateNormalBaselineTax(baseIncomeTax, incomeYear, listedWithholdingBase);
 
   return taxOnExcess > baselineTax;
 };
@@ -91,23 +90,18 @@ export const isHighIncomeMinimumTaxApplicable = (
  * Steps:
  * 1. Box ⑭: Taxable excess = floorTaxableIncome(baselineIncome - threshold), floored to ¥1,000.
  * 2. Box ⑮: Target tax = Math.floor(taxableExcess × rate) (22.5% in 2025/2026, 30.0% in 2027+).
- * 3. Box ⑲: Applicability test: compares box ⑮ with normal baseline tax (box ⑱). If ⑮ ≤ ⑱, returns undefined.
- * 4. Box ㉒: Baseline income tax without 確定申告不要制度 = base income tax (box ⑳) + 2.1% surtax (box ㉑).
- * 5. Box ㉓: Additional income tax = Math.max(0, box ⑮ - box ㉒).
+ * 3. Box ㉒: Baseline income tax when all income is reported = base income tax (box ⑳) + 2.1% surtax (box ㉑).
+ * 4. Box ㉓: Additional income tax = Math.max(0, box ⑮ - box ㉒).
  *
  * @param baselineIncome 基準所得金額: baseline income amount (box ⑬ on Form 01.pdf)
  * @param incomeYear Income calendar year
  * @param baseIncomeTax ⑳: Income tax after home loan credit (差引所得税額) computed with all income reported
- * @param listedWithholdingBase National withholding tax base on amounts left to withholding
- * @param normalBaselineTax ⑱: Baseline income tax under normal filing. If omitted, computed automatically
  * @returns {@link HighIncomeMinimumTaxResult} when the measure applies, or `undefined` when it does not.
  */
 export const calculateHighIncomeMinimumTax = (
   baselineIncome: number,
   incomeYear: number,
   baseIncomeTax: number,
-  listedWithholdingBase: number = 0,
-  normalBaselineTax?: number,
 ): HighIncomeMinimumTaxResult | undefined => {
   const params = getHighIncomeMinimumTaxParams(incomeYear);
   if (!params) {
@@ -123,28 +117,19 @@ export const calculateHighIncomeMinimumTax = (
   // Box ⑮: ⑭ × 税率 (22.5% in 2025/2026, 30.0% in 2027+)
   const taxOnExcess = params.rate.taxOn(taxableExcess);
 
-  const baselineTax =
-    normalBaselineTax ??
-    calculateNormalBaselineTax(baseIncomeTax, incomeYear, listedWithholdingBase);
-
-  // Box ⑲: ⑮ - ⑱ (Applicability test). If ⑮ ≤ ⑱, the measure does not apply.
-  if (taxOnExcess <= baselineTax) {
-    return undefined;
-  }
-
   // Box ㉑: reconstruction special income tax on base income tax
   const baseReconstructionSurtax = RECONSTRUCTION_SURTAX_RATE.taxOn(baseIncomeTax);
 
   // Box ㉒: Statutory baseline income tax including surtax (措法41条の19の基準所得税額)
   const baselineIncomeTax = baseIncomeTax + baseReconstructionSurtax;
 
-  // Box ㉓: Additional income tax under the minimum tax
-  const additionalIncomeTax = Math.max(0, taxOnExcess - baselineIncomeTax);
-  if (additionalIncomeTax <= 0) {
+  // Box ⑲/㉓: If target tax does not exceed baseline tax, the measure does not apply
+  if (taxOnExcess <= baselineIncomeTax) {
     return undefined;
   }
 
-  // Reconstruction surtax on the additional tax
+  // Box ㉓: Additional income tax per the minimum tax (added to box ㊹ on the tax return)
+  const additionalIncomeTax = taxOnExcess - baselineIncomeTax;
   const additionalReconstructionSurtax = RECONSTRUCTION_SURTAX_RATE.taxOn(additionalIncomeTax);
 
   return {
