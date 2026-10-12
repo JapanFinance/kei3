@@ -53,8 +53,10 @@ describe('IncomeStreamForm', () => {
     const { rerender } = render(
       <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
-    expect(screen.getByText(/Copy the figures from the account's/)).toBeInTheDocument();
-    expect(screen.getByText(/Capital losses are combined with the dividends/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Copy the figures from the annual transaction report/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Capital losses automatically offset dividends/)).toBeInTheDocument();
 
     // The in-account netting belongs to the withholding account alone; the other two forms say
     // what withholding, if any, applies to them.
@@ -63,19 +65,21 @@ describe('IncomeStreamForm', () => {
       screen.getByText(/No tax is withheld on a sale outside a withholding designated account/),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(/Capital losses are combined with the dividends/),
+      screen.queryByText(/Capital losses automatically offset dividends/),
     ).not.toBeInTheDocument();
 
     rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.getByText(/A dividend paid in Japan has 20.315% withheld/)).toBeInTheDocument();
     expect(
-      screen.queryByText(/Capital losses are combined with the dividends/),
+      screen.getByText(/Do not include tax-free NISA dividends or capital gains/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Capital losses automatically offset dividends/),
     ).not.toBeInTheDocument();
   });
 
   it('shows the deposit-interest guidance box', () => {
     render(<IncomeStreamForm type="interest" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.getByText(/does not affect total net income/)).toBeInTheDocument();
+    expect(screen.getByText(/This covers Interest Income/)).toBeInTheDocument();
   });
 
   it('accepts a capital-gains loss as a negative amount and saves it unchanged', () => {
@@ -122,9 +126,10 @@ describe('IncomeStreamForm', () => {
       'true',
     );
     expect(screen.getByRole('button', { name: 'Outside Japan' })).toBeEnabled();
+    expect(screen.getByText(/This covers Interest Income/)).toBeInTheDocument();
     expect(
-      screen.getByText(/Interest paid in Japan is taxed at source at 20.315%/),
-    ).toBeInTheDocument();
+      screen.queryByText(/Tax withheld abroad is credited against Japanese tax/),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('Enter the amount before withholding.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -141,11 +146,10 @@ describe('IncomeStreamForm', () => {
       'true',
     );
     expect(
-      screen.getByText(/Interest paid outside Japan has no Japanese tax withheld/),
+      screen.getByText(
+        /Tax withheld abroad is credited against Japanese tax, up to the limit on the Foreign Tax Credit/,
+      ),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/Interest paid in Japan is taxed at source at 20.315%/),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByText('Enter the amount in yen, before any foreign tax withheld.'),
     ).toBeInTheDocument();
@@ -163,7 +167,7 @@ describe('IncomeStreamForm', () => {
     await user.click(screen.getByRole('combobox', { name: /account/i }));
     const options = screen.getAllByRole('option');
     expect(options.map(o => o.textContent)).toEqual([
-      'Domestic account without withholding (特定口座（源泉徴収なし）・一般口座)',
+      'Domestic account no withholding (特定口座（源泉徴収なし）・一般口座)',
       'Foreign account',
     ]);
     for (const option of options) {
@@ -206,17 +210,13 @@ describe('IncomeStreamForm', () => {
 
   it('explains the disabled Withheld only button only for a dividend paid abroad', () => {
     render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(
-      screen.queryByText('A dividend paid abroad has to be reported.'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('A dividend paid abroad must be reported.')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Abroad' }));
-    expect(screen.getByText('A dividend paid abroad has to be reported.')).toBeInTheDocument();
+    expect(screen.getByText('A dividend paid abroad must be reported.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'In Japan' }));
-    expect(
-      screen.queryByText('A dividend paid abroad has to be reported.'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('A dividend paid abroad must be reported.')).not.toBeInTheDocument();
   });
 
   it('saves a dividend as reported when Reported is chosen', () => {
@@ -373,7 +373,7 @@ describe('IncomeStreamForm foreign tax', () => {
     fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
     expect(screen.getByText('In yen. The gross amount above includes it.')).toBeInTheDocument();
     expect(
-      screen.getByText(/the 20.315% is charged on the dividend after the foreign tax/),
+      screen.getByText(/the Japanese tax is charged on the dividend after the foreign tax/),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -426,7 +426,7 @@ describe('IncomeStreamForm foreign tax', () => {
     fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥10,000' } });
     expect(
       screen.getByText(
-        /Tax withheld abroad is credited against the Japanese income tax and residence tax on this interest, up to a limit/,
+        /Tax withheld abroad is credited against Japanese tax, up to the limit on the Foreign Tax Credit/,
       ),
     ).toBeInTheDocument();
 
