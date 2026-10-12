@@ -10,6 +10,7 @@ import type {
 } from '../types/tax';
 import {
   dividendMustBeReported,
+  withAllInvestmentReported,
   withholdingAccountDividendsMustBeReported,
   withRequiredReporting,
 } from '../utils/investmentReporting';
@@ -140,5 +141,86 @@ describe('withRequiredReporting', () => {
       amount: -500_000,
     };
     expect(withRequiredReporting(gains)).toBe(gains);
+  });
+});
+
+describe('withAllInvestmentReported', () => {
+  it('forces both reportsCapitalGains and reportsDividends to true for withholding accounts', () => {
+    const account: WithholdingAccountIncomeStream = {
+      id: 'a1',
+      type: 'withholdingAccount',
+      capitalGains: 1_000_000,
+      dividends: 500_000,
+      foreignDividends: 0,
+      foreignTax: 0,
+      reportsCapitalGains: false,
+      reportsDividends: false,
+    };
+    expect(withAllInvestmentReported(account)).toEqual({
+      ...account,
+      reportsCapitalGains: true,
+      reportsDividends: true,
+    });
+  });
+
+  it('forces isReported to true for dividends streams', () => {
+    const dividend: DividendsIncomeStream = {
+      id: 'd1',
+      type: 'dividends',
+      shareType: 'listed',
+      paymentChannel: 'domestic',
+      isReported: false,
+      issuerDomicile: 'domestic',
+      foreignTax: 0,
+      amount: 1_000_000,
+    };
+    expect(withAllInvestmentReported(dividend)).toEqual({
+      ...dividend,
+      isReported: true,
+    });
+  });
+
+  it('leaves already reported withholding accounts and dividends unchanged', () => {
+    const account: WithholdingAccountIncomeStream = {
+      id: 'a1',
+      type: 'withholdingAccount',
+      capitalGains: 1_000_000,
+      dividends: 500_000,
+      foreignDividends: 0,
+      foreignTax: 0,
+      reportsCapitalGains: true,
+      reportsDividends: true,
+    };
+    expect(withAllInvestmentReported(account)).toEqual(account);
+
+    const dividend: DividendsIncomeStream = {
+      id: 'd1',
+      type: 'dividends',
+      shareType: 'listed',
+      paymentChannel: 'domestic',
+      isReported: true,
+      issuerDomicile: 'domestic',
+      foreignTax: 0,
+      amount: 1_000_000,
+    };
+    expect(withAllInvestmentReported(dividend)).toEqual(dividend);
+  });
+
+  it('leaves other income streams unchanged', () => {
+    const salary: IncomeStream = {
+      id: 's1',
+      type: 'salary',
+      amount: 6_000_000,
+      frequency: 'annual',
+    };
+    expect(withAllInvestmentReported(salary)).toBe(salary);
+
+    const business: IncomeStream = {
+      id: 'b1',
+      type: 'business',
+      amount: 3_000_000,
+      blueFilerDeduction: 650_000,
+    };
+    expect(withAllInvestmentReported(business)).toBe(business);
   });
 });

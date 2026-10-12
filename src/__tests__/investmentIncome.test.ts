@@ -7,8 +7,13 @@ import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
 import { percentTo } from '../data/premiumRate';
 import type { InvestmentIncomeAmounts } from '../types/tax';
 import {
+  applyDeductionSpillover,
+  calculateSeparateNationalIncomeTaxBase,
   calculateWithheldInvestmentTax,
+  classifyReportedInvestmentIncome,
+  floorTaxableIncome,
   hasInvestmentIncome,
+  hasReportedInvestmentIncome,
   withholdingAccountBase,
 } from '../utils/investmentIncome';
 
@@ -109,5 +114,197 @@ describe('getInvestmentIncomeTaxRates', () => {
         listedReportedPrefecturalRate: percent(2),
       });
     }
+  });
+});
+
+describe('hasReportedInvestmentIncome', () => {
+  it('is false when both capital gains and dividends are zero', () => {
+    expect(
+      hasReportedInvestmentIncome({ capitalGains: 0, dividends: 0, qualifyingCapitalLosses: 0 }),
+    ).toBe(false);
+  });
+
+  it('is true when capital gains is non-zero (gain or loss)', () => {
+    expect(
+      hasReportedInvestmentIncome({
+        capitalGains: 100_000,
+        dividends: 0,
+        qualifyingCapitalLosses: 0,
+      }),
+    ).toBe(true);
+    expect(
+      hasReportedInvestmentIncome({
+        capitalGains: -100_000,
+        dividends: 0,
+        qualifyingCapitalLosses: 100_000,
+      }),
+    ).toBe(true);
+  });
+
+  it('is true when dividends is non-zero', () => {
+    expect(
+      hasReportedInvestmentIncome({
+        capitalGains: 0,
+        dividends: 50_000,
+        qualifyingCapitalLosses: 0,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe('classifyReportedInvestmentIncome', () => {
+  it('leaves positive capital gains and dividends un-netted', () => {
+    const result = classifyReportedInvestmentIncome({
+      capitalGains: 1_000_000,
+      dividends: 500_000,
+      qualifyingCapitalLosses: 0,
+    });
+    expect(result).toEqual({
+      lossOffsetAgainstDividends: 0,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 1_000_000, dividends: 500_000 },
+    });
+  });
+
+  it('nets qualifying capital loss against dividends when loss is smaller than dividends', () => {
+    const result = classifyReportedInvestmentIncome({
+      capitalGains: -300_000,
+      dividends: 500_000,
+      qualifyingCapitalLosses: 300_000,
+    });
+    expect(result).toEqual({
+      lossOffsetAgainstDividends: 300_000,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 0, dividends: 200_000 },
+    });
+  });
+
+  it('nets qualifying capital loss against dividends up to dividend amount and leaves unabsorbed loss', () => {
+    const result = classifyReportedInvestmentIncome({
+      capitalGains: -800_000,
+      dividends: 500_000,
+      qualifyingCapitalLosses: 800_000,
+    });
+    expect(result).toEqual({
+      lossOffsetAgainstDividends: 500_000,
+      unabsorbedQualifyingLoss: 300_000,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 0, dividends: 0 },
+    });
+  });
+
+  it('does not offset dividends with non-qualifying losses', () => {
+    const result = classifyReportedInvestmentIncome({
+      capitalGains: -500_000,
+      dividends: 500_000,
+      qualifyingCapitalLosses: 0,
+    });
+    expect(result).toEqual({
+      lossOffsetAgainstDividends: 0,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 500_000,
+      netIncome: { capitalGains: 0, dividends: 500_000 },
+    });
+  });
+
+  it('splits mixed losses into qualifying (offsets dividends) and non-qualifying', () => {
+    const result = classifyReportedInvestmentIncome({
+      capitalGains: -600_000,
+      dividends: 400_000,
+      qualifyingCapitalLosses: 200_000,
+    });
+    expect(result).toEqual({
+      lossOffsetAgainstDividends: 200_000,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 400_000,
+      netIncome: { capitalGains: 0, dividends: 200_000 },
+    });
+  });
+});
+
+describe('applyDeductionSpillover', () => {
+  it('absorbs deductions fully in aggregate income when sufficient', () => {
+    const result = applyDeductionSpillover(
+      { aggregate: 5_000_000, dividends: 1_000_000, capitalGains: 2_000_000 },
+      3_000_000,
+    );
+    expect(result).toEqual({
+      aggregate: 2_000_000,
+      dividends: 1_000_000,
+      capitalGains: 2_000_000,
+    });
+  });
+
+  it('spills unabsorbed deductions into separate dividends first', () => {
+    const result = applyDeductionSpillover(
+      { aggregate: 2_000_000, dividends: 1_000_000, capitalGains: 2_000_000 },
+      2_500_000,
+    );
+    expect(result).toEqual({
+      aggregate: 0,
+      dividends: 500_000,
+      capitalGains: 2_000_000,
+    });
+  });
+
+  it('spills through dividends into capital gains', () => {
+    const result = applyDeductionSpillover(
+      { aggregate: 1_000_000, dividends: 1_000_000, capitalGains: 2_000_000 },
+      2_500_000,
+    );
+    expect(result).toEqual({
+      aggregate: 0,
+      dividends: 0,
+      capitalGains: 1_500_000,
+    });
+  });
+
+  it('floors all classes to 0 when deductions exceed total income', () => {
+    const result = applyDeductionSpillover(
+      { aggregate: 1_000_000, dividends: 500_000, capitalGains: 500_000 },
+      5_000_000,
+    );
+    expect(result).toEqual({
+      aggregate: 0,
+      dividends: 0,
+      capitalGains: 0,
+    });
+  });
+
+  it('leaves classes unchanged when deductions is zero or negative', () => {
+    const initial = { aggregate: 1_000_000, dividends: 500_000, capitalGains: 500_000 };
+    expect(applyDeductionSpillover(initial, 0)).toEqual(initial);
+    expect(applyDeductionSpillover(initial, -100_000)).toEqual(initial);
+  });
+});
+
+describe('floorTaxableIncome', () => {
+  it('floors to the nearest ¥1,000 per statutory rules', () => {
+    expect(floorTaxableIncome(1_234_567)).toBe(1_234_000);
+    expect(floorTaxableIncome(1_000)).toBe(1_000);
+    expect(floorTaxableIncome(999)).toBe(0);
+    expect(floorTaxableIncome(0)).toBe(0);
+  });
+
+  it('floors negative amounts to 0', () => {
+    expect(floorTaxableIncome(-500)).toBe(0);
+    expect(floorTaxableIncome(-100_000)).toBe(0);
+  });
+});
+
+describe('calculateSeparateNationalIncomeTaxBase', () => {
+  it('applies 15% flat national tax rate to the sum of taxable dividends and capital gains', () => {
+    // 3,000,000 * 0.15 = 450,000
+    const tax = calculateSeparateNationalIncomeTaxBase(
+      { dividends: 1_000_000, capitalGains: 2_000_000 },
+      2026,
+    );
+    expect(tax).toBe(450_000);
+  });
+
+  it('returns 0 when both amounts are zero', () => {
+    expect(calculateSeparateNationalIncomeTaxBase({ dividends: 0, capitalGains: 0 }, 2026)).toBe(0);
   });
 });
