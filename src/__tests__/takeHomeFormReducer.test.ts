@@ -784,7 +784,14 @@ describe('takeHomeFormReducer', () => {
         expect(
           providerIds([
             salary(1_000_000),
-            { id: 'd1', type: 'dividends', shareType: 'listed', isReported, amount: 300_000 },
+            {
+              id: 'd1',
+              type: 'dividends',
+              shareType: 'listed',
+              paymentChannel: 'domestic',
+              isReported,
+              amount: 300_000,
+            },
           ]),
         ).not.toContain(DEPENDENT_COVERAGE_ID);
       }
@@ -792,11 +799,11 @@ describe('takeHomeFormReducer', () => {
       // A year's capital gains count when positive; a losing year lowers nothing.
       const gains = (amount: number) => ({
         id: 'g1',
-        type: 'capitalGains' as const,
-        shareType: 'listed' as const,
-        account: 'specifiedWithholding' as const,
-        isReported: false as const,
-        amount,
+        type: 'withholdingAccount' as const,
+        capitalGains: amount,
+        dividends: 0,
+        reportsCapitalGains: false,
+        reportsDividends: false,
       });
       expect(providerIds([salary(1_000_000), gains(300_000)])).not.toContain(DEPENDENT_COVERAGE_ID);
       expect(providerIds([salary(1_290_000), gains(-300_000)])).toContain(DEPENDENT_COVERAGE_ID);

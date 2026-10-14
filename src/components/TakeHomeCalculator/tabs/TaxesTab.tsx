@@ -522,8 +522,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       15% of the taxable investment income, apart from the progressive brackets
                       (措法8条の4①, 37条の11①). The reconstruction surtax below applies to this and
-                      the base income tax together. In a withholding account the 15.315% already
-                      withheld is credited against the total on the return.
+                      the base income tax together. In a withholding designated account the 15.315%
+                      already withheld is credited against the total on the return.
                     </Typography>
                     <SourceLinks
                       sources={[

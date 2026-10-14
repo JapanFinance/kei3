@@ -171,8 +171,13 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return formatMonthLong(stream.month);
       case 'stockCompensation':
         return stream.issuerDomicile === 'foreign' ? 'Foreign' : 'Domestic';
+      case 'withholdingAccount':
+        if (stream.reportsCapitalGains && stream.reportsDividends) return 'Reported';
+        if (stream.reportsCapitalGains) return 'Sales reported';
+        if (stream.reportsDividends) return 'Dividends reported';
+        return 'Withheld only';
       case 'capitalGains':
-        return `${stream.isReported ? 'Reported' : 'Withheld only'}${
+        return `Reported${
           stream.account === 'foreign'
             ? ', foreign account'
             : stream.account === 'domesticNoWithholding'
@@ -180,13 +185,19 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               : ''
         }`;
       case 'dividends':
-        return stream.isReported ? 'Reported' : 'Withheld only';
+        return `${stream.isReported ? 'Reported' : 'Withheld only'}${
+          stream.paymentChannel === 'abroad' ? ', paid abroad' : ''
+        }`;
       default:
         return null;
     }
   };
 
-  const hasReportedDividend = streams.some(s => s.type === 'dividends' && s.isReported);
+  const hasReportedDividend = streams.some(
+    s =>
+      (s.type === 'dividends' && s.isReported) ||
+      (s.type === 'withholdingAccount' && s.reportsDividends && s.dividends > 0),
+  );
 
   // 措法8条の4② makes the 申告分離課税 election one for every reported dividend of the year, so
   // it is made here for the group rather than on each entry.
@@ -321,9 +332,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </>
     );
 
-  // The comparison is offered once a capital-gains or dividends entry exists to elect on.
+  // The comparison is offered once a withholding-account, capital-gains or dividends entry
+  // exists to elect on.
   const hasListedShareStream = streams.some(
-    s => s.type === 'capitalGains' || s.type === 'dividends',
+    s => s.type === 'withholdingAccount' || s.type === 'capitalGains' || s.type === 'dividends',
   );
 
   const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
@@ -402,7 +414,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
                     <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
-                      {formatJPY(stream.amount)}
+                      {formatJPY(
+                        stream.type === 'withholdingAccount'
+                          ? stream.capitalGains + stream.dividends
+                          : stream.amount,
+                      )}
                     </Typography>
                     {getStreamDescription(stream) && (
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -410,6 +426,20 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       </Typography>
                     )}
                   </Box>
+                  {stream.type === 'withholdingAccount' && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                        display: 'block',
+                        // Each figure stays with its label, so a narrow card breaks at the separator.
+                        '& span': { whiteSpace: 'nowrap' },
+                      }}
+                    >
+                      <span>Sales {formatJPY(stream.capitalGains)}</span> ·{' '}
+                      <span>Dividends {formatJPY(stream.dividends)}</span>
+                    </Typography>
+                  )}
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
                     <Typography
                       variant="caption"
@@ -548,8 +578,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                 >
                   <ListItemText
                     primary={INCOME_STREAM_CATALOG[type].label}
-                    secondary={atLimit ? 'Already added' : undefined}
-                    slotProps={{ secondary: { color: 'inherit' } }}
+                    secondary={atLimit ? 'Already added' : INCOME_STREAM_CATALOG[type].labelDetail}
+                    {...(atLimit && { slotProps: { secondary: { color: 'inherit' } } })}
                   />
                 </MenuItem>
               );

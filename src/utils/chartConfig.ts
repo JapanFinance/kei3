@@ -7,8 +7,8 @@ import type { TakeHomeInputs, ChartRange, IncomeStream } from '../types/tax';
 import { detectCaps } from './capDetection';
 import { formatJPY, formatYenCompact } from './formatters';
 import {
+  annualIncomeContribution,
   annualIncomeStreamAmount,
-  countsTowardAnnualIncome,
   isEarnedIncomeStream,
   totalAnnualIncomeFromStreams,
 } from './incomeStreams';
@@ -90,13 +90,7 @@ const isPassThroughStream = (stream: IncomeStream): boolean => !isEarnedIncomeSt
  * streams, so the sweep starts here.
  */
 export const heldIncomeInSweep = (streams: readonly IncomeStream[]): number =>
-  streams.reduce(
-    (sum, s) =>
-      isPassThroughStream(s) && countsTowardAnnualIncome(s)
-        ? sum + annualIncomeStreamAmount(s)
-        : sum,
-    0,
-  );
+  streams.reduce((sum, s) => (isPassThroughStream(s) ? sum + annualIncomeContribution(s) : sum), 0);
 
 /**
  * Scale a set of income streams so their annualized total matches `targetIncome`,
@@ -118,14 +112,7 @@ export const scaleIncomeStreamsToIncome = (
 
   if (earnedTotal > 0) {
     const ratio = earnedTarget / earnedTotal;
-    return streams.map(s =>
-      isPassThroughStream(s)
-        ? s
-        : {
-            ...s,
-            amount: s.amount * ratio,
-          },
-    );
+    return streams.map(s => (isEarnedIncomeStream(s) ? { ...s, amount: s.amount * ratio } : s));
   }
 
   // Fallback if the earned streams are 0
@@ -194,31 +181,31 @@ export const generateChartData = (
         reportedInvestment: 0,
       };
       calcStreams.forEach(s => {
-        const val = annualIncomeStreamAmount(s);
         switch (s.type) {
           case 'salary':
-            groups.salary += val;
+            groups.salary += annualIncomeStreamAmount(s);
             break;
           case 'bonus':
-            groups.bonus += val;
+            groups.bonus += annualIncomeStreamAmount(s);
             break;
           case 'business':
-            groups.business += val;
+            groups.business += annualIncomeStreamAmount(s);
             break;
           case 'miscellaneous':
-            groups.miscellaneous += val;
+            groups.miscellaneous += annualIncomeStreamAmount(s);
             break;
           case 'publicPension':
-            groups.publicPension += val;
+            groups.publicPension += annualIncomeStreamAmount(s);
             break;
           // Investment income is in the breakdown only when it is part of the income: the
           // reported amounts, held constant across the sweep. What is withheld at source stays
           // outside the income, like the commuting allowance; stock compensation has no row of
           // its own.
+          case 'withholdingAccount':
           case 'capitalGains':
           case 'dividends':
           case 'interest':
-            if (countsTowardAnnualIncome(s)) groups.reportedInvestment += val;
+            groups.reportedInvestment += annualIncomeContribution(s);
             break;
           case 'commutingAllowance':
           case 'stockCompensation':

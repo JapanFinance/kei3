@@ -8,6 +8,7 @@ import {
   type TakeHomeInputs,
   type TakeHomeResults,
 } from '../types/tax';
+import { withRequiredReporting } from './investmentReporting';
 import { calculateTaxes } from './taxCalculations';
 
 export type InvestmentTreatmentColumnKey = 'withheldOnly' | 'separate' | 'aggregate';
@@ -71,14 +72,20 @@ export interface InvestmentTreatmentFigures {
 export interface InvestmentTreatmentColumn extends InvestmentTreatmentColumnDefinition {
   /** Whether the entries and the election already stand as this column would set them. */
   isCurrent: boolean;
-  /** The figures, or absent when {@link unavailableReason} says why the election is not open. */
-  figures?: InvestmentTreatmentFigures;
-  unavailableReason?: string;
+  figures: InvestmentTreatmentFigures;
 }
 
 const isListedShareStream = (stream: IncomeStream) =>
-  stream.type === 'capitalGains' || stream.type === 'dividends';
+  stream.type === 'withholdingAccount' ||
+  stream.type === 'capitalGains' ||
+  stream.type === 'dividends';
 
+/**
+ * `streams` with the election applied to every unit that can carry it: a withholding account's
+ * two flags, and a domestic dividend's `isReported`. A capital-gains sale outside an account and
+ * a dividend paid abroad are always reported, so they are left as they are.
+ * {@link withRequiredReporting} re-applies the rules that can force a flag back to reported.
+ */
 const applyElection = (
   streams: readonly IncomeStream[],
   election: InvestmentTreatmentElection,
@@ -86,9 +93,21 @@ const applyElection = (
   const elected: IncomeStream[] = [];
   for (const stream of streams) {
     switch (stream.type) {
-      case 'capitalGains':
+      case 'withholdingAccount':
+        elected.push(
+          withRequiredReporting({
+            ...stream,
+            reportsCapitalGains: election.isReported,
+            reportsDividends: election.isReported,
+          }),
+        );
+        break;
       case 'dividends':
-        elected.push({ ...stream, isReported: election.isReported });
+        elected.push(
+          stream.paymentChannel === 'domestic'
+            ? withRequiredReporting({ ...stream, isReported: election.isReported })
+            : stream,
+        );
         break;
       default:
         elected.push(stream);
@@ -115,44 +134,57 @@ const figuresOf = (results: TakeHomeResults): InvestmentTreatmentFigures => {
 };
 
 /**
- * Runs the calculation once per election in {@link INVESTMENT_TREATMENT_COLUMNS}, with every
- * listed-share entry reported or not as the column says and the reported dividends taxed under
- * its election, so the elections can be set side by side. Interest carries no election and is
- * left as entered.
- *
- * 申告不要 is open only while every sale settles in a 特定口座（源泉徴収あり）
- * (措法37条の11の5); with a sale anywhere else the column is marked unavailable instead of
- * being computed. The 総合課税 column has no 配当控除, which is not yet modelled.
+ * Runs the calculation once per election in {@link INVESTMENT_TREATMENT_COLUMNS}, applying it to
+ * every unit that can carry it — a withholding account's two flags, and a domestic dividend's —
+ * so the elections can be set side by side. A capital-gains sale outside a withholding account
+ * and a dividend paid abroad are always reported, so they stay reported in every column; interest
+ * carries no election and is left as entered. The 総合課税 column has no 配当控除, which is not
+ * yet modelled.
  */
 export function compareInvestmentTreatments(inputs: TakeHomeInputs): InvestmentTreatmentColumn[] {
   const listedStreams = inputs.incomeStreams.filter(isListedShareStream);
   const currentElection = inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION;
-  const saleOutsideWithholdingAccount = inputs.incomeStreams.some(
-    s => s.type === 'capitalGains' && s.account !== 'specifiedWithholding',
-  );
+
+  // Whether every optional reporting choice among listedStreams already matches `election`: each
+  // withholding account's two flags, and each domestic dividend's `isReported`. A capital-gains
+  // sale outside an account and a dividend paid abroad are fixed rather than optional, so they
+  // take no part in this; with no optional choice to compare, no column is current.
+  const isCurrent = (election: InvestmentTreatmentElection): boolean => {
+    let hasOptionalUnit = false;
+    for (const stream of listedStreams) {
+      if (stream.type === 'withholdingAccount') {
+        hasOptionalUnit = true;
+        if (
+          stream.reportsCapitalGains !== election.isReported ||
+          stream.reportsDividends !== election.isReported
+        ) {
+          return false;
+        }
+      } else if (stream.type === 'dividends' && stream.paymentChannel === 'domestic') {
+        hasOptionalUnit = true;
+        if (stream.isReported !== election.isReported) {
+          return false;
+        }
+      }
+    }
+    return (
+      hasOptionalUnit &&
+      (!election.isReported || election.reportedDividendsTaxation === currentElection)
+    );
+  };
 
   const columns: InvestmentTreatmentColumn[] = [];
   for (const column of INVESTMENT_TREATMENT_COLUMNS) {
-    const isCurrent =
-      listedStreams.length > 0 &&
-      listedStreams.every(s => s.isReported === column.election.isReported) &&
-      (!column.election.isReported ||
-        column.election.reportedDividendsTaxation === currentElection);
-    if (column.key === 'withheldOnly' && saleOutsideWithholdingAccount) {
-      columns.push({
-        ...column,
-        isCurrent,
-        unavailableReason:
-          'A sale outside a 特定口座（源泉徴収あり）has to be reported (措法37条の11の5).',
-      });
-      continue;
-    }
     const results = calculateTaxes({
       ...inputs,
       incomeStreams: applyElection(inputs.incomeStreams, column.election),
       reportedDividendsTaxation: column.election.reportedDividendsTaxation,
     });
-    columns.push({ ...column, isCurrent, figures: figuresOf(results) });
+    columns.push({
+      ...column,
+      isCurrent: isCurrent(column.election),
+      figures: figuresOf(results),
+    });
   }
   return columns;
 }
