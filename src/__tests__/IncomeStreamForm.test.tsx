@@ -50,7 +50,7 @@ describe('IncomeStreamForm', () => {
     const { rerender } = render(
       <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
-    expect(screen.getByText(/Copy the two figures from the account's/)).toBeInTheDocument();
+    expect(screen.getByText(/Copy the figures from the account's/)).toBeInTheDocument();
     expect(screen.getByText(/Capital losses are combined with the dividends/)).toBeInTheDocument();
 
     // The in-account netting belongs to the withholding account alone; the other two forms say
@@ -247,6 +247,8 @@ describe('IncomeStreamForm', () => {
           shareType: 'listed',
           paymentChannel: 'domestic',
           isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
         }}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
@@ -287,6 +289,8 @@ describe('IncomeStreamForm', () => {
         type: 'withholdingAccount',
         capitalGains: 1_000_000,
         dividends: 200_000,
+        foreignDividends: 0,
+        foreignTax: 0,
         reportsCapitalGains: true,
         reportsDividends: true,
       }),
@@ -323,6 +327,331 @@ describe('IncomeStreamForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(mockOnSave).toHaveBeenCalledWith(
       expect.objectContaining({ reportsCapitalGains: true, reportsDividends: true }),
+    );
+  });
+});
+
+describe('IncomeStreamForm foreign tax', () => {
+  const mockOnSave = vi.fn();
+  const mockOnCancel = vi.fn();
+  const FOREIGN_TAX_LABEL = 'Foreign Tax Withheld (外国所得税)';
+
+  beforeEach(() => {
+    mockOnSave.mockClear();
+    mockOnCancel.mockClear();
+  });
+
+  it('starts a dividend from a Japanese company, with no foreign tax field, and saves no foreign tax', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    expect(screen.getByRole('button', { name: 'Japanese' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByLabelText(FOREIGN_TAX_LABEL)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Enter the amount in yen, before any tax withheld in Japan or abroad.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/charged on the dividend after the foreign tax/)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ issuerDomicile: 'domestic', foreignTax: 0 }),
+    );
+  });
+
+  it('asks for the foreign tax on a dividend from a foreign company and saves it', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign' }));
+    fireEvent.change(screen.getByLabelText('Gross Dividends'), {
+      target: { value: '¥1,000,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+    expect(screen.getByText('In yen. The gross amount above includes it.')).toBeInTheDocument();
+    expect(
+      screen.getByText(/the 20.315% is charged on the dividend after the foreign tax/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'dividends',
+        amount: 1_000_000,
+        issuerDomicile: 'foreign',
+        foreignTax: 100_000,
+      }),
+    );
+  });
+
+  it('saves no foreign tax once the dividend is switched back to a Japanese company', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign' }));
+    fireEvent.change(screen.getByLabelText('Gross Dividends'), {
+      target: { value: '¥1,000,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Japanese' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ issuerDomicile: 'domestic', foreignTax: 0 }),
+    );
+  });
+
+  it('shows why the foreign tax cannot be used under its field, and does not save', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign' }));
+    fireEvent.change(screen.getByLabelText('Gross Dividends'), { target: { value: '¥50,000' } });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(screen.getByLabelText(FOREIGN_TAX_LABEL)).toHaveAccessibleDescription(
+      'Foreign tax cannot be more than the gross dividend.',
+    );
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it('asks for the foreign tax on interest paid outside Japan only', () => {
+    render(<IncomeStreamForm type="interest" onSave={mockOnSave} onCancel={mockOnCancel} />);
+    expect(screen.queryByLabelText(FOREIGN_TAX_LABEL)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Outside Japan' }));
+    fireEvent.change(screen.getByLabelText('Gross Interest'), { target: { value: '¥100,000' } });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥10,000' } });
+    expect(
+      screen.getByText(
+        /Tax withheld abroad is credited against the Japanese income tax and residence tax on this interest, up to a limit/,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ payerDomicile: 'foreign', amount: 100_000, foreignTax: 10_000 }),
+    );
+  });
+
+  it("saves an account's foreign dividends and foreign tax", () => {
+    render(
+      <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Dividends Received into the Account (配当等)'), {
+      target: { value: '¥800,000' },
+    });
+    const foreign = within(
+      screen.getByRole('group', {
+        name: 'Foreign shares and funds (国外株式又は国外投資信託等)',
+      }),
+    );
+    fireEvent.change(foreign.getByLabelText('Foreign Dividends'), {
+      target: { value: '¥500,000' },
+    });
+    fireEvent.change(foreign.getByLabelText('Foreign Tax (外国所得税の額)'), {
+      target: { value: '¥50,000' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'withholdingAccount',
+        dividends: 800_000,
+        foreignDividends: 500_000,
+        foreignTax: 50_000,
+      }),
+    );
+  });
+
+  it("shows an account's foreign-figure error under its own group, and does not save", () => {
+    render(
+      <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Dividends Received into the Account (配当等)'), {
+      target: { value: '¥300,000' },
+    });
+    fireEvent.change(screen.getByLabelText('Foreign Dividends'), {
+      target: { value: '¥500,000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(
+      screen.getByText(
+        'Foreign dividends cannot be more than the dividends received into the account.',
+      ),
+    ).toBeInTheDocument();
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it("keeps an edited entry's foreign company and foreign tax", () => {
+    render(
+      <IncomeStreamForm
+        type="dividends"
+        initialData={{
+          id: 'd1',
+          type: 'dividends',
+          amount: 300_000,
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: true,
+          issuerDomicile: 'foreign',
+          foreignTax: 30_000,
+        }}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Foreign' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText(FOREIGN_TAX_LABEL)).toHaveValue('¥30,000');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'd1', issuerDomicile: 'foreign', foreignTax: 30_000 }),
+    );
+  });
+
+  it('starts a pension on a Japanese system, with no foreign tax field, and saves no foreign tax', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    expect(screen.getByRole('button', { name: 'Japanese system' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByLabelText(FOREIGN_TAX_LABEL)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥1,500,000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'publicPension',
+        amount: 1_500_000,
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+      }),
+    );
+  });
+
+  it('defaults a foreign pension to unavailable tax credit and does not ask for foreign tax', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    expect(screen.getByRole('button', { name: 'Unavailable' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByLabelText(FOREIGN_TAX_LABEL)).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥2,000,000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'publicPension',
+        amount: 2_000_000,
+        payerDomicile: 'foreign',
+        treatyCredit: 'unavailable',
+        foreignTax: 0,
+      }),
+    );
+  });
+
+  it('asks for the foreign tax on a pension when tax credit is available under treaty and saves it', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Available' }));
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥2,000,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'publicPension',
+        amount: 2_000_000,
+        payerDomicile: 'foreign',
+        treatyCredit: 'available',
+        foreignTax: 100_000,
+      }),
+    );
+  });
+
+  it('saves no foreign tax once the pension is switched back to a Japanese system', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Available' }));
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥2,000,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Japanese system' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ payerDomicile: 'domestic', foreignTax: 0 }),
+    );
+  });
+
+  it('shows why the foreign tax on a pension cannot be used, and does not save', () => {
+    render(<IncomeStreamForm type="publicPension" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Foreign system' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Available' }));
+    fireEvent.change(screen.getByLabelText('Annual Gross Pension Income'), {
+      target: { value: '¥50,000' },
+    });
+    fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(screen.getByLabelText(FOREIGN_TAX_LABEL)).toHaveAccessibleDescription(
+      'Foreign tax cannot be more than the gross pension.',
+    );
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it("keeps an edited pension's foreign system and foreign tax", () => {
+    render(
+      <IncomeStreamForm
+        type="publicPension"
+        initialData={{
+          id: 'p1',
+          type: 'publicPension',
+          amount: 2_000_000,
+          payerDomicile: 'foreign',
+          treatyCredit: 'available',
+          foreignTax: 100_000,
+        }}
+        onSave={mockOnSave}
+        onCancel={mockOnCancel}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Foreign system' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Available' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByLabelText(FOREIGN_TAX_LABEL)).toHaveValue('¥100,000');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'p1',
+        payerDomicile: 'foreign',
+        treatyCredit: 'available',
+        foreignTax: 100_000,
+      }),
     );
   });
 });

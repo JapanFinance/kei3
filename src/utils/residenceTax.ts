@@ -15,11 +15,12 @@ import type {
   FurusatoNozeiDetails,
   NonTaxableResidenceTaxStatus,
   PersonalCircumstancesInput,
+  ResidenceTaxCredits,
   ResidenceTaxDetails,
   ResidenceTaxSeparateDetails,
   SeparateNetIncome,
 } from '../types/tax';
-import { EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
+import { EMPTY_PERSONAL_CIRCUMSTANCES, NO_RESIDENCE_TAX_CREDITS } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateDependentTotalNetIncome,
@@ -175,7 +176,9 @@ export function isDependentResidenceTaxable(dependent: Dependent, year: number):
  * @param personalCircumstances - The taxpayer's own 障害者・寡婦・ひとり親 status. Drives both the
  *   remaining {@link nonTaxableStatusFor} exemptions and the 人的控除 this function deducts and
  *   feeds into the 調整控除
- * @param taxCredit - Tax credit amount
+ * @param credits - The 税額控除 after the 調整控除: the home loan credit's spillover, split 60/40
+ *   between the sides, and then each side's foreign tax credit, capped at what is left of that
+ *   side's 所得割. A side's credit its 所得割 cannot absorb does not move to the other side.
  * @param separateNetIncome - Investment income reported under 申告分離課税, already inside
  *   `netIncome` (合計所得金額). Taxed at 3% + 2% apart from the 6% + 4% on 課税総所得金額
  *   (地方税法附則第33条の2, 第35条の2の2), but subject to the same exemption limits, which are
@@ -188,7 +191,7 @@ export const calculateResidenceTax = (
   year: number,
   ageRange: TaxpayerAgeRange,
   personalCircumstances: PersonalCircumstancesInput = EMPTY_PERSONAL_CIRCUMSTANCES,
-  taxCredit: number = 0,
+  credits: ResidenceTaxCredits = NO_RESIDENCE_TAX_CREDITS,
   separateNetIncome: SeparateNetIncome = NO_SEPARATE_NET_INCOME,
 ): ResidenceTaxDetails => {
   const nonTaxableStatus = nonTaxableStatusFor(ageRange, personalCircumstances, netIncome);
@@ -273,26 +276,30 @@ export const calculateResidenceTax = (
 
   // Each side's 所得割 — the 6%/4% on 課税総所得金額 and the 3%/2% on the 申告分離課税 classes
   // together — is floored to ¥100 once, after the credits.
-  const cityIncomeTax =
-    Math.floor(
-      Math.max(
-        0,
-        taxableIncome * 0.06 +
-          separateCityIncomeTax -
-          cityAdjustmentCredit -
-          taxCredit * CITY_TAX_PROPORTION,
-      ) / 100,
-    ) * 100;
+  const cityBeforeForeignTaxCredit = Math.max(
+    0,
+    taxableIncome * 0.06 +
+      separateCityIncomeTax -
+      cityAdjustmentCredit -
+      credits.homeLoan * CITY_TAX_PROPORTION -
+      (credits.furusato?.city ?? 0),
+  );
+  const cityForeignTaxCredit = Math.min(credits.foreignTax?.city ?? 0, cityBeforeForeignTaxCredit);
+  const cityIncomeTax = Math.floor((cityBeforeForeignTaxCredit - cityForeignTaxCredit) / 100) * 100;
+  const prefecturalBeforeForeignTaxCredit = Math.max(
+    0,
+    taxableIncome * 0.04 +
+      separatePrefecturalIncomeTax -
+      prefecturalAdjustmentCredit -
+      credits.homeLoan * PREFECTURAL_TAX_PROPORTION -
+      (credits.furusato?.prefecture ?? 0),
+  );
+  const prefecturalForeignTaxCredit = Math.min(
+    credits.foreignTax?.prefecture ?? 0,
+    prefecturalBeforeForeignTaxCredit,
+  );
   const prefecturalIncomeTax =
-    Math.floor(
-      Math.max(
-        0,
-        taxableIncome * 0.04 +
-          separatePrefecturalIncomeTax -
-          prefecturalAdjustmentCredit -
-          taxCredit * PREFECTURAL_TAX_PROPORTION,
-      ) / 100,
-    ) * 100;
+    Math.floor((prefecturalBeforeForeignTaxCredit - prefecturalForeignTaxCredit) / 100) * 100;
 
   const separate: ResidenceTaxSeparateDetails | undefined =
     separateNetIncomeTotal > 0
@@ -327,6 +334,9 @@ export const calculateResidenceTax = (
     forestEnvironmentTax,
     totalResidenceTax: cityIncomeTax + prefecturalIncomeTax + perCapitaTax,
     ...(separate && { separate }),
+    ...((cityForeignTaxCredit > 0 || prefecturalForeignTaxCredit > 0) && {
+      foreignTaxCredit: { city: cityForeignTaxCredit, prefecture: prefecturalForeignTaxCredit },
+    }),
   };
 };
 
@@ -597,63 +607,45 @@ export function calculateAdjustmentCredit(
 }
 
 // ふるさと納税の自己負担額
-const FURUSATO_OUT_OF_POCKET_COST = 2000;
+export const FURUSATO_OUT_OF_POCKET_COST = 2000;
 // 基本控除率 (ふるさと納税の寄付金控除の基本控除率)
 const donationBasicDeductionRate = 0.1;
 
+export interface FurusatoLimitDetails {
+  finalLimit: number;
+  deductibleDonation: number;
+  specialDeductionRate: number;
+  residenceTaxDonationBasicDeduction: number;
+  residenceTaxSpecialDeduction: number;
+  residenceCredits: {
+    city: number;
+    prefecture: number;
+  };
+}
+
 /**
- * Calculate the maximum deductible ふるさと納税 (Furusato Nozei) donation limit for which the user's out-of-pocket cost is ~2,000 yen.
- *
- * Accurate handling of home loan tax credit interactions:
- * - The 20% special-deduction cap (特例控除上限) uses 所得割 AFTER 調整控除 but
- *   BEFORE 住宅ローン控除 — pass the pre-credit residence tax via
- *   `residenceTaxDetailsForCap`. When no home loan credit is in play, pass the
- *   same details for both `residenceTaxDetailsForCap` and `residenceTaxDetailsForFinal`.
- * - The income-tax refund portion can't exceed the income tax actually owed. When a home loan
- *   credit has reduced that income tax, pass the post-credit figure via `remainingIncomeTax` to
- *   cap the refund at it. Omit it (undefined) when nothing has reduced income tax — then the
- *   refund is limited only by the normal furusato math (no extra cap needed).
- * - `appliedHomeLoanCreditToResidenceTax` is the amount of home loan credit
- *   spillover applied to residence tax. Used to compute the raw post-credit
- *   city/prefectural income tax for the furusato application step. Defaults to 0.
- *
- * @param taxableIncomeForNationalIncomeTax - Taxable income for national income tax, before rounding (所得税課税所得)
- * @param residenceTaxDetailsForCap - Residence tax details PRE home loan credit — used for the 20% special-deduction cap
- * @param residenceTaxDetailsForFinal - Residence tax details POST home loan credit — used for the totalResidenceTax baseline. Defaults to `residenceTaxDetailsForCap`.
- * @param appliedHomeLoanCreditToResidenceTax - Home loan credit spillover applied to residence tax (yen). Defaults to 0.
- * @param remainingIncomeTax - Optional cap on the income-tax refund portion (post home loan credit).
- * @param reported - Investment income reported under 申告分離課税, when there is any: the
- *   national taxable classes before rounding, for the income-tax reduction to follow the 15% path
- *   once the donation has used up 課税総所得金額, and the income year for that rate. The
- *   residence-tax side is read from `residenceTaxDetailsForCap.separate`.
- * @returns The various details of the Furusato Nozei deduction, including the limit, out-of-pocket cost, and tax reductions.
- * @see https://kaikei7.com/furusato_nouzei_keisan/
- * @see https://kaikei7.com/furusato_nouzei_onestop/
+ * Calculates the maximum deductible Furusato Nozei donation limit and the corresponding
+ * residence tax credits (basic and special deductions).
  */
-export function calculateFurusatoNozeiDetails(
+export function calculateFurusatoLimit(
   taxableIncomeForNationalIncomeTax: number,
   residenceTaxDetailsForCap: ResidenceTaxDetails,
-  residenceTaxDetailsForFinal: ResidenceTaxDetails = residenceTaxDetailsForCap,
-  appliedHomeLoanCreditToResidenceTax: number = 0,
-  remainingIncomeTax?: number,
   reported?: { nationalTaxable: SeparateNetIncome; year: number },
-): FurusatoNozeiDetails {
+): FurusatoLimitDetails {
   const nationalClasses: IncomeClassAmounts = {
     aggregate: taxableIncomeForNationalIncomeTax,
     dividends: reported?.nationalTaxable.dividends ?? 0,
     capitalGains: reported?.nationalTaxable.capitalGains ?? 0,
   };
-  const noLimit: FurusatoNozeiDetails = {
-    limit: 0,
-    incomeTaxReduction: 0,
+  const noLimit: FurusatoLimitDetails = {
+    finalLimit: 0,
+    deductibleDonation: 0,
+    specialDeductionRate: 0,
     residenceTaxDonationBasicDeduction: 0,
     residenceTaxSpecialDeduction: 0,
-    outOfPocketCost: 0,
-    residenceTaxReduction: 0,
+    residenceCredits: { city: 0, prefecture: 0 },
   };
-  // Checked before the residence details are read: the zero-income default result is built
-  // while this module and taxCalculations.ts are still loading each other, with the residence
-  // details not yet defined.
+
   if (nationalClasses.aggregate + nationalClasses.dividends + nationalClasses.capitalGains <= 0) {
     return noLimit;
   }
@@ -664,8 +656,7 @@ export function calculateFurusatoNozeiDetails(
   if (residenceTaxDetailsForCap.taxableIncome + residenceSeparateTaxableIncome <= 0) {
     return noLimit;
   }
-  // The rate itself is only reached with reported income; 0 keeps the arithmetic below exact
-  // when there is none.
+
   const separateNationalRate = reported
     ? getInvestmentIncomeTaxRates(reported.year).listedAssessedNationalRate
     : 0;
@@ -683,60 +674,135 @@ export function calculateFurusatoNozeiDetails(
     residenceSeparateTaxableIncome > 0 ? separateNationalRate : undefined,
   );
 
-  // The deduction breakdown:
-  // Income tax deduction: (X - 2000) * incomeTaxRate (not used if one-stop)
-  // Resident tax basic deduction (基本控除): (X - 2000) * residenceTaxRate
-  // Resident tax special deduction (特例控除): (X - 2000) * (1 - residenceTaxRate - marginalIncomeTaxRate) [capped at 20% of resident tax amount for the income portion]
-  // One-stop special deduction (申告特例控除):
-
-  // We need to find X such that:
-  // (X - 2000) * specialDeductionRate <= residentTaxAmountForIncomePortion * 0.2
   const maxSpecialDeduction = residentTaxAmountForIncomePortion * 0.2;
   const furusatoNozeiLimit =
     maxSpecialDeduction / specialDeductionRate + FURUSATO_OUT_OF_POCKET_COST;
 
   // Statutory cap: donation cannot exceed 30% of resident tax taxable income
-  // This will always be higher than the 20% cap for the special deduction
   const statutoryCap =
     (residenceTaxDetailsForCap.taxableIncome + residenceSeparateTaxableIncome) * 0.3;
 
-  // Final limit is the lower of the two, rounded down to the nearest 1,000 yen
   const finalLimit = Math.floor(Math.min(furusatoNozeiLimit, statutoryCap) / 1000) * 1000;
   const deductibleDonation = Math.max(finalLimit - FURUSATO_OUT_OF_POCKET_COST, 0);
-  // const incomeTaxReduction = deductibleDonation * (1 - specialDeductionRate - donationBasicDeductionRate);
+
+  const residenceTaxDonationBasicDeduction = deductibleDonation * donationBasicDeductionRate;
+  const residenceTaxSpecialDeduction =
+    Math.ceil(
+      deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.cityProportion,
+    ) +
+    Math.ceil(
+      deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.prefecturalProportion,
+    );
+
+  const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
+  const cityCredit = Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForCap.cityProportion);
+  const prefectureCredit = Math.ceil(
+    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.prefecturalProportion,
+  );
+
+  return {
+    finalLimit,
+    deductibleDonation,
+    specialDeductionRate,
+    residenceTaxDonationBasicDeduction,
+    residenceTaxSpecialDeduction,
+    residenceCredits: {
+      city: cityCredit,
+      prefecture: prefectureCredit,
+    },
+  };
+}
+
+/**
+ * Calculate the maximum deductible ふるさと納税 (Furusato Nozei) donation limit for which the user's out-of-pocket cost is ~2,000 yen.
+ *
+ * Accurate handling of home loan tax credit and foreign tax credit interactions:
+ * - The 20% special-deduction cap (特例控除上限) uses 所得割 AFTER 調整控除 but
+ *   BEFORE 住宅ローン控除 and 外国税額控除 — pass the pre-credit residence tax via
+ *   `residenceTaxDetailsForCap`. When no such credit is in play, pass the
+ *   same details for both `residenceTaxDetailsForCap` and `residenceTaxDetailsForFinal`.
+ * - The income-tax refund portion can't exceed the income tax actually owed. When a tax credit
+ *   has reduced that income tax, pass the post-credit figure via `remainingIncomeTax` to
+ *   cap the refund at it. Omit it (undefined) when nothing has reduced income tax — then the
+ *   refund is limited only by the normal furusato math (no extra cap needed).
+ * - `credits` are the residence-tax credits the final details were computed with: the home loan
+ *   credit spillover and the foreign tax credit. They are used to compute the raw post-credit
+ *   city/prefectural income tax for the furusato application step. The foreign tax credit comes
+ *   off after the donation credit, the order 地方税法37条の3 gives (「第三十五条及び前二条」), so
+ *   it is capped at what the donation leaves. The donation also lowers the 所得税 and with it the
+ *   foreign tax credit limits; that effect is not modelled.
+ *
+ * @param taxableIncomeForNationalIncomeTax - Taxable income for national income tax, before rounding (所得税課税所得)
+ * @param residenceTaxDetailsForCap - Residence tax details before the home loan and foreign tax credits — used for the 20% special-deduction cap
+ * @param residenceTaxDetailsForFinal - Residence tax details after those credits — used for the totalResidenceTax baseline. Defaults to `residenceTaxDetailsForCap`.
+ * @param credits - The residence-tax credits in `residenceTaxDetailsForFinal`. Defaults to none.
+ * @param remainingIncomeTax - Optional cap on the income-tax refund portion (after the home loan and foreign tax credits).
+ * @param reported - Investment income reported under 申告分離課税, when there is any: the
+ *   national taxable classes before rounding, for the income-tax reduction to follow the 15% path
+ *   once the donation has used up 課税総所得金額, and the income year for that rate. The
+ *   residence-tax side is read from `residenceTaxDetailsForCap.separate`.
+ * @returns The various details of the Furusato Nozei deduction, including the limit, out-of-pocket cost, and tax reductions.
+ * @see https://kaikei7.com/furusato_nouzei_keisan/
+ * @see https://kaikei7.com/furusato_nouzei_onestop/
+ */
+export function calculateFurusatoNozeiDetails(
+  taxableIncomeForNationalIncomeTax: number,
+  residenceTaxDetailsForCap: ResidenceTaxDetails,
+  residenceTaxDetailsForFinal: ResidenceTaxDetails = residenceTaxDetailsForCap,
+  credits: ResidenceTaxCredits = NO_RESIDENCE_TAX_CREDITS,
+  remainingIncomeTax?: number,
+  reported?: { nationalTaxable: SeparateNetIncome; year: number },
+): FurusatoNozeiDetails {
+  const limitDetails = calculateFurusatoLimit(
+    taxableIncomeForNationalIncomeTax,
+    residenceTaxDetailsForCap,
+    reported,
+  );
+  if (limitDetails.finalLimit <= 0) {
+    return {
+      limit: 0,
+      incomeTaxReduction: 0,
+      residenceTaxDonationBasicDeduction: 0,
+      residenceTaxSpecialDeduction: 0,
+      outOfPocketCost: 0,
+      residenceTaxReduction: 0,
+    };
+  }
+
+  const nationalClasses: IncomeClassAmounts = {
+    aggregate: taxableIncomeForNationalIncomeTax,
+    dividends: reported?.nationalTaxable.dividends ?? 0,
+    capitalGains: reported?.nationalTaxable.capitalGains ?? 0,
+  };
+  const separateNationalRate = reported
+    ? getInvestmentIncomeTaxRates(reported.year).listedAssessedNationalRate
+    : 0;
+
   let incomeTaxReduction = calculateIncomeTaxReduction(
     nationalClasses,
-    deductibleDonation,
+    limitDetails.deductibleDonation,
     separateNationalRate,
   );
-  // When the home loan tax credit reduces the actual income tax paid, the income-tax
-  // refund portion of furusato can only be claimed up to the remaining income tax.
   if (remainingIncomeTax !== undefined) {
     incomeTaxReduction = Math.min(incomeTaxReduction, Math.max(0, remainingIncomeTax));
   }
-  const residenceTaxDonationBasicDeduction = deductibleDonation * donationBasicDeductionRate;
-  let residenceTaxSpecialDeduction = deductibleDonation * specialDeductionRate;
-  residenceTaxSpecialDeduction =
-    Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetailsForFinal.cityProportion) +
-    Math.ceil(residenceTaxSpecialDeduction * residenceTaxDetailsForFinal.prefecturalProportion);
 
-  const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
-  // City/prefectural income-based residence tax, pre-rounding, with the home loan credit
-  // spillover removed first, then the furusato tax credit subtracted. When there is no home
-  // loan credit, appliedHomeLoanCreditToResidenceTax is 0, the spillover term drops out, and
-  // this reduces to the residence income-based portion minus the furusato credit. The 所得割
-  // on reported investment income is part of each side.
+  const furusatoNozeiTaxCredit =
+    limitDetails.residenceTaxDonationBasicDeduction + limitDetails.residenceTaxSpecialDeduction;
+
+  const residenceSeparate = residenceTaxDetailsForCap.separate;
   const beforeCityIncomeTax =
     residenceTaxDetailsForCap.city.cityTaxableIncome * residenceTaxDetailsForCap.residenceTaxRate +
     (residenceSeparate?.cityIncomeTax ?? 0) -
     residenceTaxDetailsForCap.city.cityAdjustmentCredit -
-    appliedHomeLoanCreditToResidenceTax * residenceTaxDetailsForCap.cityProportion;
+    credits.homeLoan * residenceTaxDetailsForCap.cityProportion;
   const cityIncomeTaxWithFurusato =
     Math.floor(
       Math.max(
         0,
         beforeCityIncomeTax -
-          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.cityProportion),
+          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.cityProportion) -
+          (credits.foreignTax?.city ?? 0),
       ) / 100,
     ) * 100;
   const beforePrefectureIncomeTax =
@@ -744,13 +810,14 @@ export function calculateFurusatoNozeiDetails(
       residenceTaxDetailsForCap.residenceTaxRate +
     (residenceSeparate?.prefecturalIncomeTax ?? 0) -
     residenceTaxDetailsForCap.prefecture.prefecturalAdjustmentCredit -
-    appliedHomeLoanCreditToResidenceTax * residenceTaxDetailsForCap.prefecturalProportion;
+    credits.homeLoan * residenceTaxDetailsForCap.prefecturalProportion;
   const prefectureIncomeTaxWithFurusato =
     Math.floor(
       Math.max(
         0,
         beforePrefectureIncomeTax -
-          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.prefecturalProportion),
+          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.prefecturalProportion) -
+          (credits.foreignTax?.prefecture ?? 0),
       ) / 100,
     ) * 100;
   const residenceTaxDifference =
@@ -760,12 +827,12 @@ export function calculateFurusatoNozeiDetails(
       residenceTaxDetailsForFinal.perCapitaTax);
 
   return {
-    limit: finalLimit,
+    limit: limitDetails.finalLimit,
     incomeTaxReduction,
-    residenceTaxDonationBasicDeduction,
-    residenceTaxSpecialDeduction,
+    residenceTaxDonationBasicDeduction: limitDetails.residenceTaxDonationBasicDeduction,
+    residenceTaxSpecialDeduction: limitDetails.residenceTaxSpecialDeduction,
     residenceTaxReduction: residenceTaxDifference,
-    outOfPocketCost: finalLimit - residenceTaxDifference - incomeTaxReduction,
+    outOfPocketCost: limitDetails.finalLimit - residenceTaxDifference - incomeTaxReduction,
   };
 }
 

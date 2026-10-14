@@ -34,6 +34,7 @@ import {
   type ReportedDividendsTaxation,
   type TakeHomeInputs,
   type TakeHomeResults,
+  type WithheldInvestmentIncome,
 } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
@@ -95,6 +96,28 @@ type ModalView =
   | { kind: 'edit'; stream: IncomeStream };
 
 const addButtonId = (category: IncomeCategoryKey) => `add-${category}-income`;
+
+/**
+ * The investment group's line for the amounts left to withholding: what was received, less the
+ * foreign tax withheld abroad and the Japanese tax withheld, and what is left of it.
+ */
+const withheldOnlyFooter = (withheld: WithheldInvestmentIncome): string => {
+  const foreignTax = withheld.foreignTax ?? 0;
+  if (withheld.tax.total === 0 && foreignTax === 0) {
+    return `Withheld only: ${formatJPY(withheld.received)}, no tax withheld`;
+  }
+  const afterForeignTax = withheld.received - foreignTax;
+  const terms = [formatJPY(withheld.received)];
+  if (foreignTax > 0) terms.push(`${formatJPY(foreignTax)} foreign tax`);
+  if (withheld.tax.total > 0) {
+    // Accounts do not net with each other, so a loss left in one account can leave the taxed
+    // amount above the net received; naming it keeps the line readable.
+    const taxedOn =
+      withheld.taxedAmount !== afterForeignTax ? ` on ${formatJPY(withheld.taxedAmount)}` : '';
+    terms.push(`${formatJPY(withheld.tax.total)} tax${taxedOn}`);
+  }
+  return `Withheld only: ${terms.join(' − ')} = ${formatJPY(afterForeignTax - withheld.tax.total)}`;
+};
 
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   open,
@@ -186,9 +209,11 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       case 'dividends':
         return `${stream.isReported ? 'Reported' : 'Withheld only'}${
           stream.paymentChannel === 'abroad' ? ', paid abroad' : ''
-        }`;
+        }${stream.issuerDomicile === 'foreign' ? ', foreign company or fund' : ''}`;
       case 'interest':
         return stream.payerDomicile === 'foreign' ? 'Paid outside Japan' : null;
+      case 'publicPension':
+        return stream.payerDomicile === 'foreign' ? 'Foreign system' : null;
       default:
         return null;
     }
@@ -316,16 +341,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       <>
         {withheldInvestment && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Withheld only: {formatJPY(withheldInvestment.received)}
-            {withheldInvestment.tax.total === 0
-              ? ', no tax withheld'
-              : ` − ${formatJPY(withheldInvestment.tax.total)} tax${
-                  // Accounts do not net with each other, so a loss left in one account can leave
-                  // the taxed amount above the net received; naming it keeps the line readable.
-                  withheldInvestment.taxedAmount !== withheldInvestment.received
-                    ? ` on ${formatJPY(withheldInvestment.taxedAmount)}`
-                    : ''
-                } = ${formatJPY(withheldInvestment.received - withheldInvestment.tax.total)}`}
+            {withheldOnlyFooter(withheldInvestment)}
           </Typography>
         )}
         {reportedInvestment && (
@@ -442,8 +458,28 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                     >
                       <span>Sales {formatJPY(stream.capitalGains)}</span> ·{' '}
                       <span>Dividends {formatJPY(stream.dividends)}</span>
+                      {(stream.foreignDividends > 0 || stream.foreignTax > 0) && (
+                        <>
+                          {' '}
+                          · <span>
+                            Foreign dividends {formatJPY(stream.foreignDividends)}
+                          </span> ·{' '}
+                          <span>Foreign tax {formatJPY(stream.foreignTax)}</span>
+                        </>
+                      )}
                     </Typography>
                   )}
+                  {(stream.type === 'dividends' ||
+                    stream.type === 'interest' ||
+                    stream.type === 'publicPension') &&
+                    stream.foreignTax > 0 && (
+                      <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary', display: 'block' }}
+                      >
+                        Foreign tax {formatJPY(stream.foreignTax)}
+                      </Typography>
+                    )}
                   {stream.type === 'salary' && stream.frequency === 'monthly' && (
                     <Typography
                       variant="caption"

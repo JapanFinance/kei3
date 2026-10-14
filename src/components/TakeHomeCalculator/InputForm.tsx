@@ -45,6 +45,8 @@ import type {
   TakeHomeResults,
   IncomeMode,
   IncomeStream,
+  ForeignTaxCreditInput,
+  ForeignTaxCreditResult,
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
   LifeInsuranceInput,
@@ -112,6 +114,8 @@ interface TaxInputFormProps {
   dispatch: Dispatch<FormAction>;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  /** Computed foreign tax credit, passed through to the modal for its summary. */
+  foreignTaxCreditResult?: ForeignTaxCreditResult | undefined;
   /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Computed 障害者・寡婦・ひとり親控除, passed through the same way; absent when none applies. */
@@ -127,6 +131,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
   dispatch,
   homeLoanTaxCreditResult,
+  foreignTaxCreditResult,
   additionalDeductions,
   personalDeductions,
   longTermCareCategory1Estimate,
@@ -163,6 +168,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   const handleHomeLoanTaxCreditChange = (newInput: HomeLoanTaxCreditInput | undefined) => {
     dispatch({ type: 'setField', field: 'homeLoanTaxCredit', value: newInput });
+  };
+
+  const handleForeignTaxCreditChange = (newInput: ForeignTaxCreditInput | undefined) => {
+    dispatch({ type: 'setField', field: 'foreignTaxCredit', value: newInput });
   };
 
   const handleDcPlanContributionsChange = (value: number) => {
@@ -863,8 +872,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             Additional Deductions &amp; Credits
             <SimpleTooltip>
               Income deductions (所得控除, e.g. iDeCo or 小規模企業共済) and tax credits (税額控除,
-              e.g. home loan tax credit). These affect income tax, residence tax, and the furusato
-              nozei limit.
+              e.g. the home loan tax credit or the foreign tax credit). These affect income tax,
+              residence tax, and the furusato nozei limit.
             </SimpleTooltip>
           </Typography>
           <Button
@@ -882,6 +891,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0)
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
+                );
+              if (inputs.foreignTaxCredit && inputs.foreignTaxCredit.foreignTax > 0)
+                parts.push(
+                  `Foreign tax paid with a return ${formatJPY(inputs.foreignTaxCredit.foreignTax)}`,
                 );
               personalDeductions?.items.forEach(item => {
                 parts.push(
@@ -962,6 +975,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         homeLoanTaxCredit={inputs.homeLoanTaxCredit}
         onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
         homeLoanTaxCreditResult={homeLoanTaxCreditResult}
+        foreignTaxCredit={inputs.foreignTaxCredit}
+        onForeignTaxCreditChange={handleForeignTaxCreditChange}
+        foreignTaxCreditResult={foreignTaxCreditResult}
+        withheldForeignTax={investmentIncome?.withheld?.foreignTax}
         lifeInsurance={inputs.lifeInsurance}
         onLifeInsuranceChange={handleLifeInsuranceChange}
         earthquakeInsurance={inputs.earthquakeInsurance}

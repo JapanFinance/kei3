@@ -20,15 +20,21 @@ export const hasReportedInvestmentIncome = (amounts: ReportedInvestmentAmounts):
 export const NO_SEPARATE_NET_INCOME: SeparateNetIncome = { capitalGains: 0, dividends: 0 };
 
 /**
- * The base a withholding account's 20.315% applies to: the broker nets the year's loss against
- * the dividends received into the account before withholding (措法37条の11の6⑥), never below
- * zero. Accounts do not net with each other, and the reported part of an account is settled on
- * the return instead of here.
+ * The base a withholding account's 20.315% applies to: the dividends received into the account
+ * after the foreign tax withheld on them (措法9条の2③), with the year's loss netted against that
+ * amount before withholding (措法37条の11の6⑥), never below zero. Accounts do not net with each
+ * other, and the reported part of an account is taxed on the return instead of here.
+ *
+ * @param unreportedForeignTax The foreign tax on the dividends left to withholding; 0 when the
+ *   dividends are reported.
+ * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_1-At_9_2
+ * @see https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11_6
  */
 export const withholdingAccountBase = (
   unreportedCapitalGains: number,
   unreportedDividends: number,
-): number => Math.max(0, unreportedCapitalGains + unreportedDividends);
+  unreportedForeignTax: number,
+): number => Math.max(0, unreportedCapitalGains + unreportedDividends - unreportedForeignTax);
 
 /**
  * Tax withheld at source on investment income under 申告不要 — see {@link WithheldInvestmentTax}.

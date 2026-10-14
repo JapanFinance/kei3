@@ -37,7 +37,13 @@ beforeAll(() => {
   Element.prototype.scrollTo = vi.fn();
 });
 
-const pensionStream: IncomeStream = { id: 'p1', type: 'publicPension', amount: 2_400_000 };
+const pensionStream: IncomeStream = {
+  id: 'p1',
+  type: 'publicPension',
+  payerDomicile: 'domestic',
+  foreignTax: 0,
+  amount: 2_400_000,
+};
 
 const makeInputs = (incomeStreams: IncomeStream[]): TakeHomeInputs => ({
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,

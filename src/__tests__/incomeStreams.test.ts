@@ -37,6 +37,8 @@ describe('totalAnnualIncomeFromStreams', () => {
           type: 'withholdingAccount',
           capitalGains: 2_000_000,
           dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
           reportsCapitalGains: false,
           reportsDividends: false,
         },
@@ -46,9 +48,11 @@ describe('totalAnnualIncomeFromStreams', () => {
           shareType: 'listed',
           paymentChannel: 'domestic',
           isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
           amount: 300_000,
         },
-        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
+        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000, foreignTax: 0 },
       ]),
     ).toBe(1_000_000 + 2_000_000 + 300_000 + 100_000);
   });
@@ -70,6 +74,8 @@ describe('totalAnnualIncomeFromStreams', () => {
           shareType: 'listed',
           paymentChannel: 'domestic',
           isReported: true,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
           amount: 300_000,
         },
       ]),
@@ -82,13 +88,21 @@ describe('dependentTestAnnualIncome', () => {
     expect(
       dependentTestAnnualIncome([
         { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
-        { id: 'p1', type: 'publicPension', amount: 500_000 },
+        {
+          id: 'p1',
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 500_000,
+        },
         {
           id: 'd1',
           type: 'dividends',
           shareType: 'listed',
           paymentChannel: 'domestic',
           isReported: true,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
           amount: 300_000,
         },
         {
@@ -97,9 +111,11 @@ describe('dependentTestAnnualIncome', () => {
           shareType: 'listed',
           paymentChannel: 'domestic',
           isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
           amount: 300_000,
         },
-        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
+        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000, foreignTax: 0 },
         { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
       ]),
     ).toBe(1_500_000 + 300_000 * 2 + 100_000 + 10_000 * 12);
@@ -122,6 +138,8 @@ describe('dependentTestAnnualIncome', () => {
           type: 'withholdingAccount',
           capitalGains: 500_000,
           dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
           reportsCapitalGains: false,
           reportsDividends: false,
         },
@@ -144,6 +162,8 @@ describe('dependentTestAnnualIncome', () => {
           type: 'withholdingAccount',
           capitalGains: -500_000,
           dividends: 300_000,
+          foreignDividends: 0,
+          foreignTax: 0,
           reportsCapitalGains: false,
           reportsDividends: false,
         },
@@ -175,7 +195,15 @@ describe('isEarnedIncomeStream', () => {
     expect(isEarnedIncomeStream({ id: 's1', type: 'salary', amount: 1, frequency: 'annual' })).toBe(
       true,
     );
-    expect(isEarnedIncomeStream({ id: 'p1', type: 'publicPension', amount: 1 })).toBe(true);
+    expect(
+      isEarnedIncomeStream({
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1,
+      }),
+    ).toBe(true);
     expect(
       isEarnedIncomeStream({
         id: 'c1',
@@ -191,6 +219,8 @@ describe('isEarnedIncomeStream', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 1,
       }),
     ).toBe(false);
@@ -210,9 +240,15 @@ describe('annualIncomeStreamAmount', () => {
   });
 
   it('takes every other type at its entered amount', () => {
-    expect(annualIncomeStreamAmount({ id: 'p1', type: 'publicPension', amount: 1_800_000 })).toBe(
-      1_800_000,
-    );
+    expect(
+      annualIncomeStreamAmount({
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      }),
+    ).toBe(1_800_000);
   });
 });
 
@@ -234,6 +270,8 @@ describe('annualIncomeContribution', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 10_000,
       }),
     ).toBe(10_000);
@@ -254,6 +292,8 @@ describe('annualIncomeContribution', () => {
         type: 'withholdingAccount',
         capitalGains: -10_000,
         dividends: 0,
+        foreignDividends: 0,
+        foreignTax: 0,
         reportsCapitalGains: false,
         reportsDividends: false,
       }),
@@ -265,6 +305,8 @@ describe('annualIncomeContribution', () => {
         shareType: 'listed',
         paymentChannel: 'domestic',
         isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 10_000,
       }),
     ).toBe(10_000);
@@ -273,6 +315,7 @@ describe('annualIncomeContribution', () => {
         id: 'i1',
         type: 'interest',
         payerDomicile: 'domestic',
+        foreignTax: 0,
         amount: 10_000,
       }),
     ).toBe(10_000);

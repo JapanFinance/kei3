@@ -352,11 +352,12 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
             <PlanRows rows={rows} isMobile={isMobile} bounded={bounded} onApply={onApply} />
             <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
               The plans electing aggregate taxation for dividends apply no dividend tax credit
-              (配当控除, not modelled yet), so for a dividend from a Japanese company they
-              understate what could be kept. Carrying a loss forward (繰越控除), the foreign tax
-              credit (外国税額控除), and the rule that lets an employee skip filing an income tax
-              return when other income is ¥200,000 or less are not modelled either. Entries that
-              have to be reported stay reported in every plan.
+              (配当控除, not supported yet), so for a dividend from a Japanese company they
+              understate what could be kept. Carrying forward a loss (繰越控除) or foreign tax above
+              the credit limits, the credit for foreign tax paid inside Japanese funds
+              (分配時調整外国税相当額控除), and the rule that lets an employee skip filing an income
+              tax return when other income is ¥200,000 or less are not supported either. Entries
+              that have to be reported stay reported in every plan.
               {bounded && boundedEstimate && (
                 <>
                   {' '}

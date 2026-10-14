@@ -42,6 +42,8 @@ const account = (
   type: 'withholdingAccount',
   capitalGains: 0,
   dividends: 0,
+  foreignDividends: 0,
+  foreignTax: 0,
   reportsCapitalGains: false,
   reportsDividends: false,
   ...overrides,
@@ -54,6 +56,8 @@ const dividend = (
   shareType: 'listed',
   paymentChannel: 'domestic',
   isReported: false,
+  issuerDomicile: 'domestic',
+  foreignTax: 0,
   amount: 0,
   ...overrides,
 });
@@ -70,6 +74,7 @@ const domesticInterest = (id: string, amount = 100_000): InterestIncomeStream =>
   id,
   type: 'interest',
   payerDomicile: 'domestic',
+  foreignTax: 0,
   amount,
 });
 
@@ -77,6 +82,7 @@ const foreignInterest = (id: string, amount = 100_000): InterestIncomeStream => 
   id,
   type: 'interest',
   payerDomicile: 'foreign',
+  foreignTax: 0,
   amount,
 });
 
@@ -217,39 +223,62 @@ describe('countPlans', () => {
 });
 
 describe('search-space reduction', () => {
-  it('keeps the same optimum on a two-account case whether or not the dominance and zero-amount reductions are applied', () => {
-    const streams: IncomeStream[] = [
-      account({ id: 'a', capitalGains: -500_000, dividends: 800_000 }),
-      account({ id: 'b', capitalGains: 300_000, dividends: 150_000 }),
-    ];
+  // The unpruned space: both accounts get all four flag combinations, including the
+  // 措法37条の11の6⑩ state (reporting the loss alone) and the state 7.3.1 finds dominated
+  // (reporting the dividends alone). evaluatePlan corrects the ⑩ state through
+  // withRequiredReporting rather than throwing, so it is safe to generate here.
+  const allFourStates = (streamIndex: number): ReportingUnit => ({
+    streamIndex,
+    states: [false, true].flatMap(reportsCapitalGains =>
+      [false, true].map(reportsDividends => ({
+        reportsDividend: reportsDividends,
+        apply: (stream: IncomeStream) => ({
+          ...(stream as WithholdingAccountIncomeStream),
+          reportsCapitalGains,
+          reportsDividends,
+        }),
+      })),
+    ),
+  });
+  const expectSameOptimumPrunedOrNot = (streams: IncomeStream[]) => {
     const inputs = salaryInputs(streams);
-    const prunedUnits = deriveReportingUnits(streams);
-
-    // The unpruned space: both accounts get all four flag combinations, including the
-    // 措法37条の11の6⑩ state (reporting the loss alone) and the state 7.3.1 finds dominated
-    // (reporting the dividends alone). evaluatePlan corrects the ⑩ state through
-    // withRequiredReporting rather than throwing, so it is safe to generate here.
-    const allFourStates = (streamIndex: number): ReportingUnit => ({
-      streamIndex,
-      states: [false, true].flatMap(reportsCapitalGains =>
-        [false, true].map(reportsDividends => ({
-          reportsDividend: reportsDividends,
-          apply: (stream: IncomeStream) => ({
-            ...(stream as WithholdingAccountIncomeStream),
-            reportsCapitalGains,
-            reportsDividends,
-          }),
-        })),
-      ),
-    });
-    const unprunedUnits: ReportingUnit[] = [allFourStates(0), allFourStates(1)];
-
     const bestKept = (units: ReportingUnit[]): number =>
       Math.max(
         ...[...generatePlans(streams, units)].map(plan => evaluatePlan(inputs, plan).figures.kept),
       );
 
-    expect(bestKept(prunedUnits)).toBe(bestKept(unprunedUnits));
+    expect(bestKept(deriveReportingUnits(streams))).toBe(
+      bestKept([allFourStates(0), allFourStates(1)]),
+    );
+  };
+
+  it('keeps the same optimum on a two-account case whether or not the dominance and zero-amount reductions are applied', () => {
+    expectSameOptimumPrunedOrNot([
+      account({ id: 'a', capitalGains: -500_000, dividends: 800_000 }),
+      account({ id: 'b', capitalGains: 300_000, dividends: 150_000 }),
+    ]);
+  });
+
+  it('keeps the same optimum when the dividends are foreign and carry foreign tax', () => {
+    // Reporting the loss with the dividends lowers both the income tax and the total income
+    // against which the foreign-source share is measured, so the tax left after the credit still
+    // falls, and "dividends only" stays dominated.
+    expectSameOptimumPrunedOrNot([
+      account({
+        id: 'a',
+        capitalGains: -500_000,
+        dividends: 800_000,
+        foreignDividends: 800_000,
+        foreignTax: 80_000,
+      }),
+      account({
+        id: 'b',
+        capitalGains: 300_000,
+        dividends: 150_000,
+        foreignDividends: 150_000,
+        foreignTax: 15_000,
+      }),
+    ]);
   });
 });
 
@@ -306,6 +335,71 @@ describe('uniform plans reproduce the migrated comparison figures', () => {
   it('omits the withheld-only plan from consideration only when there is no optional unit', () => {
     expect(hasOptionalUnit(units)).toBe(true);
     expect(hasOptionalUnit(deriveReportingUnits([outsideSale('g')]))).toBe(false);
+  });
+});
+
+describe('uniform plans weigh the foreign tax credit', () => {
+  // Cases A–C of the foreign tax cases in taxCalculations.test.ts: 1,000,000 of dividends from a
+  // foreign company with 100,000 of foreign tax, beside the 5,000,000-yen salary. Withheld only,
+  // the 20.315% is charged on the 900,000 after the foreign tax and nothing is credited: income
+  // tax 91,700 + 137,835 + 100,000 = 329,535, residence tax 243,100 + 45,000 = 288,100, kept
+  // 4,660,113. Reported under 申告分離課税 the credit brings the income tax to 191,100 (+ 100,000
+  // foreign tax) and the residence tax to 277,300, kept 4,709,348; under 総合課税 145,200
+  // (+ 100,000) and 331,100, kept 4,701,448. The furusato limits are those without the foreign
+  // tax (61,000 / 74,000 / 99,000): its 20% cap is on the residence tax before the credit.
+  const inputs = salaryInputs([
+    dividend({
+      id: 'd',
+      amount: 1_000_000,
+      isReported: true,
+      issuerDomicile: 'foreign',
+      foreignTax: 100_000,
+    }),
+  ]);
+  const units = deriveReportingUnits(inputs.incomeStreams);
+
+  it('withheld only', () => {
+    expect(evaluatePlan(inputs, withheldOnlyPlan(inputs, units)).figures).toEqual({
+      kept: 4_660_113,
+      incomeTax: 329_535,
+      residenceTax: 288_100,
+      socialInsurance: 722_252,
+      furusatoNozeiLimit: 61_000,
+      totalIncome: 3_560_000,
+    });
+  });
+
+  it('all reported, 申告分離課税', () => {
+    expect(evaluatePlan(inputs, allReportedPlan(inputs, units, 'separate')).figures).toEqual({
+      kept: 4_709_348,
+      incomeTax: 291_100,
+      residenceTax: 277_300,
+      socialInsurance: 722_252,
+      furusatoNozeiLimit: 74_000,
+      totalIncome: 4_560_000,
+    });
+  });
+
+  it('all reported, 総合課税', () => {
+    expect(evaluatePlan(inputs, allReportedPlan(inputs, units, 'aggregate')).figures).toEqual({
+      kept: 4_701_448,
+      incomeTax: 245_200,
+      residenceTax: 331_100,
+      socialInsurance: 722_252,
+      furusatoNozeiLimit: 99_000,
+      totalIncome: 4_560_000,
+    });
+  });
+
+  it('finds reporting under 申告分離課税 best', () => {
+    let best: PlanEvaluation | undefined;
+    for (const plan of generatePlans(inputs.incomeStreams, units)) {
+      const candidate: PlanEvaluation = { plan, evaluated: evaluatePlan(inputs, plan) };
+      if (!best || isBetterPlan(candidate, best, inputs, units)) best = candidate;
+    }
+    expect(best!.plan.election).toBe('separate');
+    expect(best!.evaluated.streams[1]).toMatchObject({ isReported: true });
+    expect(best!.evaluated.figures.kept).toBe(4_709_348);
   });
 });
 

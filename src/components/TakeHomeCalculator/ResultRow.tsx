@@ -15,7 +15,8 @@ const labelTooltips: Record<string, string> = {
   'Health Insurance': 'Mandatory health insurance contributions.',
   'Pension Payments': 'Employees/National pension system contributions.',
   'Employment Insurance': 'Insurance for unemployment and work-related benefits.',
-  'Income Tax': 'Income tax paid to the national government.',
+  'Income Tax':
+    'Income tax paid to the national government, and any foreign tax paid on the income abroad.',
   'Residence Tax':
     'Local income tax paid to the local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If income fluctuates from year to year, consider the effect on the residence tax billed in arrears.',
   'Total Deductions': 'Sum of all taxes and social insurance payments.',

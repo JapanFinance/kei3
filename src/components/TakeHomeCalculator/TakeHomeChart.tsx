@@ -44,6 +44,7 @@ import type {
   MedicalExpensesInput,
   PersonalCircumstancesInput,
   HomeLoanTaxCreditInput,
+  ForeignTaxCreditInput,
 } from '../../types/tax';
 import type { TaxpayerAgeRange } from '../../types/taxpayerAge';
 import { detectCaps } from '../../utils/capDetection';
@@ -164,6 +165,8 @@ interface TakeHomeChartProps {
   medicalExpenses: MedicalExpensesInput;
   personalCircumstances: PersonalCircumstancesInput;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  /** Foreign tax entered by hand; held at the entered amount across the sweep. */
+  foreignTaxCredit?: ForeignTaxCreditInput | undefined;
 }
 
 // Define a type for the mark objects
@@ -247,6 +250,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   medicalExpenses,
   personalCircumstances,
   homeLoanTaxCredit,
+  foreignTaxCredit,
 }) => {
   useLoadMilestone('chart-rendered');
 
@@ -356,6 +360,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         medicalExpenses,
         personalCircumstances,
         homeLoanTaxCredit,
+        foreignTaxCredit,
       }),
     [
       chartRange,
@@ -378,6 +383,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       medicalExpenses,
       personalCircumstances,
       homeLoanTaxCredit,
+      foreignTaxCredit,
     ],
   );
 
@@ -438,6 +444,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   medicalExpenses,
                   personalCircumstances,
                   homeLoanTaxCredit,
+                  foreignTaxCredit,
                 };
 
                 const taxResults = calculateTaxes(taxInputs);
@@ -482,6 +489,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     medicalExpenses,
     personalCircumstances,
     homeLoanTaxCredit,
+    foreignTaxCredit,
     incomeStreams,
     reportedDividendsTaxation,
     distribution,

@@ -205,21 +205,15 @@ describe('calculateFurusatoNozeiLimit', () => {
     });
 
     // ----------------------------------------------------------------------
-    // KNOWN LIMITATION (deferred to a follow-up) — furusato ⇄ home loan credit.
+    // Furusato ⇄ Home Loan Tax Credit dynamic interaction.
     //
-    // kei3 computes the home loan credit as if NO furusato donation is made. A real
-    // furusato 寄附金控除 lowers both the base income tax and the income-tax taxable
-    // income (所得税の課税総所得金額等), which would change how much credit income tax
-    // absorbs AND the residence-tax spillover cap. kei3 treats the two independently
-    // because there's no UI yet to apply an actual donation or to choose 確定申告 vs
-    // One-Stop. The furusato LIMIT and OUT-OF-POCKET shown are unaffected — this only
-    // concerns how an *actual* donation would feed back into the home loan credit.
-    // kei3 does NOT model this feedback (there's no UI to apply an actual donation or to choose
-    // 確定申告 vs One-Stop), and the correct framing — it's the home loan credit that gets
-    // squeezed, not furusato, plus the residence-cap recapture — would need more work. This test
-    // pins the current independent calculation behavior.
+    // The top-level `TakeHomeResults.homeLoanTaxCredit` computes the credit on the
+    // taxpayer's return before any furusato donation. When evaluating `furusatoNozei`,
+    // `calculateTaxes` runs a second pass with the donation deduction applied:
+    // the donation lowers base income tax, dynamically shifting any unabsorbed home loan
+    // credit into the residence-tax spillover (up to the statutory cap).
     // ----------------------------------------------------------------------
-    it('computes the home loan credit independently of any furusato donation (interaction deferred)', () => {
+    it('computes baseline home loan credit independently while furusato simulation models full credit interaction', () => {
       const inputs = {
         ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeStreams: [
@@ -262,6 +256,40 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
       expect(withCredit.furusatoNozei.outOfPocketCost).toBeGreaterThan(
         baseline.furusatoNozei.outOfPocketCost,
+      );
+    });
+
+    it('shifts unabsorbed home loan credit into residence tax spillover when donation lowers base income tax', () => {
+      const inputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [
+          { id: 'test', type: 'salary' as const, amount: 4_500_000, frequency: 'annual' as const },
+        ],
+        ageRange: 'age20to39' as const,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+      const baseline = calculateTaxes(inputs);
+      const baseTax = baseline.nationalIncomeTaxBase!;
+      // Credit exactly matches base income tax: 100% absorbed by income tax at baseline, 0 spillover
+      const withCredit = calculateTaxes({
+        ...inputs,
+        homeLoanTaxCredit: { moveInYear: 2024, creditAmount: baseTax },
+      });
+      expect(withCredit.homeLoanTaxCredit?.appliedToIncomeTax).toBe(baseTax);
+      expect(withCredit.homeLoanTaxCredit?.appliedToResidenceTax).toBe(0);
+
+      // When simulating the donation, base income tax falls, freeing up credit to spill into residence tax.
+      // Therefore, the residence tax reduction is greater than the furusato donation credits alone.
+      const furusatoBasic = withCredit.furusatoNozei.residenceTaxDonationBasicDeduction;
+      const furusatoSpecial = withCredit.furusatoNozei.residenceTaxSpecialDeduction;
+      expect(withCredit.furusatoNozei.residenceTaxReduction).toBeGreaterThan(
+        furusatoBasic + furusatoSpecial,
       );
     });
 
@@ -416,6 +444,92 @@ describe('calculateFurusatoNozeiLimit', () => {
       expect(withDeps.homeLoanTaxCredit!.appliedToIncomeTax).toBeLessThan(
         single.homeLoanTaxCredit!.appliedToIncomeTax,
       );
+    });
+  });
+
+  describe('foreign tax credit (外国税額控除) interactions', () => {
+    const baseInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { id: 'test', type: 'salary' as const, amount: 6_000_000, frequency: 'annual' as const },
+      ],
+      ageRange: 'age20to39' as const,
+      region: 'Tokyo',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    it('wipes out income-tax refund portion when foreign tax credit reduces income tax to 0', () => {
+      const withCredit = calculateTaxes({
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [
+          {
+            id: 'foreign-div',
+            type: 'dividends' as const,
+            shareType: 'listed' as const,
+            paymentChannel: 'domestic' as const,
+            isReported: true,
+            issuerDomicile: 'foreign' as const,
+            amount: 5_000_000,
+            foreignTax: 1_000_000,
+          },
+        ],
+        ageRange: 'age20to39' as const,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: true,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      });
+
+      expect(withCredit.nationalIncomeTax).toBe(0);
+      expect(withCredit.foreignTaxCredit?.credit.incomeTax).toBeGreaterThan(0);
+      // Because national income tax is ¥0, donation deduction cannot refund any national income tax
+      expect(withCredit.furusatoNozei.incomeTaxReduction).toBe(0);
+      // Out of pocket cost is higher than nominal ¥2,000
+      expect(withCredit.furusatoNozei.outOfPocketCost).toBeGreaterThan(2_200);
+      // Cash flow reconciliation: limit minus reductions equals outOfPocketCost exactly
+      expect(
+        withCredit.furusatoNozei.limit -
+          withCredit.furusatoNozei.incomeTaxReduction -
+          withCredit.furusatoNozei.residenceTaxReduction,
+      ).toBe(withCredit.furusatoNozei.outOfPocketCost);
+    });
+
+    it('simulates accurate FTC limit reduction when foreign tax credit is partial', () => {
+      // Partial foreign tax credit where Japanese income tax is not reduced to 0
+      const withPartialCredit = calculateTaxes({
+        ...baseInputs,
+        incomeStreams: [
+          ...baseInputs.incomeStreams,
+          {
+            id: 'foreign-div',
+            type: 'dividends' as const,
+            shareType: 'listed' as const,
+            paymentChannel: 'domestic' as const,
+            isReported: true,
+            issuerDomicile: 'foreign' as const,
+            amount: 1_000_000,
+            foreignTax: 30_000,
+          },
+        ],
+      });
+
+      expect(withPartialCredit.nationalIncomeTax).toBeGreaterThan(0);
+      expect(withPartialCredit.furusatoNozei.incomeTaxReduction).toBeGreaterThan(0);
+      expect(withPartialCredit.furusatoNozei.residenceTaxReduction).toBeGreaterThan(0);
+      // Cash flow reconciliation: limit minus reductions equals outOfPocketCost exactly
+      expect(
+        withPartialCredit.furusatoNozei.limit -
+          withPartialCredit.furusatoNozei.incomeTaxReduction -
+          withPartialCredit.furusatoNozei.residenceTaxReduction,
+      ).toBe(withPartialCredit.furusatoNozei.outOfPocketCost);
     });
   });
 
