@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import SummaryTab from '../components/TakeHomeCalculator/tabs/SummaryTab';
@@ -29,6 +29,32 @@ describe('SummaryTab annual income header', () => {
 
     expect(screen.getByText('Annual Income')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'About annual income' })).toBeInTheDocument();
+  });
+});
+
+describe('SummaryTab with investment income', () => {
+  // 申告不要 investment income enters no aggregate and changes no assessed figure, so it stays
+  // out of take-home and out of this tab entirely — the same treatment a 通勤手当 gets. It is
+  // reported on the input form, in the income modal, and in the Taxes tab instead.
+  it('renders exactly as it would without it', () => {
+    const { asFragment } = render(<SummaryTab results={baseResults} />);
+    const withoutInvestmentIncome = asFragment();
+
+    cleanup();
+    const { asFragment: withInvestmentIncome } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          investmentIncome: {
+            gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
+            grossTotal: 1_200_000,
+            withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+          },
+        }}
+      />,
+    );
+
+    expect(withInvestmentIncome()).toEqual(withoutInvestmentIncome);
   });
 });
 

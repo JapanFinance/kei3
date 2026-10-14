@@ -27,6 +27,30 @@ describe('totalAnnualIncomeFromStreams', () => {
   it('returns 0 for an empty stream list', () => {
     expect(totalAnnualIncomeFromStreams([])).toBe(0);
   });
+
+  it('excludes investment income (asset-based, taxed separately from earned income)', () => {
+    expect(
+      totalAnnualIncomeFromStreams([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+          amount: 2_000_000,
+        },
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          taxTreatment: 'withheldOnly',
+          amount: 300_000,
+        },
+        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000 },
+      ]),
+    ).toBe(1_000_000);
+  });
 });
 
 describe('annualIncomeStreamAmount', () => {
@@ -49,13 +73,40 @@ describe('annualIncomeStreamAmount', () => {
 });
 
 describe('countsTowardAnnualIncome', () => {
-  it('excludes only the commuting allowance', () => {
+  it('excludes the commuting allowance (a reimbursement) and investment income (asset-based)', () => {
     expect(
       countsTowardAnnualIncome({
         id: 'c1',
         type: 'commutingAllowance',
         amount: 10_000,
         frequency: 'monthly',
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardAnnualIncome({
+        id: 'g1',
+        type: 'capitalGains',
+        shareType: 'listed',
+        account: 'specifiedWithholding',
+        taxTreatment: 'withheldOnly',
+        amount: -10_000,
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardAnnualIncome({
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        taxTreatment: 'withheldOnly',
+        amount: 10_000,
+      }),
+    ).toBe(false);
+    expect(
+      countsTowardAnnualIncome({
+        id: 'i1',
+        type: 'interest',
+        payerDomicile: 'domestic',
+        amount: 10_000,
       }),
     ).toBe(false);
     expect(

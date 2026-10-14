@@ -117,6 +117,24 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       case 'publicPension':
         stream = { id, type, amount };
         break;
+      // Only the supported variant is offered; the selectors that say so arrive with the
+      // rest of the investment-income UI.
+      case 'capitalGains':
+        stream = {
+          id,
+          type,
+          amount,
+          shareType: 'listed',
+          account: 'specifiedWithholding',
+          taxTreatment: 'withheldOnly',
+        };
+        break;
+      case 'dividends':
+        stream = { id, type, amount, shareType: 'listed', taxTreatment: 'withheldOnly' };
+        break;
+      case 'interest':
+        stream = { id, type, amount, payerDomicile: 'domestic' };
+        break;
       default: {
         const unhandled: never = type;
         throw new Error(`Unhandled income stream type: ${String(unhandled)}`);
@@ -408,6 +426,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             sx={{ width: '100%' }}
             helperText={error || info.amountHelperText}
             error={!!error}
+            {...(info.min !== undefined && { min: info.min })}
           />
           {type === 'salary' && frequency === 'monthly' && amount > 0 && (
             <Typography variant="body2" align="right" sx={{ color: 'text.secondary', mt: 0.5 }}>
