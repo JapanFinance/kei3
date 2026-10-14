@@ -973,6 +973,24 @@ describe('Investment Income Integration', () => {
     ).parentElement!;
     expect(within(investmentIncomeRow).getByText('¥300,000')).toBeInTheDocument();
   }, 10_000);
+
+  it('adds no such row for a dividend reported under 申告分離課税, which joins the income total', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper />);
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends$/i }));
+
+    await user.type(screen.getByRole('textbox', { name: /gross dividends/i }), '300000');
+    await user.click(screen.getByRole('button', { name: 'Reported (separate)' }));
+    await user.click(screen.getByRole('button', { name: /add/i }));
+    await user.click(screen.getByRole('button', { name: /close/i }));
+
+    expect(screen.queryByText('Investment Income (taxed separately)')).not.toBeInTheDocument();
+    // The header total is the income on the return: 5,000,000 + 300,000.
+    expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
+  }, 10_000);
 });
 
 describe('Regression: Health Insurance Provider Auto-Correction', () => {

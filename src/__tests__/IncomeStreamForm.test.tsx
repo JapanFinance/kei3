@@ -50,10 +50,14 @@ describe('IncomeStreamForm', () => {
     const { rerender } = render(
       <IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
-    expect(screen.getByText(/netted against dividends within the account/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/nets a capital loss for the year against the dividends/),
+    ).toBeInTheDocument();
 
     rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.getByText(/netted against dividends within the account/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/nets a capital loss for the year against the dividends/),
+    ).toBeInTheDocument();
   });
 
   it('shows the deposit-interest guidance box', () => {
@@ -110,7 +114,7 @@ describe('IncomeStreamForm', () => {
     expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ payerDomicile: 'domestic' }));
   });
 
-  it('offers only the account that can leave a share sale off the return', async () => {
+  it('offers every account, and only the withholding account can leave the sale off the return', async () => {
     const user = userEvent.setup();
     render(<IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />);
 
@@ -121,13 +125,26 @@ describe('IncomeStreamForm', () => {
       'Domestic account without withholding (特定口座（源泉徴収なし）・一般口座)',
       'Foreign account',
     ]);
-    expect(options[0]).not.toHaveAttribute('aria-disabled', 'true');
-    for (const unsupported of options.slice(1)) {
-      expect(unsupported).toHaveAttribute('aria-disabled', 'true');
+    for (const option of options) {
+      expect(option).not.toHaveAttribute('aria-disabled', 'true');
     }
+
+    // 措法37条の11の5: 申告不要 goes with the 源泉徴収選択口座 alone, so choosing another account
+    // moves the entry onto the return.
+    await user.click(screen.getByRole('option', { name: 'Foreign account' }));
+    expect(screen.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ account: 'foreign', taxTreatment: 'separate' }),
+    );
   });
 
-  it('offers only 申告不要, with 総合課税 shown for dividends alone', () => {
+  it('offers 申告不要 and 申告分離課税, with 総合課税 shown for dividends alone and not yet selectable', () => {
     const { rerender } = render(
       <IncomeStreamForm type="capitalGains" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
@@ -135,14 +152,25 @@ describe('IncomeStreamForm', () => {
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toBeEnabled();
     // 措法37条の11 has no 総合課税 election for a share sale.
     expect(
       screen.queryByRole('button', { name: 'Reported (progressive)' }),
     ).not.toBeInTheDocument();
 
     rerender(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+    expect(screen.getByRole('button', { name: 'Reported (separate)' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Reported (progressive)' })).toBeDisabled();
+  });
+
+  it('saves a dividend as reported when 申告分離課税 is chosen', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reported (separate)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'dividends', taxTreatment: 'separate' }),
+    );
   });
 
   it('saves the supported account and election', () => {

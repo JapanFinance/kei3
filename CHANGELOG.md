@@ -9,6 +9,12 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 - Fixed employee health insurance premiums that were ¥1 too high for some rates. A premium that ends in exactly 0.50 yen is rounded down (50銭以下切り捨て), but in rare cases it was incorrectly being rounded up. Premiums on bonuses were affected in the same way. Amounts are now entered in whole yen, and custom provider rates accept up to four decimal places (for example, 3.9947%). A custom rate entered with more than four decimal places is rounded to four.
 - Fixed the Social Insurance tab showing the wrong standard monthly remuneration (標準報酬月額) grade when three or more income streams were entered and their total landed exactly on a grade boundary. This was a display bug in the tooltip and did not affect the calculated premiums.
 
+## 2026-09-13
+
+### New
+
+- Capital gains on shares and dividends can now be reported under [申告分離課税](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm) instead of being left to the tax withheld at source, and sales from a domestic account without withholding or from a foreign account, which have to be reported, are now accepted. A reported amount is income on the tax return: it joins the annual income and take-home pay, and it enters 合計所得金額, which moves the basic deduction, spouse and dependent eligibility, the residence-tax exemption, National Health Insurance and 後期高齢者医療 premiums, the 65+ long-term care tier, and the furusato nozei limit. The reported income is taxed at 15% income tax (plus the reconstruction surtax) and 5% residence tax apart from the progressive brackets, after any income deductions the other income could not use; the Taxes tab shows the taxable amount and the tax on it under Income Tax and under Residence Tax. A capital loss for the year is netted against the other reported gains and then, for sales through a Japanese account, against reported dividends ([損益通算](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm)); a loss realized through a foreign account offsets gains only. In the chart, reported investment income is part of the income on the x-axis and is held at the entered amount across the range. Reporting dividends under 総合課税, carrying a loss forward, the foreign tax credit, and 一般株式等 are not yet supported.
+
 ## 2026-09-12
 
 ### New
