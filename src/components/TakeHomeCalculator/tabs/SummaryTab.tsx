@@ -47,7 +47,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       (results.longTermCareCategory1Premium ?? 0);
   // The tax withheld on investment income left to withholding counts with the assessed tax of
   // the same kind; the Taxes tab shows the two apart.
-  const withheldInvestmentTax = results.investmentIncome?.withheld;
+  const withheldInvestmentTax = results.investmentIncome?.withheld?.tax;
   const incomeTax = results.nationalIncomeTax + (withheldInvestmentTax?.national ?? 0);
   const residenceTax =
     results.residenceTax.totalResidenceTax + (withheldInvestmentTax?.residence ?? 0);

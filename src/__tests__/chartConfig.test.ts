@@ -207,7 +207,7 @@ describe('generateChartData with investment income', () => {
         ...investmentContext,
         incomeStreams: scaleIncomeStreamsToIncome(investmentContext.incomeStreams, point.x),
       });
-      const withheld = result.investmentIncome!.withheld;
+      const withheld = result.investmentIncome!.withheld!.tax;
       // 1,000,000 × 15.315% + 100,000 × 15.315%; 1,000,000 × 5% + 100,000 × 5%.
       expect(withheld).toEqual({ national: 168_465, residence: 55_000, total: 223_465 });
       expect(incomeTax[i]!.y, `income ${point.x}`).toBe(result.nationalIncomeTax + 168_465);

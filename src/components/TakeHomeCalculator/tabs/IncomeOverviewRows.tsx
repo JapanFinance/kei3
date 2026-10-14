@@ -9,8 +9,8 @@ import { ResultRow } from '../ResultRow';
 import NetAggregateInvestmentIncomeTooltip from './NetAggregateInvestmentIncomeTooltip';
 import NetBusinessAndMiscIncomeTooltip from './NetBusinessAndMiscIncomeTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
-import NetInvestmentIncomeTooltip from './NetInvestmentIncomeTooltip';
 import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
+import NetSeparateInvestmentIncomeTooltip from './NetSeparateInvestmentIncomeTooltip';
 
 interface IncomeOverviewRowsProps {
   results: TakeHomeResults;
@@ -31,19 +31,16 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = grossBusinessAndMiscIncome > 0;
   const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
-  const aggregateDividends = results.investmentIncome?.aggregateDividends;
-  const aggregateInterest = results.investmentIncome?.aggregateInterest;
+  const aggregate = results.investmentIncome?.reported?.aggregate;
   // 配当所得 and the 利子所得 paid outside Japan are both inside 総所得金額 and taxed in the
   // brackets, so they share one row rather than adding a second one.
-  const hasAggregateInvestmentIncome =
-    aggregateDividends !== undefined || aggregateInterest !== undefined;
-  const reportedInvestment = results.investmentIncome?.reported;
+  const separate = results.investmentIncome?.reported?.separate;
   const presentIncomeComponents = [
     hasEmploymentIncome,
     hasBusinessOrMiscIncome,
     hasPublicPensionIncome,
-    hasAggregateInvestmentIncome,
-    reportedInvestment !== undefined,
+    aggregate !== undefined,
+    separate !== undefined,
   ].filter(Boolean).length;
 
   return (
@@ -102,33 +99,28 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
         />
       )}
 
-      {hasAggregateInvestmentIncome && (
+      {aggregate && (
         <ResultRow
           label={
             <span>
               Net Investment Income (aggregate)
-              <NetAggregateInvestmentIncomeTooltip
-                dividends={aggregateDividends}
-                interest={aggregateInterest}
-              />
+              <NetAggregateInvestmentIncomeTooltip aggregate={aggregate} />
             </span>
           }
-          value={formatJPY((aggregateDividends ?? 0) + (aggregateInterest ?? 0))}
+          value={formatJPY(aggregate.dividends + aggregate.interest)}
           type="default"
         />
       )}
 
-      {reportedInvestment && (
+      {separate && (
         <ResultRow
           label={
             <span>
               Net Investment Income (separate)
-              <NetInvestmentIncomeTooltip reported={reportedInvestment} />
+              <NetSeparateInvestmentIncomeTooltip separate={separate} />
             </span>
           }
-          value={formatJPY(
-            reportedInvestment.netIncome.capitalGains + reportedInvestment.netIncome.dividends,
-          )}
+          value={formatJPY(separate.netIncome.capitalGains + separate.netIncome.dividends)}
           type="default"
         />
       )}

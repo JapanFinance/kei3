@@ -264,8 +264,14 @@ export interface SeparateNetIncome {
 }
 
 /** Investment income reported under 申告分離課税 and how the return taxes it. */
-export interface ReportedInvestmentIncome {
-  gross: ReportedInvestmentAmounts;
+export interface SeparateTaxationIncome {
+  /** The reported amounts as entered, before 損益通算. */
+  gross: {
+    /** 上場株式等に係る譲渡所得等 netted across every reported sale; negative for a net loss. */
+    capitalGains: number;
+    /** 上場株式等の配当等 reported under 措法8条の4①. */
+    dividends: number;
+  };
   /** 上場株式等に係る譲渡損失の金額 deducted from the dividends (措法37条の12の2①). */
   lossOffsetAgainstDividends: number;
   /**
@@ -307,6 +313,66 @@ export interface WithheldInvestmentTax {
   national: number;
   residence: number;
   total: number;
+}
+
+/** The part of one withholding designated account left to withholding, and what it is taxed on. */
+export interface WithheldAccountBase {
+  /** One-based position among the withholding designated account entries, as the entries are listed. */
+  position: number;
+  /** The account's sales left to withholding; 0 when the sales are reported. */
+  capitalGains: number;
+  /** The account's dividends left to withholding; 0 when the dividends are reported. */
+  dividends: number;
+  /**
+   * {@link import("../utils/investmentIncome").withholdingAccountBase} of the two: the loss is
+   * netted against the dividends in the same account only, never below zero.
+   */
+  base: number;
+}
+
+/**
+ * Investment income left to withholding (申告不要): the amounts, what the withholding is charged
+ * on entry by entry, and the tax. Accounts do not net with each other, so a loss left over in one
+ * does not reduce the base of another; {@link accounts} shows each account's own base so a display
+ * can explain a tax that differs from the rate times {@link received}.
+ */
+export interface WithheldInvestmentIncome {
+  /** The withholding designated accounts with an amount left to withholding, in entry order. */
+  accounts: WithheldAccountBase[];
+  /** Dividends left to withholding outside a withholding designated account; taxed in full. */
+  dividends: number;
+  /** Interest paid in Japan; taxed in full. */
+  interest: number;
+  /**
+   * Every amount left to withholding, summed as received: the accounts' sales and dividends plus
+   * {@link dividends} and {@link interest}. Negative when a loss exceeds the rest.
+   */
+  received: number;
+  /** The accounts' bases plus {@link dividends} and {@link interest}: what the rates apply to. */
+  taxedAmount: number;
+  tax: WithheldInvestmentTax;
+}
+
+/**
+ * Investment income reported under 総合課税, as entered: part of 総所得金額 and taxed in the
+ * progressive brackets with the earned income.
+ */
+export interface AggregateTaxationIncome {
+  /** 配当所得 reported under the 総合課税 election; no 配当控除 (not yet supported). */
+  dividends: number;
+  /**
+   * 利子所得 paid outside Japan: no Japanese tax was withheld on it, so the whole receipt is
+   * reported. The foreign tax withheld on it is not supported.
+   */
+  interest: number;
+}
+
+/** Investment income that goes on the tax return, by how the return taxes it. */
+export interface ReportedInvestmentIncome {
+  /** Present when any amount is reported under 申告分離課税. */
+  separate?: SeparateTaxationIncome | undefined;
+  /** Present when any amount is reported under 総合課税. */
+  aggregate?: AggregateTaxationIncome | undefined;
 }
 
 /**
@@ -712,38 +778,19 @@ export interface TakeHomeResults {
    */
   commutingAllowance?: number;
   /**
-   * Investment income (listed-share capital gains and dividends, interest). Every amount
-   * is inside {@link annualIncome} and {@link takeHomeIncome}. The amounts settled by
-   * withholding are outside {@link totalNetIncome} and every assessed figure, and the tax
-   * withheld on them, in the `withheld` field, comes off take-home like any other tax; the
-   * amounts reported, under 申告分離課税 or 総合課税, are taxed through the same calculation as
-   * the earned income. Absent when every amount is 0.
+   * Investment income (listed-share capital gains and dividends, interest), split by the first
+   * choice every entry makes: left to withholding or reported. Every amount is inside
+   * {@link annualIncome} and {@link takeHomeIncome}. The amounts left to withholding are outside
+   * {@link totalNetIncome} and every assessed figure, and the tax withheld on them comes off
+   * take-home like any other tax; the reported amounts, under 申告分離課税 or 総合課税, are taxed
+   * through the same calculation as the earned income. Absent when every amount is 0.
    */
   investmentIncome?:
     | {
-        /** The 申告不要 amounts, before withholding. */
-        gross: InvestmentIncomeAmounts;
-        /**
-         * Sum of the three {@link InvestmentIncomeAmounts}; may be negative when a capital-gains
-         * loss exceeds the dividends and interest.
-         */
-        grossTotal: number;
-        withheld: WithheldInvestmentTax;
-        /** Present when any amount is reported under 申告分離課税. */
+        /** Present when any amount is left to withholding. */
+        withheld?: WithheldInvestmentIncome | undefined;
+        /** Present when any amount is reported on the tax return. */
         reported?: ReportedInvestmentIncome | undefined;
-        /**
-         * 配当所得 reported under 総合課税, as entered: part of 総所得金額 and taxed in the
-         * progressive brackets with the earned income, with no 配当控除 (not yet modelled) and
-         * nothing netted against it. Present when any dividend is reported that way.
-         */
-        aggregateDividends?: number | undefined;
-        /**
-         * 利子所得 paid outside Japan, as entered: no Japanese tax was withheld on it, so the
-         * whole receipt is part of 総所得金額 and is taxed in the progressive brackets with the
-         * earned income. The foreign tax withheld on it is not modelled. Present when any
-         * interest is paid that way.
-         */
-        aggregateInterest?: number | undefined;
       }
     | undefined;
   nationalIncomeTaxBasicDeduction?: number | undefined;

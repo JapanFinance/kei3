@@ -44,9 +44,16 @@ describe('SummaryTab with investment income', () => {
           annualIncome: 5_200_000,
           takeHomeIncome: 3_956_220,
           investmentIncome: {
-            gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
-            grossTotal: 1_200_000,
-            withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+            withheld: {
+              accounts: [
+                { position: 1, capitalGains: 1_000_000, dividends: 200_000, base: 1_200_000 },
+              ],
+              dividends: 0,
+              interest: 0,
+              received: 1_200_000,
+              taxedAmount: 1_200_000,
+              tax: { national: 183_780, residence: 60_000, total: 243_780 },
+            },
           },
         }}
       />,
@@ -71,17 +78,16 @@ describe('SummaryTab with investment income', () => {
         results={{
           ...baseResults,
           investmentIncome: {
-            gross: { capitalGains: 0, dividends: 0, interest: 0 },
-            grossTotal: 0,
-            withheld: { national: 0, residence: 0, total: 0 },
             reported: {
-              gross: { capitalGains: 0, qualifyingCapitalLosses: 0, dividends: 1_000_000 },
-              lossOffsetAgainstDividends: 0,
-              unabsorbedQualifyingLoss: 0,
-              nonQualifyingLoss: 0,
-              netIncome: { capitalGains: 0, dividends: 1_000_000 },
-              taxable: { capitalGains: 0, dividends: 1_000_000 },
-              nationalIncomeTaxBase: 150_000,
+              separate: {
+                gross: { capitalGains: 0, dividends: 1_000_000 },
+                lossOffsetAgainstDividends: 0,
+                unabsorbedQualifyingLoss: 0,
+                nonQualifyingLoss: 0,
+                netIncome: { capitalGains: 0, dividends: 1_000_000 },
+                taxable: { capitalGains: 0, dividends: 1_000_000 },
+                nationalIncomeTaxBase: 150_000,
+              },
             },
           },
         }}

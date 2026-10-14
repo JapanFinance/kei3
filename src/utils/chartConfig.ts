@@ -317,7 +317,7 @@ export const generateChartData = (
       label: 'Income Tax',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.nationalIncomeTax + (result.investmentIncome?.withheld.national ?? 0),
+        y: result.nationalIncomeTax + (result.investmentIncome?.withheld?.tax.national ?? 0),
         breakdown,
       })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
@@ -331,7 +331,7 @@ export const generateChartData = (
         x: incomePoints[i]!,
         y:
           result.residenceTax.totalResidenceTax +
-          (result.investmentIncome?.withheld.residence ?? 0),
+          (result.investmentIncome?.withheld?.tax.residence ?? 0),
         breakdown,
       })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',

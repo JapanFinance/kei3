@@ -509,9 +509,16 @@ describe('IncomeDetailsModal - Investment Income', () => {
         streams={streams}
         onStreamsChange={() => {}}
         investmentIncome={{
-          gross: { capitalGains: 1_000_000, dividends: 200_000, interest: 0 },
-          grossTotal: 1_200_000,
-          withheld: { national: 183_780, residence: 60_000, total: 243_780 },
+          withheld: {
+            accounts: [
+              { position: 1, capitalGains: 1_000_000, dividends: 200_000, base: 1_200_000 },
+            ],
+            dividends: 0,
+            interest: 0,
+            received: 1_200_000,
+            taxedAmount: 1_200_000,
+            tax: { national: 183_780, residence: 60_000, total: 243_780 },
+          },
         }}
       />,
     );
@@ -522,6 +529,55 @@ describe('IncomeDetailsModal - Investment Income', () => {
     ).toBeInTheDocument();
     // The title bar carries the total alone; the investment figure lives on its group.
     expect(screen.queryByText(/^Investment: /)).not.toBeInTheDocument();
+  });
+
+  it('names the taxed amount in the footer when a loss in one account leaves it above the net received', () => {
+    // Received net: −18,000 + 8,000 + 10,000 = 0. Taxed: account 2's 10,000 only, since the loss in
+    // account 1 cannot reach it. Tax 1,531 + 500 = 2,031, so 0 − 2,031 = −2,031.
+    const streams: IncomeStream[] = [
+      {
+        id: 'a1',
+        type: 'withholdingAccount',
+        capitalGains: -18_000,
+        dividends: 8_000,
+        reportsCapitalGains: false,
+        reportsDividends: false,
+      },
+      {
+        id: 'a2',
+        type: 'withholdingAccount',
+        capitalGains: 0,
+        dividends: 10_000,
+        reportsCapitalGains: false,
+        reportsDividends: false,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        investmentIncome={{
+          withheld: {
+            accounts: [
+              { position: 1, capitalGains: -18_000, dividends: 8_000, base: 0 },
+              { position: 2, capitalGains: 0, dividends: 10_000, base: 10_000 },
+            ],
+            dividends: 0,
+            interest: 0,
+            received: 0,
+            taxedAmount: 10_000,
+            tax: { national: 1_531, residence: 500, total: 2_031 },
+          },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText('Withheld only: ¥0 − ¥2,031 tax on ¥10,000 = -¥2,031'),
+    ).toBeInTheDocument();
   });
 
   it("shows an account's card total, its sales/dividends caption, and its per-flag description", () => {
@@ -655,17 +711,16 @@ describe('IncomeDetailsModal - Investment Income', () => {
         streams={streams}
         onStreamsChange={() => {}}
         investmentIncome={{
-          gross: { capitalGains: 0, dividends: 0, interest: 0 },
-          grossTotal: 0,
-          withheld: { national: 0, residence: 0, total: 0 },
           reported: {
-            gross: { capitalGains: -100_000, qualifyingCapitalLosses: 0, dividends: 300_000 },
-            lossOffsetAgainstDividends: 0,
-            unabsorbedQualifyingLoss: 0,
-            nonQualifyingLoss: 100_000,
-            netIncome: { capitalGains: 0, dividends: 300_000 },
-            taxable: { capitalGains: 0, dividends: 300_000 },
-            nationalIncomeTaxBase: 45_000,
+            separate: {
+              gross: { capitalGains: -100_000, dividends: 300_000 },
+              lossOffsetAgainstDividends: 0,
+              unabsorbedQualifyingLoss: 0,
+              nonQualifyingLoss: 100_000,
+              netIncome: { capitalGains: 0, dividends: 300_000 },
+              taxable: { capitalGains: 0, dividends: 300_000 },
+              nationalIncomeTaxBase: 45_000,
+            },
           },
         }}
       />,
@@ -708,10 +763,15 @@ describe('IncomeDetailsModal - Investment Income', () => {
         onStreamsChange={() => {}}
         reportedDividendsTaxation="aggregate"
         investmentIncome={{
-          gross: { capitalGains: 0, dividends: 300_000, interest: 0 },
-          grossTotal: 300_000,
-          withheld: { national: 45_945, residence: 15_000, total: 60_945 },
-          aggregateDividends: 400_000,
+          withheld: {
+            accounts: [],
+            dividends: 300_000,
+            interest: 0,
+            received: 300_000,
+            taxedAmount: 300_000,
+            tax: { national: 45_945, residence: 15_000, total: 60_945 },
+          },
+          reported: { aggregate: { dividends: 400_000, interest: 0 } },
         }}
       />,
     );
@@ -742,10 +802,15 @@ describe('IncomeDetailsModal - Investment Income', () => {
         streams={streams}
         onStreamsChange={() => {}}
         investmentIncome={{
-          gross: { capitalGains: 0, dividends: 0, interest: 50_000 },
-          grossTotal: 50_000,
-          withheld: { national: 7_657, residence: 2_500, total: 10_157 },
-          aggregateInterest: 100_000,
+          withheld: {
+            accounts: [],
+            dividends: 0,
+            interest: 50_000,
+            received: 50_000,
+            taxedAmount: 50_000,
+            tax: { national: 7_657, residence: 2_500, total: 10_157 },
+          },
+          reported: { aggregate: { dividends: 0, interest: 100_000 } },
         }}
       />,
     );
