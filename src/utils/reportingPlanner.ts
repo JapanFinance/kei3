@@ -621,9 +621,9 @@ export const mandatoryReportingNote = (
     s => s.type === 'dividends' && s.paymentChannel === 'abroad',
   );
   if (hasOutsideSale && hasAbroadDividend) {
-    return 'Sales outside a withholding designated account and dividends paid abroad are always reported.';
+    return 'Sales outside a withholding designated account and dividends received outside Japan are always reported.';
   }
   if (hasOutsideSale) return 'Sales outside a withholding designated account are always reported.';
-  if (hasAbroadDividend) return 'Dividends paid abroad are always reported.';
+  if (hasAbroadDividend) return 'Dividends received outside Japan are always reported.';
   return undefined;
 };

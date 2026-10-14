@@ -2764,7 +2764,7 @@ describe('calculateTaxes with investment income streams', () => {
     ).toThrow(/一般株式等/);
   });
 
-  it('rejects a dividend paid abroad left off the return, which 措令4条の3② excludes from 申告不要', () => {
+  it('rejects a dividend received outside Japan left off the return, which 措令4条の3② excludes from 申告不要', () => {
     expect(() =>
       calculateTaxes(
         salaryInputs([
@@ -3216,8 +3216,8 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     expect(result.takeHomeIncome).toBe(4_739_848);
   });
 
-  it('taxes a dividend paid abroad the same way once it is reported', () => {
-    // 措令4条の3② excludes a dividend paid abroad from 申告不要, but says nothing about how a
+  it('taxes a dividend received outside Japan the same way once it is reported', () => {
+    // 措令4条の3② excludes a dividend received outside Japan from 申告不要, but says nothing about how a
     // reported one is taxed once it is on the return.
     const result = calculateTaxes(
       salaryInputs([{ ...reportedDividends(1_000_000), paymentChannel: 'abroad' as const }]),

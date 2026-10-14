@@ -65,17 +65,10 @@ const ResidenceTaxCreditTooltip: React.FC<ResidenceTaxCreditTooltipProps> = ({
           <Typography variant="body2" sx={{ fontSize: '0.85em', mb: 0.5 }}>
             Personal deduction difference: {formatJPY(personalDeductionDifference)}
           </Typography>
+          {/* Statutory basis: Local Tax Act Article 314-6 (地方税法第314条の6) */}
           <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 0.5 }}>
-            The statutory personal deduction difference (defined in{' '}
-            <a
-              href="https://laws.e-gov.go.jp/law/325AC0000000226#Mp-At_314_6"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'inherit', textDecoration: 'underline' }}
-            >
-              Local Tax Act Article 314-6
-            </a>
-            ) accounts for differences between national and residence tax deduction amounts.
+            The statutory personal deduction difference (人的控除額の差) accounts for differences
+            between national and residence tax deduction amounts.
           </Typography>
           <Typography variant="body2" sx={{ fontSize: '0.8em', color: 'text.secondary', mb: 1 }}>
             The adjustment credit is calculated:
@@ -135,9 +128,17 @@ const ResidenceTaxCreditTooltip: React.FC<ResidenceTaxCreditTooltipProps> = ({
         <SourceLinks
           sources={[
             {
-              href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm',
-              label: 'Foreign tax credit (外国税額控除) - NTA',
+              href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju',
+              label: '個人住民税 (Tokyo Bureau of Taxation)',
             },
+            ...(foreignTaxCredit
+              ? [
+                  {
+                    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm',
+                    label: 'Foreign tax credit (外国税額控除) - NTA',
+                  },
+                ]
+              : []),
           ]}
         />
       </Box>

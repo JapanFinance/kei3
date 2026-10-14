@@ -223,11 +223,12 @@ const WithheldInvestmentTaxTooltip: React.FC<{
         dividends down to nothing. Accounts are not combined with each other, so a loss left over in
         one account does not reduce the tax on dividends in another.
       </Typography>
+      {/* 措法9条の2③, 措令4条の5⑫ */}
       {withheld.foreignTax !== undefined && (
         <Typography variant="body2" sx={{ mb: 1 }}>
           On dividends from a foreign company or fund, the withholding is charged on the dividends
-          after the foreign tax withheld abroad (措法9条の2③). Left to withholding, that foreign tax
-          is not credited against Japanese tax (措令4条の5⑫).
+          after the foreign tax withheld abroad. Left to withholding, that foreign tax is not
+          credited against Japanese tax.
         </Typography>
       )}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>

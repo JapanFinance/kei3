@@ -113,9 +113,9 @@ const LISTED_SHARE_SOURCES = {
   ],
 };
 
-// What happens to foreign tax on a dividend, for the reporting tooltip and the guidance box.
+// What happens to foreign tax on a dividend, for the reporting tooltip and the guidance box (措法9条の2③, 措令4条の5⑫).
 const FOREIGN_DIVIDEND_TAX_NOTE =
-  'For a dividend from a foreign company or fund left to withholding, the 20.315% is charged on the dividend after the foreign tax, and the foreign tax is not credited (措法9条の2③, 措令4条の5⑫). Reported, the foreign tax is credited against the Japanese income tax and residence tax, up to limits set by the share of foreign-source income in total net income; with no income tax, there is nothing to credit it against. Foreign tax above the limits can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.';
+  'For a dividend from a foreign company or fund that is not reported on a tax return, the Japanese tax is charged on the dividend after the foreign tax, and the foreign tax is not credited. Reported, the foreign tax is credited against Japanese tax, up to limits set by the Foreign Tax Credit rules.';
 
 const guidanceBoxSx = {
   p: 1.5,
@@ -549,13 +549,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 iconAriaLabel="company or fund info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Foreign</strong> is a company or fund established outside Japan: a US
-                  stock, a US-listed ETF, or a foreign ETF listed in Tokyo. Its dividends are
-                  foreign-source income, and the tax withheld on them abroad can be entered with the
-                  amount.
+                  <strong>Foreign</strong> is a company or fund domiciled outside Japan: a US stock,
+                  a US-listed ETF, or a foreign ETF listed on a Japanese exchange. Its dividends are
+                  foreign-source income, and the foreign tax withheld on them can be entered.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Japanese</strong> includes a Japanese fund that invests abroad. A
+                  <strong>Japanese</strong> includes Japan-domiciled funds that invest abroad. A
                   different credit (分配時調整外国税相当額控除) reduces the Japanese tax on its
                   distributions by the foreign tax its holdings paid; that credit is not supported
                   yet.
@@ -591,7 +590,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
               onChange={e => setAccount(e.target.value)}
             >
               <MenuItem value="domesticNoWithholding">
-                Domestic account without withholding (特定口座（源泉徴収なし）・一般口座)
+                Domestic account no withholding (特定口座（源泉徴収なし）・一般口座)
               </MenuItem>
               <MenuItem value="foreign">Foreign account</MenuItem>
             </Select>
@@ -605,13 +604,14 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 icon={SIMPLE_TOOLTIP_ICON}
                 iconAriaLabel="account info"
               >
+                {/* 措法37条の12の2② requires sales to be through a licensed broker in Japan to offset dividends or carry forward */}
                 <Typography sx={{ display: 'block' }}>
                   A designated account without withholding (特定口座（源泉徴収なし）) and a general
                   account (一般口座) are one option here because they have the same tax treatment. A
                   foreign account is its own option because a sale there is not made through a
                   broker licensed in Japan (金融商品取引業者), which the law requires of a loss for
-                  it to offset dividends or be carried forward (措法37条の12の2②). A loss in a
-                  foreign account only offsets the year's other reported gains.
+                  it to offset dividends or be carried forward. A loss in a foreign account only
+                  offsets the year's other reported gains.
                 </Typography>
               </DetailedTooltip>
             </FormHelperText>
@@ -621,21 +621,21 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         {type === 'dividends' && (
           <FormControl fullWidth>
             <FormLabel id="dividend-payment-channel-label" sx={variantLabelSx}>
-              <span>Paid</span>
+              <span>Received</span>
               <DetailedTooltip
-                title="Where the Dividend Is Paid"
+                title="Where the Dividend Is Received"
                 icon={SIMPLE_TOOLTIP_ICON}
                 iconAriaLabel="dividend payment channel info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>In Japan</strong> means paid in Japan, or paid abroad through a Japanese
+                  <strong>In Japan</strong> means received in Japan, or received through a Japanese
                   broker that handles the payment (支払の取扱者). Japanese tax was withheld, so the
                   dividend may be left to withholding per payment.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Abroad</strong> means received outside Japan with no Japanese handler — a
-                  foreign brokerage account, for example. Such a dividend cannot be left to
-                  withholding, so it has to be reported.
+                  <strong>Outside Japan</strong> means received with no Japanese handler — a foreign
+                  brokerage account, for example. Such a dividend cannot be left to withholding, so
+                  it has to be reported.
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -648,12 +648,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 }
               }}
               aria-labelledby="dividend-payment-channel-label"
-              aria-label="where the dividend is paid"
+              aria-label="where the dividend is received"
               size="small"
               sx={variantToggleGroupSx}
             >
               <ToggleButton value="domestic">In Japan</ToggleButton>
-              <ToggleButton value="abroad">Abroad</ToggleButton>
+              <ToggleButton value="abroad">Outside Japan</ToggleButton>
             </ToggleButtonGroup>
           </FormControl>
         )}
@@ -668,19 +668,17 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 iconAriaLabel="reporting info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Withheld only (申告不要)</strong> means the 20.315% the payer withheld
-                  settles the tax. The dividend stays off the return and out of total net income
-                  (合計所得金額).
+                  <strong>Withheld only (申告不要)</strong> means the Japanese tax the payer
+                  withheld settles the tax. The dividend stays off the return and out of total net
+                  income.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Reported</strong> puts the dividend on the return, where it counts toward
-                  total net income (合計所得金額) and everything keyed to it, from the basic
-                  deduction and dependent eligibility to National Health Insurance premiums and the
-                  furusato nozei limit. The tax withheld is credited at filing. Reported dividends
-                  are taxed under the election made in the income list, separate or aggregate
-                  taxation. Reporting can be beneficial when the other income cannot use all the
-                  deductions, or, under separate taxation, when a reported loss can offset the
-                  dividend.
+                  <strong>Reported</strong> puts the dividend on the tax return, where it counts
+                  toward total net income. The tax withheld is credited at filing. Reported
+                  dividends are taxed under the election made in the income list, separate or
+                  aggregate taxation. Reporting can be beneficial when the other income cannot use
+                  all the deductions, or, under separate taxation, when a reported loss can offset
+                  the dividend.
                 </Typography>
                 {issuerDomicile === 'foreign' && (
                   <>
@@ -720,7 +718,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             {minimumTaxApplies ? (
               <FormHelperText sx={minimumTaxWarningSx}>{MINIMUM_TAX_REPORTING_NOTE}</FormHelperText>
             ) : paymentChannel === 'abroad' ? (
-              <FormHelperText>A dividend paid abroad has to be reported.</FormHelperText>
+              <FormHelperText>A dividend received outside Japan must be reported.</FormHelperText>
             ) : null}
           </FormControl>
         )}
@@ -790,15 +788,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   <strong>Japanese system</strong> is a pension under a Japanese system, even when
                   it is paid abroad.
                 </Typography>
-                <SourceLinks
-                  sources={[
-                    NTA_TAX_ANSWERS.foreignTaxCredit,
-                    {
-                      href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
-                      label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
-                    },
-                  ]}
-                />
+                {/* 所得税法第95条 */}
+                <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
               </DetailedTooltip>
             </FormLabel>
             <ToggleButtonGroup
@@ -842,7 +833,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   <strong>Unavailable</strong> — The pension is taxed in Japan with the public
                   pension deduction (公的年金等控除) and is excluded from foreign-source income for
-                  Japan&apos;s foreign tax credit limit.
+                  Japan's foreign tax credit limit.
                 </Typography>
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   <strong>Available</strong> — Foreign tax can be credited against Japanese tax up
@@ -856,7 +847,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   <li>The treaty explicitly permits source-country taxation (e.g. Germany).</li>
                   <li>
                     Foreign government or military service pensions where the paying country retains
-                    taxation rights under the treaty (Article 19).
+                    taxation rights under the treaty (e.g. government service provisions).
                   </li>
                   <li>
                     Countries or territories without a tax treaty with Japan (e.g. Nepal, Myanmar,
@@ -867,15 +858,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   Pensions that are exempt from Japanese tax under a treaty should not be entered in
                   this calculator.
                 </Typography>
-                <SourceLinks
-                  sources={[
-                    NTA_TAX_ANSWERS.foreignTaxCredit,
-                    {
-                      href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
-                      label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
-                    },
-                  ]}
-                />
+                {/* 所得税法第95条 */}
+                <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
               </DetailedTooltip>
             </FormLabel>
             <ToggleButtonGroup
@@ -904,8 +888,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             )}
             {treatyCredit === 'available' && (
               <FormHelperText>
-                Foreign tax is credited in Japan (e.g. Canada CPP/OAS, Germany, non-treaty
-                countries).
+                Foreign tax credit in Japan (e.g. Canada CPP/OAS, Germany, non-treaty countries).
               </FormHelperText>
             )}
           </FormControl>
@@ -1094,9 +1077,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             // and 37条の11の6⑨), the helper text under the pair at the group's full width.
             <Stack spacing={2}>
               <Typography variant="body2" component="div">
-                Copy the figures from the account's annual transaction report
-                (特定口座年間取引報告書), and choose whether to report the sales and the dividends
-                on a tax return.
+                Copy the figures from the annual transaction report (特定口座年間取引報告書), and
+                choose whether to report the sales and/or the dividends on a tax return.
                 <DetailedTooltip
                   title="Reporting"
                   icon={SIMPLE_TOOLTIP_ICON}
@@ -1108,9 +1090,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   </Typography>
                   <Typography sx={{ display: 'block', mb: 1 }}>
                     Reporting includes the figure on the tax return, where it counts toward total
-                    net income (合計所得金額) and everything based on it, from the basic deduction
-                    and dependent eligibility to National Health Insurance premiums and the furusato
-                    nozei limit. A reported loss offsets the year's other reported gains and, under
+                    net income. A reported loss offsets the year's other reported gains and, under
                     separate taxation, the reported dividends. All reported dividends follow the one
                     election for separate or aggregate taxation, made in the income list.
                   </Typography>
@@ -1257,22 +1237,22 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           {(type === 'withholdingAccount' || type === 'capitalGains' || type === 'dividends') && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                {type === 'withholdingAccount' &&
-                  'In a withholding designated account the broker withholds 20.315% (15.315% income tax and 5% residence tax). Capital losses are combined with the dividends paid into the account before withholding.'}
-                {type === 'capitalGains' &&
-                  'No tax is withheld on a sale outside a withholding designated account, so it is reported and taxed through the return at 15.315% income tax including the reconstruction surtax, and 5% residence tax.'}
-                {type === 'dividends' &&
-                  'A dividend paid in Japan has 20.315% withheld (15.315% income tax and 5% residence tax), which settles the tax unless the dividend is reported.'}
+                Do not include tax-free NISA dividends or capital gains.
               </Typography>
+              {(type === 'withholdingAccount' || type === 'capitalGains') && (
+                <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                  {type === 'withholdingAccount' &&
+                    'In a withholding designated account the broker withholds Japanese tax. Capital losses automatically offset dividends paid into the account, so tax is withheld only on the net amount.'}
+                  {type === 'capitalGains' &&
+                    'No tax is withheld on a sale outside a withholding designated account, so it is reported and taxed separately from other income at flat rates via a tax return.'}
+                </Typography>
+              )}
               {(type === 'withholdingAccount' ||
                 (type === 'dividends' && issuerDomicile === 'foreign')) && (
                 <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
                   {FOREIGN_DIVIDEND_TAX_NOTE}
                 </Typography>
               )}
-              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                Do not include tax-free NISA dividends or capital gains.
-              </Typography>
               <SourceLinks sources={LISTED_SHARE_SOURCES[type]} />
             </Box>
           )}
@@ -1280,17 +1260,18 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           {type === 'interest' && (
             <Box sx={guidanceBoxSx}>
               <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
-                {payerDomicile === 'domestic'
-                  ? 'Interest paid in Japan is taxed at source at 20.315% and not reported on a tax return, so it does not affect total net income (合計所得金額) or anything that depends on it.'
-                  : 'Interest paid outside Japan has no Japanese tax withheld: the whole amount is interest income (利子所得) on the tax return, taxed in the progressive brackets and at the 10% residence-tax rate with the other income, so it counts toward total net income (合計所得金額) and everything keyed to it. Enter the amount in yen. Tax withheld abroad is credited against the Japanese income tax and residence tax on this interest, up to a limit (the foreign tax credit, 外国税額控除).'}
-              </Typography>
-              <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
-                This covers interest income (利子所得) as the law defines it: interest on bonds
+                This covers Interest Income (利子所得) as the law defines it: interest on bonds
                 (公社債) and deposits (預貯金), and distributions from jointly operated money trusts
                 (合同運用信託), bond investment trusts (公社債投資信託) and publicly offered bond
                 investment trusts (公募公社債等運用投資信託). Interest on money lent privately
-                should be reported as miscellaneous income (雑所得) rather than interest income.
+                should be reported as Miscellaneous Income (雑所得) rather than Interest Income.
               </Typography>
+              {payerDomicile === 'foreign' && (
+                <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                  Tax withheld abroad is credited against Japanese tax, up to the limit on the
+                  Foreign Tax Credit.
+                </Typography>
+              )}
               <SourceLinks
                 sources={[
                   {
@@ -1314,13 +1295,13 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 from defined benefit plans (確定給付企業年金) and defined contribution plans
                 (確定拠出年金, such as iDeCo). Pensions from a foreign social insurance or mutual
                 aid system comparable to the National Pension or Employees' Pension are also
-                included: enter each one as its own entry paid by a foreign system.
+                included.
               </Typography>
               <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
                 Disability pensions (障害年金) and survivors' pensions (遺族年金) are non-taxable
                 and should not be included. Payments from private individual annuity insurance
                 (個人年金保険) are not considered public pension income. For private pensions,
-                instead enter the amount net of the premiums paid as Miscellaneous income.
+                instead enter the amount net of the premiums paid as Miscellaneous Income.
               </Typography>
               <SourceLinks
                 sources={[

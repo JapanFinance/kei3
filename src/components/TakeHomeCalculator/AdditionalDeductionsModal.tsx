@@ -259,7 +259,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
             isTotal: true,
           },
           {
-            label: 'Foreign-source income',
+            label: 'Adjusted Foreign-Source Income',
             amount: foreignTaxCreditResult.adjustedForeignSourceIncome,
           },
           {
@@ -276,8 +276,8 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
   const foreignTaxExcessWarning =
     foreignTaxCreditResult && foreignTaxCreditResult.excess > 0
       ? foreignTaxCreditResult.adjustedForeignSourceIncome === 0
-        ? `There is no foreign-source income to credit the foreign tax against, so ${formatJPY(foreignTaxCreditResult.excess)} is not credited this year. Foreign-source income comes from income entries: dividends from a foreign company or fund, interest paid outside Japan and pensions from a foreign system. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
-        : `${formatJPY(foreignTaxCreditResult.excess)} of the foreign tax is above the limit and is not credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
+        ? `There is no Adjusted Foreign-Source Income (調整国外所得金額) to credit the foreign tax against, so ${formatJPY(foreignTaxCreditResult.excess)} cannot be credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
+        : `${formatJPY(foreignTaxCreditResult.excess)} of the foreign tax is above the limit and cannot be credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
       : undefined;
 
   const lifeInput = lifeInsurance;
@@ -955,13 +955,13 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                       total net income.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Foreign tax withheld at source is entered with the income it was withheld
-                      from: a dividend from a foreign company or fund, interest paid outside Japan,
-                      etc.
+                      Foreign tax withheld at source is entered with the income from which it was
+                      withheld: a dividend from a foreign company or fund, interest paid outside
+                      Japan, etc.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Enter here only tax paid with a foreign tax return. It counts in the year the
-                      return is filed, not in the year of the income it was charged on. Tax treaty
+                      Foreign tax paid with a tax return must be claimed in the year the return is
+                      filed, not in the year of the income on which it was charged. Tax treaty
                       limits apply: tax exceeding a treaty's maximum rate on a given type of income,
                       or tax paid voluntarily (such as when available treaty relief, exemptions, or
                       refunds were not claimed), cannot be credited. For example, US tax paid by a
@@ -969,7 +969,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                       be credited.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      With no foreign-source income or no income tax there is no limit, and nothing
+                      With no foreign-source income or no income tax the limit is zero, and nothing
                       is credited. Foreign tax above the limits can be carried forward for up to
                       three years by attaching the foreign tax credit statement
                       (外国税額控除に関する明細書) to the tax return each year.
@@ -996,7 +996,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                 step={1_000}
                 shiftStep={10_000}
                 min={0}
-                helperText="Only tax paid with a foreign tax return filed this year. Withheld foreign tax is entered with the income it was withheld from."
+                helperText="Only tax paid with a foreign tax return filed this year. Withheld foreign tax is entered with the income from which it was withheld."
               />
               {foreignTaxSummaryRows.length > 0 && (
                 <Box

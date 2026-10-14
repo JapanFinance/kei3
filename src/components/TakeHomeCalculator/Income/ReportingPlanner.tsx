@@ -46,7 +46,7 @@ const FIGURE_COLUMNS: readonly { key: keyof PlanFigures; label: string }[] = [
   { key: 'totalIncome', label: 'Net income (合計所得金額)' },
 ];
 
-const CURRENT_KEEPS_MOST = 'The current choices already keep the most.';
+const CURRENT_KEEPS_MOST = 'The current choices already maximize take-home.';
 
 /**
  * The short column heading for a plan in the desktop table, where the full row labels would
@@ -331,7 +331,7 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
               component="div"
               sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}
             >
-              <span>Ways to report the capital-gains and dividends.</span>
+              <span>Ways to report capital gains and dividends.</span>
               <DetailedTooltip
                 title="Reporting Plans"
                 icon={SIMPLE_TOOLTIP_ICON}
@@ -339,9 +339,9 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
                   Each plan is one set of choices for the entries that are not fixed already.
-                  Current is the entries as they stand, Best is the plan found to keep the most, and
-                  the rest set every such entry the same way. The Apply buttons set every entry and
-                  the election to that plan's choices.
+                  Current is the entries as they stand, Best is the plan that maximizes the
+                  take-home, and the rest set every entry the same way. The Apply buttons update
+                  every entry and the election to that plan's choices.
                 </Typography>
                 {mandatoryNote && (
                   <Typography sx={{ display: 'block' }}>{mandatoryNote}</Typography>
@@ -352,10 +352,9 @@ export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({
             <PlanRows rows={rows} isMobile={isMobile} bounded={bounded} onApply={onApply} />
             <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.secondary' }}>
               The plans electing aggregate taxation for dividends apply no dividend tax credit
-              (配当控除, not supported yet), so for a dividend from a Japanese company they
-              understate what could be kept. Carrying forward a loss (繰越控除) or foreign tax above
-              the credit limits, the credit for foreign tax paid inside Japanese funds
-              (分配時調整外国税相当額控除), and the rule that lets an employee skip filing an income
+              (配当控除, not supported yet), so for dividends from Japanese companies they
+              understate the take-home. The credit for foreign tax paid inside Japanese funds
+              (分配時調整外国税相当額控除) and the rule that lets an employee skip filing an income
               tax return when other income is ¥200,000 or less are not supported either. Entries
               that have to be reported stay reported in every plan.
               {bounded && boundedEstimate && (

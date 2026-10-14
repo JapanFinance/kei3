@@ -2,15 +2,11 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
-## 2026-09-22
+## 2026-10-13
 
 ### New
 
-- Investment income can now be entered in Advanced mode: [capital gains on shares](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm), [dividends](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm) and [interest](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm), with a withholding designated account ([特定口座（源泉徴収あり）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm)) entered as one entry from its annual transaction report. Each amount can be left to the tax withheld at source or reported on the tax return, under separate taxation (申告分離課税) or, for dividends, aggregate taxation (総合課税), and every result follows the choice, from take-home pay and the taxes to National Health Insurance premiums, the basic deduction, dependent eligibility and the furusato nozei limit. Tax withheld abroad on a foreign company's or fund's dividends, on interest paid outside Japan and on a pension from a foreign system can be entered with those amounts, and tax paid with a foreign tax return in the Additional Deductions & Credits dialog; on reported income it is credited against income tax and residence tax up to the legal limits ([foreign tax credit, 外国税額控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm)). A reporting planner in the income details dialog finds the choices that keep the most and applies them. The dividend tax credit (配当控除), the credit for foreign tax paid inside Japanese funds, and losses or foreign tax carried forward from earlier years are not supported yet.
-
-### Updated
-
-- The dependent-coverage (被扶養者) income test now counts investment receipts toward the annual income whatever their tax treatment, following the written practice of health insurance societies.
+- Investment income can now be entered in Advanced mode: [capital gains on shares](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm), [dividends](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm) and [interest](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm), including a withholding designated account ([特定口座（源泉徴収あり）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm)) entered as one entry from its annual transaction report. Each amount can be left to the tax withheld at source (if applicable) or reported on the tax return, under separate taxation (申告分離課税) or, for dividends, aggregate taxation (総合課税). Tax withheld abroad can be entered with the corresponding income (including eligible foreign pensions), and tax paid with a foreign tax return in the Additional Deductions & Credits dialog. Foreign tax paid on reported income is credited against income tax and residence tax up to the legal limits (see the [foreign tax credit](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm)). When investment income is entered, a reporting planner in the advanced income details dialog finds the choices that maximize take-home. The [Minimum Tax on Ultra-High Income](https://www.nta.go.jp/taxes/shiraberu/shinkoku/kiwataka/index.htm) is applied when applicable. The dividend tax credit (配当控除), the credit for foreign tax paid inside Japanese funds, and losses or foreign tax carried forward from earlier years are not supported yet.
 
 ## 2026-09-21
 
@@ -70,7 +66,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Updated
 
-- Updated the income distribution to the Ministry of Health, Labour and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
+- Updated the income distribution to the Ministry of Health, Labour, and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
 - The percentile estimate is more precise below ¥10,000,000, where the survey's income brackets now resolve in ¥500,000 steps instead of ¥1,000,000.
 
 ## 2026-06-29

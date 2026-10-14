@@ -20,13 +20,8 @@ const NTA_SOURCE: Source = {
   label: 'Foreign tax credit (外国税額控除) - NTA',
 };
 
-const SOURCES: Source[] = [
-  NTA_SOURCE,
-  {
-    href: 'https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95',
-    label: 'Income Tax Act, Article 95 (所得税法第95条) - e-Gov',
-  },
-];
+// Statutory basis: 所得税法第95条
+const SOURCES: Source[] = [NTA_SOURCE];
 
 interface AmountRow {
   label: string;
@@ -92,13 +87,14 @@ const WithheldForeignTaxNote: React.FC<{ withheldForeignTax: number; isAll: bool
   withheldForeignTax,
   isAll,
 }) => (
+  // 措令4条の5⑫, 措法9条の2③
   <Note>
     {isAll
       ? `All the foreign tax paid, ${formatJPY(withheldForeignTax)}, is on dividends left to withholding.`
       : `The ${formatJPY(withheldForeignTax)} of foreign tax on dividends left to withholding is not eligible.`}{' '}
-    Foreign tax on dividends left to withholding is not credited (措令4条の5⑫); instead, the
-    Japanese withholding is charged on the dividends after it (措法9条の2③). Reporting the dividends
-    would let the foreign tax be credited, within the limits.
+    Foreign tax on dividends left to withholding is not credited; instead, the Japanese withholding
+    is charged on the dividends after it. Reporting the dividends would let the foreign tax be
+    credited, within the limits.
   </Note>
 );
 
@@ -177,11 +173,13 @@ export const ForeignTaxCreditTooltip: React.FC<ForeignTaxCreditTooltipProps> = (
               </Box>
             )}
             <Note>
-              Foreign tax (外国所得税) on income from outside Japan comes off Japanese tax, up to
-              limits, so the same income is not taxed twice. It comes off in this order: income tax,
-              reconstruction surtax, prefectural tax, municipal tax.
+              Foreign tax can be credited against Japanese tax, up to limits, to alleviate double
+              taxation. It is credited in this order: income tax, reconstruction surtax, prefectural
+              tax, municipal tax.
             </Note>
-            <Note>This row is what came off the income tax and the surtax.</Note>
+            <Note>
+              This row is what is credited against the income tax and the reconstruction surtax.
+            </Note>
           </>
         )}
         <SourceLinks sources={SOURCES} />
@@ -403,8 +401,8 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
     <DetailedTooltip title="Foreign Tax Paid">
       <Box>
         <Note>
-          Foreign tax (外国所得税) is a tax on the income like any other, so it comes off take-home
-          pay. It is counted in the income tax total, beside the Japanese income tax.
+          Foreign tax is a tax on income like any other, so it comes off take-home pay. It is
+          counted in the income tax total, beside the Japanese income tax.
         </Note>
         <AmountTable
           rows={[
@@ -451,10 +449,11 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
             statement (外国税額控除に関する明細書) to the tax return each year.
           </Note>
         )}
+        {/* 措令4条の5⑫, 措法9条の2③ */}
         {withheldForeignTax > 0 && (
           <Note>
-            Foreign tax on dividends left to withholding is not credited (措令4条の5⑫); instead, the
-            Japanese withholding is charged on the dividends after it (措法9条の2③).
+            Foreign tax on dividends left to withholding is not credited; instead, the Japanese
+            withholding is charged on the dividends after it.
           </Note>
         )}
         {credit?.manualForeignTax !== undefined && (
