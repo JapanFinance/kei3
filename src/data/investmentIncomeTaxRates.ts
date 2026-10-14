@@ -30,14 +30,17 @@
  *   https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_4-Di_1-At_71_6
  *
  * Combined withholding rates: national 15.315% = 15% + (15% × 2.1%); residence 5% (no surtax).
- * Verified that plain `amount * rate` followed by `Math.floor` matches exact rational
- * arithmetic for every whole-yen amount from ¥0 to ¥50,000,000 at both 0.15315 and 0.05 — no
- * integer-scaled arithmetic is needed for these particular rates.
+ * Withholding rates are held as {@link PremiumRate}s to perform exact rational arithmetic
+ * and whole-yen flooring via `taxOn`. Under 復興財確法第28条 and NTA Tax Answer No. 2507, payors
+ * apply this single combined rate (合計税率 15.315%) and floor once to ¥1, rather than rounding
+ * base tax and surtax separately.
  *
- * The assessed rates are the statute's own figures: the return applies the 復興特別所得税 to the
+ * The reported rates are the statute's own figures: the return applies the 復興特別所得税 to the
  * whole 基準所得税額 at once, and the 住民税 splits its 5% into the 市町村民税 and 道府県民税
  * 所得割, each floored to ¥100 together with the 所得割 on 課税総所得金額.
  */
+
+import { percentTo, type PremiumRate } from './premiumRate';
 
 export interface InvestmentIncomeTaxRatePeriod {
   /** The income year (calendar year) from which these rates apply (inclusive). */
@@ -46,35 +49,37 @@ export interface InvestmentIncomeTaxRatePeriod {
    * 所得税 withheld on 上場株式等の譲渡所得等 and 配当等 that are 申告不要, including the
    * 復興特別所得税 fold-in.
    */
-  listedNationalRate: number;
+  listedWithholdingNationalRate: PremiumRate;
   /** 住民税 withheld (配当割・株式等譲渡所得割) on the same. */
-  listedResidenceRate: number;
+  listedWithholdingResidenceRate: PremiumRate;
   /** 所得税 rate on 一般利子等 (源泉分離課税), including the 復興特別所得税 fold-in. */
-  interestNationalRate: number;
+  interestWithholdingNationalRate: PremiumRate;
   /** 住民税 rate (利子割) on the same. */
-  interestResidenceRate: number;
+  interestWithholdingResidenceRate: PremiumRate;
   /**
    * 所得税 the return assesses on 上場株式等の譲渡所得等 and 配当等 reported under 申告分離課税
    * (措法37条の11①, 8条の4①), before the 復興特別所得税.
    */
-  listedAssessedNationalRate: number;
+  listedReportedNationalRate: PremiumRate;
   /** 市町村民税所得割 on the same (地方税法附則第35条の2の2第5項, 第33条の2第5項). */
-  listedAssessedMunicipalRate: number;
+  listedReportedMunicipalRate: PremiumRate;
   /** 道府県民税所得割 on the same (地方税法附則第35条の2の2第1項, 第33条の2第1項). */
-  listedAssessedPrefecturalRate: number;
+  listedReportedPrefecturalRate: PremiumRate;
 }
+
+const percent = percentTo(3);
 
 /** Time-series of investment-income tax rates, sorted newest-first. */
 export const INVESTMENT_INCOME_TAX_RATE_PERIODS: ReadonlyArray<InvestmentIncomeTaxRatePeriod> = [
   {
     effectiveYear: 2014,
-    listedNationalRate: 0.15315,
-    listedResidenceRate: 0.05,
-    interestNationalRate: 0.15315,
-    interestResidenceRate: 0.05,
-    listedAssessedNationalRate: 0.15,
-    listedAssessedMunicipalRate: 0.03,
-    listedAssessedPrefecturalRate: 0.02,
+    listedWithholdingNationalRate: percent(15.315),
+    listedWithholdingResidenceRate: percent(5),
+    interestWithholdingNationalRate: percent(15.315),
+    interestWithholdingResidenceRate: percent(5),
+    listedReportedNationalRate: percent(15),
+    listedReportedMunicipalRate: percent(3),
+    listedReportedPrefecturalRate: percent(2),
   },
 ];
 

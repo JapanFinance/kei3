@@ -116,10 +116,15 @@ const dividendsState = (isReported: boolean, reportsDividend: boolean): Reportin
  */
 const withholdingAccountStates = (
   account: WithholdingAccountIncomeStream,
+  minimumTaxApplies = false,
 ): ReportingUnitState[] => {
   const hasGain = account.capitalGains > 0;
   const hasLoss = account.capitalGains < 0;
   const hasDividends = account.dividends > 0;
+
+  if (minimumTaxApplies) {
+    return [withholdingAccountState(true, hasDividends, hasDividends)];
+  }
 
   if (hasGain && hasDividends) {
     return [
@@ -154,9 +159,13 @@ const withholdingAccountStates = (
  * The reporting states worth evaluating for one domestic dividend entry: two when there is an
  * amount to move between them. A zero amount can't change the result, so it has one state; a
  * dividend paid abroad has to be reported (措令4条の3②五・六), so it is fixed to that state too.
+ * Under the high-income minimum tax (措法41条の19), 申告不要 is disallowed so it is also fixed to reported.
  */
-const dividendsStates = (dividend: DividendsIncomeStream): ReportingUnitState[] => {
-  if (dividend.paymentChannel === 'abroad') {
+const dividendsStates = (
+  dividend: DividendsIncomeStream,
+  minimumTaxApplies = false,
+): ReportingUnitState[] => {
+  if (minimumTaxApplies || dividend.paymentChannel === 'abroad') {
     return [dividendsState(true, dividend.amount > 0)];
   }
   if (dividend.amount === 0) {
@@ -171,13 +180,16 @@ const dividendsStates = (dividend: DividendsIncomeStream): ReportingUnitState[] 
  * varies, so the search never branches on them. Interest is reported when it is paid outside
  * Japan and never otherwise, which is the entry's own field rather than a choice.
  */
-export const deriveReportingUnits = (streams: readonly IncomeStream[]): ReportingUnit[] => {
+export const deriveReportingUnits = (
+  streams: readonly IncomeStream[],
+  minimumTaxApplies = false,
+): ReportingUnit[] => {
   const units: ReportingUnit[] = [];
   streams.forEach((stream, streamIndex) => {
     if (stream.type === 'withholdingAccount') {
-      units.push({ streamIndex, states: withholdingAccountStates(stream) });
+      units.push({ streamIndex, states: withholdingAccountStates(stream, minimumTaxApplies) });
     } else if (stream.type === 'dividends') {
-      units.push({ streamIndex, states: dividendsStates(stream) });
+      units.push({ streamIndex, states: dividendsStates(stream, minimumTaxApplies) });
     }
   });
   return units;
@@ -397,7 +409,7 @@ const figuresOf = (results: TakeHomeResults): PlanFigures => ({
  * Runs `plan` through the engine: applies {@link withRequiredReporting} to every stream (a
  * safety net — the search never produces an invalid combination itself), calls
  * {@link calculateTaxes}, and returns the resulting streams, election and figures so a caller
- * (Apply) can dispatch them.
+ * (Apply) can dispatch them. Under the minimum tax (措法41条の19), all investment streams are forced reported.
  */
 export const evaluatePlan = (inputs: TakeHomeInputs, plan: ReportingPlan): EvaluatedPlan => {
   const streams = plan.streams.map(withRequiredReporting);
@@ -408,6 +420,12 @@ export const evaluatePlan = (inputs: TakeHomeInputs, plan: ReportingPlan): Evalu
   });
   return { streams, election: plan.election, figures: figuresOf(results) };
 };
+
+/**
+ * Whether the high-income minimum tax (措法41条の19) applies to `inputs`.
+ */
+export const isMinimumTaxApplicable = (inputs: TakeHomeInputs): boolean =>
+  calculateTaxes(inputs).highIncomeMinimumTax !== undefined;
 
 /**
  * Whether `candidate` should replace `best` as the best plan found so far (7.3.3): a strictly
@@ -423,12 +441,12 @@ export const isBetterPlan = (
   if (candidate.evaluated.figures.kept !== best.evaluated.figures.kept) {
     return candidate.evaluated.figures.kept > best.evaluated.figures.kept;
   }
-  const candidateReported = reportedUnitCount(units, candidate.plan.streams);
-  const bestReported = reportedUnitCount(units, best.plan.streams);
-  if (candidateReported !== bestReported) return candidateReported < bestReported;
   const candidateIsCurrent = planMatchesCurrent(units, candidate.plan, inputs);
   const bestIsCurrent = planMatchesCurrent(units, best.plan, inputs);
-  return candidateIsCurrent && !bestIsCurrent;
+  if (candidateIsCurrent !== bestIsCurrent) return candidateIsCurrent;
+  const candidateReported = reportedUnitCount(units, candidate.plan.streams);
+  const bestReported = reportedUnitCount(units, best.plan.streams);
+  return candidateReported < bestReported;
 };
 
 /**
@@ -559,7 +577,7 @@ const unitTarget = (stream: IncomeStream): string => {
 
 /**
  * What applying `plan` would change about the entries as they stand in `current` (7.3.4): one
- * line per optional entry whose reporting differs, naming the entry and what it is set to, and
+ * line per entry whose reporting differs, naming the entry and what it is set to, and
  * one line for the election when the plan reports a dividend and either the election differs
  * or no dividend was reported before (when the election had no effect). Entries that stay as
  * they are get no line; empty when the plan is the current one.
@@ -570,7 +588,6 @@ export const planChanges = (
   units: readonly ReportingUnit[],
 ): string[] => {
   const changes = units
-    .filter(unit => unit.states.length > 1)
     .filter(
       unit => !unitFlagsEqual(plan.streams[unit.streamIndex]!, current.streams[unit.streamIndex]!),
     )
@@ -588,10 +605,17 @@ export const planChanges = (
 
 /**
  * The once-stated note for entries that have to be reported in every plan (7.3.4): a sale outside
- * a withholding account (措法37条の11の5①) and a dividend paid abroad (措令4条の3②). Undefined
- * when `streams` has neither, so nothing is shown.
+ * a withholding account (措法37条の11の5①) and a dividend paid abroad (措令4条の3②). Under the
+ * minimum tax on high income (措法41条の19), all investment income must be reported. Undefined
+ * when `streams` has none of these, so nothing is shown.
  */
-export const mandatoryReportingNote = (streams: readonly IncomeStream[]): string | undefined => {
+export const mandatoryReportingNote = (
+  streams: readonly IncomeStream[],
+  minimumTaxApplies = false,
+): string | undefined => {
+  if (minimumTaxApplies) {
+    return 'Due to the Minimum Tax on High Income, investment income must be reported on the tax return.';
+  }
   const hasOutsideSale = streams.some(s => s.type === 'capitalGains');
   const hasAbroadDividend = streams.some(
     s => s.type === 'dividends' && s.paymentChannel === 'abroad',

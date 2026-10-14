@@ -40,6 +40,7 @@ import {
   SurtaxCreditTooltip,
   hasForeignTaxCreditDetails,
 } from './ForeignTaxCreditTooltips';
+import { HighIncomeMinimumTaxTooltip } from './HighIncomeMinimumTaxTooltip';
 import IncomeBasedPortionTooltip from './IncomeBasedPortionTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
 import {
@@ -720,6 +721,19 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </span>
             }
             value={formatJPY(-results.homeLoanTaxCredit.appliedToIncomeTax)}
+            type="detail"
+          />
+        )}
+
+        {results.highIncomeMinimumTax && (
+          <ResultRow
+            label={
+              <span>
+                Minimum Tax on High Income
+                <HighIncomeMinimumTaxTooltip minimumTax={results.highIncomeMinimumTax} />
+              </span>
+            }
+            value={formatJPY(results.highIncomeMinimumTax.additionalIncomeTax)}
             type="detail"
           />
         )}

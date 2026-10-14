@@ -4,7 +4,10 @@
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../constants/taxThresholds';
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
-import { NATIONAL_INCOME_TAX_BRACKETS } from '../data/nationalIncomeTaxBrackets';
+import {
+  NATIONAL_INCOME_TAX_BRACKETS,
+  RECONSTRUCTION_SURTAX_RATE,
+} from '../data/nationalIncomeTaxBrackets';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
 import type { PremiumRate } from '../data/premiumRate';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
@@ -24,6 +27,7 @@ import {
   NO_RESIDENCE_TAX_CREDITS,
   type BonusIncomeStream,
   type ForeignTaxCreditResult,
+  type HighIncomeMinimumTaxResult,
   type IncomeStream,
   type InvestmentIncomeAmounts,
   type PersonalCircumstancesInput,
@@ -57,6 +61,11 @@ import {
   calculateNationalHealthInsurancePremiumWithBreakdown,
   type LatterStageElderlyBreakdown,
 } from './healthInsuranceCalculator';
+import {
+  calculateHighIncomeBaselineIncome,
+  calculateHighIncomeMinimumTax,
+  isHighIncomeMinimumTaxApplicable,
+} from './highIncomeMinimumTax';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { annualIncomeStreamAmount } from './incomeStreams';
 import {
@@ -71,6 +80,7 @@ import {
 } from './investmentIncome';
 import {
   dividendMustBeReported,
+  withAllInvestmentReported,
   withholdingAccountDividendsMustBeReported,
 } from './investmentReporting';
 import {
@@ -262,7 +272,7 @@ export const calculateNationalIncomeTaxBase = (taxableIncome: number): number =>
  * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
  */
 export const calculateReconstructionSurtax = (baseTax: number): number => {
-  return baseTax * 0.021;
+  return RECONSTRUCTION_SURTAX_RATE.taxOn(baseTax);
 };
 
 /**
@@ -335,7 +345,7 @@ interface IncomeBreakdown {
   /** Sum of {@link investment}'s three amounts; may be negative. */
   grossInvestmentIncome: number;
   /**
-   * The base the 20.315% listed-share withholding rate applies to: every withholding account's
+   * The base the listed-share withholding rate applies to: every withholding account's
    * {@link import("./investmentIncome").withholdingAccountBase}, plus the dividends withheld
    * outside such an account, all net of the foreign tax withheld on the dividends (措法9条の2③).
    */
@@ -1082,7 +1092,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // 所得税額 after the home loan credit (B): the base the 復興特別所得税 and the foreign tax credit
   // limits are measured on. The bracket arithmetic is float, so it is rounded to the whole yen it
   // stands for.
-  const incomeTaxAfterHomeLoanCredit = Math.round(
+  let incomeTaxAfterHomeLoanCredit = Math.round(
     Math.max(
       0,
       nationalIncomeTaxBase +
@@ -1090,9 +1100,51 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         (homeLoanTaxCreditResult?.appliedToIncomeTax ?? 0),
     ),
   );
-  // 復興特別所得税 (R): 2.1% of B, before the foreign tax credit (復興財確法10条①一, 13条),
-  // floored to the yen as on the return.
-  const reconstructionSurtax = Math.floor((incomeTaxAfterHomeLoanCredit * 21) / 1000);
+
+  const baselineIncome = calculateHighIncomeBaselineIncome(
+    aggregateNetIncome,
+    separateNetIncome,
+    listedWithholdingBase,
+  );
+
+  let highIncomeMinimumTax: HighIncomeMinimumTaxResult | undefined;
+
+  if (listedWithholdingBase > 0) {
+    if (
+      isHighIncomeMinimumTaxApplicable(
+        baselineIncome,
+        incomeYear,
+        incomeTaxAfterHomeLoanCredit,
+        listedWithholdingBase,
+      )
+    ) {
+      // Special Tax Measures Act Art. 41-19 disallows 確定申告不要制度 when the minimum tax applies.
+      // However, under 措法通達41の19-2 (https://www.nta.go.jp/law/tsutatsu/kobetsu/shotoku/sochiho/801226/sinkoku/57/41/20.htm),
+      // if the minimum tax does not result in additional tax when all investment income is reported
+      // (box ㉓ ≤ 0), the measure does not apply and the election not to report remains effective.
+      const fullReportedResult = calculateTaxes({
+        ...inputs,
+        incomeStreams: inputs.incomeStreams.map(withAllInvestmentReported),
+      });
+      if (fullReportedResult.highIncomeMinimumTax !== undefined) {
+        return fullReportedResult;
+      }
+    }
+  } else {
+    highIncomeMinimumTax = calculateHighIncomeMinimumTax(
+      baselineIncome,
+      incomeYear,
+      incomeTaxAfterHomeLoanCredit,
+    );
+
+    if (highIncomeMinimumTax) {
+      incomeTaxAfterHomeLoanCredit += highIncomeMinimumTax.additionalIncomeTax;
+    }
+  }
+
+  // 復興特別所得税 (R): surtax on B (including minimum tax addition when applicable),
+  // before the foreign tax credit (復興財確法10条①一, 13条), floored to the yen as on the return.
+  const reconstructionSurtax = RECONSTRUCTION_SURTAX_RATE.taxOn(incomeTaxAfterHomeLoanCredit);
 
   const manualForeignTax = inputs.foreignTaxCredit?.foreignTax ?? 0;
   if (manualForeignTax < 0) {
@@ -1293,6 +1345,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     taxableIncomeForResidenceTax,
     furusatoNozei,
     ...(homeLoanTaxCreditResult && { homeLoanTaxCredit: homeLoanTaxCreditResult }),
+    ...(highIncomeMinimumTax && { highIncomeMinimumTax }),
     ...(foreignTaxCredit && { foreignTaxCredit }),
     ...(foreignTaxPaid > 0 && { foreignTaxPaid }),
     additionalDeductions,

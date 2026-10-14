@@ -4,6 +4,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
+import { percentTo } from '../data/premiumRate';
 import type { InvestmentIncomeAmounts } from '../types/tax';
 import {
   calculateWithheldInvestmentTax,
@@ -92,18 +93,20 @@ describe('calculateWithheldInvestmentTax', () => {
   });
 });
 
+const percent = percentTo(3);
+
 describe('getInvestmentIncomeTaxRates', () => {
   it('returns the 2014-onward rates for every income year this calculator models', () => {
     for (const year of [2014, 2020, 2025, 2026]) {
       expect(getInvestmentIncomeTaxRates(year)).toEqual({
         effectiveYear: 2014,
-        listedNationalRate: 0.15315,
-        listedResidenceRate: 0.05,
-        interestNationalRate: 0.15315,
-        interestResidenceRate: 0.05,
-        listedAssessedNationalRate: 0.15,
-        listedAssessedMunicipalRate: 0.03,
-        listedAssessedPrefecturalRate: 0.02,
+        listedWithholdingNationalRate: percent(15.315),
+        listedWithholdingResidenceRate: percent(5),
+        interestWithholdingNationalRate: percent(15.315),
+        interestWithholdingResidenceRate: percent(5),
+        listedReportedNationalRate: percent(15),
+        listedReportedMunicipalRate: percent(3),
+        listedReportedPrefecturalRate: percent(2),
       });
     }
   });

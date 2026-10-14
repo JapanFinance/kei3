@@ -30,10 +30,10 @@ const account = (
   ...overrides,
 });
 
-const salaryInputs = (streams: IncomeStream[]): TakeHomeInputs => ({
+const salaryInputs = (streams: IncomeStream[], salary = 5_000_000): TakeHomeInputs => ({
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   incomeStreams: [
-    { id: 'salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+    { id: 'salary', type: 'salary', amount: salary, frequency: 'annual' },
     ...streams,
   ],
   ageRange: 'age20to39',
@@ -250,5 +250,109 @@ describe('useReportingPlans', () => {
 
     expect(result.current.progress).toEqual(fresh.result.current.progress);
     expect(result.current.bestPlan?.figures).toEqual(fresh.result.current.bestPlan?.figures);
+  });
+
+  it('excludes withheld-only and forces reporting when high-income minimum tax applies', async () => {
+    // 1.1B capital gain triggers minimum tax in 2026 (excess tax > normal tax)
+    const minTaxInputs = salaryInputs(
+      [account({ id: 'a', capitalGains: 1_100_000_000, reportsCapitalGains: true })],
+      0,
+    );
+
+    const { result } = renderPlans(minTaxInputs, true, { chunkMs: 0 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    const rows = result.current.rows!;
+    expect(rows).toBeDefined();
+    // Withheld-only row must NOT exist
+    expect(rows.some(r => r.key === 'withheldOnly')).toBe(false);
+    expect(rows.some(r => r.label === 'All withheld only')).toBe(false);
+
+    // Mandatory reporting note must be populated
+    expect(result.current.mandatoryNote).toContain('Minimum Tax on High Income');
+
+    // Best plan must report all investment streams
+    const bestRow = rows.find(r => r.roles.includes('best'))!;
+    expect(bestRow).toBeDefined();
+    const acctStream = bestRow.evaluated.streams.find(
+      s => s.type === 'withholdingAccount',
+    ) as WithholdingAccountIncomeStream;
+    expect(acctStream.reportsCapitalGains).toBe(true);
+
+    // Current matches Best and canApply is false
+    expect(bestRow.roles).toContain('current');
+    expect(bestRow.canApply).toBe(false);
+  });
+
+  it('recommends reporting when current entries are withheld under minimum tax', async () => {
+    // Current entries are withheld, but income triggers minimum tax
+    const minTaxInputs = salaryInputs(
+      [account({ id: 'a', capitalGains: 1_100_000_000, reportsCapitalGains: false })],
+      0,
+    );
+
+    const { result } = renderPlans(minTaxInputs, true, { chunkMs: 0 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    const rows = result.current.rows!;
+    expect(rows).toBeDefined();
+
+    // Withheld-only is not offered as a valid plan
+    expect(rows.some(r => r.key === 'withheldOnly')).toBe(false);
+
+    // Current row is present with un-reported choices
+    const currentRow = rows.find(r => r.roles.includes('current'))!;
+    expect(currentRow).toBeDefined();
+
+    // Best row is separate taxation reporting the capital gains
+    const bestRow = rows.find(r => r.roles.includes('best'))!;
+    expect(bestRow).toBeDefined();
+    expect(bestRow.canApply).toBe(true);
+    expect(bestRow.changes).toEqual([
+      'Account 1 (sales ¥1,100,000,000, dividends ¥0): report the sales only.',
+    ]);
+  });
+
+  it('evaluates separate and aggregate taxation when minimum tax applies with dividends', async () => {
+    // 1.5B capital gain triggers minimum tax in 2026, with 1M in dividends
+    const minTaxWithDividendsInputs = salaryInputs(
+      [
+        account({
+          id: 'a',
+          capitalGains: 1_500_000_000,
+          dividends: 1_000_000,
+          reportsCapitalGains: true,
+          reportsDividends: true,
+        }),
+      ],
+      0,
+    );
+
+    const { result } = renderPlans(minTaxWithDividendsInputs, true, { chunkMs: 0 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    const rows = result.current.rows!;
+    expect(rows).toBeDefined();
+
+    // Withheld-only is not offered
+    expect(rows.some(r => r.key === 'withheldOnly')).toBe(false);
+
+    // Both separate and aggregate options are present
+    const separateRow = rows.find(r => r.key === 'separate')!;
+    const aggregateRow = rows.find(r => r.key === 'aggregate')!;
+    expect(separateRow).toBeDefined();
+    expect(aggregateRow).toBeDefined();
+
+    // Separate taxation keeps more take-home than aggregate taxation
+    expect(separateRow.evaluated.figures.kept).toBeGreaterThan(aggregateRow.evaluated.figures.kept);
+
+    // Best plan is separate
+    expect(separateRow.roles).toContain('best');
   });
 });

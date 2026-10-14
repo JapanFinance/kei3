@@ -4,7 +4,10 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { IncomeStreamForm } from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
+import {
+  IncomeStreamForm,
+  MINIMUM_TAX_REPORTING_NOTE,
+} from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
 
 describe('IncomeStreamForm', () => {
   const mockOnSave = vi.fn();
@@ -653,5 +656,110 @@ describe('IncomeStreamForm foreign tax', () => {
         foreignTax: 100_000,
       }),
     );
+  });
+
+  describe('High Income Minimum Tax dynamic reporting (措法41条の19)', () => {
+    it('forces withholding account sales and dividends to reported when isMinimumTaxTriggered returns true', () => {
+      render(
+        <IncomeStreamForm
+          type="withholdingAccount"
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          isMinimumTaxTriggered={() => true}
+        />,
+      );
+
+      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(salesGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+
+      const dividendsGroup = within(screen.getByRole('group', { name: 'Dividends' }));
+      expect(dividendsGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(dividendsGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+
+      expect(screen.getAllByText(MINIMUM_TAX_REPORTING_NOTE)).toHaveLength(2);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'withholdingAccount',
+          reportsCapitalGains: true,
+          reportsDividends: true,
+        }),
+      );
+    });
+
+    it('forces standalone dividend reporting when isMinimumTaxTriggered returns true', () => {
+      render(
+        <IncomeStreamForm
+          type="dividends"
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          isMinimumTaxTriggered={() => true}
+        />,
+      );
+
+      const reportingGroup = within(screen.getByRole('group', { name: 'Reporting' }));
+      expect(reportingGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(reportingGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getByText(MINIMUM_TAX_REPORTING_NOTE)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'dividends',
+          isReported: true,
+        }),
+      );
+    });
+
+    it('dynamically reacts as the draft amount crosses the trigger threshold', () => {
+      render(
+        <IncomeStreamForm
+          type="withholdingAccount"
+          onSave={mockOnSave}
+          onCancel={mockOnCancel}
+          isMinimumTaxTriggered={stream =>
+            stream.type === 'withholdingAccount' && stream.capitalGains >= 1_000_000_000
+          }
+        />,
+      );
+
+      // Initially 0, not triggered
+      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).not.toBeDisabled();
+      expect(screen.queryByText(MINIMUM_TAX_REPORTING_NOTE)).not.toBeInTheDocument();
+
+      // Enter 1.1 billion yen (triggers minimum tax)
+      fireEvent.change(screen.getByLabelText('Net Capital Gains (譲渡損益)'), {
+        target: { value: '¥1,100,000,000' },
+      });
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
+      expect(salesGroup.getByRole('button', { name: 'Reported' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.getAllByText(MINIMUM_TAX_REPORTING_NOTE)).toHaveLength(2);
+
+      // Reduce to 50 million yen (below trigger)
+      fireEvent.change(screen.getByLabelText('Net Capital Gains (譲渡損益)'), {
+        target: { value: '¥50,000,000' },
+      });
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).not.toBeDisabled();
+      expect(salesGroup.getByRole('button', { name: 'Withheld only' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      expect(screen.queryByText(MINIMUM_TAX_REPORTING_NOTE)).not.toBeInTheDocument();
+    });
   });
 });

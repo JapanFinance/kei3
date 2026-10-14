@@ -15,6 +15,8 @@
  * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
  */
 
+import { percentTo, type PremiumRate } from './premiumRate';
+
 export interface NationalIncomeTaxBracket {
   /** Upper bound of taxable income (inclusive) for this bracket, in yen (Infinity for the top). */
   maxTaxableIncomeInclusive: number;
@@ -23,6 +25,17 @@ export interface NationalIncomeTaxBracket {
   /** 速算控除額 subtracted after applying `rate`, in yen. */
   deduction: number;
 }
+
+const percent = percentTo(1);
+
+/**
+ * Reconstruction special income tax rate (復興特別所得税) at 2.1% of base income tax.
+ * In effect from 2013-01-01 through 2037-12-31.
+ *
+ * Source: 東日本大震災からの復興のための施策を実施するために必要な財源の確保に関する特別措置法第13条
+ * https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
+ */
+export const RECONSTRUCTION_SURTAX_RATE: PremiumRate = percent(2.1);
 
 /** Brackets in ascending order of `maxTaxableIncomeInclusive`; the final bound is Infinity. */
 export const NATIONAL_INCOME_TAX_BRACKETS: ReadonlyArray<NationalIncomeTaxBracket> = [

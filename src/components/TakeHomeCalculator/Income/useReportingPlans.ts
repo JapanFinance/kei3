@@ -16,6 +16,7 @@ import {
   generatePlans,
   hasOptionalUnit,
   isBetterPlan,
+  isMinimumTaxApplicable,
   mandatoryReportingNote,
   samePlan,
   withheldOnlyPlan,
@@ -157,8 +158,9 @@ export function useReportingPlans(
       };
     }
 
-    const units = deriveReportingUnits(inputs.incomeStreams);
-    const mandatoryNote = mandatoryReportingNote(inputs.incomeStreams);
+    const minimumTaxApplies = isMinimumTaxApplicable(inputs);
+    const units = deriveReportingUnits(inputs.incomeStreams, minimumTaxApplies);
+    const mandatoryNote = mandatoryReportingNote(inputs.incomeStreams, minimumTaxApplies);
 
     const uniformKeys: UniformRowKey[] = hasOptionalUnit(units)
       ? ['withheldOnly', 'separate', 'aggregate']
@@ -180,10 +182,21 @@ export function useReportingPlans(
       }),
     );
 
-    let best = [...uniformEvaluations.values()].reduce(
-      (soFar, candidate) => (isBetterPlan(candidate, soFar, inputs, units) ? candidate : soFar),
-      current,
-    );
+    let best: PlanEvaluation;
+    if (minimumTaxApplies) {
+      const separateEval = uniformEvaluations.get('separate')!;
+      const aggregateEval = uniformEvaluations.get('aggregate');
+      const bestUniform =
+        aggregateEval && aggregateEval.evaluated.figures.kept > separateEval.evaluated.figures.kept
+          ? aggregateEval
+          : separateEval;
+      best = samePlan(units, current.plan, bestUniform.plan) ? current : bestUniform;
+    } else {
+      best = [...uniformEvaluations.values()].reduce(
+        (soFar, candidate) => (isBetterPlan(candidate, soFar, inputs, units) ? candidate : soFar),
+        current,
+      );
+    }
 
     const count = countPlans(units);
     // Decided after the first chunk of the exhaustive search, from its measured throughput: the
@@ -250,6 +263,11 @@ export function useReportingPlans(
       setResult(previous => ({ ...previous, progress, showProgress: progress !== undefined }));
 
     publishRows(best);
+    if (minimumTaxApplies) {
+      return () => {
+        generationRef.current += 1;
+      };
+    }
     let publishedBest = best;
     let publishedBounded = bounded;
 

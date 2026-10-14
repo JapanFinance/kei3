@@ -25,7 +25,7 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
@@ -43,6 +43,7 @@ import {
   getCommutingAllowanceAnnualAmount,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
+import { calculateTaxes } from '../../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import {
@@ -180,6 +181,26 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
 
   const totalIncome = totalAnnualIncomeFromStreams(streams);
 
+  const minimumTaxApplies = useMemo(() => {
+    return calculationInputs
+      ? calculateTaxes(calculationInputs).highIncomeMinimumTax !== undefined
+      : false;
+  }, [calculationInputs]);
+
+  const checkMinimumTax = useCallback(
+    (draftStream: IncomeStream, excludeId?: string) => {
+      if (!calculationInputs) return false;
+      const baseStreams = streams.filter(s => s.id !== excludeId);
+      return (
+        calculateTaxes({
+          ...calculationInputs,
+          incomeStreams: [...baseStreams, draftStream],
+        }).highIncomeMinimumTax !== undefined
+      );
+    },
+    [calculationInputs, streams],
+  );
+
   const getStreamDescription = (stream: IncomeStream) => {
     switch (stream.type) {
       case 'salary':
@@ -194,7 +215,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       case 'stockCompensation':
         return stream.issuerDomicile === 'foreign' ? 'Foreign' : 'Domestic';
       case 'withholdingAccount':
-        if (stream.reportsCapitalGains && stream.reportsDividends) return 'Reported';
+        if (minimumTaxApplies || (stream.reportsCapitalGains && stream.reportsDividends)) {
+          return 'Reported';
+        }
         if (stream.reportsCapitalGains) return 'Sales reported';
         if (stream.reportsDividends) return 'Dividends reported';
         return 'Withheld only';
@@ -207,7 +230,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               : ''
         }`;
       case 'dividends':
-        return `${stream.isReported ? 'Reported' : 'Withheld only'}${
+        return `${minimumTaxApplies || stream.isReported ? 'Reported' : 'Withheld only'}${
           stream.paymentChannel === 'abroad' ? ', paid abroad' : ''
         }${stream.issuerDomicile === 'foreign' ? ', foreign company or fund' : ''}`;
       case 'interest':
@@ -221,8 +244,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
 
   const hasReportedDividend = streams.some(
     s =>
-      (s.type === 'dividends' && s.isReported) ||
-      (s.type === 'withholdingAccount' && s.reportsDividends && s.dividends > 0),
+      (s.type === 'dividends' && (minimumTaxApplies || s.isReported)) ||
+      (s.type === 'withholdingAccount' &&
+        (minimumTaxApplies || s.reportsDividends) &&
+        s.dividends > 0),
   );
 
   // 措法8条の4② makes the 申告分離課税 election one for every reported dividend of the year, so
@@ -577,7 +602,12 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       </DialogTitle>
       <DialogContent dividers>
         {view.kind === 'add' ? (
-          <IncomeStreamForm type={view.type} onSave={handleSaveStream} onCancel={showList} />
+          <IncomeStreamForm
+            type={view.type}
+            onSave={handleSaveStream}
+            onCancel={showList}
+            isMinimumTaxTriggered={draft => checkMinimumTax(draft)}
+          />
         ) : view.kind === 'edit' ? (
           <IncomeStreamForm
             key={view.stream.id}
@@ -585,6 +615,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             initialData={view.stream}
             onSave={handleSaveStream}
             onCancel={showList}
+            isMinimumTaxTriggered={draft => checkMinimumTax(draft, view.stream.id)}
           />
         ) : (
           <Stack spacing={0}>{INCOME_CATEGORIES.map(renderStreamGroup)}</Stack>
