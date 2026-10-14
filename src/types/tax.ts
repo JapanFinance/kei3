@@ -67,8 +67,9 @@ export interface StockCompensationIncomeStream extends BaseIncomeStream {
  *   apart from the brackets with no 総合課税 election.
  *
  * A share sale has no such election — 措法37条の11 taxes a reported sale under 申告分離課税 and
- * nothing else — and interest none at all: 措法3条① makes 源泉分離課税 the final treatment of
- * 一般利子等 paid in Japan, see {@link InterestIncomeStream}.
+ * nothing else — and interest none at all: 措法3条① makes 源泉分離課税 the final treatment of the
+ * 一般利子等 国内において支払を受けるべき, while interest paid outside Japan is taxed in the
+ * brackets with no election either, see {@link InterestIncomeStream}.
  */
 export type ReportedDividendsTaxation = 'separate' | 'aggregate';
 
@@ -172,10 +173,16 @@ export interface DividendsIncomeStream extends BaseIncomeStream {
 export interface InterestIncomeStream extends BaseIncomeStream {
   type: 'interest';
   /**
-   * Where the interest is paid. 措法3条① settles 一般利子等 国内において支払を受けるもの by
-   * 源泉分離課税, with no election and nothing to report; interest paid outside Japan is not
-   * withheld, so it is reported and taxed in the progressive brackets. Only 'domestic' is
-   * supported.
+   * Where the interest is paid.
+   * - `domestic` — 国内において支払を受けるべき一般利子等, which 措法3条① settles by
+   *   源泉分離課税 at 15% plus the 復興特別所得税 and 5% 住民税, with no election and nothing to
+   *   report. Interest paid outside Japan on a 公社債 or 公社債投資信託 but handed over by a
+   *   Japanese 支払の取扱者 is settled the same way (措法3条の3①) and belongs here too.
+   * - `foreign` — received with no Japanese payer or 支払の取扱者, interest on a deposit at a
+   *   foreign bank for example. 措法3条① does not reach it, so nothing is withheld in Japan and
+   *   所法22条②一 counts the whole receipt (所法23条②) in 総所得金額, taxed in the progressive
+   *   brackets and at the 住民税 所得割 rate with the other income. The foreign tax withheld on
+   *   it is not modelled (外国税額控除, 所法95条).
    */
   payerDomicile: 'domestic' | 'foreign';
 }
@@ -198,8 +205,9 @@ export type IncomeStreamType = IncomeStream['type'];
 /**
  * Whether `stream` is one of the investment-income types. These are never earned income — see
  * {@link import("../utils/incomeStreams").isEarnedIncomeStream} — and, except for a
- * dividend reported under 総合課税, are taxed separately from the progressive brackets, see
- * {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
+ * dividend reported under 総合課税 and for interest paid outside Japan
+ * ({@link InterestIncomeStream.payerDomicile}), are taxed separately from the progressive
+ * brackets, see {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
  */
 export const isInvestmentIncomeStream = (
   stream: IncomeStream,
@@ -225,7 +233,7 @@ export interface InvestmentIncomeAmounts {
   capitalGains: number;
   /** See {@link DividendsIncomeStream}. */
   dividends: number;
-  /** See {@link InterestIncomeStream}. */
+  /** Interest paid in Japan — see {@link InterestIncomeStream.payerDomicile}. */
   interest: number;
 }
 
@@ -704,7 +712,7 @@ export interface TakeHomeResults {
    */
   commutingAllowance?: number;
   /**
-   * Investment income (listed-share capital gains and dividends, deposit interest). Every amount
+   * Investment income (listed-share capital gains and dividends, interest). Every amount
    * is inside {@link annualIncome} and {@link takeHomeIncome}. The amounts settled by
    * withholding are outside {@link totalNetIncome} and every assessed figure, and the tax
    * withheld on them, in the `withheld` field, comes off take-home like any other tax; the
@@ -729,6 +737,13 @@ export interface TakeHomeResults {
          * nothing netted against it. Present when any dividend is reported that way.
          */
         aggregateDividends?: number | undefined;
+        /**
+         * 利子所得 paid outside Japan, as entered: no Japanese tax was withheld on it, so the
+         * whole receipt is part of 総所得金額 and is taxed in the progressive brackets with the
+         * earned income. The foreign tax withheld on it is not modelled. Present when any
+         * interest is paid that way.
+         */
+        aggregateInterest?: number | undefined;
       }
     | undefined;
   nationalIncomeTaxBasicDeduction?: number | undefined;
