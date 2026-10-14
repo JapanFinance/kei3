@@ -22,12 +22,15 @@ export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 // The statutory test is on 年間収入 — a social-insurance concept matching no tax figure: the
 // PROSPECTIVE annual amount expected from the certification date onward (monthly guide
 // 108,334円未満), counting gross pay including bonuses and 通勤手当 regardless of tax
-// non-taxability, plus receipts the tax system ignores (公的年金 including 障害・遺族年金,
-// 雇用保険の失業等給付, 傷病手当金・出産手当金). It is NOT the tax-side 合計所得金額.
+// non-taxability, 財産収入 such as dividends and interest gross of the tax withheld, plus
+// receipts the tax system ignores (公的年金 including 障害・遺族年金, 雇用保険の失業等給付,
+// 傷病手当金・出産手当金). It is NOT the tax-side 合計所得金額, and the tax election on an
+// investment amount does not change it (see dependentTestAnnualIncome in utils/incomeStreams.ts).
 //
 // The 1.5 million yen band for ages 19-22 excluding spouses (effective 2025-10) is not
 // modeled: its 19/23 boundaries do not align with the age ranges the calculator collects.
-// Sources: https://www.nenkin.go.jp/service/kounen/tekiyo/hihokensha1/20141202.html
+// Sources: https://www.mhlw.go.jp/web/t_doc?dataId=00tb0189&dataType=1&pageNo=1 (昭和52年 保発第9号)
+//          https://www.nenkin.go.jp/service/kounen/tekiyo/hihokensha1/20141202.html
 //          https://www.mhlw.go.jp/stf/taiou_001_00002.html
 //          https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html
 //          https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html (通勤手当)
@@ -81,11 +84,12 @@ export function isEmployeeHealthProvider(id: HealthInsuranceProviderId): id is E
  *
  * @param dependentTestIncome  Stands in for the statutory 年間収入 (see
  *   {@link DEPENDENT_INCOME_THRESHOLD}). Callers pass `dependentTestAnnualIncome` from
- *   utils/incomeStreams.ts: the form's annual income (TakeHomeResults.annualIncome in tax.ts) —
- *   salary, bonuses and public pension gross, business and miscellaneous income after expenses,
- *   the same basis as 年間収入, which also counts pension gross and allows business expenses but
- *   not the 青色申告特別控除 — plus the commuting allowance, which 年間収入 counts and annual
- *   income does not. It still understates 年間収入 where the person receives benefits the
+ *   utils/incomeStreams.ts: the earned income — salary, bonuses and public pension gross,
+ *   business and miscellaneous income after expenses, the same basis as 年間収入, which also
+ *   counts pension gross and allows business expenses but not the 青色申告特別控除 — plus the
+ *   commuting allowance, which 年間収入 counts and annual income does not, plus the investment
+ *   receipts whatever their tax election: dividends and interest gross, and the year's capital
+ *   gains when positive. It still understates 年間収入 where the person receives benefits the
  *   calculator does not model.
  */
 export function isDependentCoverageEligible(

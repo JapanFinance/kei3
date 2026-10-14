@@ -6,7 +6,11 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
 import { IncomeDetailsModal } from '../components/TakeHomeCalculator/Income/IncomeDetailsModal';
-import type { IncomeStream } from '../types/tax';
+import {
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  type IncomeStream,
+  type TakeHomeInputs,
+} from '../types/tax';
 
 describe('IncomeDetailsModal - Business Income', () => {
   it('allows adding business income with blue-filer deduction', async () => {
@@ -474,7 +478,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
       expect.objectContaining({
         type: 'dividends',
         shareType: 'listed',
-        taxTreatment: 'withheldOnly',
+        isReported: false,
         amount: 300000,
       }),
     ]);
@@ -487,14 +491,14 @@ describe('IncomeDetailsModal - Investment Income', () => {
         type: 'capitalGains',
         shareType: 'listed',
         account: 'specifiedWithholding',
-        taxTreatment: 'withheldOnly',
+        isReported: false,
         amount: 1_000_000,
       },
       {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
-        taxTreatment: 'withheldOnly',
+        isReported: false,
         amount: 200_000,
       },
     ];
@@ -514,8 +518,9 @@ describe('IncomeDetailsModal - Investment Income', () => {
     );
 
     expect(screen.getByText('Subtotal: ¥1,200,000')).toBeInTheDocument();
-    expect(screen.getByText(/Withheld at Source \(源泉徴収\): -¥243,780/)).toBeInTheDocument();
-    expect(screen.getByText(/Net Investment Income: ¥956,220/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Withheld only: ¥1,200,000 − ¥243,780 tax = ¥956,220/),
+    ).toBeInTheDocument();
     // The header caption mirrors the category subtotal.
     expect(screen.getByText('Investment: ¥1,200,000')).toBeInTheDocument();
   });
@@ -527,14 +532,14 @@ describe('IncomeDetailsModal - Investment Income', () => {
         type: 'capitalGains',
         shareType: 'listed',
         account: 'foreign',
-        taxTreatment: 'separate',
+        isReported: true,
         amount: -100_000,
       },
       {
         id: 'd1',
         type: 'dividends',
         shareType: 'listed',
-        taxTreatment: 'separate',
+        isReported: true,
         amount: 300_000,
       },
     ];
@@ -562,13 +567,177 @@ describe('IncomeDetailsModal - Investment Income', () => {
       />,
     );
 
-    expect(screen.getByText('Reported (separate), foreign account')).toBeInTheDocument();
-    expect(screen.getByText('Reported (separate)')).toBeInTheDocument();
+    expect(screen.getByText('Reported, foreign account')).toBeInTheDocument();
+    expect(screen.getByText('Reported')).toBeInTheDocument();
     expect(screen.getByText('Subtotal: ¥200,000')).toBeInTheDocument();
+    expect(screen.getByText(/Reported on the return: ¥200,000/)).toBeInTheDocument();
+    expect(screen.queryByText(/Withheld only:/)).not.toBeInTheDocument();
+  });
+
+  it('describes each dividend by whether it is reported, without the election, and footers the reported total', () => {
+    // The election is one for every reported dividend (措法8条の4②), shown once on the group,
+    // so an entry says only whether it is on the return.
+    const streams: IncomeStream[] = [
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        isReported: true,
+        amount: 400_000,
+      },
+      {
+        id: 'd2',
+        type: 'dividends',
+        shareType: 'listed',
+        isReported: false,
+        amount: 300_000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        reportedDividendsTaxation="aggregate"
+        investmentIncome={{
+          gross: { capitalGains: 0, dividends: 300_000, interest: 0 },
+          grossTotal: 300_000,
+          withheld: { national: 45_945, residence: 15_000, total: 60_945 },
+          aggregateDividends: 400_000,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Reported')).toBeInTheDocument();
+    expect(screen.getByText('Withheld only')).toBeInTheDocument();
+    expect(screen.queryByText(/progressive|separate/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Subtotal: ¥700,000')).toBeInTheDocument();
     expect(
-      screen.getByText(/Reported \(申告分離課税\): ¥200,000, taxed with the other income/),
+      screen.getByText(/Withheld only: ¥300,000 − ¥60,945 tax = ¥239,055/),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Withheld at Source/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Reported on the return: ¥400,000/)).toBeInTheDocument();
+    expect(screen.queryByText(/Reported on the return: ¥300,000/)).not.toBeInTheDocument();
+  });
+
+  it('offers the election for the reported dividends as one control for the group', async () => {
+    const user = userEvent.setup();
+    const onReportedDividendsTaxationChange = vi.fn();
+    const withheldOnly: IncomeStream[] = [
+      { id: 'd1', type: 'dividends', shareType: 'listed', isReported: false, amount: 300_000 },
+    ];
+    const reported: IncomeStream[] = [
+      { id: 'd1', type: 'dividends', shareType: 'listed', isReported: true, amount: 300_000 },
+      { id: 'd2', type: 'dividends', shareType: 'listed', isReported: false, amount: 200_000 },
+    ];
+
+    const { rerender } = render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={withheldOnly}
+        onStreamsChange={() => {}}
+        onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
+      />,
+    );
+    // With no reported dividend there is nothing the election applies to.
+    expect(screen.queryByRole('group', { name: 'Reported dividends' })).toBeNull();
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={reported}
+        onStreamsChange={() => {}}
+        onReportedDividendsTaxationChange={onReportedDividendsTaxationChange}
+      />,
+    );
+    const group = screen.getByRole('group', { name: 'Reported dividends' });
+    expect(within(group).getByRole('button', { name: 'Separate' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    // The statutory notes sit behind the label's tooltip rather than under the control.
+    expect(screen.getByRole('button', { name: 'reported dividends info' })).toBeInTheDocument();
+
+    await user.click(within(group).getByRole('button', { name: 'Progressive' }));
+    expect(onReportedDividendsTaxationChange).toHaveBeenCalledWith('aggregate');
+
+    // Without a way to change it the election is not offered, and the entries still say which
+    // election they follow.
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={reported}
+        onStreamsChange={() => {}}
+        reportedDividendsTaxation="aggregate"
+      />,
+    );
+    expect(screen.queryByRole('group', { name: 'Reported dividends' })).toBeNull();
+    expect(screen.getByText('Reported')).toBeInTheDocument();
+    expect(screen.getByText('Withheld only')).toBeInTheDocument();
+  });
+
+  it('offers the treatment comparison with calculation inputs and a listed-share entry, computing it on expand', async () => {
+    const user = userEvent.setup();
+    const streams: IncomeStream[] = [
+      { id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+      {
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        isReported: true,
+        amount: 1_000_000,
+      },
+    ];
+    const calculationInputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: streams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    const { rerender } = render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        calculationInputs={calculationInputs}
+      />,
+    );
+
+    const toggle = screen.getByRole('button', { name: /compare tax treatments/i });
+    expect(screen.queryByText('Take-home')).not.toBeInTheDocument();
+    await user.click(toggle);
+
+    // The three elections of the engine tests: 申告分離課税 is the one in force.
+    expect(screen.getByText('Take-home')).toBeInTheDocument();
+    expect(screen.getByText('(current)')).toBeInTheDocument();
+    expect(screen.getByText('¥4,739,798')).toBeInTheDocument();
+    expect(screen.getByText('¥4,739,848')).toBeInTheDocument();
+    expect(screen.getByText('¥4,748,648')).toBeInTheDocument();
+    expect(screen.getByText(/no 配当控除, which is not modelled yet/)).toBeInTheDocument();
+
+    rerender(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+    expect(
+      screen.queryByRole('button', { name: /compare tax treatments/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows only the gross subtotal when no investmentIncome prop is supplied', () => {
@@ -581,7 +750,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
             id: 'd1',
             type: 'dividends',
             shareType: 'listed',
-            taxTreatment: 'withheldOnly',
+            isReported: false,
             amount: 200_000,
           },
         ]}
@@ -590,7 +759,7 @@ describe('IncomeDetailsModal - Investment Income', () => {
     );
 
     expect(screen.getByText('Subtotal: ¥200,000')).toBeInTheDocument();
-    expect(screen.queryByText(/Withheld at Source/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Withheld only:/)).not.toBeInTheDocument();
   });
 
   it('omits the header Investment caption when there is no investment income', () => {

@@ -2400,14 +2400,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 1_000_000,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 200_000,
           id: 'dividends',
         },
@@ -2437,14 +2437,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: -500_000,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 300_000,
           id: 'dividends',
         },
@@ -2463,14 +2463,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: -500_000,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 800_000,
           id: 'dividends',
         },
@@ -2522,7 +2522,7 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: -300_000,
           id: 'gains',
         },
@@ -2544,7 +2544,7 @@ describe('calculateTaxes with investment income streams', () => {
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 1_234_567,
           id: 'dividends',
         },
@@ -2568,14 +2568,14 @@ describe('calculateTaxes with investment income streams', () => {
           type: 'capitalGains',
           shareType: 'listed',
           account: 'specifiedWithholding',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 0,
           id: 'gains',
         },
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 0,
           id: 'dividends',
         },
@@ -2594,7 +2594,7 @@ describe('calculateTaxes with investment income streams', () => {
         {
           type: 'dividends',
           shareType: 'listed',
-          taxTreatment: 'withheldOnly',
+          isReported: false,
           amount: 1_000_000,
           id: 'dividends',
         },
@@ -2629,7 +2629,7 @@ describe('calculateTaxes with investment income streams', () => {
             type: 'capitalGains',
             shareType: 'other',
             account: 'specifiedWithholding',
-            taxTreatment: 'withheldOnly',
+            isReported: false,
             amount: 500_000,
             id: 'gains',
           },
@@ -2642,7 +2642,7 @@ describe('calculateTaxes with investment income streams', () => {
           {
             type: 'dividends',
             shareType: 'other',
-            taxTreatment: 'withheldOnly',
+            isReported: false,
             amount: 500_000,
             id: 'dividends',
           },
@@ -2659,29 +2659,13 @@ describe('calculateTaxes with investment income streams', () => {
             type: 'capitalGains',
             shareType: 'listed',
             account: 'domesticNoWithholding',
-            taxTreatment: 'withheldOnly',
+            isReported: false,
             amount: 500_000,
             id: 'gains',
           },
         ]),
       ),
     ).toThrow(/特定口座/);
-  });
-
-  it('rejects dividends reported under 総合課税, which is not modelled yet', () => {
-    expect(() =>
-      calculateTaxes(
-        salaryInputs([
-          {
-            type: 'dividends',
-            shareType: 'listed',
-            taxTreatment: 'aggregate',
-            amount: 500_000,
-            id: 'dividends',
-          },
-        ]),
-      ),
-    ).toThrow(/総合課税/);
   });
 
   it('rejects interest paid outside Japan, which is 総合課税 rather than withheld at source', () => {
@@ -2719,7 +2703,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
   const reportedDividends = (amount: number, id = 'dividends') => ({
     type: 'dividends' as const,
     shareType: 'listed' as const,
-    taxTreatment: 'separate' as const,
+    isReported: true as const,
     amount,
     id,
   });
@@ -2731,7 +2715,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     type: 'capitalGains' as const,
     shareType: 'listed' as const,
     account,
-    taxTreatment: 'separate' as const,
+    isReported: true as const,
     amount,
     id,
   });
@@ -2828,10 +2812,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     expect(reported.healthInsurance).toBe(652_479);
 
     const withheld = calculateTaxes(
-      nhiInputs([
-        miscellaneous(5_000_000),
-        { ...reportedDividends(1_000_000), taxTreatment: 'withheldOnly' },
-      ]),
+      nhiInputs([miscellaneous(5_000_000), { ...reportedDividends(1_000_000), isReported: false }]),
     );
     expect(withheld.healthInsurance).toBe(
       calculateTaxes(nhiInputs([miscellaneous(5_000_000)])).healthInsurance,
@@ -2938,9 +2919,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
       incomeYear: 2025,
     });
 
-    const withheld = calculateTaxes(
-      inputs({ ...reportedDividends(100_000), taxTreatment: 'withheldOnly' }),
-    );
+    const withheld = calculateTaxes(inputs({ ...reportedDividends(100_000), isReported: false }));
     expect(withheld.totalNetIncome).toBe(1_250_000);
     expect(withheld.nationalIncomeTaxBasicDeduction).toBe(950_000);
 
@@ -2976,9 +2955,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     });
 
     // Social insurance 528,968 + 713,700 + 53,811 = 1,296,479; 基礎控除 620,000 either way.
-    const withheld = calculateTaxes(
-      inputs({ ...reportedDividends(500_000), taxTreatment: 'withheldOnly' }),
-    );
+    const withheld = calculateTaxes(inputs({ ...reportedDividends(500_000), isReported: false }));
     expect(withheld.totalNetIncome).toBe(8_550_000);
     // 8,550,000 − 1,296,479 − 620,000 − 380,000 = 6,253,521 → 6,253,000.
     expect(withheld.taxableIncomeForNationalIncomeTax).toBe(6_253_000);
@@ -3045,7 +3022,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     // max(0, −500,000) = 0); the 800,000 of reported dividends are taxed whole.
     const result = calculateTaxes(
       salaryInputs([
-        { ...reportedGains(-500_000, 'specifiedWithholding'), taxTreatment: 'withheldOnly' },
+        { ...reportedGains(-500_000, 'specifiedWithholding'), isReported: false },
         reportedDividends(800_000),
       ]),
     );
@@ -3113,5 +3090,208 @@ describe('calculateTaxes with investment income reported under 申告分離課�
     // 住民税 課税総所得金額 1,132,000: 67,920 + 30,000 − 1,500 − 15,660 → 80,700; 45,280 + 20,000
     // − 1,000 − 10,440 → 53,800; plus 5,000 = 139,500.
     expect(result.residenceTax.totalResidenceTax).toBe(139_500);
+  });
+});
+
+describe('calculateTaxes with dividends reported under 総合課税', () => {
+  // The same 5,000,000-yen employee, income year 2026: 給与所得 3,560,000; social insurance
+  // 722,252; 基礎控除 1,040,000 up to a 合計所得金額 of 4,890,000; 住民税 基礎控除 430,000 and
+  // 調整控除 2,500 (人的控除差 50,000, 課税総所得金額 over 2,000,000). The election is made once
+  // for every reported dividend (措法8条の4②), so it is an input beside the streams.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    reportedDividendsTaxation: 'aggregate',
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  const aggregateDividends = (amount: number, id = 'dividends') => ({
+    type: 'dividends' as const,
+    shareType: 'listed' as const,
+    isReported: true as const,
+    amount,
+    id,
+  });
+
+  it('applies the election to every reported dividend and to no withheld-only one', () => {
+    // 1,000,000 reported and 300,000 left to withholding: the reported amount is 配当所得 in
+    // 総所得金額 and the withheld amount stays outside the return, as under 申告分離課税. With the
+    // election absent, the same reported dividend is 申告分離課税.
+    const streams = [
+      aggregateDividends(600_000, 'd1'),
+      aggregateDividends(400_000, 'd2'),
+      { ...aggregateDividends(300_000, 'd3'), isReported: false as const },
+    ];
+    const elected = calculateTaxes(salaryInputs(streams));
+    expect(elected.investmentIncome).toEqual({
+      gross: { capitalGains: 0, dividends: 300_000, interest: 0 },
+      grossTotal: 300_000,
+      withheld: { national: 45_945, residence: 15_000, total: 60_945 },
+      aggregateDividends: 1_000_000,
+    });
+    expect(elected.nationalIncomeTax).toBe(186_000);
+
+    const { reportedDividendsTaxation: _unused, ...withoutElection } = salaryInputs(streams);
+    const separate = calculateTaxes(withoutElection);
+    expect(separate.investmentIncome?.aggregateDividends).toBeUndefined();
+    expect(separate.investmentIncome?.reported?.taxable).toEqual({
+      capitalGains: 0,
+      dividends: 1_000_000,
+    });
+    expect(separate.nationalIncomeTax).toBe(244_800);
+  });
+
+  it('taxes them in the brackets as 配当所得 inside 総所得金額, with no 配当控除', () => {
+    const result = calculateTaxes(salaryInputs([aggregateDividends(1_000_000)]));
+
+    // 所法22条②一 counts the 配当所得 in 総所得金額, so 総所得金額 = 合計所得金額 = 4,560,000, still
+    // within the 1,040,000 基礎控除 tier; the return covers 6,000,000.
+    expect(result.annualIncome).toBe(6_000_000);
+    expect(result.totalNetIncome).toBe(4_560_000);
+    expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
+    expect(result.investmentIncome).toEqual({
+      gross: { capitalGains: 0, dividends: 0, interest: 0 },
+      grossTotal: 0,
+      withheld: { national: 0, residence: 0, total: 0 },
+      aggregateDividends: 1_000_000,
+    });
+    // 課税総所得金額 4,560,000 − 722,252 − 1,040,000 = 2,797,748 → 2,797,000; in the 10% bracket
+    // 279,700 − 97,500 = 182,200; with the 2.1% 復興特別所得税 186,026.2 → 186,000.
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(2_797_000);
+    expect(result.nationalIncomeTaxBase).toBe(182_200);
+    expect(result.nationalIncomeTax).toBe(186_000);
+    // 住民税: 4,560,000 − 722,252 − 430,000 = 3,407,748 → 3,407,000; 市 204,420 / 県 136,280 less
+    // the 調整控除 split 60/40 → 202,900 / 135,200; plus the 5,000 均等割 = 343,100. Nothing is
+    // taxed apart from the brackets.
+    expect(result.taxableIncomeForResidenceTax).toBe(3_407_000);
+    expect(result.residenceTax.separate).toBeUndefined();
+    expect(result.residenceTax.totalResidenceTax).toBe(343_100);
+    expect(result.takeHomeIncome).toBe(6_000_000 - 186_000 - 343_100 - 722_252);
+    // Furusato: 所得割 338,100 × 20% = 67,620; 3,407,000 − 50,000 人的控除差 is in the 20% band, so
+    // the 特例控除割合 is 1 − 0.1 − 0.2 × 1.021 = 0.6958; 67,620 / 0.6958 + 2,000 = 99,183 → 99,000.
+    expect(result.furusatoNozei.limit).toBe(99_000);
+  });
+
+  it('moves the 基礎控除 tier when they carry 合計所得金額 past 4,890,000', () => {
+    // 3,560,000 + 1,500,000 = 5,060,000 → the 670,000 tier (2026).
+    const result = calculateTaxes(salaryInputs([aggregateDividends(1_500_000)]));
+    expect(result.totalNetIncome).toBe(5_060_000);
+    expect(result.nationalIncomeTaxBasicDeduction).toBe(670_000);
+  });
+
+  it('nets no reported capital loss against them (措法37条の12の2① reaches 申告分離課税 dividends only)', () => {
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'domesticNoWithholding',
+          isReported: true,
+          amount: -400_000,
+          id: 'gains',
+        },
+        aggregateDividends(1_000_000),
+      ]),
+    );
+
+    // The loss is a qualifying 上場株式等に係る譲渡損失の金額 with no 申告分離課税 dividends to
+    // offset, so it is left over in full and the 配当所得 is taxed as if it were not there.
+    expect(result.investmentIncome?.reported).toEqual({
+      gross: { capitalGains: -400_000, qualifyingCapitalLosses: 400_000, dividends: 0 },
+      lossOffsetAgainstDividends: 0,
+      unabsorbedQualifyingLoss: 400_000,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 0, dividends: 0 },
+      taxable: { capitalGains: 0, dividends: 0 },
+      nationalIncomeTaxBase: 0,
+    });
+    expect(result.investmentIncome?.aggregateDividends).toBe(1_000_000);
+    expect(result.totalNetIncome).toBe(4_560_000);
+    expect(result.nationalIncomeTax).toBe(186_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(343_100);
+    // The return covers 5,000,000 − 400,000 + 1,000,000.
+    expect(result.annualIncome).toBe(5_600_000);
+    expect(result.takeHomeIncome).toBe(5_600_000 - 186_000 - 343_100 - 722_252);
+  });
+
+  it('sits beside a reported capital gain, each taxed in its own class', () => {
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'domesticNoWithholding',
+          isReported: true,
+          amount: 500_000,
+          id: 'gains',
+        },
+        aggregateDividends(200_000),
+      ]),
+    );
+
+    // 総所得金額 3,760,000 plus the 500,000 分離 class: 合計所得金額 4,260,000. 課税総所得金額
+    // 3,760,000 − 1,762,252 = 1,997,748 → 1,997,000, in the 10% bracket: 199,700 − 97,500 =
+    // 102,200; plus 15% of 500,000 = 75,000; 177,200 × 1.021 = 180,921.2 → 180,900.
+    expect(result.totalNetIncome).toBe(4_260_000);
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(1_997_000);
+    expect(result.investmentIncome?.reported?.taxable).toEqual({
+      capitalGains: 500_000,
+      dividends: 0,
+    });
+    expect(result.investmentIncome?.aggregateDividends).toBe(200_000);
+    expect(result.nationalIncomeTax).toBe(180_900);
+    // 住民税: 3,760,000 − 722,252 − 430,000 = 2,607,748 → 2,607,000: 156,420 / 104,280, plus
+    // 15,000 / 10,000 on the gain, less 1,500 / 1,000 → 169,900 / 113,200; plus 5,000 = 288,100.
+    expect(result.residenceTax.separate?.taxableCapitalGains).toBe(500_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(288_100);
+    expect(result.annualIncome).toBe(5_700_000);
+    expect(result.takeHomeIncome).toBe(5_700_000 - 180_900 - 288_100 - 722_252);
+  });
+
+  it('computes real results for a taxpayer with 総合課税 dividends and no earned income', () => {
+    const result = calculateTaxes({
+      ...salaryInputs(),
+      incomeStreams: [aggregateDividends(1_000_000)],
+      // Manual social insurance keeps the NHI and pension tables out of this case.
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+    });
+
+    // 合計所得金額 1,000,000: the 1,040,000 基礎控除 leaves no 課税総所得金額. 住民税 課税総所得金額
+    // 570,000 → 34,200 / 22,800 less the 1,500 / 1,000 調整控除 → 32,700 / 21,800; plus 5,000 =
+    // 59,500.
+    expect(result.annualIncome).toBe(1_000_000);
+    expect(result.totalNetIncome).toBe(1_000_000);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(59_500);
+    expect(result.takeHomeIncome).toBe(940_500);
+  });
+
+  it('counts them in the 公的年金等控除 band base (所法35条④一)', () => {
+    const components = calculateNetIncomeComponents(
+      [{ type: 'publicPension', amount: 3_000_000, id: 'pension' }, aggregateDividends(10_500_000)],
+      2026,
+      'age65to69',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+      'aggregate',
+    );
+
+    // 公的年金等に係る雑所得以外の合計所得金額 of 10,500,000 is over 10,000,000, so the 65+ deduction
+    // is 300,000 + 25% × (3,000,000 − 500,000) = 925,000, raised to its 1,000,000 floor → 雑所得
+    // 2,000,000 (1,900,000 in the 1,000万円以下 band).
+    expect(components.aggregateDividendIncome).toBe(10_500_000);
+    expect(components.netPublicPensionIncome).toBe(2_000_000);
+    expect(components.aggregateNetIncome).toBe(12_500_000);
+    expect(components.totalNetIncome).toBe(12_500_000);
   });
 });

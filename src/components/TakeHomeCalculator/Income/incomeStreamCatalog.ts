@@ -143,7 +143,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   dividends: {
     label: 'Dividends',
     category: 'investment',
-    chipLabel: 'DIVIDENDS',
+    chipLabel: 'DIVIDEND',
     amountLabel: 'Gross Dividends',
     amountHelperText:
       'Before withholding; includes 公募株式投資信託の分配金 and 特定公社債の利子. Exclude NISA amounts.',
