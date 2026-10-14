@@ -9,6 +9,12 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 - Fixed employee health insurance premiums that were ¥1 too high for some rates. A premium that ends in exactly 0.50 yen is rounded down (50銭以下切り捨て), but in rare cases it was incorrectly being rounded up. Premiums on bonuses were affected in the same way. Amounts are now entered in whole yen, and custom provider rates accept up to four decimal places (for example, 3.9947%). A custom rate entered with more than four decimal places is rounded to four.
 - Fixed the Social Insurance tab showing the wrong standard monthly remuneration (標準報酬月額) grade when three or more income streams were entered and their total landed exactly on a grade boundary. This was a display bug in the tooltip and did not affect the calculated premiums.
 
+## 2026-09-12
+
+### New
+
+- Investment income can now be entered as Advanced-mode income types: capital gains on shares, dividends, and interest. Only the amounts taxed at source are covered — [上場株式等の譲渡所得等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm) and [上場株式等の配当等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm) held in a [特定口座（源泉徴収あり）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm) under 申告不要, and [利子所得](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm) paid in Japan. Each entry carries the choices that decide its tax — the share type, the account it was sold from, and whether the amount is reported — with the options that are not modelled yet shown disabled, so the limits are visible where the amount is entered. Because these amounts are settled by the 20.315% withheld at source and stay off the tax return, they change no other figure the calculator shows: take-home pay, the summary and the chart are all unaffected, exactly as a commuting allowance is. What is withheld, and what is left after it, appear alongside the entered amount and in the Taxes tab. Reporting a gain, dividend, or loss on a tax return (申告分離課税 / 総合課税), 一般株式等, foreign brokerages, interest paid outside Japan, and NISA are not yet supported.
+
 ## 2026-09-10
 
 ### Updated
