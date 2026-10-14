@@ -192,10 +192,10 @@ describe('IncomeStreamForm', () => {
     expect(screen.getByRole('button', { name: 'Reported' })).toBeEnabled();
   });
 
-  it('forces Reported and disables Withheld only when a dividend is paid abroad', () => {
+  it('forces Reported and disables Withheld only when a dividend is received outside Japan', () => {
     render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Abroad' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Outside Japan' }));
     expect(screen.getByRole('button', { name: 'Withheld only' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Reported' })).toHaveAttribute(
       'aria-pressed',
@@ -208,15 +208,21 @@ describe('IncomeStreamForm', () => {
     );
   });
 
-  it('explains the disabled Withheld only button only for a dividend paid abroad', () => {
+  it('explains the disabled Withheld only button only for a dividend received outside Japan', () => {
     render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
-    expect(screen.queryByText('A dividend paid abroad must be reported.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('A dividend received outside Japan must be reported.'),
+    ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Abroad' }));
-    expect(screen.getByText('A dividend paid abroad must be reported.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Outside Japan' }));
+    expect(
+      screen.getByText('A dividend received outside Japan must be reported.'),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'In Japan' }));
-    expect(screen.queryByText('A dividend paid abroad must be reported.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('A dividend received outside Japan must be reported.'),
+    ).not.toBeInTheDocument();
   });
 
   it('saves a dividend as reported when Reported is chosen', () => {

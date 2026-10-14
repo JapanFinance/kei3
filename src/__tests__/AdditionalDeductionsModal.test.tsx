@@ -85,7 +85,7 @@ describe('Foreign Tax Credit card', () => {
     renderModal(undefined);
 
     expect(screen.getByLabelText(FOREIGN_TAX_LABEL)).toHaveAccessibleDescription(
-      'Only tax paid with a foreign tax return filed this year. Withheld foreign tax is entered with the income it was withheld from.',
+      'Only tax paid with a foreign tax return filed this year. Withheld foreign tax is entered with the income from which it was withheld.',
     );
   });
 
@@ -105,11 +105,11 @@ describe('Foreign Tax Credit card', () => {
       ['On dividends left to withholding, not eligible', '¥50,000'],
       ['Paid with a tax return', '¥5,000'],
       ['Total eligible foreign tax', '¥105,000'],
-      ['Foreign-source income', '¥1,000,000'],
+      ['Adjusted Foreign-Source Income', '¥1,000,000'],
       ['Credit limit', '¥69,480'],
     ]);
     expect(screen.getByRole('alert')).toHaveTextContent(
-      '¥35,520 of the foreign tax is above the limit and is not credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.',
+      '¥35,520 of the foreign tax is above the limit and cannot be credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.',
     );
   });
 
@@ -134,7 +134,7 @@ describe('Foreign Tax Credit card', () => {
     expect(summaryRows()).toEqual([
       ['Paid with a tax return', '¥20,000'],
       ['Total eligible foreign tax', '¥20,000'],
-      ['Foreign-source income', '¥500,000'],
+      ['Adjusted Foreign-Source Income', '¥500,000'],
       ['Credit limit', '¥21,504'],
     ]);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -158,7 +158,7 @@ describe('Foreign Tax Credit card', () => {
 
     expect(summaryRows()).toContainEqual(['Credit limit', '¥0']);
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'There is no foreign-source income to credit the foreign tax against, so ¥20,000 is not credited this year.',
+      'There is no Adjusted Foreign-Source Income (調整国外所得金額) to credit the foreign tax against, so ¥20,000 cannot be credited this year.',
     );
   });
 
@@ -177,7 +177,7 @@ describe('Foreign Tax Credit card', () => {
 
     expect(summaryRows()).toEqual([
       ['Total eligible foreign tax', '¥0'],
-      ['Foreign-source income', '¥1,000,000'],
+      ['Adjusted Foreign-Source Income', '¥1,000,000'],
       ['Credit limit', '¥69,480'],
     ]);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();

@@ -818,13 +818,13 @@ describe('multiStartDescent', () => {
 });
 
 describe('mandatoryReportingNote', () => {
-  it('names sales outside an account and dividends paid abroad together when both exist', () => {
+  it('names sales outside an account and dividends received outside Japan together when both exist', () => {
     const streams: IncomeStream[] = [
       outsideSale('g'),
       dividend({ id: 'd', paymentChannel: 'abroad', isReported: true, amount: 100_000 }),
     ];
     expect(mandatoryReportingNote(streams)).toBe(
-      'Sales outside a withholding designated account and dividends paid abroad are always reported.',
+      'Sales outside a withholding designated account and dividends received outside Japan are always reported.',
     );
   });
 
@@ -836,7 +836,7 @@ describe('mandatoryReportingNote', () => {
       mandatoryReportingNote([
         dividend({ id: 'd', paymentChannel: 'abroad', isReported: true, amount: 1 }),
       ]),
-    ).toBe('Dividends paid abroad are always reported.');
+    ).toBe('Dividends received outside Japan are always reported.');
   });
 
   it('is undefined without either', () => {

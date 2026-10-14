@@ -58,7 +58,7 @@ describe('withholdingAccountDividendsMustBeReported', () => {
 });
 
 describe('dividendMustBeReported', () => {
-  it('is true for a dividend paid abroad', () => {
+  it('is true for a dividend received outside Japan', () => {
     expect(dividendMustBeReported({ paymentChannel: 'abroad' })).toBe(true);
   });
 
@@ -96,7 +96,7 @@ describe('withRequiredReporting', () => {
     expect(withRequiredReporting(account)).toBe(account);
   });
 
-  it('forces a dividend paid abroad to be reported', () => {
+  it('forces a dividend received outside Japan to be reported', () => {
     const dividend: DividendsIncomeStream = {
       id: 'd1',
       type: 'dividends',

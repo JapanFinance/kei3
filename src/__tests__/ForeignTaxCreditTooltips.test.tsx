@@ -116,7 +116,9 @@ describe('ForeignTaxCreditTooltip', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Foreign tax \(外国所得税\) on income from outside Japan/),
+      screen.getByText(
+        /Foreign tax can be credited against Japanese tax, up to limits, to alleviate double taxation/,
+      ),
     ).toBeInTheDocument();
   });
 });

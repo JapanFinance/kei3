@@ -231,7 +231,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         }`;
       case 'dividends':
         return `${minimumTaxApplies || stream.isReported ? 'Reported' : 'Withheld only'}${
-          stream.paymentChannel === 'abroad' ? ', paid abroad' : ''
+          stream.paymentChannel === 'abroad' ? ', received outside Japan' : ''
         }${stream.issuerDomicile === 'foreign' ? ', foreign company or fund' : ''}`;
       case 'interest':
         return stream.payerDomicile === 'foreign' ? 'Paid outside Japan' : null;

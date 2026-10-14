@@ -173,11 +173,13 @@ export const ForeignTaxCreditTooltip: React.FC<ForeignTaxCreditTooltipProps> = (
               </Box>
             )}
             <Note>
-              Foreign tax (外国所得税) on income from outside Japan comes off Japanese tax, up to
-              limits, so the same income is not taxed twice. It comes off in this order: income tax,
-              reconstruction surtax, prefectural tax, municipal tax.
+              Foreign tax can be credited against Japanese tax, up to limits, to alleviate double
+              taxation. It is credited in this order: income tax, reconstruction surtax, prefectural
+              tax, municipal tax.
             </Note>
-            <Note>This row is what came off the income tax and the surtax.</Note>
+            <Note>
+              This row is what is credited against the income tax and the reconstruction surtax.
+            </Note>
           </>
         )}
         <SourceLinks sources={SOURCES} />
@@ -399,8 +401,8 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
     <DetailedTooltip title="Foreign Tax Paid">
       <Box>
         <Note>
-          Foreign tax (外国所得税) is a tax on the income like any other, so it comes off take-home
-          pay. It is counted in the income tax total, beside the Japanese income tax.
+          Foreign tax is a tax on income like any other, so it comes off take-home pay. It is
+          counted in the income tax total, beside the Japanese income tax.
         </Note>
         <AmountTable
           rows={[

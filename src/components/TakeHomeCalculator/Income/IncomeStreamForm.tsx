@@ -621,21 +621,21 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         {type === 'dividends' && (
           <FormControl fullWidth>
             <FormLabel id="dividend-payment-channel-label" sx={variantLabelSx}>
-              <span>Paid</span>
+              <span>Received</span>
               <DetailedTooltip
-                title="Where the Dividend Is Paid"
+                title="Where the Dividend Is Received"
                 icon={SIMPLE_TOOLTIP_ICON}
                 iconAriaLabel="dividend payment channel info"
               >
                 <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>In Japan</strong> means paid in Japan, or paid abroad through a Japanese
+                  <strong>In Japan</strong> means received in Japan, or received through a Japanese
                   broker that handles the payment (支払の取扱者). Japanese tax was withheld, so the
                   dividend may be left to withholding per payment.
                 </Typography>
                 <Typography sx={{ display: 'block' }}>
-                  <strong>Abroad</strong> means received outside Japan with no Japanese handler — a
-                  foreign brokerage account, for example. Such a dividend cannot be left to
-                  withholding, so it has to be reported.
+                  <strong>Outside Japan</strong> means received with no Japanese handler — a foreign
+                  brokerage account, for example. Such a dividend cannot be left to withholding, so
+                  it has to be reported.
                 </Typography>
               </DetailedTooltip>
             </FormLabel>
@@ -648,12 +648,12 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 }
               }}
               aria-labelledby="dividend-payment-channel-label"
-              aria-label="where the dividend is paid"
+              aria-label="where the dividend is received"
               size="small"
               sx={variantToggleGroupSx}
             >
               <ToggleButton value="domestic">In Japan</ToggleButton>
-              <ToggleButton value="abroad">Abroad</ToggleButton>
+              <ToggleButton value="abroad">Outside Japan</ToggleButton>
             </ToggleButtonGroup>
           </FormControl>
         )}
@@ -718,7 +718,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             {minimumTaxApplies ? (
               <FormHelperText sx={minimumTaxWarningSx}>{MINIMUM_TAX_REPORTING_NOTE}</FormHelperText>
             ) : paymentChannel === 'abroad' ? (
-              <FormHelperText>A dividend paid abroad must be reported.</FormHelperText>
+              <FormHelperText>A dividend received outside Japan must be reported.</FormHelperText>
             ) : null}
           </FormControl>
         )}

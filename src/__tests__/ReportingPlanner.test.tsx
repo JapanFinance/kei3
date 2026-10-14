@@ -246,7 +246,7 @@ describe('ReportingPlanner', () => {
     render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
     await expandPanel();
 
-    expect(screen.getByText('The current choices already keep the most.')).toBeInTheDocument();
+    expect(screen.getByText('The current choices already maximize take-home.')).toBeInTheDocument();
     expect(screen.queryByText('should not be shown')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument();
   });
@@ -272,7 +272,7 @@ describe('ReportingPlanner', () => {
     expect(screen.getByText('All withheld only')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
     expect(screen.getByText('Best')).toBeInTheDocument();
-    expect(screen.getByText('The current choices already keep the most.')).toBeInTheDocument();
+    expect(screen.getByText('The current choices already maximize take-home.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Apply' })).toHaveLength(1);
   });
 

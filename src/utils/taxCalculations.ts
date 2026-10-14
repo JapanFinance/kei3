@@ -582,7 +582,7 @@ const calculateIncomeBreakdown = (
         }
         if (dividendMustBeReported(income) && !income.isReported) {
           throw new Error(
-            'A dividend paid abroad with no Japanese handler must be reported (措令4条の3②).',
+            'A dividend received outside Japan with no Japanese handler must be reported (措令4条の3②).',
           );
         }
         if (!income.isReported) {
