@@ -65,7 +65,6 @@ import {
   dependentTestAnnualIncome,
   totalCommutingAllowanceFromStreams,
 } from '../../utils/incomeStreams';
-import { hasInvestmentIncome } from '../../utils/investmentIncome';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -382,32 +381,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       </Box>
                     ) : null;
                   })()}
-
-                  {/* Only the withheld part sits outside the total; reported investment income is
-                      inside it. */}
-                  {investmentIncome !== undefined &&
-                    hasInvestmentIncome(investmentIncome.gross) && (
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          px: 1,
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          {isMobile
-                            ? 'Investment (withheld only)'
-                            : 'Investment Income (withheld only)'}
-                        </Typography>
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ color: 'text.secondary', fontWeight: 'medium' }}
-                        >
-                          {formatJPY(investmentIncome.grossTotal)}
-                        </Typography>
-                      </Box>
-                    )}
                 </Box>
 
                 <Badge

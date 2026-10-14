@@ -45,7 +45,13 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       results.pensionPayments +
       (results.employmentInsurance ?? 0) +
       (results.longTermCareCategory1Premium ?? 0);
-  const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
+  // The tax withheld on investment income left to withholding counts with the assessed tax of
+  // the same kind; the Taxes tab shows the two apart.
+  const withheldInvestmentTax = results.investmentIncome?.withheld;
+  const incomeTax = results.nationalIncomeTax + (withheldInvestmentTax?.national ?? 0);
+  const residenceTax =
+    results.residenceTax.totalResidenceTax + (withheldInvestmentTax?.residence ?? 0);
+  const totalTaxes = incomeTax + residenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage =
     results.annualIncome > 0
@@ -176,16 +182,12 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         </Typography>
         <ResultRow
           label="Income Tax"
-          value={formatAmountWithShare(results.nationalIncomeTax, results.annualIncome, !isMobile)}
+          value={formatAmountWithShare(incomeTax, results.annualIncome, !isMobile)}
           type="indented"
         />
         <ResultRow
           label="Residence Tax"
-          value={formatAmountWithShare(
-            results.residenceTax.totalResidenceTax,
-            results.annualIncome,
-            !isMobile,
-          )}
+          value={formatAmountWithShare(residenceTax, results.annualIncome, !isMobile)}
           type="indented"
         />
         <ResultRow

@@ -15,7 +15,7 @@ interface NetInvestmentIncomeTooltipProps {
 }
 
 /**
- * Tooltip for the "Net Investment Income (reported)" row: shows how the amounts reported under
+ * Tooltip for the "Net Investment Income (separate)" row: shows how the amounts reported under
  * 申告分離課税 net into the figure that enters 合計所得金額. Renders its own DetailedTooltip
  * trigger, so callers place it directly after the row label. Shared by the Taxes and Social
  * Insurance tabs.
@@ -81,7 +81,7 @@ const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({
             </tr>
           )}
           <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Investment Income:</td>
+            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Investment Income (separate):</td>
             <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
               {formatJPY(netIncome)}
             </td>
@@ -101,15 +101,15 @@ const NetInvestmentIncomeTooltip: React.FC<NetInvestmentIncomeTooltipProps> = ({
         sources={[
           {
             href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
-            label: '株式等を譲渡したときの課税(申告分離課税) - NTA',
+            label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
           },
           {
             href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
-            label: '配当金を受け取ったとき(配当所得) - NTA',
+            label: 'Dividend income (配当所得) - NTA',
           },
           {
             href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm',
-            label: '上場株式等に係る譲渡損失の損益通算及び繰越控除 - NTA',
+            label: 'Offsetting and carrying forward listed-share losses (損益通算・繰越控除) - NTA',
           },
         ]}
       />

@@ -12,6 +12,7 @@ import {
   scaleIncomeStreamsToIncome,
   type ChartCalculationContext,
 } from '../utils/chartConfig';
+import { calculateTaxes } from '../utils/taxCalculations';
 
 const context: ChartCalculationContext = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -169,9 +170,9 @@ describe('generateChartData with a commuting allowance', () => {
 });
 
 describe('generateChartData with investment income', () => {
-  // 申告不要 investment income is settled by withholding and enters no aggregate, so it is
-  // outside take-home and outside this chart: the bars, the breakdown and the percentage line
-  // are all about earned income, which is what the x-axis sweeps.
+  // 申告不要 investment income is money received, so it is inside the income the x-axis sweeps
+  // and inside take-home. It is asset-based, so the sweep holds it at the entered amount, and the
+  // tax withheld on it rides in the tax bars beside the assessed tax.
   const investmentContext: ChartCalculationContext = {
     ...context,
     incomeStreams: [
@@ -188,8 +189,33 @@ describe('generateChartData with investment income', () => {
     ],
   };
 
-  it('leaves every dataset identical to the same sweep without it', () => {
-    expect(generateChartData(range, investmentContext)).toEqual(generateChartData(range, context));
+  it('holds the amount constant, carries the withheld tax in the tax bars, and stacks to the income', () => {
+    const { datasets } = generateChartData({ min: 0, max: 5_000_000 }, investmentContext);
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+    const incomeTax = pointsOf(datasets.find(d => d.label === 'Income Tax')!);
+    const residenceTax = pointsOf(datasets.find(d => d.label === 'Residence Tax')!);
+
+    // 1,100,000 is held, so no earned income reaches the 1,000,000 point.
+    expect(takeHome.map(p => p.x)).toEqual([2_000_000, 3_000_000, 4_000_000, 5_000_000]);
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+
+      // The engine's figures for the same point: the assessed tax plus the tax withheld.
+      const result = calculateTaxes({
+        ...investmentContext,
+        incomeStreams: scaleIncomeStreamsToIncome(investmentContext.incomeStreams, point.x),
+      });
+      const withheld = result.investmentIncome!.withheld;
+      // 1,000,000 × 15.315% + 100,000 × 15.315%; 1,000,000 × 5% + 100,000 × 5%.
+      expect(withheld).toEqual({ national: 168_465, residence: 55_000, total: 223_465 });
+      expect(incomeTax[i]!.y, `income ${point.x}`).toBe(result.nationalIncomeTax + 168_465);
+      expect(residenceTax[i]!.y, `income ${point.x}`).toBe(
+        result.residenceTax.totalResidenceTax + 55_000,
+      );
+      expect(point.y).toBe(result.takeHomeIncome);
+    });
   });
 });
 
@@ -253,7 +279,7 @@ describe('generateChartData with investment income reported under 申告分離�
     expect(takeHomeAt('aggregate')).toBe(4_748_648);
   });
 
-  it('labels the reported income in the breakdown at every point', () => {
+  it('labels the investment income in the breakdown at every point', () => {
     const { datasets } = generateChartData({ min: 0, max: 5_000_000 }, reportedContext);
     const bars = datasets.filter(d => d.type === 'bar');
     expect(bars.length).toBeGreaterThan(0);
@@ -265,7 +291,7 @@ describe('generateChartData with investment income reported under 申告分離�
       points.forEach(point => {
         expect(point.breakdown, `income ${point.x}`).toEqual([
           ...(point.x > 1_000_000 ? [{ label: 'Salary', amount: point.x - 1_000_000 }] : []),
-          { label: 'Reported Investment Income', amount: 1_000_000 },
+          { label: 'Investment Income', amount: 1_000_000 },
         ]);
       });
     });

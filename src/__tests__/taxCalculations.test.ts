@@ -2392,7 +2392,7 @@ describe('calculateTaxes with investment income streams', () => {
     incomeYear: 2026,
   });
 
-  it('leaves take-home and every earned-income field untouched, reporting only the withholding', () => {
+  it('counts a withheld-only amount in annual income and in take-home net of the tax withheld', () => {
     const baseline = calculateTaxes(salaryInputs());
     const result = calculateTaxes(
       salaryInputs([
@@ -2419,7 +2419,9 @@ describe('calculateTaxes with investment income streams', () => {
       grossTotal: 1_200_000,
       withheld: { national: 183_780, residence: 60_000, total: 243_780 },
     });
-    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+    // The 1,200,000 is income received; the 243,780 withheld on it is a tax like any other.
+    expect(result.annualIncome).toBe(baseline.annualIncome + 1_200_000);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 1_200_000 - 243_780);
   });
 
   it('nets a capital loss against dividends down to zero tax when the loss is larger', () => {
@@ -2438,7 +2440,8 @@ describe('calculateTaxes with investment income streams', () => {
     );
 
     expect(result.investmentIncome?.withheld.total).toBe(0);
-    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+    // The net loss of 200,000 is money gone, so it lowers take-home with nothing withheld.
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 200_000);
   });
 
   it('taxes only the remainder when a capital loss partially offsets dividends', () => {
@@ -2458,7 +2461,7 @@ describe('calculateTaxes with investment income streams', () => {
 
     // base = 300,000; national = 45,945; residence = 15,000; total = 60,945
     expect(result.investmentIncome?.withheld.total).toBe(60_945);
-    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 300_000 - 60_945);
   });
 
   it('does not change National Health Insurance when only deposit interest is reported', () => {
@@ -2490,7 +2493,7 @@ describe('calculateTaxes with investment income streams', () => {
       residence: 5_000,
       total: 20_315,
     });
-    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 100_000 - 20_315);
   });
 
   it('handles a capital loss with no dividends to net against (withheld tax is zero)', () => {
@@ -2513,7 +2516,8 @@ describe('calculateTaxes with investment income streams', () => {
       grossTotal: -300_000,
       withheld: { national: 0, residence: 0, total: 0 },
     });
-    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+    expect(result.annualIncome).toBe(baseline.annualIncome - 300_000);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 300_000);
   });
 
   it('truncates withholding to the whole yen on top of earned income', () => {
@@ -2537,7 +2541,7 @@ describe('calculateTaxes with investment income streams', () => {
       residence: 61_728,
       total: 250_801,
     });
-    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 1_234_567 - 250_801);
   });
 
   it('leaves investmentIncome absent and results identical when every stream amount is zero', () => {
@@ -2560,7 +2564,7 @@ describe('calculateTaxes with investment income streams', () => {
     expect(result).toEqual(baseline);
   });
 
-  it('reports the withholding for an investment-only taxpayer, whose take-home is nil', () => {
+  it('gives an investment-only taxpayer the dividend net of the withholding as take-home', () => {
     const result = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
@@ -2585,12 +2589,12 @@ describe('calculateTaxes with investment income streams', () => {
       incomeYear: 2026,
     });
 
-    expect(result.annualIncome).toBe(0);
+    expect(result.annualIncome).toBe(1_000_000);
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
     // base = 1,000,000; national = 153,150; residence = 50,000
     expect(result.investmentIncome?.withheld.total).toBe(203_150);
-    expect(result.takeHomeIncome).toBe(0);
+    expect(result.takeHomeIncome).toBe(1_000_000 - 203_150);
   });
 
   // The UI offers only the supported variant, so these guard the engine against a stream
@@ -2705,7 +2709,8 @@ describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
     expect(result.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
     expect(result.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
     expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
-    expect(result.annualIncome).toBe(5_000_000);
+    // −500,000 + 300,000 + 600,000 received on top of the salary.
+    expect(result.annualIncome).toBe(5_400_000);
   });
 
   it('leaves a withheld loss in the account when only the dividends are reported', () => {
@@ -2720,7 +2725,8 @@ describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
       taxable: { capitalGains: 0, dividends: 800_000 },
       nationalIncomeTaxBase: 120_000,
     });
-    expect(result.annualIncome).toBe(5_800_000);
+    // 5,000,000 + 800,000 reported − 500,000 lost in the account.
+    expect(result.annualIncome).toBe(5_300_000);
   });
 
   it('has to report the dividends when a reported loss reduced their withholding (措法37条の11の6⑩)', () => {
@@ -2772,8 +2778,10 @@ describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
       residence: 10_000,
       total: 40_630,
     });
-    expect(result.annualIncome).toBe(6_000_000);
-    expect(result.takeHomeIncome).toBe(4_739_848);
+    expect(result.annualIncome).toBe(6_200_000);
+    // 6,000,000 − 244,800 − 293,100 − 722,252 = 4,739,848 on the return, plus the 200,000 of
+    // dividends net of the 40,630 withheld on them.
+    expect(result.takeHomeIncome).toBe(4_739_848 + 200_000 - 40_630);
   });
 });
 

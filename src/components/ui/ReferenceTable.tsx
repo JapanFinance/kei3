@@ -18,7 +18,9 @@ const HIGHLIGHTED_ROW_SX: SxProps<Theme> = {
 };
 
 interface ReferenceTableProps {
-  /** Column headings, one per column. */
+  /** A title above the table spanning every column; omitted when absent. */
+  caption?: React.ReactNode;
+  /** Column headings, one per column; an empty array renders no heading row. */
   headers: React.ReactNode[];
   /** Table body: an array of rows, each an array of cells matching the header count. */
   rows: React.ReactNode[][];
@@ -35,13 +37,24 @@ interface ReferenceTableProps {
  * tiers, tax brackets, per-capita amounts, …). Feed it `headers` and `rows` as data; the borders,
  * padding and font sizing are baked in so every tooltip table renders identically.
  */
-const ReferenceTable: React.FC<ReferenceTableProps> = ({ headers, rows, highlightedRow }) => (
+const ReferenceTable: React.FC<ReferenceTableProps> = ({
+  caption,
+  headers,
+  rows,
+  highlightedRow,
+}) => (
   <Box
     component="table"
     sx={{
       borderCollapse: 'collapse',
       width: '100%',
       fontSize: '0.95em',
+      '& caption': {
+        captionSide: 'top',
+        textAlign: 'left',
+        fontWeight: 600,
+        padding: '2px 6px 6px',
+      },
       '& td': {
         padding: '2px 6px',
       },
@@ -53,15 +66,18 @@ const ReferenceTable: React.FC<ReferenceTableProps> = ({ headers, rows, highligh
       },
     }}
   >
-    <thead>
-      <tr>
-        {headers.map((header, i) => (
-          <th key={i} scope="col">
-            {header}
-          </th>
-        ))}
-      </tr>
-    </thead>
+    {caption !== undefined && <caption>{caption}</caption>}
+    {headers.length > 0 && (
+      <thead>
+        <tr>
+          {headers.map((header, i) => (
+            <th key={i} scope="col">
+              {header}
+            </th>
+          ))}
+        </tr>
+      </thead>
+    )}
     <tbody>
       {rows.map((row, ri) => {
         const isHighlighted = ri === highlightedRow;

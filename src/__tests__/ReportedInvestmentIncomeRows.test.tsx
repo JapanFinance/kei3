@@ -159,7 +159,7 @@ describe.each([
   it('shows the reported net amount with its netting breakdown, and the 合計所得金額 subtotal', () => {
     render(<Tab results={props.results} inputs={props.inputs} />);
 
-    expect(screen.getByText('Net Investment Income (reported)')).toBeInTheDocument();
+    expect(screen.getByText('Net Investment Income (separate)')).toBeInTheDocument();
     const tooltip = tooltipTitled('Reported Investment Income Details');
     expect(tooltip).toBeDefined();
     // The −500,000 appears as the year's net capital gains and again as the offset.
@@ -193,12 +193,14 @@ describe.each([
   it('lists them on a row of their own, inside the 合計所得金額 subtotal', () => {
     render(<Tab results={props.results} inputs={props.inputs} />);
 
-    const label = screen.getByText('Net Dividend Income (reported, progressive)');
+    const label = screen.getByText('Net Dividend Income (aggregate)');
     expect(within(label.closest('div')!.parentElement!).getByText('¥400,000')).toBeInTheDocument();
-    const tooltip = tooltipTitled('Dividends Reported under 総合課税');
+    const tooltip = tooltipTitled('Dividends Reported under Aggregate Taxation');
     expect(tooltip).toBeDefined();
-    expect(within(tooltip!).getByText(/配当控除 \(所法92条.*not modelled yet/)).toBeInTheDocument();
-    expect(screen.getByText('Net Investment Income (reported)')).toBeInTheDocument();
+    expect(
+      within(tooltip!).getByText(/dividend tax credit \(配当控除, 所法92条.*not modelled yet/),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Net Investment Income (separate)')).toBeInTheDocument();
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
     expect(screen.getAllByText('¥4,260,000').length).toBeGreaterThanOrEqual(1);
   });
@@ -223,39 +225,51 @@ describe('TaxesTab with dividends reported under 総合課税 alone', () => {
       />,
     );
 
-    expect(screen.getByText('Net Dividend Income (reported, progressive)')).toBeInTheDocument();
+    expect(screen.getByText('Net Dividend Income (aggregate)')).toBeInTheDocument();
     expect(screen.getByText('Total Net Income')).toBeInTheDocument();
-    expect(screen.queryByText('Net Investment Income (reported)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Net Investment Income (separate)')).not.toBeInTheDocument();
     expect(screen.queryByText('Taxable Investment Income (reported)')).not.toBeInTheDocument();
-    expect(screen.queryByText('Tax on Investment Income (15%)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Tax on Investment Income (separate)')).not.toBeInTheDocument();
   });
 });
 
 describe('TaxesTab with reported investment income', () => {
-  it('lists the taxable amount and its 15% under income tax, and the 3% + 2% under residence tax', () => {
+  it('lists the 15% under income tax and the 3% + 2% under residence tax, with the taxable amount in the tooltips', () => {
     render(<TaxesTab results={results} inputs={inputs} />);
 
-    // Once under Income Tax (after the 所得控除 spillover) and once under Residence Tax.
-    expect(screen.getAllByText('Taxable Investment Income (reported)')).toHaveLength(2);
-    expect(screen.getByText('Tax on Investment Income (15%)')).toBeInTheDocument();
-    expect(screen.getByText('¥45,000')).toBeInTheDocument();
+    // The taxable amount (after the 所得控除 spillover) has no row of its own: the 15% row's
+    // tooltip derives it, and the residence-tax portion's tooltip names it.
+    expect(screen.queryByText('Taxable Investment Income (reported)')).not.toBeInTheDocument();
+    const taxRow = screen
+      .getByText('Tax on Investment Income (separate)')
+      .closest('div')!.parentElement!;
+    expect(within(taxRow).getByText('¥45,000')).toBeInTheDocument();
+    expect(
+      within(tooltipTitled('Income Tax on Reported Investment Income')!).getByText(
+        'Taxable (¥1,000 floor):',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(tooltipTitled('Income-based Residence Tax')!).getByText(
+        /^Taxable investment income \(reported\):/,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText('Municipal portion, investment income (3%)')).toBeInTheDocument();
     expect(screen.getByText('¥9,000')).toBeInTheDocument();
     expect(screen.getByText('Prefectural portion, investment income (2%)')).toBeInTheDocument();
     expect(screen.getByText('¥6,000')).toBeInTheDocument();
   });
 
-  it('counts the assessed tax in Total Taxes and shows no 源泉徴収 section', () => {
+  it('counts the assessed tax in Total Taxes and shows no withheld rows', () => {
     render(<TaxesTab results={results} inputs={inputs} />);
 
     // 137,600 income tax + 258,100 residence tax, both of which already include the reported income.
     const totalRow = screen.getByText('Total Taxes').closest('div')!.parentElement!;
     expect(within(totalRow).getByText('¥395,700')).toBeInTheDocument();
-    expect(screen.queryByText('Investment Income Tax (源泉徴収)')).not.toBeInTheDocument();
-    expect(screen.queryByText('Total Withheld')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Withheld on Investment Income/)).not.toBeInTheDocument();
   });
 
-  it('keeps the 源泉徴収 section for amounts withheld beside the reported ones', () => {
+  it('adds a withheld row under each tax for amounts withheld beside the reported ones', () => {
     render(
       <TaxesTab
         results={{
@@ -271,9 +285,17 @@ describe('TaxesTab with reported investment income', () => {
       />,
     );
 
-    expect(screen.getByText('Investment Income Tax (源泉徴収)')).toBeInTheDocument();
-    expect(screen.getByText('Total Withheld')).toBeInTheDocument();
-    expect(screen.getByText('Tax on Investment Income (15%)')).toBeInTheDocument();
+    // One row under each tax, named alike; the rates are in their shared tooltip.
+    const withheldRows = screen
+      .getAllByText('Withheld on Investment Income')
+      .map(label => label.closest('div')!.parentElement!);
+    expect(withheldRows).toHaveLength(2);
+    expect(within(withheldRows[0]!).getByText('¥15,315')).toBeInTheDocument();
+    expect(within(withheldRows[1]!).getByText('¥5,000')).toBeInTheDocument();
+    // 395,700 assessed + 20,315 withheld.
+    const totalRow = screen.getByText('Total Taxes').closest('div')!.parentElement!;
+    expect(within(totalRow).getByText('¥416,015')).toBeInTheDocument();
+    expect(screen.getByText('Tax on Investment Income (separate)')).toBeInTheDocument();
   });
 });
 

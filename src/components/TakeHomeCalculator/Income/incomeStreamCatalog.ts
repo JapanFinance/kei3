@@ -143,8 +143,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'investment',
     chipLabel: 'ACCOUNT',
     amountLabel: 'Net Capital Gains (譲渡損益)',
-    amountHelperText:
-      "The net gain or loss on sales for the year, from the account's annual transaction report (特定口座年間取引報告書); enter a loss as a negative amount.",
+    amountHelperText: 'The net gain or loss on sales; enter a loss as a negative amount.',
     min: Number.MIN_SAFE_INTEGER,
   },
   capitalGains: {
@@ -153,8 +152,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'investment',
     chipLabel: 'CAPITAL GAINS',
     amountLabel: 'Net Capital Gains',
-    amountHelperText:
-      'Net of acquisition and transfer costs; enter a loss as a negative amount. Exclude NISA amounts.',
+    amountHelperText: 'Net of acquisition and transfer costs; enter a loss as a negative amount.',
     min: Number.MIN_SAFE_INTEGER,
   },
   dividends: {
@@ -163,15 +161,14 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'investment',
     chipLabel: 'DIVIDEND',
     amountLabel: 'Gross Dividends',
-    amountHelperText:
-      "Before withholding. Dividends received into a withholding designated account go in that account's entry. Exclude NISA amounts.",
+    amountHelperText: 'Enter the amount before withholding.',
   },
   interest: {
     label: 'Interest',
     category: 'investment',
     chipLabel: 'INTEREST',
     amountLabel: 'Gross Interest',
-    amountHelperText: '預貯金の利子 and 一般公社債の利子, before withholding.',
+    amountHelperText: 'Enter the amount before withholding.',
   },
 };
 

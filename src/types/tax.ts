@@ -197,7 +197,7 @@ export type IncomeStreamType = IncomeStream['type'];
 
 /**
  * Whether `stream` is one of the investment-income types. These are never earned income — see
- * {@link import("../utils/incomeStreams").annualIncomeContribution} — and, except for a
+ * {@link import("../utils/incomeStreams").isEarnedIncomeStream} — and, except for a
  * dividend reported under 総合課税, are taxed separately from the progressive brackets, see
  * {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
  */
@@ -627,17 +627,15 @@ export interface CustomEmployeesHealthInsuranceRates {
 
 export interface TakeHomeResults {
   /**
-   * The income that goes on the return, as received over the year before taxes and social
-   * insurance: net of the real costs of earning it and gross of every deduction that is not a
-   * cash outflow. Salary, bonus and stock compensation gross; public pension gross, before the
-   * 公的年金等控除; business and miscellaneous income after 必要経費 but before the
-   * 青色申告特別控除; and investment income reported under 申告分離課税 or 総合課税, as
-   * entered (so a reported 譲渡損失 reduces it). A commuting allowance is excluded as a cost reimbursement,
-   * and investment income that is 申告不要 is excluded because the tax system does not count
-   * it: withholding settles it and it enters no aggregate — see {@link investmentIncome} for
-   * where its own gross amount and tax are reported instead. Under this definition, and only
-   * this one, {@link takeHomeIncome} (this amount minus taxes and social insurance) is the money
-   * kept from what the return covers.
+   * The income received over the year before taxes and social insurance: net of the real costs
+   * of earning it and gross of every deduction that is not a cash outflow. Salary, bonus and
+   * stock compensation gross; public pension gross, before the 公的年金等控除; business and
+   * miscellaneous income after 必要経費 but before the 青色申告特別控除; and investment income
+   * as entered, whether reported under 申告分離課税 or 総合課税 or settled by withholding under
+   * 申告不要 (so a 譲渡損失 reduces it). A commuting allowance is excluded as a cost
+   * reimbursement. {@link takeHomeIncome} is this amount minus social insurance and every tax on
+   * it, assessed through the return or withheld at source — see {@link investmentIncome} for the
+   * withheld tax.
    *
    * The same definition is used by the 国民生活基礎調査 figure behind the chart's median and
    * percentile bands, which the survey's 用語の説明 (2025 edition, item 13「所得の種類」,
@@ -706,11 +704,12 @@ export interface TakeHomeResults {
    */
   commutingAllowance?: number;
   /**
-   * Investment income (listed-share capital gains and dividends, deposit interest). The
-   * amounts settled by withholding are outside {@link annualIncome}, {@link totalNetIncome} and
-   * {@link takeHomeIncome} alike; the amounts reported, under 申告分離課税 or 総合課税, are
-   * inside all three, taxed through the same calculation as the earned income. Absent when
-   * every amount is 0.
+   * Investment income (listed-share capital gains and dividends, deposit interest). Every amount
+   * is inside {@link annualIncome} and {@link takeHomeIncome}. The amounts settled by
+   * withholding are outside {@link totalNetIncome} and every assessed figure, and the tax
+   * withheld on them, in the `withheld` field, comes off take-home like any other tax; the
+   * amounts reported, under 申告分離課税 or 総合課税, are taxed through the same calculation as
+   * the earned income. Absent when every amount is 0.
    */
   investmentIncome?:
     | {
