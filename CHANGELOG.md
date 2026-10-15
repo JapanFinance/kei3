@@ -8,6 +8,8 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 - Fixed employee health insurance premiums that were ¥1 too high for some rates. A premium that ends in exactly 0.50 yen is rounded down (50銭以下切り捨て), but in rare cases it was incorrectly being rounded up. Premiums on bonuses were affected in the same way. Amounts are now entered in whole yen, and custom provider rates accept up to four decimal places (for example, 3.9947%). A custom rate entered with more than four decimal places is rounded to four.
 - Fixed the Social Insurance tab showing the wrong standard monthly remuneration (標準報酬月額) grade when three or more income streams were entered and their total landed exactly on a grade boundary. This was a display bug in the tooltip and did not affect the calculated premiums.
+- Fixed the National Health Insurance portion tooltips (medical, elderly support, long-term care, child support) showing a total ¥1 different from the row beside them in a year that combines two fiscal years, such as 2026. Each fiscal year's amount is now rounded to the yen before the 3/10 and 7/10 weights are applied, as the premium itself is calculated. The calculated premiums were not affected.
+- Fixed the National Health Insurance portion tooltips showing, at net income above ¥24,000,000, a calculation base after a ¥430,000 basic deduction, where the rules apply the same stepped basic deduction as residence tax (¥290,000, ¥150,000, then none). Every portion is at its cap at that income, so no premium changes.
 
 ## 2026-09-10
 

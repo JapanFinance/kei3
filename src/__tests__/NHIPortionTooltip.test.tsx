@@ -4,10 +4,7 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
-import {
-  NHIPortionTooltip,
-  type NHIPortionType,
-} from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
+import { NHIPortionTooltip } from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type {
   TakeHomeResults,
@@ -17,7 +14,10 @@ import type {
 } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { formatJPY } from '../utils/formatters';
-import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
+import {
+  calculateNationalHealthInsurancePremiumWithBreakdown,
+  type NationalHealthInsurancePortionKey,
+} from '../utils/healthInsuranceCalculator';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -56,6 +56,10 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     nhiElderlySupportPortion: breakdown.elderlySupportPortion,
     nhiLongTermCarePortion: breakdown.longTermCarePortion,
     nhiChildSupportPortion: breakdown.childSupportPortion,
+    nhiMedicalCapped: breakdown.medicalCapped,
+    nhiElderlySupportCapped: breakdown.elderlySupportCapped,
+    nhiLongTermCareCapped: breakdown.longTermCareCapped,
+    nhiChildSupportCapped: breakdown.childSupportCapped,
     salaryIncome: 0,
     bonusIncome: 0,
     grossEmploymentIncome: 0,
@@ -86,7 +90,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
   describe('blended year (2026) — tooltip totals match calculator breakdown', () => {
     const { results, inputs, breakdown } = buildNHIScenario(5_000_000, region, false);
 
-    const portionsToTest: { portion: NHIPortionType; expected: number }[] = [
+    const portionsToTest: { portion: NationalHealthInsurancePortionKey; expected: number }[] = [
       { portion: 'medical', expected: breakdown.medicalPortion },
       { portion: 'elderlySupport', expected: breakdown.elderlySupportPortion },
       { portion: 'childSupport', expected: breakdown.childSupportPortion },
@@ -130,7 +134,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
   describe('blended year at high income (caps apply)', () => {
     const { results, inputs, breakdown } = buildNHIScenario(20_000_000, region, false);
 
-    const portionsToTest: { portion: NHIPortionType; expected: number }[] = [
+    const portionsToTest: { portion: NationalHealthInsurancePortionKey; expected: number }[] = [
       { portion: 'medical', expected: breakdown.medicalPortion },
       { portion: 'elderlySupport', expected: breakdown.elderlySupportPortion },
       { portion: 'childSupport', expected: breakdown.childSupportPortion },
@@ -144,6 +148,64 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         );
         const values = Array.from(container.querySelectorAll('strong')).map(el => el.textContent);
         expect(values).toContain(formatJPY(expected));
+      },
+    );
+  });
+
+  describe("blended year: each fiscal year's amount is rounded before it is weighted", () => {
+    // The calculation rounds each fiscal year's portion to the yen and then weights the rounded
+    // amounts. Weighting the unrounded amounts instead lands ¥1 away in these cases: Chiyoda's
+    // FY2025 medical portion at ¥434,000 is 47,608.4 and its FY2026 one 47,900.4, which weight to
+    // 47,812.8 unrounded but 47,812.4 rounded.
+    const cases: {
+      income: number;
+      portion: NationalHealthInsurancePortionKey;
+      expected: number;
+      total: string;
+    }[] = [
+      {
+        income: 434_000,
+        portion: 'medical',
+        expected: 47_812,
+        total: 'Total: ¥47,608 × 3⁄10 + ¥47,900 × 7⁄10 = ¥47,812',
+      },
+      {
+        income: 435_000,
+        portion: 'elderlySupport',
+        expected: 17_499,
+        total: 'Total: ¥16,935 × 3⁄10 + ¥17,740 × 7⁄10 = ¥17,499',
+      },
+      {
+        income: 436_000,
+        portion: 'medical',
+        expected: 47_965,
+        total: 'Total: ¥47,763 × 3⁄10 + ¥48,051 × 7⁄10 = ¥47,965',
+      },
+      {
+        income: 438_000,
+        portion: 'childSupport',
+        expected: 1_327,
+        total: 'Total: ¥0 × 3⁄10 + ¥1,895 × 7⁄10 = ¥1,327',
+      },
+    ];
+
+    it.each(cases)(
+      'shows the $portion portion of ¥$income in Chiyoda as $total',
+      ({ income, portion, expected, total }) => {
+        const { results, inputs, breakdown } = buildNHIScenario(income, 'Tokyo-Chiyoda', false);
+        const portionAmounts = {
+          medical: breakdown.medicalPortion,
+          elderlySupport: breakdown.elderlySupportPortion,
+          longTermCare: breakdown.longTermCarePortion,
+          childSupport: breakdown.childSupportPortion,
+        };
+        expect(portionAmounts[portion]).toBe(expected);
+
+        const { container } = render(
+          <NHIPortionTooltip portion={portion} results={results} inputs={inputs} />,
+        );
+
+        expect(container.textContent).toContain(total);
       },
     );
   });
