@@ -54,6 +54,25 @@ describe('calculateFurusatoNozeiLimit', () => {
     expect(calculateFNForIncome(-1000).limit).toBe(0);
   });
 
+  it("splits the residence tax credit into each level's share, rounded up", () => {
+    // A credit of 12,337 is 7,402.2 municipal and 4,934.8 prefectural; each share is rounded up
+    // to the yen, so the two exceed the credit by ¥1.
+    const fn = calculateFNForIncome(2_080_000);
+    expect(fn.limit).toBe(15_000);
+    expect(fn.residenceTaxDonationBasicDeduction + fn.residenceTaxSpecialDeduction).toBe(12_337);
+    expect(fn.municipalTaxCredit).toBe(7_403);
+    expect(fn.prefecturalTaxCredit).toBe(4_935);
+  });
+
+  it('rounds each level of the credit up at every income', () => {
+    for (let income = 2_000_000; income <= 20_000_000; income += 250_000) {
+      const fn = calculateFNForIncome(income);
+      const credit = fn.residenceTaxDonationBasicDeduction + fn.residenceTaxSpecialDeduction;
+      expect(fn.municipalTaxCredit).toBe(Math.ceil(credit * 0.6));
+      expect(fn.prefecturalTaxCredit).toBe(Math.ceil(credit * 0.4));
+    }
+  });
+
   it('furusato nozei limit is reduced by DC plan contributions', () => {
     const fn = calculateTaxes({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,

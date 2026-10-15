@@ -341,6 +341,8 @@ describe('calculateTaxes', () => {
 
     // Verify Blue-Filer deduction is returned
     expect(result.blueFilerDeduction).toBe(650_000);
+    expect(result.grossBusinessAndMiscIncome).toBe(5_000_000);
+    expect(result.netBusinessAndMiscIncome).toBe(4_350_000);
   });
 });
 

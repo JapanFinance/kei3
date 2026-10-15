@@ -113,4 +113,29 @@ describe('NetEmploymentIncomeTooltip', () => {
     expect(marked).toHaveLength(1);
     expect(marked[0]).toHaveTextContent('8,500,001 and above');
   });
+
+  it('ends the flat-deduction row where the 30% formula starts (2026)', () => {
+    // The 2026 rules fix the net at set amounts up to a gross of 2,199,999 and apply the 30%
+    // formula from 2,200,000, which the calculation treats as the first tier. Both give a
+    // deduction of 740,000 at 2,200,000, so only the highlighted row tells them apart.
+    const markedRowFor = (gross: number) => {
+      const { unmount } = render(
+        <NetEmploymentIncomeTooltip
+          grossEmploymentIncome={gross}
+          netEmploymentIncome={gross - 740_000}
+          year={2026}
+        />,
+      );
+      const marked = Array.from(document.querySelectorAll('tbody tr')).filter(
+        tr => tr.getAttribute('aria-current') === 'true',
+      );
+      expect(marked).toHaveLength(1);
+      const text = marked[0]!.textContent;
+      unmount();
+      return text;
+    };
+
+    expect(markedRowFor(2_199_999)).toContain('Up to 2,199,999');
+    expect(markedRowFor(2_200_000)).toContain('2,200,000 – 3,600,000');
+  });
 });
