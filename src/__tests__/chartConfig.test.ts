@@ -4,15 +4,14 @@
 import { describe, it, expect } from 'vitest';
 
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, type TakeHomeInputs } from '../types/tax';
 import {
   generateChartData,
   getChartOptions,
   scaleIncomeStreamsToIncome,
-  type ChartCalculationContext,
 } from '../utils/chartConfig';
 
-const context: ChartCalculationContext = {
+const context: TakeHomeInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   incomeStreams: [{ id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' }],
   ageRange: 'age65to69',
@@ -25,7 +24,6 @@ const context: ChartCalculationContext = {
   incomeYear: 2026,
   longTermCareCategory1ManualEntry: false,
   longTermCareCategory1Premium: 0,
-  isEmploymentIncome: true,
 };
 
 // Five income points: 1M, 2M, 3M, 4M, 5M.
@@ -87,10 +85,9 @@ describe('generateChartData with the 介護保険第1号 premium', () => {
 });
 
 describe('generateChartData with public pension income', () => {
-  const pensionContext: ChartCalculationContext = {
+  const pensionContext: TakeHomeInputs = {
     ...context,
     incomeStreams: [{ id: 'p', type: 'publicPension', amount: 2_400_000 }],
-    isEmploymentIncome: false,
   };
 
   it('labels the pension in the breakdown at every point of the sweep', () => {
@@ -126,7 +123,7 @@ describe('generateChartData with public pension income', () => {
 describe('generateChartData with a commuting allowance', () => {
   // 100,000円/month is under the 150,000円 non-taxable cap, but scaling it with the swept
   // income would carry it past the cap and the calculation would reject it.
-  const commutingContext: ChartCalculationContext = {
+  const commutingContext: TakeHomeInputs = {
     ...context,
     incomeStreams: [
       { id: 's', type: 'salary', amount: 5_000_000, frequency: 'annual' },
@@ -164,6 +161,40 @@ describe('generateChartData with a commuting allowance', () => {
         );
       });
     });
+  });
+});
+
+describe('generateChartData employment insurance bar', () => {
+  it('shows the bar wherever the calculation charges the premium, even with no salary or bonus', () => {
+    // A commuting allowance beside business income is employment for social insurance, so the
+    // premium is charged on it: ¥10,000 a month at the 2026 rates comes to ¥615 a year. The bar
+    // used to be gated on a salary or bonus being entered, which left the stack short by ¥615.
+    const { datasets } = generateChartData(range, {
+      ...context,
+      ageRange: 'age20to39',
+      incomeStreams: [
+        { id: 'b', type: 'business', amount: 4_000_000 },
+        { id: 'c', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      ],
+    });
+
+    const employmentInsurance = datasets.find(d => d.label === 'Employment Insurance');
+    expect(employmentInsurance).toBeDefined();
+    pointsOf(employmentInsurance!).forEach(point => expect(point.y, `income ${point.x}`).toBe(615));
+
+    const bars = datasets.filter(d => d.type === 'bar');
+    pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!).forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
+  });
+
+  it('omits the bar when no point of the sweep charges the premium', () => {
+    const { datasets } = generateChartData(range, {
+      ...context,
+      incomeStreams: [{ id: 'p', type: 'publicPension', amount: 2_400_000 }],
+    });
+    expect(datasets.some(d => d.label === 'Employment Insurance')).toBe(false);
   });
 });
 
