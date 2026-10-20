@@ -7,11 +7,14 @@
  * made in the list looks like the choices made on an entry.
  */
 export const variantToggleGroupSx = {
+  height: { xs: 34, sm: 40 },
   '& .MuiToggleButton-root': {
-    px: 2,
-    py: 0.5,
-    fontSize: '0.85rem',
+    px: { xs: 1.5, sm: 2 },
+    py: { xs: 0.25, sm: 0.5 },
+    fontSize: { xs: '0.8rem', sm: '0.85rem' },
     fontWeight: 500,
+    height: '100%',
+    boxSizing: 'border-box',
   },
   '& .MuiToggleButton-root.Mui-selected': {
     bgcolor: 'primary.main',
@@ -29,4 +32,5 @@ export const variantLabelSx = {
   display: 'flex',
   alignItems: 'center',
   gap: 0.5,
+  minHeight: { xs: 20, sm: 24 },
 };

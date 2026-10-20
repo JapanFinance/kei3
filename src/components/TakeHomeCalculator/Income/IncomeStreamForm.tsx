@@ -16,9 +16,11 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
+import { useTheme } from '@mui/material/styles';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useMemo, useState } from 'react';
 
 import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
@@ -58,15 +60,14 @@ interface IncomeStreamFormProps {
   isMinimumTaxTriggered?: ((draft: IncomeStream) => boolean) | undefined;
 }
 
-// A figure's amount beside its reporting choice; the toggle wraps under the amount on a phone.
-const figureRowSx = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  alignItems: 'center',
+// Two-column grid on desktop (sm), stacking into a single column on mobile.
+const figureGridSx = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
   columnGap: 2,
-  rowGap: 1,
+  rowGap: { xs: 1.25, sm: 2 },
+  alignItems: 'start',
 };
-const figureFieldSx = { flex: '1 1 220px' };
 
 const NTA_TAX_ANSWERS = {
   saleOfShares: {
@@ -117,6 +118,24 @@ const LISTED_SHARE_SOURCES = {
 const FOREIGN_DIVIDEND_TAX_NOTE =
   'For a dividend from a foreign company or fund that is not reported on a tax return, the Japanese tax is charged on the dividend after the foreign tax, and the foreign tax is not credited. Reported, the foreign tax is credited against Japanese tax, up to limits set by the Foreign Tax Credit rules.';
 
+const WITHHOLDING_ACCOUNT_REPORTING_TOOLTIP = (
+  <DetailedTooltip title="Reporting" icon={SIMPLE_TOOLTIP_ICON} iconAriaLabel="reporting info">
+    <Typography sx={{ display: 'block', mb: 1 }}>
+      Whether a withholding designated account&apos;s sales and dividends go on a tax return is
+      chosen per such account, separate from every other account.
+    </Typography>
+    <Typography sx={{ display: 'block', mb: 1 }}>
+      Reporting includes the figure on the tax return, where it counts toward total net income. A
+      reported loss offsets the year&apos;s other reported gains and, under separate taxation, the
+      reported dividends. All reported dividends follow the one election for separate or aggregate
+      taxation, made in the income list.
+    </Typography>
+    <Typography sx={{ display: 'block' }}>
+      Tax withheld on a reported amount is credited at filing.
+    </Typography>
+  </DetailedTooltip>
+);
+
 const guidanceBoxSx = {
   p: 1.5,
   backgroundColor: 'background.default',
@@ -135,6 +154,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   onCancel,
   isMinimumTaxTriggered,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const info = INCOME_STREAM_CATALOG[type];
   const [amount, setAmount] = useState<number>(
     initialData && 'amount' in initialData ? initialData.amount : 0,
@@ -495,7 +516,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
           </FormControl>
         )}
 
-        {(type === 'capitalGains' || type === 'dividends') && (
+        {type === 'capitalGains' && (
           <FormControl fullWidth>
             <FormLabel id="share-type-label" sx={variantLabelSx}>
               <span>Share Type</span>
@@ -540,44 +561,272 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
         )}
 
         {type === 'dividends' && (
-          <FormControl fullWidth>
-            <FormLabel id="dividend-issuer-label" sx={variantLabelSx}>
-              <span>Company or fund</span>
-              <DetailedTooltip
-                title="Company or Fund"
-                icon={SIMPLE_TOOLTIP_ICON}
-                iconAriaLabel="company or fund info"
+          <Box sx={figureGridSx}>
+            {/* Row 1, Column 1: Share Type */}
+            <FormControl fullWidth>
+              <FormLabel id="share-type-label" sx={variantLabelSx}>
+                <span>Share Type</span>
+                <DetailedTooltip
+                  title="Share Type"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                  iconAriaLabel="share type info"
+                >
+                  <Typography sx={{ display: 'block', mb: 1 }}>
+                    <strong>Listed (上場株式等)</strong> covers shares traded on an exchange, along
+                    with publicly offered stock investment trusts (公募株式投資信託) and specified
+                    bonds (特定公社債) such as government bonds and listed corporate bonds. Gains
+                    and dividends on them are separately taxed at a flat rate.
+                  </Typography>
+                  <Typography sx={{ display: 'block' }}>
+                    <strong>Other (一般株式等)</strong> is every other share or fund, mostly
+                    unlisted shares. It is not supported yet: it is a separate income class whose
+                    losses and gains cannot be combined with listed amounts, and its dividends are
+                    always taxed in aggregate.
+                  </Typography>
+                </DetailedTooltip>
+              </FormLabel>
+              <ToggleButtonGroup
+                value={shareType}
+                exclusive
+                onChange={(_, newValue: 'listed' | 'other' | null) => {
+                  if (newValue) {
+                    setShareType(newValue);
+                  }
+                }}
+                aria-labelledby="share-type-label"
+                aria-label="share type"
+                size="small"
+                sx={variantToggleGroupSx}
               >
-                <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Foreign</strong> is a company or fund domiciled outside Japan: a US stock,
-                  a US-listed ETF, or a foreign ETF listed on a Japanese exchange. Its dividends are
-                  foreign-source income, and the foreign tax withheld on them can be entered.
-                </Typography>
-                <Typography sx={{ display: 'block' }}>
-                  <strong>Japanese</strong> includes Japan-domiciled funds that invest abroad. A
-                  different credit (分配時調整外国税相当額控除) reduces the Japanese tax on its
-                  distributions by the foreign tax its holdings paid; that credit is not supported
-                  yet.
-                </Typography>
-              </DetailedTooltip>
-            </FormLabel>
-            <ToggleButtonGroup
-              value={issuerDomicile}
-              exclusive
-              onChange={(_, newValue: 'domestic' | 'foreign' | null) => {
-                if (newValue) {
-                  setIssuerDomicile(newValue);
+                <ToggleButton value="listed">Listed</ToggleButton>
+                <ToggleButton value="other" disabled>
+                  Other
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </FormControl>
+
+            {/* Row 1, Column 2: Received */}
+            <FormControl fullWidth>
+              <FormLabel id="dividend-payment-channel-label" sx={variantLabelSx}>
+                <span>Received</span>
+                <DetailedTooltip
+                  title="Where the Dividend Is Received"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                  iconAriaLabel="dividend payment channel info"
+                >
+                  <Typography sx={{ display: 'block', mb: 1 }}>
+                    <strong>In Japan</strong> means received in Japan, or received through a
+                    Japanese broker that handles the payment. Japanese tax was withheld, so the
+                    decision about whether to report the dividend on a tax return can be made per
+                    payment.
+                  </Typography>
+                  <Typography sx={{ display: 'block' }}>
+                    <strong>Outside Japan</strong> means received with no Japanese intermediary,
+                    such as in a foreign brokerage account. With no Japanese tax withheld, such a
+                    dividend must be reported.
+                  </Typography>
+                </DetailedTooltip>
+              </FormLabel>
+              <ToggleButtonGroup
+                value={paymentChannel}
+                exclusive
+                onChange={(_, newValue: 'domestic' | 'abroad' | null) => {
+                  if (newValue) {
+                    handlePaymentChannelChange(newValue);
+                  }
+                }}
+                aria-labelledby="dividend-payment-channel-label"
+                aria-label="where the dividend is received"
+                size="small"
+                sx={variantToggleGroupSx}
+              >
+                <ToggleButton value="domestic">In Japan</ToggleButton>
+                <ToggleButton value="abroad">Outside Japan</ToggleButton>
+              </ToggleButtonGroup>
+            </FormControl>
+
+            {/* Row 2, Column 1: Gross Dividends */}
+            <FormControl fullWidth>
+              <Box sx={variantLabelSx}>
+                <FormLabel
+                  id="dividend-amount-label"
+                  htmlFor="dividend-amount-input"
+                  sx={{ color: 'inherit', fontWeight: 'inherit', fontSize: 'inherit' }}
+                >
+                  Gross Dividends
+                </FormLabel>
+                {isMobile && (
+                  <DetailedTooltip
+                    title="Reporting"
+                    icon={SIMPLE_TOOLTIP_ICON}
+                    iconAriaLabel="reporting info"
+                  >
+                    <Typography sx={{ display: 'block', mb: 1 }}>
+                      <strong>Withheld only (申告不要)</strong> means the Japanese tax the payer
+                      withheld settles the tax. The dividend stays off the return and out of total
+                      net income.
+                    </Typography>
+                    <Typography sx={{ display: 'block' }}>
+                      <strong>Reported</strong> puts the dividend on the tax return, where it counts
+                      toward total net income. The tax withheld is credited at filing. Reported
+                      dividends are taxed under the election made in the income list, separate or
+                      aggregate taxation. Reporting can be beneficial when the other income cannot
+                      use all the deductions, or, under separate taxation, when a reported loss can
+                      offset the dividend.
+                    </Typography>
+                    {issuerDomicile === 'foreign' && (
+                      <>
+                        <Typography sx={{ display: 'block', mt: 1 }}>
+                          {FOREIGN_DIVIDEND_TAX_NOTE}
+                        </Typography>
+                        <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
+                      </>
+                    )}
+                  </DetailedTooltip>
+                )}
+              </Box>
+              <SpinnerNumberField
+                id="dividend-amount-input"
+                inputProps={{ autoFocus: true, 'aria-describedby': 'dividend-amount-help' }}
+                value={amount}
+                onChange={val => setAmount(val)}
+                sx={{ width: '100%' }}
+                error={!!error}
+                {...(info.min !== undefined && { min: info.min })}
+              />
+              <FormHelperText id="dividend-amount-help">{error || amountHelperText}</FormHelperText>
+            </FormControl>
+
+            {/* Row 2, Column 2: Reporting */}
+            <FormControl fullWidth>
+              {!isMobile && (
+                <FormLabel id="reporting-label" sx={variantLabelSx}>
+                  <span>Reporting</span>
+                  <DetailedTooltip
+                    title="Reporting"
+                    icon={SIMPLE_TOOLTIP_ICON}
+                    iconAriaLabel="reporting info"
+                  >
+                    <Typography sx={{ display: 'block', mb: 1 }}>
+                      <strong>Withheld only (申告不要)</strong> means the Japanese tax the payer
+                      withheld settles the tax. The dividend stays off the return and out of total
+                      net income.
+                    </Typography>
+                    <Typography sx={{ display: 'block' }}>
+                      <strong>Reported</strong> puts the dividend on the tax return, where it counts
+                      toward total net income. The tax withheld is credited at filing. Reported
+                      dividends are taxed under the election made in the income list, separate or
+                      aggregate taxation. Reporting can be beneficial when the other income cannot
+                      use all the deductions, or, under separate taxation, when a reported loss can
+                      offset the dividend.
+                    </Typography>
+                    {issuerDomicile === 'foreign' && (
+                      <>
+                        <Typography sx={{ display: 'block', mt: 1 }}>
+                          {FOREIGN_DIVIDEND_TAX_NOTE}
+                        </Typography>
+                        <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
+                      </>
+                    )}
+                  </DetailedTooltip>
+                </FormLabel>
+              )}
+              <ToggleButtonGroup
+                value={
+                  minimumTaxApplies || paymentChannel === 'abroad' || isReported
+                    ? 'reported'
+                    : 'withheldOnly'
                 }
-              }}
-              aria-labelledby="dividend-issuer-label"
-              aria-label="company or fund"
-              size="small"
-              sx={variantToggleGroupSx}
-            >
-              <ToggleButton value="domestic">Japanese</ToggleButton>
-              <ToggleButton value="foreign">Foreign</ToggleButton>
-            </ToggleButtonGroup>
-          </FormControl>
+                exclusive
+                onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
+                  if (newValue) {
+                    setIsReported(newValue === 'reported');
+                  }
+                }}
+                aria-labelledby={!isMobile ? 'reporting-label' : undefined}
+                aria-label="reporting"
+                size="small"
+                sx={variantToggleGroupSx}
+              >
+                <ToggleButton
+                  value="withheldOnly"
+                  disabled={minimumTaxApplies || paymentChannel === 'abroad'}
+                >
+                  Withheld only
+                </ToggleButton>
+                <ToggleButton value="reported">Reported</ToggleButton>
+              </ToggleButtonGroup>
+              {minimumTaxApplies ? (
+                <FormHelperText sx={minimumTaxWarningSx}>
+                  {MINIMUM_TAX_REPORTING_NOTE}
+                </FormHelperText>
+              ) : paymentChannel === 'abroad' ? (
+                <FormHelperText>A dividend received outside Japan must be reported.</FormHelperText>
+              ) : null}
+            </FormControl>
+
+            {/* Row 3, Column 1: Company or fund */}
+            <FormControl fullWidth>
+              <FormLabel id="dividend-issuer-label" sx={variantLabelSx}>
+                <span>Company or fund</span>
+                <DetailedTooltip
+                  title="Company or Fund"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                  iconAriaLabel="company or fund info"
+                >
+                  <Typography sx={{ display: 'block', mb: 1 }}>
+                    <strong>Foreign</strong> is a company or fund domiciled outside Japan: a US
+                    stock, a US-listed ETF, or a foreign ETF listed on a Japanese exchange. Its
+                    dividends are foreign-source income, and the foreign tax withheld on them can be
+                    entered.
+                  </Typography>
+                  <Typography sx={{ display: 'block' }}>
+                    <strong>Japanese</strong> includes Japan-domiciled funds that invest abroad. A
+                    different credit (分配時調整外国税相当額控除) reduces the Japanese tax on its
+                    distributions by the foreign tax its holdings paid; that credit is not supported
+                    yet.
+                  </Typography>
+                </DetailedTooltip>
+              </FormLabel>
+              <ToggleButtonGroup
+                value={issuerDomicile}
+                exclusive
+                onChange={(_, newValue: 'domestic' | 'foreign' | null) => {
+                  if (newValue) {
+                    setIssuerDomicile(newValue);
+                  }
+                }}
+                aria-labelledby="dividend-issuer-label"
+                aria-label="company or fund"
+                size="small"
+                sx={variantToggleGroupSx}
+              >
+                <ToggleButton value="domestic">Japanese</ToggleButton>
+                <ToggleButton value="foreign">Foreign</ToggleButton>
+              </ToggleButtonGroup>
+            </FormControl>
+
+            {/* Row 3, Column 2: Foreign Tax Withheld (if Foreign company/fund) */}
+            {issuerDomicile === 'foreign' && (
+              <FormControl fullWidth>
+                <FormLabel
+                  id="dividend-foreign-tax-label"
+                  htmlFor="dividend-foreign-tax-input"
+                  sx={variantLabelSx}
+                >
+                  Foreign Tax Withheld (外国所得税)
+                </FormLabel>
+                <SpinnerNumberField
+                  id="dividend-foreign-tax-input"
+                  value={foreignTax}
+                  onChange={val => setForeignTax(val)}
+                  sx={{ width: '100%' }}
+                  helperText={foreignTaxError ?? 'In yen. The gross dividends include it.'}
+                  error={!!foreignTaxError}
+                />
+              </FormControl>
+            )}
+          </Box>
         )}
 
         {type === 'capitalGains' && (
@@ -615,111 +864,6 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 </Typography>
               </DetailedTooltip>
             </FormHelperText>
-          </FormControl>
-        )}
-
-        {type === 'dividends' && (
-          <FormControl fullWidth>
-            <FormLabel id="dividend-payment-channel-label" sx={variantLabelSx}>
-              <span>Received</span>
-              <DetailedTooltip
-                title="Where the Dividend Is Received"
-                icon={SIMPLE_TOOLTIP_ICON}
-                iconAriaLabel="dividend payment channel info"
-              >
-                <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>In Japan</strong> means received in Japan, or received through a Japanese
-                  broker that handles the payment (支払の取扱者). Japanese tax was withheld, so the
-                  dividend may be left to withholding per payment.
-                </Typography>
-                <Typography sx={{ display: 'block' }}>
-                  <strong>Outside Japan</strong> means received with no Japanese handler — a foreign
-                  brokerage account, for example. Such a dividend cannot be left to withholding, so
-                  it has to be reported.
-                </Typography>
-              </DetailedTooltip>
-            </FormLabel>
-            <ToggleButtonGroup
-              value={paymentChannel}
-              exclusive
-              onChange={(_, newValue: 'domestic' | 'abroad' | null) => {
-                if (newValue) {
-                  handlePaymentChannelChange(newValue);
-                }
-              }}
-              aria-labelledby="dividend-payment-channel-label"
-              aria-label="where the dividend is received"
-              size="small"
-              sx={variantToggleGroupSx}
-            >
-              <ToggleButton value="domestic">In Japan</ToggleButton>
-              <ToggleButton value="abroad">Outside Japan</ToggleButton>
-            </ToggleButtonGroup>
-          </FormControl>
-        )}
-
-        {type === 'dividends' && (
-          <FormControl fullWidth>
-            <FormLabel id="reporting-label" sx={variantLabelSx}>
-              <span>Reporting</span>
-              <DetailedTooltip
-                title="Reporting"
-                icon={SIMPLE_TOOLTIP_ICON}
-                iconAriaLabel="reporting info"
-              >
-                <Typography sx={{ display: 'block', mb: 1 }}>
-                  <strong>Withheld only (申告不要)</strong> means the Japanese tax the payer
-                  withheld settles the tax. The dividend stays off the return and out of total net
-                  income.
-                </Typography>
-                <Typography sx={{ display: 'block' }}>
-                  <strong>Reported</strong> puts the dividend on the tax return, where it counts
-                  toward total net income. The tax withheld is credited at filing. Reported
-                  dividends are taxed under the election made in the income list, separate or
-                  aggregate taxation. Reporting can be beneficial when the other income cannot use
-                  all the deductions, or, under separate taxation, when a reported loss can offset
-                  the dividend.
-                </Typography>
-                {issuerDomicile === 'foreign' && (
-                  <>
-                    <Typography sx={{ display: 'block', mt: 1 }}>
-                      {FOREIGN_DIVIDEND_TAX_NOTE}
-                    </Typography>
-                    <SourceLinks sources={[NTA_TAX_ANSWERS.foreignTaxCredit]} />
-                  </>
-                )}
-              </DetailedTooltip>
-            </FormLabel>
-            <ToggleButtonGroup
-              value={
-                minimumTaxApplies || paymentChannel === 'abroad' || isReported
-                  ? 'reported'
-                  : 'withheldOnly'
-              }
-              exclusive
-              onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
-                if (newValue) {
-                  setIsReported(newValue === 'reported');
-                }
-              }}
-              aria-labelledby="reporting-label"
-              aria-label="reporting"
-              size="small"
-              sx={variantToggleGroupSx}
-            >
-              <ToggleButton
-                value="withheldOnly"
-                disabled={minimumTaxApplies || paymentChannel === 'abroad'}
-              >
-                Withheld only
-              </ToggleButton>
-              <ToggleButton value="reported">Reported</ToggleButton>
-            </ToggleButtonGroup>
-            {minimumTaxApplies ? (
-              <FormHelperText sx={minimumTaxWarningSx}>{MINIMUM_TAX_REPORTING_NOTE}</FormHelperText>
-            ) : paymentChannel === 'abroad' ? (
-              <FormHelperText>A dividend received outside Japan must be reported.</FormHelperText>
-            ) : null}
           </FormControl>
         )}
 
@@ -1043,7 +1187,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             </FormControl>
           )}
 
-          {type !== 'withholdingAccount' && (
+          {type !== 'withholdingAccount' && type !== 'dividends' && (
             <SpinnerNumberField
               inputProps={{ autoFocus: true }}
               label={info.amountLabel}
@@ -1056,8 +1200,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             />
           )}
 
-          {((type === 'dividends' && issuerDomicile === 'foreign') ||
-            (type === 'interest' && payerDomicile === 'foreign') ||
+          {((type === 'interest' && payerDomicile === 'foreign') ||
             (type === 'publicPension' &&
               payerDomicile === 'foreign' &&
               treatyCredit === 'available')) && (
@@ -1076,59 +1219,57 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             // its reporting choice side by side (the choice is made per figure, 措法37条の11の5①
             // and 37条の11の6⑨), the helper text under the pair at the group's full width.
             <Stack spacing={2}>
-              <Typography variant="body2" component="div">
+              <Typography variant="body2">
                 Copy the figures from the annual transaction report (特定口座年間取引報告書), and
                 choose whether to report the sales and/or the dividends on a tax return.
-                <DetailedTooltip
-                  title="Reporting"
-                  icon={SIMPLE_TOOLTIP_ICON}
-                  iconAriaLabel="reporting info"
-                >
-                  <Typography sx={{ display: 'block', mb: 1 }}>
-                    Whether a withholding designated account's sales and dividends go on a tax
-                    return is chosen per such account, separate from every other account.
-                  </Typography>
-                  <Typography sx={{ display: 'block', mb: 1 }}>
-                    Reporting includes the figure on the tax return, where it counts toward total
-                    net income. A reported loss offsets the year's other reported gains and, under
-                    separate taxation, the reported dividends. All reported dividends follow the one
-                    election for separate or aggregate taxation, made in the income list.
-                  </Typography>
-                  <Typography sx={{ display: 'block' }}>
-                    Tax withheld on a reported amount is credited at filing.
-                  </Typography>
-                </DetailedTooltip>
               </Typography>
-              <FormControl fullWidth>
-                <FormLabel id="account-sales-reporting-label" sx={variantLabelSx}>
-                  Sales
-                </FormLabel>
-                <Box sx={figureRowSx}>
-                  <SpinnerNumberField
-                    inputProps={{ autoFocus: true, 'aria-describedby': 'account-sales-help' }}
-                    label={info.amountLabel}
-                    value={accountCapitalGains}
-                    onChange={val => setAccountCapitalGains(val)}
-                    sx={figureFieldSx}
-                    {...(info.min !== undefined && { min: info.min })}
-                  />
-                  <ToggleButtonGroup
-                    value={minimumTaxApplies || reportsCapitalGains ? 'reported' : 'withheldOnly'}
-                    exclusive
-                    onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
-                      if (newValue) {
-                        setReportsCapitalGains(newValue === 'reported');
-                      }
-                    }}
-                    aria-labelledby="account-sales-reporting-label"
-                    size="small"
-                    sx={variantToggleGroupSx}
-                  >
-                    <ToggleButton value="withheldOnly" disabled={minimumTaxApplies}>
-                      Withheld only
-                    </ToggleButton>
-                    <ToggleButton value="reported">Reported</ToggleButton>
-                  </ToggleButtonGroup>
+              <FormControl fullWidth role="group" aria-labelledby="account-sales-label">
+                <Box sx={figureGridSx}>
+                  <Box>
+                    <Box sx={variantLabelSx}>
+                      <FormLabel
+                        id="account-sales-label"
+                        sx={{ color: 'inherit', fontWeight: 'inherit', fontSize: 'inherit' }}
+                      >
+                        Sales
+                      </FormLabel>
+                      {isMobile && WITHHOLDING_ACCOUNT_REPORTING_TOOLTIP}
+                    </Box>
+                    <SpinnerNumberField
+                      inputProps={{ autoFocus: true, 'aria-describedby': 'account-sales-help' }}
+                      label={info.amountLabel}
+                      value={accountCapitalGains}
+                      onChange={val => setAccountCapitalGains(val)}
+                      sx={{ width: '100%' }}
+                      {...(info.min !== undefined && { min: info.min })}
+                    />
+                  </Box>
+                  <Box>
+                    {!isMobile && (
+                      <FormLabel id="account-sales-reporting-label" sx={variantLabelSx}>
+                        <span>Reporting</span>
+                        {WITHHOLDING_ACCOUNT_REPORTING_TOOLTIP}
+                      </FormLabel>
+                    )}
+                    <ToggleButtonGroup
+                      value={minimumTaxApplies || reportsCapitalGains ? 'reported' : 'withheldOnly'}
+                      exclusive
+                      onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
+                        if (newValue) {
+                          setReportsCapitalGains(newValue === 'reported');
+                        }
+                      }}
+                      aria-labelledby={!isMobile ? 'account-sales-reporting-label' : undefined}
+                      aria-label="sales reporting"
+                      size="small"
+                      sx={variantToggleGroupSx}
+                    >
+                      <ToggleButton value="withheldOnly" disabled={minimumTaxApplies}>
+                        Withheld only
+                      </ToggleButton>
+                      <ToggleButton value="reported">Reported</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Box>
                 </Box>
                 <FormHelperText id="account-sales-help">{info.amountHelperText}</FormHelperText>
                 {minimumTaxApplies && (
@@ -1137,42 +1278,59 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   </FormHelperText>
                 )}
               </FormControl>
-              <FormControl fullWidth>
-                <FormLabel id="account-dividends-reporting-label" sx={variantLabelSx}>
-                  Dividends
-                </FormLabel>
-                <Box sx={figureRowSx}>
-                  <SpinnerNumberField
-                    inputProps={{ 'aria-describedby': 'account-dividends-help' }}
-                    label="Dividends Received into the Account (配当等)"
-                    value={accountDividends}
-                    onChange={val => setAccountDividends(val)}
-                    sx={figureFieldSx}
-                  />
-                  <ToggleButtonGroup
-                    value={
-                      minimumTaxApplies || dividendsForced || reportsDividends
-                        ? 'reported'
-                        : 'withheldOnly'
-                    }
-                    exclusive
-                    onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
-                      if (newValue) {
-                        setReportsDividends(newValue === 'reported');
+              <FormControl fullWidth role="group" aria-labelledby="account-dividends-label">
+                <Box sx={figureGridSx}>
+                  <Box>
+                    <Box sx={variantLabelSx}>
+                      <FormLabel
+                        id="account-dividends-label"
+                        sx={{ color: 'inherit', fontWeight: 'inherit', fontSize: 'inherit' }}
+                      >
+                        Dividends
+                      </FormLabel>
+                      {isMobile && WITHHOLDING_ACCOUNT_REPORTING_TOOLTIP}
+                    </Box>
+                    <SpinnerNumberField
+                      inputProps={{ 'aria-describedby': 'account-dividends-help' }}
+                      label="Dividends Received into the Account (配当等)"
+                      value={accountDividends}
+                      onChange={val => setAccountDividends(val)}
+                      sx={{ width: '100%' }}
+                    />
+                  </Box>
+                  <Box>
+                    {!isMobile && (
+                      <FormLabel id="account-dividends-reporting-label" sx={variantLabelSx}>
+                        <span>Reporting</span>
+                        {WITHHOLDING_ACCOUNT_REPORTING_TOOLTIP}
+                      </FormLabel>
+                    )}
+                    <ToggleButtonGroup
+                      value={
+                        minimumTaxApplies || dividendsForced || reportsDividends
+                          ? 'reported'
+                          : 'withheldOnly'
                       }
-                    }}
-                    aria-labelledby="account-dividends-reporting-label"
-                    size="small"
-                    sx={variantToggleGroupSx}
-                  >
-                    <ToggleButton
-                      value="withheldOnly"
-                      disabled={minimumTaxApplies || dividendsForced}
+                      exclusive
+                      onChange={(_, newValue: 'withheldOnly' | 'reported' | null) => {
+                        if (newValue) {
+                          setReportsDividends(newValue === 'reported');
+                        }
+                      }}
+                      aria-labelledby={!isMobile ? 'account-dividends-reporting-label' : undefined}
+                      aria-label="dividends reporting"
+                      size="small"
+                      sx={variantToggleGroupSx}
                     >
-                      Withheld only
-                    </ToggleButton>
-                    <ToggleButton value="reported">Reported</ToggleButton>
-                  </ToggleButtonGroup>
+                      <ToggleButton
+                        value="withheldOnly"
+                        disabled={minimumTaxApplies || dividendsForced}
+                      >
+                        Withheld only
+                      </ToggleButton>
+                      <ToggleButton value="reported">Reported</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Box>
                 </Box>
                 <FormHelperText id="account-dividends-help">
                   Enter the total amount before withholding.
@@ -1183,7 +1341,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                   </FormHelperText>
                 ) : dividendsForced ? (
                   <FormHelperText>
-                    Reporting this account's loss requires reporting its dividends as well.
+                    Reporting this account&apos;s loss requires reporting its dividends as well.
                   </FormHelperText>
                 ) : null}
               </FormControl>
@@ -1193,20 +1351,20 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
                 <FormLabel id="account-foreign-label" sx={variantLabelSx}>
                   Foreign shares and funds (国外株式又は国外投資信託等)
                 </FormLabel>
-                <Box role="group" aria-labelledby="account-foreign-label" sx={figureRowSx}>
+                <Box role="group" aria-labelledby="account-foreign-label" sx={figureGridSx}>
                   <SpinnerNumberField
                     inputProps={{ 'aria-describedby': 'account-foreign-help' }}
                     label="Foreign Dividends"
                     value={accountForeignDividends}
                     onChange={val => setAccountForeignDividends(val)}
-                    sx={figureFieldSx}
+                    sx={{ width: '100%' }}
                   />
                   <SpinnerNumberField
                     inputProps={{ 'aria-describedby': 'account-foreign-help' }}
                     label="Foreign Tax (外国所得税の額)"
                     value={foreignTax}
                     onChange={val => setForeignTax(val)}
-                    sx={figureFieldSx}
+                    sx={{ width: '100%' }}
                   />
                 </Box>
                 <FormHelperText id="account-foreign-help">

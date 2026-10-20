@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -338,6 +339,64 @@ describe('IncomeStreamForm', () => {
       expect.objectContaining({ reportsCapitalGains: true, reportsDividends: true }),
     );
   });
+
+  it('displays the Reporting label with its tooltip above each reporting choice in a withholding account', () => {
+    render(
+      <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
+
+    const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+    expect(salesGroup.getByText('Reporting')).toBeInTheDocument();
+    expect(salesGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+
+    const dividendsGroup = within(screen.getByRole('group', { name: 'Dividends' }));
+    expect(dividendsGroup.getByText('Reporting')).toBeInTheDocument();
+    expect(dividendsGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+  });
+
+  it('displays the Reporting label and tooltip beside Gross Dividends for dividends', () => {
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+    expect(screen.getByLabelText('Gross Dividends')).toBeInTheDocument();
+    const reportingGroup = within(screen.getByRole('group', { name: 'Reporting' }));
+    expect(reportingGroup.getByRole('button', { name: 'Withheld only' })).toBeInTheDocument();
+    expect(reportingGroup.getByRole('button', { name: 'Reported' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+  });
+
+  it('places the reporting tooltip on the section title and hides the separate Reporting label on mobile in a withholding account', () => {
+    vi.mocked(useMediaQuery).mockReturnValue(true);
+    try {
+      render(
+        <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
+      );
+
+      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+      expect(salesGroup.queryByText('Reporting')).toBeNull();
+      expect(salesGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+
+      const dividendsGroup = within(screen.getByRole('group', { name: 'Dividends' }));
+      expect(dividendsGroup.queryByText('Reporting')).toBeNull();
+      expect(dividendsGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+    } finally {
+      vi.mocked(useMediaQuery).mockReturnValue(false);
+    }
+  });
+
+  it('places the reporting tooltip on Gross Dividends and hides the separate Reporting label on mobile for dividends', () => {
+    vi.mocked(useMediaQuery).mockReturnValue(true);
+    try {
+      render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+
+      expect(screen.getByLabelText('Gross Dividends')).toBeInTheDocument();
+      expect(screen.queryByText('Reporting')).toBeNull();
+      expect(screen.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Withheld only' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Reported' })).toBeInTheDocument();
+    } finally {
+      vi.mocked(useMediaQuery).mockReturnValue(false);
+    }
+  });
 });
 
 describe('IncomeStreamForm foreign tax', () => {
@@ -358,9 +417,7 @@ describe('IncomeStreamForm foreign tax', () => {
       'true',
     );
     expect(screen.queryByLabelText(FOREIGN_TAX_LABEL)).not.toBeInTheDocument();
-    expect(
-      screen.getByText('Enter the amount in yen, before any tax withheld in Japan or abroad.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Enter in yen, before withholding.')).toBeInTheDocument();
     expect(screen.queryByText(/charged on the dividend after the foreign tax/)).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
@@ -377,7 +434,7 @@ describe('IncomeStreamForm foreign tax', () => {
       target: { value: '¥1,000,000' },
     });
     fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥100,000' } });
-    expect(screen.getByText('In yen. The gross amount above includes it.')).toBeInTheDocument();
+    expect(screen.getByText('In yen. The gross dividends include it.')).toBeInTheDocument();
     expect(
       screen.getByText(/the Japanese tax is charged on the dividend after the foreign tax/),
     ).toBeInTheDocument();
