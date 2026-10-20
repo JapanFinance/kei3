@@ -1632,6 +1632,8 @@ describe('grossEmploymentIncome (canonical gross for the Net Employment Income t
 
     // 6,000,000 + 1,000,000 + 4,000,000 = 11,000,000
     expect(result.grossEmploymentIncome).toBe(11_000_000);
+    expect(result.salaryIncome).toBe(6_000_000);
+    expect(result.bonusIncome).toBe(1_000_000);
 
     // The tooltip derives 給与所得控除 as gross − net − adjustment. With the canonical gross this is
     // the real (capped) deduction and is never negative.
@@ -4634,17 +4636,17 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           });
         }
         if (rand() < 0.35) {
-          const systemDomicile = pick(['domestic', 'foreign'] as const);
+          const payerDomicile = pick(['domestic', 'foreign'] as const);
           const amount = randInt(500_000, 4_000_000);
           const treatyCredit =
-            systemDomicile === 'foreign' ? pick(['creditable', 'unavailable'] as const) : undefined;
+            payerDomicile === 'foreign' ? pick(['available', 'unavailable'] as const) : undefined;
           streams.push({
             id: 'pen',
             type: 'publicPension',
             amount,
-            systemDomicile,
+            payerDomicile,
             foreignTax:
-              systemDomicile === 'foreign' && treatyCredit === 'creditable'
+              payerDomicile === 'foreign' && treatyCredit === 'available'
                 ? randInt(0, Math.floor(amount * 0.2))
                 : 0,
             ...(treatyCredit !== undefined && { treatyCredit }),
@@ -4690,10 +4692,10 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
 
         // Outside dividends
         if (rand() < 0.5) {
-          const paymentChannel = pick(['domestic', 'foreign'] as const);
+          const paymentChannel = pick(['domestic', 'abroad'] as const);
           const issuerDomicile =
-            paymentChannel === 'foreign' ? 'foreign' : pick(['domestic', 'foreign'] as const);
-          const isReported = paymentChannel === 'foreign' ? true : rand() < 0.5;
+            paymentChannel === 'abroad' ? 'foreign' : pick(['domestic', 'foreign'] as const);
+          const isReported = paymentChannel === 'abroad' ? true : rand() < 0.5;
           const amount = randInt(10_000, 2_500_000);
           const foreignTax =
             issuerDomicile === 'foreign' ? randInt(0, Math.floor(amount * 0.25)) : 0;
