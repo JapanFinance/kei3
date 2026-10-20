@@ -254,7 +254,7 @@ export const calculateNationalIncomeTaxBasicDeduction = (
  * bounds and amounts.
  * Source: National Tax Agency tax brackets — https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
  */
-export const calculateNationalIncomeTaxBase = (taxableIncome: number): number => {
+const calculateNationalIncomeTaxBase = (taxableIncome: number): number => {
   // Clamp taxable income to 0 if negative
   const clampedTaxableIncome = Math.max(0, taxableIncome);
 
@@ -271,7 +271,7 @@ export const calculateNationalIncomeTaxBase = (taxableIncome: number): number =>
  * Calculates the reconstruction surtax (復興特別所得税) at 2.1% of base income tax
  * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
  */
-export const calculateReconstructionSurtax = (baseTax: number): number => {
+const calculateReconstructionSurtax = (baseTax: number): number => {
   return RECONSTRUCTION_SURTAX_RATE.taxOn(baseTax);
 };
 
@@ -330,8 +330,7 @@ interface IncomeBreakdown {
    * Earned income only (employment + business/misc + public pension). Investment income is
    * gathered separately in {@link investment}, {@link reportedInvestment},
    * {@link aggregateDividends} and {@link aggregateInterest}; all of it joins this in
-   * TakeHomeResults.annualIncome — see
-   * {@link isInvestmentIncomeStream}.
+   * TakeHomeResults.annualIncome.
    */
   totalAnnualIncome: number;
   commutingAllowance: number;

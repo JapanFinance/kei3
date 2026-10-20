@@ -8,12 +8,7 @@
 
 import type { CustomEmployeesHealthInsuranceRates } from '../../types/tax';
 import type { PremiumRate } from '../premiumRate';
-import {
-  PROVIDER_DEFINITIONS,
-  getProviderDefinition,
-  percent,
-  type RegionalRates,
-} from './providerRateData';
+import { getProviderDefinition, percent, type RegionalRates } from './providerRateData';
 
 /** The rates that an employee's premium is calculated with. */
 export type EmployeeRates = Pick<
@@ -77,22 +72,4 @@ export function getEmployeePremiumRate(
   return includeLongTermCare
     ? rates.employeeHealthInsuranceRate.plus(rates.employeeLongTermCareRate)
     : rates.employeeHealthInsuranceRate;
-}
-
-/**
- * Get all available regions for a specific provider
- */
-export function getAvailableRegions(providerId: string): string[] {
-  const provider = getProviderDefinition(providerId);
-  return provider ? Object.keys(provider.regions) : [];
-}
-
-/**
- * Get all available providers
- */
-export function getAvailableProviders(): Array<{ providerId: string; providerName: string }> {
-  return Object.entries(PROVIDER_DEFINITIONS).map(([providerId, provider]) => ({
-    providerId,
-    providerName: provider.providerName,
-  }));
 }

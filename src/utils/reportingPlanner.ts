@@ -17,7 +17,7 @@ import { calculateTaxes, incomeTaxPaid, residenceTaxPaid } from './taxCalculatio
 /**
  * One reporting choice a {@link ReportingUnit} could be set to.
  */
-export interface ReportingUnitState {
+interface ReportingUnitState {
   /**
    * Whether choosing this state reports a nonzero dividend amount — what drives the election
    * doubling in {@link countPlans} and {@link generatePlans} (7.3.1).
@@ -348,7 +348,7 @@ export const neighbourPlans = (
 };
 
 /** How many units `plan` reports something on — the tie-break's "fewer reported units" (7.3.3). */
-export const reportedUnitCount = (
+const reportedUnitCount = (
   units: readonly ReportingUnit[],
   streams: readonly IncomeStream[],
 ): number =>
@@ -384,7 +384,7 @@ export const samePlan = (
  * Whether `plan` sets every unit exactly as the entries and the election already stand — the
  * tie-break's "then Current" (7.3.3), and what decides whether Apply is offered.
  */
-export const planMatchesCurrent = (
+const planMatchesCurrent = (
   units: readonly ReportingUnit[],
   plan: ReportingPlan,
   inputs: TakeHomeInputs,

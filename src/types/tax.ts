@@ -265,25 +265,6 @@ export type IncomeStream =
 export type IncomeStreamType = IncomeStream['type'];
 
 /**
- * Whether `stream` is one of the investment-income types. These are never earned income — see
- * {@link import("../utils/incomeStreams").isEarnedIncomeStream} — and, except for a
- * dividend reported under 総合課税 and for interest paid outside Japan
- * ({@link InterestIncomeStream.payerDomicile}), are taxed separately from the progressive
- * brackets, see {@link import("../utils/investmentIncome").calculateWithheldInvestmentTax}.
- */
-export const isInvestmentIncomeStream = (
-  stream: IncomeStream,
-): stream is
-  | WithholdingAccountIncomeStream
-  | CapitalGainsIncomeStream
-  | DividendsIncomeStream
-  | InterestIncomeStream =>
-  stream.type === 'withholdingAccount' ||
-  stream.type === 'capitalGains' ||
-  stream.type === 'dividends' ||
-  stream.type === 'interest';
-
-/**
  * Gross investment-income amounts for the year that are settled by withholding and stay off
  * the return, before that withholding: 上場株式等 under 申告不要 for {@link capitalGains} and
  * {@link dividends} — including the unreported parts of a

@@ -4578,4 +4578,296 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       expect(foreignPensionSourceIncome(2_000_000, 'age65to69', 11_000_000, 2026)).toBe(1_000_000);
     });
   });
+
+  describe('property-based accounting and statutory invariants', () => {
+    // Deterministic PRNG (Mulberry32) so randomized multi-stream scenarios are 100% reproducible.
+    const createPrng = (seed: number) => {
+      let state = seed >>> 0;
+      return () => {
+        state = (state + 0x6d2b79f5) >>> 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    };
+
+    it('preserves cash-flow conservation, statutory rounding, and credit bounds across 250 randomized portfolios', () => {
+      const rand = createPrng(0x5eed_2026);
+      const randInt = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min;
+      const pick = <T>(arr: readonly T[]): T => arr[randInt(0, arr.length - 1)]!;
+
+      const ageRanges: readonly TaxpayerAgeRange[] = [
+        'age20to39',
+        'age40to59',
+        'age60to64',
+        'age65to69',
+        'age70to74',
+        'age75plus',
+      ];
+      const years = [2025, 2026, 2027] as const;
+
+      for (let i = 0; i < 250; i++) {
+        const ageRange = pick(ageRanges);
+        const incomeYear = pick(years);
+        const provider =
+          ageRange === 'age75plus'
+            ? LATTER_STAGE_ELDERLY_ID
+            : pick([DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID]);
+
+        const streams: TakeHomeInputs['incomeStreams'] = [];
+
+        // Optionally include salary / business / pension
+        if (rand() < 0.75) {
+          streams.push({
+            id: 'sal',
+            type: 'salary',
+            amount: pick([0, 800_000, 3_500_000, 7_200_000, 18_000_000, 45_000_000]),
+            frequency: 'annual',
+          });
+        }
+        if (rand() < 0.3) {
+          streams.push({
+            id: 'biz',
+            type: 'business',
+            amount: randInt(100_000, 8_000_000),
+            blueFilerDeduction: pick([0, 100_000, 550_000, 650_000]),
+          });
+        }
+        if (rand() < 0.35) {
+          const systemDomicile = pick(['domestic', 'foreign'] as const);
+          const amount = randInt(500_000, 4_000_000);
+          const treatyCredit =
+            systemDomicile === 'foreign' ? pick(['creditable', 'unavailable'] as const) : undefined;
+          streams.push({
+            id: 'pen',
+            type: 'publicPension',
+            amount,
+            systemDomicile,
+            foreignTax:
+              systemDomicile === 'foreign' && treatyCredit === 'creditable'
+                ? randInt(0, Math.floor(amount * 0.2))
+                : 0,
+            ...(treatyCredit !== undefined && { treatyCredit }),
+          });
+        }
+
+        // 0–2 Withholding designated accounts (including high-income minimum tax scale in some cases)
+        const numAccounts = randInt(0, 2);
+        for (let a = 0; a < numAccounts; a++) {
+          const highScale = rand() < 0.12;
+          const capitalGains = highScale
+            ? randInt(150_000_000, 400_000_000)
+            : randInt(-3_000_000, 6_000_000);
+          const dividends = randInt(0, 3_000_000);
+          const foreignDividends = randInt(0, dividends);
+          const foreignTax = randInt(0, Math.floor(foreignDividends * 0.3));
+          const reportsCapitalGains = rand() < 0.5;
+          // Respect 措法37条の11の6⑩ when reporting a loss alongside dividends
+          const reportsDividends =
+            (capitalGains < 0 && dividends > 0 && reportsCapitalGains) || rand() < 0.5;
+          streams.push({
+            id: `acct-${a}`,
+            type: 'withholdingAccount',
+            capitalGains,
+            dividends,
+            foreignDividends,
+            foreignTax,
+            reportsCapitalGains,
+            reportsDividends,
+          });
+        }
+
+        // Outside capital gains
+        if (rand() < 0.5) {
+          streams.push({
+            id: 'cg',
+            type: 'capitalGains',
+            shareType: 'listed',
+            account: pick(['domesticNoWithholding', 'foreign'] as const),
+            amount: randInt(-2_500_000, 5_000_000),
+          });
+        }
+
+        // Outside dividends
+        if (rand() < 0.5) {
+          const paymentChannel = pick(['domestic', 'foreign'] as const);
+          const issuerDomicile =
+            paymentChannel === 'foreign' ? 'foreign' : pick(['domestic', 'foreign'] as const);
+          const isReported = paymentChannel === 'foreign' ? true : rand() < 0.5;
+          const amount = randInt(10_000, 2_500_000);
+          const foreignTax =
+            issuerDomicile === 'foreign' ? randInt(0, Math.floor(amount * 0.25)) : 0;
+          streams.push({
+            id: 'div',
+            type: 'dividends',
+            shareType: 'listed',
+            paymentChannel,
+            isReported,
+            issuerDomicile,
+            foreignTax,
+            amount,
+          });
+        }
+
+        // Interest
+        if (rand() < 0.4) {
+          const payerDomicile = pick(['domestic', 'foreign'] as const);
+          const amount = randInt(5_000, 1_000_000);
+          const foreignTax = payerDomicile === 'foreign' ? randInt(0, Math.floor(amount * 0.2)) : 0;
+          streams.push({
+            id: 'int',
+            type: 'interest',
+            payerDomicile,
+            foreignTax,
+            amount,
+          });
+        }
+
+        if (streams.length === 0) continue;
+
+        const inputs: TakeHomeInputs = {
+          ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+          incomeStreams: streams,
+          reportedDividendsTaxation: pick(['separate', 'aggregate'] as const),
+          ageRange,
+          healthInsuranceProvider: provider,
+          region: 'Tokyo',
+          dependents:
+            rand() < 0.3
+              ? [
+                  {
+                    id: 'sp1',
+                    relationship: 'spouse',
+                    ageRange: 'under65',
+                    income: {
+                      grossEmploymentIncome: randInt(0, 1_500_000),
+                      grossPublicPensionIncome: 0,
+                      otherNetIncome: 0,
+                    },
+                    disability: 'none',
+                    isCohabiting: true,
+                  },
+                ]
+              : [],
+          dcPlanContributions: pick([0, 276_000]),
+          manualSocialInsuranceEntry: false,
+          manualSocialInsuranceAmount: 0,
+          incomeYear,
+          ...(rand() < 0.25 && {
+            homeLoanTaxCredit: {
+              moveInYear: 2023,
+              creditAmount: randInt(50_000, 210_000),
+              isTokuteiShutoku: true,
+            },
+          }),
+          ...(rand() < 0.25 && {
+            foreignTaxCredit: {
+              foreignTax: randInt(10_000, 300_000),
+            },
+          }),
+        };
+
+        const results = calculateTaxes(inputs);
+
+        // 1. All primary outputs are finite safe integers
+        for (const val of [
+          results.annualIncome,
+          results.takeHomeIncome,
+          results.nationalIncomeTax,
+          results.residenceTax.totalResidenceTax,
+          results.healthInsurance,
+          results.pensionPayments,
+          results.totalNetIncome,
+          results.furusatoNozei.limit,
+          results.furusatoNozei.outOfPocketCost,
+        ]) {
+          expect(Number.isSafeInteger(val)).toBe(true);
+        }
+
+        // 2. Cash-flow conservation when calculation is active
+        const isDefaultEmpty =
+          results.annualIncome <= 0 &&
+          results.takeHomeIncome === 0 &&
+          results.nationalIncomeTax === 0 &&
+          results.healthInsurance === 0 &&
+          results.pensionPayments === 0;
+        if (!isDefaultEmpty) {
+          const totalSocialInsurance =
+            results.socialInsuranceOverride ??
+            results.healthInsurance +
+              results.pensionPayments +
+              (results.employmentInsurance ?? 0) +
+              (results.longTermCareCategory1Premium ?? 0);
+          expect(results.takeHomeIncome).toBe(
+            results.annualIncome -
+              totalSocialInsurance -
+              incomeTaxPaid(results) -
+              residenceTaxPaid(results),
+          );
+        }
+
+        // 3. Statutory rounding & non-negativity
+        expect(results.nationalIncomeTax).toBeGreaterThanOrEqual(0);
+        expect(results.nationalIncomeTax % 100).toBe(0);
+        expect(results.residenceTax.city.cityIncomeTax).toBeGreaterThanOrEqual(0);
+        expect(results.residenceTax.city.cityIncomeTax % 100).toBe(0);
+        expect(results.residenceTax.prefecture.prefecturalIncomeTax).toBeGreaterThanOrEqual(0);
+        expect(results.residenceTax.prefecture.prefecturalIncomeTax % 100).toBe(0);
+
+        if (results.taxableIncomeForNationalIncomeTax !== undefined) {
+          expect(results.taxableIncomeForNationalIncomeTax).toBeGreaterThanOrEqual(0);
+          expect(results.taxableIncomeForNationalIncomeTax % 1000).toBe(0);
+        }
+        if (results.taxableIncomeForResidenceTax !== undefined) {
+          expect(results.taxableIncomeForResidenceTax).toBeGreaterThanOrEqual(0);
+          expect(results.taxableIncomeForResidenceTax % 1000).toBe(0);
+        }
+
+        // 4. Separate-taxation invariants
+        const separate = results.investmentIncome?.reported?.separate;
+        if (separate) {
+          expect(separate.netIncome.capitalGains).toBeGreaterThanOrEqual(0);
+          expect(separate.netIncome.dividends).toBeGreaterThanOrEqual(0);
+          expect(separate.taxable.capitalGains).toBeGreaterThanOrEqual(0);
+          expect(separate.taxable.capitalGains % 1000).toBe(0);
+          expect(separate.taxable.capitalGains).toBeLessThanOrEqual(
+            separate.netIncome.capitalGains,
+          );
+          expect(separate.taxable.dividends).toBeGreaterThanOrEqual(0);
+          expect(separate.taxable.dividends % 1000).toBe(0);
+          expect(separate.taxable.dividends).toBeLessThanOrEqual(separate.netIncome.dividends);
+        }
+
+        // 5. Foreign Tax Credit conservation & bounds
+        const ftc = results.foreignTaxCredit;
+        if (ftc) {
+          expect(ftc.adjustedForeignSourceIncome).toBeGreaterThanOrEqual(0);
+          expect(ftc.adjustedForeignSourceIncome).toBeLessThanOrEqual(ftc.foreignSourceIncome);
+          expect(ftc.adjustedForeignSourceIncome).toBeLessThanOrEqual(Math.max(0, ftc.totalIncome));
+          expect(ftc.credit.incomeTax).toBeLessThanOrEqual(ftc.limit.incomeTax);
+          expect(ftc.credit.reconstructionSurtax).toBeLessThanOrEqual(
+            ftc.limit.reconstructionSurtax,
+          );
+          expect(ftc.credit.prefecture).toBeLessThanOrEqual(ftc.limit.prefecture);
+          expect(ftc.credit.city).toBeLessThanOrEqual(ftc.limit.city);
+          expect(
+            ftc.credit.incomeTax +
+              ftc.credit.reconstructionSurtax +
+              ftc.credit.prefecture +
+              ftc.credit.city +
+              ftc.excess,
+          ).toBe(ftc.foreignTax);
+        }
+
+        // 6. High-Income Minimum Tax disallowance of 申告不要 on positive listed bases
+        if (results.highIncomeMinimumTax) {
+          expect(results.highIncomeMinimumTax.additionalIncomeTax).toBeGreaterThan(0);
+          const withheld = results.investmentIncome?.withheld;
+          if (withheld) {
+            expect(withheld.taxedAmount).toBe(withheld.interest);
+          }
+        }
+      }
+    });
+  });
 });
