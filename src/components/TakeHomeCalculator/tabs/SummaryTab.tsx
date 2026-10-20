@@ -21,7 +21,8 @@ interface SummaryTabProps {
 }
 
 /**
- * Formats an amount as "¥X (Y.Y%)" of the total, or bare "¥X" when the share is hidden.
+ * Formats an amount as "¥X (Y.Y%)" of the total, or bare "¥X" when the share is hidden or
+ * total income is zero/negative (e.g. when capital losses offset or exceed other income).
  * The summary hides the share on mobile, where horizontal space is tight.
  *
  * @param decimals Fraction digits for the share. Defaults to 1.
@@ -32,13 +33,14 @@ const formatAmountWithShare = (
   showShare: boolean,
   decimals = 1,
 ): string =>
-  showShare
+  showShare && total > 0
     ? `${formatJPY(amount)} (${((amount / total) * 100).toFixed(decimals)}%)`
     : formatJPY(amount);
 
 const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const showShare = !isMobile && results.annualIncome > 0;
 
   const totalSocialInsurance =
     results.socialInsuranceOverride ??
@@ -53,9 +55,9 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const totalTaxes = incomeTax + residenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage =
-    results.annualIncome > 0
+    results.annualIncome > 0 && results.takeHomeIncome >= 0
       ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%`
-      : '100%';
+      : undefined;
 
   return (
     <Box>
@@ -206,7 +208,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         <ResultRow
           label="Total Deductions"
           value={
-            !isMobile
+            showShare
               ? `${formatJPY(-totalDeductions)} (${((totalDeductions / results.annualIncome) * 100).toFixed(1)}%)`
               : formatJPY(-totalDeductions)
           }
@@ -222,17 +224,19 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         value={
           <Box component="span" sx={{ color: 'success.main', fontWeight: 700 }}>
             {formatJPY(results.takeHomeIncome)}
-            <Box
-              component="span"
-              sx={{
-                color: 'success.dark',
-                fontWeight: 600,
-                ml: 1,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              ({takeHomePercentage})
-            </Box>
+            {takeHomePercentage !== undefined && (
+              <Box
+                component="span"
+                sx={{
+                  color: 'success.dark',
+                  fontWeight: 600,
+                  ml: 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ({takeHomePercentage})
+              </Box>
+            )}
           </Box>
         }
         type="final"

@@ -516,8 +516,8 @@ describe('IncomeDetailsModal - Investment Income', () => {
     ).toEqual([
       'Withholding Designated Account特定口座（源泉徴収あり）',
       'Capital GainsOther accounts',
-      'DividendsOther accounts',
-      'Interest',
+      'DividendsOther accounts or direct payout',
+      'InterestOutside a designated withholding account',
     ]);
 
     await user.click(within(menu).getByRole('menuitem', { name: /^dividends/i }));

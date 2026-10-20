@@ -444,6 +444,34 @@ describe('TaxesTab with reported investment income', () => {
     expect(within(totalRow).getByText('¥416,015')).toBeInTheDocument();
     expect(screen.getByText('Tax on Investment Income (separate)')).toBeInTheDocument();
   });
+
+  it('does not misattribute the ¥1,000 taxable-income floor to leftover deductions', () => {
+    // Net separate dividends of 300,500 floored to 300,000 taxable, beside a salary that absorbs
+    // all income deductions: leftover deductions are ¥0, not -¥500.
+    render(
+      <TaxesTab
+        results={{
+          ...results,
+          investmentIncome: {
+            reported: {
+              separate: {
+                ...separate,
+                gross: { capitalGains: -500_000, dividends: 800_500 },
+                netIncome: { capitalGains: 0, dividends: 300_500 },
+                taxable: { capitalGains: 0, dividends: 300_000 },
+              },
+            },
+          },
+        }}
+        inputs={inputs}
+      />,
+    );
+
+    const tooltip = tooltipTitled('Income Tax on Investment Income under Separate Taxation')!;
+    expect(amountIn(tooltip, 'Net investment income (separate)')).toBe('¥300,500');
+    expect(amountIn(tooltip, 'Deductions left over from other income')).toBe('¥0');
+    expect(amountIn(tooltip, 'Taxable (¥1,000 floor)')).toBe('¥300,000');
+  });
 });
 
 describe('SocialInsuranceTab with reported investment income on NHI', () => {

@@ -1220,8 +1220,8 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
             // and 37条の11の6⑨), the helper text under the pair at the group's full width.
             <Stack spacing={2}>
               <Typography variant="body2">
-                Copy the figures from the annual transaction report (特定口座年間取引報告書), and
-                choose whether to report the sales and/or the dividends on a tax return.
+                Enter one account per annual transaction report (特定口座年間取引報告書), and choose
+                whether to report its sales and/or dividends on a tax return.
               </Typography>
               <FormControl fullWidth role="group" aria-labelledby="account-sales-label">
                 <Box sx={figureGridSx}>

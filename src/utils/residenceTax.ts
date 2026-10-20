@@ -13,7 +13,6 @@ import {
   dependentAgeCoversBand,
 } from '../types/dependents';
 import type {
-  FurusatoNozeiDetails,
   NonTaxableResidenceTaxStatus,
   PersonalCircumstancesInput,
   ResidenceTaxCredits,
@@ -34,7 +33,6 @@ import {
   type IncomeClassAmounts,
 } from './investmentIncome';
 import { calculatePersonalDeductions } from './personalDeductions';
-import { calculateNationalIncomeTaxBase, calculateReconstructionSurtax } from './taxCalculations';
 
 const RESIDENCE_TAX_RATE = 0.1;
 const CITY_TAX_PROPORTION = 0.6;
@@ -713,166 +711,6 @@ export function calculateFurusatoLimit(
       prefecture: prefectureCredit,
     },
   };
-}
-
-/**
- * Calculate the maximum deductible ふるさと納税 (Furusato Nozei) donation limit for which the user's out-of-pocket cost is ~2,000 yen.
- *
- * Accurate handling of home loan tax credit and foreign tax credit interactions:
- * - The 20% special-deduction cap (特例控除上限) uses 所得割 AFTER 調整控除 but
- *   BEFORE 住宅ローン控除 and 外国税額控除 — pass the pre-credit residence tax via
- *   `residenceTaxDetailsForCap`. When no such credit is in play, pass the
- *   same details for both `residenceTaxDetailsForCap` and `residenceTaxDetailsForFinal`.
- * - The income-tax refund portion can't exceed the income tax actually owed. When a tax credit
- *   has reduced that income tax, pass the post-credit figure via `remainingIncomeTax` to
- *   cap the refund at it. Omit it (undefined) when nothing has reduced income tax — then the
- *   refund is limited only by the normal furusato math (no extra cap needed).
- * - `credits` are the residence-tax credits the final details were computed with: the home loan
- *   credit spillover and the foreign tax credit. They are used to compute the raw post-credit
- *   city/prefectural income tax for the furusato application step. The foreign tax credit comes
- *   off after the donation credit, the order 地方税法37条の3 gives (「第三十五条及び前二条」), so
- *   it is capped at what the donation leaves. The donation also lowers the 所得税 and with it the
- *   foreign tax credit limits; that effect is not modelled.
- *
- * @param taxableIncomeForNationalIncomeTax - Taxable income for national income tax, before rounding (所得税課税所得)
- * @param residenceTaxDetailsForCap - Residence tax details before the home loan and foreign tax credits — used for the 20% special-deduction cap
- * @param residenceTaxDetailsForFinal - Residence tax details after those credits — used for the totalResidenceTax baseline. Defaults to `residenceTaxDetailsForCap`.
- * @param credits - The residence-tax credits in `residenceTaxDetailsForFinal`. Defaults to none.
- * @param remainingIncomeTax - Optional cap on the income-tax refund portion (after the home loan and foreign tax credits).
- * @param reported - Investment income reported under 申告分離課税, when there is any: the
- *   national taxable classes before rounding, for the income-tax reduction to follow the 15% path
- *   once the donation has used up 課税総所得金額, and the income year for that rate. The
- *   residence-tax side is read from `residenceTaxDetailsForCap.separate`.
- * @returns The various details of the Furusato Nozei deduction, including the limit, out-of-pocket cost, and tax reductions.
- * @see https://kaikei7.com/furusato_nouzei_keisan/
- * @see https://kaikei7.com/furusato_nouzei_onestop/
- */
-export function calculateFurusatoNozeiDetails(
-  taxableIncomeForNationalIncomeTax: number,
-  residenceTaxDetailsForCap: ResidenceTaxDetails,
-  residenceTaxDetailsForFinal: ResidenceTaxDetails = residenceTaxDetailsForCap,
-  credits: ResidenceTaxCredits = NO_RESIDENCE_TAX_CREDITS,
-  remainingIncomeTax?: number,
-  reported?: { nationalTaxable: SeparateNetIncome; year: number },
-): FurusatoNozeiDetails {
-  const limitDetails = calculateFurusatoLimit(
-    taxableIncomeForNationalIncomeTax,
-    residenceTaxDetailsForCap,
-    reported,
-  );
-  if (limitDetails.finalLimit <= 0) {
-    return {
-      limit: 0,
-      incomeTaxReduction: 0,
-      residenceTaxDonationBasicDeduction: 0,
-      residenceTaxSpecialDeduction: 0,
-      outOfPocketCost: 0,
-      residenceTaxReduction: 0,
-    };
-  }
-
-  const nationalClasses: IncomeClassAmounts = {
-    aggregate: taxableIncomeForNationalIncomeTax,
-    dividends: reported?.nationalTaxable.dividends ?? 0,
-    capitalGains: reported?.nationalTaxable.capitalGains ?? 0,
-  };
-  const separateNationalRate = reported
-    ? getInvestmentIncomeTaxRates(reported.year).listedReportedNationalRate
-    : undefined;
-
-  let incomeTaxReduction = calculateIncomeTaxReduction(
-    nationalClasses,
-    limitDetails.deductibleDonation,
-    separateNationalRate,
-  );
-  if (remainingIncomeTax !== undefined) {
-    incomeTaxReduction = Math.min(incomeTaxReduction, Math.max(0, remainingIncomeTax));
-  }
-
-  const furusatoNozeiTaxCredit =
-    limitDetails.residenceTaxDonationBasicDeduction + limitDetails.residenceTaxSpecialDeduction;
-
-  const residenceSeparate = residenceTaxDetailsForCap.separate;
-  const beforeCityIncomeTax =
-    residenceTaxDetailsForCap.city.cityTaxableIncome * residenceTaxDetailsForCap.residenceTaxRate +
-    (residenceSeparate?.cityIncomeTax ?? 0) -
-    residenceTaxDetailsForCap.city.cityAdjustmentCredit -
-    credits.homeLoan * residenceTaxDetailsForCap.cityProportion;
-  const cityIncomeTaxWithFurusato =
-    Math.floor(
-      Math.max(
-        0,
-        beforeCityIncomeTax -
-          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.cityProportion) -
-          (credits.foreignTax?.city ?? 0),
-      ) / 100,
-    ) * 100;
-  const beforePrefectureIncomeTax =
-    residenceTaxDetailsForCap.prefecture.prefecturalTaxableIncome *
-      residenceTaxDetailsForCap.residenceTaxRate +
-    (residenceSeparate?.prefecturalIncomeTax ?? 0) -
-    residenceTaxDetailsForCap.prefecture.prefecturalAdjustmentCredit -
-    credits.homeLoan * residenceTaxDetailsForCap.prefecturalProportion;
-  const prefectureIncomeTaxWithFurusato =
-    Math.floor(
-      Math.max(
-        0,
-        beforePrefectureIncomeTax -
-          Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForFinal.prefecturalProportion) -
-          (credits.foreignTax?.prefecture ?? 0),
-      ) / 100,
-    ) * 100;
-  const residenceTaxDifference =
-    residenceTaxDetailsForFinal.totalResidenceTax -
-    (cityIncomeTaxWithFurusato +
-      prefectureIncomeTaxWithFurusato +
-      residenceTaxDetailsForFinal.perCapitaTax);
-
-  return {
-    limit: limitDetails.finalLimit,
-    incomeTaxReduction,
-    residenceTaxDonationBasicDeduction: limitDetails.residenceTaxDonationBasicDeduction,
-    residenceTaxSpecialDeduction: limitDetails.residenceTaxSpecialDeduction,
-    residenceTaxReduction: residenceTaxDifference,
-    outOfPocketCost: limitDetails.finalLimit - residenceTaxDifference - incomeTaxReduction,
-  };
-}
-
-/**
- * National income tax on the taxable classes: the brackets on 課税総所得金額 plus the flat
- * `separateNationalRate` on the 申告分離課税 classes, the 復興特別所得税 on both, floored to
- * ¥100 — the same steps calculateTaxes takes.
- */
-function nationalIncomeTaxOnClasses(
-  classes: IncomeClassAmounts,
-  separateNationalRate: PremiumRate | undefined,
-) {
-  const separateBase =
-    floorTaxableIncome(classes.dividends) + floorTaxableIncome(classes.capitalGains);
-  const separateTax =
-    separateNationalRate && separateBase > 0 ? separateNationalRate.taxOn(separateBase) : 0;
-  const base = calculateNationalIncomeTaxBase(floorTaxableIncome(classes.aggregate)) + separateTax;
-  return Math.floor((base + calculateReconstructionSurtax(base)) / 100) * 100;
-}
-
-/**
- * How much the 寄附金控除 (an 所得控除) lowers the income tax. Like every 所得控除 it comes off
- * 課税総所得金額 first and off the 申告分離課税 classes only once that is used up
- * ({@link applyDeductionSpillover}), so with reported investment income the reduction follows
- * the 15% path from that point.
- */
-function calculateIncomeTaxReduction(
-  classes: IncomeClassAmounts,
-  furusatoNozeiDeduction: number,
-  separateNationalRate: PremiumRate | undefined,
-): number {
-  const incomeTaxBefore = nationalIncomeTaxOnClasses(classes, separateNationalRate);
-  const incomeTaxAfter = nationalIncomeTaxOnClasses(
-    applyDeductionSpillover(classes, furusatoNozeiDeduction),
-    separateNationalRate,
-  );
-
-  return incomeTaxBefore - incomeTaxAfter;
 }
 
 /**

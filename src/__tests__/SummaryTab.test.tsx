@@ -151,3 +151,35 @@ describe('SummaryTab with the 介護保険第1号 premium', () => {
     expect(screen.getAllByText(/^¥408,500/)).toHaveLength(2);
   });
 });
+
+describe('SummaryTab with zero or negative annual income from capital losses', () => {
+  it('omits percentage shares when annual income is zero instead of dividing by zero', () => {
+    const { container } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          annualIncome: 0,
+          takeHomeIncome: -708_500,
+        }}
+      />,
+    );
+
+    expect(container.textContent).not.toMatch(/Infinity|NaN|%/);
+    expect(screen.getAllByText('-¥708,500')).toHaveLength(2);
+  });
+
+  it('omits percentage shares when annual income is negative', () => {
+    const { container } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          annualIncome: -500_000,
+          takeHomeIncome: -1_208_500,
+        }}
+      />,
+    );
+
+    expect(container.textContent).not.toMatch(/%/);
+    expect(screen.getByText('-¥1,208,500')).toBeInTheDocument();
+  });
+});

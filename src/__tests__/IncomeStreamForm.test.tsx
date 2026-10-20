@@ -54,9 +54,7 @@ describe('IncomeStreamForm', () => {
     const { rerender } = render(
       <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
     );
-    expect(
-      screen.getByText(/Copy the figures from the annual transaction report/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Enter one account per annual transaction report/)).toBeInTheDocument();
     expect(screen.getByText(/Capital losses automatically offset dividends/)).toBeInTheDocument();
 
     // The in-account netting belongs to the withholding account alone; the other two forms say
@@ -131,7 +129,9 @@ describe('IncomeStreamForm', () => {
     expect(
       screen.queryByText(/Tax withheld abroad is credited against Japanese tax/),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('Enter the amount before withholding.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Annual total (or per payment) before withholding.'),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ payerDomicile: 'domestic' }));

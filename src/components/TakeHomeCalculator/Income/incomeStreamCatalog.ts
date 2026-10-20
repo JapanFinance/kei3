@@ -112,6 +112,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'employment',
     chipLabel: 'STOCK',
     amountLabel: 'Gross Income',
+    amountHelperText: 'Annual total across vests/exercises, or one entry per vest.',
   },
   business: {
     label: 'Business',
@@ -152,12 +153,13 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'investment',
     chipLabel: 'CAPITAL GAINS',
     amountLabel: 'Net Capital Gains',
-    amountHelperText: 'Net of acquisition and transfer costs; enter a loss as a negative amount.',
+    amountHelperText:
+      'Combine sales for the year or enter separately, net of costs (negative for a loss).',
     min: Number.MIN_SAFE_INTEGER,
   },
   dividends: {
     label: 'Dividends',
-    labelDetail: 'Other accounts',
+    labelDetail: 'Other accounts or direct payout',
     category: 'investment',
     chipLabel: 'DIVIDEND',
     amountLabel: 'Gross Dividends',
@@ -165,10 +167,11 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   },
   interest: {
     label: 'Interest',
+    labelDetail: 'Outside a designated withholding account',
     category: 'investment',
     chipLabel: 'INTEREST',
     amountLabel: 'Gross Interest',
-    amountHelperText: 'Enter the amount before withholding.',
+    amountHelperText: 'Annual total (or per payment) before withholding.',
   },
 };
 

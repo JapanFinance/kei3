@@ -25,6 +25,7 @@ import type {
   WithheldInvestmentIncome,
 } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
+import { applyDeductionSpillover } from '../../../utils/investmentIncome';
 import { NON_TAXABLE_STATUS_INCOME_LIMIT } from '../../../utils/residenceTax';
 import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
@@ -300,6 +301,32 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // row of its own under each tax and counted in that tax's total, as on the Summary tab. The
   // foreign tax paid is a row of its own under income tax in the same way.
   const separateInvestment = results.investmentIncome?.reported?.separate;
+  const separateInvestmentNetTotal = separateInvestment
+    ? separateInvestment.netIncome.capitalGains + separateInvestment.netIncome.dividends
+    : 0;
+  // Deductions spilled over from 総所得金額 onto the 申告分離課税 classes (措法8条の4③三,
+  // 37条の10⑥五), computed before the ¥1,000 taxable-income floor (通則法118条①) so the
+  // rounding remainder is not misattributed to leftover deductions.
+  const separateAfterDeductions = separateInvestment
+    ? applyDeductionSpillover(
+        {
+          aggregate: results.totalNetIncome - separateInvestmentNetTotal,
+          dividends: separateInvestment.netIncome.dividends,
+          capitalGains: separateInvestment.netIncome.capitalGains,
+        },
+        totalSocialInsurance +
+          results.dcPlanContributions +
+          (results.nationalIncomeTaxBasicDeduction ?? 0) +
+          (results.dependentDeductions?.nationalTax.total ?? 0) +
+          results.additionalDeductions.national +
+          (results.personalDeductions?.national ?? 0),
+      )
+    : undefined;
+  const separateDeductionSpillover = separateAfterDeductions
+    ? separateInvestmentNetTotal -
+      separateAfterDeductions.capitalGains -
+      separateAfterDeductions.dividends
+    : 0;
   const withheldInvestment = results.investmentIncome?.withheld;
   const withheldNational = withheldInvestment?.tax.national ?? 0;
   const withheldResidence = withheldInvestment?.tax.residence ?? 0;
@@ -619,10 +646,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                         <tr>
                           <td style={{ padding: '2px 0' }}>Net investment income (separate):</td>
                           <td style={{ padding: '2px 0', textAlign: 'right' }}>
-                            {formatJPY(
-                              separateInvestment.netIncome.capitalGains +
-                                separateInvestment.netIncome.dividends,
-                            )}
+                            {formatJPY(separateInvestmentNetTotal)}
                           </td>
                         </tr>
                         <tr>
@@ -631,15 +655,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           </td>
                           <Box
                             component="td"
-                            sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
+                            sx={{
+                              padding: '2px 0',
+                              textAlign: 'right',
+                              ...(separateDeductionSpillover > 0 && { color: 'error.main' }),
+                            }}
                           >
-                            -
-                            {formatJPY(
-                              separateInvestment.netIncome.capitalGains +
-                                separateInvestment.netIncome.dividends -
-                                separateInvestment.taxable.capitalGains -
-                                separateInvestment.taxable.dividends,
-                            )}
+                            {formatReduction(separateDeductionSpillover)}
                           </Box>
                         </tr>
                         <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
