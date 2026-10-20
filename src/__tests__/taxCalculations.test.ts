@@ -12,7 +12,12 @@ import {
   DEPENDENT_COVERAGE_ID,
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
+import {
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  EMPTY_PERSONAL_CIRCUMSTANCES,
+  type PublicPensionTreatyCredit,
+  type TakeHomeInputs,
+} from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateTaxes,
@@ -20,6 +25,9 @@ import {
   calculateNationalIncomeTaxBasicDeduction,
   calculateNationalIncomeTax,
   calculateNetIncomeComponents,
+  foreignPensionSourceIncome,
+  incomeTaxPaid,
+  residenceTaxPaid,
 } from '../utils/taxCalculations';
 
 describe('calculateTaxes', () => {
@@ -891,7 +899,13 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
       { type: 'business' as const, amount: 2_000_000, blueFilerDeduction: 100_000, id: 'b1' },
       { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' },
-      { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+      {
+        type: 'publicPension' as const,
+        payerDomicile: 'domestic' as const,
+        foreignTax: 0,
+        amount: 2_400_000,
+        id: 'p1',
+      },
     ];
     const components = calculateNetIncomeComponents(
       incomeStreams,
@@ -1917,7 +1931,15 @@ describe('calculateTaxes at ages 65 and over', () => {
   describe('介護保険第1号 estimate (ages 65+)', () => {
     const nhiPensionInputs = (pensionAmount: number) => ({
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-      incomeStreams: [{ type: 'publicPension' as const, amount: pensionAmount, id: 'p1' }],
+      incomeStreams: [
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: pensionAmount,
+          id: 'p1',
+        },
+      ],
       ageRange: 'age65to69' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
@@ -2093,7 +2115,15 @@ describe('calculateTaxes at ages 65 and over', () => {
 describe('calculateTaxes with public pension income', () => {
   const pensionInputs = (ageRange: TaxpayerAgeRange) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
-    incomeStreams: [{ type: 'publicPension' as const, amount: 2_400_000, id: 'p1' }],
+    incomeStreams: [
+      {
+        type: 'publicPension' as const,
+        payerDomicile: 'domestic' as const,
+        foreignTax: 0,
+        amount: 2_400_000,
+        id: 'p1',
+      },
+    ],
     ageRange,
     healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
     region: 'Tokyo',
@@ -2128,8 +2158,20 @@ describe('calculateTaxes with public pension income', () => {
     const result = calculateTaxes({
       ...pensionInputs('age65to69'),
       incomeStreams: [
-        { type: 'publicPension' as const, amount: 1_200_000, id: 'p1' },
-        { type: 'publicPension' as const, amount: 1_200_000, id: 'p2' },
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 1_200_000,
+          id: 'p1',
+        },
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 1_200_000,
+          id: 'p2',
+        },
       ],
     });
     expect(result.grossPublicPensionIncome).toBe(2_400_000);
@@ -2193,7 +2235,13 @@ describe('calculateTaxes with public pension income', () => {
       ...pensionInputs('age60to64'),
       incomeStreams: [
         { type: 'miscellaneous' as const, amount: 10_000_001, id: 'm1' },
-        { type: 'publicPension' as const, amount: 3_000_000, id: 'p1' },
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 3_000_000,
+          id: 'p1',
+        },
       ],
     });
     // Band 2 deduction: 300,000 + 25% × (3,000,000 − 500,000) = 925,000
@@ -2206,7 +2254,13 @@ describe('calculateTaxes with public pension income', () => {
       ...pensionInputs('age65to69'),
       incomeStreams: [
         { type: 'miscellaneous' as const, amount: 10_000_001, id: 'm1' },
-        { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 2_400_000,
+          id: 'p1',
+        },
       ],
     });
     // 所法35④二: band 2 gives 300,000 + 25% × (2,400,000 − 500,000) = 775,000, but 措法41の15の3
@@ -2220,7 +2274,13 @@ describe('calculateTaxes with public pension income', () => {
       ...pensionInputs('age60to64'),
       incomeStreams: [
         { type: 'miscellaneous' as const, amount: 20_000_001, id: 'm1' },
-        { type: 'publicPension' as const, amount: 3_000_000, id: 'p1' },
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 3_000_000,
+          id: 'p1',
+        },
       ],
     });
     // 所法35④三: band 3 gives 200,000 + 25% × (3,000,000 − 500,000) = 825,000, above the band's
@@ -2252,7 +2312,13 @@ describe('calculateTaxes with public pension income', () => {
       ...pensionInputs('age65to69'),
       incomeStreams: [
         { type: 'salary' as const, amount: 11_000_000, frequency: 'annual' as const, id: 's1' },
-        { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 2_400_000,
+          id: 'p1',
+        },
       ],
     });
     // 給与所得 11,000,000 − 1,950,000 = 9,050,000 stays in band 1 (≤ ¥10,000,000) even though the
@@ -2268,7 +2334,13 @@ describe('calculateTaxes with public pension income', () => {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
         { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
-        { type: 'publicPension' as const, amount: 2_400_000, id: 'p1' },
+        {
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 2_400_000,
+          id: 'p1',
+        },
       ],
       ageRange: 'age65to69' as const,
       healthInsuranceProvider: DEFAULT_PROVIDER,
@@ -2294,7 +2366,13 @@ describe('calculateTaxes with public pension income', () => {
         ...salaryAndPensionInputs,
         incomeStreams: [
           { type: 'salary' as const, amount: 800_000, frequency: 'annual' as const, id: 's1' },
-          { type: 'publicPension' as const, amount: 2_000_000, id: 'p1' },
+          {
+            type: 'publicPension' as const,
+            payerDomicile: 'domestic' as const,
+            foreignTax: 0,
+            amount: 2_000_000,
+            id: 'p1',
+          },
         ],
       });
       // 給与所得 60,000: adjustment = 60,000 + 100,000 − 100,000, zeroing employment income
@@ -2309,7 +2387,13 @@ describe('calculateTaxes with public pension income', () => {
         ...salaryAndPensionInputs,
         incomeStreams: [
           { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
-          { type: 'publicPension' as const, amount: 1_150_000, id: 'p1' },
+          {
+            type: 'publicPension' as const,
+            payerDomicile: 'domestic' as const,
+            foreignTax: 0,
+            amount: 1_150_000,
+            id: 'p1',
+          },
         ],
       });
       // 雑所得 1,150,000 − 1,100,000 = 50,000: adjustment = 100,000 + 50,000 − 100,000
@@ -2324,7 +2408,13 @@ describe('calculateTaxes with public pension income', () => {
         ...salaryAndPensionInputs,
         incomeStreams: [
           { type: 'salary' as const, amount: 800_000, frequency: 'annual' as const, id: 's1' },
-          { type: 'publicPension' as const, amount: 1_150_000, id: 'p1' },
+          {
+            type: 'publicPension' as const,
+            payerDomicile: 'domestic' as const,
+            foreignTax: 0,
+            amount: 1_150_000,
+            id: 'p1',
+          },
         ],
       });
       // 給与所得 60,000 and 雑所得 50,000: adjustment = 60,000 + 50,000 − 100,000
@@ -2339,7 +2429,13 @@ describe('calculateTaxes with public pension income', () => {
         ...salaryAndPensionInputs,
         incomeStreams: [
           { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
-          { type: 'publicPension' as const, amount: 1_100_000, id: 'p1' },
+          {
+            type: 'publicPension' as const,
+            payerDomicile: 'domestic' as const,
+            foreignTax: 0,
+            amount: 1_100_000,
+            id: 'p1',
+          },
         ],
       });
       expect(result.pensionIncomeAdjustmentDeduction).toBeUndefined();
@@ -2352,7 +2448,15 @@ describe('calculateTaxes with public pension income', () => {
 });
 
 describe('calculateNetIncomeComponents with public pension income', () => {
-  const streams = [{ type: 'publicPension' as const, amount: 3_000_000, id: 'p1' }];
+  const streams = [
+    {
+      type: 'publicPension' as const,
+      payerDomicile: 'domestic' as const,
+      foreignTax: 0,
+      amount: 3_000_000,
+      id: 'p1',
+    },
+  ];
 
   it('uses the 65+ minimum deduction when the taxpayer is 65 or older', () => {
     expect(
@@ -2367,5 +2471,2405 @@ describe('calculateNetIncomeComponents with public pension income', () => {
       calculateNetIncomeComponents(streams, 2026, 'age60to64', [], EMPTY_PERSONAL_CIRCUMSTANCES)
         .totalNetIncome,
     ).toBe(1_975_000);
+  });
+});
+
+describe('calculateTaxes with investment income streams', () => {
+  // Baseline: the 5,000,000-yen salary case from the top-level describe block above.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []) => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39' as const,
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+
+  it('counts a withheld-only amount in annual income and in take-home net of the tax withheld', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'withholdingAccount',
+          capitalGains: 1_000_000,
+          dividends: 200_000,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
+        },
+      ]),
+    );
+
+    expect(result.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+    expect(result.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
+    expect(result.healthInsurance).toBe(baseline.healthInsurance);
+    expect(result.pensionPayments).toBe(baseline.pensionPayments);
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
+
+    // base = max(0, 1,000,000 + 200,000) = 1,200,000; 15.315% = 183,780; 5% = 60,000
+    expect(result.investmentIncome).toEqual({
+      withheld: {
+        accounts: [{ position: 1, capitalGains: 1_000_000, dividends: 200_000, base: 1_200_000 }],
+        dividends: 0,
+        interest: 0,
+        received: 1_200_000,
+        taxedAmount: 1_200_000,
+        tax: { national: 183_780, residence: 60_000, total: 243_780 },
+      },
+    });
+    // The 1,200,000 is income received; the 243,780 withheld on it is a tax like any other.
+    expect(result.annualIncome).toBe(baseline.annualIncome + 1_200_000);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 1_200_000 - 243_780);
+  });
+
+  it('nets a capital loss against dividends down to zero tax when the loss is larger', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 300_000,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
+        },
+      ]),
+    );
+
+    expect(result.investmentIncome?.withheld?.tax.total).toBe(0);
+    // The net loss of 200,000 is money gone, so it lowers take-home with nothing withheld.
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 200_000);
+  });
+
+  it('taxes only the remainder when a capital loss partially offsets dividends', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 800_000,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
+        },
+      ]),
+    );
+
+    // base = 300,000; national = 45,945; residence = 15,000; total = 60,945
+    expect(result.investmentIncome?.withheld?.tax.total).toBe(60_945);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 300_000 - 60_945);
+  });
+
+  it('does not change National Health Insurance when only deposit interest is reported', () => {
+    // Non-employment-income NHI baseline: 5,000,000-yen miscellaneous income.
+    const nhiInputs = (streams: TakeHomeInputs['incomeStreams'] = []) => ({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { type: 'miscellaneous' as const, amount: 5_000_000, id: 'misc' },
+        ...streams,
+      ],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    const baseline = calculateTaxes(nhiInputs());
+    const result = calculateTaxes(
+      nhiInputs([
+        {
+          type: 'interest',
+          payerDomicile: 'domestic',
+          amount: 100_000,
+          id: 'interest',
+          foreignTax: 0,
+        },
+      ]),
+    );
+
+    expect(result.healthInsurance).toBe(baseline.healthInsurance);
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
+      national: 15_315,
+      residence: 5_000,
+      total: 20_315,
+    });
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 100_000 - 20_315);
+  });
+
+  it('handles a capital loss with no dividends to net against (withheld tax is zero)', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'withholdingAccount',
+          capitalGains: -300_000,
+          dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
+        },
+      ]),
+    );
+
+    // The loss has no dividends in its account to net against, so the base is max(0, −300,000).
+    expect(result.investmentIncome).toEqual({
+      withheld: {
+        accounts: [{ position: 1, capitalGains: -300_000, dividends: 0, base: 0 }],
+        dividends: 0,
+        interest: 0,
+        received: -300_000,
+        taxedAmount: 0,
+        tax: { national: 0, residence: 0, total: 0 },
+      },
+    });
+    expect(result.annualIncome).toBe(baseline.annualIncome - 300_000);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 300_000);
+  });
+
+  it('truncates withholding to the whole yen on top of earned income', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 1_234_567,
+          id: 'dividends',
+        },
+      ]),
+    );
+
+    // 1,234,567 * 0.15315 = 189,073.93...; 1,234,567 * 0.05 = 61,728.35
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
+      national: 189_073,
+      residence: 61_728,
+      total: 250_801,
+    });
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 1_234_567 - 250_801);
+  });
+
+  it('leaves investmentIncome absent and results identical when every stream amount is zero', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'withholdingAccount',
+          capitalGains: 0,
+          dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+          id: 'account',
+        },
+        { type: 'interest', payerDomicile: 'domestic', amount: 0, id: 'interest', foreignTax: 0 },
+      ]),
+    );
+
+    expect(result.investmentIncome).toBeUndefined();
+    expect(result).toEqual(baseline);
+  });
+
+  it('gives an investment-only taxpayer the dividend net of the withholding as take-home', () => {
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        {
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 1_000_000,
+          id: 'dividends',
+        },
+      ],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      // Manual social insurance entry isolates this case from the NHI/pension data tables,
+      // which are unaffected by 申告不要 investment income and are exercised elsewhere.
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+
+    expect(result.annualIncome).toBe(1_000_000);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    // base = 1,000,000; national = 153,150; residence = 50,000
+    expect(result.investmentIncome?.withheld?.tax.total).toBe(203_150);
+    expect(result.takeHomeIncome).toBe(1_000_000 - 203_150);
+  });
+
+  // The UI offers only the supported variant, so these guard the engine against a stream
+  // built elsewhere being silently taxed under the wrong regime.
+  it('rejects 一般株式等 gains and dividends, which are a separate 分離課税 class', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'capitalGains',
+            shareType: 'other',
+            account: 'domesticNoWithholding',
+            amount: 500_000,
+            id: 'gains',
+          },
+        ]),
+      ),
+    ).toThrow(/一般株式等/);
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'dividends',
+            shareType: 'other',
+            paymentChannel: 'domestic',
+            isReported: false,
+            issuerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 500_000,
+            id: 'dividends',
+          },
+        ]),
+      ),
+    ).toThrow(/一般株式等/);
+  });
+
+  it('rejects a dividend received outside Japan left off the return, which 措令4条の3② excludes from 申告不要', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'dividends',
+            shareType: 'listed',
+            paymentChannel: 'abroad',
+            isReported: false,
+            issuerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 1_000_000,
+            id: 'dividends',
+          },
+        ]),
+      ),
+    ).toThrow(/措令4条の3/);
+  });
+
+  it('rejects a negative interest amount, paid in Japan or outside it', () => {
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'interest',
+            payerDomicile: 'domestic',
+            amount: -1,
+            id: 'interest',
+            foreignTax: 0,
+          },
+        ]),
+      ),
+    ).toThrow(/Interest cannot be negative/);
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          { type: 'interest', payerDomicile: 'foreign', amount: -1, id: 'interest', foreignTax: 0 },
+        ]),
+      ),
+    ).toThrow(/Interest cannot be negative/);
+  });
+});
+
+describe('calculateTaxes with interest paid outside Japan', () => {
+  // The same 5,000,000-yen employee, income year 2026: 給与所得 3,560,000; social insurance
+  // 722,252; 所得税 91,700; 住民税 243,100; take-home 3,942,948. 措法3条① settles by
+  // 源泉分離課税 only the 一般利子等 国内において支払を受けるべき, so interest with no Japanese
+  // payer is 利子所得 inside 総所得金額 (所法22条②一) and is taxed with the rest.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  const foreignInterest = (amount: number, id = 'interest') => ({
+    type: 'interest' as const,
+    payerDomicile: 'foreign' as const,
+    foreignTax: 0,
+    amount,
+    id,
+  });
+
+  it('taxes it in the brackets as 利子所得 inside 総所得金額, with nothing withheld', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(salaryInputs([foreignInterest(100_000)]));
+
+    // 合計所得金額 3,560,000 + 100,000 = 3,660,000, still inside the 1,040,000 基礎控除 tier
+    // (up to 4,890,000).
+    expect(result.annualIncome).toBe(5_100_000);
+    expect(result.totalNetIncome).toBe(3_660_000);
+    expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
+    // Nothing is left to withholding, so only the reported part is present.
+    expect(result.investmentIncome).toEqual({
+      reported: { aggregate: { dividends: 0, interest: 100_000 } },
+    });
+
+    // 課税総所得金額 3,660,000 − 722,252 − 1,040,000 = 1,897,748 → 1,897,000, in the 5% bracket:
+    // 94,850; with the 2.1% 復興特別所得税 96,841.85 → 96,800.
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(1_897_000);
+    expect(result.nationalIncomeTaxBase).toBe(94_850);
+    expect(result.nationalIncomeTax).toBe(96_800);
+    // 住民税: 3,660,000 − 722,252 − 430,000 = 2,507,748 → 2,507,000. The 調整控除 stays 2,500:
+    // 課税総所得金額 is over 2,000,000, so it is 5% of max(50,000 人的控除差 − (2,507,000 −
+    // 2,000,000), 50,000). 市 150,420 − 1,500 = 148,920 → 148,900; 県 100,280 − 1,000 = 99,280
+    // → 99,200; plus the 5,000 均等割 = 253,100.
+    expect(result.taxableIncomeForResidenceTax).toBe(2_507_000);
+    expect(result.residenceTax.city.cityAdjustmentCredit).toBe(1_500);
+    expect(result.residenceTax.prefecture.prefecturalAdjustmentCredit).toBe(1_000);
+    expect(result.residenceTax.separate).toBeUndefined();
+    expect(result.residenceTax.totalResidenceTax).toBe(253_100);
+
+    // Only the two assessed taxes move: 96,800 − 91,700 and 253,100 − 243,100.
+    expect(baseline.nationalIncomeTax).toBe(91_700);
+    expect(baseline.residenceTax.totalResidenceTax).toBe(243_100);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome + 100_000 - 5_100 - 10_000);
+    expect(result.takeHomeIncome).toBe(4_027_848);
+  });
+
+  it('raises the National Health Insurance base, unlike the same interest paid in Japan', () => {
+    // 5,000,000 of miscellaneous income in Chiyoda Ward, where the calendar year blends the
+    // FY2025 and FY2026 rate tables (3/10 + 7/10).
+    const nhiInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: [{ type: 'miscellaneous', amount: 5_000_000, id: 'misc' }, ...streams],
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo-Chiyoda',
+    });
+    const baseline = calculateTaxes(nhiInputs());
+    const result = calculateTaxes(nhiInputs([foreignInterest(100_000)]));
+    const domestic = calculateTaxes(
+      nhiInputs([
+        {
+          type: 'interest',
+          payerDomicile: 'domestic',
+          amount: 100_000,
+          id: 'interest',
+          foreignTax: 0,
+        },
+      ]),
+    );
+
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome + 100_000);
+    // NHI base 4,570,000 → 4,670,000 (総所得金額等 less the 430,000 基礎控除). The extra
+    // 100,000 adds, per fiscal year: FY2025 7,710 medical (7.71%) + 2,690 support (2.69%);
+    // FY2026 7,510 medical (7.51%) + 2,800 support (2.8%) + 270 child support (0.27%). Blended,
+    // 3/10 × 10,400 + 7/10 × 10,580 = 3,120 + 7,406 = 10,526.
+    expect(result.healthInsurance - baseline.healthInsurance).toBe(10_526);
+
+    // Interest paid in Japan is settled by the 20.315% withholding and reaches neither figure.
+    expect(domestic.totalNetIncome).toBe(baseline.totalNetIncome);
+    expect(domestic.healthInsurance).toBe(baseline.healthInsurance);
+  });
+
+  it('computes real results for a taxpayer with foreign interest and no other income', () => {
+    const result = calculateTaxes({
+      ...salaryInputs(),
+      incomeStreams: [foreignInterest(1_000_000)],
+      // Manual social insurance keeps the NHI and pension tables out of this case.
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+    });
+
+    // 合計所得金額 1,000,000 (所法23条②: the whole receipt, no deduction). The 1,040,000
+    // 基礎控除 leaves no 課税総所得金額, so no 所得税. 住民税: over the 450,000 非課税限度額
+    // at 1級地, 課税総所得金額 1,000,000 − 430,000 = 570,000 → 市 34,200 / 県 22,800 less the
+    // 1,500 / 1,000 調整控除 (5% of the 50,000 人的控除差) → 32,700 / 21,800; plus the 5,000
+    // 均等割 = 59,500.
+    expect(result.annualIncome).toBe(1_000_000);
+    expect(result.totalNetIncome).toBe(1_000_000);
+    expect(result.investmentIncome?.reported?.aggregate?.interest).toBe(1_000_000);
+    expect(result.investmentIncome?.withheld).toBeUndefined();
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(59_500);
+    expect(result.takeHomeIncome).toBe(940_500);
+  });
+
+  it('counts it in the 公的年金等控除 band base (所法35条④一) and in 総所得金額', () => {
+    const components = calculateNetIncomeComponents(
+      [
+        {
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 3_000_000,
+          id: 'pension',
+        },
+        foreignInterest(10_500_000),
+      ],
+      2026,
+      'age65to69',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+    );
+
+    // 公的年金等に係る雑所得以外の合計所得金額 of 10,500,000 is over 10,000,000, so the 65+
+    // deduction is 300,000 + 25% × (3,000,000 − 500,000) = 925,000, raised to its 1,000,000
+    // floor → 雑所得 2,000,000.
+    expect(components.aggregateInterestIncome).toBe(10_500_000);
+    expect(components.netPublicPensionIncome).toBe(2_000_000);
+    expect(components.aggregateNetIncome).toBe(12_500_000);
+    expect(components.totalNetIncome).toBe(12_500_000);
+  });
+});
+
+describe('calculateTaxes with a 特定口座（源泉徴収あり）', () => {
+  // Same 5,000,000-yen employee baseline as above: 所得税 91,700, 住民税 243,100, social
+  // insurance 722,252, take-home 3,942,948.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  const account = (
+    capitalGains: number,
+    dividends: number,
+    reportsCapitalGains = false,
+    reportsDividends = false,
+    id = 'account',
+  ) => ({
+    type: 'withholdingAccount' as const,
+    id,
+    capitalGains,
+    dividends,
+    foreignDividends: 0,
+    foreignTax: 0,
+    reportsCapitalGains,
+    reportsDividends,
+  });
+
+  it('does not net one account against another', () => {
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        account(-500_000, 300_000, false, false, 'a'),
+        account(0, 600_000, false, false, 'b'),
+      ]),
+    );
+
+    // base = max(0, −500,000 + 300,000) + max(0, 0 + 600,000) = 0 + 600,000 = 600,000;
+    // 600,000 × 15.315% = 91,890; 600,000 × 5% = 30,000.
+    // Each account's own base, so the taxed 600,000 differs from the 400,000 received.
+    expect(result.investmentIncome).toEqual({
+      withheld: {
+        accounts: [
+          { position: 1, capitalGains: -500_000, dividends: 300_000, base: 0 },
+          { position: 2, capitalGains: 0, dividends: 600_000, base: 600_000 },
+        ],
+        dividends: 0,
+        interest: 0,
+        received: 400_000,
+        taxedAmount: 600_000,
+        tax: { national: 91_890, residence: 30_000, total: 121_890 },
+      },
+    });
+    expect(result.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+    expect(result.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
+    // −500,000 + 300,000 + 600,000 received on top of the salary.
+    expect(result.annualIncome).toBe(5_400_000);
+  });
+
+  it('leaves a withheld loss in the account when only the dividends are reported', () => {
+    // The migrated "does not net a withheld loss against reported dividends" case: the loss
+    // stays in the account (base max(0, −500,000) = 0), so the return taxes the 800,000 whole.
+    const result = calculateTaxes(salaryInputs([account(-500_000, 800_000, false, true)]));
+
+    expect(result.investmentIncome?.withheld?.tax).toEqual({ national: 0, residence: 0, total: 0 });
+    expect(result.investmentIncome?.reported?.separate).toMatchObject({
+      gross: { capitalGains: 0, dividends: 800_000 },
+      lossOffsetAgainstDividends: 0,
+      taxable: { capitalGains: 0, dividends: 800_000 },
+      nationalIncomeTaxBase: 120_000,
+    });
+    // 5,000,000 + 800,000 reported − 500,000 lost in the account.
+    expect(result.annualIncome).toBe(5_300_000);
+  });
+
+  it('taxes each account on its own base when a loss in one exceeds its dividends', () => {
+    // Account 1: max(0, −18,000 + 8,000) = 0; account 2: max(0, 0 + 10,000) = 10,000. The pooled
+    // gross amounts net to 0, but the rates apply to 10,000: floor(10,000 × 15.315%) = 1,531 and
+    // 10,000 × 5% = 500.
+    const result = calculateTaxes(
+      salaryInputs([
+        account(-18_000, 8_000, false, false, 'a'),
+        account(0, 10_000, false, false, 'b'),
+      ]),
+    );
+
+    expect(result.investmentIncome?.withheld?.received).toBe(0);
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
+      national: 1_531,
+      residence: 500,
+      total: 2_031,
+    });
+    expect(result.investmentIncome?.withheld?.accounts).toEqual([
+      { position: 1, capitalGains: -18_000, dividends: 8_000, base: 0 },
+      { position: 2, capitalGains: 0, dividends: 10_000, base: 10_000 },
+    ]);
+    expect(result.investmentIncome?.withheld?.taxedAmount).toBe(10_000);
+  });
+
+  it('numbers accounts among all account entries and leaves out a fully reported one', () => {
+    // Account 1 is reported in full, so nothing of it is withheld; account 2 keeps its number.
+    const result = calculateTaxes(
+      salaryInputs([
+        account(1_000_000, 0, true, false, 'a'),
+        account(0, 50_000, false, false, 'b'),
+      ]),
+    );
+
+    expect(result.investmentIncome?.withheld?.accounts).toEqual([
+      { position: 2, capitalGains: 0, dividends: 50_000, base: 50_000 },
+    ]);
+  });
+
+  it('has to report the dividends when a reported loss reduced their withholding (措法37条の11の6⑩)', () => {
+    expect(() => calculateTaxes(salaryInputs([account(-500_000, 800_000, true, false)]))).toThrow(
+      /措法37条の11の6/,
+    );
+  });
+
+  it('nets a qualifying loss against reported dividends from the same account (損益通算)', () => {
+    // The migrated 損益通算 case.
+    const result = calculateTaxes(salaryInputs([account(-500_000, 800_000, true, true)]));
+
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: -500_000, dividends: 800_000 },
+      lossOffsetAgainstDividends: 500_000,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 0, dividends: 300_000 },
+      taxable: { capitalGains: 0, dividends: 300_000 },
+      nationalIncomeTaxBase: 45_000,
+    });
+    expect(result.annualIncome).toBe(5_300_000);
+    // 89,850 + 45,000 = 134,850 × 1.021 = 137,681.85 → 137,600; 住民税 243,100 + (9,000 + 6,000) =
+    // 258,100.
+    expect(result.nationalIncomeTax).toBe(137_600);
+    expect(result.residenceTax.totalResidenceTax).toBe(258_100);
+    expect(result.takeHomeIncome).toBe(5_300_000 - 137_600 - 258_100 - 722_252);
+  });
+
+  it('reports a gain alone, leaving the dividends withheld', () => {
+    const result = calculateTaxes(salaryInputs([account(1_000_000, 200_000, true, false)]));
+
+    expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
+      capitalGains: 1_000_000,
+      dividends: 0,
+    });
+    // The sales are reported, so only the dividends are left to withholding.
+    expect(result.investmentIncome?.withheld?.accounts).toEqual([
+      { position: 1, capitalGains: 0, dividends: 200_000, base: 200_000 },
+    ]);
+    // 89,850 + 15% of 1,000,000 (150,000) = 239,850; × 1.021 = 244,886.85 → 244,800.
+    expect(result.nationalIncomeTax).toBe(244_800);
+    // 243,100 + 3%/2% of 1,000,000 (30,000 + 20,000) = 293,100.
+    expect(result.residenceTax.totalResidenceTax).toBe(293_100);
+    // base = 200,000; national = 30,630; residence = 10,000.
+    expect(result.investmentIncome?.withheld?.tax).toEqual({
+      national: 30_630,
+      residence: 10_000,
+      total: 40_630,
+    });
+    expect(result.annualIncome).toBe(6_200_000);
+    // 6,000,000 − 244,800 − 293,100 − 722,252 = 4,739,848 on the return, plus the 200,000 of
+    // dividends net of the 40,630 withheld on them.
+    expect(result.takeHomeIncome).toBe(4_739_848 + 200_000 - 40_630);
+  });
+});
+
+describe('calculateTaxes with investment income reported under 申告分離課税', () => {
+  // The 5,000,000-yen employee of the 申告不要 cases above, income year 2026: 給与所得 3,560,000;
+  // social insurance 246,449 + 450,180 + 25,623 = 722,252; 基礎控除 1,040,000 (合計所得金額 ≤
+  // 4,890,000); 課税総所得金額 1,797,000 → 所得税 89,850 (91,700 with the 復興特別所得税);
+  // 住民税 課税総所得金額 2,407,000 → 市 144,420 / 県 96,280 less the 2,500 調整控除 split 60/40 →
+  // 142,900 / 95,200, plus 5,000 均等割 = 243,100.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  const reportedDividends = (amount: number, id = 'dividends') => ({
+    type: 'dividends' as const,
+    shareType: 'listed' as const,
+    paymentChannel: 'domestic' as const,
+    isReported: true as const,
+    issuerDomicile: 'domestic' as const,
+    foreignTax: 0,
+    amount,
+    id,
+  });
+  const reportedGains = (
+    amount: number,
+    account: 'domesticNoWithholding' | 'foreign',
+    id = 'gains',
+  ) => ({
+    type: 'capitalGains' as const,
+    shareType: 'listed' as const,
+    account,
+    amount,
+    id,
+  });
+
+  it('taxes reported dividends at 15% + 5% beside the earned income, inside take-home', () => {
+    const result = calculateTaxes(salaryInputs([reportedDividends(1_000_000)]));
+
+    // 合計所得金額 takes the reported amount (措法8条の4③一): 4,560,000, still ≤ 4,890,000, so the
+    // 基礎控除 is unchanged. The income on the return is 6,000,000.
+    expect(result.annualIncome).toBe(6_000_000);
+    expect(result.totalNetIncome).toBe(4_560_000);
+    expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: 0, dividends: 1_000_000 },
+      lossOffsetAgainstDividends: 0,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 0, dividends: 1_000_000 },
+      taxable: { capitalGains: 0, dividends: 1_000_000 },
+      nationalIncomeTaxBase: 150_000,
+    });
+    // 所得税: 89,850 on 課税総所得金額 plus 1,000,000 × 15% (措法8条の4①); the 2.1% 復興特別所得税
+    // is on the 239,850 together (5,036.85); 244,886 → 244,800.
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(1_797_000);
+    expect(result.nationalIncomeTaxBase).toBe(89_850);
+    expect(result.nationalIncomeTax).toBe(244_800);
+    // 住民税: 3% 市 / 2% 県 on the 1,000,000 (地方税法附則第33条の2第1項・第5項) join each side's
+    // 所得割 before its ¥100 floor: 144,420 + 30,000 − 1,500 → 172,900; 96,280 + 20,000 − 1,000 →
+    // 115,200; with the 5,000 均等割, 293,100.
+    expect(result.residenceTax.separate).toEqual({
+      taxableDividends: 1_000_000,
+      taxableCapitalGains: 0,
+      cityIncomeTax: 30_000,
+      prefecturalIncomeTax: 20_000,
+    });
+    expect(result.residenceTax.city.cityIncomeTax).toBe(172_900);
+    expect(result.residenceTax.prefecture.prefecturalIncomeTax).toBe(115_200);
+    expect(result.residenceTax.totalResidenceTax).toBe(293_100);
+    // Nothing is withheld: the amount is assessed on the return, and take-home covers it:
+    // 6,000,000 − 244,800 − 293,100 − 722,252.
+    expect(result.investmentIncome?.withheld).toBeUndefined();
+    expect(result.takeHomeIncome).toBe(4_739_848);
+  });
+
+  it('taxes a dividend received outside Japan the same way once it is reported', () => {
+    // 措令4条の3② excludes a dividend received outside Japan from 申告不要, but says nothing about how a
+    // reported one is taxed once it is on the return.
+    const result = calculateTaxes(
+      salaryInputs([{ ...reportedDividends(1_000_000), paymentChannel: 'abroad' as const }]),
+    );
+
+    expect(result.nationalIncomeTax).toBe(244_800);
+    expect(result.residenceTax.totalResidenceTax).toBe(293_100);
+  });
+
+  it('taxes a reported capital gain the same way, in its own class', () => {
+    const result = calculateTaxes(
+      salaryInputs([reportedGains(1_000_000, 'domesticNoWithholding')]),
+    );
+
+    expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
+      capitalGains: 1_000_000,
+      dividends: 0,
+    });
+    expect(result.investmentIncome?.reported?.separate?.nationalIncomeTaxBase).toBe(150_000);
+    expect(result.residenceTax.separate?.taxableCapitalGains).toBe(1_000_000);
+    expect(result.nationalIncomeTax).toBe(244_800);
+    expect(result.residenceTax.totalResidenceTax).toBe(293_100);
+    expect(result.takeHomeIncome).toBe(4_739_848);
+  });
+
+  it('raises the furusato nozei limit through the 所得割 on the reported income', () => {
+    const result = calculateTaxes(salaryInputs([reportedDividends(1_000_000)]));
+
+    // 所得割 172,900 + 115,200 = 288,100 is the cap base (附則第33条の2第3項第4号); 20% = 57,620.
+    // 特例控除割合 for 課税総所得金額 2,407,000 − 50,000 人的控除差 in the 10% band: 1 − 0.1 −
+    // 0.1021 = 0.7979; 57,620 / 0.7979 + 2,000 = 74,214 → 74,000 (61,000 without the dividends).
+    expect(result.furusatoNozei.limit).toBe(74_000);
+    // The 72,000 寄附金控除 comes off 課税総所得金額 (1,797,748 → 1,725,000 → 86,250) and leaves
+    // the 15% class alone: (239,850 − 236,250) × 1.021 at the ¥100 floor is 244,800 − 241,200.
+    expect(result.furusatoNozei.incomeTaxReduction).toBe(3_600);
+  });
+
+  it('counts the reported income toward the NHI premium, like any other 所得', () => {
+    // 国保法施行令第29条の7第2項第4号: the 所得割 base is 総所得金額 plus the amounts taxed apart
+    // from it, less 430,000 — so 5,000,000 of 雑所得 with 1,000,000 of reported dividends pays
+    // what 6,000,000 of 雑所得 pays, and the same dividends under 申告不要 change nothing.
+    const nhiInputs = (streams: TakeHomeInputs['incomeStreams']): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: streams,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+    });
+    const miscellaneous = (amount: number) => ({
+      type: 'miscellaneous' as const,
+      amount,
+      id: 'misc',
+    });
+
+    const reported = calculateTaxes(
+      nhiInputs([miscellaneous(5_000_000), reportedDividends(1_000_000)]),
+    );
+    const sameIncomeEarned = calculateTaxes(nhiInputs([miscellaneous(6_000_000)]));
+    expect(reported.totalNetIncome).toBe(6_000_000);
+    expect(reported.healthInsurance).toBe(sameIncomeEarned.healthInsurance);
+    expect(reported.healthInsurance).toBe(652_479);
+
+    const withheld = calculateTaxes(
+      nhiInputs([miscellaneous(5_000_000), { ...reportedDividends(1_000_000), isReported: false }]),
+    );
+    expect(withheld.healthInsurance).toBe(
+      calculateTaxes(nhiInputs([miscellaneous(5_000_000)])).healthInsurance,
+    );
+    expect(withheld.healthInsurance).toBe(547_219);
+  });
+
+  describe('a 65–69 pensioner on NHI, whose 所得控除 exceed the other income', () => {
+    const pensionerInputs = (
+      grossPension: number,
+      streams: TakeHomeInputs['incomeStreams'],
+    ): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: [
+        {
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: grossPension,
+          id: 'pension',
+        },
+        ...streams,
+      ],
+      ageRange: 'age65to69',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+    });
+
+    it('lets the deductions the other income cannot use come off the reported income', () => {
+      // 2,000,000 of pension at 65+: 公的年金等控除 1,100,000 — the band judged on the 1,000,000
+      // of other 合計所得金額 (所法35条④) — leaves 雑所得 900,000; 合計所得金額 1,900,000. NHI
+      // 220,913 on 1,900,000 − 430,000, and the 介護保険第1号 premium moves to tier 7 (合計所得金額
+      // 1,200,000〜2,100,000) → 98,500: social insurance 319,413.
+      const result = calculateTaxes(pensionerInputs(2_000_000, [reportedDividends(1_000_000)]));
+
+      expect(result.totalNetIncome).toBe(1_900_000);
+      expect(result.healthInsurance).toBe(220_913);
+      expect(result.longTermCareCategory1Premium).toBe(98_500);
+      // 所得税: 900,000 − 319,413 − 1,040,000 leaves 459,413 of deductions unused, which come off
+      // the dividends (措法8条の4③三): 1,000,000 − 459,413 = 540,587 → 540,000 × 15% = 81,000;
+      // 復興税 1,701 → 82,700.
+      expect(result.taxableIncomeForNationalIncomeTax).toBe(0);
+      expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
+        capitalGains: 0,
+        dividends: 540_000,
+      });
+      expect(result.nationalIncomeTax).toBe(82_700);
+      // 住民税: 900,000 − 319,413 − 430,000 = 150,587 → 150,000 課税総所得金額, the dividends
+      // untouched: 9,000 + 30,000 − 1,500 調整控除 → 37,500; 6,000 + 20,000 − 1,000 → 25,000; with
+      // the 均等割, 67,500.
+      expect(result.residenceTax.taxableIncome).toBe(150_000);
+      expect(result.residenceTax.separate?.taxableDividends).toBe(1_000_000);
+      expect(result.residenceTax.totalResidenceTax).toBe(67_500);
+    });
+
+    it('sets the furusato 特例控除割合 from the 15% rate once no 課税総所得金額 is left (附則第5条の5第1項第5号)', () => {
+      // 1,500,000 of pension → 雑所得 400,000; 合計所得金額 1,400,000; NHI 168,283 + 第1号 98,500 =
+      // 266,783. 住民税: 400,000 − 266,783 − 430,000 < 0 → 課税総所得金額 0, the 296,783 left over
+      // comes off the dividends: 703,217 → 703,000, 所得割 21,090 + 14,060 → 21,000 + 14,000.
+      const result = calculateTaxes(pensionerInputs(1_500_000, [reportedDividends(1_000_000)]));
+
+      expect(result.residenceTax.taxableIncome).toBe(0);
+      expect(result.residenceTax.separate?.taxableDividends).toBe(703_000);
+      expect(result.residenceTax.totalResidenceTax).toBe(40_000);
+      // 20% of the 35,000 所得割 is 7,000; the ratio is 1 − 0.1 − 0.15 × 1.021 = 0.74685 (附則第5条
+      // の6 folds the 復興税 into the 100分の75); 7,000 / 0.74685 + 2,000 = 11,372 → 11,000.
+      expect(result.furusatoNozei.limit).toBe(11_000);
+      // 所得税 on the dividends: 1,000,000 − (1,040,000 + 266,783 − 400,000) = 93,217 → 93,000 ×
+      // 15% = 13,950, 復興税 292.95 → 14,200; the 9,000 donation takes it to 84,000 × 15% × 1.021
+      // → 12,800.
+      expect(result.nationalIncomeTax).toBe(14_200);
+      expect(result.furusatoNozei.incomeTaxReduction).toBe(1_400);
+    });
+  });
+
+  it('judges the 障害者 住民税 exemption on 合計所得金額 with the reported income, and exempts its 所得割 too', () => {
+    // 1,200,000 of salary → 給与所得 460,000 (the 2026 floor of 740,000); 890,000 of dividends
+    // makes 合計所得金額 exactly the 1,350,000 limit (地方税法第24条の5第1項第2号).
+    const inputs = (dividends: number): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: [
+        { type: 'salary', amount: 1_200_000, frequency: 'annual', id: 'salary' },
+        reportedDividends(dividends),
+      ],
+      personalCircumstances: { disability: 'regular', widowOrSingleParent: 'none' },
+    });
+
+    const atLimit = calculateTaxes(inputs(890_000));
+    expect(atLimit.totalNetIncome).toBe(1_350_000);
+    expect(atLimit.residenceTax.nonTaxableStatus).toBe('disability');
+    expect(atLimit.residenceTax.totalResidenceTax).toBe(0);
+    expect(atLimit.residenceTax.separate).toBeUndefined();
+
+    // One yen over: social insurance 58,906 + 107,604 + 6,150 = 172,660; 460,000 − 172,660 −
+    // 430,000 − 260,000 障害者控除 < 0 leaves 402,660 for the dividends: 890,001 − 402,660 =
+    // 487,341 → 487,000; 14,610 + 9,740 → 14,600 + 9,700 + 5,000 = 29,300.
+    const overLimit = calculateTaxes(inputs(890_001));
+    expect(overLimit.residenceTax.nonTaxableStatus).toBeUndefined();
+    expect(overLimit.residenceTax.taxableIncome).toBe(0);
+    expect(overLimit.residenceTax.separate?.taxableDividends).toBe(487_000);
+    expect(overLimit.residenceTax.totalResidenceTax).toBe(29_300);
+  });
+
+  it('moves the 基礎控除 tier when the reported income carries 合計所得金額 past 1,320,000 (2025)', () => {
+    // 1,900,000 of salary in 2025 → 給与所得 1,250,000 (the 650,000 floor). 100,000 of dividends
+    // withheld leaves 合計所得金額 at 1,250,000 → 950,000; reported, 1,350,000 → 880,000
+    // (措法41条の16の2, 2025 amounts).
+    const inputs = (dividends: TakeHomeInputs['incomeStreams'][number]): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: [
+        { type: 'salary', amount: 1_900_000, frequency: 'annual', id: 'salary' },
+        dividends,
+      ],
+      incomeYear: 2025,
+    });
+
+    const withheld = calculateTaxes(inputs({ ...reportedDividends(100_000), isReported: false }));
+    expect(withheld.totalNetIncome).toBe(1_250_000);
+    expect(withheld.nationalIncomeTaxBasicDeduction).toBe(950_000);
+
+    const reported = calculateTaxes(inputs(reportedDividends(100_000)));
+    expect(reported.totalNetIncome).toBe(1_350_000);
+    expect(reported.nationalIncomeTaxBasicDeduction).toBe(880_000);
+    // Social insurance 95,136 + 175,680 + 10,452 = 281,268: 1,250,000 − 281,268 − 880,000 =
+    // 88,732 → 88,000 × 5% = 4,400, plus 15,000 on the dividends; × 1.021 = 19,807 → 19,800.
+    expect(reported.taxableIncomeForNationalIncomeTax).toBe(88_000);
+    expect(reported.nationalIncomeTax).toBe(19_800);
+  });
+
+  it('moves the 配偶者控除 tier when the reported income carries 合計所得金額 past 9,000,000', () => {
+    // 10,500,000 of salary → 給与所得 8,550,000 (the 1,950,000 cap), spouse without income.
+    // 500,000 of dividends withheld → 配偶者控除 380,000; reported → 9,050,000 → 260,000
+    // (所法83条①二), 330,000 → 220,000 for the 住民税 (地方税法第314条の2第1項第10号の2).
+    const inputs = (dividends: TakeHomeInputs['incomeStreams'][number]): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: [
+        { type: 'salary', amount: 10_500_000, frequency: 'annual', id: 'salary' },
+        dividends,
+      ],
+      dependents: [
+        {
+          id: 'spouse',
+          relationship: 'spouse',
+          ageRange: 'under65',
+          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+          disability: 'none',
+          isCohabiting: true,
+        },
+      ],
+    });
+
+    // Social insurance 528,968 + 713,700 + 53,811 = 1,296,479; 基礎控除 620,000 either way.
+    const withheld = calculateTaxes(inputs({ ...reportedDividends(500_000), isReported: false }));
+    expect(withheld.totalNetIncome).toBe(8_550_000);
+    // 8,550,000 − 1,296,479 − 620,000 − 380,000 = 6,253,521 → 6,253,000.
+    expect(withheld.taxableIncomeForNationalIncomeTax).toBe(6_253_000);
+    expect(withheld.taxableIncomeForResidenceTax).toBe(6_493_000);
+
+    const reported = calculateTaxes(inputs(reportedDividends(500_000)));
+    expect(reported.totalNetIncome).toBe(9_050_000);
+    // … − 260,000 = 6,373,521 → 6,373,000 × 20% − 427,500 = 847,100, plus 75,000; × 1.021 →
+    // 941,400.
+    expect(reported.taxableIncomeForNationalIncomeTax).toBe(6_373_000);
+    expect(reported.taxableIncomeForResidenceTax).toBe(6_603_000);
+    expect(reported.nationalIncomeTax).toBe(941_400);
+  });
+
+  // The single-account loss/dividends 損益通算 cases (both reported, and a withheld loss beside
+  // reported dividends) moved to 'calculateTaxes with a 特定口座（源泉徴収あり）' above, since a
+  // 特定口座 is now its own entry type.
+
+  it('leaves a loss the dividends cannot absorb unused, changing no assessed figure', () => {
+    // −500,000 and 300,000 of dividends in one account, both reported: 300,000 offsets, the
+    // other 200,000 would carry forward (措法37条の12の2⑤), which is not modelled.
+    const baseline = calculateTaxes(salaryInputs());
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 300_000,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: true,
+          reportsDividends: true,
+          id: 'account',
+        },
+      ]),
+    );
+
+    expect(result.investmentIncome?.reported?.separate).toMatchObject({
+      lossOffsetAgainstDividends: 300_000,
+      unabsorbedQualifyingLoss: 200_000,
+      netIncome: { capitalGains: 0, dividends: 0 },
+      nationalIncomeTaxBase: 0,
+    });
+    expect(result.totalNetIncome).toBe(baseline.totalNetIncome);
+    expect(result.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+    expect(result.residenceTax).toEqual(baseline.residenceTax);
+    // The income on the return is 200,000 lower, and so is take-home.
+    expect(result.annualIncome).toBe(4_800_000);
+    expect(result.takeHomeIncome).toBe(baseline.takeHomeIncome - 200_000);
+  });
+
+  it('caps the loss that offsets dividends at the losses realized through a Japanese account', () => {
+    // A 1,000,000 gain and a −500,000 loss in domestic accounts, a −2,000,000 loss in a foreign
+    // account, 1,000,000 of dividends. Every sale nets into one 譲渡所得等の金額 first (−1,500,000),
+    // but only 500,000 of that is 上場株式等に係る譲渡損失の金額 — the losses through a licensed
+    // 金融商品取引業者 (措法37条の12の2②一〜三; 措令25条の11の2②③) — so 500,000 offsets the
+    // dividends; the 1,000,000 of the foreign-account loss offsets nothing and cannot carry forward.
+    const result = calculateTaxes(
+      salaryInputs([
+        reportedGains(1_000_000, 'domesticNoWithholding', 'gain'),
+        reportedGains(-500_000, 'domesticNoWithholding', 'loss'),
+        reportedGains(-2_000_000, 'foreign', 'foreign-loss'),
+        reportedDividends(1_000_000),
+      ]),
+    );
+
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: -1_500_000, dividends: 1_000_000 },
+      lossOffsetAgainstDividends: 500_000,
+      unabsorbedQualifyingLoss: 0,
+      nonQualifyingLoss: 1_000_000,
+      netIncome: { capitalGains: 0, dividends: 500_000 },
+      taxable: { capitalGains: 0, dividends: 500_000 },
+      nationalIncomeTaxBase: 75_000,
+    });
+    expect(result.annualIncome).toBe(4_500_000);
+    expect(result.totalNetIncome).toBe(4_060_000);
+  });
+
+  it('applies the home loan credit to the 15% tax too, but caps the residence spillover on 課税総所得金額 alone', () => {
+    // 3,000,000 of salary → 給与所得 2,020,000; 1,000,000 of dividends. Social insurance 156,286 +
+    // 285,480 + 15,375 = 457,141; 課税総所得金額 522,000 → 26,100, plus 150,000 on the dividends.
+    const result = calculateTaxes({
+      ...salaryInputs([reportedDividends(1_000_000)]),
+      incomeStreams: [
+        { type: 'salary', amount: 3_000_000, frequency: 'annual', id: 'salary' },
+        reportedDividends(1_000_000),
+      ],
+      homeLoanTaxCredit: { creditAmount: 300_000, moveInYear: 2024 },
+    });
+
+    expect(result.nationalIncomeTaxBase).toBe(26_100);
+    expect(result.investmentIncome?.reported?.separate?.nationalIncomeTaxBase).toBe(150_000);
+    // 176,100 comes off the whole 所得税額; the spillover is 5% of the 522,000 課税総所得金額
+    // (地方税法附則第5条の4第1項), not of the classes together; 97,800 goes unused.
+    expect(result.homeLoanTaxCredit).toMatchObject({
+      appliedToIncomeTax: 176_100,
+      appliedToResidenceTax: 26_100,
+      unusedCredit: 97_800,
+    });
+    expect(result.nationalIncomeTax).toBe(0);
+    // 住民税 課税総所得金額 1,132,000: 67,920 + 30,000 − 1,500 − 15,660 → 80,700; 45,280 + 20,000
+    // − 1,000 − 10,440 → 53,800; plus 5,000 = 139,500.
+    expect(result.residenceTax.totalResidenceTax).toBe(139_500);
+  });
+});
+
+describe('calculateTaxes with dividends reported under 総合課税', () => {
+  // The same 5,000,000-yen employee, income year 2026: 給与所得 3,560,000; social insurance
+  // 722,252; 基礎控除 1,040,000 up to a 合計所得金額 of 4,890,000; 住民税 基礎控除 430,000 and
+  // 調整控除 2,500 (人的控除差 50,000, 課税総所得金額 over 2,000,000). The election is made once
+  // for every reported dividend (措法8条の4②), so it is an input beside the streams.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    reportedDividendsTaxation: 'aggregate',
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  const aggregateDividends = (amount: number, id = 'dividends') => ({
+    type: 'dividends' as const,
+    shareType: 'listed' as const,
+    paymentChannel: 'domestic' as const,
+    isReported: true as const,
+    issuerDomicile: 'domestic' as const,
+    foreignTax: 0,
+    amount,
+    id,
+  });
+
+  it('applies the election to every reported dividend and to no withheld-only one', () => {
+    // 1,000,000 reported and 300,000 left to withholding: the reported amount is 配当所得 in
+    // 総所得金額 and the withheld amount stays outside the return, as under 申告分離課税. With the
+    // election absent, the same reported dividend is 申告分離課税.
+    const streams = [
+      aggregateDividends(600_000, 'd1'),
+      aggregateDividends(400_000, 'd2'),
+      { ...aggregateDividends(300_000, 'd3'), isReported: false as const },
+    ];
+    const elected = calculateTaxes(salaryInputs(streams));
+    expect(elected.investmentIncome).toEqual({
+      withheld: {
+        accounts: [],
+        dividends: 300_000,
+        interest: 0,
+        received: 300_000,
+        taxedAmount: 300_000,
+        tax: { national: 45_945, residence: 15_000, total: 60_945 },
+      },
+      reported: { aggregate: { dividends: 1_000_000, interest: 0 } },
+    });
+    expect(elected.nationalIncomeTax).toBe(186_000);
+
+    const { reportedDividendsTaxation: _unused, ...withoutElection } = salaryInputs(streams);
+    const separate = calculateTaxes(withoutElection);
+    expect(separate.investmentIncome?.reported?.aggregate).toBeUndefined();
+    expect(separate.investmentIncome?.reported?.separate?.taxable).toEqual({
+      capitalGains: 0,
+      dividends: 1_000_000,
+    });
+    expect(separate.nationalIncomeTax).toBe(244_800);
+  });
+
+  it('taxes them in the brackets as 配当所得 inside 総所得金額, with no 配当控除', () => {
+    const result = calculateTaxes(salaryInputs([aggregateDividends(1_000_000)]));
+
+    // 所法22条②一 counts the 配当所得 in 総所得金額, so 総所得金額 = 合計所得金額 = 4,560,000, still
+    // within the 1,040,000 基礎控除 tier; the return covers 6,000,000.
+    expect(result.annualIncome).toBe(6_000_000);
+    expect(result.totalNetIncome).toBe(4_560_000);
+    expect(result.nationalIncomeTaxBasicDeduction).toBe(1_040_000);
+    expect(result.investmentIncome).toEqual({
+      reported: { aggregate: { dividends: 1_000_000, interest: 0 } },
+    });
+    // 課税総所得金額 4,560,000 − 722,252 − 1,040,000 = 2,797,748 → 2,797,000; in the 10% bracket
+    // 279,700 − 97,500 = 182,200; with the 2.1% 復興特別所得税 186,026.2 → 186,000.
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(2_797_000);
+    expect(result.nationalIncomeTaxBase).toBe(182_200);
+    expect(result.nationalIncomeTax).toBe(186_000);
+    // 住民税: 4,560,000 − 722,252 − 430,000 = 3,407,748 → 3,407,000; 市 204,420 / 県 136,280 less
+    // the 調整控除 split 60/40 → 202,900 / 135,200; plus the 5,000 均等割 = 343,100. Nothing is
+    // taxed apart from the brackets.
+    expect(result.taxableIncomeForResidenceTax).toBe(3_407_000);
+    expect(result.residenceTax.separate).toBeUndefined();
+    expect(result.residenceTax.totalResidenceTax).toBe(343_100);
+    expect(result.takeHomeIncome).toBe(6_000_000 - 186_000 - 343_100 - 722_252);
+    // Furusato: 所得割 338,100 × 20% = 67,620; 3,407,000 − 50,000 人的控除差 is in the 20% band, so
+    // the 特例控除割合 is 1 − 0.1 − 0.2 × 1.021 = 0.6958; 67,620 / 0.6958 + 2,000 = 99,183 → 99,000.
+    expect(result.furusatoNozei.limit).toBe(99_000);
+  });
+
+  it('moves the 基礎控除 tier when they carry 合計所得金額 past 4,890,000', () => {
+    // 3,560,000 + 1,500,000 = 5,060,000 → the 670,000 tier (2026).
+    const result = calculateTaxes(salaryInputs([aggregateDividends(1_500_000)]));
+    expect(result.totalNetIncome).toBe(5_060_000);
+    expect(result.nationalIncomeTaxBasicDeduction).toBe(670_000);
+  });
+
+  it('nets no reported capital loss against them (措法37条の12の2① reaches 申告分離課税 dividends only)', () => {
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'domesticNoWithholding',
+          amount: -400_000,
+          id: 'gains',
+        },
+        aggregateDividends(1_000_000),
+      ]),
+    );
+
+    // The loss is a qualifying 上場株式等に係る譲渡損失の金額 with no 申告分離課税 dividends to
+    // offset, so it is left over in full and the 配当所得 is taxed as if it were not there.
+    expect(result.investmentIncome?.reported?.separate).toEqual({
+      gross: { capitalGains: -400_000, dividends: 0 },
+      lossOffsetAgainstDividends: 0,
+      unabsorbedQualifyingLoss: 400_000,
+      nonQualifyingLoss: 0,
+      netIncome: { capitalGains: 0, dividends: 0 },
+      taxable: { capitalGains: 0, dividends: 0 },
+      nationalIncomeTaxBase: 0,
+    });
+    expect(result.investmentIncome?.reported?.aggregate?.dividends).toBe(1_000_000);
+    expect(result.totalNetIncome).toBe(4_560_000);
+    expect(result.nationalIncomeTax).toBe(186_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(343_100);
+    // The return covers 5,000,000 − 400,000 + 1,000,000.
+    expect(result.annualIncome).toBe(5_600_000);
+    expect(result.takeHomeIncome).toBe(5_600_000 - 186_000 - 343_100 - 722_252);
+  });
+
+  it('sits beside a reported capital gain, each taxed in its own class', () => {
+    const result = calculateTaxes(
+      salaryInputs([
+        {
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'domesticNoWithholding',
+          amount: 500_000,
+          id: 'gains',
+        },
+        aggregateDividends(200_000),
+      ]),
+    );
+
+    // 総所得金額 3,760,000 plus the 500,000 分離 class: 合計所得金額 4,260,000. 課税総所得金額
+    // 3,760,000 − 1,762,252 = 1,997,748 → 1,997,000, in the 10% bracket: 199,700 − 97,500 =
+    // 102,200; plus 15% of 500,000 = 75,000; 177,200 × 1.021 = 180,921.2 → 180,900.
+    expect(result.totalNetIncome).toBe(4_260_000);
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(1_997_000);
+    expect(result.investmentIncome?.reported?.separate?.taxable).toEqual({
+      capitalGains: 500_000,
+      dividends: 0,
+    });
+    expect(result.investmentIncome?.reported?.aggregate?.dividends).toBe(200_000);
+    expect(result.nationalIncomeTax).toBe(180_900);
+    // 住民税: 3,760,000 − 722,252 − 430,000 = 2,607,748 → 2,607,000: 156,420 / 104,280, plus
+    // 15,000 / 10,000 on the gain, less 1,500 / 1,000 → 169,900 / 113,200; plus 5,000 = 288,100.
+    expect(result.residenceTax.separate?.taxableCapitalGains).toBe(500_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(288_100);
+    expect(result.annualIncome).toBe(5_700_000);
+    expect(result.takeHomeIncome).toBe(5_700_000 - 180_900 - 288_100 - 722_252);
+  });
+
+  it('computes real results for a taxpayer with 総合課税 dividends and no earned income', () => {
+    const result = calculateTaxes({
+      ...salaryInputs(),
+      incomeStreams: [aggregateDividends(1_000_000)],
+      // Manual social insurance keeps the NHI and pension tables out of this case.
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+    });
+
+    // 合計所得金額 1,000,000: the 1,040,000 基礎控除 leaves no 課税総所得金額. 住民税 課税総所得金額
+    // 570,000 → 34,200 / 22,800 less the 1,500 / 1,000 調整控除 → 32,700 / 21,800; plus 5,000 =
+    // 59,500.
+    expect(result.annualIncome).toBe(1_000_000);
+    expect(result.totalNetIncome).toBe(1_000_000);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(59_500);
+    expect(result.takeHomeIncome).toBe(940_500);
+  });
+
+  it('counts them in the 公的年金等控除 band base (所法35条④一)', () => {
+    const components = calculateNetIncomeComponents(
+      [
+        {
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 3_000_000,
+          id: 'pension',
+        },
+        aggregateDividends(10_500_000),
+      ],
+      2026,
+      'age65to69',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+      'aggregate',
+    );
+
+    // 公的年金等に係る雑所得以外の合計所得金額 of 10,500,000 is over 10,000,000, so the 65+ deduction
+    // is 300,000 + 25% × (3,000,000 − 500,000) = 925,000, raised to its 1,000,000 floor → 雑所得
+    // 2,000,000 (1,900,000 in the 1,000万円以下 band).
+    expect(components.aggregateDividendIncome).toBe(10_500_000);
+    expect(components.netPublicPensionIncome).toBe(2_000_000);
+    expect(components.aggregateNetIncome).toBe(12_500_000);
+    expect(components.totalNetIncome).toBe(12_500_000);
+  });
+});
+
+describe('calculateTaxes with foreign tax (外国税額控除)', () => {
+  // The 5,000,000-yen employee of the investment cases, income year 2026: 給与所得 3,560,000;
+  // social insurance 722,252; 基礎控除 1,040,000 up to a 合計所得金額 of 4,890,000; 所得税 91,700;
+  // 住民税 課税総所得金額 2,407,000 → 市 144,420 − 1,500 = 142,920 / 県 96,280 − 1,000 = 95,280,
+  // floored to 142,900 / 95,200, plus 5,000 均等割 = 243,100; take-home 3,942,948.
+  //
+  // The credit (所法95条①, 復興財確法14条①, 地方税法37条の3・314条の8): B is the 所得税額 after the
+  // home loan credit, R = ⌊B × 2.1%⌋, T the 合計所得金額 and A the foreign-source income capped at
+  // T; L = ⌊B × A / T⌋ and L_R = ⌊R × A / T⌋; the residence limits are ⌊L × 12%⌋ (道府県) and
+  // ⌊L × 18%⌋ (市町村). National tax is ⌊(B + R − credits) / 100⌋ × 100; each residence side is
+  // floored to ¥100 after its credit.
+  const salaryInputs = (streams: TakeHomeInputs['incomeStreams'] = []): TakeHomeInputs => ({
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [
+      { type: 'salary', amount: 5_000_000, frequency: 'annual', id: 'salary' },
+      ...streams,
+    ],
+    ageRange: 'age20to39',
+    healthInsuranceProvider: DEFAULT_PROVIDER,
+    region: 'Tokyo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2026,
+  });
+  // A dividend from a foreign company, paid in Japan through a Japanese broker.
+  const foreignDividend = (isReported: boolean, foreignTax = 100_000, amount = 1_000_000) => ({
+    type: 'dividends' as const,
+    shareType: 'listed' as const,
+    paymentChannel: 'domestic' as const,
+    isReported,
+    issuerDomicile: 'foreign' as const,
+    foreignTax,
+    amount,
+    id: 'dividends',
+  });
+  const foreignInterest = (amount: number, foreignTax: number) => ({
+    type: 'interest' as const,
+    payerDomicile: 'foreign' as const,
+    foreignTax,
+    amount,
+    id: 'interest',
+  });
+  const account = (
+    capitalGains: number,
+    dividends: number,
+    foreignDividends: number,
+    foreignTax: number,
+    reported: boolean,
+  ) => ({
+    type: 'withholdingAccount' as const,
+    id: 'account',
+    capitalGains,
+    dividends,
+    foreignDividends,
+    foreignTax,
+    reportsCapitalGains: reported,
+    reportsDividends: reported,
+  });
+  // Interest only, with manual social insurance of 0 to keep the premium tables out.
+  const interestOnly = (amount: number, foreignTax: number): TakeHomeInputs => ({
+    ...salaryInputs(),
+    incomeStreams: [foreignInterest(amount, foreignTax)],
+    manualSocialInsuranceEntry: true,
+    manualSocialInsuranceAmount: 0,
+  });
+
+  describe('case A: a foreign dividend of 1,000,000 with 100,000 foreign tax, reported under 申告分離課税', () => {
+    const result = calculateTaxes(salaryInputs([foreignDividend(true)]));
+
+    it('credits the foreign tax up to each limit', () => {
+      // T = 3,560,000 + 1,000,000 = 4,560,000; B = 89,850 (課税総所得金額 1,797,000 at 5%) +
+      // 150,000 (15% of the dividend) = 239,850; R = ⌊5,036.85⌋ = 5,036; A = 1,000,000.
+      // L = ⌊239,850 × 1,000,000 / 4,560,000⌋ = ⌊52,598.68⌋ = 52,598;
+      // L_R = ⌊5,036 × 1,000,000 / 4,560,000⌋ = ⌊1,104.39⌋ = 1,104;
+      // 道府県 ⌊52,598 × 12%⌋ = ⌊6,311.76⌋ = 6,311; 市町村 ⌊52,598 × 18%⌋ = ⌊9,467.64⌋ = 9,467.
+      // All used: 100,000 − 52,598 − 1,104 − 6,311 − 9,467 = 30,520 left over.
+      const limits = {
+        incomeTax: 52_598,
+        reconstructionSurtax: 1_104,
+        prefecture: 6_311,
+        city: 9_467,
+      };
+      expect(result.foreignTaxCredit).toEqual({
+        foreignTax: 100_000,
+        foreignSourceIncome: 1_000_000,
+        adjustedForeignSourceIncome: 1_000_000,
+        totalIncome: 4_560_000,
+        incomeTax: 239_850,
+        limit: limits,
+        credit: limits,
+        excess: 30_520,
+      });
+      expect(result.reconstructionSurtax).toBe(5_036);
+    });
+
+    it('takes the credits off both taxes', () => {
+      // ⌊(239,850 + 5,036 − 52,598 − 1,104) / 100⌋ × 100 = ⌊191,184 / 100⌋ × 100 = 191,100.
+      expect(result.nationalIncomeTax).toBe(191_100);
+      // 市 144,420 + 30,000 − 1,500 = 172,920 − 9,467 = 163,453 → 163,400;
+      // 県 96,280 + 20,000 − 1,000 = 115,280 − 6,311 = 108,969 → 108,900; + 5,000 = 277,300. The
+      // 所得割 before the credit is 172,900 + 115,200 = 288,100.
+      expect(result.residenceTax.foreignTaxCredit).toEqual({ city: 9_467, prefecture: 6_311 });
+      expect(result.residenceTax.city.cityIncomeTax).toBe(163_400);
+      expect(result.residenceTax.prefecture.prefecturalIncomeTax).toBe(108_900);
+      expect(result.residenceTax.totalResidenceTax).toBe(277_300);
+      expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBe(288_100);
+      expect(result.residenceTaxIncomeBasedBeforeHomeLoanCredit).toBeUndefined();
+    });
+
+    it('subtracts the foreign tax paid from take-home and folds it into the income tax paid', () => {
+      expect(result.foreignTaxPaid).toBe(100_000);
+      expect(result.annualIncome).toBe(6_000_000);
+      // 191,100 + 100,000 foreign tax; the residence tax has nothing withheld beside it.
+      expect(incomeTaxPaid(result)).toBe(291_100);
+      expect(residenceTaxPaid(result)).toBe(277_300);
+      // 6,000,000 − 191,100 − 277,300 − 722,252 − 100,000.
+      expect(result.takeHomeIncome).toBe(4_709_348);
+    });
+
+    it('applies the residence credit after the furusato donation credits', () => {
+      // Limit as without the foreign tax (74,000; the 20% cap is on the 所得割 before either
+      // credit). A donation lowers the base tax, which also lowers the foreign tax credit limit:
+      // national income tax falls from 191,100 to 188,300 (a 2,800 net reduction, losing 800 of FTC),
+      // and residence tax falls from 277,300 to 213,000 (a 64,300 net reduction, losing 300 of FTC).
+      // Out-of-pocket cost is 74,000 − 64,300 − 2,800 = 6,900.
+      expect(result.furusatoNozei).toEqual({
+        limit: 74_000,
+        incomeTaxReduction: 2_800,
+        residenceTaxDonationBasicDeduction: 7_200,
+        residenceTaxSpecialDeduction: 57_450,
+        residenceTaxReduction: 64_300,
+        outOfPocketCost: 6_900,
+      });
+      expect(
+        calculateTaxes(salaryInputs([{ ...foreignDividend(true), foreignTax: 0 }])).furusatoNozei
+          .residenceTaxReduction,
+      ).toBe(64_600);
+    });
+
+    it('credits nothing more once every limit is used (case A plus 5,000 paid with a return)', () => {
+      const withManual = calculateTaxes({
+        ...salaryInputs([foreignDividend(true)]),
+        foreignTaxCredit: { foreignTax: 5_000 },
+      });
+      // F = 105,000 with the same limits: 30,520 + 5,000 left over, taxes unchanged.
+      expect(withManual.foreignTaxCredit).toMatchObject({
+        foreignTax: 105_000,
+        manualForeignTax: 5_000,
+        excess: 35_520,
+      });
+      expect(withManual.nationalIncomeTax).toBe(191_100);
+      expect(withManual.residenceTax.totalResidenceTax).toBe(277_300);
+      expect(withManual.foreignTaxPaid).toBe(105_000);
+      // 4,709,348 − 5,000.
+      expect(withManual.takeHomeIncome).toBe(4_704_348);
+    });
+  });
+
+  it('case B: charges the withholding on the dividend after the foreign tax and credits none of it', () => {
+    const result = calculateTaxes(salaryInputs([foreignDividend(false)]));
+
+    // 措法9条の2③: base 1,000,000 − 100,000 = 900,000; ⌊900,000 × 15.315%⌋ = 137,835 and 45,000.
+    // 措令4条の5⑫: no credit for a dividend left to withholding.
+    expect(result.investmentIncome).toEqual({
+      withheld: {
+        accounts: [],
+        dividends: 1_000_000,
+        dividendsForeignTax: 100_000,
+        interest: 0,
+        received: 1_000_000,
+        foreignTax: 100_000,
+        taxedAmount: 900_000,
+        tax: { national: 137_835, residence: 45_000, total: 182_835 },
+      },
+    });
+    expect(result.foreignTaxCredit).toBeUndefined();
+    expect(result.nationalIncomeTax).toBe(91_700);
+    expect(result.residenceTax.totalResidenceTax).toBe(243_100);
+    expect(result.foreignTaxPaid).toBe(100_000);
+    // 91,700 + 137,835 + 100,000; 243,100 + 45,000.
+    expect(incomeTaxPaid(result)).toBe(329_535);
+    expect(residenceTaxPaid(result)).toBe(288_100);
+    // 6,000,000 − 91,700 − 243,100 − 722,252 − 182,835 − 100,000.
+    expect(result.takeHomeIncome).toBe(4_660_113);
+  });
+
+  it('case C: credits it under 総合課税 against the tax on the brackets', () => {
+    const result = calculateTaxes({
+      ...salaryInputs([foreignDividend(true)]),
+      reportedDividendsTaxation: 'aggregate',
+    });
+
+    // 課税総所得金額 4,560,000 − 722,252 − 1,040,000 = 2,797,748 → 2,797,000 at 10%: B = 279,700 −
+    // 97,500 = 182,200; R = ⌊3,826.2⌋ = 3,826. L = ⌊182,200 × 1,000,000 / 4,560,000⌋ =
+    // ⌊39,956.14⌋ = 39,956; L_R = ⌊3,826 / 4.56⌋ = ⌊839.04⌋ = 839; ⌊39,956 × 12%⌋ = ⌊4,794.72⌋ =
+    // 4,794; ⌊39,956 × 18%⌋ = ⌊7,192.08⌋ = 7,192. Left over: 100,000 − 39,956 − 839 − 4,794 −
+    // 7,192 = 47,219.
+    const limits = { incomeTax: 39_956, reconstructionSurtax: 839, prefecture: 4_794, city: 7_192 };
+    expect(result.foreignTaxCredit).toEqual({
+      foreignTax: 100_000,
+      foreignSourceIncome: 1_000_000,
+      adjustedForeignSourceIncome: 1_000_000,
+      totalIncome: 4_560_000,
+      incomeTax: 182_200,
+      limit: limits,
+      credit: limits,
+      excess: 47_219,
+    });
+    // ⌊(182,200 + 3,826 − 39,956 − 839) / 100⌋ × 100 = ⌊145,231 / 100⌋ × 100 = 145,200.
+    expect(result.nationalIncomeTax).toBe(145_200);
+    // 3,407,000: 市 204,420 − 1,500 − 7,192 = 195,728 → 195,700; 県 136,280 − 1,000 − 4,794 =
+    // 130,486 → 130,400; + 5,000 = 331,100 (before the credit 202,900 + 135,200 = 338,100).
+    expect(result.residenceTax.totalResidenceTax).toBe(331_100);
+    expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBe(338_100);
+    // 6,000,000 − 145,200 − 331,100 − 722,252 − 100,000.
+    expect(result.takeHomeIncome).toBe(4_701_448);
+  });
+
+  it('case D: charges an account left to withholding on its dividends after the foreign tax', () => {
+    // 措法9条の2③ with 37条の11の6⑥: base 0 + 800,000 − 50,000 = 750,000; ⌊750,000 × 15.315%⌋ =
+    // ⌊114,862.5⌋ = 114,862 and 37,500.
+    const result = calculateTaxes(salaryInputs([account(0, 800_000, 500_000, 50_000, false)]));
+    expect(result.investmentIncome).toEqual({
+      withheld: {
+        accounts: [
+          { position: 1, capitalGains: 0, dividends: 800_000, foreignTax: 50_000, base: 750_000 },
+        ],
+        dividends: 0,
+        interest: 0,
+        received: 800_000,
+        foreignTax: 50_000,
+        taxedAmount: 750_000,
+        tax: { national: 114_862, residence: 37_500, total: 152_362 },
+      },
+    });
+    expect(result.foreignTaxCredit).toBeUndefined();
+    expect(result.foreignTaxPaid).toBe(50_000);
+    // 3,942,948 + 800,000 − 152,362 − 50,000.
+    expect(result.takeHomeIncome).toBe(4_540_586);
+
+    // A −500,000 loss nets against the dividends after the foreign tax: −500,000 + 800,000 −
+    // 50,000 = 250,000; ⌊38,287.5⌋ = 38,287 and 12,500.
+    const withLoss = calculateTaxes(
+      salaryInputs([account(-500_000, 800_000, 500_000, 50_000, false)]),
+    );
+    expect(withLoss.investmentIncome?.withheld?.accounts).toEqual([
+      {
+        position: 1,
+        capitalGains: -500_000,
+        dividends: 800_000,
+        foreignTax: 50_000,
+        base: 250_000,
+      },
+    ]);
+    expect(withLoss.investmentIncome?.withheld?.tax).toEqual({
+      national: 38_287,
+      residence: 12_500,
+      total: 50_787,
+    });
+    // 3,942,948 + 300,000 − 50,787 − 50,000.
+    expect(withLoss.takeHomeIncome).toBe(4_142_161);
+  });
+
+  it('case E: keeps the whole foreign dividend as foreign-source income when a reported loss nets against it', () => {
+    const result = calculateTaxes(
+      salaryInputs([account(-500_000, 800_000, 800_000, 80_000, true)]),
+    );
+    const withoutForeignTax = calculateTaxes(
+      salaryInputs([account(-500_000, 800_000, 0, 0, true)]),
+    );
+
+    // The loss offsets 500,000 of the dividends, so T = 3,560,000 + 300,000 = 3,860,000, but it is
+    // not foreign-source and does not reduce A = 800,000. B = 89,850 + 45,000 = 134,850;
+    // R = ⌊2,831.85⌋ = 2,831. L = ⌊134,850 × 800,000 / 3,860,000⌋ = ⌊27,948.19⌋ = 27,948;
+    // L_R = ⌊2,831 × 800,000 / 3,860,000⌋ = ⌊586.74⌋ = 586; ⌊27,948 × 12%⌋ = ⌊3,353.76⌋ = 3,353;
+    // ⌊27,948 × 18%⌋ = ⌊5,030.64⌋ = 5,030. Left over 80,000 − 27,948 − 586 − 3,353 − 5,030 = 43,083.
+    const limits = { incomeTax: 27_948, reconstructionSurtax: 586, prefecture: 3_353, city: 5_030 };
+    expect(result.foreignTaxCredit).toEqual({
+      foreignTax: 80_000,
+      foreignSourceIncome: 800_000,
+      adjustedForeignSourceIncome: 800_000,
+      totalIncome: 3_860_000,
+      incomeTax: 134_850,
+      limit: limits,
+      credit: limits,
+      excess: 43_083,
+    });
+    // The surtax on the return drops the fraction: 2,831, not 2,831.85.
+    expect(result.reconstructionSurtax).toBe(2_831);
+    // ⌊(134,850 + 2,831 − 27,948 − 586) / 100⌋ × 100 = ⌊109,147 / 100⌋ × 100 = 109,100; without
+    // the credit ⌊137,681 / 100⌋ × 100 = 137,600.
+    expect(result.nationalIncomeTax).toBe(109_100);
+    expect(withoutForeignTax.nationalIncomeTax).toBe(137_600);
+    // 市 144,420 + 9,000 − 1,500 = 151,920 − 5,030 = 146,890 → 146,800; 県 96,280 + 6,000 − 1,000 =
+    // 101,280 − 3,353 = 97,927 → 97,900; + 5,000 = 249,700; without it 151,900 + 101,200 + 5,000 =
+    // 258,100.
+    expect(result.residenceTax.totalResidenceTax).toBe(249_700);
+    expect(withoutForeignTax.residenceTax.totalResidenceTax).toBe(258_100);
+    expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBe(253_100);
+    // 5,300,000 − 109,100 − 249,700 − 722,252 − 80,000.
+    expect(result.takeHomeIncome).toBe(4_138_948);
+  });
+
+  describe('case F: interest of 100,000 paid outside Japan with 10,000 foreign tax', () => {
+    it('credits the foreign tax against every tax in turn', () => {
+      const result = calculateTaxes(salaryInputs([foreignInterest(100_000, 10_000)]));
+
+      // T = 3,660,000; 課税総所得金額 1,897,000 → B = 94,850; R = ⌊1,991.85⌋ = 1,991.
+      // L = ⌊94,850 × 100,000 / 3,660,000⌋ = ⌊2,591.53⌋ = 2,591; L_R = ⌊1,991 / 36.6⌋ = ⌊54.40⌋ =
+      // 54; ⌊2,591 × 12%⌋ = ⌊310.92⌋ = 310; ⌊2,591 × 18%⌋ = ⌊466.38⌋ = 466. Left over 10,000 −
+      // 2,591 − 54 − 310 − 466 = 6,579.
+      const limits = { incomeTax: 2_591, reconstructionSurtax: 54, prefecture: 310, city: 466 };
+      expect(result.foreignTaxCredit).toEqual({
+        foreignTax: 10_000,
+        foreignSourceIncome: 100_000,
+        adjustedForeignSourceIncome: 100_000,
+        totalIncome: 3_660_000,
+        incomeTax: 94_850,
+        limit: limits,
+        credit: limits,
+        excess: 6_579,
+      });
+      // ⌊(94,850 + 1,991 − 2,591 − 54) / 100⌋ × 100 = ⌊94,196 / 100⌋ × 100 = 94,100.
+      expect(result.nationalIncomeTax).toBe(94_100);
+      // 2,507,000: 市 150,420 − 1,500 − 466 = 148,454 → 148,400; 県 100,280 − 1,000 − 310 =
+      // 98,970 → 98,900; + 5,000 = 252,300.
+      expect(result.residenceTax.totalResidenceTax).toBe(252_300);
+      // 5,100,000 − 94,100 − 252,300 − 722,252 − 10,000.
+      expect(result.takeHomeIncome).toBe(4_021_348);
+    });
+
+    it('measures the limits on the income tax after a home loan credit it absorbs', () => {
+      const result = calculateTaxes({
+        ...salaryInputs([foreignInterest(100_000, 10_000)]),
+        homeLoanTaxCredit: { creditAmount: 50_000, moveInYear: 2024 },
+      });
+
+      // B = 94,850 − 50,000 = 44,850; R = ⌊941.85⌋ = 941. L = ⌊44,850 × 100,000 / 3,660,000⌋ =
+      // ⌊1,225.41⌋ = 1,225; L_R = ⌊941 / 36.6⌋ = ⌊25.71⌋ = 25; ⌊1,225 × 12%⌋ = 147; ⌊1,225 ×
+      // 18%⌋ = ⌊220.5⌋ = 220.
+      expect(result.homeLoanTaxCredit).toMatchObject({
+        appliedToIncomeTax: 50_000,
+        appliedToResidenceTax: 0,
+      });
+      expect(result.foreignTaxCredit).toMatchObject({
+        incomeTax: 44_850,
+        limit: { incomeTax: 1_225, reconstructionSurtax: 25, prefecture: 147, city: 220 },
+        credit: { incomeTax: 1_225, reconstructionSurtax: 25, prefecture: 147, city: 220 },
+      });
+      // ⌊(44,850 + 941 − 1,225 − 25) / 100⌋ × 100 = ⌊44,541 / 100⌋ × 100 = 44,500.
+      expect(result.nationalIncomeTax).toBe(44_500);
+      // 市 148,920 − 220 = 148,700; 県 99,280 − 147 = 99,133 → 99,100; + 5,000 = 252,800.
+      expect(result.residenceTax.totalResidenceTax).toBe(252_800);
+    });
+
+    it('credits nothing when a home loan credit takes all the income tax and spills over', () => {
+      const result = calculateTaxes({
+        ...salaryInputs([foreignInterest(100_000, 10_000)]),
+        homeLoanTaxCredit: { creditAmount: 200_000, moveInYear: 2024 },
+      });
+
+      // 94,850 comes off the income tax, so B = 0 and there is no limit; the other 105,150 spills
+      // over up to min(97,500, ⌊1,897,000 × 5%⌋ = 94,850) = 94,850.
+      expect(result.foreignTaxCredit).toMatchObject({
+        incomeTax: 0,
+        limit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+        credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+        excess: 10_000,
+      });
+      expect(result.nationalIncomeTax).toBe(0);
+      // Spillover 94,850 splits 56,910 / 37,940: 市 148,920 − 56,910 = 92,010 → 92,000; 県 99,280 −
+      // 37,940 = 61,340 → 61,300; + 5,000 = 158,300. Only the home loan's reconciliation figure
+      // (148,900 + 99,200) is present.
+      expect(result.residenceTax.totalResidenceTax).toBe(158_300);
+      expect(result.residenceTax.foreignTaxCredit).toBeUndefined();
+      expect(result.residenceTaxIncomeBasedBeforeHomeLoanCredit).toBe(248_100);
+      expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBeUndefined();
+    });
+  });
+
+  it('case G: credits nothing with no income tax to credit against', () => {
+    const result = calculateTaxes(interestOnly(1_000_000, 100_000));
+
+    // 合計所得金額 1,000,000 is under the 1,040,000 基礎控除, so B = 0 and every limit is 0.
+    expect(result.foreignTaxCredit).toEqual({
+      foreignTax: 100_000,
+      foreignSourceIncome: 1_000_000,
+      adjustedForeignSourceIncome: 1_000_000,
+      totalIncome: 1_000_000,
+      incomeTax: 0,
+      limit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+      credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+      excess: 100_000,
+    });
+    expect(result.nationalIncomeTax).toBe(0);
+    // As without foreign tax: 32,700 + 21,800 + 5,000.
+    expect(result.residenceTax.totalResidenceTax).toBe(59_500);
+    // 1,000,000 − 59,500 − 100,000.
+    expect(result.takeHomeIncome).toBe(840_500);
+  });
+
+  it('case H: caps each residence side at its own 所得割', () => {
+    const result = calculateTaxes(interestOnly(60_000_000, 30_000_000));
+
+    // Over 25,000,000 there is no 基礎控除 and no 調整控除. B = 60,000,000 × 45% − 4,796,000 =
+    // 22,204,000; R = 466,284; A = T, so L = B and L_R = R; 道府県 ⌊22,204,000 × 12%⌋ = 2,664,480,
+    // 市町村 ⌊22,204,000 × 18%⌋ = 3,996,720. The 所得割 is 3,600,000 / 2,400,000, under both
+    // residence credits, so each is capped at it.
+    expect(result.foreignTaxCredit?.credit).toEqual({
+      incomeTax: 22_204_000,
+      reconstructionSurtax: 466_284,
+      prefecture: 2_664_480,
+      city: 3_996_720,
+    });
+    // 30,000,000 − 22,204,000 − 466,284 − 2,664,480 − 3,996,720.
+    expect(result.foreignTaxCredit?.excess).toBe(668_516);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.foreignTaxCredit).toEqual({
+      city: 3_600_000,
+      prefecture: 2_400_000,
+    });
+    expect(result.residenceTax.totalResidenceTax).toBe(5_000);
+    expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBe(6_000_000);
+    // With nothing left to reduce, the furusato donation reduces neither tax.
+    expect(result.furusatoNozei.incomeTaxReduction).toBe(0);
+    expect(result.furusatoNozei.residenceTaxReduction).toBe(0);
+  });
+
+  it('case H′: does not move a prefectural credit the 所得割 cannot absorb to the municipal side', () => {
+    const result = calculateTaxes(interestOnly(50_000_000, 22_000_000));
+
+    // B = 50,000,000 × 45% − 4,796,000 = 17,704,000; R = 371,784; 道府県 limit ⌊17,704,000 × 12%⌋ =
+    // 2,124,480, 市町村 ⌊17,704,000 × 18%⌋ = 3,186,720. Left for residence tax: 22,000,000 −
+    // 17,704,000 − 371,784 = 3,924,216 → 2,124,480 prefectural, 1,799,736 municipal.
+    expect(result.foreignTaxCredit?.credit).toEqual({
+      incomeTax: 17_704_000,
+      reconstructionSurtax: 371_784,
+      prefecture: 2_124_480,
+      city: 1_799_736,
+    });
+    // 県 2,000,000 absorbs 2,000,000 of its 2,124,480; the other 124,480 is not added to the city's
+    // 1,799,736: 市 3,000,000 − 1,799,736 = 1,200,264 → 1,200,200; + 5,000 = 1,205,200.
+    expect(result.residenceTax.foreignTaxCredit).toEqual({
+      city: 1_799_736,
+      prefecture: 2_000_000,
+    });
+    expect(result.residenceTax.totalResidenceTax).toBe(1_205_200);
+    // 50,000,000 − 1,205,200 − 22,000,000.
+    expect(result.takeHomeIncome).toBe(26_794_800);
+  });
+
+  it('case I: counts a foreign dividend with no foreign tax toward the limit', () => {
+    const result = calculateTaxes(
+      salaryInputs([foreignInterest(100_000, 10_000), foreignDividend(true, 0)]),
+    );
+
+    // A = 100,000 + 1,000,000; T = 4,660,000; B = 94,850 + 150,000 = 244,850; R = ⌊5,141.85⌋ =
+    // 5,141. L = ⌊244,850 × 1,100,000 / 4,660,000⌋ = ⌊57,797.21⌋ = 57,797 ≥ 10,000, so all of it
+    // comes off the income tax. L_R = ⌊5,141 × 1,100,000 / 4,660,000⌋ = ⌊1,213.54⌋ = 1,213;
+    // ⌊57,797 × 12%⌋ = ⌊6,935.64⌋ = 6,935; ⌊57,797 × 18%⌋ = ⌊10,403.46⌋ = 10,403.
+    expect(result.foreignTaxCredit).toEqual({
+      foreignTax: 10_000,
+      foreignSourceIncome: 1_100_000,
+      adjustedForeignSourceIncome: 1_100_000,
+      totalIncome: 4_660_000,
+      incomeTax: 244_850,
+      limit: { incomeTax: 57_797, reconstructionSurtax: 1_213, prefecture: 6_935, city: 10_403 },
+      credit: { incomeTax: 10_000, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+      excess: 0,
+    });
+    // ⌊(244,850 + 5,141 − 10,000) / 100⌋ × 100 = ⌊239,991 / 100⌋ × 100 = 239,900.
+    expect(result.nationalIncomeTax).toBe(239_900);
+    // No residence credit: 市 150,420 + 30,000 − 1,500 = 178,920 → 178,900; 県 100,280 + 20,000 −
+    // 1,000 = 119,280 → 119,200; + 5,000 = 303,100.
+    expect(result.residenceTax.foreignTaxCredit).toBeUndefined();
+    expect(result.residenceTax.totalResidenceTax).toBe(303_100);
+    expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBeUndefined();
+  });
+
+  it('case J: taxes a foreign dividend with no foreign tax as a Japanese one', () => {
+    // Left to withholding it is not on the return, so it is not foreign-source income there.
+    expect(calculateTaxes(salaryInputs([foreignDividend(false, 0)]))).toEqual(
+      calculateTaxes(salaryInputs([{ ...foreignDividend(false, 0), issuerDomicile: 'domestic' }])),
+    );
+    // Reported, the taxes are the same, and the result shows the limit with nothing to credit:
+    // the limits of case A (B 239,850, T 4,560,000, A 1,000,000).
+    const { foreignTaxCredit, ...foreign } = calculateTaxes(
+      salaryInputs([foreignDividend(true, 0)]),
+    );
+    expect(foreign).toEqual(
+      calculateTaxes(salaryInputs([{ ...foreignDividend(true, 0), issuerDomicile: 'domestic' }])),
+    );
+    expect(foreignTaxCredit).toEqual({
+      foreignTax: 0,
+      foreignSourceIncome: 1_000_000,
+      adjustedForeignSourceIncome: 1_000_000,
+      totalIncome: 4_560_000,
+      incomeTax: 239_850,
+      limit: { incomeTax: 52_598, reconstructionSurtax: 1_104, prefecture: 6_311, city: 9_467 },
+      credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+      excess: 0,
+    });
+  });
+
+  it('case K: credits tax paid with a foreign return against the foreign-source income of an entry', () => {
+    const result = calculateTaxes({
+      ...salaryInputs([foreignInterest(500_000, 0)]),
+      foreignTaxCredit: { foreignTax: 20_000 },
+    });
+
+    // T = 3,560,000 + 500,000 = 4,060,000; 課税総所得金額 4,060,000 − 722,252 − 1,040,000 =
+    // 2,297,748 → 2,297,000 at 10%: B = 229,700 − 97,500 = 132,200; R = ⌊2,776.2⌋ = 2,776.
+    // L = ⌊132,200 × 500,000 / 4,060,000⌋ = ⌊16,280.79⌋ = 16,280; L_R = ⌊2,776 × 500,000 /
+    // 4,060,000⌋ = ⌊341.87⌋ = 341; ⌊16,280 × 12%⌋ = ⌊1,953.6⌋ = 1,953; ⌊16,280 × 18%⌋ =
+    // ⌊2,930.4⌋ = 2,930. F = 20,000: 16,280 and 341 national, then 3,379 left: 1,953 prefectural
+    // and 1,426 municipal, under its 2,930 limit. Nothing left over.
+    expect(result.foreignTaxCredit).toEqual({
+      foreignTax: 20_000,
+      foreignSourceIncome: 500_000,
+      adjustedForeignSourceIncome: 500_000,
+      totalIncome: 4_060_000,
+      incomeTax: 132_200,
+      manualForeignTax: 20_000,
+      limit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 2_930 },
+      credit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 1_426 },
+      excess: 0,
+    });
+    // ⌊(132,200 + 2,776 − 16,280 − 341) / 100⌋ × 100 = ⌊118,355 / 100⌋ × 100 = 118,300.
+    expect(result.nationalIncomeTax).toBe(118_300);
+    // 住民税 課税総所得金額 4,060,000 − 722,252 − 430,000 = 2,907,748 → 2,907,000: 市 174,420 −
+    // 1,500 = 172,920 − 1,426 = 171,494 → 171,400; 県 116,280 − 1,000 = 115,280 − 1,953 =
+    // 113,327 → 113,300; + 5,000. Before the credit 172,900 + 115,200 = 288,100.
+    expect(result.residenceTax.city.cityIncomeTax).toBe(171_400);
+    expect(result.residenceTax.prefecture.prefecturalIncomeTax).toBe(113_300);
+    expect(result.residenceTax.totalResidenceTax).toBe(289_700);
+    expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBe(288_100);
+    expect(result.foreignTaxPaid).toBe(20_000);
+    // 118,300 + 20,000.
+    expect(incomeTaxPaid(result)).toBe(138_300);
+    // 5,500,000 − 118,300 − 289,700 − 722,252 − 20,000.
+    expect(result.takeHomeIncome).toBe(4_349_748);
+  });
+
+  it('case K′: has no limit with no foreign-source income, so the foreign tax is only paid', () => {
+    const result = calculateTaxes({
+      ...salaryInputs(),
+      foreignTaxCredit: { foreignTax: 20_000 },
+    });
+
+    expect(result.foreignTaxCredit).toEqual({
+      foreignTax: 20_000,
+      foreignSourceIncome: 0,
+      adjustedForeignSourceIncome: 0,
+      totalIncome: 3_560_000,
+      incomeTax: 89_850,
+      manualForeignTax: 20_000,
+      limit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+      credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
+      excess: 20_000,
+    });
+    expect(result.nationalIncomeTax).toBe(91_700);
+    expect(result.residenceTax.totalResidenceTax).toBe(243_100);
+    // 3,942,948 − 20,000.
+    expect(result.takeHomeIncome).toBe(3_922_948);
+  });
+
+  it('leaves the results unchanged when nothing is entered by hand', () => {
+    expect(
+      calculateTaxes({
+        ...salaryInputs(),
+        foreignTaxCredit: { foreignTax: 0 },
+      }),
+    ).toEqual(calculateTaxes(salaryInputs()));
+  });
+
+  it('rejects foreign-tax figures that cannot apply', () => {
+    expect(() =>
+      calculateTaxes(salaryInputs([{ ...foreignDividend(true), issuerDomicile: 'domestic' }])),
+    ).toThrow('Only a dividend from a foreign company or fund has foreign tax withheld.');
+    expect(() => calculateTaxes(salaryInputs([foreignDividend(true, 1_000_001)]))).toThrow(
+      'Foreign tax cannot be more than the gross dividend.',
+    );
+    expect(() => calculateTaxes(salaryInputs([foreignDividend(false, -1)]))).toThrow(
+      'Foreign tax cannot be negative.',
+    );
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([{ ...foreignInterest(100_000, 10_000), payerDomicile: 'domestic' }]),
+      ),
+    ).toThrow('Foreign tax on interest paid in Japan is not supported.');
+    expect(() => calculateTaxes(salaryInputs([foreignInterest(100_000, 100_001)]))).toThrow(
+      'Foreign tax cannot be more than the gross interest.',
+    );
+    expect(() => calculateTaxes(salaryInputs([account(0, 800_000, 800_001, 0, false)]))).toThrow(
+      'Foreign dividends cannot be more than the dividends received into the account.',
+    );
+    expect(() =>
+      calculateTaxes(salaryInputs([account(0, 800_000, 500_000, 500_001, true)])),
+    ).toThrow('Foreign tax cannot be more than the foreign dividends.');
+    expect(() =>
+      calculateTaxes({
+        ...salaryInputs(),
+        foreignTaxCredit: { foreignTax: -1 },
+      }),
+    ).toThrow('Foreign tax cannot be negative.');
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'publicPension',
+            id: 'pension',
+            amount: 1_000_000,
+            payerDomicile: 'domestic',
+            foreignTax: 1,
+          },
+        ]),
+      ),
+    ).toThrow('Foreign tax can be entered only for a pension from a foreign system.');
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'publicPension',
+            id: 'pension',
+            amount: 1_000_000,
+            payerDomicile: 'foreign',
+            treatyCredit: 'unavailable',
+            foreignTax: 1,
+          },
+        ]),
+      ),
+    ).toThrow(
+      'Foreign tax can be entered only when a tax credit is available in Japan under a tax treaty.',
+    );
+    expect(() =>
+      calculateTaxes(
+        salaryInputs([
+          {
+            type: 'publicPension',
+            id: 'pension',
+            amount: 1_000_000,
+            payerDomicile: 'foreign',
+            foreignTax: 1_000_001,
+          },
+        ]),
+      ),
+    ).toThrow('Foreign tax cannot be more than the gross pension.');
+  });
+
+  describe('pensions from a foreign system (所令221条の6①)', () => {
+    // A 65–69 pensioner in Tokyo with social insurance entered as 0, income year 2026. The
+    // 公的年金等控除 at 65 and over, with other income up to 10,000,000, is the larger of 1,100,000
+    // and 400,000 + 25% of the gross above 500,000 (up to 3,600,000 of it).
+    const pensionerInputs = (streams: TakeHomeInputs['incomeStreams']): TakeHomeInputs => ({
+      ...salaryInputs(),
+      incomeStreams: streams,
+      ageRange: 'age65to69',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+    });
+    const pension = (
+      id: string,
+      amount: number,
+      payerDomicile: 'domestic' | 'foreign',
+      foreignTax = 0,
+      treatyCredit: PublicPensionTreatyCredit = payerDomicile === 'foreign'
+        ? 'available'
+        : 'unavailable',
+    ) => ({ type: 'publicPension' as const, id, amount, payerDomicile, foreignTax, treatyCredit });
+    const noCredit = { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 };
+
+    it('credits nothing on a foreign pension alone that leaves no income tax', () => {
+      const result = calculateTaxes(
+        pensionerInputs([pension('foreign', 2_000_000, 'foreign', 100_000)]),
+      );
+
+      // 400,000 + 25% × 1,500,000 = 775,000 < 1,100,000, so the deduction is 1,100,000:
+      // T = A = 900,000, under the 1,040,000 基礎控除, so B = 0 and there is no limit.
+      expect(result.netPublicPensionIncome).toBe(900_000);
+      expect(result.foreignTaxCredit).toEqual({
+        foreignTax: 100_000,
+        foreignSourceIncome: 900_000,
+        adjustedForeignSourceIncome: 900_000,
+        totalIncome: 900_000,
+        incomeTax: 0,
+        limit: noCredit,
+        credit: noCredit,
+        excess: 100_000,
+      });
+      expect(result.nationalIncomeTax).toBe(0);
+      // 900,000 − 430,000 = 470,000: 市 28,200 − 1,500 = 26,700; 県 18,800 − 1,000 = 17,800;
+      // + 5,000 = 49,500.
+      expect(result.residenceTax.totalResidenceTax).toBe(49_500);
+      expect(result.foreignTaxPaid).toBe(100_000);
+      // 2,000,000 − 49,500 − 100,000.
+      expect(result.takeHomeIncome).toBe(1_850_500);
+    });
+
+    it("takes the foreign pension's own deduction beside a Japanese pension", () => {
+      const result = calculateTaxes(
+        pensionerInputs([
+          pension('foreign', 2_000_000, 'foreign', 100_000),
+          pension('japanese', 1_500_000, 'domestic'),
+        ]),
+      );
+
+      // Together: 400,000 + 25% × 3,000,000 = 1,150,000 ≥ 1,100,000, so T = 3,500,000 −
+      // 1,150,000 = 2,350,000. The foreign pension alone: 2,000,000 − 1,100,000 = 900,000 = A.
+      // 課税総所得金額 2,350,000 − 1,040,000 = 1,310,000 at 5%: B = 65,500; R = ⌊1,375.5⌋ = 1,375.
+      // L = ⌊65,500 × 900,000 / 2,350,000⌋ = ⌊25,085.10⌋ = 25,085; L_R = ⌊1,375 × 900,000 /
+      // 2,350,000⌋ = ⌊526.59⌋ = 526; ⌊25,085 × 12%⌋ = ⌊3,010.2⌋ = 3,010; ⌊25,085 × 18%⌋ =
+      // ⌊4,515.3⌋ = 4,515. All used: 100,000 − 25,085 − 526 − 3,010 − 4,515 = 66,864 left over.
+      expect(result.netPublicPensionIncome).toBe(2_350_000);
+      const limits = {
+        incomeTax: 25_085,
+        reconstructionSurtax: 526,
+        prefecture: 3_010,
+        city: 4_515,
+      };
+      expect(result.foreignTaxCredit).toEqual({
+        foreignTax: 100_000,
+        foreignSourceIncome: 900_000,
+        adjustedForeignSourceIncome: 900_000,
+        totalIncome: 2_350_000,
+        incomeTax: 65_500,
+        limit: limits,
+        credit: limits,
+        excess: 66_864,
+      });
+      // ⌊(65,500 + 1,375 − 25,085 − 526) / 100⌋ × 100 = ⌊41,264 / 100⌋ × 100 = 41,200.
+      expect(result.nationalIncomeTax).toBe(41_200);
+      // 2,350,000 − 430,000 = 1,920,000: 市 115,200 − 1,500 = 113,700 − 4,515 = 109,185 →
+      // 109,100; 県 76,800 − 1,000 = 75,800 − 3,010 = 72,790 → 72,700; + 5,000 = 186,800. Before
+      // the credit 113,700 + 75,800 = 189,500.
+      expect(result.residenceTax.totalResidenceTax).toBe(186_800);
+      expect(result.residenceTaxIncomeBasedBeforeForeignTaxCredit).toBe(189_500);
+      // 3,500,000 − 41,200 − 186,800 − 100,000.
+      expect(result.takeHomeIncome).toBe(3_172_000);
+    });
+
+    it('adds no foreign-source income for a foreign pension under its own minimum deduction', () => {
+      const result = calculateTaxes(
+        pensionerInputs([
+          pension('foreign', 1_000_000, 'foreign', 50_000),
+          pension('japanese', 2_500_000, 'domestic'),
+        ]),
+      );
+
+      // The foreign pension alone is under the 1,100,000 minimum, so A = 0, while the pensions
+      // together are the 3,500,000 above: T = 2,350,000, B = 65,500, R = 1,375, and no limit.
+      expect(result.foreignTaxCredit).toEqual({
+        foreignTax: 50_000,
+        foreignSourceIncome: 0,
+        adjustedForeignSourceIncome: 0,
+        totalIncome: 2_350_000,
+        incomeTax: 65_500,
+        limit: noCredit,
+        credit: noCredit,
+        excess: 50_000,
+      });
+      // ⌊(65,500 + 1,375) / 100⌋ × 100 = ⌊66,875 / 100⌋ × 100 = 66,800; 住民税 113,700 + 75,800 +
+      // 5,000 = 194,500.
+      expect(result.nationalIncomeTax).toBe(66_800);
+      expect(result.residenceTax.totalResidenceTax).toBe(194_500);
+      // 3,500,000 − 66,800 − 194,500 − 50,000.
+      expect(result.takeHomeIncome).toBe(3_188_700);
+    });
+
+    it('judges the band of the foreign pension on the other foreign-source income only', () => {
+      // Beside 11,000,000 of Japanese miscellaneous income the pensions fall in the second band
+      // (other income over 10,000,000): max(300,000 + 375,000, 1,000,000) = 1,000,000, net
+      // 1,000,000. The foreign-source part is judged with no other foreign-source income, in the
+      // first band: 2,000,000 − 1,100,000 = 900,000.
+      const beside = calculateTaxes(
+        pensionerInputs([
+          pension('foreign', 2_000_000, 'foreign'),
+          { type: 'miscellaneous', id: 'misc', amount: 11_000_000 },
+        ]),
+      );
+      expect(beside.netPublicPensionIncome).toBe(1_000_000);
+      expect(beside.foreignTaxCredit?.foreignSourceIncome).toBe(900_000);
+
+      // Beside 11,000,000 of interest paid outside Japan, which is foreign-source, both are in the
+      // second band: A = 11,000,000 + 1,000,000.
+      const withForeignInterest = calculateTaxes(
+        pensionerInputs([pension('foreign', 2_000_000, 'foreign'), foreignInterest(11_000_000, 0)]),
+      );
+      expect(withForeignInterest.netPublicPensionIncome).toBe(1_000_000);
+      expect(withForeignInterest.foreignTaxCredit?.foreignSourceIncome).toBe(12_000_000);
+    });
+
+    it('treats a foreign pension with unavailable tax credit in Japan as having no foreign-source income', () => {
+      const result = calculateTaxes(
+        pensionerInputs([
+          pension('foreign', 2_000_000, 'foreign', 0, 'unavailable'),
+          foreignInterest(11_000_000, 0),
+        ]),
+      );
+      // Net pension income is calculated in Japan (1,000,000 in band 2)
+      expect(result.netPublicPensionIncome).toBe(1_000_000);
+      // But only the foreign interest contributes to foreignSourceIncome
+      expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(11_000_000);
+    });
+  });
+
+  describe('foreignPensionSourceIncome', () => {
+    it('computes net income of the foreign pension under its own deduction', () => {
+      // 2,000,000 at age 65-69: 1,100,000 minimum deduction -> 900,000
+      expect(foreignPensionSourceIncome(2_000_000, 'age65to69', 0, 2026)).toBe(900_000);
+      // Under 65: 400,000 + 25% × 1,500,000 = 775,000 deduction -> 1,225,000
+      expect(foreignPensionSourceIncome(2_000_000, 'age60to64', 0, 2026)).toBe(1_225_000);
+    });
+
+    it('is 0 when gross is 0 or under the deduction', () => {
+      expect(foreignPensionSourceIncome(0, 'age65to69', 0, 2026)).toBe(0);
+      expect(foreignPensionSourceIncome(1_000_000, 'age65to69', 0, 2026)).toBe(0);
+    });
+
+    it('judges the band by other foreign-source income', () => {
+      // Other foreign-source income over 10,000,000: 1,000,000 minimum deduction at 65+ -> 1,000,000
+      expect(foreignPensionSourceIncome(2_000_000, 'age65to69', 11_000_000, 2026)).toBe(1_000_000);
+    });
+  });
+
+  describe('property-based accounting and statutory invariants', () => {
+    // Deterministic PRNG (Mulberry32) so randomized multi-stream scenarios are 100% reproducible.
+    const createPrng = (seed: number) => {
+      let state = seed >>> 0;
+      return () => {
+        state = (state + 0x6d2b79f5) >>> 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    };
+
+    it('preserves cash-flow conservation, statutory rounding, and credit bounds across 250 randomized portfolios', () => {
+      const rand = createPrng(0x5eed_2026);
+      const randInt = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min;
+      const pick = <T>(arr: readonly T[]): T => arr[randInt(0, arr.length - 1)]!;
+
+      const ageRanges: readonly TaxpayerAgeRange[] = [
+        'age20to39',
+        'age40to59',
+        'age60to64',
+        'age65to69',
+        'age70to74',
+        'age75plus',
+      ];
+      const years = [2025, 2026, 2027] as const;
+
+      for (let i = 0; i < 250; i++) {
+        const ageRange = pick(ageRanges);
+        const incomeYear = pick(years);
+        const provider =
+          ageRange === 'age75plus'
+            ? LATTER_STAGE_ELDERLY_ID
+            : pick([DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID, DEPENDENT_COVERAGE_ID]);
+
+        const streams: TakeHomeInputs['incomeStreams'] = [];
+
+        // Optionally include salary / business / pension
+        if (rand() < 0.75) {
+          streams.push({
+            id: 'sal',
+            type: 'salary',
+            amount: pick([0, 800_000, 3_500_000, 7_200_000, 18_000_000, 45_000_000]),
+            frequency: 'annual',
+          });
+        }
+        if (rand() < 0.3) {
+          streams.push({
+            id: 'biz',
+            type: 'business',
+            amount: randInt(100_000, 8_000_000),
+            blueFilerDeduction: pick([0, 100_000, 550_000, 650_000]),
+          });
+        }
+        if (rand() < 0.35) {
+          const payerDomicile = pick(['domestic', 'foreign'] as const);
+          const amount = randInt(500_000, 4_000_000);
+          const treatyCredit =
+            payerDomicile === 'foreign' ? pick(['available', 'unavailable'] as const) : undefined;
+          streams.push({
+            id: 'pen',
+            type: 'publicPension',
+            amount,
+            payerDomicile,
+            foreignTax:
+              payerDomicile === 'foreign' && treatyCredit === 'available'
+                ? randInt(0, Math.floor(amount * 0.2))
+                : 0,
+            ...(treatyCredit !== undefined && { treatyCredit }),
+          });
+        }
+
+        // 0–2 Withholding designated accounts (including high-income minimum tax scale in some cases)
+        const numAccounts = randInt(0, 2);
+        for (let a = 0; a < numAccounts; a++) {
+          const highScale = rand() < 0.12;
+          const capitalGains = highScale
+            ? randInt(150_000_000, 400_000_000)
+            : randInt(-3_000_000, 6_000_000);
+          const dividends = randInt(0, 3_000_000);
+          const foreignDividends = randInt(0, dividends);
+          const foreignTax = randInt(0, Math.floor(foreignDividends * 0.3));
+          const reportsCapitalGains = rand() < 0.5;
+          // Respect 措法37条の11の6⑩ when reporting a loss alongside dividends
+          const reportsDividends =
+            (capitalGains < 0 && dividends > 0 && reportsCapitalGains) || rand() < 0.5;
+          streams.push({
+            id: `acct-${a}`,
+            type: 'withholdingAccount',
+            capitalGains,
+            dividends,
+            foreignDividends,
+            foreignTax,
+            reportsCapitalGains,
+            reportsDividends,
+          });
+        }
+
+        // Outside capital gains
+        if (rand() < 0.5) {
+          streams.push({
+            id: 'cg',
+            type: 'capitalGains',
+            shareType: 'listed',
+            account: pick(['domesticNoWithholding', 'foreign'] as const),
+            amount: randInt(-2_500_000, 5_000_000),
+          });
+        }
+
+        // Outside dividends
+        if (rand() < 0.5) {
+          const paymentChannel = pick(['domestic', 'abroad'] as const);
+          const issuerDomicile =
+            paymentChannel === 'abroad' ? 'foreign' : pick(['domestic', 'foreign'] as const);
+          const isReported = paymentChannel === 'abroad' ? true : rand() < 0.5;
+          const amount = randInt(10_000, 2_500_000);
+          const foreignTax =
+            issuerDomicile === 'foreign' ? randInt(0, Math.floor(amount * 0.25)) : 0;
+          streams.push({
+            id: 'div',
+            type: 'dividends',
+            shareType: 'listed',
+            paymentChannel,
+            isReported,
+            issuerDomicile,
+            foreignTax,
+            amount,
+          });
+        }
+
+        // Interest
+        if (rand() < 0.4) {
+          const payerDomicile = pick(['domestic', 'foreign'] as const);
+          const amount = randInt(5_000, 1_000_000);
+          const foreignTax = payerDomicile === 'foreign' ? randInt(0, Math.floor(amount * 0.2)) : 0;
+          streams.push({
+            id: 'int',
+            type: 'interest',
+            payerDomicile,
+            foreignTax,
+            amount,
+          });
+        }
+
+        if (streams.length === 0) continue;
+
+        const inputs: TakeHomeInputs = {
+          ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+          incomeStreams: streams,
+          reportedDividendsTaxation: pick(['separate', 'aggregate'] as const),
+          ageRange,
+          healthInsuranceProvider: provider,
+          region: 'Tokyo',
+          dependents:
+            rand() < 0.3
+              ? [
+                  {
+                    id: 'sp1',
+                    relationship: 'spouse',
+                    ageRange: 'under65',
+                    income: {
+                      grossEmploymentIncome: randInt(0, 1_500_000),
+                      grossPublicPensionIncome: 0,
+                      otherNetIncome: 0,
+                    },
+                    disability: 'none',
+                    isCohabiting: true,
+                  },
+                ]
+              : [],
+          dcPlanContributions: pick([0, 276_000]),
+          manualSocialInsuranceEntry: false,
+          manualSocialInsuranceAmount: 0,
+          incomeYear,
+          ...(rand() < 0.25 && {
+            homeLoanTaxCredit: {
+              moveInYear: 2023,
+              creditAmount: randInt(50_000, 210_000),
+              isTokuteiShutoku: true,
+            },
+          }),
+          ...(rand() < 0.25 && {
+            foreignTaxCredit: {
+              foreignTax: randInt(10_000, 300_000),
+            },
+          }),
+        };
+
+        const results = calculateTaxes(inputs);
+
+        // 1. All primary outputs are finite safe integers
+        for (const val of [
+          results.annualIncome,
+          results.takeHomeIncome,
+          results.nationalIncomeTax,
+          results.residenceTax.totalResidenceTax,
+          results.healthInsurance,
+          results.pensionPayments,
+          results.totalNetIncome,
+          results.furusatoNozei.limit,
+          results.furusatoNozei.outOfPocketCost,
+        ]) {
+          expect(Number.isSafeInteger(val)).toBe(true);
+        }
+
+        // 2. Cash-flow conservation when calculation is active
+        const isDefaultEmpty =
+          results.annualIncome <= 0 &&
+          results.takeHomeIncome === 0 &&
+          results.nationalIncomeTax === 0 &&
+          results.healthInsurance === 0 &&
+          results.pensionPayments === 0;
+        if (!isDefaultEmpty) {
+          const totalSocialInsurance =
+            results.socialInsuranceOverride ??
+            results.healthInsurance +
+              results.pensionPayments +
+              (results.employmentInsurance ?? 0) +
+              (results.longTermCareCategory1Premium ?? 0);
+          expect(results.takeHomeIncome).toBe(
+            results.annualIncome -
+              totalSocialInsurance -
+              incomeTaxPaid(results) -
+              residenceTaxPaid(results),
+          );
+        }
+
+        // 3. Statutory rounding & non-negativity
+        expect(results.nationalIncomeTax).toBeGreaterThanOrEqual(0);
+        expect(results.nationalIncomeTax % 100).toBe(0);
+        expect(results.residenceTax.city.cityIncomeTax).toBeGreaterThanOrEqual(0);
+        expect(results.residenceTax.city.cityIncomeTax % 100).toBe(0);
+        expect(results.residenceTax.prefecture.prefecturalIncomeTax).toBeGreaterThanOrEqual(0);
+        expect(results.residenceTax.prefecture.prefecturalIncomeTax % 100).toBe(0);
+
+        if (results.taxableIncomeForNationalIncomeTax !== undefined) {
+          expect(results.taxableIncomeForNationalIncomeTax).toBeGreaterThanOrEqual(0);
+          expect(results.taxableIncomeForNationalIncomeTax % 1000).toBe(0);
+        }
+        if (results.taxableIncomeForResidenceTax !== undefined) {
+          expect(results.taxableIncomeForResidenceTax).toBeGreaterThanOrEqual(0);
+          expect(results.taxableIncomeForResidenceTax % 1000).toBe(0);
+        }
+
+        // 4. Separate-taxation invariants
+        const separate = results.investmentIncome?.reported?.separate;
+        if (separate) {
+          expect(separate.netIncome.capitalGains).toBeGreaterThanOrEqual(0);
+          expect(separate.netIncome.dividends).toBeGreaterThanOrEqual(0);
+          expect(separate.taxable.capitalGains).toBeGreaterThanOrEqual(0);
+          expect(separate.taxable.capitalGains % 1000).toBe(0);
+          expect(separate.taxable.capitalGains).toBeLessThanOrEqual(
+            separate.netIncome.capitalGains,
+          );
+          expect(separate.taxable.dividends).toBeGreaterThanOrEqual(0);
+          expect(separate.taxable.dividends % 1000).toBe(0);
+          expect(separate.taxable.dividends).toBeLessThanOrEqual(separate.netIncome.dividends);
+        }
+
+        // 5. Foreign Tax Credit conservation & bounds
+        const ftc = results.foreignTaxCredit;
+        if (ftc) {
+          expect(ftc.adjustedForeignSourceIncome).toBeGreaterThanOrEqual(0);
+          expect(ftc.adjustedForeignSourceIncome).toBeLessThanOrEqual(ftc.foreignSourceIncome);
+          expect(ftc.adjustedForeignSourceIncome).toBeLessThanOrEqual(Math.max(0, ftc.totalIncome));
+          expect(ftc.credit.incomeTax).toBeLessThanOrEqual(ftc.limit.incomeTax);
+          expect(ftc.credit.reconstructionSurtax).toBeLessThanOrEqual(
+            ftc.limit.reconstructionSurtax,
+          );
+          expect(ftc.credit.prefecture).toBeLessThanOrEqual(ftc.limit.prefecture);
+          expect(ftc.credit.city).toBeLessThanOrEqual(ftc.limit.city);
+          expect(
+            ftc.credit.incomeTax +
+              ftc.credit.reconstructionSurtax +
+              ftc.credit.prefecture +
+              ftc.credit.city +
+              ftc.excess,
+          ).toBe(ftc.foreignTax);
+        }
+
+        // 6. High-Income Minimum Tax disallowance of 申告不要 on positive listed bases
+        if (results.highIncomeMinimumTax) {
+          expect(results.highIncomeMinimumTax.additionalIncomeTax).toBeGreaterThan(0);
+          const withheld = results.investmentIncome?.withheld;
+          if (withheld) {
+            expect(withheld.taxedAmount).toBe(withheld.interest);
+          }
+        }
+      }
+    });
   });
 });

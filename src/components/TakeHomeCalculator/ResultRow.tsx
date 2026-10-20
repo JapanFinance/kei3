@@ -15,7 +15,8 @@ const labelTooltips: Record<string, string> = {
   'Health Insurance': 'Mandatory health insurance contributions.',
   'Pension Payments': 'Employees/National pension system contributions.',
   'Employment Insurance': 'Insurance for unemployment and work-related benefits.',
-  'Income Tax': 'Income tax paid to the national government.',
+  'Income Tax':
+    'Income tax paid to the national government, and any foreign tax paid on the income abroad.',
   'Residence Tax':
     'Local income tax paid to the local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If income fluctuates from year to year, consider the effect on the residence tax billed in arrears.',
   'Total Deductions': 'Sum of all taxes and social insurance payments.',
@@ -175,13 +176,15 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       break;
   }
 
-  // Responsive: stack label/value vertically on mobile
-  const leftColumnLayoutSx: SxProps<Theme> = isMobile
-    ? { width: '60%', textAlign: 'left', pr: 1 }
-    : { flexBasis: '60%', textAlign: 'left', pr: 2 };
-  const rightColumnLayoutSx: SxProps<Theme> = isMobile
-    ? { width: '40%', textAlign: 'right' }
-    : { flexBasis: '40%', textAlign: 'right' };
+  // The value keeps its own width and the label takes the rest, so a label wraps only when the
+  // row is too narrow for both, not at a fixed share of the row.
+  const leftColumnLayoutSx: SxProps<Theme> = {
+    flex: '1 1 auto',
+    minWidth: 0,
+    textAlign: 'left',
+    pr: isMobile ? 1 : 2,
+  };
+  const rightColumnLayoutSx: SxProps<Theme> = { flexShrink: 0, ml: 'auto', textAlign: 'right' };
 
   // Add tooltip and icon if available
   const labelText = (

@@ -18,7 +18,11 @@ import {
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, DEFAULT_INCOME_YEAR } from '../types/tax';
+import {
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  DEFAULT_INCOME_YEAR,
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+} from '../types/tax';
 
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -27,6 +31,7 @@ const baseState: TakeHomeFormState = {
   incomeMode: 'salary',
   incomeStreams: [{ id: 'default-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
   savedIncomeStreams: [],
+  reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   longTermCareCategory1ManualEntry: false,
   longTermCareCategory1Premium: 0,
   ageRange: 'age20to39',
@@ -514,7 +519,15 @@ describe('takeHomeFormReducer', () => {
 
       const result = takeHomeFormReducer(state, {
         type: 'incomeStreamsChanged',
-        streams: [{ id: 'p1', type: 'publicPension', amount: 2_400_000 }],
+        streams: [
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 2_400_000,
+          },
+        ],
       });
 
       expect(result.annualIncome).toBe(2_400_000);
@@ -758,6 +771,54 @@ describe('takeHomeFormReducer', () => {
         DEPENDENT_COVERAGE_ID,
         NATIONAL_HEALTH_INSURANCE_ID,
       ]);
+    });
+
+    it('counts investment receipts toward the 年間収入 whatever their tax election', () => {
+      const advanced = { ...baseState, incomeMode: 'advanced' as const };
+      const salary = (amount: number) => ({
+        id: 's1',
+        type: 'salary' as const,
+        amount,
+        frequency: 'annual' as const,
+      });
+      const providerIds = (streams: TakeHomeFormState['incomeStreams']) =>
+        availableProvidersFor({ ...advanced, incomeStreams: streams }).map(o => o.id);
+
+      // 1,000,000 of salary is under the threshold; 300,000 of dividends carries the 年間収入 to
+      // it whether the dividends are withheld or reported — the test is a social-insurance rule,
+      // not a matter of the tax election.
+      expect(providerIds([salary(1_000_000)])).toContain(DEPENDENT_COVERAGE_ID);
+      for (const isReported of [false, true]) {
+        expect(
+          providerIds([
+            salary(1_000_000),
+            {
+              id: 'd1',
+              type: 'dividends',
+              shareType: 'listed',
+              paymentChannel: 'domestic',
+              isReported,
+              issuerDomicile: 'domestic',
+              foreignTax: 0,
+              amount: 300_000,
+            },
+          ]),
+        ).not.toContain(DEPENDENT_COVERAGE_ID);
+      }
+
+      // A year's capital gains count when positive; a losing year lowers nothing.
+      const gains = (amount: number) => ({
+        id: 'g1',
+        type: 'withholdingAccount' as const,
+        capitalGains: amount,
+        dividends: 0,
+        foreignDividends: 0,
+        foreignTax: 0,
+        reportsCapitalGains: false,
+        reportsDividends: false,
+      });
+      expect(providerIds([salary(1_000_000), gains(300_000)])).not.toContain(DEPENDENT_COVERAGE_ID);
+      expect(providerIds([salary(1_290_000), gains(-300_000)])).toContain(DEPENDENT_COVERAGE_ID);
     });
   });
 });

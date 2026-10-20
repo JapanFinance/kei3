@@ -1,0 +1,127 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import React from 'react';
+
+import type { AggregateTaxationIncome } from '../../../types/tax';
+import { formatJPY } from '../../../utils/formatters';
+import type { Source } from '../../ui/SourceLinks';
+import SourceLinks from '../../ui/SourceLinks';
+import { DetailedTooltip } from '../../ui/Tooltips';
+
+interface NetAggregateInvestmentIncomeTooltipProps {
+  aggregate: AggregateTaxationIncome;
+}
+
+const CELL_SX = { padding: '2px 0' };
+const TOTAL_CELL_SX = { padding: '4px 0', fontWeight: 600 };
+
+/**
+ * Tooltip for the "Net Investment Income (aggregate)" row: the investment income taxed with the
+ * other income rather than apart from it, which is dividends reported under 総合課税 and interest
+ * paid outside Japan. Renders its own DetailedTooltip trigger, so callers place it directly after
+ * the row label. Shared by the Taxes and Social Insurance tabs.
+ */
+const NetAggregateInvestmentIncomeTooltip: React.FC<NetAggregateInvestmentIncomeTooltipProps> = ({
+  aggregate,
+}) => {
+  const { dividends, interest } = aggregate;
+  const sources: Source[] = [];
+  if (dividends > 0) {
+    sources.push(
+      {
+        href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+        label: 'Dividend income (配当所得) - NTA',
+      },
+      {
+        href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1250.htm',
+        label: 'Dividend tax credit (配当控除) - NTA',
+      },
+    );
+  }
+  if (interest > 0) {
+    sources.push({
+      href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
+      label: 'Interest income (利子所得) - NTA',
+    });
+  }
+
+  return (
+    <DetailedTooltip title="Investment Income under Aggregate Taxation">
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '0.9rem',
+          marginBottom: '8px',
+        }}
+      >
+        <tbody>
+          {dividends > 0 && (
+            <tr>
+              <Box component="td" sx={CELL_SX}>
+                Dividends (配当所得):
+              </Box>
+              <Box component="td" sx={{ ...CELL_SX, textAlign: 'right', fontWeight: 500 }}>
+                {formatJPY(dividends)}
+              </Box>
+            </tr>
+          )}
+          {interest > 0 && (
+            <tr>
+              <Box component="td" sx={CELL_SX}>
+                Interest paid outside Japan (利子所得):
+              </Box>
+              <Box component="td" sx={{ ...CELL_SX, textAlign: 'right', fontWeight: 500 }}>
+                {formatJPY(interest)}
+              </Box>
+            </tr>
+          )}
+          <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+            <Box component="td" sx={TOTAL_CELL_SX}>
+              Net Investment Income (aggregate):
+            </Box>
+            <Box component="td" sx={{ ...TOTAL_CELL_SX, textAlign: 'right' }}>
+              {formatJPY(dividends + interest)}
+            </Box>
+          </Box>
+        </tbody>
+      </table>
+
+      {dividends > 0 && (
+        <>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Dividends reported under aggregate taxation (総合課税) count toward total net income
+            (合計所得金額) and are taxed in the progressive brackets and at the 10% residence tax
+            rate together with other income.
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            The dividend tax credit (配当控除) that offsets part of that tax for a dividend from a
+            Japanese company is not supported yet, so the tax shown is overstated for those. Capital
+            losses cannot offset dividends subject to aggregate taxation.
+          </Typography>
+        </>
+      )}
+
+      {interest > 0 && (
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          Interest paid outside Japan had no Japanese tax withheld on it, so the whole amount is
+          interest income that counts toward total net income (合計所得金額) and is taxed in the
+          progressive brackets and at the 10% residence rate together with the other income.
+        </Typography>
+      )}
+
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Tax another country withholds, such as on a foreign company's dividends or a foreign bank's
+        interest, is credited against the Japanese income tax and residence tax up to a limit,
+        through the foreign tax credit (外国税額控除) shown on the Taxes tab.
+      </Typography>
+
+      <SourceLinks sources={sources} />
+    </DetailedTooltip>
+  );
+};
+
+export default NetAggregateInvestmentIncomeTooltip;

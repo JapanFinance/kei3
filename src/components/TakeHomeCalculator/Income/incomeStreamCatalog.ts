@@ -11,7 +11,12 @@ import { formatJPY } from '../../../utils/formatters';
  * The income classification (所得区分) an Advanced-mode income stream belongs to. Groups the
  * streams in {@link IncomeDetailsModal} and the types offered when adding one.
  */
-export type IncomeCategoryKey = 'employment' | 'business' | 'miscellaneous' | 'publicPension';
+export type IncomeCategoryKey =
+  | 'employment'
+  | 'business'
+  | 'miscellaneous'
+  | 'publicPension'
+  | 'investment';
 
 export interface IncomeCategory {
   key: IncomeCategoryKey;
@@ -48,6 +53,12 @@ export const INCOME_CATEGORIES: readonly IncomeCategory[] = [
     addLabel: 'Add Public Pension',
     chipColor: 'secondary',
   },
+  {
+    key: 'investment',
+    heading: 'Investment Income (配当・譲渡・利子)',
+    addLabel: 'Add Investment Income',
+    chipColor: 'info',
+  },
 ];
 
 export const getIncomeCategory = (key: IncomeCategoryKey): IncomeCategory =>
@@ -55,6 +66,12 @@ export const getIncomeCategory = (key: IncomeCategoryKey): IncomeCategory =>
 
 export interface IncomeStreamTypeInfo {
   label: string;
+  /**
+   * A second, smaller line under {@link label} where the type is offered and in its form's
+   * heading: the official term for it, or what it covers. Kept out of the label so that the label
+   * fits a phone screen.
+   */
+  labelDetail?: string;
   category: IncomeCategoryKey;
   /** Uppercase badge on a stream in the list; its colour comes from the category. */
   chipLabel: string;
@@ -62,6 +79,8 @@ export interface IncomeStreamTypeInfo {
   amountHelperText?: string;
   /** Maximum number of streams of this type; unlimited when omitted. */
   maxCount?: number;
+  /** Lower bound on the entered amount; 0 (no negative entry) when omitted. */
+  min?: number;
 }
 
 /** Per-type presentation, in display order within each category. */
@@ -93,6 +112,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     category: 'employment',
     chipLabel: 'STOCK',
     amountLabel: 'Gross Income',
+    amountHelperText: 'Annual total across vests/exercises, or one entry per vest.',
   },
   business: {
     label: 'Business',
@@ -117,6 +137,41 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     amountLabel: 'Annual Gross Pension Income',
     amountHelperText:
       'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.',
+  },
+  withholdingAccount: {
+    label: 'Withholding Designated Account',
+    labelDetail: '特定口座（源泉徴収あり）',
+    category: 'investment',
+    chipLabel: 'ACCOUNT',
+    amountLabel: 'Net Capital Gains (譲渡損益)',
+    amountHelperText: 'The net gain or loss on sales; enter a loss as a negative amount.',
+    min: Number.MIN_SAFE_INTEGER,
+  },
+  capitalGains: {
+    label: 'Capital Gains',
+    labelDetail: 'Other accounts',
+    category: 'investment',
+    chipLabel: 'CAPITAL GAINS',
+    amountLabel: 'Net Capital Gains',
+    amountHelperText:
+      'Combine sales for the year or enter separately, net of costs (negative for a loss).',
+    min: Number.MIN_SAFE_INTEGER,
+  },
+  dividends: {
+    label: 'Dividends',
+    labelDetail: 'Other accounts or direct payout',
+    category: 'investment',
+    chipLabel: 'DIVIDEND',
+    amountLabel: 'Gross Dividends',
+    amountHelperText: 'Enter in yen, before withholding.',
+  },
+  interest: {
+    label: 'Interest',
+    labelDetail: 'Outside a designated withholding account',
+    category: 'investment',
+    chipLabel: 'INTEREST',
+    amountLabel: 'Gross Interest',
+    amountHelperText: 'Annual total (or per payment) before withholding.',
   },
 };
 

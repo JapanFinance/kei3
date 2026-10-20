@@ -22,16 +22,27 @@ import type {
   NonTaxableResidenceTaxStatus,
   TakeHomeResults,
   TakeHomeInputs,
+  WithheldInvestmentIncome,
 } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
+import { applyDeductionSpillover } from '../../../utils/investmentIncome';
 import { NON_TAXABLE_STATUS_INCOME_LIMIT } from '../../../utils/residenceTax';
+import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import ReferenceTable from '../../ui/ReferenceTable';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
 import AdditionalDeductionsTooltip from './AdditionalDeductionsTooltip';
-import AdjustmentCreditTooltip from './AdjustmentCreditTooltip';
+import {
+  ForeignTaxCreditTooltip,
+  ForeignTaxPaidTooltip,
+  IncomeTaxCreditTooltip,
+  SurtaxCreditTooltip,
+  hasForeignTaxCreditDetails,
+} from './ForeignTaxCreditTooltips';
+import { HighIncomeMinimumTaxTooltip } from './HighIncomeMinimumTaxTooltip';
+import IncomeBasedPortionTooltip from './IncomeBasedPortionTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
 import {
   buildNationalBasicDeductionRows,
@@ -41,6 +52,7 @@ import {
   buildNationalIncomeTaxBracketRows,
   getNationalIncomeTaxBracketHighlightIndex,
 } from './referenceTableHighlight';
+import ResidenceTaxCreditTooltip from './ResidenceTaxCreditTooltip';
 
 interface TaxesTabProps {
   results: TakeHomeResults;
@@ -157,11 +169,122 @@ const DependentDeductionTooltip: React.FC<DependentDeductionTooltipProps> = ({
 };
 
 const INCOME_BASED_SPLIT_ID = 'residence-tax-income-based-split';
+const INCOME_TAX_FOREIGN_CREDIT_ID = 'income-tax-foreign-tax-credit-details';
+
+/** A credit shown as a reduction, with a zero shown as ¥0 rather than as a negative zero. */
+const formatReduction = (amount: number): string => formatJPY(amount > 0 ? -amount : 0);
+
+/**
+ * The amounts the withholding is charged on, as label and amount pairs: each withholding designated
+ * account at its own base (its dividends after the foreign tax, with its loss netted against them,
+ * never below zero), then the dividends outside an account less the foreign tax withheld on them,
+ * and the interest, taxed in full. Listing the accounts one by one is what makes the rows add up
+ * to the taxed amount when a loss in one account exceeds its dividends while another account has
+ * dividends.
+ */
+const withheldBaseRows = (base: WithheldInvestmentIncome): [label: string, amount: number][] => {
+  const accountLabel = (account: WithheldInvestmentIncome['accounts'][number]) =>
+    `Account ${account.position} (${[
+      account.capitalGains !== 0 && `sales ${formatJPY(account.capitalGains)}`,
+      account.dividends !== 0 && `dividends ${formatJPY(account.dividends)}`,
+      account.foreignTax && `foreign tax ${formatJPY(account.foreignTax)}`,
+    ]
+      .filter(Boolean)
+      .join(', ')})`;
+  return [
+    ...base.accounts.map((account): [string, number] => [accountLabel(account), account.base]),
+    ...(base.dividends !== 0
+      ? [['Dividends (other accounts)', base.dividends] as [string, number]]
+      : []),
+    ...(base.dividendsForeignTax
+      ? [['Less foreign tax on those dividends', -base.dividendsForeignTax] as [string, number]]
+      : []),
+    ...(base.interest !== 0 ? [['Interest paid in Japan', base.interest] as [string, number]] : []),
+  ];
+};
+
+/**
+ * Tooltip for the two rows of tax withheld on investment income left to withholding: what the
+ * withholding settles and the amounts it was taken from. One component for both rows, so the
+ * income-tax and residence-tax rows tell the same story.
+ */
+const WithheldInvestmentTaxTooltip: React.FC<{
+  withheld: WithheldInvestmentIncome;
+}> = ({ withheld }) => (
+  <DetailedTooltip title="Tax Withheld on Investment Income">
+    <Box>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Investment income left to withholding (申告不要): the payer withholds 15.315% income tax and
+        5% residence tax, which settles the tax in full. The amount is not reported on a tax return
+        and is in no assessed figure above.
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        In a withholding designated account, the year's net loss on sales is offset against the
+        dividends received into the account before withholding, so a loss can bring the tax on the
+        dividends down to nothing. Accounts are not combined with each other, so a loss left over in
+        one account does not reduce the tax on dividends in another.
+      </Typography>
+      {/* 措法9条の2③, 措令4条の5⑫ */}
+      {withheld.foreignTax !== undefined && (
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          On dividends from a foreign company or fund, the withholding is charged on the dividends
+          after the foreign tax withheld abroad. Left to withholding, that foreign tax is not
+          credited against Japanese tax.
+        </Typography>
+      )}
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+        <tbody>
+          {withheldBaseRows(withheld).map(([label, amount]) => (
+            <tr key={label}>
+              <td style={{ padding: '2px 0' }}>{label}:</td>
+              <td style={{ padding: '2px 0', textAlign: 'right' }}>{formatJPY(amount)}</td>
+            </tr>
+          ))}
+          <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+            <td style={{ padding: '4px 0', fontWeight: 600 }}>Taxed amount:</td>
+            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+              {formatJPY(withheld.taxedAmount)}
+            </td>
+          </Box>
+          <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+            <td style={{ padding: '4px 0', fontWeight: 600 }}>Income tax withheld (15.315%):</td>
+            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+              {formatJPY(withheld.tax.national)}
+            </td>
+          </Box>
+          <tr>
+            <td style={{ padding: '4px 0', fontWeight: 600 }}>Residence tax withheld (5%):</td>
+            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+              {formatJPY(withheld.tax.residence)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <SourceLinks
+        sources={[
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+            label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
+          },
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+            label: 'Dividend income (配当所得) - NTA',
+          },
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm',
+            label: 'Interest income (利子所得) - NTA',
+          },
+        ]}
+      />
+    </Box>
+  </DetailedTooltip>
+);
 
 const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showIncomeBasedSplit, setShowIncomeBasedSplit] = useState(false);
+  const [showIncomeTaxForeignCredit, setShowIncomeTaxForeignCredit] = useState(false);
   const totalSocialInsurance =
     results.socialInsuranceOverride ??
     results.healthInsurance +
@@ -171,9 +294,55 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome =
     results.totalNetIncome - totalSocialInsurance - results.dcPlanContributions;
-  const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
   const incomeYear = inputs.incomeYear;
   const basicDeductionTiers = getNationalBasicDeductionTiers(incomeYear);
+  // Investment income reported under 申告分離課税 is taxed inside the calculation below; the
+  // amounts left to withholding are settled by the tax withheld at source, which is shown as a
+  // row of its own under each tax and counted in that tax's total, as on the Summary tab. The
+  // foreign tax paid is a row of its own under income tax in the same way.
+  const separateInvestment = results.investmentIncome?.reported?.separate;
+  const separateInvestmentNetTotal = separateInvestment
+    ? separateInvestment.netIncome.capitalGains + separateInvestment.netIncome.dividends
+    : 0;
+  // Deductions spilled over from 総所得金額 onto the 申告分離課税 classes (措法8条の4③三,
+  // 37条の10⑥五), computed before the ¥1,000 taxable-income floor (通則法118条①) so the
+  // rounding remainder is not misattributed to leftover deductions.
+  const separateAfterDeductions = separateInvestment
+    ? applyDeductionSpillover(
+        {
+          aggregate: results.totalNetIncome - separateInvestmentNetTotal,
+          dividends: separateInvestment.netIncome.dividends,
+          capitalGains: separateInvestment.netIncome.capitalGains,
+        },
+        totalSocialInsurance +
+          results.dcPlanContributions +
+          (results.nationalIncomeTaxBasicDeduction ?? 0) +
+          (results.dependentDeductions?.nationalTax.total ?? 0) +
+          results.additionalDeductions.national +
+          (results.personalDeductions?.national ?? 0),
+      )
+    : undefined;
+  const separateDeductionSpillover = separateAfterDeductions
+    ? separateInvestmentNetTotal -
+      separateAfterDeductions.capitalGains -
+      separateAfterDeductions.dividends
+    : 0;
+  const withheldInvestment = results.investmentIncome?.withheld;
+  const withheldNational = withheldInvestment?.tax.national ?? 0;
+  const withheldResidence = withheldInvestment?.tax.residence ?? 0;
+  const foreignTaxCredit = results.foreignTaxCredit;
+  // The Foreign Tax Credit rows appear whenever foreign tax was paid, even when none of it is
+  // credited, so a figure entered in the hope of a credit is always answered; with no foreign tax
+  // they stay out of the way.
+  const showForeignTaxCredit = results.foreignTaxPaid !== undefined;
+  const withheldForeignTax = withheldInvestment?.foreignTax;
+  const foreignTaxCreditDetails = hasForeignTaxCreditDetails(foreignTaxCredit)
+    ? foreignTaxCredit
+    : undefined;
+  const totalIncomeTax = incomeTaxPaid(results);
+  const totalResidenceTax = residenceTaxPaid(results);
+  const totalTaxes = totalIncomeTax + totalResidenceTax;
+  const residenceSeparate = results.residenceTax.separate;
 
   // Which reference-table row applies to this taxpayer (undefined → highlight nothing). Basic
   // deductions key off 合計所得金額; the income-tax bracket off the (already 1,000-floored) taxable
@@ -192,19 +361,40 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
       ? getNationalIncomeTaxBracketHighlightIndex(results.taxableIncomeForNationalIncomeTax)
       : undefined;
 
-  // Residence income-based portion (所得割). When a home loan credit spills over to
-  // residence tax, show the portion BEFORE the spillover and the spillover as its own
-  // row so the line items sum to the total (otherwise the portion is already net of it).
+  // Residence income-based portion (所得割). When a home loan credit spills over to residence tax
+  // or the foreign tax credit reduces it, show the portion BEFORE those credits and each credit as
+  // its own row so the line items sum to the total (otherwise the portion is already net of
+  // them). The reductions are exact differences of the floored portions, so the rows reconcile.
   const residenceIncomeBasedPost =
     results.residenceTax.city.cityIncomeTax + results.residenceTax.prefecture.prefecturalIncomeTax;
-  const residenceIncomeBasedPre =
-    results.residenceTaxIncomeBasedBeforeHomeLoanCredit ?? residenceIncomeBasedPost;
-  const hasHomeLoanResidenceSpillover = (results.homeLoanTaxCredit?.appliedToResidenceTax ?? 0) > 0;
-  const residenceIncomeBasedDisplayed = hasHomeLoanResidenceSpillover
-    ? residenceIncomeBasedPre
-    : residenceIncomeBasedPost;
-  // Exact reduction (pre − post) so the displayed rows reconcile to the total.
-  const homeLoanResidenceReduction = residenceIncomeBasedPre - residenceIncomeBasedPost;
+  const residenceIncomeBasedBeforeForeignTaxCredit =
+    results.residenceTaxIncomeBasedBeforeForeignTaxCredit ?? residenceIncomeBasedPost;
+  const residenceIncomeBasedDisplayed =
+    results.residenceTaxIncomeBasedBeforeHomeLoanCredit ??
+    residenceIncomeBasedBeforeForeignTaxCredit;
+  const homeLoanResidenceReduction =
+    residenceIncomeBasedDisplayed - residenceIncomeBasedBeforeForeignTaxCredit;
+  const foreignTaxResidenceReduction =
+    residenceIncomeBasedBeforeForeignTaxCredit - residenceIncomeBasedPost;
+  const residenceForeignTaxCredit = results.residenceTax.foreignTaxCredit;
+  // The Municipal/Prefectural portion rows (and their merged Tax credit rows below) show the
+  // adjustment credit AND the foreign tax credit together, ahead of the Home Loan Tax Credit row,
+  // which differs from the calculation order (adjustment, then home loan, then foreign) but sums
+  // to the same totals either way, since subtraction order doesn't affect the total. So the
+  // header subtotal shown here needs to already be net of the foreign tax credit too, unlike
+  // residenceIncomeBasedDisplayed above.
+  const residenceIncomeBasedAfterTaxCredit =
+    residenceIncomeBasedDisplayed - foreignTaxResidenceReduction;
+  const municipalPortionAggregate = Math.round(results.residenceTax.taxableIncome * 0.06);
+  const municipalPortionSeparate = residenceSeparate
+    ? Math.round(residenceSeparate.cityIncomeTax)
+    : undefined;
+  const municipalPortionGross = municipalPortionAggregate + (municipalPortionSeparate ?? 0);
+  const prefecturalPortionAggregate = Math.round(results.residenceTax.taxableIncome * 0.04);
+  const prefecturalPortionSeparate = residenceSeparate
+    ? Math.round(residenceSeparate.prefecturalIncomeTax)
+    : undefined;
+  const prefecturalPortionGross = prefecturalPortionAggregate + (prefecturalPortionSeparate ?? 0);
 
   return (
     <Box>
@@ -434,6 +624,86 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {separateInvestment && (
+          <ResultRow
+            label={
+              <span>
+                Tax on Investment Income (separate)
+                <DetailedTooltip title="Income Tax on Investment Income under Separate Taxation">
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      A flat 15% of the taxable investment income. The taxable amount is the net
+                      investment income reported under separate taxation, less any income deductions
+                      too large for the other income to absorb. The deductions are subtracted from
+                      the other income first, as in the Taxable Income row above, and only the part
+                      left over is subtracted from the investment income. The reconstruction surtax
+                      below applies to this and the base income tax together.
+                    </Typography>
+                    <table
+                      style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}
+                    >
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '2px 0' }}>Net investment income (separate):</td>
+                          <td style={{ padding: '2px 0', textAlign: 'right' }}>
+                            {formatJPY(separateInvestmentNetTotal)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '2px 0' }}>
+                            Deductions left over from other income:
+                          </td>
+                          <Box
+                            component="td"
+                            sx={{
+                              padding: '2px 0',
+                              textAlign: 'right',
+                              ...(separateDeductionSpillover > 0 && { color: 'error.main' }),
+                            }}
+                          >
+                            {formatReduction(separateDeductionSpillover)}
+                          </Box>
+                        </tr>
+                        <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                          <td style={{ padding: '4px 0', fontWeight: 600 }}>
+                            Taxable (¥1,000 floor):
+                          </td>
+                          <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                            {formatJPY(
+                              separateInvestment.taxable.capitalGains +
+                                separateInvestment.taxable.dividends,
+                            )}
+                          </td>
+                        </Box>
+                        <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+                          <td style={{ padding: '4px 0', fontWeight: 600 }}>Tax at 15%:</td>
+                          <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                            {formatJPY(separateInvestment.nationalIncomeTaxBase)}
+                          </td>
+                        </Box>
+                      </tbody>
+                    </table>
+                    <SourceLinks
+                      sources={[
+                        {
+                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+                          label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
+                        },
+                        {
+                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+                          label: 'Dividend income (配当所得) - NTA',
+                        },
+                      ]}
+                    />
+                  </Box>
+                </DetailedTooltip>
+              </span>
+            }
+            value={formatJPY(separateInvestment.nationalIncomeTaxBase)}
+            type="detail"
+          />
+        )}
+
         {results.homeLoanTaxCredit && results.homeLoanTaxCredit.appliedToIncomeTax > 0 && (
           <ResultRow
             label={
@@ -478,6 +748,19 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {results.highIncomeMinimumTax && (
+          <ResultRow
+            label={
+              <span>
+                Minimum Tax on High Income
+                <HighIncomeMinimumTaxTooltip minimumTax={results.highIncomeMinimumTax} />
+              </span>
+            }
+            value={formatJPY(results.highIncomeMinimumTax.additionalIncomeTax)}
+            type="detail"
+          />
+        )}
+
         {results.reconstructionSurtax !== undefined && (
           <ResultRow
             label={
@@ -489,14 +772,14 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                       復興特別所得税
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      A temporary surtax of 2.1% applied to the base income tax remaining after tax
-                      credits such as the home loan tax credit (基準所得税額). Originally introduced
-                      to help fund reconstruction efforts after the 2011 Great East Japan Earthquake
-                      and tsunami.
+                      A temporary surtax of 2.1% on the base income tax after the home loan tax
+                      credit and before the foreign tax credit (基準所得税額), rounded down to the
+                      yen. Originally introduced to help fund reconstruction efforts after the 2011
+                      Great East Japan Earthquake and tsunami.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      <strong>Rate:</strong> 2.1% of base income tax after tax credits
-                      (基準所得税額)
+                      <strong>Rate:</strong> 2.1% of the base income tax after the home loan tax
+                      credit (基準所得税額)
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       <strong>Period:</strong> January 1, 2013 - December 31, 2037 (25 years)
@@ -522,6 +805,92 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           />
         )}
 
+        {showForeignTaxCredit && (
+          <ResultRow
+            label="Foreign Tax Credit"
+            {...(foreignTaxCreditDetails && {
+              disclosure: {
+                expanded: showIncomeTaxForeignCredit,
+                onToggle: () => setShowIncomeTaxForeignCredit(open => !open),
+                controlsId: INCOME_TAX_FOREIGN_CREDIT_ID,
+              },
+            })}
+            labelSuffix={
+              <ForeignTaxCreditTooltip
+                credit={foreignTaxCredit}
+                withheldForeignTax={withheldForeignTax}
+              />
+            }
+            value={formatReduction(
+              (foreignTaxCredit?.credit.incomeTax ?? 0) +
+                (foreignTaxCredit?.credit.reconstructionSurtax ?? 0),
+            )}
+            type="detail"
+          />
+        )}
+        {showForeignTaxCredit && foreignTaxCreditDetails && (
+          <Collapse in={showIncomeTaxForeignCredit} id={INCOME_TAX_FOREIGN_CREDIT_ID}>
+            <Box sx={{ ml: 2, mb: 1 }}>
+              <ResultRow
+                label={
+                  <span>
+                    Income tax credit
+                    <IncomeTaxCreditTooltip
+                      credit={foreignTaxCreditDetails}
+                      withheldForeignTax={withheldForeignTax}
+                    />
+                  </span>
+                }
+                value={formatReduction(foreignTaxCreditDetails.credit.incomeTax)}
+                type="detail"
+              />
+              <ResultRow
+                label={
+                  <span>
+                    Surtax credit
+                    <SurtaxCreditTooltip
+                      credit={foreignTaxCreditDetails}
+                      reconstructionSurtax={results.reconstructionSurtax ?? 0}
+                    />
+                  </span>
+                }
+                value={formatReduction(foreignTaxCreditDetails.credit.reconstructionSurtax)}
+                type="detail"
+              />
+            </Box>
+          </Collapse>
+        )}
+
+        {withheldInvestment && (
+          <ResultRow
+            label={
+              <span>
+                Withheld on Investment Income
+                <WithheldInvestmentTaxTooltip withheld={withheldInvestment} />
+              </span>
+            }
+            value={formatJPY(withheldNational)}
+            type="detail"
+          />
+        )}
+
+        {results.foreignTaxPaid !== undefined && (
+          <ResultRow
+            label={
+              <span>
+                Foreign Tax Paid
+                <ForeignTaxPaidTooltip
+                  foreignTaxPaid={results.foreignTaxPaid}
+                  credit={foreignTaxCredit}
+                  withheldForeignTax={withheldForeignTax}
+                />
+              </span>
+            }
+            value={formatJPY(results.foreignTaxPaid)}
+            type="detail"
+          />
+        )}
+
         <ResultRow
           label={
             <span>
@@ -529,11 +898,16 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               <DetailedTooltip title="Total Income Tax Calculation">
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Total Income Tax = Base Income Tax (− Tax Credits) + Reconstruction Surtax
+                    {separateInvestment
+                      ? 'Total Income Tax = Base Income Tax + Tax on Investment Income (separate) (− Tax Credits) + Reconstruction Surtax'
+                      : 'Total Income Tax = Base Income Tax (− Tax Credits) + Reconstruction Surtax'}
+                    {showForeignTaxCredit && ' − Foreign Tax Credit'}
+                    {withheldInvestment && ' + Withheld on Investment Income'}
+                    {results.foreignTaxPaid !== undefined && ' + Foreign Tax Paid'}
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Rounding:</strong> The sum of base income tax and surtax is rounded down
-                    to the nearest 100 yen for the final amount.
+                    <strong>Rounding:</strong> The sum of base income tax and surtax, after the tax
+                    credits, is rounded down to the nearest 100 yen for the final amount.
                   </Typography>
                   <SourceLinks
                     sources={[
@@ -547,7 +921,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </DetailedTooltip>
             </span>
           }
-          value={formatJPY(results.nationalIncomeTax)}
+          value={formatJPY(totalIncomeTax)}
           type="subtotal"
         />
       </Box>
@@ -685,18 +1059,40 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Income-based Portion (所得割): 10% of Taxable Income
+                      {residenceSeparate && ' + 5% of Taxable Investment Income'}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       This portion is calculated as a percentage of taxable income and split between
                       municipal and prefectural governments.
+                      {residenceSeparate &&
+                        ' Investment income reported under separate taxation is taxed at 5% within the same portion: the net amount reported, less any deductions the other income could not use, floored to ¥1,000.'}
                     </Typography>
+                    {residenceSeparate && (
+                      <Box sx={{ mb: 1 }}>
+                        <HighlightedRowValue
+                          label="Taxable investment income (separate)"
+                          value={
+                            residenceSeparate.taxableCapitalGains +
+                            residenceSeparate.taxableDividends
+                          }
+                        />
+                      </Box>
+                    )}
                     <ReferenceTable
-                      headers={['Component', 'Rate']}
-                      rows={[
-                        ['Municipal Tax (市町村民税)', '6%'],
-                        ['Prefectural Tax (都道府県民税)', '4%'],
-                        [<strong>Total</strong>, <strong>10%</strong>],
-                      ]}
+                      headers={['Component', 'Rate (separate)']}
+                      rows={
+                        residenceSeparate
+                          ? [
+                              ['Municipal Tax (市町村民税)', '6% (3%)'],
+                              ['Prefectural Tax (都道府県民税)', '4% (2%)'],
+                              [<strong>Total</strong>, <strong>10% (5%)</strong>],
+                            ]
+                          : [
+                              ['Municipal Tax (市町村民税)', '6%'],
+                              ['Prefectural Tax (都道府県民税)', '4%'],
+                              [<strong>Total</strong>, <strong>10%</strong>],
+                            ]
+                      }
                     />
                     <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85em' }}>
                       <strong>Rounding:</strong> The municipal and prefectural portions are each
@@ -713,7 +1109,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                   </Box>
                 </DetailedTooltip>
               }
-              value={formatJPY(residenceIncomeBasedDisplayed)}
+              value={formatJPY(residenceIncomeBasedAfterTaxCredit)}
               type="detail"
             />
 
@@ -721,40 +1117,77 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             <Collapse in={showIncomeBasedSplit} id={INCOME_BASED_SPLIT_ID}>
               <Box sx={{ ml: 2, mb: 1 }}>
                 <ResultRow
-                  label="Municipal portion (6%)"
-                  value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.06))}
+                  label={
+                    <span>
+                      Municipal portion
+                      <IncomeBasedPortionTooltip
+                        level="municipal"
+                        aggregateRatePercent={6}
+                        aggregateAmount={municipalPortionAggregate}
+                        separateRatePercent={3}
+                        separateAmount={municipalPortionSeparate}
+                      />
+                    </span>
+                  }
+                  value={formatJPY(municipalPortionGross)}
                   type="detail"
                 />
-                {results.residenceTax.city.cityAdjustmentCredit > 0 && (
+                {(results.residenceTax.city.cityAdjustmentCredit > 0 ||
+                  (residenceForeignTaxCredit?.city ?? 0) > 0) && (
                   <ResultRow
                     label={
                       <span>
                         Tax credit (municipal)
-                        <AdjustmentCreditTooltip
+                        <ResidenceTaxCreditTooltip
                           level="municipal"
                           adjustmentCredit={results.residenceTax.city.cityAdjustmentCredit}
                           personalDeductionDifference={
                             results.residenceTax.personalDeductionDifference
                           }
+                          foreignTaxCredit={
+                            foreignTaxCreditDetails && (residenceForeignTaxCredit?.city ?? 0) > 0
+                              ? {
+                                  credit: foreignTaxCreditDetails,
+                                  applied: residenceForeignTaxCredit?.city ?? 0,
+                                }
+                              : undefined
+                          }
                         />
                       </span>
                     }
-                    value={formatJPY(-results.residenceTax.city.cityAdjustmentCredit)}
+                    value={formatJPY(
+                      -(
+                        results.residenceTax.city.cityAdjustmentCredit +
+                        (residenceForeignTaxCredit?.city ?? 0)
+                      ),
+                    )}
                     type="detail"
                   />
                 )}
 
                 <ResultRow
-                  label="Prefectural portion (4%)"
-                  value={formatJPY(Math.round(results.residenceTax.taxableIncome * 0.04))}
+                  label={
+                    <span>
+                      Prefectural portion
+                      <IncomeBasedPortionTooltip
+                        level="prefectural"
+                        aggregateRatePercent={4}
+                        aggregateAmount={prefecturalPortionAggregate}
+                        separateRatePercent={2}
+                        separateAmount={prefecturalPortionSeparate}
+                      />
+                    </span>
+                  }
+                  value={formatJPY(prefecturalPortionGross)}
                   type="detail"
                 />
-                {results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 && (
+                {(results.residenceTax.prefecture.prefecturalAdjustmentCredit > 0 ||
+                  (residenceForeignTaxCredit?.prefecture ?? 0) > 0) && (
                   <ResultRow
                     label={
                       <span>
                         Tax credit (prefectural)
-                        <AdjustmentCreditTooltip
+                        <ResidenceTaxCreditTooltip
                           level="prefectural"
                           adjustmentCredit={
                             results.residenceTax.prefecture.prefecturalAdjustmentCredit
@@ -762,10 +1195,24 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                           personalDeductionDifference={
                             results.residenceTax.personalDeductionDifference
                           }
+                          foreignTaxCredit={
+                            foreignTaxCreditDetails &&
+                            (residenceForeignTaxCredit?.prefecture ?? 0) > 0
+                              ? {
+                                  credit: foreignTaxCreditDetails,
+                                  applied: residenceForeignTaxCredit?.prefecture ?? 0,
+                                }
+                              : undefined
+                          }
                         />
                       </span>
                     }
-                    value={formatJPY(-results.residenceTax.prefecture.prefecturalAdjustmentCredit)}
+                    value={formatJPY(
+                      -(
+                        results.residenceTax.prefecture.prefecturalAdjustmentCredit +
+                        (residenceForeignTaxCredit?.prefecture ?? 0)
+                      ),
+                    )}
                     type="detail"
                   />
                 )}
@@ -879,6 +1326,19 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           </>
         )}
 
+        {withheldInvestment && (
+          <ResultRow
+            label={
+              <span>
+                Withheld on Investment Income
+                <WithheldInvestmentTaxTooltip withheld={withheldInvestment} />
+              </span>
+            }
+            value={formatJPY(withheldResidence)}
+            type="detail"
+          />
+        )}
+
         <ResultRow
           label="Total Residence Tax"
           labelSuffix={
@@ -888,7 +1348,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
               </SimpleTooltip>
             ) : undefined
           }
-          value={formatJPY(results.residenceTax.totalResidenceTax)}
+          value={formatJPY(totalResidenceTax)}
           type="subtotal"
         />
       </Box>
