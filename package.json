@@ -54,7 +54,7 @@
     "typescript": "~7.0.2",
     "vite": "^8.3.4",
     "vite-plugin-sitemap": "^0.8.2",
-    "vitest": "^5.0.3",
+    "vitest": "^5.0.5",
     "wrangler": "^4.147.0"
   },
   "lint-staged": {
