@@ -265,39 +265,6 @@ export type IncomeStream =
 export type IncomeStreamType = IncomeStream['type'];
 
 /**
- * Gross investment-income amounts for the year that are settled by withholding and stay off
- * the return, before that withholding: 上場株式等 under 申告不要 for {@link capitalGains} and
- * {@link dividends} — including the unreported parts of a
- * {@link WithholdingAccountIncomeStream} — and 国内において支払を受ける一般利子等 for
- * {@link interest}.
- */
-export interface InvestmentIncomeAmounts {
-  /** See {@link CapitalGainsIncomeStream}; may be negative. */
-  capitalGains: number;
-  /** See {@link DividendsIncomeStream}. */
-  dividends: number;
-  /** Interest paid in Japan — see {@link InterestIncomeStream.payerDomicile}. */
-  interest: number;
-}
-
-/** The 申告分離課税 amounts gathered from the reported streams, as entered. */
-export interface ReportedInvestmentAmounts {
-  /**
-   * 上場株式等に係る譲渡所得等 netted across every reported account; negative when the year
-   * closed at a loss.
-   */
-  capitalGains: number;
-  /**
-   * The losses within {@link capitalGains} realized in a Japanese account. Only these can be
-   * 上場株式等に係る譲渡損失の金額 — 措法37条の12の2②一〜三 requires a sale through a licensed
-   * 金融商品取引業者 or 登録金融機関 — so only these can offset dividends or carry forward.
-   */
-  qualifyingCapitalLosses: number;
-  /** 上場株式等の配当等 reported under 措法8条の4①. */
-  dividends: number;
-}
-
-/**
  * The net 分離課税 amounts that enter 合計所得金額 (措法8条の4③一, 37条の10⑥一 as 37条の11⑥
  * applies it): each class after 損益通算, never negative.
  */
@@ -307,7 +274,7 @@ export interface SeparateNetIncome {
 }
 
 /** Investment income reported under 申告分離課税 and how the return taxes it. */
-export interface SeparateTaxationIncome {
+export interface SeparateTaxationReportedIncome {
   /** The reported amounts as entered, before 損益通算. */
   gross: {
     /** 上場株式等に係る譲渡所得等 netted across every reported sale; negative for a net loss. */
@@ -319,7 +286,7 @@ export interface SeparateTaxationIncome {
   lossOffsetAgainstDividends: number;
   /**
    * Qualifying loss left after that offset. It would carry forward for three years
-   * (措法37条の12の2⑤), which is not modelled.
+   * (措法37条の12の2⑤).
    */
   unabsorbedQualifyingLoss: number;
   /**
@@ -335,7 +302,7 @@ export interface SeparateTaxationIncome {
   taxable: SeparateNetIncome;
   /**
    * 15% of the taxable total (措法8条の4①, 37条の11①), before the 復興特別所得税 that the
-   * total income tax applies to it together with the bracket tax.
+   * total income tax applies to it together with the aggregate tax.
    */
   nationalIncomeTaxBase: number;
 }
@@ -382,7 +349,7 @@ export interface WithheldAccountBase {
  * does not reduce the base of another; {@link accounts} shows each account's own base so a display
  * can explain a tax that differs from the rate times {@link received}.
  */
-export interface WithheldInvestmentIncome {
+export interface WithholdingOnlyInvestmentIncome {
   /** The withholding designated accounts with an amount left to withholding, in entry order. */
   accounts: WithheldAccountBase[];
   /**
@@ -421,7 +388,7 @@ export interface WithheldInvestmentIncome {
  * Investment income reported under 総合課税, as entered: part of 総所得金額 and taxed in the
  * progressive brackets with the earned income.
  */
-export interface AggregateTaxationIncome {
+export interface AggregateTaxationInvestmentIncome {
   /** 配当所得 reported under the 総合課税 election; no 配当控除 (not yet supported). */
   dividends: number;
   /**
@@ -435,9 +402,9 @@ export interface AggregateTaxationIncome {
 /** Investment income that goes on the tax return, by how the return taxes it. */
 export interface ReportedInvestmentIncome {
   /** Present when any amount is reported under 申告分離課税. */
-  separate?: SeparateTaxationIncome | undefined;
+  separate?: SeparateTaxationReportedIncome | undefined;
   /** Present when any amount is reported under 総合課税. */
-  aggregate?: AggregateTaxationIncome | undefined;
+  aggregate?: AggregateTaxationInvestmentIncome | undefined;
 }
 
 /**
@@ -960,7 +927,7 @@ export interface TakeHomeResults {
   investmentIncome?:
     | {
         /** Present when any amount is left to withholding. */
-        withheld?: WithheldInvestmentIncome | undefined;
+        withheld?: WithholdingOnlyInvestmentIncome | undefined;
         /** Present when any amount is reported on the tax return. */
         reported?: ReportedInvestmentIncome | undefined;
       }
@@ -981,7 +948,7 @@ export interface TakeHomeResults {
   /**
    * Foreign tax paid for the year: the creditable foreign tax
    * ({@link ForeignTaxCreditResult.foreignTax}) plus the foreign tax on dividends left to
-   * withholding ({@link WithheldInvestmentIncome.foreignTax}). A tax like any other, it is
+   * withholding ({@link WithholdingOnlyInvestmentIncome.foreignTax}). A tax like any other, it is
    * subtracted in {@link takeHomeIncome}. Kept here rather than under {@link investmentIncome}
    * because the tax on a foreign pension or paid with a foreign tax return can exist with no
    * investment income. Absent when 0.

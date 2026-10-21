@@ -34,7 +34,7 @@ import {
   type ReportedDividendsTaxation,
   type TakeHomeInputs,
   type TakeHomeResults,
-  type WithheldInvestmentIncome,
+  type WithholdingOnlyInvestmentIncome,
 } from '../../../types/tax';
 import { formatJPY, formatMonthLong } from '../../../utils/formatters';
 import {
@@ -102,7 +102,7 @@ const addButtonId = (category: IncomeCategoryKey) => `add-${category}-income`;
  * The investment group's line for the amounts left to withholding: what was received, less the
  * foreign tax withheld abroad and the Japanese tax withheld, and what is left of it.
  */
-const withheldOnlyFooter = (withheld: WithheldInvestmentIncome): string => {
+const withheldOnlyFooter = (withheld: WithholdingOnlyInvestmentIncome): string => {
   const foreignTax = withheld.foreignTax ?? 0;
   if (withheld.tax.total === 0 && foreignTax === 0) {
     return `Withheld only: ${formatJPY(withheld.received)}, no tax withheld`;

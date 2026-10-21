@@ -3,19 +3,38 @@
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
 import type {
-  InvestmentIncomeAmounts,
-  ReportedInvestmentAmounts,
   SeparateNetIncome,
+  SeparateTaxationReportedIncome,
   WithheldInvestmentTax,
 } from '../types/tax';
 
-/** Whether any of the three withheld investment-income amounts is non-zero. */
-export const hasInvestmentIncome = (amounts: InvestmentIncomeAmounts): boolean =>
-  amounts.capitalGains !== 0 || amounts.dividends !== 0 || amounts.interest !== 0;
+/** The 申告分離課税 amounts gathered from the reported streams, as entered. */
+export interface SeparateTaxationReportedInvestmentAmounts {
+  /**
+   * 上場株式等に係る譲渡所得等 netted across every reported account; negative when the year
+   * closed at a loss.
+   */
+  capitalGains: number;
+  /**
+   * The losses within {@link capitalGains} realized in a Japanese account. Only these can be
+   * 上場株式等に係る譲渡損失の金額 — 措法37条の12の2②一〜三 requires a sale through a licensed
+   * 金融商品取引業者 or 登録金融機関 — so only these can offset dividends or carry forward.
+   */
+  qualifyingCapitalLosses: number;
+  /** 上場株式等の配当等 reported under 措法8条の4①. */
+  dividends: number;
+}
+
+/** How the reported amounts net against each other before any of them is taxed. */
+export type SeparateTaxationBase = Omit<
+  SeparateTaxationReportedIncome,
+  'taxable' | 'nationalIncomeTaxBase'
+>;
 
 /** Whether any amount is reported under 申告分離課税. */
-export const hasReportedInvestmentIncome = (amounts: ReportedInvestmentAmounts): boolean =>
-  amounts.capitalGains !== 0 || amounts.dividends !== 0;
+export const hasSeparateTaxationReportedInvestmentIncome = (
+  amounts: SeparateTaxationBase['gross'],
+): boolean => amounts.capitalGains !== 0 || amounts.dividends !== 0;
 
 export const NO_SEPARATE_NET_INCOME: SeparateNetIncome = { capitalGains: 0, dividends: 0 };
 
@@ -61,17 +80,6 @@ export const calculateWithheldInvestmentTax = (
   return { national, residence, total: national + residence };
 };
 
-/** How the reported amounts net against each other before any of them is taxed. */
-export interface ReportedInvestmentClassification {
-  /** 上場株式等に係る譲渡損失の金額 deducted from the reported dividends (措法37条の12の2①). */
-  lossOffsetAgainstDividends: number;
-  /** Qualifying loss the dividends did not absorb; it would carry forward (not modelled). */
-  unabsorbedQualifyingLoss: number;
-  /** Foreign-account loss the year's gains did not absorb; it offsets nothing. */
-  nonQualifyingLoss: number;
-  netIncome: SeparateNetIncome;
-}
-
 /**
  * Nets the 申告分離課税 amounts the way the return does. Every reported sale first nets into one
  * 上場株式等に係る譲渡所得等の金額 for the year, whichever account it came from. A loss left
@@ -83,13 +91,17 @@ export interface ReportedInvestmentClassification {
  * gains did not absorb is lost for the year.
  */
 export const classifyReportedInvestmentIncome = (
-  amounts: ReportedInvestmentAmounts,
-): ReportedInvestmentClassification => {
+  amounts: SeparateTaxationReportedInvestmentAmounts,
+): SeparateTaxationBase => {
   const loss = Math.max(0, -amounts.capitalGains);
   const qualifyingLoss = Math.min(loss, amounts.qualifyingCapitalLosses);
   const lossOffsetAgainstDividends = Math.min(qualifyingLoss, amounts.dividends);
 
   return {
+    gross: {
+      capitalGains: amounts.capitalGains,
+      dividends: amounts.dividends,
+    },
     lossOffsetAgainstDividends,
     unabsorbedQualifyingLoss: qualifyingLoss - lossOffsetAgainstDividends,
     nonQualifyingLoss: loss - qualifyingLoss,

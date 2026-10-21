@@ -5,14 +5,14 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
-import type { AggregateTaxationIncome } from '../../../types/tax';
+import type { AggregateTaxationInvestmentIncome } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import type { Source } from '../../ui/SourceLinks';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface NetAggregateInvestmentIncomeTooltipProps {
-  aggregate: AggregateTaxationIncome;
+  aggregate: AggregateTaxationInvestmentIncome;
 }
 
 const CELL_SX = { padding: '2px 0' };

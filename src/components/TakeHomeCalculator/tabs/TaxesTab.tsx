@@ -22,7 +22,7 @@ import type {
   NonTaxableResidenceTaxStatus,
   TakeHomeResults,
   TakeHomeInputs,
-  WithheldInvestmentIncome,
+  WithholdingOnlyInvestmentIncome,
 } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { applyDeductionSpillover } from '../../../utils/investmentIncome';
@@ -182,8 +182,10 @@ const formatReduction = (amount: number): string => formatJPY(amount > 0 ? -amou
  * to the taxed amount when a loss in one account exceeds its dividends while another account has
  * dividends.
  */
-const withheldBaseRows = (base: WithheldInvestmentIncome): [label: string, amount: number][] => {
-  const accountLabel = (account: WithheldInvestmentIncome['accounts'][number]) =>
+const withheldBaseRows = (
+  base: WithholdingOnlyInvestmentIncome,
+): [label: string, amount: number][] => {
+  const accountLabel = (account: WithholdingOnlyInvestmentIncome['accounts'][number]) =>
     `Account ${account.position} (${[
       account.capitalGains !== 0 && `sales ${formatJPY(account.capitalGains)}`,
       account.dividends !== 0 && `dividends ${formatJPY(account.dividends)}`,
@@ -209,7 +211,7 @@ const withheldBaseRows = (base: WithheldInvestmentIncome): [label: string, amoun
  * income-tax and residence-tax rows tell the same story.
  */
 const WithheldInvestmentTaxTooltip: React.FC<{
-  withheld: WithheldInvestmentIncome;
+  withheld: WithholdingOnlyInvestmentIncome;
 }> = ({ withheld }) => (
   <DetailedTooltip title="Tax Withheld on Investment Income">
     <Box>

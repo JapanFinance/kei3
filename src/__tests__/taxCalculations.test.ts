@@ -4579,6 +4579,49 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       // Other foreign-source income over 10,000,000: 1,000,000 minimum deduction at 65+ -> 1,000,000
       expect(foreignPensionSourceIncome(2_000_000, 'age65to69', 11_000_000, 2026)).toBe(1_000_000);
     });
+
+    it('includes withheld investment results even when two withholding accounts have equal and opposite capital gains', () => {
+      const result = calculateTaxes({
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [
+          {
+            id: 'acct-gain',
+            type: 'withholdingAccount',
+            capitalGains: 100_000,
+            dividends: 0,
+            foreignDividends: 0,
+            foreignTax: 0,
+            reportsCapitalGains: false,
+            reportsDividends: false,
+          },
+          {
+            id: 'acct-loss',
+            type: 'withholdingAccount',
+            capitalGains: -100_000,
+            dividends: 0,
+            foreignDividends: 0,
+            foreignTax: 0,
+            reportsCapitalGains: false,
+            reportsDividends: false,
+          },
+        ],
+        ageRange: 'age20to39',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: 'Tokyo',
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      });
+
+      expect(result.annualIncome).toBe(0);
+      expect(result.investmentIncome?.withheld).toBeDefined();
+      expect(result.investmentIncome?.withheld?.received).toBe(0);
+      expect(result.investmentIncome?.withheld?.taxedAmount).toBe(100_000);
+      expect(result.investmentIncome?.withheld?.tax.total).toBe(20_315);
+      expect(result.takeHomeIncome).toBe(-20_315);
+    });
   });
 
   describe('property-based accounting and statutory invariants', () => {

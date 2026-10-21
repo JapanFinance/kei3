@@ -5,36 +5,15 @@ import { describe, it, expect } from 'vitest';
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
 import { percentTo } from '../data/premiumRate';
-import type { InvestmentIncomeAmounts } from '../types/tax';
 import {
   applyDeductionSpillover,
   calculateSeparateNationalIncomeTaxBase,
   calculateWithheldInvestmentTax,
   classifyReportedInvestmentIncome,
   floorTaxableIncome,
-  hasInvestmentIncome,
-  hasReportedInvestmentIncome,
+  hasSeparateTaxationReportedInvestmentIncome,
   withholdingAccountBase,
 } from '../utils/investmentIncome';
-
-const amounts = (overrides: Partial<InvestmentIncomeAmounts> = {}): InvestmentIncomeAmounts => ({
-  capitalGains: 0,
-  dividends: 0,
-  interest: 0,
-  ...overrides,
-});
-
-describe('hasInvestmentIncome', () => {
-  it('is false when every amount is zero', () => {
-    expect(hasInvestmentIncome(amounts())).toBe(false);
-  });
-
-  it('is true when any one amount is non-zero, including a loss', () => {
-    expect(hasInvestmentIncome(amounts({ capitalGains: -500_000 }))).toBe(true);
-    expect(hasInvestmentIncome(amounts({ dividends: 1 }))).toBe(true);
-    expect(hasInvestmentIncome(amounts({ interest: 1 }))).toBe(true);
-  });
-});
 
 describe('withholdingAccountBase', () => {
   // 措法37条の11の6⑥: a same-account 譲渡損 nets against 配当等 before withholding.
@@ -117,36 +96,36 @@ describe('getInvestmentIncomeTaxRates', () => {
   });
 });
 
-describe('hasReportedInvestmentIncome', () => {
+describe('hasSeparateTaxationReportedInvestmentIncome', () => {
   it('is false when both capital gains and dividends are zero', () => {
     expect(
-      hasReportedInvestmentIncome({ capitalGains: 0, dividends: 0, qualifyingCapitalLosses: 0 }),
+      hasSeparateTaxationReportedInvestmentIncome({
+        capitalGains: 0,
+        dividends: 0,
+      }),
     ).toBe(false);
   });
 
   it('is true when capital gains is non-zero (gain or loss)', () => {
     expect(
-      hasReportedInvestmentIncome({
+      hasSeparateTaxationReportedInvestmentIncome({
         capitalGains: 100_000,
         dividends: 0,
-        qualifyingCapitalLosses: 0,
       }),
     ).toBe(true);
     expect(
-      hasReportedInvestmentIncome({
+      hasSeparateTaxationReportedInvestmentIncome({
         capitalGains: -100_000,
         dividends: 0,
-        qualifyingCapitalLosses: 100_000,
       }),
     ).toBe(true);
   });
 
   it('is true when dividends is non-zero', () => {
     expect(
-      hasReportedInvestmentIncome({
+      hasSeparateTaxationReportedInvestmentIncome({
         capitalGains: 0,
         dividends: 50_000,
-        qualifyingCapitalLosses: 0,
       }),
     ).toBe(true);
   });
@@ -160,6 +139,7 @@ describe('classifyReportedInvestmentIncome', () => {
       qualifyingCapitalLosses: 0,
     });
     expect(result).toEqual({
+      gross: { capitalGains: 1_000_000, dividends: 500_000 },
       lossOffsetAgainstDividends: 0,
       unabsorbedQualifyingLoss: 0,
       nonQualifyingLoss: 0,
@@ -174,6 +154,7 @@ describe('classifyReportedInvestmentIncome', () => {
       qualifyingCapitalLosses: 300_000,
     });
     expect(result).toEqual({
+      gross: { capitalGains: -300_000, dividends: 500_000 },
       lossOffsetAgainstDividends: 300_000,
       unabsorbedQualifyingLoss: 0,
       nonQualifyingLoss: 0,
@@ -188,6 +169,7 @@ describe('classifyReportedInvestmentIncome', () => {
       qualifyingCapitalLosses: 800_000,
     });
     expect(result).toEqual({
+      gross: { capitalGains: -800_000, dividends: 500_000 },
       lossOffsetAgainstDividends: 500_000,
       unabsorbedQualifyingLoss: 300_000,
       nonQualifyingLoss: 0,
@@ -202,6 +184,7 @@ describe('classifyReportedInvestmentIncome', () => {
       qualifyingCapitalLosses: 0,
     });
     expect(result).toEqual({
+      gross: { capitalGains: -500_000, dividends: 500_000 },
       lossOffsetAgainstDividends: 0,
       unabsorbedQualifyingLoss: 0,
       nonQualifyingLoss: 500_000,
@@ -216,6 +199,7 @@ describe('classifyReportedInvestmentIncome', () => {
       qualifyingCapitalLosses: 200_000,
     });
     expect(result).toEqual({
+      gross: { capitalGains: -600_000, dividends: 400_000 },
       lossOffsetAgainstDividends: 200_000,
       unabsorbedQualifyingLoss: 0,
       nonQualifyingLoss: 400_000,

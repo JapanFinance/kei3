@@ -5,13 +5,13 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
-import type { SeparateTaxationIncome } from '../../../types/tax';
+import type { SeparateTaxationReportedIncome } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
 
 interface NetSeparateInvestmentIncomeTooltipProps {
-  separate: SeparateTaxationIncome;
+  separate: SeparateTaxationReportedIncome;
 }
 
 /**

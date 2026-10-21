@@ -8,7 +8,7 @@ import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNoze
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import TaxesTab from '../components/TakeHomeCalculator/tabs/TaxesTab';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
-import type { SeparateTaxationIncome, TakeHomeInputs, TakeHomeResults } from '../types/tax';
+import type { SeparateTaxationReportedIncome, TakeHomeInputs, TakeHomeResults } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
   makeFurusatoNozeiDetails,
@@ -54,7 +54,7 @@ beforeAll(() => {
 
 // The 損益通算 case of the engine tests: a −500,000 loss in a 特定口座 and 800,000 of dividends,
 // both reported, beside a 5,000,000 salary.
-const separate: SeparateTaxationIncome = {
+const separate: SeparateTaxationReportedIncome = {
   gross: { capitalGains: -500_000, dividends: 800_000 },
   lossOffsetAgainstDividends: 500_000,
   unabsorbedQualifyingLoss: 0,

@@ -29,15 +29,13 @@ import {
   type ForeignTaxCreditResult,
   type HighIncomeMinimumTaxResult,
   type IncomeStream,
-  type InvestmentIncomeAmounts,
   type PersonalCircumstancesInput,
   type ReportedDividendsTaxation,
-  type ReportedInvestmentAmounts,
   type ResidenceTaxCredits,
   type FurusatoNozeiDetails,
   type TakeHomeInputs,
   type TakeHomeResults,
-  type WithheldInvestmentIncome,
+  type WithholdingOnlyInvestmentIncome,
   ZERO_FURUSATO_NOZEI_DETAILS,
 } from '../types/tax';
 import {
@@ -74,8 +72,8 @@ import {
   calculateWithheldInvestmentTax,
   classifyReportedInvestmentIncome,
   floorTaxableIncome,
-  hasInvestmentIncome,
-  hasReportedInvestmentIncome,
+  hasSeparateTaxationReportedInvestmentIncome,
+  type SeparateTaxationBase,
   withholdingAccountBase,
 } from './investmentIncome';
 import {
@@ -331,7 +329,7 @@ interface IncomeBreakdown {
   blueFilerDeduction: number;
   /**
    * Earned income only (employment + business/misc + public pension). Investment income is
-   * gathered separately in {@link investment}, {@link reportedInvestment},
+   * gathered separately in {@link withheldBase}, {@link separateBase},
    * {@link aggregateDividends} and {@link aggregateInterest}; all of it joins this in
    * TakeHomeResults.annualIncome.
    */
@@ -339,10 +337,6 @@ interface IncomeBreakdown {
   commutingAllowance: number;
   stockCompensationIncome: number;
   grossPublicPensionIncome: number;
-  /** Investment-income amounts settled by withholding, before that withholding. */
-  investment: InvestmentIncomeAmounts;
-  /** Sum of {@link investment}'s three amounts; may be negative. */
-  grossInvestmentIncome: number;
   /**
    * The base the listed-share withholding rate applies to: every withholding account's
    * {@link import("./investmentIncome").withholdingAccountBase}, plus the dividends withheld
@@ -350,13 +344,10 @@ interface IncomeBreakdown {
    */
   listedWithholdingBase: number;
   /**
-   * {@link listedWithholdingBase} and the interest base entry by entry, for the displays that
-   * show what the withholding was charged on.
+   * Investment-income amounts settled by withholding, before that withholding, and what the
+   * withholding was charged on entry by entry.
    */
-  withheldBase: Pick<
-    WithheldInvestmentIncome,
-    'accounts' | 'dividends' | 'dividendsForeignTax' | 'interest' | 'foreignTax' | 'taxedAmount'
-  >;
+  withheldBase: Omit<WithholdingOnlyInvestmentIncome, 'tax'>;
   /**
    * Foreign-source income (所法95条④六・七) on the reported entries: interest paid outside Japan
    * and dividends from foreign companies and funds, gross. A reported loss netted against the
@@ -381,8 +372,8 @@ interface IncomeBreakdown {
    * (措令4条の5⑫).
    */
   withheldForeignTax: number;
-  /** Investment-income amounts reported under 申告分離課税, as entered. */
-  reportedInvestment: ReportedInvestmentAmounts;
+  /** Investment-income amounts reported under 申告分離課税 and how they net against each other. */
+  separateBase: SeparateTaxationBase;
   /** 配当等 reported under 総合課税, as entered — the 配当所得 that joins 総所得金額. */
   aggregateDividends: number;
   /**
@@ -418,7 +409,7 @@ const calculateIncomeBreakdown = (
   let dividends = 0;
   let interest = 0;
   let listedWithholdingBase = 0;
-  const withheldAccounts: WithheldInvestmentIncome['accounts'] = [];
+  const withheldAccounts: WithholdingOnlyInvestmentIncome['accounts'] = [];
   let withheldDividendsOutsideAccounts = 0;
   let withheldDividendsForeignTax = 0;
   let withheldForeignTax = 0;
@@ -637,17 +628,11 @@ const calculateIncomeBreakdown = (
     grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
     grossPublicPensionIncome;
-  const investment: InvestmentIncomeAmounts = {
-    capitalGains,
-    dividends,
-    interest,
-  };
-  const grossInvestmentIncome = capitalGains + dividends + interest;
-  const reportedInvestment: ReportedInvestmentAmounts = {
+  const separateBase = classifyReportedInvestmentIncome({
     capitalGains: reportedCapitalGains,
     qualifyingCapitalLosses: reportedQualifyingCapitalLosses,
     dividends: reportedDividends,
-  };
+  });
 
   return {
     salaryIncome,
@@ -661,18 +646,17 @@ const calculateIncomeBreakdown = (
     commutingAllowance,
     stockCompensationIncome,
     grossPublicPensionIncome,
-    investment,
-    grossInvestmentIncome,
     listedWithholdingBase,
     withheldBase: {
       accounts: withheldAccounts,
       dividends: withheldDividendsOutsideAccounts,
       ...(withheldDividendsForeignTax > 0 && { dividendsForeignTax: withheldDividendsForeignTax }),
       interest,
+      received: capitalGains + dividends + interest,
       ...(withheldForeignTax > 0 && { foreignTax: withheldForeignTax }),
       taxedAmount: listedWithholdingBase + interest,
     },
-    reportedInvestment,
+    separateBase,
     aggregateDividends,
     aggregateInterest,
     foreignSourceIncome,
@@ -739,7 +723,7 @@ const composeTaxpayerNetIncomeComponents = (
     otherNetIncome: netBusinessAndMiscIncome,
     aggregateDividendIncome: breakdown.aggregateDividends,
     aggregateInterestIncome: breakdown.aggregateInterest,
-    separateNetIncome: classifyReportedInvestmentIncome(breakdown.reportedInvestment).netIncome,
+    separateNetIncome: breakdown.separateBase.netIncome,
     year,
   });
 };
@@ -793,11 +777,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     commutingAllowance,
     stockCompensationIncome,
     grossPublicPensionIncome,
-    investment,
-    grossInvestmentIncome,
     listedWithholdingBase,
     withheldBase,
-    reportedInvestment,
+    separateBase,
     aggregateDividends,
     aggregateInterest,
     grossForeignPublicPensionIncome,
@@ -805,11 +787,15 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     withheldForeignTax,
   } = incomeBreakdown;
 
-  const hasReportedInvestment = hasReportedInvestmentIncome(reportedInvestment);
+  const hasWithheldInvestment =
+    withheldBase.accounts.length > 0 || withheldBase.dividends > 0 || withheldBase.interest > 0;
+  const hasSeparateReportedInvestment = hasSeparateTaxationReportedInvestmentIncome(
+    separateBase.gross,
+  );
   if (
     totalAnnualIncome <= 0 &&
-    !hasInvestmentIncome(investment) &&
-    !hasReportedInvestment &&
+    !hasWithheldInvestment &&
+    !hasSeparateReportedInvestment &&
     aggregateDividends === 0 &&
     aggregateInterest === 0
   ) {
@@ -822,9 +808,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // than read from inputs.annualIncome for consistency.
   const annualIncome =
     totalAnnualIncome +
-    grossInvestmentIncome +
-    reportedInvestment.capitalGains +
-    reportedInvestment.dividends +
+    withheldBase.received +
+    separateBase.gross.capitalGains +
+    separateBase.gross.dividends +
     aggregateDividends +
     aggregateInterest;
 
@@ -1212,7 +1198,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
   // Calculate totals
   const withheldInvestmentTax = calculateWithheldInvestmentTax(
-    { listed: listedWithholdingBase, interest: investment.interest },
+    { listed: listedWithholdingBase, interest: withheldBase.interest },
     incomeYear,
   );
   // The foreign tax is taken as paid in the year: withheld abroad on the entries, and paid with a
@@ -1235,7 +1221,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     const furusatoLimit = calculateFurusatoLimit(
       nationalTaxableClasses.aggregate,
       preCreditResidenceTax,
-      hasReportedInvestment
+      hasSeparateReportedInvestment
         ? {
             nationalTaxable: {
               dividends: nationalTaxableClasses.dividends,
@@ -1272,7 +1258,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       };
     }
   }
-  const reportedInvestmentClassification = classifyReportedInvestmentIncome(reportedInvestment);
 
   return {
     annualIncome,
@@ -1301,31 +1286,22 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       grossPublicPensionIncome,
       netPublicPensionIncome,
     }),
-    ...((hasInvestmentIncome(investment) ||
-      hasReportedInvestment ||
+    ...((hasWithheldInvestment ||
+      hasSeparateReportedInvestment ||
       aggregateDividends > 0 ||
       aggregateInterest > 0) && {
       investmentIncome: {
-        ...(hasInvestmentIncome(investment) && {
+        ...(hasWithheldInvestment && {
           withheld: {
             ...withheldBase,
-            received: grossInvestmentIncome,
             tax: withheldInvestmentTax,
           },
         }),
-        ...((hasReportedInvestment || aggregateDividends > 0 || aggregateInterest > 0) && {
+        ...((hasSeparateReportedInvestment || aggregateDividends > 0 || aggregateInterest > 0) && {
           reported: {
-            ...(hasReportedInvestment && {
+            ...(hasSeparateReportedInvestment && {
               separate: {
-                gross: {
-                  capitalGains: reportedInvestment.capitalGains,
-                  dividends: reportedInvestment.dividends,
-                },
-                lossOffsetAgainstDividends:
-                  reportedInvestmentClassification.lossOffsetAgainstDividends,
-                unabsorbedQualifyingLoss: reportedInvestmentClassification.unabsorbedQualifyingLoss,
-                nonQualifyingLoss: reportedInvestmentClassification.nonQualifyingLoss,
-                netIncome: separateNetIncome,
+                ...separateBase,
                 taxable: taxableSeparateIncome,
                 nationalIncomeTaxBase: separateNationalIncomeTaxBase,
               },
