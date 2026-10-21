@@ -203,9 +203,6 @@ function App() {
           <TakeHomeChart
             currentIncome={deferredInputs.annualIncome}
             incomeYear={deferredInputs.incomeYear}
-            isEmploymentIncome={deferredInputs.incomeStreams.some(
-              s => s.type === 'salary' || s.type === 'bonus',
-            )}
             ageRange={deferredInputs.ageRange}
             longTermCareCategory1ManualEntry={deferredInputs.longTermCareCategory1ManualEntry}
             longTermCareCategory1Premium={deferredInputs.longTermCareCategory1Premium}
