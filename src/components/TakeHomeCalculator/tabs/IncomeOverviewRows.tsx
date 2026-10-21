@@ -21,12 +21,8 @@ interface IncomeOverviewRowsProps {
  * 合計所得金額 subtotal when more than one category is present.
  */
 const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs }) => {
-  const grossBusinessAndMiscIncome = inputs.incomeStreams
-    .filter(s => s.type === 'business' || s.type === 'miscellaneous')
-    .reduce((sum, s) => sum + s.amount, 0);
-
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
-  const hasBusinessOrMiscIncome = grossBusinessAndMiscIncome > 0;
+  const hasBusinessOrMiscIncome = results.grossBusinessAndMiscIncome > 0;
   const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
   const presentIncomeComponents = [
     hasEmploymentIncome,
@@ -62,7 +58,7 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
               Net Business / Misc Income
               {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
                 <NetBusinessAndMiscIncomeTooltip
-                  grossBusinessAndMiscIncome={grossBusinessAndMiscIncome}
+                  grossBusinessAndMiscIncome={results.grossBusinessAndMiscIncome}
                   blueFilerDeduction={results.blueFilerDeduction}
                   netBusinessAndMiscIncome={results.netBusinessAndMiscIncome}
                 />

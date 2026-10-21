@@ -10,6 +10,8 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 - Fixed the Social Insurance tab showing the wrong standard monthly remuneration (標準報酬月額) grade when three or more income streams were entered and their total landed exactly on a grade boundary. This was a display bug in the tooltip and did not affect the calculated premiums.
 - Fixed the National Health Insurance portion tooltips (medical, elderly support, long-term care, child support) showing a total ¥1 different from the row beside them in a year that combines two fiscal years, such as 2026. Each fiscal year's amount is now rounded to the yen before the 3/10 and 7/10 weights are applied, as the premium itself is calculated. The calculated premiums were not affected.
 - Fixed the National Health Insurance portion tooltips showing, at net income above ¥24,000,000, a calculation base after a ¥430,000 basic deduction, where the rules apply the same stepped basic deduction as residence tax (¥290,000, ¥150,000, then none). Every portion is at its cap at that income, so no premium changes.
+- Fixed the Furusato Nozei tab's Municipal tax credit and Prefectural tax credit rows, which could each be ¥1 below the credit the calculation applied. The calculation rounds each level's share of the credit up to the yen; the rows rounded it to the nearest yen. The limit and the tax reductions were not affected.
+- Fixed the Net Employment Income tooltip's deduction table for 2026 highlighting the "Up to 2,200,000" row for a gross employment income of exactly ¥2,200,000, which the 30% formula row applies to. The fixed-deduction row now ends at ¥2,199,999, as the rules do. Both rows give the same deduction at that income.
 
 ## 2026-09-10
 
