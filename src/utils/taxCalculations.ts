@@ -17,35 +17,35 @@ import {
   CUSTOM_PROVIDER_ID,
   DEFAULT_PROVIDER,
   DEPENDENT_COVERAGE_ID,
-  LATTER_STAGE_ELDERLY_ID,
-  NATIONAL_HEALTH_INSURANCE_ID,
   isEmployeeHealthProvider,
+  LATTER_STAGE_ELDERLY_ID,
   type LongTermCareCategory1Estimate,
+  NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
 import {
-  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
-  NO_RESIDENCE_TAX_CREDITS,
   type BonusIncomeStream,
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   type ForeignTaxCreditResult,
+  type FurusatoNozeiDetails,
   type HighIncomeMinimumTaxResult,
   type IncomeStream,
+  NO_RESIDENCE_TAX_CREDITS,
   type PersonalCircumstancesInput,
   type ReportedDividendsTaxation,
   type ResidenceTaxCredits,
-  type FurusatoNozeiDetails,
   type TakeHomeInputs,
   type TakeHomeResults,
   type WithholdingOnlyInvestmentIncome,
   ZERO_FURUSATO_NOZEI_DETAILS,
 } from '../types/tax';
 import {
-  type TaxpayerAgeRange,
   DEFAULT_TAXPAYER_AGE_RANGE,
-  taxpayerAgeRangeBounds,
   isLongTermCareCategory1Insured,
   isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
   isSubjectToNationalPension,
+  type TaxpayerAgeRange,
+  taxpayerAgeRangeBounds,
 } from '../types/taxpayerAge';
 import { calculateAdditionalDeductions } from './additionalDeductions';
 import {
@@ -68,12 +68,12 @@ import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
 import { annualIncomeStreamAmount } from './incomeStreams';
 import {
   applyDeductionSpillover,
+  calculateReportedSeparateInvestmentIncomeTaxationBase,
   calculateSeparateNationalIncomeTaxBase,
   calculateWithheldInvestmentTax,
-  classifyReportedInvestmentIncome,
   floorTaxableIncome,
   hasSeparateTaxationReportedInvestmentIncome,
-  type SeparateTaxationBase,
+  type ReportedSeparateTaxationBase,
   withholdingAccountBase,
 } from './investmentIncome';
 import {
@@ -266,14 +266,6 @@ const calculateNationalIncomeTaxBase = (taxableIncome: number): number => {
 };
 
 /**
- * Calculates the reconstruction surtax (復興特別所得税) at 2.1% of base income tax
- * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
- */
-const calculateReconstructionSurtax = (baseTax: number): number => {
-  return RECONSTRUCTION_SURTAX_RATE.taxOn(baseTax);
-};
-
-/**
  * Calculates national income tax based on taxable income, including the 2.1% reconstruction surtax
  * Source: National Tax Agency tax brackets for 2025
  * https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
@@ -281,7 +273,7 @@ const calculateReconstructionSurtax = (baseTax: number): number => {
  */
 export const calculateNationalIncomeTax = (taxableIncome: number): number => {
   const baseTax = calculateNationalIncomeTaxBase(taxableIncome);
-  const reconstructionSurtax = calculateReconstructionSurtax(baseTax);
+  const reconstructionSurtax = RECONSTRUCTION_SURTAX_RATE.taxOn(baseTax);
 
   // Round down to the nearest 100 yen (total tax)
   return Math.floor((baseTax + reconstructionSurtax) / 100) * 100;
@@ -373,7 +365,7 @@ interface IncomeBreakdown {
    */
   withheldForeignTax: number;
   /** Investment-income amounts reported under 申告分離課税 and how they net against each other. */
-  separateBase: SeparateTaxationBase;
+  separateBase: ReportedSeparateTaxationBase;
   /** 配当等 reported under 総合課税, as entered — the 配当所得 that joins 総所得金額. */
   aggregateDividends: number;
   /**
@@ -628,7 +620,7 @@ const calculateIncomeBreakdown = (
     grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
     grossPublicPensionIncome;
-  const separateBase = classifyReportedInvestmentIncome({
+  const separateBase = calculateReportedSeparateInvestmentIncomeTaxationBase({
     capitalGains: reportedCapitalGains,
     qualifyingCapitalLosses: reportedQualifyingCapitalLosses,
     dividends: reportedDividends,

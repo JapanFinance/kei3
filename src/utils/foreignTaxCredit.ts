@@ -174,7 +174,7 @@ export const foreignTaxEntryError = (
         return 'Foreign tax can be entered only for a pension from a foreign system.';
       }
       if (stream.foreignTax > 0 && stream.treatyCredit === 'unavailable') {
-        return 'Foreign tax can be entered only when a tax credit is available in Japan under a tax treaty.';
+        return 'Foreign tax can be entered only when a tax credit is available in Japan.';
       }
       if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
         return 'Foreign tax cannot be more than the gross pension.';

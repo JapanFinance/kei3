@@ -254,9 +254,7 @@ describe('foreignTaxEntryError', () => {
   it('rejects foreign tax on a pension when tax credit is unavailable in Japan under treaty', () => {
     expect(
       foreignTaxEntryError(pension({ treatyCredit: 'unavailable', foreignTax: 100_000 })),
-    ).toBe(
-      'Foreign tax can be entered only when a tax credit is available in Japan under a tax treaty.',
-    );
+    ).toBe('Foreign tax can be entered only when a tax credit is available in Japan.');
   });
 
   it('rejects foreign tax above the amount it was withheld from', () => {

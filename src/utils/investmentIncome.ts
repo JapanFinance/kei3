@@ -8,32 +8,15 @@ import type {
   WithheldInvestmentTax,
 } from '../types/tax';
 
-/** The 申告分離課税 amounts gathered from the reported streams, as entered. */
-export interface SeparateTaxationReportedInvestmentAmounts {
-  /**
-   * 上場株式等に係る譲渡所得等 netted across every reported account; negative when the year
-   * closed at a loss.
-   */
-  capitalGains: number;
-  /**
-   * The losses within {@link capitalGains} realized in a Japanese account. Only these can be
-   * 上場株式等に係る譲渡損失の金額 — 措法37条の12の2②一〜三 requires a sale through a licensed
-   * 金融商品取引業者 or 登録金融機関 — so only these can offset dividends or carry forward.
-   */
-  qualifyingCapitalLosses: number;
-  /** 上場株式等の配当等 reported under 措法8条の4①. */
-  dividends: number;
-}
-
 /** How the reported amounts net against each other before any of them is taxed. */
-export type SeparateTaxationBase = Omit<
+export type ReportedSeparateTaxationBase = Omit<
   SeparateTaxationReportedIncome,
   'taxable' | 'nationalIncomeTaxBase'
 >;
 
 /** Whether any amount is reported under 申告分離課税. */
 export const hasSeparateTaxationReportedInvestmentIncome = (
-  amounts: SeparateTaxationBase['gross'],
+  amounts: ReportedSeparateTaxationBase['gross'],
 ): boolean => amounts.capitalGains !== 0 || amounts.dividends !== 0;
 
 export const NO_SEPARATE_NET_INCOME: SeparateNetIncome = { capitalGains: 0, dividends: 0 };
@@ -57,13 +40,19 @@ export const withholdingAccountBase = (
 
 /**
  * Tax withheld at source on investment income under 申告不要 — see {@link WithheldInvestmentTax}.
- *
- * `bases.listed` is the sum of every withholding account's {@link withholdingAccountBase} plus
- * the dividends withheld outside such an account; `bases.interest` is assumed non-negative,
- * validated where the amounts are gathered.
  */
 export const calculateWithheldInvestmentTax = (
-  bases: { listed: number; interest: number },
+  bases: {
+    /**
+     * The sum of every withholding account's {@link withholdingAccountBase} plus
+     * the dividends withheld outside such an account.
+     */
+    listed: number;
+    /**
+     * Non-reportable interest income; assumed non-negative, validated where the amounts are gathered.
+     */
+    interest: number;
+  },
   year: number,
 ): WithheldInvestmentTax => {
   const rates = getInvestmentIncomeTaxRates(year);
@@ -90,9 +79,21 @@ export const calculateWithheldInvestmentTax = (
  * would carry forward for three years, which is not modelled; a foreign-account loss that the
  * gains did not absorb is lost for the year.
  */
-export const classifyReportedInvestmentIncome = (
-  amounts: SeparateTaxationReportedInvestmentAmounts,
-): SeparateTaxationBase => {
+export const calculateReportedSeparateInvestmentIncomeTaxationBase = (amounts: {
+  /**
+   * 上場株式等に係る譲渡所得等 netted across every reported account; negative when the year
+   * closed at a loss.
+   */
+  capitalGains: number;
+  /**
+   * The losses within {@link capitalGains} realized in a Japanese account. Only these can be
+   * 上場株式等に係る譲渡損失の金額 — 措法37条の12の2②一〜三 requires a sale through a licensed
+   * 金融商品取引業者 or 登録金融機関 — so only these can offset dividends or carry forward.
+   */
+  qualifyingCapitalLosses: number;
+  /** 上場株式等の配当等 reported under 措法8条の4①. */
+  dividends: number;
+}): ReportedSeparateTaxationBase => {
   const loss = Math.max(0, -amounts.capitalGains);
   const qualifyingLoss = Math.min(loss, amounts.qualifyingCapitalLosses);
   const lossOffsetAgainstDividends = Math.min(qualifyingLoss, amounts.dividends);

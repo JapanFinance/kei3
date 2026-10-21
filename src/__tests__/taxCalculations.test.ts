@@ -4387,9 +4387,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           },
         ]),
       ),
-    ).toThrow(
-      'Foreign tax can be entered only when a tax credit is available in Japan under a tax treaty.',
-    );
+    ).toThrow('Foreign tax can be entered only when a tax credit is available in Japan.');
     expect(() =>
       calculateTaxes(
         salaryInputs([

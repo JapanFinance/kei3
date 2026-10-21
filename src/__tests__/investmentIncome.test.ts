@@ -9,7 +9,7 @@ import {
   applyDeductionSpillover,
   calculateSeparateNationalIncomeTaxBase,
   calculateWithheldInvestmentTax,
-  classifyReportedInvestmentIncome,
+  calculateReportedSeparateInvestmentIncomeTaxationBase,
   floorTaxableIncome,
   hasSeparateTaxationReportedInvestmentIncome,
   withholdingAccountBase,
@@ -133,7 +133,7 @@ describe('hasSeparateTaxationReportedInvestmentIncome', () => {
 
 describe('classifyReportedInvestmentIncome', () => {
   it('leaves positive capital gains and dividends un-netted', () => {
-    const result = classifyReportedInvestmentIncome({
+    const result = calculateReportedSeparateInvestmentIncomeTaxationBase({
       capitalGains: 1_000_000,
       dividends: 500_000,
       qualifyingCapitalLosses: 0,
@@ -148,7 +148,7 @@ describe('classifyReportedInvestmentIncome', () => {
   });
 
   it('nets qualifying capital loss against dividends when loss is smaller than dividends', () => {
-    const result = classifyReportedInvestmentIncome({
+    const result = calculateReportedSeparateInvestmentIncomeTaxationBase({
       capitalGains: -300_000,
       dividends: 500_000,
       qualifyingCapitalLosses: 300_000,
@@ -163,7 +163,7 @@ describe('classifyReportedInvestmentIncome', () => {
   });
 
   it('nets qualifying capital loss against dividends up to dividend amount and leaves unabsorbed loss', () => {
-    const result = classifyReportedInvestmentIncome({
+    const result = calculateReportedSeparateInvestmentIncomeTaxationBase({
       capitalGains: -800_000,
       dividends: 500_000,
       qualifyingCapitalLosses: 800_000,
@@ -178,7 +178,7 @@ describe('classifyReportedInvestmentIncome', () => {
   });
 
   it('does not offset dividends with non-qualifying losses', () => {
-    const result = classifyReportedInvestmentIncome({
+    const result = calculateReportedSeparateInvestmentIncomeTaxationBase({
       capitalGains: -500_000,
       dividends: 500_000,
       qualifyingCapitalLosses: 0,
@@ -193,7 +193,7 @@ describe('classifyReportedInvestmentIncome', () => {
   });
 
   it('splits mixed losses into qualifying (offsets dividends) and non-qualifying', () => {
-    const result = classifyReportedInvestmentIncome({
+    const result = calculateReportedSeparateInvestmentIncomeTaxationBase({
       capitalGains: -600_000,
       dividends: 400_000,
       qualifyingCapitalLosses: 200_000,
