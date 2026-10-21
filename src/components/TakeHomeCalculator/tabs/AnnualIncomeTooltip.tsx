@@ -21,9 +21,10 @@ const AnnualIncomeTooltip: React.FC = () => (
     iconAriaLabel="About annual income"
   >
     <Typography variant="body2" sx={{ mb: 1 }}>
-      The amount received over the year, before taxes and social insurance: gross salary, bonus and
-      stock compensation, gross public pension income, and business and miscellaneous income less
-      necessary expenses.
+      The income received over the year before taxes and social insurance: gross salary, bonus and
+      stock compensation, gross public pension income, business and miscellaneous income less
+      necessary expenses, and investment income as entered, whether reported on a tax return or
+      settled by the tax withheld at source.
     </Typography>
     <Typography variant="body2">
       Deductions that reduce net income without reducing the amount received are not subtracted: the

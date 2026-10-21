@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-10-21
+
+### New
+
+- Investment income can now be entered in Advanced mode: [capital gains on shares](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm), [dividends](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm) and [interest](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm), including a withholding designated account ([特定口座（源泉徴収あり）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm)) entered as one entry from its annual transaction report. Each amount can be left to the tax withheld at source (if applicable) or reported on the tax return, under separate taxation (申告分離課税) or, for dividends, aggregate taxation (総合課税). Tax withheld abroad can be entered with the corresponding income (including eligible foreign pensions), and tax paid with a foreign tax return in the Additional Deductions & Credits dialog. Foreign tax paid on reported income is credited against income tax and residence tax up to the legal limits (see the [foreign tax credit](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm)). When investment income is entered, a reporting planner in the advanced income details dialog finds the choices that maximize take-home. The [Minimum Tax on Ultra-High Income](https://www.nta.go.jp/taxes/shiraberu/shinkoku/kiwataka/index.htm) is applied when applicable. The dividend tax credit (配当控除), the credit for foreign tax paid inside Japanese funds, and losses or foreign tax carried forward from earlier years are not supported yet.
+
 ## 2026-09-21
 
 ### Fixed
@@ -60,7 +66,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Updated
 
-- Updated the income distribution to the Ministry of Health, Labour and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
+- Updated the income distribution to the Ministry of Health, Labour, and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
 - The percentile estimate is more precise below ¥10,000,000, where the survey's income brackets now resolve in ¥500,000 steps instead of ¥1,000,000.
 
 ## 2026-06-29

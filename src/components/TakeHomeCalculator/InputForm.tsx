@@ -42,8 +42,11 @@ import {
 } from '../../types/healthInsurance';
 import type {
   TakeHomeFormState,
+  TakeHomeResults,
   IncomeMode,
   IncomeStream,
+  ForeignTaxCreditInput,
+  ForeignTaxCreditResult,
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
   LifeInsuranceInput,
@@ -52,6 +55,7 @@ import type {
   AdditionalDeductionsResult,
   PersonalCircumstancesInput,
   PersonalDeductionsResult,
+  ReportedDividendsTaxation,
 } from '../../types/tax';
 import {
   TAXPAYER_AGE_RANGES,
@@ -59,7 +63,10 @@ import {
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
-import { dependentTestAnnualIncome, totalNonIncomeFromStreams } from '../../utils/incomeStreams';
+import {
+  dependentTestAnnualIncome,
+  totalCommutingAllowanceFromStreams,
+} from '../../utils/incomeStreams';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -107,21 +114,28 @@ interface TaxInputFormProps {
   dispatch: Dispatch<FormAction>;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  /** Computed foreign tax credit, passed through to the modal for its summary. */
+  foreignTaxCreditResult?: ForeignTaxCreditResult | undefined;
   /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
   /** Computed 障害者・寡婦・ひとり親控除, passed through the same way; absent when none applies. */
   personalDeductions?: PersonalDeductionsResult | undefined;
   /** Computed 介護保険料第1号 estimate, shown next to the estimate switch; absent below 65. */
   longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
+  /** Computed investment income (gross amounts and tax withheld at source), passed through to
+   *  the income modal for its group footer; absent when every amount is 0. */
+  investmentIncome?: TakeHomeResults['investmentIncome'];
 }
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
   dispatch,
   homeLoanTaxCreditResult,
+  foreignTaxCreditResult,
   additionalDeductions,
   personalDeductions,
   longTermCareCategory1Estimate,
+  investmentIncome,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -156,6 +170,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     dispatch({ type: 'setField', field: 'homeLoanTaxCredit', value: newInput });
   };
 
+  const handleForeignTaxCreditChange = (newInput: ForeignTaxCreditInput | undefined) => {
+    dispatch({ type: 'setField', field: 'foreignTaxCredit', value: newInput });
+  };
+
   const handleDcPlanContributionsChange = (value: number) => {
     dispatch({ type: 'setField', field: 'dcPlanContributions', value });
   };
@@ -174,6 +192,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   const handlePersonalCircumstancesChange = (newInput: PersonalCircumstancesInput) => {
     dispatch({ type: 'setField', field: 'personalCircumstances', value: newInput });
+  };
+
+  const handleReportedDividendsTaxationChange = (value: ReportedDividendsTaxation) => {
+    dispatch({ type: 'setField', field: 'reportedDividendsTaxation', value });
   };
 
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
@@ -266,6 +288,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         inputs.ageRange,
         inputs.dependents,
         inputs.personalCircumstances,
+        inputs.reportedDividendsTaxation,
       ),
     [
       inputs.incomeStreams,
@@ -273,6 +296,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       inputs.dependents,
       inputs.ageRange,
       inputs.personalCircumstances,
+      inputs.reportedDividendsTaxation,
     ],
   );
 
@@ -341,7 +365,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </Box>
 
                   {(() => {
-                    const totalNontaxableBenefits = totalNonIncomeFromStreams(inputs.incomeStreams);
+                    const totalNontaxableBenefits = totalCommutingAllowanceFromStreams(
+                      inputs.incomeStreams,
+                    );
 
                     return totalNontaxableBenefits > 0 ? (
                       <Box
@@ -670,7 +696,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance, is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance and investment income (dividends and interest before withholding, and a year's capital gains), is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>
@@ -846,8 +872,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             Additional Deductions &amp; Credits
             <SimpleTooltip>
               Income deductions (所得控除, e.g. iDeCo or 小規模企業共済) and tax credits (税額控除,
-              e.g. home loan tax credit). These affect income tax, residence tax, and the furusato
-              nozei limit.
+              e.g. the home loan tax credit or the foreign tax credit). These affect income tax,
+              residence tax, and the furusato nozei limit.
             </SimpleTooltip>
           </Typography>
           <Button
@@ -865,6 +891,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0)
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
+                );
+              if (inputs.foreignTaxCredit && inputs.foreignTaxCredit.foreignTaxOnTaxReturn > 0)
+                parts.push(
+                  `Foreign tax paid with a return ${formatJPY(inputs.foreignTaxCredit.foreignTaxOnTaxReturn)}`,
                 );
               personalDeductions?.items.forEach(item => {
                 parts.push(
@@ -930,7 +960,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+        reportedDividendsTaxation={inputs.reportedDividendsTaxation}
+        onReportedDividendsTaxationChange={handleReportedDividendsTaxationChange}
+        calculationInputs={inputs}
         netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
+        investmentIncome={investmentIncome}
       />
 
       <AdditionalDeductionsModal
@@ -941,6 +975,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         homeLoanTaxCredit={inputs.homeLoanTaxCredit}
         onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
         homeLoanTaxCreditResult={homeLoanTaxCreditResult}
+        foreignTaxCredit={inputs.foreignTaxCredit}
+        onForeignTaxCreditChange={handleForeignTaxCreditChange}
+        foreignTaxCreditResult={foreignTaxCreditResult}
+        withheldForeignTax={investmentIncome?.withheld?.foreignTax}
         lifeInsurance={inputs.lifeInsurance}
         onLifeInsuranceChange={handleLifeInsuranceChange}
         earthquakeInsurance={inputs.earthquakeInsurance}

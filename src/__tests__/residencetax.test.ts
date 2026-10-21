@@ -573,6 +573,105 @@ describe('calculateResidenceTax personal deductions (人的控除)', () => {
   });
 });
 
+describe('calculateResidenceTax foreign tax credit (地方税法37条の3, 314条の8)', () => {
+  const NO_STATUS = { disability: 'none', widowOrSingleParent: 'none' } as const;
+
+  it('takes each side its own credit after the 調整控除, before the ¥100 floor', () => {
+    // 5,000,000 − 1,000,000 − 430,000 = 3,570,000: 市 214,200 − 1,500 = 212,700, − 9,467 =
+    // 203,233 → 203,200; 県 142,800 − 1,000 = 141,800, − 6,311 = 135,489 → 135,400; + 5,000.
+    const result = calculateResidenceTax(
+      5_000_000,
+      1_000_000,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      { homeLoan: 0, foreignTax: { city: 9_467, prefecture: 6_311 } },
+    );
+    expect(result.city.cityIncomeTax).toBe(203_200);
+    expect(result.prefecture.prefecturalIncomeTax).toBe(135_400);
+    expect(result.totalResidenceTax).toBe(343_600);
+    expect(result.foreignTaxCredit).toEqual({ city: 9_467, prefecture: 6_311 });
+  });
+
+  it("caps each side's credit at its own 所得割 and moves nothing to the other side", () => {
+    // 1,000,000 − 430,000 = 570,000: 市 34,200 − 1,500 = 32,700 absorbs 32,700 of the 50,000;
+    // 県 22,800 − 1,000 = 21,800 − 10,000 = 11,800. The 17,300 the city could not use does not
+    // reach the prefecture, which had room for it.
+    const result = calculateResidenceTax(
+      1_000_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      { homeLoan: 0, foreignTax: { city: 50_000, prefecture: 10_000 } },
+    );
+    expect(result.city.cityIncomeTax).toBe(0);
+    expect(result.prefecture.prefecturalIncomeTax).toBe(11_800);
+    expect(result.totalResidenceTax).toBe(16_800);
+    expect(result.foreignTaxCredit).toEqual({ city: 32_700, prefecture: 10_000 });
+  });
+
+  it('takes the home loan credit first and caps the foreign tax credit at what it leaves', () => {
+    // The 20,000 spillover splits 12,000 / 8,000: 市 32,700 − 12,000 = 20,700, all of it absorbed
+    // by the 25,000 credit; 県 21,800 − 8,000 = 13,800 − 5,000 = 8,800.
+    const result = calculateResidenceTax(
+      1_000_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      { homeLoan: 20_000, foreignTax: { city: 25_000, prefecture: 5_000 } },
+    );
+    expect(result.city.cityIncomeTax).toBe(0);
+    expect(result.prefecture.prefecturalIncomeTax).toBe(8_800);
+    expect(result.totalResidenceTax).toBe(13_800);
+    expect(result.foreignTaxCredit).toEqual({ city: 20_700, prefecture: 5_000 });
+  });
+
+  it('applies no credit when no 所得割 is levied', () => {
+    const credits = { homeLoan: 0, foreignTax: { city: 1_000, prefecture: 1_000 } };
+    // At or below the 450,000 均等割 limit: nothing is levied at all.
+    expect(
+      calculateResidenceTax(
+        450_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+        NO_STATUS,
+        credits,
+      ),
+    ).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    // A 地方税法295条1項2号 status at 1,350,000.
+    expect(
+      calculateResidenceTax(
+        1_350_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+        { disability: 'regular', widowOrSingleParent: 'none' },
+        credits,
+      ),
+    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: 'disability' });
+    // Deductions leave no 課税総所得金額, so the 所得割 is 0 and only the 均等割 remains.
+    const noTaxableIncome = calculateResidenceTax(
+      1_000_000,
+      600_000,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      credits,
+    );
+    expect(noTaxableIncome.totalResidenceTax).toBe(5_000);
+    expect(noTaxableIncome.foreignTaxCredit).toBeUndefined();
+  });
+});
+
 describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
   it('returns the non-taxable detail, marked as the minor exemption, at 合計所得金額 1,350,000', () => {
     expect(

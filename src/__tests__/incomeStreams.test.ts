@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import {
+  annualIncomeContribution,
   annualIncomeStreamAmount,
-  countsTowardAnnualIncome,
   dependentTestAnnualIncome,
+  isEarnedIncomeStream,
   monthlyIncomeStreamAmount,
   totalAnnualIncomeFromStreams,
   totalCommutingAllowanceFromStreams,
-  totalNonIncomeFromStreams,
 } from '../utils/incomeStreams';
 
 describe('totalAnnualIncomeFromStreams', () => {
@@ -27,6 +27,204 @@ describe('totalAnnualIncomeFromStreams', () => {
   it('returns 0 for an empty stream list', () => {
     expect(totalAnnualIncomeFromStreams([])).toBe(0);
   });
+
+  it('includes investment income settled by withholding, as entered', () => {
+    expect(
+      totalAnnualIncomeFromStreams([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'withholdingAccount',
+          capitalGains: 2_000_000,
+          dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        },
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 300_000,
+        },
+        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000, foreignTax: 0 },
+      ]),
+    ).toBe(1_000_000 + 2_000_000 + 300_000 + 100_000);
+  });
+
+  it('includes investment income reported under 申告分離課税, as entered', () => {
+    expect(
+      totalAnnualIncomeFromStreams([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'foreign',
+          amount: -200_000,
+        },
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: true,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 300_000,
+        },
+      ]),
+    ).toBe(1_000_000 - 200_000 + 300_000);
+  });
+});
+
+describe('dependentTestAnnualIncome', () => {
+  it('counts earned income, the commuting allowance, and dividends and interest gross whatever their election', () => {
+    expect(
+      dependentTestAnnualIncome([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        {
+          id: 'p1',
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 500_000,
+        },
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: true,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 300_000,
+        },
+        {
+          id: 'd2',
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 300_000,
+        },
+        { id: 'i1', type: 'interest', payerDomicile: 'domestic', amount: 100_000, foreignTax: 0 },
+        { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      ]),
+    ).toBe(1_500_000 + 300_000 * 2 + 100_000 + 10_000 * 12);
+  });
+
+  it('counts a year of capital gains netted across accounts, and nothing in a losing year', () => {
+    const salary = {
+      id: 's1',
+      type: 'salary' as const,
+      amount: 1_000_000,
+      frequency: 'annual' as const,
+    };
+
+    // +500,000 in a withholding account and −200,000 in a foreign one: the year's gains are 300,000.
+    expect(
+      dependentTestAnnualIncome([
+        salary,
+        {
+          id: 'g1',
+          type: 'withholdingAccount',
+          capitalGains: 500_000,
+          dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        },
+        {
+          id: 'g2',
+          type: 'capitalGains',
+          shareType: 'listed',
+          account: 'foreign',
+          amount: -200_000,
+        },
+      ]),
+    ).toBe(1_300_000);
+
+    // A losing year adds nothing and is not netted against the dividends of the same account.
+    expect(
+      dependentTestAnnualIncome([
+        salary,
+        {
+          id: 'g1',
+          type: 'withholdingAccount',
+          capitalGains: -500_000,
+          dividends: 300_000,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        },
+      ]),
+    ).toBe(1_300_000);
+  });
+
+  it('adds the annualized commuting allowance that annual income leaves out', () => {
+    const streams: Parameters<typeof dependentTestAnnualIncome>[0] = [
+      { id: 's1', type: 'salary', amount: 100_000, frequency: 'monthly' },
+      { id: 'c1', type: 'commutingAllowance', amount: 15_000, frequency: 'monthly' },
+    ];
+
+    expect(totalAnnualIncomeFromStreams(streams)).toBe(1_200_000);
+    expect(dependentTestAnnualIncome(streams)).toBe(1_200_000 + 15_000 * 12);
+  });
+
+  it('equals the annual income when there is no commuting allowance', () => {
+    expect(
+      dependentTestAnnualIncome([
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+      ]),
+    ).toBe(1_200_000);
+  });
+});
+
+describe('isEarnedIncomeStream', () => {
+  it('is true for pay, business, miscellaneous and pension income and false for the rest', () => {
+    expect(isEarnedIncomeStream({ id: 's1', type: 'salary', amount: 1, frequency: 'annual' })).toBe(
+      true,
+    );
+    expect(
+      isEarnedIncomeStream({
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1,
+      }),
+    ).toBe(true);
+    expect(
+      isEarnedIncomeStream({
+        id: 'c1',
+        type: 'commutingAllowance',
+        amount: 1,
+        frequency: 'monthly',
+      }),
+    ).toBe(false);
+    expect(
+      isEarnedIncomeStream({
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1,
+      }),
+    ).toBe(false);
+  });
 });
 
 describe('annualIncomeStreamAmount', () => {
@@ -42,25 +240,89 @@ describe('annualIncomeStreamAmount', () => {
   });
 
   it('takes every other type at its entered amount', () => {
-    expect(annualIncomeStreamAmount({ id: 'p1', type: 'publicPension', amount: 1_800_000 })).toBe(
-      1_800_000,
-    );
+    expect(
+      annualIncomeStreamAmount({
+        id: 'p1',
+        type: 'publicPension',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 1_800_000,
+      }),
+    ).toBe(1_800_000);
   });
 });
 
-describe('countsTowardAnnualIncome', () => {
-  it('excludes only the commuting allowance', () => {
+describe('annualIncomeContribution', () => {
+  it('includes investment income that is reported', () => {
     expect(
-      countsTowardAnnualIncome({
+      annualIncomeContribution({
+        id: 'g1',
+        type: 'capitalGains',
+        shareType: 'listed',
+        account: 'domesticNoWithholding',
+        amount: 10_000,
+      }),
+    ).toBe(10_000);
+    expect(
+      annualIncomeContribution({
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: true,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 10_000,
+      }),
+    ).toBe(10_000);
+  });
+
+  it('includes investment income settled by withholding and excludes only the commuting allowance', () => {
+    expect(
+      annualIncomeContribution({
         id: 'c1',
         type: 'commutingAllowance',
         amount: 10_000,
         frequency: 'monthly',
       }),
-    ).toBe(false);
+    ).toBe(0);
     expect(
-      countsTowardAnnualIncome({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
-    ).toBe(true);
+      annualIncomeContribution({
+        id: 'g1',
+        type: 'withholdingAccount',
+        capitalGains: -10_000,
+        dividends: 0,
+        foreignDividends: 0,
+        foreignTax: 0,
+        reportsCapitalGains: false,
+        reportsDividends: false,
+      }),
+    ).toBe(-10_000);
+    expect(
+      annualIncomeContribution({
+        id: 'd1',
+        type: 'dividends',
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 10_000,
+      }),
+    ).toBe(10_000);
+    expect(
+      annualIncomeContribution({
+        id: 'i1',
+        type: 'interest',
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+        amount: 10_000,
+      }),
+    ).toBe(10_000);
+    // A monthly amount contributes its annualized total, not the entered amount.
+    expect(
+      annualIncomeContribution({ id: 's1', type: 'salary', amount: 10_000, frequency: 'monthly' }),
+    ).toBe(120_000);
   });
 });
 
@@ -141,47 +403,5 @@ describe('totalCommutingAllowanceFromStreams', () => {
     expect(
       totalCommutingAllowanceFromStreams([{ id: 'm1', type: 'miscellaneous', amount: 500_000 }]),
     ).toBe(0);
-  });
-});
-
-describe('dependentTestAnnualIncome', () => {
-  it('adds the annualized commuting allowance that annual income leaves out', () => {
-    const streams: Parameters<typeof dependentTestAnnualIncome>[0] = [
-      { id: 's1', type: 'salary', amount: 100_000, frequency: 'monthly' },
-      { id: 'c1', type: 'commutingAllowance', amount: 15_000, frequency: 'monthly' },
-    ];
-
-    expect(totalAnnualIncomeFromStreams(streams)).toBe(1_200_000);
-    expect(dependentTestAnnualIncome(streams)).toBe(1_200_000 + 15_000 * 12);
-  });
-
-  it('equals the annual income when there is no commuting allowance', () => {
-    expect(
-      dependentTestAnnualIncome([
-        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
-      ]),
-    ).toBe(1_200_000);
-  });
-});
-
-describe('totalNonIncomeFromStreams', () => {
-  it('totals the streams excluded from annual income and ignores the rest', () => {
-    const streams: Parameters<typeof totalNonIncomeFromStreams>[0] = [
-      { id: 's1', type: 'salary', amount: 3_000_000, frequency: 'annual' },
-      { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
-      { id: 'c2', type: 'commutingAllowance', amount: 60_000, frequency: '6-months' },
-    ];
-
-    expect(totalNonIncomeFromStreams(streams)).toBe(10_000 * 12 + 60_000 * 2);
-    // Together the two totals account for every stream, at its annual amount.
-    expect(totalNonIncomeFromStreams(streams) + totalAnnualIncomeFromStreams(streams)).toBe(
-      streams.reduce((sum, s) => sum + annualIncomeStreamAmount(s), 0),
-    );
-  });
-
-  it('returns 0 when every stream counts toward annual income', () => {
-    expect(totalNonIncomeFromStreams([{ id: 'm1', type: 'miscellaneous', amount: 500_000 }])).toBe(
-      0,
-    );
   });
 });

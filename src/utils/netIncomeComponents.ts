@@ -4,6 +4,8 @@
 import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import type { AgeRange } from '../types/age';
+import type { SeparateNetIncome } from '../types/tax';
+import { NO_SEPARATE_NET_INCOME } from './investmentIncome';
 
 /**
  * The ¥100,000 that caps both income terms of the
@@ -64,7 +66,18 @@ export interface NetIncomeComponents {
   pensionIncomeAdjustmentDeduction: number;
   /** 公的年金等に係る雑所得. */
   netPublicPensionIncome: number;
-  /** 合計所得金額: the net components above plus the other net income. */
+  /** 配当所得 reported under 総合課税 — see {@link NetIncomeComposition.aggregateDividendIncome}. */
+  aggregateDividendIncome: number;
+  /** 利子所得 paid outside Japan — see {@link NetIncomeComposition.aggregateInterestIncome}. */
+  aggregateInterestIncome: number;
+  /**
+   * 総所得金額: the net components above plus the other net income taxed in the brackets
+   * (所法22条②一).
+   */
+  aggregateNetIncome: number;
+  /** The 申告分離課税 amounts, which 合計所得金額 includes and 総所得金額 does not. */
+  separateNetIncome: SeparateNetIncome;
+  /** 合計所得金額: {@link aggregateNetIncome} plus {@link separateNetIncome}. */
   totalNetIncome: number;
 }
 
@@ -89,6 +102,26 @@ export interface NetIncomeComposition {
   recipientAgeRange: AgeRange;
   /** Net income of every other category (事業所得, 公的年金等以外の雑所得, and so on). */
   otherNetIncome: number;
+  /**
+   * 配当所得 reported under 総合課税: 上場株式等の配当等 for which 措法8条の4 was not elected, so
+   * 所法22条②一 counts it in 総所得金額 like any other 配当所得. Taken as the 収入金額 (所法24条②,
+   * the 負債利子 offset not modelled). Kept apart from {@link otherNetIncome} so the display can
+   * name it. Absent means none.
+   */
+  aggregateDividendIncome?: number | undefined;
+  /**
+   * 利子所得 paid outside Japan: 措法3条① settles by 源泉分離課税 only the 一般利子等
+   * 国内において支払を受けるべき, so interest with no Japanese payer has no Japanese tax
+   * withheld and 所法22条②一 counts it in 総所得金額 like any other 利子所得. Taken as the whole
+   * receipt (所法23条②, which allows no deduction). Kept apart from {@link otherNetIncome} so the
+   * display can name it. Absent means none.
+   */
+  aggregateInterestIncome?: number | undefined;
+  /**
+   * Investment income reported under 申告分離課税, after 損益通算. Part of 合計所得金額 but not
+   * of 総所得金額 (措法8条の4③一, 37条の10⑥一 as 37条の11⑥ applies it). Absent means none.
+   */
+  separateNetIncome?: SeparateNetIncome | undefined;
   /** Income year for the deduction table lookups. */
   year: number;
 }
@@ -106,19 +139,29 @@ export const composeNetIncomeComponents = ({
   grossPublicPensionIncome,
   recipientAgeRange,
   otherNetIncome,
+  aggregateDividendIncome = 0,
+  aggregateInterestIncome = 0,
+  separateNetIncome = NO_SEPARATE_NET_INCOME,
   year,
 }: NetIncomeComposition): NetIncomeComponents => {
   const netEmploymentIncomeBeforePensionAdjustment =
     calculateNetEmploymentIncome(grossEmploymentIncome, year) - incomeAdjustmentDeduction;
+  const separateNetIncomeTotal = separateNetIncome.capitalGains + separateNetIncome.dividends;
 
   // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
-  // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額).
-  // Without pension income the 給与+年金 adjustment below cannot apply, so 給与所得 enters the band
-  // test before that adjustment but after the 子ども・特別障害者等 variant.
+  // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額),
+  // which includes the 配当所得 and 利子所得 in 総所得金額 and the 申告分離課税 amounts (所法2条1項30号 as
+  // 措法8条の4③一 and 37条の10⑥一 read it). Without pension income the 給与+年金 adjustment
+  // below cannot apply, so 給与所得 enters the band test before that adjustment but after the
+  // 子ども・特別障害者等 variant.
   const netPublicPensionIncome = calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
     recipientAgeRange,
-    netEmploymentIncomeBeforePensionAdjustment + otherNetIncome,
+    netEmploymentIncomeBeforePensionAdjustment +
+      otherNetIncome +
+      aggregateDividendIncome +
+      aggregateInterestIncome +
+      separateNetIncomeTotal,
     year,
   );
 
@@ -128,12 +171,22 @@ export const composeNetIncomeComponents = ({
   );
   const netEmploymentIncome =
     netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
+  const aggregateNetIncome =
+    netEmploymentIncome +
+    netPublicPensionIncome +
+    otherNetIncome +
+    aggregateDividendIncome +
+    aggregateInterestIncome;
 
   return {
     netEmploymentIncome,
     incomeAdjustmentDeduction,
     pensionIncomeAdjustmentDeduction,
     netPublicPensionIncome,
-    totalNetIncome: netEmploymentIncome + netPublicPensionIncome + otherNetIncome,
+    aggregateDividendIncome,
+    aggregateInterestIncome,
+    aggregateNetIncome,
+    separateNetIncome,
+    totalNetIncome: aggregateNetIncome + separateNetIncomeTotal,
   };
 };

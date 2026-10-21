@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import SummaryTab from '../components/TakeHomeCalculator/tabs/SummaryTab';
@@ -29,6 +29,86 @@ describe('SummaryTab annual income header', () => {
 
     expect(screen.getByText('Annual Income')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'About annual income' })).toBeInTheDocument();
+  });
+});
+
+describe('SummaryTab with investment income', () => {
+  // Investment income left to withholding is money received, so it is inside annual income and
+  // take-home, and the tax withheld on it counts with the assessed tax of the same kind; the
+  // Taxes tab shows the two apart. No row of its own.
+  it('counts the tax withheld on 申告不要 income with the income tax and residence tax', () => {
+    render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          annualIncome: 5_200_000,
+          takeHomeIncome: 3_956_220,
+          investmentIncome: {
+            withheld: {
+              accounts: [
+                { position: 1, capitalGains: 1_000_000, dividends: 200_000, base: 1_200_000 },
+              ],
+              dividends: 0,
+              interest: 0,
+              received: 1_200_000,
+              taxedAmount: 1_200_000,
+              tax: { national: 183_780, residence: 60_000, total: 243_780 },
+            },
+          },
+        }}
+      />,
+    );
+
+    // 100,000 assessed + 183,780 withheld; 200,000 assessed + 60,000 withheld; their sum.
+    expect(screen.getByText(/^¥283,780/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥260,000/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥543,780/)).toBeInTheDocument();
+    expect(screen.queryByText(/Investment Income/)).not.toBeInTheDocument();
+  });
+
+  // Reported investment income is already inside annual income, the taxes, and take-home, so it
+  // needs no row of its own either.
+  it('adds no row for investment income reported under 申告分離課税', () => {
+    const { asFragment } = render(<SummaryTab results={baseResults} />);
+    const withoutInvestmentIncome = asFragment();
+
+    cleanup();
+    const { asFragment: withReportedIncome } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          investmentIncome: {
+            reported: {
+              separate: {
+                gross: { capitalGains: 0, dividends: 1_000_000 },
+                lossOffsetAgainstDividends: 0,
+                unabsorbedQualifyingLoss: 0,
+                nonQualifyingLoss: 0,
+                netIncome: { capitalGains: 0, dividends: 1_000_000 },
+                taxable: { capitalGains: 0, dividends: 1_000_000 },
+                nationalIncomeTaxBase: 150_000,
+              },
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(withReportedIncome()).toEqual(withoutInvestmentIncome);
+  });
+});
+
+describe('SummaryTab with foreign tax', () => {
+  // Foreign tax paid is a tax on the income like any other: it counts with the income tax, which
+  // the foreign tax credit has already reduced, and needs no row of its own.
+  it('folds the foreign tax paid into the income tax', () => {
+    render(<SummaryTab results={{ ...baseResults, foreignTaxPaid: 20_000 }} />);
+
+    // 100,000 assessed + 20,000 foreign tax; 200,000 residence tax; their sum.
+    expect(screen.getByText(/^¥120,000/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥200,000/)).toBeInTheDocument();
+    expect(screen.getByText(/^¥320,000/)).toBeInTheDocument();
+    expect(screen.queryByText(/Foreign/)).not.toBeInTheDocument();
   });
 });
 
@@ -69,5 +149,37 @@ describe('SummaryTab with the 介護保険第1号 premium', () => {
     expect(screen.queryByText('Age 65+ Long-term Care Insurance')).not.toBeInTheDocument();
     // Health insurance and the total are both 408,500 with nothing else due.
     expect(screen.getAllByText(/^¥408,500/)).toHaveLength(2);
+  });
+});
+
+describe('SummaryTab with zero or negative annual income from capital losses', () => {
+  it('omits percentage shares when annual income is zero instead of dividing by zero', () => {
+    const { container } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          annualIncome: 0,
+          takeHomeIncome: -708_500,
+        }}
+      />,
+    );
+
+    expect(container.textContent).not.toMatch(/Infinity|NaN|%/);
+    expect(screen.getAllByText('-¥708,500')).toHaveLength(2);
+  });
+
+  it('omits percentage shares when annual income is negative', () => {
+    const { container } = render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          annualIncome: -500_000,
+          takeHomeIncome: -1_208_500,
+        }}
+      />,
+    );
+
+    expect(container.textContent).not.toMatch(/%/);
+    expect(screen.getByText('-¥1,208,500')).toBeInTheDocument();
   });
 });

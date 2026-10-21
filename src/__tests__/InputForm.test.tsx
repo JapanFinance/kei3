@@ -18,6 +18,7 @@ import {
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { calculateTaxes } from '../utils/taxCalculations';
 
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
@@ -62,6 +63,7 @@ describe('TakeHomeInputForm Tests', () => {
     incomeMode: 'salary',
     incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -317,6 +319,7 @@ describe('Dependent Coverage UI Behavior', () => {
     incomeMode: 'salary',
     incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -424,6 +427,80 @@ describe('Dependent Coverage UI Behavior', () => {
       .map(option => option.textContent);
 
     expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it('should NOT include dependent coverage when dividends left off the return carry the 年間収入 over', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        // 100,000 short of the threshold; the dividends are 収入 whether or not they are reported.
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 100_000,
+        },
+      ],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    const optionTexts = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .map(option => option.textContent);
+
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it("should NOT include dependent coverage when a year's capital gains carry the 年間収入 over, but should for a losing year", async () => {
+    const user = userEvent.setup();
+    const withGains = (amount: number): TakeHomeFormState => ({
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'withholdingAccount',
+          capitalGains: amount,
+          dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        },
+      ],
+    });
+
+    const { unmount } = render(
+      <TakeHomeInputForm inputs={withGains(100_000)} dispatch={mockDispatch} />,
+    );
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map(option => option.textContent),
+    ).not.toContain('None (dependent of insured employee)');
+    await user.keyboard('{Escape}');
+    unmount();
+
+    render(<TakeHomeInputForm inputs={withGains(-500_000)} dispatch={mockDispatch} />);
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'None (dependent of insured employee)',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('should include dependent coverage for the same salary without a commuting allowance', async () => {
@@ -565,6 +642,7 @@ describe('Age Selection', () => {
     incomeMode: 'salary',
     incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -781,6 +859,7 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     incomeMode: 'advanced',
     incomeStreams: [],
     savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
     longTermCareCategory1ManualEntry: false,
     longTermCareCategory1Premium: 0,
     ageRange: 'age20to39' as const,
@@ -824,8 +903,17 @@ describe('TakeHomeInputForm Income Details Modal', () => {
       annualIncome: 2_400_000,
       incomeYear: 2026,
       incomeMode: 'advanced' as const,
-      incomeStreams: [{ id: 'p1', type: 'publicPension' as const, amount: 2_400_000 }],
+      incomeStreams: [
+        {
+          id: 'p1',
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 2_400_000,
+        },
+      ],
       savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange,
@@ -874,6 +962,7 @@ describe('Commuting Allowance Integration', () => {
       incomeMode: 'advanced',
       incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
       savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
@@ -919,6 +1008,74 @@ describe('Commuting Allowance Integration', () => {
   }, 10_000);
 });
 
+describe('Investment Income Integration', () => {
+  // Real reducer and calculateTaxes, mirroring how App.tsx derives investmentIncome from the
+  // streams, so the header row's presence and value depend on the actual engine output.
+  const TestWrapper = () => {
+    const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      annualIncome: 5000000,
+      incomeYear: 2026,
+      incomeMode: 'advanced',
+      incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
+      savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
+      longTermCareCategory1ManualEntry: false,
+      longTermCareCategory1Premium: 0,
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dcPlanContributions: 0,
+      dependents: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    });
+    const results = calculateTaxes(inputs);
+
+    return (
+      <TakeHomeInputForm
+        inputs={inputs}
+        dispatch={dispatch}
+        investmentIncome={results.investmentIncome}
+      />
+    );
+  };
+
+  it('counts a withheld-only dividend in the income total, with no row of its own', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper />);
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
+
+    const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
+    await user.type(amountInput, '300000');
+    await user.click(screen.getByRole('button', { name: /add/i }));
+    await user.click(screen.getByRole('button', { name: /close/i }));
+
+    // Gross, before the 20.315% withheld at source: 5,000,000 + 300,000.
+    expect(screen.queryByText('Investment Income (withheld only)')).not.toBeInTheDocument();
+    expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
+  }, 10_000);
+
+  it('counts a dividend reported under 申告分離課税 in the income total the same way', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper />);
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
+
+    await user.type(screen.getByRole('textbox', { name: /gross dividends/i }), '300000');
+    await user.click(screen.getByRole('button', { name: 'Reported' }));
+    await user.click(screen.getByRole('button', { name: /add/i }));
+    await user.click(screen.getByRole('button', { name: /close/i }));
+
+    expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
+  }, 10_000);
+});
+
 describe('Regression: Health Insurance Provider Auto-Correction', () => {
   // Wrapper component to manage state like the real application
   const TestWrapper = () => {
@@ -932,6 +1089,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
         { id: '2', type: 'business', amount: 4000000 },
       ],
       savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
       longTermCareCategory1ManualEntry: false,
       longTermCareCategory1Premium: 0,
       ageRange: 'age20to39' as const,
@@ -979,5 +1137,59 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
     // 5. Assert UI Outcome
     // The provider should now be "National Health Insurance"
     expect(providerSelect).toHaveTextContent('National Health Insurance');
+  });
+});
+
+describe('Additional Deductions & Credits: foreign tax credit', () => {
+  const salaryInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    annualIncome: 5_000_000,
+    incomeYear: 2026,
+    incomeMode: 'salary',
+    incomeStreams: [
+      { id: 'simple-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+    ],
+    savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39',
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  it('names the foreign tax paid with a return in the button summary', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={{
+          ...salaryInputs,
+          foreignTaxCredit: { foreignTaxOnTaxReturn: 20_000 },
+        }}
+        dispatch={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Foreign tax paid with a return ¥20,000')).toBeInTheDocument();
+  });
+
+  it('dispatches the foreign tax entered in the dialog, in any income mode', async () => {
+    const user = userEvent.setup();
+    const dispatch = vi.fn();
+    render(<TakeHomeInputForm inputs={salaryInputs} dispatch={dispatch} />);
+
+    await user.click(screen.getByRole('button', { name: /Add iDeCo/ }));
+    const foreignTax = screen.getByLabelText('Foreign Tax Paid with a Tax Return (外国所得税)');
+    await user.clear(foreignTax);
+    await user.type(foreignTax, '20000');
+
+    expect(dispatch).toHaveBeenLastCalledWith({
+      type: 'setField',
+      field: 'foreignTaxCredit',
+      value: { foreignTaxOnTaxReturn: 20_000 },
+    });
   });
 });
