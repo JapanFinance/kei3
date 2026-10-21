@@ -429,8 +429,8 @@ export const isMinimumTaxApplicable = (inputs: TakeHomeInputs): boolean =>
 
 /**
  * Whether `candidate` should replace `best` as the best plan found so far (7.3.3): a strictly
- * higher `kept` wins outright; a tie prefers fewer reported units, then whichever of the two
- * already matches the current entries.
+ * higher `kept` wins outright; a tie prefers whichever of the two already matches the current
+ * entries (to avoid recommending spurious changes), then fewer reported units.
  */
 export const isBetterPlan = (
   candidate: PlanEvaluation,
