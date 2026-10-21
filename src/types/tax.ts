@@ -477,7 +477,7 @@ export interface ForeignTaxCreditInput {
    * Creditable 外国所得税 paid with a foreign tax return filed this year, a US return for example.
    * For a US citizen, only the part Article 23(3)(a) of the Japan–US tax treaty lets Japan credit.
    */
-  foreignTax: number;
+  foreignTaxOnTaxReturn: number;
 }
 
 /** One amount per tax the foreign tax credit comes off, in the order the credit is applied. */

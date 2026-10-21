@@ -3898,7 +3898,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     it('credits nothing more once every limit is used (case A plus 5,000 paid with a return)', () => {
       const withManual = calculateTaxes({
         ...salaryInputs([foreignDividend(true)]),
-        foreignTaxCredit: { foreignTax: 5_000 },
+        foreignTaxCredit: { foreignTaxOnTaxReturn: 5_000 },
       });
       // F = 105,000 with the same limits: 30,520 + 5,000 left over, taxes unchanged.
       expect(withManual.foreignTaxCredit).toMatchObject({
@@ -4263,7 +4263,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
   it('case K: credits tax paid with a foreign return against the foreign-source income of an entry', () => {
     const result = calculateTaxes({
       ...salaryInputs([foreignInterest(500_000, 0)]),
-      foreignTaxCredit: { foreignTax: 20_000 },
+      foreignTaxCredit: { foreignTaxOnTaxReturn: 20_000 },
     });
 
     // T = 3,560,000 + 500,000 = 4,060,000; 課税総所得金額 4,060,000 − 722,252 − 1,040,000 =
@@ -4302,7 +4302,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
   it('case K′: has no limit with no foreign-source income, so the foreign tax is only paid', () => {
     const result = calculateTaxes({
       ...salaryInputs(),
-      foreignTaxCredit: { foreignTax: 20_000 },
+      foreignTaxCredit: { foreignTaxOnTaxReturn: 20_000 },
     });
 
     expect(result.foreignTaxCredit).toEqual({
@@ -4326,7 +4326,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     expect(
       calculateTaxes({
         ...salaryInputs(),
-        foreignTaxCredit: { foreignTax: 0 },
+        foreignTaxCredit: { foreignTaxOnTaxReturn: 0 },
       }),
     ).toEqual(calculateTaxes(salaryInputs()));
   });
@@ -4358,7 +4358,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     expect(() =>
       calculateTaxes({
         ...salaryInputs(),
-        foreignTaxCredit: { foreignTax: -1 },
+        foreignTaxCredit: { foreignTaxOnTaxReturn: -1 },
       }),
     ).toThrow('Foreign tax cannot be negative.');
     expect(() =>
@@ -4805,7 +4805,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           }),
           ...(rand() < 0.25 && {
             foreignTaxCredit: {
-              foreignTax: randInt(10_000, 300_000),
+              foreignTaxOnTaxReturn: randInt(10_000, 300_000),
             },
           }),
         };

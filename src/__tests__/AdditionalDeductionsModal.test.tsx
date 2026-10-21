@@ -71,11 +71,11 @@ describe('Foreign Tax Credit card', () => {
     expect(screen.queryByLabelText(/Foreign-Source Income/)).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '¥20,000' } });
-    expect(onForeignTaxCreditChange).toHaveBeenLastCalledWith({ foreignTax: 20_000 });
+    expect(onForeignTaxCreditChange).toHaveBeenLastCalledWith({ foreignTaxOnTaxReturn: 20_000 });
   });
 
   it('removes the input once the amount is cleared', () => {
-    const { onForeignTaxCreditChange } = renderModal({ foreignTax: 20_000 });
+    const { onForeignTaxCreditChange } = renderModal({ foreignTaxOnTaxReturn: 20_000 });
 
     fireEvent.change(screen.getByLabelText(FOREIGN_TAX_LABEL), { target: { value: '' } });
     expect(onForeignTaxCreditChange).toHaveBeenLastCalledWith(undefined);
@@ -97,7 +97,7 @@ describe('Foreign Tax Credit card', () => {
   });
 
   it('sums the foreign tax, the foreign-source income and the limit, and warns of the excess', () => {
-    renderModal({ foreignTax: 5_000 }, CASE_A_WITH_RETURN, 50_000);
+    renderModal({ foreignTaxOnTaxReturn: 5_000 }, CASE_A_WITH_RETURN, 50_000);
 
     // 105,000 − 5,000 from the entries; limit 52,598 + 1,104 + 6,311 + 9,467 = 69,480.
     expect(summaryRows()).toEqual([
@@ -116,7 +116,7 @@ describe('Foreign Tax Credit card', () => {
   it('shows the limit with no warning when the foreign tax is within it', () => {
     // The engine's case K: 20,000 paid with a return against 500,000 of foreign interest.
     renderModal(
-      { foreignTax: 20_000 },
+      { foreignTaxOnTaxReturn: 20_000 },
       {
         foreignTax: 20_000,
         foreignSourceIncome: 500_000,
@@ -142,7 +142,7 @@ describe('Foreign Tax Credit card', () => {
 
   it('says there is no foreign-source income to credit the tax against', () => {
     renderModal(
-      { foreignTax: 20_000 },
+      { foreignTaxOnTaxReturn: 20_000 },
       {
         foreignTax: 20_000,
         foreignSourceIncome: 0,

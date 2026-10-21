@@ -1167,7 +1167,7 @@ describe('Additional Deductions & Credits: foreign tax credit', () => {
       <TakeHomeInputForm
         inputs={{
           ...salaryInputs,
-          foreignTaxCredit: { foreignTax: 20_000 },
+          foreignTaxCredit: { foreignTaxOnTaxReturn: 20_000 },
         }}
         dispatch={vi.fn()}
       />,
@@ -1189,7 +1189,7 @@ describe('Additional Deductions & Credits: foreign tax credit', () => {
     expect(dispatch).toHaveBeenLastCalledWith({
       type: 'setField',
       field: 'foreignTaxCredit',
-      value: { foreignTax: 20_000 },
+      value: { foreignTaxOnTaxReturn: 20_000 },
     });
   });
 });

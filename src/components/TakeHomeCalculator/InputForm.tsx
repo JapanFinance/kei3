@@ -892,9 +892,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
-              if (inputs.foreignTaxCredit && inputs.foreignTaxCredit.foreignTax > 0)
+              if (inputs.foreignTaxCredit && inputs.foreignTaxCredit.foreignTaxOnTaxReturn > 0)
                 parts.push(
-                  `Foreign tax paid with a return ${formatJPY(inputs.foreignTaxCredit.foreignTax)}`,
+                  `Foreign tax paid with a return ${formatJPY(inputs.foreignTaxCredit.foreignTaxOnTaxReturn)}`,
                 );
               personalDeductions?.items.forEach(item => {
                 parts.push(

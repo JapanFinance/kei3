@@ -375,7 +375,7 @@ describe('generateChartData with foreign tax', () => {
           { id: 's', type: 'salary', amount: 5_000_000, frequency: 'annual' },
           { id: 'i', type: 'interest', payerDomicile: 'foreign', foreignTax: 0, amount: 500_000 },
         ],
-        foreignTaxCredit: { foreignTax: 20_000 },
+        foreignTaxCredit: { foreignTaxOnTaxReturn: 20_000 },
       },
       20_000,
       { min: 500_000, max: 5_500_000 },

@@ -988,9 +988,11 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               <SpinnerNumberField
                 id="foreignTaxPaid"
                 name="foreignTaxPaid"
-                value={foreignTaxCredit?.foreignTax ?? 0}
+                value={foreignTaxCredit?.foreignTaxOnTaxReturn ?? 0}
                 onChange={value =>
-                  onForeignTaxCreditChange(value === 0 ? undefined : { foreignTax: value })
+                  onForeignTaxCreditChange(
+                    value === 0 ? undefined : { foreignTaxOnTaxReturn: value },
+                  )
                 }
                 label="Foreign Tax Paid with a Tax Return (外国所得税)"
                 step={1_000}
