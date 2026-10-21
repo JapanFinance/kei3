@@ -13,6 +13,7 @@ import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
 import {
   getNHIParamsForMonth,
   nhiParamsDiffer,
+  type NHIParamsField,
 } from '../data/nationalHealthInsurance/nhiParamsData';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type {
@@ -29,8 +30,16 @@ import {
 } from '../types/healthInsurance';
 import type { BonusIncomeStream, CustomEmployeesHealthInsuranceRates } from '../types/tax';
 
+/** The portions (区分) a National Health Insurance premium is made of. */
+export type NationalHealthInsurancePortionKey =
+  | 'medical'
+  | 'elderlySupport'
+  | 'longTermCare'
+  | 'childSupport';
+
 /**
- * Breakdown of National Health Insurance premium components
+ * Breakdown of National Health Insurance premium components: each portion for the calendar year
+ * and their total, in yen.
  */
 export interface NationalHealthInsuranceBreakdown {
   medicalPortion: number;
@@ -38,6 +47,133 @@ export interface NationalHealthInsuranceBreakdown {
   longTermCarePortion: number;
   childSupportPortion: number;
   total: number;
+  /**
+   * Whether each portion has stopped rising with income: at its 賦課限度額 in every fiscal year
+   * that levies it. A portion no fiscal year levies is not capped.
+   */
+  medicalCapped: boolean;
+  elderlySupportCapped: boolean;
+  longTermCareCapped: boolean;
+  childSupportCapped: boolean;
+}
+
+/** The parameter fields each portion is calculated from. */
+const NHI_PORTION_FIELDS: Record<
+  NationalHealthInsurancePortionKey,
+  {
+    rate: NHIParamsField;
+    perCapita: NHIParamsField;
+    householdFlat: NHIParamsField;
+    cap: NHIParamsField;
+  }
+> = {
+  medical: {
+    rate: 'medicalRate',
+    perCapita: 'medicalPerCapita',
+    householdFlat: 'medicalHouseholdFlat',
+    cap: 'medicalCap',
+  },
+  elderlySupport: {
+    rate: 'supportRate',
+    perCapita: 'supportPerCapita',
+    householdFlat: 'supportHouseholdFlat',
+    cap: 'supportCap',
+  },
+  longTermCare: {
+    rate: 'ltcRateForEligible',
+    perCapita: 'ltcPerCapitaForEligible',
+    householdFlat: 'ltcHouseholdFlatForEligible',
+    cap: 'ltcCapForEligible',
+  },
+  childSupport: {
+    rate: 'childSupportRate',
+    perCapita: 'childSupportPerCapita',
+    householdFlat: 'childSupportHouseholdFlat',
+    cap: 'childSupportCap',
+  },
+};
+
+/** One portion of a National Health Insurance premium for one fiscal year's parameters. */
+export interface NationalHealthInsurancePortion {
+  /** The 所得割率. */
+  rate: number;
+  /** 所得割: the calculation base times {@link rate}. */
+  incomeBased: number;
+  /** 均等割額. */
+  perCapita: number;
+  /** 平等割額, 0 where the region levies none. */
+  householdFlat: number;
+  /** The three added, before the 賦課限度額. */
+  uncapped: number;
+  /** 賦課限度額. */
+  cap: number;
+  /** The lower of {@link uncapped} and {@link cap}, before rounding to yen. */
+  premium: number;
+  /** {@link premium} rounded to yen: the portion for the fiscal year. */
+  amount: number;
+  /** Whether {@link uncapped} reached {@link cap}, so that more income would not raise the portion. */
+  capped: boolean;
+}
+
+/**
+ * The 基礎控除後の総所得金額等 that National Health Insurance and 後期高齢者医療 assess their
+ * 所得割 on: 総所得金額等 less the 地方税法第314条の2第2項 basic deduction (¥430,000, stepping
+ * down above ¥24,000,000 of 合計所得金額), never below 0. Both statutes point at that deduction
+ * rather than fixing an amount: 国民健康保険法施行令第29条の7第2項第4号 for premiums,
+ * 地方税法第703条の4第6項 for the tax form, and 高齢者の医療の確保に関する法律 for the elderly
+ * system, so no region's parameters carry one. This calculator judges the base on the income
+ * year's own income, where a municipality judges it on the previous year's.
+ */
+export function premiumCalculationBase(netIncome: number): number {
+  return Math.max(0, netIncome - calculateResidenceTaxBasicDeduction(netIncome));
+}
+
+/**
+ * One portion of the premium for one fiscal year's parameters: 所得割 + 均等割 + 平等割, capped
+ * at the 賦課限度額. Undefined where the parameters have no 所得割率 or no 賦課限度額 for it,
+ * which is how a region states that it does not levy the portion; the data gives a levied portion
+ * its rate, per-capita amount and cap together. Shared by the premium calculation and the tooltip
+ * that explains it, so the two cannot round or cap differently.
+ */
+export function calculateNationalHealthInsurancePortion(
+  calculationBase: number,
+  params: NationalHealthInsuranceRegionParams,
+  portion: NationalHealthInsurancePortionKey,
+): NationalHealthInsurancePortion | undefined {
+  const fields = NHI_PORTION_FIELDS[portion];
+  const rate = params[fields.rate];
+  const cap = params[fields.cap];
+  if (!rate || !cap) return undefined;
+
+  const perCapita = params[fields.perCapita] ?? 0;
+  const householdFlat = params[fields.householdFlat] ?? 0;
+  const incomeBased = calculationBase * rate;
+  const uncapped = incomeBased + perCapita + householdFlat;
+  const premium = Math.min(uncapped, cap);
+  return {
+    rate,
+    incomeBased,
+    perCapita,
+    householdFlat,
+    uncapped,
+    cap,
+    premium,
+    amount: Math.round(premium),
+    capped: uncapped >= cap,
+  };
+}
+
+/**
+ * Whether a portion's own parameters differ between two fiscal years' parameters, so that the
+ * portion's amount can differ between the two years.
+ */
+export function nationalHealthInsurancePortionDiffers(
+  a: NationalHealthInsuranceRegionParams,
+  b: NationalHealthInsuranceRegionParams,
+  portion: NationalHealthInsurancePortionKey,
+): boolean {
+  const fields = NHI_PORTION_FIELDS[portion];
+  return nhiParamsDiffer(a, b, [fields.rate, fields.perCapita, fields.householdFlat, fields.cap]);
 }
 
 /**
@@ -276,75 +412,62 @@ export function calculateHealthInsurancePremium(
   ).total;
 }
 
+type FiscalYearPortions = Record<
+  NationalHealthInsurancePortionKey,
+  NationalHealthInsurancePortion | undefined
+>;
+
 /**
- * Calculates National Health Insurance premium breakdown based on regional parameters.
+ * Every portion for one fiscal year's parameters. The 介護納付金分 is levied on a Category 2
+ * insured person (ages 40-64) only.
+ */
+function calculateFiscalYearPortions(
+  annualIncome: number,
+  isSubjectToLongTermCarePremium: boolean,
+  params: NationalHealthInsuranceRegionParams,
+): FiscalYearPortions {
+  const base = premiumCalculationBase(annualIncome);
+  return {
+    medical: calculateNationalHealthInsurancePortion(base, params, 'medical'),
+    elderlySupport: calculateNationalHealthInsurancePortion(base, params, 'elderlySupport'),
+    longTermCare: isSubjectToLongTermCarePremium
+      ? calculateNationalHealthInsurancePortion(base, params, 'longTermCare')
+      : undefined,
+    childSupport: calculateNationalHealthInsurancePortion(base, params, 'childSupport'),
+  };
+}
+
+/**
+ * Calculates National Health Insurance premium breakdown based on regional parameters. The total
+ * is the sum of the portions before rounding, rounded once.
  */
 function calculateNationalHealthInsurancePremiumBreakdown(
   annualIncome: number,
   isSubjectToLongTermCarePremium: boolean, // Person is 40-64 years old
   params: NationalHealthInsuranceRegionParams,
 ): NationalHealthInsuranceBreakdown {
-  // Calculate NHI taxable income (住民税算定基礎額等 - often previous year's income minus a standard deduction)
-  // For simplicity, using current annual income minus the NHI standard deduction.
-  // Real-world calculations might use prior year's certified income.
-  const nhiTaxableIncome = Math.max(0, annualIncome - params.nhiStandardDeduction);
-
-  // 1. Medical Portion (医療分)
-  const incomeBasedMedical = nhiTaxableIncome * params.medicalRate;
-  const perCapitaMedical = params.medicalPerCapita;
-  const householdFlatMedical = params.medicalHouseholdFlat || 0;
-  const totalMedicalPremium = Math.min(
-    incomeBasedMedical + perCapitaMedical + householdFlatMedical,
-    params.medicalCap,
+  const { medical, elderlySupport, longTermCare, childSupport } = calculateFiscalYearPortions(
+    annualIncome,
+    isSubjectToLongTermCarePremium,
+    params,
   );
-
-  // 2. Elderly Support Portion (後期高齢者支援金分)
-  const incomeBasedSupport = nhiTaxableIncome * params.supportRate;
-  const perCapitaSupport = params.supportPerCapita;
-  const householdFlatSupport = params.supportHouseholdFlat || 0;
-  const totalSupportPremium = Math.min(
-    incomeBasedSupport + perCapitaSupport + householdFlatSupport,
-    params.supportCap,
-  );
-
-  // 3. Long-Term Care Portion (介護納付金分) - only for those aged 40-64
-  let totalLtcPremium = 0;
-  if (
-    isSubjectToLongTermCarePremium &&
-    params.ltcRateForEligible &&
-    params.ltcPerCapitaForEligible &&
-    params.ltcCapForEligible
-  ) {
-    const incomeBasedLtc = nhiTaxableIncome * params.ltcRateForEligible;
-    const perCapitaLtc = params.ltcPerCapitaForEligible;
-    const householdFlatLtc = params.ltcHouseholdFlatForEligible || 0;
-    totalLtcPremium = Math.min(
-      incomeBasedLtc + perCapitaLtc + householdFlatLtc,
-      params.ltcCapForEligible,
-    );
-  }
-
-  // 4. Child/Childcare Support Portion (子ども・子育て支援納付金分) - from FY2026
-  let totalChildSupportPremium = 0;
-  if (params.childSupportRate && params.childSupportCap) {
-    const incomeBasedChildSupport = nhiTaxableIncome * params.childSupportRate;
-    const perCapitaChildSupport = params.childSupportPerCapita || 0;
-    const householdFlatChildSupport = params.childSupportHouseholdFlat || 0;
-    totalChildSupportPremium = Math.min(
-      incomeBasedChildSupport + perCapitaChildSupport + householdFlatChildSupport,
-      params.childSupportCap,
-    );
-  }
 
   const totalPremium =
-    totalMedicalPremium + totalSupportPremium + totalLtcPremium + totalChildSupportPremium;
+    (medical?.premium ?? 0) +
+    (elderlySupport?.premium ?? 0) +
+    (longTermCare?.premium ?? 0) +
+    (childSupport?.premium ?? 0);
 
   return {
-    medicalPortion: Math.round(totalMedicalPremium),
-    elderlySupportPortion: Math.round(totalSupportPremium),
-    longTermCarePortion: Math.round(totalLtcPremium),
-    childSupportPortion: Math.round(totalChildSupportPremium),
+    medicalPortion: medical?.amount ?? 0,
+    elderlySupportPortion: elderlySupport?.amount ?? 0,
+    longTermCarePortion: longTermCare?.amount ?? 0,
+    childSupportPortion: childSupport?.amount ?? 0,
     total: Math.round(totalPremium),
+    medicalCapped: medical?.capped ?? false,
+    elderlySupportCapped: elderlySupport?.capped ?? false,
+    longTermCareCapped: longTermCare?.capped ?? false,
+    childSupportCapped: childSupport?.capped ?? false,
   };
 }
 
@@ -386,6 +509,10 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
       longTermCarePortion: 0,
       childSupportPortion: 0,
       total: 0,
+      medicalCapped: false,
+      elderlySupportCapped: false,
+      longTermCareCapped: false,
+      childSupportCapped: false,
     };
   }
 
@@ -399,34 +526,50 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
     );
   }
 
-  // Calculate full annual breakdown for each fiscal year
-  const prevFY = calculateNationalHealthInsurancePremiumBreakdown(
+  // Calculate every portion for each fiscal year
+  const prevFY = calculateFiscalYearPortions(
     annualIncome,
     isSubjectToLongTermCarePremium,
     prevFYParams,
   );
-  const currFY = calculateNationalHealthInsurancePremiumBreakdown(
+  const currFY = calculateFiscalYearPortions(
     annualIncome,
     isSubjectToLongTermCarePremium,
     currFYParams,
   );
 
-  // Blend: 3/10 of previous FY + 7/10 of current FY (10-installment payment schedule)
-  const medicalPortion = Math.round(
-    (prevFY.medicalPortion * 3) / 10 + (currFY.medicalPortion * 7) / 10,
-  );
-  const elderlySupportPortion = Math.round(
-    (prevFY.elderlySupportPortion * 3) / 10 + (currFY.elderlySupportPortion * 7) / 10,
-  );
-  const longTermCarePortion = Math.round(
-    (prevFY.longTermCarePortion * 3) / 10 + (currFY.longTermCarePortion * 7) / 10,
-  );
-  const childSupportPortion = Math.round(
-    (prevFY.childSupportPortion * 3) / 10 + (currFY.childSupportPortion * 7) / 10,
-  );
+  // Blend: 3/10 of previous FY + 7/10 of current FY (10-installment payment schedule), from each
+  // fiscal year's rounded amount
+  const blend = (portion: NationalHealthInsurancePortionKey): number =>
+    Math.round(
+      ((prevFY[portion]?.amount ?? 0) * 3) / 10 + ((currFY[portion]?.amount ?? 0) * 7) / 10,
+    );
+  // A portion has stopped rising with income once every fiscal year that levies it has it at its
+  // 賦課限度額; one that neither year levies has nothing to cap.
+  const blendCapped = (portion: NationalHealthInsurancePortionKey): boolean => {
+    const levied = [prevFY[portion], currFY[portion]].filter(
+      (fiscalYear): fiscalYear is NationalHealthInsurancePortion => fiscalYear !== undefined,
+    );
+    return levied.length > 0 && levied.every(fiscalYear => fiscalYear.capped);
+  };
+
+  const medicalPortion = blend('medical');
+  const elderlySupportPortion = blend('elderlySupport');
+  const longTermCarePortion = blend('longTermCare');
+  const childSupportPortion = blend('childSupport');
   const total = medicalPortion + elderlySupportPortion + longTermCarePortion + childSupportPortion;
 
-  return { medicalPortion, elderlySupportPortion, longTermCarePortion, childSupportPortion, total };
+  return {
+    medicalPortion,
+    elderlySupportPortion,
+    longTermCarePortion,
+    childSupportPortion,
+    total,
+    medicalCapped: blendCapped('medical'),
+    elderlySupportCapped: blendCapped('elderlySupport'),
+    longTermCareCapped: blendCapped('longTermCare'),
+    childSupportCapped: blendCapped('childSupport'),
+  };
 }
 
 /** Breakdown of 後期高齢者医療制度 premium components. */
@@ -448,15 +591,6 @@ const ZERO_LATTER_STAGE_BREAKDOWN: LatterStageElderlyBreakdown = {
   total: 0,
   medicalCapped: false,
 };
-
-/**
- * The 賦課のもととなる所得金額: 総所得金額等 minus the 地方税法 basic deduction, which is the
- * residence-tax basic deduction (43万円, stepping down above 合計所得金額 2,400万円).
- * Source: https://www.tokyo-ikiiki.net/seido/1001968/1001975/index.html
- */
-function latterStagePremiumBase(netIncome: number): number {
-  return Math.max(0, netIncome - calculateResidenceTaxBasicDeduction(netIncome));
-}
 
 /**
  * Rates are published to 0.01% (e.g. 9.88%), so scaling by this factor turns every rate into
@@ -482,7 +616,7 @@ function calculateLatterStagePremiumForParams(
   netIncome: number,
   params: LatterStageElderlyRegionParams,
 ): LatterStageElderlyBreakdown {
-  const base = latterStagePremiumBase(netIncome);
+  const base = premiumCalculationBase(netIncome);
 
   const medicalPortion = Math.min(
     portionFlooredToHundred(params.medicalPerCapita, base, params.medicalRate),
