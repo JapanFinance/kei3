@@ -76,7 +76,7 @@ export interface ReportingRow {
   label: string;
   roles: PlanRole[];
   evaluated: EvaluatedPlan;
-  /** What applying the plan changes about the current entries (7.3.4); empty for Current. */
+  /** What applying the plan changes about the current entries; empty for Current. */
   changes: string[];
   /** Whether Apply should be offered for this row: every row but the current plan's. */
   canApply: boolean;
@@ -86,14 +86,14 @@ export interface UseReportingPlansResult {
   /** Undefined until the panel has expanded and the first, synchronous results are ready. */
   rows: ReportingRow[] | undefined;
   bestPlan: EvaluatedPlan | undefined;
-  /** The once-stated note for entries that always have to be reported (7.3.4). */
+  /** The once-stated note for entries that always have to be reported. */
   mandatoryNote: string | undefined;
   progress: SearchProgress | undefined;
   /** True while a search has run longer than the threshold and is still running. */
   showProgress: boolean;
   /** True once the search had to fall back to coordinate descent instead of running exhaustively. */
   bounded: boolean;
-  /** Present only when `bounded`: the figures the caption reports (7.3.5). */
+  /** Present only when `bounded`: the figures the caption reports. */
   boundedEstimate: { count: number; predictedMs: number } | undefined;
 }
 
@@ -122,8 +122,8 @@ const UNIFORM_ROW_LABELS: Record<UniformRowKey, string> = {
 const yieldToEventLoop = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
 /**
- * Searches the reporting plans for the investment entries in `inputs` while `expanded` is true
- * (7.3.3): runs in an effect, never during render. Current and the uniform plans render at once
+ * Searches the reporting plans for the investment entries in `inputs` while `expanded` is true:
+ * runs in an effect, never during render. Current and the uniform plans render at once
  * (at most a handful of engine runs). The exhaustive search then starts, and the throughput of its
  * first chunk predicts how long every feasible plan would take: within `budgetMs` it runs on;
  * otherwise a coordinate descent from the best plan found so far bounds the search instead. Both
@@ -170,7 +170,7 @@ export function useReportingPlans(
         ? withheldOnlyPlan(inputs, units)
         : allReportedPlan(inputs, units, key);
 
-    // Step 1 (7.3.3): Current and the uniform plans, synchronously, so their rows render at once.
+    // Step 1: Current and the uniform plans, synchronously, so their rows render at once.
     const current: PlanEvaluation = {
       plan: currentPlan(inputs),
       evaluated: evaluatePlan(inputs, currentPlan(inputs)),

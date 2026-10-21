@@ -20,7 +20,7 @@ import { calculateTaxes, incomeTaxPaid, residenceTaxPaid } from './taxCalculatio
 interface ReportingUnitState {
   /**
    * Whether choosing this state reports a nonzero dividend amount — what drives the election
-   * doubling in {@link countPlans} and {@link generatePlans} (7.3.1).
+   * doubling in {@link countPlans} and {@link generatePlans}.
    */
   reportsDividend: boolean;
   /** `stream` (assumed to be this unit's own entry) with this state's reporting flags applied. */
@@ -37,7 +37,7 @@ export interface ReportingUnit {
   /** Index into the plan's `streams` array this unit patches. */
   streamIndex: number;
   /**
-   * The states worth evaluating for this unit (7.3.1), ordered least-reported first: index 0
+   * The states worth evaluating for this unit, ordered least-reported first: index 0
    * always leaves the unit fully withheld, and the last index always reports everything the unit
    * can report. Length 1 when the unit's reporting can't change the result.
    */
@@ -103,12 +103,12 @@ const dividendsState = (isReported: boolean, reportsDividend: boolean): Reportin
 });
 
 /**
- * The reporting states worth evaluating for one withholding account (7.3.1). A gain with
+ * The reporting states worth evaluating for one withholding account. A gain with
  * dividends has all four combinations of the two flags. A loss with dividends drops two: "sales
  * only" (report the loss, leave the dividends withheld) is forbidden outright — a reported loss
  * that reduced the account's dividend withholding drags the dividends onto the return
  * (措法37条の11の6⑩) — and "dividends only" is dominated by reporting both, which never keeps
- * less (verified on 96 engine cases, plan 7.3.2), so only "nothing" and "both" remain. An account
+ * less (verified on 96 engine cases), so only "nothing" and "both" remain. An account
  * with one nonzero figure varies only that figure's flag; the other flag can't change the result,
  * so it is left withheld. An account with both figures at zero has one state, for the same
  * reason. Ordered least-reported first, so index 0 is always "everything withheld" and the last
@@ -196,7 +196,7 @@ export const deriveReportingUnits = (
 };
 
 /**
- * The number of feasible plans over `units`, without running the engine (7.3.1): the election
+ * The number of feasible plans over `units`, without running the engine: the election
  * doubles a combination of unit states only when it reports a nonzero dividend, so the total is
  * `2P − N₀`, where `P` is the product of the state counts and `N₀` the number of combinations that
  * report no dividend at all — itself a product, over each unit, of how many of its states report
@@ -321,7 +321,7 @@ const otherElection = (election: ReportedDividendsTaxation): ReportedDividendsTa
   election === 'separate' ? 'aggregate' : 'separate';
 
 /**
- * The neighbours of `plan` one coordinate-descent step away (7.3.3): every other state of one
+ * The neighbours of `plan` one coordinate-descent step away: every other state of one
  * unit at a time, plus, only when `plan` reports at least one dividend, the other election with
  * every unit left as it is. Flipping the election when nothing is reported would just repeat
  * `plan`, so that neighbour is left out rather than wasting an engine run on it.
@@ -347,7 +347,7 @@ export const neighbourPlans = (
   return neighbours;
 };
 
-/** How many units `plan` reports something on — the tie-break's "fewer reported units" (7.3.3). */
+/** How many units `plan` reports something on — the tie-break's "fewer reported units". */
 const reportedUnitCount = (
   units: readonly ReportingUnit[],
   streams: readonly IncomeStream[],
@@ -382,7 +382,7 @@ export const samePlan = (
 
 /**
  * Whether `plan` sets every unit exactly as the entries and the election already stand — the
- * tie-break's "then Current" (7.3.3), and what decides whether Apply is offered.
+ * tie-break's "prefer Current", and what decides whether Apply is offered.
  */
 const planMatchesCurrent = (
   units: readonly ReportingUnit[],
@@ -428,7 +428,7 @@ export const isMinimumTaxApplicable = (inputs: TakeHomeInputs): boolean =>
   calculateTaxes(inputs).highIncomeMinimumTax !== undefined;
 
 /**
- * Whether `candidate` should replace `best` as the best plan found so far (7.3.3): a strictly
+ * Whether `candidate` should replace `best` as the best plan found so far: a strictly
  * higher `kept` wins outright; a tie prefers whichever of the two already matches the current
  * entries (to avoid recommending spurious changes), then fewer reported units.
  */
@@ -450,7 +450,7 @@ export const isBetterPlan = (
 };
 
 /**
- * Coordinate descent from `start` (7.3.3): evaluates every neighbour of the current plan
+ * Coordinate descent from `start`: evaluates every neighbour of the current plan
  * ({@link neighbourPlans}), yielding each one as it is tried, moves to the best one that improves
  * on the current plan ({@link isBetterPlan}), and repeats from there; returns the current plan
  * once none of its neighbours improve on it. A caller that only wants the final plan can drain
@@ -576,7 +576,7 @@ const unitTarget = (stream: IncomeStream): string => {
 };
 
 /**
- * What applying `plan` would change about the entries as they stand in `current` (7.3.4): one
+ * What applying `plan` would change about the entries as they stand in `current`: one
  * line per entry whose reporting differs, naming the entry and what it is set to, and
  * one line for the election when the plan reports a dividend and either the election differs
  * or no dividend was reported before (when the election had no effect). Entries that stay as
@@ -604,7 +604,7 @@ export const planChanges = (
 };
 
 /**
- * The once-stated note for entries that have to be reported in every plan (7.3.4): a sale outside
+ * The once-stated note for entries that have to be reported in every plan: a sale outside
  * a withholding account (措法37条の11の5①) and a dividend paid abroad (措令4条の3②). Under the
  * minimum tax on high income (措法41条の19), all investment income must be reported. Undefined
  * when `streams` has none of these, so nothing is shown.

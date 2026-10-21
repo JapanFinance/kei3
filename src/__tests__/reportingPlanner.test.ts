@@ -225,7 +225,7 @@ describe('countPlans', () => {
 
 describe('search-space reduction', () => {
   // The unpruned space: both accounts get all four flag combinations, including the
-  // 措法37条の11の6⑩ state (reporting the loss alone) and the state 7.3.1 finds dominated
+  // 措法37条の11の6⑩ state (reporting the loss alone) and the dominated state
   // (reporting the dividends alone). evaluatePlan corrects the ⑩ state through
   // withRequiredReporting rather than throwing, so it is safe to generate here.
   const allFourStates = (streamIndex: number): ReportingUnit => ({
@@ -495,8 +495,8 @@ describe('a mixed plan can beat every uniform plan', () => {
   // only the large gain (9,541,535), and reporting both (9,541,555): at 合計所得金額 1,060,000 the
   // modest gain is absorbed whole by the unused deductions, whereas reporting the large gain
   // drops the basic deduction from 1,040,000 to 620,000 and leaves the rest taxed at 15.315% +
-  // 5%, no better than the 20.315% withheld; adding the modest gain on top is then a net loss —
-  // the 7.3 guidance's mechanism, landing on "report the modest gain, leave the large one
+  // 5%, no better than the 20.315% withheld; adding the modest gain on top is then a net loss,
+  // landing on "report the modest gain, leave the large one
   // withheld" as the unique best of the four. (The modest gain has to exceed the 514,645 the
   // large gain's plan carries into its gain class; at 500,000 the large gain absorbs more of the
   // unused deductions than the modest one can, and reporting the large gain alone wins instead.)

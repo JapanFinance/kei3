@@ -282,7 +282,7 @@ const PlanRows = React.memo(function PlanRows({ rows, isMobile, bounded, onApply
 /**
  * Searches the ways to report the capital-gains and dividends entries that are not already fixed
  * — one election per account and per domestic dividend — and shows, for each, the same figures
- * the summary and tabs use (7.3.4). Collapsed by default: {@link useReportingPlans} runs the
+ * the summary and tabs use. Collapsed by default: {@link useReportingPlans} runs the
  * search only once expanded, and again whenever the inputs change while it stays open.
  */
 export const ReportingPlanner: React.FC<ReportingPlannerProps> = ({

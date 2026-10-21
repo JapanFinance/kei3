@@ -46,7 +46,7 @@ const salaryInputs = (streams: IncomeStream[], salary = 5_000_000): TakeHomeInpu
   incomeYear: 2026,
 });
 
-// One domestic dividend: 2 states, doubled only when reported → 3 total plans (7.3.1).
+// One domestic dividend: 2 states, doubled only when reported → 3 total plans.
 const smallInputs = salaryInputs([
   {
     id: 'd',
