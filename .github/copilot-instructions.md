@@ -93,6 +93,10 @@ When adding new tax calculations, follow the pattern in existing calculators:
 4. Add corresponding display components in results tabs
 5. Write comprehensive unit tests covering edge cases
 
+### Adding a New Income Stream Type
+
+Defined in `src/types/tax.ts` as the `IncomeStream` discriminated union. Adding a new type starts by adding its interface to that union; TypeScript's exhaustive checks will then guide the required additions across behavior/validation, catalog metadata, form components, and tax engine handling (see the JSDoc on `IncomeStream` in `src/types/tax.ts`).
+
 The codebase prioritizes calculation accuracy and transparency - all formulas include source references to official Japanese tax documentation.
 
 If the change is noteworthy, add an entry to the `CHANGELOG.md` summarizing the update for users.

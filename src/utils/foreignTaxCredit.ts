@@ -1,14 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type {
-  DividendsIncomeStream,
-  ForeignTaxCreditAmounts,
-  ForeignTaxCreditResult,
-  InterestIncomeStream,
-  PublicPensionIncomeStream,
-  WithholdingAccountIncomeStream,
-} from '../types/tax';
+import type { ForeignTaxCreditAmounts, ForeignTaxCreditResult } from '../types/tax';
 
 /**
  * The 道府県民税 limit as a percentage of the 所得税 limit (地方税法施行令7条の19③). A resident of
@@ -138,60 +131,4 @@ export const calculateForeignTaxCredit = (
     },
     excess: leftForResidenceTax - prefectureCredit - cityCredit,
   };
-};
-
-/**
- * Why an entry's foreign-tax figures cannot be used, or undefined when they can. Shared by the
- * calculation, which throws the message, and the entry form, which shows it.
- */
-export const foreignTaxEntryError = (
-  stream:
-    | DividendsIncomeStream
-    | InterestIncomeStream
-    | PublicPensionIncomeStream
-    | WithholdingAccountIncomeStream,
-): string | undefined => {
-  if (stream.foreignTax < 0) return 'Foreign tax cannot be negative.';
-  switch (stream.type) {
-    case 'dividends':
-      if (stream.foreignTax > 0 && stream.issuerDomicile === 'domestic') {
-        return 'Only a dividend from a foreign company or fund has foreign tax withheld.';
-      }
-      if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
-        return 'Foreign tax cannot be more than the gross dividend.';
-      }
-      return undefined;
-    case 'interest':
-      if (stream.foreignTax > 0 && stream.payerDomicile === 'domestic') {
-        return 'Foreign tax on interest paid in Japan is not supported.';
-      }
-      if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
-        return 'Foreign tax cannot be more than the gross interest.';
-      }
-      return undefined;
-    case 'publicPension':
-      if (stream.foreignTax > 0 && stream.payerDomicile === 'domestic') {
-        return 'Foreign tax can be entered only for a pension from a foreign system.';
-      }
-      if (stream.foreignTax > 0 && stream.treatyCredit === 'unavailable') {
-        return 'Foreign tax can be entered only when a tax credit is available in Japan.';
-      }
-      if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
-        return 'Foreign tax cannot be more than the gross pension.';
-      }
-      return undefined;
-    case 'withholdingAccount':
-      if (stream.foreignDividends < 0) return 'Foreign dividends cannot be negative.';
-      if (stream.foreignDividends > 0 && stream.foreignDividends > stream.dividends) {
-        return 'Foreign dividends cannot be more than the dividends received into the account.';
-      }
-      if (stream.foreignTax > 0 && stream.foreignTax > stream.foreignDividends) {
-        return 'Foreign tax cannot be more than the foreign dividends.';
-      }
-      return undefined;
-    default: {
-      const unhandled: never = stream;
-      throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
-    }
-  }
 };

@@ -1,7 +1,6 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../constants/taxThresholds';
 import { getEmploymentInsuranceRate } from '../data/employmentInsurance';
 import { getNationalBasicDeductionTiers } from '../data/nationalBasicDeduction';
 import {
@@ -51,7 +50,7 @@ import {
   calculateDependentDeductions,
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
-import { calculateForeignTaxCredit, foreignTaxEntryError } from './foreignTaxCredit';
+import { calculateForeignTaxCredit } from './foreignTaxCredit';
 import {
   calculateHealthInsuranceBreakdown,
   calculateLatterStageElderlyPremium,
@@ -64,7 +63,7 @@ import {
   isHighIncomeMinimumTaxApplicable,
 } from './highIncomeMinimumTax';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
-import { annualIncomeStreamAmount } from './incomeStreams';
+import { annualIncomeStreamAmount, validateIncomeStream } from './incomeStreams';
 import {
   applyDeductionSpillover,
   calculateReportedSeparateInvestmentIncomeTaxationBase,
@@ -75,11 +74,7 @@ import {
   type ReportedSeparateTaxationBase,
   withholdingAccountBase,
 } from './investmentIncome';
-import {
-  dividendMustBeReported,
-  withAllInvestmentReported,
-  withholdingAccountDividendsMustBeReported,
-} from './investmentReporting';
+import { withAllInvestmentReported } from './investmentReporting';
 import {
   estimateLongTermCareCategory1Premium,
   type LongTermCareCategory1TierInputs,
@@ -434,20 +429,17 @@ const calculateIncomeBreakdown = (
   };
 
   for (const income of incomeStreams) {
+    const streamError = validateIncomeStream(income);
+    if (streamError) {
+      throw new Error(streamError);
+    }
     switch (income.type) {
       case 'salary':
         salaryIncome += annualIncomeStreamAmount(income);
         break;
-      case 'commutingAllowance': {
-        const annualAmount = annualIncomeStreamAmount(income);
-        if (annualAmount / 12 > COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP) {
-          throw new Error(
-            'A commuting allowance above the non-taxable cap is not supported. Enter the excess as salary.',
-          );
-        }
-        commutingAllowance += annualAmount;
+      case 'commutingAllowance':
+        commutingAllowance += annualIncomeStreamAmount(income);
         break;
-      }
       case 'bonus':
         bonusIncome.push(income);
         break;
@@ -457,9 +449,6 @@ const calculateIncomeBreakdown = (
       case 'business': {
         if (processedBusinessIncome) {
           throw new Error('Only one business income stream is allowed.');
-        }
-        if (income.amount < 0) {
-          throw new Error('Business income losses are not currently supported.');
         }
         const maxDeduction = income.blueFilerDeduction || 0;
         netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
@@ -475,10 +464,6 @@ const calculateIncomeBreakdown = (
         netBusinessAndMiscIncome += income.amount;
         break;
       case 'publicPension': {
-        const foreignTaxError = foreignTaxEntryError(income);
-        if (foreignTaxError) {
-          throw new Error(foreignTaxError);
-        }
         grossPublicPensionIncome += income.amount;
         const isForeignTaxable =
           income.payerDomicile === 'foreign' &&
@@ -491,18 +476,6 @@ const calculateIncomeBreakdown = (
         break;
       }
       case 'withholdingAccount': {
-        const foreignTaxError = foreignTaxEntryError(income);
-        if (foreignTaxError) {
-          throw new Error(foreignTaxError);
-        }
-        if (income.dividends < 0) {
-          throw new Error('Dividends cannot be negative.');
-        }
-        if (withholdingAccountDividendsMustBeReported(income) && !income.reportsDividends) {
-          throw new Error(
-            "A reported loss that reduced this account's dividend withholding must be reported together with the dividends (措法37条の11の6⑩).",
-          );
-        }
         // The part left to withholding: netted against each other in the account
         // (withholdingAccountBase), the way the broker nets them before withholding.
         const unreportedGains = income.reportsCapitalGains ? 0 : income.capitalGains;
@@ -542,9 +515,6 @@ const calculateIncomeBreakdown = (
         break;
       }
       case 'capitalGains':
-        if (income.shareType !== 'listed') {
-          throw new Error('Capital gains on 一般株式等 are not currently supported.');
-        }
         // 措法37条の11の5① grants 申告不要 only to a 源泉徴収選択口座 (a
         // WithholdingAccountIncomeStream), so a sale here is always reported. Negative
         // (譲渡損失) is expected: see classifyReportedInvestmentIncome's 損益通算.
@@ -554,21 +524,6 @@ const calculateIncomeBreakdown = (
         }
         break;
       case 'dividends': {
-        const foreignTaxError = foreignTaxEntryError(income);
-        if (foreignTaxError) {
-          throw new Error(foreignTaxError);
-        }
-        if (income.shareType !== 'listed') {
-          throw new Error('Dividends on 一般株式等 are not currently supported.');
-        }
-        if (income.amount < 0) {
-          throw new Error('Dividends cannot be negative.');
-        }
-        if (dividendMustBeReported(income) && !income.isReported) {
-          throw new Error(
-            'A dividend received outside Japan with no Japanese handler must be reported (措令4条の3②).',
-          );
-        }
         if (!income.isReported) {
           // The amount stays gross as received; the withholding is charged after the foreign
           // tax (措法9条の2③).
@@ -587,13 +542,6 @@ const calculateIncomeBreakdown = (
         break;
       }
       case 'interest': {
-        const foreignTaxError = foreignTaxEntryError(income);
-        if (foreignTaxError) {
-          throw new Error(foreignTaxError);
-        }
-        if (income.amount < 0) {
-          throw new Error('Interest cannot be negative.');
-        }
         // 措法3条① applies 源泉分離課税 to the 一般利子等 国内において支払を受けるべき only, so
         // interest paid outside Japan with no Japanese payer or 支払の取扱者 (措法3条の3① covers
         // the handler case) has nothing withheld and stays under 所法22条②一 with the rest.

@@ -1,17 +1,26 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../constants/taxThresholds';
 import type {
   BonusIncomeStream,
   BusinessIncomeStream,
   CommutingAllowanceIncomeStream,
+  DividendsIncomeStream,
   IncomeStream,
   IncomeStreamType,
+  InterestIncomeStream,
   MiscellaneousIncomeStream,
   PublicPensionIncomeStream,
   SalaryIncomeStream,
   StockCompensationIncomeStream,
+  WithholdingAccountIncomeStream,
 } from '../types/tax';
+import { formatJPY } from './formatters';
+import {
+  dividendMustBeReported,
+  withholdingAccountDividendsMustBeReported,
+} from './investmentReporting';
 
 /** The member of the {@link IncomeStream} union discriminated by `T`, by discriminant. */
 type IncomeStreamOfType = { [T in IncomeStreamType]: Extract<IncomeStream, { type: T }> };
@@ -24,6 +33,62 @@ export type EarnedIncomeStream =
   | MiscellaneousIncomeStream
   | PublicPensionIncomeStream
   | StockCompensationIncomeStream;
+
+/**
+ * Why an entry's foreign-tax figures cannot be used, or undefined when they can. Shared by the
+ * calculation, which throws the message, and the entry form, which shows it.
+ */
+export const foreignTaxEntryError = (
+  stream:
+    | DividendsIncomeStream
+    | InterestIncomeStream
+    | PublicPensionIncomeStream
+    | WithholdingAccountIncomeStream,
+): string | undefined => {
+  if (stream.foreignTax < 0) return 'Foreign tax cannot be negative.';
+  switch (stream.type) {
+    case 'dividends':
+      if (stream.foreignTax > 0 && stream.issuerDomicile === 'domestic') {
+        return 'Only a dividend from a foreign company or fund has foreign tax withheld.';
+      }
+      if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
+        return 'Foreign tax cannot be more than the gross dividend.';
+      }
+      return undefined;
+    case 'interest':
+      if (stream.foreignTax > 0 && stream.payerDomicile === 'domestic') {
+        return 'Foreign tax on interest paid in Japan is not supported.';
+      }
+      if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
+        return 'Foreign tax cannot be more than the gross interest.';
+      }
+      return undefined;
+    case 'publicPension':
+      if (stream.foreignTax > 0 && stream.payerDomicile === 'domestic') {
+        return 'Foreign tax can be entered only for a pension from a foreign system.';
+      }
+      if (stream.foreignTax > 0 && stream.treatyCredit === 'unavailable') {
+        return 'Foreign tax can be entered only when a tax credit is available in Japan.';
+      }
+      if (stream.foreignTax > 0 && stream.foreignTax > stream.amount) {
+        return 'Foreign tax cannot be more than the gross pension.';
+      }
+      return undefined;
+    case 'withholdingAccount':
+      if (stream.foreignDividends < 0) return 'Foreign dividends cannot be negative.';
+      if (stream.foreignDividends > 0 && stream.foreignDividends > stream.dividends) {
+        return 'Foreign dividends cannot be more than the dividends received into the account.';
+      }
+      if (stream.foreignTax > 0 && stream.foreignTax > stream.foreignDividends) {
+        return 'Foreign tax cannot be more than the foreign dividends.';
+      }
+      return undefined;
+    default: {
+      const unhandled: never = stream;
+      throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
+    }
+  }
+};
 
 interface IncomeStreamBehavior<T extends IncomeStreamType> {
   /**
@@ -48,6 +113,11 @@ interface IncomeStreamBehavior<T extends IncomeStreamType> {
   countsTowardCategorySubtotal: boolean;
   /** The amount the stream represents over a year, from however its amount is entered. */
   annualAmount: (stream: IncomeStreamOfType[T]) => number;
+  /**
+   * Why `stream` violates an invariant of its type, or `undefined` when valid.
+   * Shared by the entry form (which shows the message) and `calculateTaxes` (which throws it).
+   */
+  validate: (stream: IncomeStreamOfType[T]) => string | undefined;
 }
 
 /**
@@ -71,10 +141,12 @@ export const getFrequencyAnnualMultiplier = (
 
 const earned = <T extends IncomeStreamType>(
   annualAmount: IncomeStreamBehavior<T>['annualAmount'],
+  validate: IncomeStreamBehavior<T>['validate'] = () => undefined,
 ): IncomeStreamBehavior<T> => ({
   isEarnedIncome: true,
   countsTowardCategorySubtotal: true,
   annualAmount,
+  validate,
 });
 
 /**
@@ -88,15 +160,23 @@ const earned = <T extends IncomeStreamType>(
 const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T> } = {
   salary: earned(s => (s.frequency === 'monthly' ? s.amount * 12 : s.amount)),
   bonus: earned(s => s.amount),
-  business: earned(s => s.amount),
+  business: earned(
+    s => s.amount,
+    s => (s.amount < 0 ? 'Business income losses are not currently supported.' : undefined),
+  ),
   miscellaneous: earned(s => s.amount),
-  publicPension: earned(s => s.amount),
+  publicPension: earned(s => s.amount, foreignTaxEntryError),
   stockCompensation: earned(s => s.amount),
   // A commuting allowance (通勤手当) reimburses a cost rather than paying for work.
   commutingAllowance: {
     isEarnedIncome: false,
     countsTowardCategorySubtotal: false,
     annualAmount: s => s.amount * getFrequencyAnnualMultiplier(s.frequency),
+    validate: s =>
+      (s.amount * getFrequencyAnnualMultiplier(s.frequency)) / 12 >
+      COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP
+        ? `Commuting allowance cannot exceed ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)}/month (non-taxable cap). For amounts exceeding this, please include the excess as part of the salary.`
+        : undefined,
   },
   // One 特定口座（源泉徴収あり）; the account's own two flags say whether its sales and its
   // dividends are on the return (措法37条の11の5①, 37条の11の6⑨).
@@ -104,6 +184,15 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
     isEarnedIncome: false,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.capitalGains + s.dividends,
+    validate: s => {
+      const foreignError = foreignTaxEntryError(s);
+      if (foreignError) return foreignError;
+      if (s.dividends < 0) return 'Dividends cannot be negative.';
+      if (withholdingAccountDividendsMustBeReported(s) && !s.reportsDividends) {
+        return "A reported loss that reduced this account's dividend withholding must be reported together with the dividends (措法37条の11の6⑩).";
+      }
+      return undefined;
+    },
   },
   // Asset-based income. Settled at source under 申告不要 (see calculateWithheldInvestmentTax in
   // investmentIncome.ts) or taxed through the return when reported; real income of its own
@@ -112,11 +201,25 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
     isEarnedIncome: false,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
+    validate: s =>
+      s.shareType !== 'listed'
+        ? 'Capital gains on 一般株式等 are not currently supported.'
+        : undefined,
   },
   dividends: {
     isEarnedIncome: false,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
+    validate: s => {
+      const foreignError = foreignTaxEntryError(s);
+      if (foreignError) return foreignError;
+      if (s.shareType !== 'listed') return 'Dividends on 一般株式等 are not currently supported.';
+      if (s.amount < 0) return 'Dividends cannot be negative.';
+      if (dividendMustBeReported(s) && !s.isReported) {
+        return 'A dividend received outside Japan with no Japanese handler must be reported (措令4条の3②).';
+      }
+      return undefined;
+    },
   },
   // 措法3条① settles interest paid in Japan by withholding; interest paid outside Japan is
   // reported.
@@ -124,6 +227,12 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
     isEarnedIncome: false,
     countsTowardCategorySubtotal: true,
     annualAmount: s => s.amount,
+    validate: s => {
+      const foreignError = foreignTaxEntryError(s);
+      if (foreignError) return foreignError;
+      if (s.amount < 0) return 'Interest cannot be negative.';
+      return undefined;
+    },
   },
 };
 
@@ -145,6 +254,18 @@ const annualAmountOf = <T extends IncomeStreamType>(
 /** The amount `stream` represents over a year. */
 export const annualIncomeStreamAmount = (stream: IncomeStream): number =>
   annualAmountOf(stream.type, stream);
+
+const validateStreamOf = <T extends IncomeStreamType>(
+  type: T,
+  stream: IncomeStreamOfType[T],
+): string | undefined => INCOME_STREAM_BEHAVIOR[type].validate(stream);
+
+/**
+ * Why `stream` violates an invariant of its type, or `undefined` when valid.
+ * Shared by the entry form (which shows the message) and `calculateTaxes` (which throws it).
+ */
+export const validateIncomeStream = (stream: IncomeStream): string | undefined =>
+  validateStreamOf(stream.type, stream);
 
 /**
  * The part of `stream`'s annual amount that contributes to {@link totalAnnualIncomeFromStreams}:
@@ -236,15 +357,33 @@ export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): num
   let capitalGains = 0;
   let total = totalCommutingAllowanceFromStreams(streams);
   for (const s of streams) {
-    if (isEarnedIncomeStream(s)) {
-      total += annualIncomeStreamAmount(s);
-    } else if (s.type === 'dividends' || s.type === 'interest') {
-      total += s.amount;
-    } else if (s.type === 'capitalGains') {
-      capitalGains += s.amount;
-    } else if (s.type === 'withholdingAccount') {
-      total += s.dividends;
-      capitalGains += s.capitalGains;
+    switch (s.type) {
+      case 'salary':
+      case 'bonus':
+      case 'business':
+      case 'miscellaneous':
+      case 'publicPension':
+      case 'stockCompensation':
+        total += annualIncomeStreamAmount(s);
+        break;
+      case 'commutingAllowance':
+        // Commuting allowances are annualized in totalCommutingAllowanceFromStreams above.
+        break;
+      case 'dividends':
+      case 'interest':
+        total += s.amount;
+        break;
+      case 'capitalGains':
+        capitalGains += s.amount;
+        break;
+      case 'withholdingAccount':
+        total += s.dividends;
+        capitalGains += s.capitalGains;
+        break;
+      default: {
+        const unhandled: never = s;
+        throw new Error(`Unhandled income stream: ${JSON.stringify(unhandled)}`);
+      }
     }
   }
   return total + Math.max(0, capitalGains);
