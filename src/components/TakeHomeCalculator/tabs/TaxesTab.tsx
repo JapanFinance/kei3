@@ -28,6 +28,7 @@ import { formatJPY } from '../../../utils/formatters';
 import { applyDeductionSpillover } from '../../../utils/investmentIncome';
 import { NON_TAXABLE_STATUS_INCOME_LIMIT } from '../../../utils/residenceTax';
 import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import ReferenceTable from '../../ui/ReferenceTable';
 import SourceLinks from '../../ui/SourceLinks';
@@ -712,18 +713,23 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Home Loan Tax Credit
-                {!hasHomeLoanResidenceSpillover && results.homeLoanTaxCredit.unusedCredit > 0 && (
-                  <WarningIcon
-                    fontSize="small"
-                    sx={{
-                      ml: 0.5,
-                      color: 'warning.main',
-                      fontSize: '1rem',
-                      verticalAlign: 'text-bottom',
-                    }}
-                  />
-                )}
-                <DetailedTooltip title="Home Loan Tax Credit — Income Tax Portion">
+                <DetailedTooltip
+                  title="Home Loan Tax Credit — Income Tax Portion"
+                  icon={
+                    !hasHomeLoanResidenceSpillover && results.homeLoanTaxCredit.unusedCredit > 0 ? (
+                      <WarningIcon fontSize="small" color="warning" />
+                    ) : (
+                      SIMPLE_TOOLTIP_ICON
+                    )
+                  }
+                  {...(!hasHomeLoanResidenceSpillover && results.homeLoanTaxCredit.unusedCredit > 0
+                    ? {
+                        iconAriaLabel: `Home loan tax credit warning: ${formatJPY(results.homeLoanTaxCredit.unusedCredit)} could not be applied`,
+                      }
+                    : {
+                        iconAriaLabel: 'Home loan tax credit details',
+                      })}
+                >
                   <Box>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       A tax credit (税額控除) for homeowners with a home loan. It reduces the base
@@ -1255,18 +1261,23 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 label={
                   <span>
                     Home Loan Tax Credit
-                    {results.homeLoanTaxCredit.unusedCredit > 0 && (
-                      <WarningIcon
-                        fontSize="small"
-                        sx={{
-                          ml: 0.5,
-                          color: 'warning.main',
-                          fontSize: '1rem',
-                          verticalAlign: 'text-bottom',
-                        }}
-                      />
-                    )}
-                    <DetailedTooltip title="Home Loan Tax Credit — Residence Tax Spillover">
+                    <DetailedTooltip
+                      title="Home Loan Tax Credit — Residence Tax Spillover"
+                      icon={
+                        results.homeLoanTaxCredit.unusedCredit > 0 ? (
+                          <WarningIcon fontSize="small" color="warning" />
+                        ) : (
+                          SIMPLE_TOOLTIP_ICON
+                        )
+                      }
+                      {...(results.homeLoanTaxCredit.unusedCredit > 0
+                        ? {
+                            iconAriaLabel: `Home loan tax credit warning: ${formatJPY(results.homeLoanTaxCredit.unusedCredit)} could not be applied`,
+                          }
+                        : {
+                            iconAriaLabel: 'Home loan tax credit spillover details',
+                          })}
+                    >
                       <Box>
                         <Typography variant="body2" sx={{ mb: 1 }}>
                           When the available credit amount exceeds the income tax, the remainder
