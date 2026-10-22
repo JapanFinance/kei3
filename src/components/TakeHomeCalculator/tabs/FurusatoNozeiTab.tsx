@@ -227,7 +227,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             Math.round(
               (results.furusatoNozei.residenceTaxDonationBasicDeduction +
                 results.furusatoNozei.residenceTaxSpecialDeduction) *
-                results.residenceTax.cityProportion,
+                results.residenceTax.cityProportion.toDecimal(),
             ),
           )}
           type="detail"
@@ -239,7 +239,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             Math.round(
               (results.furusatoNozei.residenceTaxDonationBasicDeduction +
                 results.furusatoNozei.residenceTaxSpecialDeduction) *
-                results.residenceTax.prefecturalProportion,
+                results.residenceTax.prefecturalProportion.toDecimal(),
             ),
           )}
           type="detail"

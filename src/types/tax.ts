@@ -1033,9 +1033,9 @@ export interface TakeHomeResults {
 
 export interface ResidenceTaxDetails {
   taxableIncome: number; // 市町村民税の課税標準額
-  cityProportion: number;
-  prefecturalProportion: number;
-  residenceTaxRate: number;
+  cityProportion: Rate;
+  prefecturalProportion: Rate;
+  residenceTaxRate: Rate;
   basicDeduction: number;
   personalDeductionDifference: number; // 人的控除額の差 - difference between national and residence tax personal deductions
   city: {

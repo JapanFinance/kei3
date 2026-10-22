@@ -4,11 +4,14 @@
 import { describe, it, expect } from 'vitest';
 
 import { getHomeLoanTaxCreditCohort } from '../data/homeLoanTaxCredit';
+import { percentTo } from '../data/rate';
 import {
   applyHomeLoanTaxCredit,
   earliestEligibleMoveInYear,
   homeLoanCreditDistinguishesTokuteiShutoku,
 } from '../utils/homeLoanTaxCredit';
+
+const percent = percentTo(0);
 
 describe('getHomeLoanTaxCreditCohort', () => {
   it('returns the 2022+ band for 2022 and later move-ins', () => {
@@ -17,7 +20,7 @@ describe('getHomeLoanTaxCreditCohort', () => {
     expect(getHomeLoanTaxCreditCohort(2026)?.moveInYearFrom).toBe(2022);
     const band = getHomeLoanTaxCreditCohort(2024)!;
     expect(band.incomeLimit).toBe(20_000_000);
-    expect(band.spillover).toEqual({ flatCap: 97_500, taxableIncomeRate: 0.05 });
+    expect(band.spillover).toEqual({ flatCap: 97_500, taxableIncomeRate: percent(5) });
   });
 
   it('returns the 2014-2021 band with both 特定取得 (7% / ¥136,500) and non-特定取得 (5% / ¥97,500) caps', () => {
@@ -27,8 +30,11 @@ describe('getHomeLoanTaxCreditCohort', () => {
     expect(getHomeLoanTaxCreditCohort(2021)?.moveInYearFrom).toBe(2014);
     const band = getHomeLoanTaxCreditCohort(2018)!;
     expect(band.incomeLimit).toBe(30_000_000);
-    expect(band.spillover).toEqual({ flatCap: 136_500, taxableIncomeRate: 0.07 });
-    expect(band.spilloverNonTokuteiShutoku).toEqual({ flatCap: 97_500, taxableIncomeRate: 0.05 });
+    expect(band.spillover).toEqual({ flatCap: 136_500, taxableIncomeRate: percent(7) });
+    expect(band.spilloverNonTokuteiShutoku).toEqual({
+      flatCap: 97_500,
+      taxableIncomeRate: percent(5),
+    });
   });
 
   it('does not carry a non-特定取得 cap for the 2022+ band (5% / ¥97,500 applies regardless)', () => {

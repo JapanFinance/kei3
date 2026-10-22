@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { Rate } from '../../data/rate';
 import { DEFAULT_PROVIDER } from '../../types/healthInsurance';
 import type { FurusatoNozeiDetails, ResidenceTaxDetails, TakeHomeResults } from '../../types/tax';
 
@@ -12,9 +13,9 @@ export const makeResidenceTaxDetails = (
   overrides: Partial<ResidenceTaxDetails> = {},
 ): ResidenceTaxDetails => ({
   taxableIncome: 0,
-  cityProportion: 0,
-  prefecturalProportion: 0,
-  residenceTaxRate: 0,
+  cityProportion: Rate.ZERO,
+  prefecturalProportion: Rate.ZERO,
+  residenceTaxRate: Rate.ZERO,
   basicDeduction: 0,
   personalDeductionDifference: 0,
   city: { cityTaxableIncome: 0, cityAdjustmentCredit: 0, cityIncomeTax: 0, cityPerCapitaTax: 0 },

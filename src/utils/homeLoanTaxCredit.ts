@@ -124,7 +124,7 @@ export function applyHomeLoanTaxCredit(
       : cohort.spillover;
 
   // Remainder spills over to residence tax, capped at min(定額限度 flatCap, 定率限度 課税総所得金額等 × rate).
-  const incomeRateCap = Math.floor(Math.max(0, taxableTotalIncome) * spillover.taxableIncomeRate);
+  const incomeRateCap = spillover.taxableIncomeRate.taxOn(Math.max(0, taxableTotalIncome));
   const statutoryCap = Math.min(spillover.flatCap, incomeRateCap);
 
   // The spillover is deducted from the 所得割, so it can never exceed the 所得割 actually levied:

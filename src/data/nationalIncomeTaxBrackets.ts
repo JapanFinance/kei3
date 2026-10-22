@@ -20,8 +20,8 @@ import { percentTo, type Rate } from './rate';
 export interface NationalIncomeTaxBracket {
   /** Upper bound of taxable income (inclusive) for this bracket, in yen (Infinity for the top). */
   maxTaxableIncomeInclusive: number;
-  /** Marginal rate applied to taxable income (e.g. 0.2 for 20%). */
-  rate: number;
+  /** Marginal rate applied to taxable income (e.g. 20%). */
+  rate: Rate;
   /** 速算控除額 subtracted after applying `rate`, in yen. */
   deduction: number;
 }
@@ -39,11 +39,11 @@ export const RECONSTRUCTION_SURTAX_RATE: Rate = percent(2.1);
 
 /** Brackets in ascending order of `maxTaxableIncomeInclusive`; the final bound is Infinity. */
 export const NATIONAL_INCOME_TAX_BRACKETS: ReadonlyArray<NationalIncomeTaxBracket> = [
-  { maxTaxableIncomeInclusive: 1_949_000, rate: 0.05, deduction: 0 },
-  { maxTaxableIncomeInclusive: 3_299_000, rate: 0.1, deduction: 97_500 },
-  { maxTaxableIncomeInclusive: 6_949_000, rate: 0.2, deduction: 427_500 },
-  { maxTaxableIncomeInclusive: 8_999_000, rate: 0.23, deduction: 636_000 },
-  { maxTaxableIncomeInclusive: 17_999_000, rate: 0.33, deduction: 1_536_000 },
-  { maxTaxableIncomeInclusive: 39_999_000, rate: 0.4, deduction: 2_796_000 },
-  { maxTaxableIncomeInclusive: Infinity, rate: 0.45, deduction: 4_796_000 },
+  { maxTaxableIncomeInclusive: 1_949_000, rate: percent(5), deduction: 0 },
+  { maxTaxableIncomeInclusive: 3_299_000, rate: percent(10), deduction: 97_500 },
+  { maxTaxableIncomeInclusive: 6_949_000, rate: percent(20), deduction: 427_500 },
+  { maxTaxableIncomeInclusive: 8_999_000, rate: percent(23), deduction: 636_000 },
+  { maxTaxableIncomeInclusive: 17_999_000, rate: percent(33), deduction: 1_536_000 },
+  { maxTaxableIncomeInclusive: 39_999_000, rate: percent(40), deduction: 2_796_000 },
+  { maxTaxableIncomeInclusive: Infinity, rate: percent(45), deduction: 4_796_000 },
 ];
