@@ -36,6 +36,10 @@ beforeAll(() => {
   Element.prototype.scrollTo = vi.fn();
 });
 
+/** The text of the whole result row whose label is `label`: the label and its value. */
+const resultRowText = (label: string) =>
+  screen.getByText(label).closest('div')!.parentElement!.textContent;
+
 describe('SocialInsuranceTab', () => {
   const mockInputs: TakeHomeInputs = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -150,10 +154,6 @@ describe('SocialInsuranceTab', () => {
     const smrRow = screen.getAllByText('Standard Monthly Remuneration')[0]!.parentElement!;
     expect(within(smrRow).getByText('¥68,000')).toBeInTheDocument();
   });
-
-  /** The text of the whole result row whose label is `label`: the label and its value. */
-  const resultRowText = (label: string) =>
-    screen.getByText(label).closest('div')!.parentElement!.textContent;
 
   it('shows the salary and commuting allowance the calculation charged, not the entered streams', () => {
     // The entered streams say 520,000 a month; the results say 63,000. The tab and the tooltips it
@@ -354,6 +354,24 @@ describe('SocialInsuranceTab at ages 65 and over', () => {
     expect(screen.getAllByText('¥401,500').length).toBeGreaterThan(0);
     expect(screen.getByText(/enrollment ends at age 70 and National Pension/)).toBeInTheDocument();
     expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
+  });
+
+  it('assesses the 後期高齢者医療 premium after the residence tax basic deduction', () => {
+    // Like National Health Insurance, this premium takes the 地方税法 deduction, which steps
+    // down above ¥24,000,000 of net income.
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          totalNetIncome: 25_000_000,
+          residenceTaxBasicDeduction: 150_000,
+        }}
+      />,
+    );
+
+    expect(resultRowText('Basic Deduction')).toContain('-¥150,000');
+    expect(resultRowText('Premium Calculation Base')).toContain('¥24,850,000');
   });
 
   it('renders the 第1号 long-term care premium row and includes it in the total at 75+', () => {
