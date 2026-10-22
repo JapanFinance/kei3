@@ -284,10 +284,8 @@ function calculateNationalHealthInsurancePremiumBreakdown(
   isSubjectToLongTermCarePremium: boolean, // Person is 40-64 years old
   params: NationalHealthInsuranceRegionParams,
 ): NationalHealthInsuranceBreakdown {
-  // Calculate NHI taxable income (住民税算定基礎額等 - often previous year's income minus a standard deduction)
-  // For simplicity, using current annual income minus the NHI standard deduction.
-  // Real-world calculations might use prior year's certified income.
-  const nhiTaxableIncome = Math.max(0, annualIncome - params.nhiStandardDeduction);
+  // Calculate NHI taxable income (住民税算定基礎額等 - 総所得金額等 less the 地方税法 basic deduction)
+  const nhiTaxableIncome = premiumCalculationBase(annualIncome);
 
   // 1. Medical Portion (医療分)
   const incomeBasedMedical = nhiTaxableIncome * params.medicalRate;
@@ -452,9 +450,11 @@ const ZERO_LATTER_STAGE_BREAKDOWN: LatterStageElderlyBreakdown = {
 /**
  * The 賦課のもととなる所得金額: 総所得金額等 minus the 地方税法 basic deduction, which is the
  * residence-tax basic deduction (43万円, stepping down above 合計所得金額 2,400万円).
- * Source: https://www.tokyo-ikiiki.net/seido/1001968/1001975/index.html
+ *
+ * Applies to both 国民健康保険 (国民健康保険法施行令第29条の7第2項第4号 and 地方税法第703条の4
+ * 第6項) and 後期高齢者医療 (https://www.tokyo-ikiiki.net/seido/1001968/1001975/index.html).
  */
-function latterStagePremiumBase(netIncome: number): number {
+export function premiumCalculationBase(netIncome: number): number {
   return Math.max(0, netIncome - calculateResidenceTaxBasicDeduction(netIncome));
 }
 
@@ -482,7 +482,7 @@ function calculateLatterStagePremiumForParams(
   netIncome: number,
   params: LatterStageElderlyRegionParams,
 ): LatterStageElderlyBreakdown {
-  const base = latterStagePremiumBase(netIncome);
+  const base = premiumCalculationBase(netIncome);
 
   const medicalPortion = Math.min(
     portionFlooredToHundred(params.medicalPerCapita, base, params.medicalRate),

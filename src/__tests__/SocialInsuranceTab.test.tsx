@@ -206,6 +206,36 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
   });
 
+  it('assesses National Health Insurance after the stepped residence tax basic deduction', () => {
+    // 国民健康保険法施行令第29条の7第2項第4号 points at the 地方税法 basic deduction, which is
+    // ¥150,000 at ¥25,000,000 of 合計所得金額; the calculation applies the same figure.
+    const inputs = {
+      ...mockInputs,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      incomeStreams: [{ id: 'b1', type: 'business' as const, amount: 25_000_000 }],
+    };
+    const results = {
+      ...mockResults,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      salaryIncome: 0,
+      commutingAllowance: 0,
+      netBusinessAndMiscIncome: 25_000_000,
+      totalNetIncome: 25_000_000,
+      residenceTaxBasicDeduction: 150_000,
+      nhiMedicalPortion: 670_000,
+      nhiElderlySupportPortion: 260_000,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(resultRowText('Basic Deduction')).toContain('-¥150,000');
+    expect(resultRowText('NHI Calculation Base')).toContain('¥24,850,000');
+  });
+
   it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
     const inputs = {
       ...mockInputs,
