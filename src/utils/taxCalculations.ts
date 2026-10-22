@@ -1034,6 +1034,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const residenceTaxBasicDeduction = preCreditResidenceTax.basicDeduction;
   const taxableIncomeForResidenceTax = preCreditResidenceTax.taxableIncome;
 
+  // 所得割 levied before the credit — both the spillover's ceiling and the figure the Taxes tab
+  // shows as the pre-spillover income-based portion.
+  const preCreditResidenceIncomeBased =
+    preCreditResidenceTax.city.cityIncomeTax +
+    preCreditResidenceTax.prefecture.prefecturalIncomeTax;
+
   const homeLoanTaxCreditResult = inputs.homeLoanTaxCredit
     ? applyHomeLoanTaxCredit(
         inputs.homeLoanTaxCredit,
@@ -1045,6 +1051,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         // 課税総所得金額 alone, not the 申告分離課税 classes (地方税法附則第5条の4第1項) — and
         // NOT the residence-tax taxable income.
         taxableIncomeForNationalIncomeTax,
+        preCreditResidenceIncomeBased,
       )
     : undefined;
 
@@ -1303,9 +1310,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     // Taxes tab can show the spillover as its own line and have the rows sum.
     ...(homeLoanTaxCreditResult &&
       homeLoanTaxCreditResult.appliedToResidenceTax > 0 && {
-        residenceTaxIncomeBasedBeforeHomeLoanCredit:
-          preCreditResidenceTax.city.cityIncomeTax +
-          preCreditResidenceTax.prefecture.prefecturalIncomeTax,
+        residenceTaxIncomeBasedBeforeHomeLoanCredit: preCreditResidenceIncomeBased,
       }),
     // The same for the foreign tax credit. It never meets a home loan spillover (see above), so
     // the 所得割 before it is the pre-credit one.
