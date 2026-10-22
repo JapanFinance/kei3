@@ -35,6 +35,7 @@ import {
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
+import { premiumCalculationBase } from '../../../utils/healthInsuranceCalculator';
 import SMRTableTooltip from './SMRTableTooltip';
 
 export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
@@ -203,7 +204,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   }
 
   const config = PORTION_CONFIG[portion];
-  const nhiTaxableIncome = Math.max(0, results.totalNetIncome - currFYData.nhiStandardDeduction);
+  const nhiTaxableIncome = premiumCalculationBase(results.totalNetIncome);
 
   // Check if this portion has rates in the current FY data
   const currRate = currFYData[config.rateKey];
@@ -226,14 +227,9 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
       config.perCapitaKey,
       config.householdFlatKey,
       config.capKey,
-      'nhiStandardDeduction',
     ]);
 
-  // For blended calculation, we need NHI taxable income from each FY's deduction
-  // (in practice, the deduction is usually the same, but use each FY's value for correctness)
-  const prevNhiTaxableIncome = prevFYData
-    ? Math.max(0, results.totalNetIncome - prevFYData.nhiStandardDeduction)
-    : nhiTaxableIncome;
+  const prevNhiTaxableIncome = nhiTaxableIncome;
 
   const currCalc = calculatePortionForFY(nhiTaxableIncome, currFYData, portion);
 

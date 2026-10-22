@@ -14,6 +14,7 @@ import {
   calculateHealthInsurancePremium,
   calculateHealthInsuranceBreakdown,
   calculateEmployeesHealthInsuranceBonusBreakdown,
+  premiumCalculationBase,
 } from '../utils/healthInsuranceCalculator';
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
@@ -910,5 +911,15 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
         'Tokyo-Nakano',
       ),
     ).toBe(948_000);
+  });
+
+  it('reduces the base by the stepped residence tax basic deduction, never below zero', () => {
+    // 地方税法第314条の2第2項, which the NHI rules point at: ¥430,000 up to ¥24,000,000 of
+    // 合計所得金額, then ¥290,000, ¥150,000 and nothing above ¥25,000,000.
+    expect(premiumCalculationBase(5_000_000)).toBe(4_570_000);
+    expect(premiumCalculationBase(100_000)).toBe(0);
+    expect(premiumCalculationBase(24_200_000)).toBe(23_910_000);
+    expect(premiumCalculationBase(25_000_000)).toBe(24_850_000);
+    expect(premiumCalculationBase(26_000_000)).toBe(26_000_000);
   });
 });
