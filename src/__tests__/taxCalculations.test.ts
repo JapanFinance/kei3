@@ -1756,6 +1756,39 @@ describe('home loan credit spillover vs. a residence tax that levies no 所得�
       credit.appliedToResidenceTax,
     );
   });
+
+  it('applies no spillover when residence tax is fully 非課税 via 未成年者 exemption', () => {
+    // A minor (under 18) with 合計所得金額 ≤ 1,350,000 (salary ¥2,050,000 − ¥740,000 deduction =
+    // ¥1,310,000) is exempt from residence tax (地方税法第295条第1項第2号). Income tax is still levied
+    // on the ¥100,000 taxable income (absorbing ¥5,000 of credit), and the rate cap has ¥5,000 of
+    // statutory headroom, but residence tax 所得割 is ¥0.
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { id: 's1', type: 'salary' as const, amount: 2_050_000, frequency: 'annual' as const },
+      ],
+      ageRange: 'under18',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+      homeLoanTaxCredit: { moveInYear: 2024, creditAmount: 300_000 },
+    });
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.residenceTax.nonTaxableStatus).toBe('minor');
+
+    const credit = result.homeLoanTaxCredit!;
+    expect(credit.appliedToIncomeTax).toBe(5_000);
+    expect(credit.residenceTaxSpilloverCap?.incomeRateCap).toBe(5_000);
+    expect(credit.residenceTaxSpilloverCap?.residenceIncomeBasedCap).toBe(0);
+    expect(credit.appliedToResidenceTax).toBe(0);
+    expect(credit.unusedCredit).toBe(295_000);
+    expect(credit.warnings[0]).toContain('所得割');
+    expect(result.residenceTaxIncomeBasedBeforeHomeLoanCredit).toBeUndefined();
+  });
 });
 
 describe('calculateTaxes age-range rules', () => {
