@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import FurusatoNozeiTab from '../components/TakeHomeCalculator/tabs/FurusatoNozeiTab';
-import { percentTo } from '../data/premiumRate';
+import { percentTo } from '../data/rate';
 import type {
   ForeignTaxCreditResult,
   HighIncomeMinimumTaxResult,

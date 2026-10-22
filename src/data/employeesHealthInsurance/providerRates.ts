@@ -7,7 +7,7 @@
  */
 
 import type { CustomEmployeesHealthInsuranceRates } from '../../types/tax';
-import type { PremiumRate } from '../premiumRate';
+import type { Rate } from '../rate';
 import { getProviderDefinition, percent, type RegionalRates } from './providerRateData';
 
 /** The rates that an employee's premium is calculated with. */
@@ -65,10 +65,7 @@ export function getCustomProviderRates(
  * The employee's premium rate: health insurance, plus long-term care for a Category 2 insured
  * person (ages 40-64).
  */
-export function getEmployeePremiumRate(
-  rates: EmployeeRates,
-  includeLongTermCare: boolean,
-): PremiumRate {
+export function getEmployeePremiumRate(rates: EmployeeRates, includeLongTermCare: boolean): Rate {
   return includeLongTermCare
     ? rates.employeeHealthInsuranceRate.plus(rates.employeeLongTermCareRate)
     : rates.employeeHealthInsuranceRate;

@@ -29,15 +29,15 @@ const roundSocialInsurancePremium = (units: number, scale: number): number => {
 };
 
 /**
- * A social insurance premium rate, held as a whole number of units of 1/`scale` so that a
- * premium, a whole-yen amount times a rate, is an exact integer product rather than a binary
+ * A rate, held as a whole number of units of 1/`scale` so that a calculated amount (such as a
+ * premium or tax, a whole-yen amount times a rate) is an exact integer product rather than a binary
  * fraction. Callers work with the rate itself and never see the scale.
  *
  * Read a rate with {@link percentTo} or {@link perMilleTo} in the unit its source publishes. The
  * decimal in the source only picks the integer: 5.075 is the double 5.0749999999999998, and times
  * 10,000 it lands 1.2e-10 from 50,750, far nearer that integer than any other.
  */
-export class PremiumRate {
+export class Rate {
   readonly #units: number;
   readonly #scale: number;
 
@@ -47,23 +47,23 @@ export class PremiumRate {
   }
 
   /** A rate of this many units of 1/`scale`, for a reader built by {@link rateReader}. */
-  static ofUnits(units: number, scale: number): PremiumRate {
+  static ofUnits(units: number, scale: number): Rate {
     if (import.meta.env.DEV && !(Number.isSafeInteger(units) && units >= 0)) {
-      throw new Error(`A premium rate must be a non-negative whole number of units: ${units}`);
+      throw new Error(`A rate must be a non-negative whole number of units: ${units}`);
     }
-    return new PremiumRate(units, scale);
+    return new Rate(units, scale);
   }
 
   /** This rate plus `other`, which must be read at the same scale. */
-  plus(other: PremiumRate): PremiumRate {
+  plus(other: Rate): Rate {
     if (import.meta.env.DEV && other.#scale !== this.#scale) {
       throw new Error(`Cannot add rates of different scales: ${this.#scale} and ${other.#scale}`);
     }
-    return new PremiumRate(this.#units + other.#units, this.#scale);
+    return new Rate(this.#units + other.#units, this.#scale);
   }
 
   /** Whether `other` is the same rate, which two separately read rates can be. */
-  equals(other: PremiumRate): boolean {
+  equals(other: Rate): boolean {
     return this.#units === other.#units && this.#scale === other.#scale;
   }
 
@@ -94,8 +94,8 @@ export class PremiumRate {
    * 1000分の183 divided into two is the 9.15% an employee pays of what they and their employer
    * pay together.
    */
-  dividedBy(parts: number): PremiumRate {
-    return new PremiumRate(this.#units, this.#scale * parts);
+  dividedBy(parts: number): Rate {
+    return new Rate(this.#units, this.#scale * parts);
   }
 
   /** The rate as a decimal number (e.g. 0.15 for 15%). */
@@ -118,16 +118,15 @@ export class PremiumRate {
  * instead, which has to be accepted whatever its decimals are.
  */
 export interface RateReader {
-  (value: number): PremiumRate;
-  entered(value: number): PremiumRate;
+  (value: number): Rate;
+  entered(value: number): Rate;
 }
 
 const rateReader = (writtenScale: number, decimals: number, writtenUnit: string): RateReader => {
   const unitsPerWritten = 10 ** decimals;
   const scale = writtenScale * unitsPerWritten;
-  const entered = (value: number): PremiumRate =>
-    PremiumRate.ofUnits(Math.round(value * unitsPerWritten), scale);
-  const curated = (value: number): PremiumRate => {
+  const entered = (value: number): Rate => Rate.ofUnits(Math.round(value * unitsPerWritten), scale);
+  const curated = (value: number): Rate => {
     const units = value * unitsPerWritten;
     if (import.meta.env.DEV && Math.abs(units - Math.round(units)) > 1e-6) {
       throw new Error(

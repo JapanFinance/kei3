@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { perMilleTo, type PremiumRate } from './premiumRate';
+import { perMilleTo, type Rate } from './rate';
 
 /**
  * Employment insurance (雇用保険) premium rates for general businesses (一般の事業).
@@ -14,7 +14,7 @@ export interface EmploymentInsuranceRatePeriod {
   /** The date from which this rate applies (inclusive). Month is 0-indexed (0=Jan, 3=Apr). */
   effectiveFrom: { year: number; month: number };
   /** Employee premium rate */
-  rate: PremiumRate;
+  rate: Rate;
 }
 
 /**
@@ -57,7 +57,7 @@ if (import.meta.env.DEV) {
  * @param year Calendar year
  * @param month 0-indexed month (0=Jan, 11=Dec)
  */
-export const getEmploymentInsuranceRate = (year: number, month: number): PremiumRate => {
+export const getEmploymentInsuranceRate = (year: number, month: number): Rate => {
   for (const period of EMPLOYMENT_INSURANCE_RATES) {
     const { effectiveFrom } = period;
     if (

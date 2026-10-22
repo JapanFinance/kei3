@@ -9,8 +9,8 @@ import {
   RECONSTRUCTION_SURTAX_RATE,
 } from '../data/nationalIncomeTaxBrackets';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import type { PremiumRate } from '../data/premiumRate';
 import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
+import type { Rate } from '../data/rate';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
@@ -157,7 +157,7 @@ export interface EmploymentInsuranceBreakdown {
  */
 export const calculateMonthlyEmploymentInsurancePremium = (
   annualWage: number,
-  rate: PremiumRate,
+  rate: Rate,
 ): number => rate.premiumOn(annualWage, 12);
 
 /**
@@ -181,13 +181,13 @@ const calculateEmploymentInsuranceBreakdown = (
   // of one rate period shares the rate object the lookup returns, so the premium is computed once
   // per period.
   if (salaryIncome > 0) {
-    let premiumRate: PremiumRate | undefined;
+    let currentRate: Rate | undefined;
     let premium = 0;
     for (let month = 0; month < 12; month++) {
       const rate = getEmploymentInsuranceRate(year, month);
-      if (rate !== premiumRate) {
+      if (rate !== currentRate) {
         premium = calculateMonthlyEmploymentInsurancePremium(salaryIncome, rate);
-        premiumRate = rate;
+        currentRate = rate;
       }
       annualPremium += premium;
     }

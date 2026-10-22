@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Prefecture } from '../prefectures';
-import { percentTo, type PremiumRate } from '../premiumRate';
+import { percentTo, type Rate } from '../rate';
 
 /**
  * Decimal places of a percentage that a health insurance premium rate can have. Four, because a
@@ -24,13 +24,13 @@ export interface RegionalRates {
   /** Region-specific source URL or document reference */
   source?: string;
   /** Employee's health insurance premium rate */
-  employeeHealthInsuranceRate: PremiumRate;
+  employeeHealthInsuranceRate: Rate;
   /** Employer's health insurance premium rate. If omitted, defaults to same as employee */
-  employerHealthInsuranceRate?: PremiumRate;
+  employerHealthInsuranceRate?: Rate;
   /** Employee's long-term care insurance premium rate */
-  employeeLongTermCareRate: PremiumRate;
+  employeeLongTermCareRate: Rate;
   /** Employer's long-term care insurance premium rate. If omitted, defaults to same as employee */
-  employerLongTermCareRate?: PremiumRate;
+  employerLongTermCareRate?: Rate;
 }
 
 /**

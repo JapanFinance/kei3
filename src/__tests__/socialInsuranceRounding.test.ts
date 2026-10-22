@@ -10,7 +10,7 @@ import {
   getRegionalRatesForMonth,
 } from '../data/employeesHealthInsurance/providerRates';
 import { perMille } from '../data/employmentInsurance';
-import { PremiumRate, percentTo } from '../data/premiumRate';
+import { Rate, percentTo } from '../data/rate';
 import {
   calculateEmployeesHealthInsuranceBonusBreakdown,
   calculateHealthInsuranceBreakdown,
@@ -19,7 +19,7 @@ import { calculatePensionBonusBreakdown } from '../utils/pensionCalculator';
 import { calculateMonthlyEmploymentInsurancePremium } from '../utils/taxCalculations';
 
 describe('Social Insurance Rounding', () => {
-  describe('PremiumRate.premiumOn', () => {
+  describe('Rate.premiumOn', () => {
     it('rounds 0.50 yen down and more than 0.50 yen up', () => {
       // 9.15% of 1,000 yen is 91.50 yen, and a rate a ten-millionth higher is above the tie.
       expect(percentTo(4)(9.15).premiumOn(1000)).toBe(91);
@@ -35,10 +35,10 @@ describe('Social Insurance Rounding', () => {
 
     it('rounds exactly up to 2^53', () => {
       // A whole rate over a scale of 1, so that the product is the amount itself.
-      const whole = PremiumRate.ofUnits(1, 1);
+      const whole = Rate.ofUnits(1, 1);
       expect(whole.premiumOn(2 ** 53 - 1, 2)).toBe(2 ** 52 - 1);
       expect(whole.premiumOn(2 ** 53 - 3, 2)).toBe(2 ** 52 - 2);
-      expect(PremiumRate.ofUnits(1, 100_000).premiumOn(2 ** 53 - 1)).toBe(90_071_992_547);
+      expect(Rate.ofUnits(1, 100_000).premiumOn(2 ** 53 - 1)).toBe(90_071_992_547);
     });
 
     it('throws for a negative, NaN or infinite amount', () => {
@@ -50,7 +50,7 @@ describe('Social Insurance Rounding', () => {
     });
   });
 
-  describe('PremiumRate.taxOn', () => {
+  describe('Rate.taxOn', () => {
     it('floors fractional yen down to the nearest whole yen (1円未満切り捨て)', () => {
       const rate22_5 = percentTo(1)(22.5);
       // 1,000 yen × 22.5% = 225 yen

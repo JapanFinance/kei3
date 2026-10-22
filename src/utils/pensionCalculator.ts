@@ -3,7 +3,7 @@
 
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
-import { perMilleTo } from '../data/premiumRate';
+import { perMilleTo } from '../data/rate';
 import type { BonusIncomeStream } from '../types/tax';
 
 export type { StandardMonthlyRemunerationBracket };

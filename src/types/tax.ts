@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { PremiumRate } from '../data/premiumRate';
+import type { Rate } from '../data/rate';
 import type { Dependent, DependentDeductionResults, DisabilityLevel } from './dependents';
 import type { HealthInsuranceProviderId, LongTermCareCategory1Estimate } from './healthInsurance';
 import type { TaxpayerAgeRange } from './taxpayerAge';
@@ -547,7 +547,7 @@ export interface HighIncomeMinimumTaxResult {
   /** Taxable excess above threshold (box ⑭, floored to ¥1,000). */
   taxableExcess: number;
   /** Statutory tax rate on excess (22.5% in 2025/2026, 30.0% in 2027+). */
-  rate: PremiumRate;
+  rate: Rate;
   /** Tax on excess: taxableExcess × rate (box ⑮). */
   taxOnExcess: number;
   /** Baseline income tax + surtax without 確定申告不要制度 (box ㉒). */
