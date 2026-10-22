@@ -8,7 +8,7 @@ import {
   HIGH_INCOME_MINIMUM_TAX_PERIODS,
 } from '../data/highIncomeMinimumTax';
 import { RECONSTRUCTION_SURTAX_RATE } from '../data/nationalIncomeTaxBrackets';
-import { percentTo } from '../data/premiumRate';
+import { percentTo } from '../data/rate';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import {
   EMPTY_ADDITIONAL_DEDUCTION_INPUTS,

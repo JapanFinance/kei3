@@ -14,7 +14,7 @@ import {
   getEmployeePremiumRate,
   getRegionalRatesForMonth,
 } from '../../../data/employeesHealthInsurance/providerRates';
-import type { PremiumRate } from '../../../data/premiumRate';
+import type { Rate } from '../../../data/rate';
 import { CUSTOM_PROVIDER_ID, DEFAULT_PROVIDER_REGION } from '../../../types/healthInsurance';
 import type { TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
@@ -56,7 +56,7 @@ const HealthInsuranceBonusTooltip: React.FC<HealthInsuranceBonusTooltipProps> = 
   }
 
   // Look up the applicable rate for a given bonus month
-  const getRateForMonth = (month: number): PremiumRate => {
+  const getRateForMonth = (month: number): Rate => {
     const rates =
       provider === CUSTOM_PROVIDER_ID
         ? getCustomProviderRates(inputs.customEHIRates)

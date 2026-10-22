@@ -19,7 +19,7 @@
  * - Calculation Sheet: https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/gengaku/01.pdf
  */
 
-import { percentTo, type PremiumRate } from './premiumRate';
+import { percentTo, type Rate } from './rate';
 
 export interface HighIncomeMinimumTaxPeriod {
   /** The calendar tax year from which this period applies (inclusive). */
@@ -27,7 +27,7 @@ export interface HighIncomeMinimumTaxPeriod {
   /** Statutory threshold / deduction (特別控除額), in yen. */
   threshold: number;
   /** Statutory tax rate (税率). */
-  rate: PremiumRate;
+  rate: Rate;
 }
 
 const percent = percentTo(1);

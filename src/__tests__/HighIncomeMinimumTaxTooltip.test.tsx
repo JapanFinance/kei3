@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 
 import { HighIncomeMinimumTaxTooltip } from '../components/TakeHomeCalculator/tabs/HighIncomeMinimumTaxTooltip';
 import TaxesTab from '../components/TakeHomeCalculator/tabs/TaxesTab';
-import { percentTo } from '../data/premiumRate';
+import { percentTo } from '../data/rate';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { HighIncomeMinimumTaxResult, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';

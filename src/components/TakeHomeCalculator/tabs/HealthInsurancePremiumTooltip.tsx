@@ -25,7 +25,7 @@ import {
   nhiParamsDiffer,
   type NHIParamsField,
 } from '../../../data/nationalHealthInsurance/nhiParamsData';
-import type { PremiumRate } from '../../../data/premiumRate';
+import type { Rate } from '../../../data/rate';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
@@ -483,7 +483,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
     const totalPremium = finalRate.premiumOn(standardMonthlyRemuneration);
 
     // Check if rates differ across the 12 months of the year
-    const monthlyRates: { rate: PremiumRate; premium: number }[] = [];
+    const monthlyRates: { rate: Rate; premium: number }[] = [];
     let ratesVary = false;
 
     if (provider !== CUSTOM_PROVIDER_ID) {
@@ -595,7 +595,7 @@ const HealthInsurancePremiumTooltip: React.FC<HealthInsurancePremiumTooltipProps
                   const groups: {
                     startMonth: number;
                     endMonth: number;
-                    rate: PremiumRate;
+                    rate: Rate;
                     premium: number;
                   }[] = [];
                   for (let i = 0; i < monthlyRates.length; i++) {

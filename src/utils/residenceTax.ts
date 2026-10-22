@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
-import type { PremiumRate } from '../data/premiumRate';
+import type { Rate } from '../data/rate';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import {
@@ -748,7 +748,7 @@ export function calculateFurusatoLimit(
 function getSpecialDeductionMultiplier(
   taxableIncome: number,
   personalDeductionDifference: number,
-  separateNationalRate: PremiumRate | undefined,
+  separateNationalRate: Rate | undefined,
 ): number {
   const adjustedTaxableIncome = taxableIncome - personalDeductionDifference;
   let incomeTaxRate: number;

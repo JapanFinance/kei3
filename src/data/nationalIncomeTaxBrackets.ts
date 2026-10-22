@@ -15,7 +15,7 @@
  * Source: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
  */
 
-import { percentTo, type PremiumRate } from './premiumRate';
+import { percentTo, type Rate } from './rate';
 
 export interface NationalIncomeTaxBracket {
   /** Upper bound of taxable income (inclusive) for this bracket, in yen (Infinity for the top). */
@@ -35,7 +35,7 @@ const percent = percentTo(1);
  * Source: 東日本大震災からの復興のための施策を実施するために必要な財源の確保に関する特別措置法第13条
  * https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm
  */
-export const RECONSTRUCTION_SURTAX_RATE: PremiumRate = percent(2.1);
+export const RECONSTRUCTION_SURTAX_RATE: Rate = percent(2.1);
 
 /** Brackets in ascending order of `maxTaxableIncomeInclusive`; the final bound is Infinity. */
 export const NATIONAL_INCOME_TAX_BRACKETS: ReadonlyArray<NationalIncomeTaxBracket> = [

@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
-import { percentTo } from '../data/premiumRate';
+import { percentTo } from '../data/rate';
 import {
   applyDeductionSpillover,
   calculateSeparateNationalIncomeTaxBase,

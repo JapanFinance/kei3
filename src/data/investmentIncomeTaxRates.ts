@@ -30,7 +30,7 @@
  *   https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_4-Di_1-At_71_6
  *
  * Combined withholding rates: national 15.315% = 15% + (15% × 2.1%); residence 5% (no surtax).
- * Withholding rates are held as {@link PremiumRate}s to perform exact rational arithmetic
+ * Withholding rates are held as {@link Rate}s to perform exact rational arithmetic
  * and whole-yen flooring via `taxOn`. Under 復興財確法第28条 and NTA Tax Answer No. 2507, payors
  * apply this single combined rate (合計税率 15.315%) and floor once to ¥1, rather than rounding
  * base tax and surtax separately.
@@ -40,7 +40,7 @@
  * 所得割, each floored to ¥100 together with the 所得割 on 課税総所得金額.
  */
 
-import { percentTo, type PremiumRate } from './premiumRate';
+import { percentTo, type Rate } from './rate';
 
 export interface InvestmentIncomeTaxRatePeriod {
   /** The income year (calendar year) from which these rates apply (inclusive). */
@@ -49,22 +49,22 @@ export interface InvestmentIncomeTaxRatePeriod {
    * 所得税 withheld on 上場株式等の譲渡所得等 and 配当等 that are 申告不要, including the
    * 復興特別所得税 fold-in.
    */
-  listedWithholdingNationalRate: PremiumRate;
+  listedWithholdingNationalRate: Rate;
   /** 住民税 withheld (配当割・株式等譲渡所得割) on the same. */
-  listedWithholdingResidenceRate: PremiumRate;
+  listedWithholdingResidenceRate: Rate;
   /** 所得税 rate on 一般利子等 (源泉分離課税), including the 復興特別所得税 fold-in. */
-  interestWithholdingNationalRate: PremiumRate;
+  interestWithholdingNationalRate: Rate;
   /** 住民税 rate (利子割) on the same. */
-  interestWithholdingResidenceRate: PremiumRate;
+  interestWithholdingResidenceRate: Rate;
   /**
    * 所得税 the return assesses on 上場株式等の譲渡所得等 and 配当等 reported under 申告分離課税
    * (措法37条の11①, 8条の4①), before the 復興特別所得税.
    */
-  listedReportedNationalRate: PremiumRate;
+  listedReportedNationalRate: Rate;
   /** 市町村民税所得割 on the same (地方税法附則第35条の2の2第5項, 第33条の2第5項). */
-  listedReportedMunicipalRate: PremiumRate;
+  listedReportedMunicipalRate: Rate;
   /** 道府県民税所得割 on the same (地方税法附則第35条の2の2第1項, 第33条の2第1項). */
-  listedReportedPrefecturalRate: PremiumRate;
+  listedReportedPrefecturalRate: Rate;
 }
 
 const percent = percentTo(3);
