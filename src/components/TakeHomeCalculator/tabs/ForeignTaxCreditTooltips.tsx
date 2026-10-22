@@ -166,7 +166,13 @@ export const ForeignTaxCreditTooltip: React.FC<ForeignTaxCreditTooltipProps> = (
                     ? 'No foreign-source income to credit against (limit is ¥0).'
                     : credit.incomeTax === 0
                       ? 'Japanese income tax is ¥0 (limit is ¥0).'
-                      : 'Foreign tax exceeds the allowable Japanese credit limits.'}{' '}
+                      : credit.foreignTax <=
+                          credit.limit.incomeTax +
+                            credit.limit.reconstructionSurtax +
+                            credit.limit.prefecture +
+                            credit.limit.city
+                        ? 'The residence-tax income-based portion (所得割) is less than the credit.'
+                        : 'Foreign tax exceeds the allowable Japanese credit limits.'}{' '}
                   It can be carried forward for up to three years by attaching the foreign tax
                   credit statement (外国税額控除に関する明細書) to the tax return each year.
                 </Note>
@@ -444,9 +450,18 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
         )}
         {excess > 0 && (
           <Note>
-            The {formatJPY(excess)} above every limit (控除限度超過額) is not credited this year. It
-            can be carried forward for up to three years by attaching the foreign tax credit
-            statement (外国税額控除に関する明細書) to the tax return each year.
+            The {formatJPY(excess)}{' '}
+            {credit &&
+            credit.foreignTax <=
+              credit.limit.incomeTax +
+                credit.limit.reconstructionSurtax +
+                credit.limit.prefecture +
+                credit.limit.city
+              ? 'unabsorbed by the residence-tax income-based portion (所得割) (控除不足額)'
+              : 'above every limit (控除限度超過額)'}{' '}
+            is not credited this year. It can be carried forward for up to three years by attaching
+            the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each
+            year.
           </Note>
         )}
         {/* 措令4条の5⑫, 措法9条の2③ */}

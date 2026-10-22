@@ -1073,7 +1073,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       incomeBreakdown.foreignSourceIncome,
       incomeYear,
     );
-  const foreignTaxCredit: ForeignTaxCreditResult | undefined =
+  const rawForeignTaxCredit: ForeignTaxCreditResult | undefined =
     foreignTax > 0 || foreignSourceIncome > 0
       ? {
           ...calculateForeignTaxCredit({
@@ -1090,8 +1090,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     Math.floor(
       (incomeTaxAfterHomeLoanCredit +
         reconstructionSurtax -
-        (foreignTaxCredit?.credit.incomeTax ?? 0) -
-        (foreignTaxCredit?.credit.reconstructionSurtax ?? 0)) /
+        (rawForeignTaxCredit?.credit.incomeTax ?? 0) -
+        (rawForeignTaxCredit?.credit.reconstructionSurtax ?? 0)) /
         100,
     ) * 100;
 
@@ -1100,8 +1100,9 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   // here, and the residence tax is never computed a third time.
   const homeLoanResidenceCredit = homeLoanTaxCreditResult?.appliedToResidenceTax ?? 0;
   const foreignResidenceCredit =
-    foreignTaxCredit && (foreignTaxCredit.credit.city > 0 || foreignTaxCredit.credit.prefecture > 0)
-      ? { city: foreignTaxCredit.credit.city, prefecture: foreignTaxCredit.credit.prefecture }
+    rawForeignTaxCredit &&
+    (rawForeignTaxCredit.credit.city > 0 || rawForeignTaxCredit.credit.prefecture > 0)
+      ? { city: rawForeignTaxCredit.credit.city, prefecture: rawForeignTaxCredit.credit.prefecture }
       : undefined;
   const furusatoResidenceCredit = inputs.furusatoDonation?.residenceCredits;
   const residenceTaxCredits: ResidenceTaxCredits | undefined =
@@ -1124,6 +1125,20 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         separateNetIncome,
       )
     : preCreditResidenceTax;
+
+  // Residence FTC unabsorbed when the income-based portion (所得割) is smaller than the limit
+  // (地方税法施行令7条の19⑧, 48条の9の2⑨) also carries forward in law, so include it in excess.
+  const unabsorbedResidenceCredit = rawForeignTaxCredit
+    ? rawForeignTaxCredit.credit.prefecture -
+      (residenceTax.foreignTaxCredit?.prefecture ?? 0) +
+      (rawForeignTaxCredit.credit.city - (residenceTax.foreignTaxCredit?.city ?? 0))
+    : 0;
+  const foreignTaxCredit: ForeignTaxCreditResult | undefined = rawForeignTaxCredit
+    ? {
+        ...rawForeignTaxCredit,
+        excess: rawForeignTaxCredit.excess + unabsorbedResidenceCredit,
+      }
+    : undefined;
 
   // Calculate totals
   const withheldInvestmentTax = calculateWithheldInvestmentTax(

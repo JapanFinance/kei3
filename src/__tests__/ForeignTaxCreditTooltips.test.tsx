@@ -87,6 +87,23 @@ describe('ForeignTaxCreditTooltip', () => {
     ).toBeInTheDocument();
   });
 
+  it('explains residence-tax income-based portion limitation when foreign tax is within limits but unabsorbed', () => {
+    const credit = sampleCredit({
+      foreignTax: 10_000,
+      excess: 2_000,
+    });
+    render(<ForeignTaxCreditTooltip credit={credit} />);
+
+    expect(
+      screen.getByText(/⚠️ ¥2,000 of foreign tax is not credited this year/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /The residence-tax income-based portion \(所得割\) is less than the credit\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('explains zero foreign-source income when adjustedForeignSourceIncome is 0', () => {
     const credit = sampleCredit({
       adjustedForeignSourceIncome: 0,
@@ -270,6 +287,22 @@ describe('ForeignTaxPaidTooltip', () => {
     expect(screen.getByText(formatJPY(65_000))).toBeInTheDocument();
     expect(screen.getByText('Not credited this year:')).toBeInTheDocument();
     expect(screen.getByText(formatJPY(14_753))).toBeInTheDocument();
+  });
+
+  it('explains residence-tax unabsorbed credit when foreign tax is within limits but unabsorbed', () => {
+    const credit = sampleCredit({
+      foreignTax: 10_000,
+      excess: 2_000,
+    });
+    render(<ForeignTaxPaidTooltip foreignTaxPaid={10_000} credit={credit} />);
+
+    expect(screen.getByText('Not credited this year:')).toBeInTheDocument();
+    expect(screen.getByText(formatJPY(2_000))).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /The ¥2,000 unabsorbed by the residence-tax income-based portion \(所得割\) \(控除不足額\) is not credited this year\./,
+      ),
+    ).toBeInTheDocument();
   });
 
   it('renders basic notice when credit is undefined', () => {

@@ -140,6 +140,27 @@ describe('Foreign Tax Credit card', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('warns when foreign tax is within the statutory limit but unabsorbed by residence tax 所得割', () => {
+    renderModal(
+      { foreignTaxOnTaxReturn: 20_000 },
+      {
+        foreignTax: 20_000,
+        foreignSourceIncome: 500_000,
+        adjustedForeignSourceIncome: 500_000,
+        totalIncome: 4_060_000,
+        incomeTax: 132_200,
+        manualForeignTax: 20_000,
+        limit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 2_930 },
+        credit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 1_426 },
+        excess: 3_379,
+      },
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '¥3,379 of the foreign tax could not be credited because the residence-tax income-based portion (所得割) is less than the credit. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.',
+    );
+  });
+
   it('says there is no foreign-source income to credit the tax against', () => {
     renderModal(
       { foreignTaxOnTaxReturn: 20_000 },

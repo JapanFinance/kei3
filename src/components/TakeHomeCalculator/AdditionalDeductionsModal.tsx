@@ -273,11 +273,18 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
         ]
       : []),
   ];
+  const totalLimit =
+    (foreignTaxCreditResult?.limit.incomeTax ?? 0) +
+    (foreignTaxCreditResult?.limit.reconstructionSurtax ?? 0) +
+    (foreignTaxCreditResult?.limit.prefecture ?? 0) +
+    (foreignTaxCreditResult?.limit.city ?? 0);
   const foreignTaxExcessWarning =
     foreignTaxCreditResult && foreignTaxCreditResult.excess > 0
       ? foreignTaxCreditResult.adjustedForeignSourceIncome === 0
         ? `There is no Adjusted Foreign-Source Income (調整国外所得金額) to credit the foreign tax against, so ${formatJPY(foreignTaxCreditResult.excess)} cannot be credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
-        : `${formatJPY(foreignTaxCreditResult.excess)} of the foreign tax is above the limit and cannot be credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
+        : foreignTaxCreditResult.foreignTax <= totalLimit
+          ? `${formatJPY(foreignTaxCreditResult.excess)} of the foreign tax could not be credited because the residence-tax income-based portion (所得割) is less than the credit. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
+          : `${formatJPY(foreignTaxCreditResult.excess)} of the foreign tax is above the limit and cannot be credited this year. It can be carried forward for up to three years by attaching the foreign tax credit statement (外国税額控除に関する明細書) to the tax return each year.`
       : undefined;
 
   const lifeInput = lifeInsurance;

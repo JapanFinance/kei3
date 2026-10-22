@@ -70,7 +70,8 @@ export interface ForeignTaxCreditInputs {
  * which carries forward for three years in law (所法95条②③; 地方税法施行令7条の19②, 48条の9の2②
  * for residence tax) and is not modelled. The residence credits are before the cap at each side's
  * 所得割, which the residence tax calculation applies; a credit a 所得割 cannot absorb also
- * carries forward in law (地方税法施行令7条の19⑧, 48条の9の2⑨), which is not modelled either.
+ * carries forward in law (地方税法施行令7条の19⑧, 48条の9の2⑨) and is added to {@link
+ * ForeignTaxCreditResult.excess} by `calculateTaxes`.
  *
  * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95
  * @see https://laws.e-gov.go.jp/law/340CO0000000096#Mp-Pa_2-Ch_3-At_222

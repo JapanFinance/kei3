@@ -4284,8 +4284,8 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       prefecture: 2_664_480,
       city: 3_996_720,
     });
-    // 30,000,000 − 22,204,000 − 466,284 − 2,664,480 − 3,996,720.
-    expect(result.foreignTaxCredit?.excess).toBe(668_516);
+    // 30,000,000 − 22,204,000 − 466,284 − 2,400,000 − 3,600,000.
+    expect(result.foreignTaxCredit?.excess).toBe(1_329_716);
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.foreignTaxCredit).toEqual({
       city: 3_600_000,
@@ -4312,6 +4312,8 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     });
     // 県 2,000,000 absorbs 2,000,000 of its 2,124,480; the other 124,480 is not added to the city's
     // 1,799,736: 市 3,000,000 − 1,799,736 = 1,200,264 → 1,200,200; + 5,000 = 1,205,200.
+    // The unabsorbed 124,480 prefectural credit is included in excess.
+    expect(result.foreignTaxCredit?.excess).toBe(124_480);
     expect(result.residenceTax.foreignTaxCredit).toEqual({
       city: 1_799_736,
       prefecture: 2_000_000,
@@ -4319,6 +4321,33 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     expect(result.residenceTax.totalResidenceTax).toBe(1_205_200);
     // 50,000,000 − 1,205,200 − 22,000,000.
     expect(result.takeHomeIncome).toBe(26_794_800);
+  });
+
+  it('includes residence-tax FTC capped by 所得割 in excess when residence tax is 非課税', () => {
+    // Under 18 with total income at or below 1,350,000 is fully exempt from residence tax (地方税法第24条の5第1項第1号).
+    // National income tax: 1,200,000 − 1,040,000 basic deduction = 160,000 @ 5% = 8,000; surtax = 168.
+    // Statutory FTC limits: incomeTax 8,000, surtax 168, prefecture 960, city 1,440.
+    // With foreign tax of 12,000:
+    // incomeTax credit = 8,000, surtax credit = 168, prefecture credit = 960, city credit = 1,440.
+    // Statutory excess = 12,000 − 8,000 − 168 − 960 − 1,440 = 1,432.
+    // But residence tax is fully 非課税 (所得割 is 0), so prefecture absorbs 0 and city absorbs 0.
+    // The entire residence credit 960 + 1,440 = 2,400 is unabsorbed and must be included in excess:
+    // excess = 1,432 + 2,400 = 3,832 (i.e. 12,000 − 8,000 − 168).
+    const result = calculateTaxes({
+      ...interestOnly(1_200_000, 12_000),
+      ageRange: 'under18',
+    });
+
+    expect(result.foreignTaxCredit?.credit).toEqual({
+      incomeTax: 8_000,
+      reconstructionSurtax: 168,
+      prefecture: 960,
+      city: 1_440,
+    });
+    expect(result.residenceTax.foreignTaxCredit).toBeUndefined();
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.foreignTaxCredit?.excess).toBe(3_832);
+    expect(result.nationalIncomeTax).toBe(0);
   });
 
   it('case I: counts a foreign dividend with no foreign tax toward the limit', () => {
@@ -5007,11 +5036,12 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           );
           expect(ftc.credit.prefecture).toBeLessThanOrEqual(ftc.limit.prefecture);
           expect(ftc.credit.city).toBeLessThanOrEqual(ftc.limit.city);
+          const resFtc = results.residenceTax.foreignTaxCredit;
           expect(
             ftc.credit.incomeTax +
               ftc.credit.reconstructionSurtax +
-              ftc.credit.prefecture +
-              ftc.credit.city +
+              (resFtc?.prefecture ?? 0) +
+              (resFtc?.city ?? 0) +
               ftc.excess,
           ).toBe(ftc.foreignTax);
         }

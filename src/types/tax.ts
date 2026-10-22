@@ -546,7 +546,12 @@ export interface ForeignTaxCreditResult {
    * 所得割; {@link ResidenceTaxDetails.foreignTaxCredit} holds what the 所得割 absorbed.
    */
   credit: ForeignTaxCreditAmounts;
-  /** 控除限度超過額: foreign tax above every limit. It carries forward in law, not modelled. */
+  /**
+   * Foreign tax that cannot be credited this year: foreign tax above every statutory limit
+   * (控除限度超過額) plus any residence foreign tax credit that could not be absorbed because the
+   * income-based portion (所得割) was smaller than the limit (控除不足額). It carries forward for
+   * up to three years in law (所法95条②③; 地方税法施行令7条の19②⑧, 48条の9の2②⑨), not modelled.
+   */
   excess: number;
 }
 
