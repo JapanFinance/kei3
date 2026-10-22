@@ -102,7 +102,11 @@ export const buildNationalIncomeTaxBracketRows = (): string[][] =>
     } else {
       range = `${formatNumber(arr[i - 1]!.maxTaxableIncomeInclusive + 1)} - ${formatNumber(bracket.maxTaxableIncomeInclusive)}`;
     }
-    return [range, `${Math.round(bracket.rate * 100)}%`, formatNumber(bracket.deduction)];
+    return [
+      range,
+      `${Math.round(bracket.rate.toDecimal() * 100)}%`,
+      formatNumber(bracket.deduction),
+    ];
   });
 
 /**

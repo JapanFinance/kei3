@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
-import type { Rate } from '../data/rate';
+import { RECONSTRUCTION_SURTAX_RATE } from '../data/nationalIncomeTaxBrackets';
+import { percentTo, Rate } from '../data/rate';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import {
@@ -34,9 +35,16 @@ import {
 } from './investmentIncome';
 import { calculatePersonalDeductions } from './personalDeductions';
 
-const RESIDENCE_TAX_RATE = 0.1;
-const CITY_TAX_PROPORTION = 0.6;
-const PREFECTURAL_TAX_PROPORTION = 0.4;
+const percent = percentTo(3);
+
+export const CITY_RESIDENCE_TAX_RATE = percent(6);
+export const PREFECTURAL_RESIDENCE_TAX_RATE = percent(4);
+export const RESIDENCE_TAX_RATE = Rate.sum(CITY_RESIDENCE_TAX_RATE, PREFECTURAL_RESIDENCE_TAX_RATE);
+
+export const CITY_TAX_PROPORTION = percent(60);
+export const PREFECTURAL_TAX_PROPORTION = percent(40);
+
+export const ADJUSTMENT_CREDIT_RATE = percent(5);
 
 // 非課税制度 - 所得割・均等割とも非課税
 export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
@@ -271,27 +279,27 @@ export const calculateResidenceTax = (
     taxableIncome,
     personalDeductionDifference,
   );
-  const cityAdjustmentCredit = adjustmentCredit * CITY_TAX_PROPORTION;
-  const prefecturalAdjustmentCredit = adjustmentCredit * PREFECTURAL_TAX_PROPORTION;
+  const cityAdjustmentCredit = CITY_TAX_PROPORTION.taxOn(adjustmentCredit);
+  const prefecturalAdjustmentCredit = PREFECTURAL_TAX_PROPORTION.taxOn(adjustmentCredit);
 
   // Each side's 所得割 — the 6%/4% on 課税総所得金額 and the 3%/2% on the 申告分離課税 classes
   // together — is floored to ¥100 once, after the credits.
   const cityBeforeForeignTaxCredit = Math.max(
     0,
-    taxableIncome * 0.06 +
+    CITY_RESIDENCE_TAX_RATE.taxOn(taxableIncome) +
       separateCityIncomeTax -
       cityAdjustmentCredit -
-      credits.homeLoan * CITY_TAX_PROPORTION -
+      CITY_TAX_PROPORTION.taxOn(credits.homeLoan) -
       (credits.furusato?.city ?? 0),
   );
   const cityForeignTaxCredit = Math.min(credits.foreignTax?.city ?? 0, cityBeforeForeignTaxCredit);
   const cityIncomeTax = Math.floor((cityBeforeForeignTaxCredit - cityForeignTaxCredit) / 100) * 100;
   const prefecturalBeforeForeignTaxCredit = Math.max(
     0,
-    taxableIncome * 0.04 +
+    PREFECTURAL_RESIDENCE_TAX_RATE.taxOn(taxableIncome) +
       separatePrefecturalIncomeTax -
       prefecturalAdjustmentCredit -
-      credits.homeLoan * PREFECTURAL_TAX_PROPORTION -
+      PREFECTURAL_TAX_PROPORTION.taxOn(credits.homeLoan) -
       (credits.furusato?.prefecture ?? 0),
   );
   const prefecturalForeignTaxCredit = Math.min(
@@ -319,13 +327,13 @@ export const calculateResidenceTax = (
     basicDeduction,
     personalDeductionDifference,
     city: {
-      cityTaxableIncome: taxableIncome * CITY_TAX_PROPORTION,
+      cityTaxableIncome: CITY_TAX_PROPORTION.taxOn(taxableIncome),
       cityAdjustmentCredit,
       cityIncomeTax,
       cityPerCapitaTax,
     },
     prefecture: {
-      prefecturalTaxableIncome: taxableIncome * PREFECTURAL_TAX_PROPORTION,
+      prefecturalTaxableIncome: PREFECTURAL_TAX_PROPORTION.taxOn(taxableIncome),
       prefecturalAdjustmentCredit,
       prefecturalIncomeTax,
       prefecturalPerCapitaTax,
@@ -591,7 +599,9 @@ export function calculateAdjustmentCredit(
   if (netIncome > 25000000) {
     adjustmentCredit = 0;
   } else if (taxableIncome <= 2000000) {
-    adjustmentCredit = Math.min(personalDeductionDifference * 0.05, taxableIncome * 0.05);
+    adjustmentCredit = ADJUSTMENT_CREDIT_RATE.taxOn(
+      Math.min(personalDeductionDifference, taxableIncome),
+    );
   } else {
     // taxableIncome > 2M
     // Per 地方税法 §314-6, the personal deduction difference is first reduced by
@@ -601,7 +611,7 @@ export function calculateAdjustmentCredit(
       personalDeductionDifference - (taxableIncome - 2_000_000),
       50_000,
     );
-    adjustmentCredit = reducedDifference * 0.05;
+    adjustmentCredit = ADJUSTMENT_CREDIT_RATE.taxOn(reducedDifference);
   }
   return adjustmentCredit;
 }
@@ -609,12 +619,14 @@ export function calculateAdjustmentCredit(
 // ふるさと納税の自己負担額
 export const FURUSATO_OUT_OF_POCKET_COST = 2000;
 // 基本控除率 (ふるさと納税の寄付金控除の基本控除率)
-const donationBasicDeductionRate = 0.1;
+export const DONATION_BASIC_DEDUCTION_RATE = percent(10);
+export const FURUSATO_SPECIAL_DEDUCTION_CEILING_RATE = percent(20);
+export const FURUSATO_INCOME_CEILING_RATE = percent(30);
 
 export interface FurusatoLimitDetails {
   finalLimit: number;
   deductibleDonation: number;
-  specialDeductionRate: number;
+  specialDeductionRate: Rate;
   residenceTaxDonationBasicDeduction: number;
   residenceTaxSpecialDeduction: number;
   residenceCredits: {
@@ -640,7 +652,7 @@ export function calculateFurusatoLimit(
   const noLimit: FurusatoLimitDetails = {
     finalLimit: 0,
     deductibleDonation: 0,
-    specialDeductionRate: 0,
+    specialDeductionRate: Rate.ZERO,
     residenceTaxDonationBasicDeduction: 0,
     residenceTaxSpecialDeduction: 0,
     residenceCredits: { city: 0, prefecture: 0 },
@@ -674,30 +686,40 @@ export function calculateFurusatoLimit(
     residenceSeparateTaxableIncome > 0 ? separateNationalRate : undefined,
   );
 
-  const maxSpecialDeduction = residentTaxAmountForIncomePortion * 0.2;
+  const maxSpecialDeduction = FURUSATO_SPECIAL_DEDUCTION_CEILING_RATE.taxOn(
+    residentTaxAmountForIncomePortion,
+  );
   const furusatoNozeiLimit =
-    maxSpecialDeduction / specialDeductionRate + FURUSATO_OUT_OF_POCKET_COST;
+    maxSpecialDeduction / specialDeductionRate.toDecimal() + FURUSATO_OUT_OF_POCKET_COST;
 
   // Statutory cap: donation cannot exceed 30% of resident tax taxable income
-  const statutoryCap =
-    (residenceTaxDetailsForCap.taxableIncome + residenceSeparateTaxableIncome) * 0.3;
+  const statutoryCap = FURUSATO_INCOME_CEILING_RATE.taxOn(
+    residenceTaxDetailsForCap.taxableIncome + residenceSeparateTaxableIncome,
+  );
 
   const finalLimit = Math.floor(Math.min(furusatoNozeiLimit, statutoryCap) / 1000) * 1000;
   const deductibleDonation = Math.max(finalLimit - FURUSATO_OUT_OF_POCKET_COST, 0);
 
-  const residenceTaxDonationBasicDeduction = deductibleDonation * donationBasicDeductionRate;
+  const residenceTaxDonationBasicDeduction =
+    DONATION_BASIC_DEDUCTION_RATE.taxOn(deductibleDonation);
   const residenceTaxSpecialDeduction =
     Math.ceil(
-      deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.cityProportion,
+      deductibleDonation *
+        specialDeductionRate.toDecimal() *
+        residenceTaxDetailsForCap.cityProportion.toDecimal(),
     ) +
     Math.ceil(
-      deductibleDonation * specialDeductionRate * residenceTaxDetailsForCap.prefecturalProportion,
+      deductibleDonation *
+        specialDeductionRate.toDecimal() *
+        residenceTaxDetailsForCap.prefecturalProportion.toDecimal(),
     );
 
   const furusatoNozeiTaxCredit = residenceTaxDonationBasicDeduction + residenceTaxSpecialDeduction;
-  const cityCredit = Math.ceil(furusatoNozeiTaxCredit * residenceTaxDetailsForCap.cityProportion);
+  const cityCredit = Math.ceil(
+    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.cityProportion.toDecimal(),
+  );
   const prefectureCredit = Math.ceil(
-    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.prefecturalProportion,
+    furusatoNozeiTaxCredit * residenceTaxDetailsForCap.prefecturalProportion.toDecimal(),
   );
 
   return {
@@ -712,6 +734,8 @@ export function calculateFurusatoLimit(
     },
   };
 }
+
+const ONE_HUNDRED_PERCENT = percent(100);
 
 /**
  * Returns the 特例控除割合 for the taxpayer.
@@ -745,24 +769,26 @@ export function calculateFurusatoLimit(
  * @see 地方税法附則第5条の5第1項第五号（分離課税所得がある場合の特例控除額の特例）
  * @see 地方税法附則第5条の6（復興特別所得税分の読替え、平成26年度〜令和20年度）
  */
-function getSpecialDeductionMultiplier(
+export function getSpecialDeductionMultiplier(
   taxableIncome: number,
   personalDeductionDifference: number,
   separateNationalRate: Rate | undefined,
-): number {
+): Rate {
   const adjustedTaxableIncome = taxableIncome - personalDeductionDifference;
-  let incomeTaxRate: number;
+  let incomeTaxRate: Rate;
   if (separateNationalRate !== undefined && (taxableIncome <= 0 || adjustedTaxableIncome < 0)) {
-    incomeTaxRate = separateNationalRate.rate;
-  } else if (adjustedTaxableIncome <= 1950000) incomeTaxRate = 0.05;
-  else if (adjustedTaxableIncome <= 3300000) incomeTaxRate = 0.1;
-  else if (adjustedTaxableIncome <= 6950000) incomeTaxRate = 0.2;
-  else if (adjustedTaxableIncome <= 9000000) incomeTaxRate = 0.23;
-  else if (adjustedTaxableIncome <= 18000000) incomeTaxRate = 0.33;
-  else if (adjustedTaxableIncome <= 40000000) incomeTaxRate = 0.4;
-  else incomeTaxRate = 0.45; // Over 40 million
+    incomeTaxRate = separateNationalRate;
+  } else if (adjustedTaxableIncome <= 1950000) incomeTaxRate = percent(5);
+  else if (adjustedTaxableIncome <= 3300000) incomeTaxRate = percent(10);
+  else if (adjustedTaxableIncome <= 6950000) incomeTaxRate = percent(20);
+  else if (adjustedTaxableIncome <= 9000000) incomeTaxRate = percent(23);
+  else if (adjustedTaxableIncome <= 18000000) incomeTaxRate = percent(33);
+  else if (adjustedTaxableIncome <= 40000000) incomeTaxRate = percent(40);
+  else incomeTaxRate = percent(45); // Over 40 million
 
-  incomeTaxRate *= 1.021; // 附則第5条の6 read-replacement: fold the 復興特別所得税 factor into the ratio
+  // 附則第5条の6 read-replacement: fold the 復興特別所得税 factor into the ratio
+  const surtax = incomeTaxRate.times(RECONSTRUCTION_SURTAX_RATE);
+  const totalIncomeTaxRate = incomeTaxRate.plus(surtax);
 
-  return 1 - donationBasicDeductionRate - incomeTaxRate;
+  return ONE_HUNDRED_PERCENT.minus(DONATION_BASIC_DEDUCTION_RATE).minus(totalIncomeTaxRate);
 }

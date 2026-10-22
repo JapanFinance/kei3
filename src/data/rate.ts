@@ -28,6 +28,17 @@ const roundSocialInsurancePremium = (units: number, scale: number): number => {
   return 2 * (units - yen * scale) > scale ? yen + 1 : yen;
 };
 
+const gcd = (a: number, b: number): number => {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x;
+};
+
 /**
  * A rate, held as a whole number of units of 1/`scale` so that a calculated amount (such as a
  * premium or tax, a whole-yen amount times a rate) is an exact integer product rather than a binary
@@ -46,25 +57,85 @@ export class Rate {
     this.#scale = scale;
   }
 
+  /** A zero rate. */
+  static readonly ZERO: Rate = new Rate(0, 1);
+
   /** A rate of this many units of 1/`scale`, for a reader built by {@link rateReader}. */
   static ofUnits(units: number, scale: number): Rate {
     if (import.meta.env.DEV && !(Number.isSafeInteger(units) && units >= 0)) {
       throw new Error(`A rate must be a non-negative whole number of units: ${units}`);
     }
+    if (import.meta.env.DEV && !(Number.isSafeInteger(scale) && scale > 0)) {
+      throw new Error(`Scale must be a positive integer: ${scale}`);
+    }
     return new Rate(units, scale);
   }
 
-  /** This rate plus `other`, which must be read at the same scale. */
-  plus(other: Rate): Rate {
-    if (import.meta.env.DEV && other.#scale !== this.#scale) {
-      throw new Error(`Cannot add rates of different scales: ${this.#scale} and ${other.#scale}`);
+  /**
+   * The sum of zero or more rates. When called with no arguments, returns {@link Rate.ZERO}.
+   */
+  static sum(...rates: Rate[]): Rate {
+    if (rates.length === 0) {
+      return Rate.ZERO;
     }
-    return new Rate(this.#units + other.#units, this.#scale);
+    return rates.reduce((acc, r) => acc.plus(r));
   }
 
-  /** Whether `other` is the same rate, which two separately read rates can be. */
+  /** This rate plus `other`, which may be read at a different scale. */
+  plus(other: Rate): Rate {
+    if (this.#scale === other.#scale) {
+      return new Rate(this.#units + other.#units, this.#scale);
+    }
+    const g = gcd(this.#scale, other.#scale);
+    const commonScale = (this.#scale / g) * other.#scale;
+    const units =
+      this.#units * (commonScale / this.#scale) + other.#units * (commonScale / other.#scale);
+    return new Rate(units, commonScale);
+  }
+
+  /** This rate minus `other`. Throws in development if the result would be negative. */
+  minus(other: Rate): Rate {
+    if (this.#scale === other.#scale) {
+      const units = this.#units - other.#units;
+      if (import.meta.env.DEV && !(Number.isSafeInteger(units) && units >= 0)) {
+        throw new Error(`Rate subtraction resulted in negative units: ${units}`);
+      }
+      return new Rate(units, this.#scale);
+    }
+    const g = gcd(this.#scale, other.#scale);
+    const commonScale = (this.#scale / g) * other.#scale;
+    const units =
+      this.#units * (commonScale / this.#scale) - other.#units * (commonScale / other.#scale);
+    if (import.meta.env.DEV && !(Number.isSafeInteger(units) && units >= 0)) {
+      throw new Error(`Rate subtraction resulted in negative units: ${units}`);
+    }
+    return new Rate(units, commonScale);
+  }
+
+  /**
+   * This rate multiplied by `factor`.
+   *
+   * When `factor` is a `Rate`, computes the exact rational product, simplified by GCD:
+   * e.g. 5% times 2.1% surtax is 0.105%.
+   * When `factor` is an integer, scales the rate by that whole multiple.
+   */
+  times(factor: Rate | number): Rate {
+    if (typeof factor === 'number') {
+      if (import.meta.env.DEV && !(Number.isSafeInteger(factor) && factor >= 0)) {
+        throw new Error(`Multiplier must be a non-negative whole number: ${factor}`);
+      }
+      const g = gcd(factor, this.#scale);
+      return new Rate(this.#units * (factor / g), this.#scale / g);
+    }
+    const units = this.#units * factor.#units;
+    const scale = this.#scale * factor.#scale;
+    const g = gcd(units, scale);
+    return new Rate(units / g, scale / g);
+  }
+
+  /** Whether `other` represents the same mathematical rate. */
   equals(other: Rate): boolean {
-    return this.#units === other.#units && this.#scale === other.#scale;
+    return this.#units * other.#scale === other.#units * this.#scale;
   }
 
   /**
@@ -99,7 +170,7 @@ export class Rate {
   }
 
   /** The rate as a decimal number (e.g. 0.15 for 15%). */
-  get rate(): number {
+  toDecimal(): number {
     return this.#units / this.#scale;
   }
 

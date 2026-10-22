@@ -257,7 +257,7 @@ const calculateNationalIncomeTaxBase = (taxableIncome: number): number => {
 
   for (const bracket of NATIONAL_INCOME_TAX_BRACKETS) {
     if (clampedTaxableIncome <= bracket.maxTaxableIncomeInclusive) {
-      return clampedTaxableIncome * bracket.rate - bracket.deduction;
+      return bracket.rate.taxOn(clampedTaxableIncome) - bracket.deduction;
     }
   }
 

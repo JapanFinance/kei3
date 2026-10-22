@@ -11,6 +11,11 @@ import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type { SeparateTaxationReportedIncome, TakeHomeInputs, TakeHomeResults } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import {
+  CITY_TAX_PROPORTION,
+  PREFECTURAL_TAX_PROPORTION,
+  RESIDENCE_TAX_RATE,
+} from '../utils/residenceTax';
+import {
   makeFurusatoNozeiDetails,
   makeResidenceTaxDetails,
   makeTakeHomeResults,
@@ -91,9 +96,9 @@ const inputs: TakeHomeInputs = {
 
 const residenceTaxOnEarnedIncome = {
   taxableIncome: 2_407_000,
-  cityProportion: 0.6,
-  prefecturalProportion: 0.4,
-  residenceTaxRate: 0.1,
+  cityProportion: CITY_TAX_PROPORTION,
+  prefecturalProportion: PREFECTURAL_TAX_PROPORTION,
+  residenceTaxRate: RESIDENCE_TAX_RATE,
   basicDeduction: 430_000,
   personalDeductionDifference: 50_000,
   city: {

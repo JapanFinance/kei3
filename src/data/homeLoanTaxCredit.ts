@@ -25,13 +25,17 @@
  *   - MLIT 住宅ローン減税: https://www.mlit.go.jp/jutakukentiku/house/jutakukentiku_house_tk2_000017.html
  */
 
+import { percentTo, type Rate } from './rate';
+
+const percent = percentTo(0);
+
 /**
  * A residence-tax spillover cap: the credit remainder (after income tax) is capped at
  *   min(flatCap, floor(所得税の課税総所得金額等 × taxableIncomeRate)).
  */
 export interface ResidenceTaxSpilloverCap {
   flatCap: number;
-  taxableIncomeRate: number;
+  taxableIncomeRate: Rate;
 }
 
 export interface HomeLoanTaxCreditCohort {
@@ -81,7 +85,7 @@ export const HOME_LOAN_TAX_CREDIT_COHORTS: ReadonlyArray<HomeLoanTaxCreditCohort
     moveInYearFrom: 2022,
     moveInYearTo: 9999,
     incomeLimit: 20_000_000,
-    spillover: { flatCap: 97_500, taxableIncomeRate: 0.05 },
+    spillover: { flatCap: 97_500, taxableIncomeRate: percent(5) },
   },
   // 2014-2021: the 特定取得 distinction applies. A 特定取得 (home acquired under the 8%/10%
   // consumption tax — e.g. a new build or a pre-owned home bought from a business) raises the
@@ -98,8 +102,8 @@ export const HOME_LOAN_TAX_CREDIT_COHORTS: ReadonlyArray<HomeLoanTaxCreditCohort
     moveInYearFrom: 2014,
     moveInYearTo: 2021,
     incomeLimit: 30_000_000,
-    spillover: { flatCap: 136_500, taxableIncomeRate: 0.07 },
-    spilloverNonTokuteiShutoku: { flatCap: 97_500, taxableIncomeRate: 0.05 },
+    spillover: { flatCap: 136_500, taxableIncomeRate: percent(7) },
+    spilloverNonTokuteiShutoku: { flatCap: 97_500, taxableIncomeRate: percent(5) },
   },
 ];
 

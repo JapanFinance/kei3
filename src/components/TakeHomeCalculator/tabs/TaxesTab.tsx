@@ -26,7 +26,11 @@ import type {
 } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { applyDeductionSpillover } from '../../../utils/investmentIncome';
-import { NON_TAXABLE_STATUS_INCOME_LIMIT } from '../../../utils/residenceTax';
+import {
+  CITY_RESIDENCE_TAX_RATE,
+  NON_TAXABLE_STATUS_INCOME_LIMIT,
+  PREFECTURAL_RESIDENCE_TAX_RATE,
+} from '../../../utils/residenceTax';
 import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
@@ -389,12 +393,13 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   // residenceIncomeBasedDisplayed above.
   const residenceIncomeBasedAfterTaxCredit =
     residenceIncomeBasedDisplayed - foreignTaxResidenceReduction;
-  const municipalPortionAggregate = Math.round(results.residenceTax.taxableIncome * 0.06);
+  const taxableIncome = results.residenceTax.taxableIncome ?? 0;
+  const municipalPortionAggregate = CITY_RESIDENCE_TAX_RATE.taxOn(taxableIncome);
   const municipalPortionSeparate = residenceSeparate
     ? Math.round(residenceSeparate.cityIncomeTax)
     : undefined;
   const municipalPortionGross = municipalPortionAggregate + (municipalPortionSeparate ?? 0);
-  const prefecturalPortionAggregate = Math.round(results.residenceTax.taxableIncome * 0.04);
+  const prefecturalPortionAggregate = PREFECTURAL_RESIDENCE_TAX_RATE.taxOn(taxableIncome);
   const prefecturalPortionSeparate = residenceSeparate
     ? Math.round(residenceSeparate.prefecturalIncomeTax)
     : undefined;

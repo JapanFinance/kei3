@@ -3,13 +3,20 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { percentTo } from '../data/rate';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { DependentDeductionResults, Dependent } from '../types/dependents';
 import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
   calculateResidenceTax,
+  CITY_RESIDENCE_TAX_RATE,
+  CITY_TAX_PROPORTION,
+  getSpecialDeductionMultiplier,
   NON_TAXABLE_STATUS_INCOME_LIMIT,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+  PREFECTURAL_RESIDENCE_TAX_RATE,
+  PREFECTURAL_TAX_PROPORTION,
+  RESIDENCE_TAX_RATE,
 } from '../utils/residenceTax';
 
 const TEST_INCOME_YEAR = 2026;
@@ -730,5 +737,78 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
     const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 'under18');
     // The plain detail (no nonTaxableStatus flag) proves the general path produced it.
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+  });
+});
+
+describe('Standard residence tax rates and proportions', () => {
+  const percent3 = percentTo(3);
+
+  it('defines 6% city and 4% prefectural tax summing to 10% total', () => {
+    expect(CITY_RESIDENCE_TAX_RATE.equals(percent3(6))).toBe(true);
+    expect(PREFECTURAL_RESIDENCE_TAX_RATE.equals(percent3(4))).toBe(true);
+    expect(RESIDENCE_TAX_RATE.equals(percent3(10))).toBe(true);
+    expect(
+      CITY_RESIDENCE_TAX_RATE.plus(PREFECTURAL_RESIDENCE_TAX_RATE).equals(RESIDENCE_TAX_RATE),
+    ).toBe(true);
+  });
+
+  it('defines 60% city and 40% prefectural proportions summing to 100%', () => {
+    expect(CITY_TAX_PROPORTION.equals(percent3(60))).toBe(true);
+    expect(PREFECTURAL_TAX_PROPORTION.equals(percent3(40))).toBe(true);
+    expect(CITY_TAX_PROPORTION.plus(PREFECTURAL_TAX_PROPORTION).equals(percent3(100))).toBe(true);
+  });
+});
+
+describe('getSpecialDeductionMultiplier (特例控除割合)', () => {
+  const percent3 = percentTo(3);
+
+  it('calculates the 地方税法附則第5条の6 statutory ratio for each income band', () => {
+    // 195万円以下: 90% - 5% * 1.021 = 84.895% (100分の84.895)
+    expect(getSpecialDeductionMultiplier(1_950_000, 0, undefined).equals(percent3(84.895))).toBe(
+      true,
+    );
+
+    // 330万円以下: 90% - 10% * 1.021 = 79.79% (100分の79.79)
+    expect(getSpecialDeductionMultiplier(3_300_000, 0, undefined).equals(percent3(79.79))).toBe(
+      true,
+    );
+
+    // 695万円以下: 90% - 20% * 1.021 = 69.58% (100分の69.58)
+    expect(getSpecialDeductionMultiplier(6_950_000, 0, undefined).equals(percent3(69.58))).toBe(
+      true,
+    );
+
+    // 900万円以下: 90% - 23% * 1.021 = 66.517% (100分の66.517)
+    expect(getSpecialDeductionMultiplier(9_000_000, 0, undefined).equals(percent3(66.517))).toBe(
+      true,
+    );
+
+    // 1800万円以下: 90% - 33% * 1.021 = 56.307% (100分の56.307)
+    expect(getSpecialDeductionMultiplier(18_000_000, 0, undefined).equals(percent3(56.307))).toBe(
+      true,
+    );
+
+    // 4000万円以下: 90% - 40% * 1.021 = 49.16% (100分の49.16)
+    expect(getSpecialDeductionMultiplier(40_000_000, 0, undefined).equals(percent3(49.16))).toBe(
+      true,
+    );
+
+    // 4000万円超: 90% - 45% * 1.021 = 44.055% (100分の44.055)
+    expect(getSpecialDeductionMultiplier(50_000_000, 0, undefined).equals(percent3(44.055))).toBe(
+      true,
+    );
+  });
+
+  it('uses separateNationalRate (15%) when taxable income is 0 or less', () => {
+    // 附則第5条の5第1項第5号: 90% - 15% * 1.021 = 74.685% (100分の74.685)
+    const separateNationalRate = percent3(15);
+    expect(getSpecialDeductionMultiplier(0, 0, separateNationalRate).equals(percent3(74.685))).toBe(
+      true,
+    );
+    expect(
+      getSpecialDeductionMultiplier(100_000, 150_000, separateNationalRate).equals(
+        percent3(74.685),
+      ),
+    ).toBe(true);
   });
 });
