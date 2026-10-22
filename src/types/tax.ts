@@ -249,6 +249,21 @@ export interface InterestIncomeStream extends BaseIncomeStream {
   foreignTax: number;
 }
 
+/**
+ * Discriminated union of all supported income streams.
+ *
+ * To add a new stream type, define its interface and add it here. The compiler
+ * enforces the remaining updates:
+ * 1. Declare behavior, annual amount & validation in `INCOME_STREAM_BEHAVIOR`
+ *    and handle in `dependentTestAnnualIncome` (`src/utils/incomeStreams.ts`).
+ * 2. Declare presentation metadata in `INCOME_STREAM_CATALOG` (`incomeStreamCatalog.ts`).
+ * 3. Implement its form in `src/components/TakeHomeCalculator/Income/forms/` and
+ *    register it in `STREAM_FORM_COMPONENTS` (`IncomeStreamForm.tsx`).
+ * 4. Add card summary handling in `getStreamDescription` and `getStreamCardPrimaryAmount`
+ *    (`IncomeDetailsModal.tsx`).
+ * 5. Handle calculation in `calculateIncomeBreakdown` (`taxCalculations.ts`) and
+ *    charting in `generateChartData` (`chartConfig.ts`).
+ */
 export type IncomeStream =
   | SalaryIncomeStream
   | BonusIncomeStream

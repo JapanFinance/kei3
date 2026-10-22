@@ -120,6 +120,28 @@ const withheldOnlyFooter = (withheld: WithholdingOnlyInvestmentIncome): string =
   return `Withheld only: ${terms.join(' − ')} = ${formatJPY(afterForeignTax - withheld.tax.total)}`;
 };
 
+const getStreamCardPrimaryAmount = (stream: IncomeStream): number => {
+  switch (stream.type) {
+    case 'withholdingAccount':
+      return stream.capitalGains + stream.dividends;
+    case 'salary':
+    case 'bonus':
+    case 'business':
+    case 'commutingAllowance':
+    case 'stockCompensation':
+    case 'miscellaneous':
+    case 'publicPension':
+    case 'capitalGains':
+    case 'dividends':
+    case 'interest':
+      return stream.amount;
+    default: {
+      const unhandled: never = stream;
+      throw new Error(`Unhandled income stream: ${JSON.stringify(unhandled)}`);
+    }
+  }
+};
+
 export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   open,
   onClose,
@@ -237,8 +259,13 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return stream.payerDomicile === 'foreign' ? 'Paid outside Japan' : null;
       case 'publicPension':
         return stream.payerDomicile === 'foreign' ? 'Foreign system' : null;
-      default:
+      case 'business':
+      case 'miscellaneous':
         return null;
+      default: {
+        const unhandled: never = stream;
+        throw new Error(`Unhandled income stream: ${JSON.stringify(unhandled)}`);
+      }
     }
   };
 
@@ -459,11 +486,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       sx={{ fontSize: '0.7rem', height: 20 }}
                     />
                     <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold' }}>
-                      {formatJPY(
-                        stream.type === 'withholdingAccount'
-                          ? stream.capitalGains + stream.dividends
-                          : stream.amount,
-                      )}
+                      {formatJPY(getStreamCardPrimaryAmount(stream))}
                     </Typography>
                     {getStreamDescription(stream) && (
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>

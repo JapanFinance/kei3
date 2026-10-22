@@ -9,6 +9,7 @@ import {
   monthlyIncomeStreamAmount,
   totalAnnualIncomeFromStreams,
   totalCommutingAllowanceFromStreams,
+  validateIncomeStream,
 } from '../utils/incomeStreams';
 
 describe('totalAnnualIncomeFromStreams', () => {
@@ -403,5 +404,258 @@ describe('totalCommutingAllowanceFromStreams', () => {
     expect(
       totalCommutingAllowanceFromStreams([{ id: 'm1', type: 'miscellaneous', amount: 500_000 }]),
     ).toBe(0);
+  });
+});
+
+describe('validateIncomeStream', () => {
+  it('accepts valid streams of all 11 types', () => {
+    expect(
+      validateIncomeStream({ id: '1', type: 'salary', amount: 5_000_000, frequency: 'annual' }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({ id: '2', type: 'bonus', amount: 1_000_000, month: 5 }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '3',
+        type: 'business',
+        amount: 2_000_000,
+        blueFilerDeduction: 650_000,
+      }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({ id: '4', type: 'miscellaneous', amount: 500_000 }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '5',
+        type: 'publicPension',
+        amount: 1_500_000,
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+      }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '6',
+        type: 'stockCompensation',
+        amount: 800_000,
+        issuerDomicile: 'foreign',
+      }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '7',
+        type: 'commutingAllowance',
+        amount: 150_000,
+        frequency: 'monthly',
+      }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '8',
+        type: 'withholdingAccount',
+        capitalGains: 1_000_000,
+        dividends: 200_000,
+        foreignDividends: 0,
+        foreignTax: 0,
+        reportsCapitalGains: false,
+        reportsDividends: false,
+      }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '9',
+        type: 'capitalGains',
+        amount: 500_000,
+        shareType: 'listed',
+        account: 'domesticNoWithholding',
+      }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '10',
+        type: 'dividends',
+        amount: 300_000,
+        shareType: 'listed',
+        paymentChannel: 'domestic',
+        isReported: false,
+        issuerDomicile: 'domestic',
+        foreignTax: 0,
+      }),
+    ).toBeUndefined();
+    expect(
+      validateIncomeStream({
+        id: '11',
+        type: 'interest',
+        amount: 100_000,
+        payerDomicile: 'domestic',
+        foreignTax: 0,
+      }),
+    ).toBeUndefined();
+  });
+
+  describe('commuting allowance monthly cap', () => {
+    it.each([
+      { frequency: 'monthly' as const, valid: 150_000, invalid: 150_001 },
+      { frequency: '3-months' as const, valid: 450_000, invalid: 450_001 },
+      { frequency: '6-months' as const, valid: 900_000, invalid: 900_001 },
+      { frequency: 'annual' as const, valid: 1_800_000, invalid: 1_800_001 },
+    ])('validates cap across frequency $frequency', ({ frequency, valid, invalid }) => {
+      expect(
+        validateIncomeStream({ id: 'c', type: 'commutingAllowance', amount: valid, frequency }),
+      ).toBeUndefined();
+      expect(
+        validateIncomeStream({ id: 'c', type: 'commutingAllowance', amount: invalid, frequency }),
+      ).toContain('Commuting allowance cannot exceed ¥150,000/month (non-taxable cap)');
+    });
+  });
+
+  describe('business income', () => {
+    it('rejects negative business income', () => {
+      expect(
+        validateIncomeStream({ id: 'b', type: 'business', amount: -1, blueFilerDeduction: 0 }),
+      ).toBe('Business income losses are not currently supported.');
+    });
+  });
+
+  describe('public pension', () => {
+    it('validates foreign tax entry invariants', () => {
+      expect(
+        validateIncomeStream({
+          id: 'p',
+          type: 'publicPension',
+          amount: 1_000_000,
+          payerDomicile: 'domestic',
+          foreignTax: 10_000,
+        }),
+      ).toBe('Foreign tax can be entered only for a pension from a foreign system.');
+    });
+  });
+
+  describe('withholding account', () => {
+    it('rejects foreign tax errors', () => {
+      expect(
+        validateIncomeStream({
+          id: 'w',
+          type: 'withholdingAccount',
+          capitalGains: 0,
+          dividends: 100_000,
+          foreignDividends: 0,
+          foreignTax: -1,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        }),
+      ).toBe('Foreign tax cannot be negative.');
+    });
+
+    it('rejects negative dividends', () => {
+      expect(
+        validateIncomeStream({
+          id: 'w',
+          type: 'withholdingAccount',
+          capitalGains: 0,
+          dividends: -1,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        }),
+      ).toBe('Dividends cannot be negative.');
+    });
+
+    it('rejects unreported dividends when reported loss reduced withholding', () => {
+      expect(
+        validateIncomeStream({
+          id: 'w',
+          type: 'withholdingAccount',
+          capitalGains: -100_000,
+          dividends: 200_000,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: true,
+          reportsDividends: false,
+        }),
+      ).toBe(
+        "A reported loss that reduced this account's dividend withholding must be reported together with the dividends (措法37条の11の6⑩).",
+      );
+    });
+  });
+
+  describe('capital gains', () => {
+    it('rejects non-listed shares', () => {
+      expect(
+        validateIncomeStream({
+          id: 'cg',
+          type: 'capitalGains',
+          amount: 100_000,
+          shareType: 'other',
+          account: 'domesticNoWithholding',
+        }),
+      ).toBe('Capital gains on 一般株式等 are not currently supported.');
+    });
+  });
+
+  describe('dividends', () => {
+    it('rejects non-listed shares', () => {
+      expect(
+        validateIncomeStream({
+          id: 'd',
+          type: 'dividends',
+          amount: 100_000,
+          shareType: 'other',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+        }),
+      ).toBe('Dividends on 一般株式等 are not currently supported.');
+    });
+
+    it('rejects negative dividends', () => {
+      expect(
+        validateIncomeStream({
+          id: 'd',
+          type: 'dividends',
+          amount: -1,
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+        }),
+      ).toBe('Dividends cannot be negative.');
+    });
+
+    it('rejects unreported dividend received outside Japan', () => {
+      expect(
+        validateIncomeStream({
+          id: 'd',
+          type: 'dividends',
+          amount: 100_000,
+          shareType: 'listed',
+          paymentChannel: 'abroad',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+        }),
+      ).toBe(
+        'A dividend received outside Japan with no Japanese handler must be reported (措令4条の3②).',
+      );
+    });
+  });
+
+  describe('interest', () => {
+    it('rejects negative interest', () => {
+      expect(
+        validateIncomeStream({
+          id: 'i',
+          type: 'interest',
+          amount: -1,
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+        }),
+      ).toBe('Interest cannot be negative.');
+    });
   });
 });

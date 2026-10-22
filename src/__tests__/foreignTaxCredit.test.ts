@@ -9,7 +9,8 @@ import type {
   PublicPensionIncomeStream,
   WithholdingAccountIncomeStream,
 } from '../types/tax';
-import { calculateForeignTaxCredit, foreignTaxEntryError } from '../utils/foreignTaxCredit';
+import { calculateForeignTaxCredit } from '../utils/foreignTaxCredit';
+import { foreignTaxEntryError } from '../utils/incomeStreams';
 
 // NTA 記載例1 of the 外国税額控除に関する明細書 (令和7年分): 所得税額 B 200,800, 復興特別所得税額
 // R 4,216 (⌊200,800 × 2.1%⌋), 所得総額 T 5,606,000, 調整国外所得金額 A 280,000.
