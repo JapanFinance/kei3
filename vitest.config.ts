@@ -4,7 +4,7 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, configDefaults } from 'vitest/config';
 
-import { changelogDefine } from './changelogDate';
+import { changelogDefine } from './changelogDate.ts';
 
 export default defineConfig({
   define: changelogDefine(),

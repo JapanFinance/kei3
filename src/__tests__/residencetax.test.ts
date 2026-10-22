@@ -3,11 +3,12 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { DependentDeductionResults, Dependent } from '../types/dependents';
 import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import {
   calculateResidenceTax,
-  calculateResidenceTaxBasicDeduction,
+  NON_TAXABLE_STATUS_INCOME_LIMIT,
   NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from '../utils/residenceTax';
 
@@ -72,8 +73,13 @@ describe('calculateResidenceTax', () => {
     // Adjustment credit: max((50K - (3.57M - 2M)) * 0.05, 50K * 0.05) = 2,500
     // Tax: 3,570,000 * 0.1 - 2,500 + 5,000 = 359,500
     expect(
-      calculateResidenceTax(5_000_000, 1_000_000, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        5_000_000,
+        1_000_000,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(359_500);
   });
 
@@ -84,8 +90,13 @@ describe('calculateResidenceTax', () => {
     // Adjustment credit: max((50K - (22.91M - 2M)) * 0.05, 50K * 0.05) = 2,500
     // Tax: 22,910,000 * 0.1 - 2,500 + 5,000 = 2,293,500
     expect(
-      calculateResidenceTax(24_200_000, 1_000_000, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        24_200_000,
+        1_000_000,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(2_293_500);
   });
 
@@ -96,59 +107,90 @@ describe('calculateResidenceTax', () => {
     // Adjustment credit: max((50K - (23.55M - 2M)) * 0.05, 50K * 0.05) = 2,500
     // Tax: 23,550,000 * 0.1 - 2,500 + 5,000 = 2,357,500
     expect(
-      calculateResidenceTax(24_700_000, 1_000_000, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        24_700_000,
+        1_000_000,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(2_357_500);
   });
 
   it('calculates tax correctly for income with no basic deduction', () => {
     // Example: 26M income, 1M social insurance
     expect(
-      calculateResidenceTax(26_000_000, 1_000_000, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        26_000_000,
+        1_000_000,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(2_505_000); // (26M - 1M - 0) * 0.1 + 5000
   });
 
   it('returns minimum tax amount when deductions exceed net income', () => {
     // Example: 1M income, 2M social insurance
     expect(
-      calculateResidenceTax(1_000_000, 2_000_000, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        1_000_000,
+        2_000_000,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(5_000); // Only 5000 yen 均等割 when taxable income is 0
   });
 
   it('returns 0 yen when net income is 450,000 yen or less due to 非課税制度', () => {
     expect(
-      calculateResidenceTax(449_999, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
+      calculateResidenceTax(449_999, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39')
         .totalResidenceTax,
     ).toBe(0);
     expect(
-      calculateResidenceTax(450_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
+      calculateResidenceTax(450_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39')
         .totalResidenceTax,
     ).toBe(0);
   });
 
   it('returns 5000 yen 均等割 when taxable income is 0', () => {
     expect(
-      calculateResidenceTax(450_001, 20_001, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        450_001,
+        20_001,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(5_000);
     expect(
-      calculateResidenceTax(1_000_000, 600_000, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        1_000_000,
+        600_000,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(5_000);
   });
 
   it('handles zero income correctly', () => {
     expect(
-      calculateResidenceTax(0, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR).totalResidenceTax,
+      calculateResidenceTax(0, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39')
+        .totalResidenceTax,
     ).toBe(0);
   });
 
   it('handles negative income correctly', () => {
     expect(
-      calculateResidenceTax(-1_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR)
-        .totalResidenceTax,
+      calculateResidenceTax(
+        -1_000_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+      ).totalResidenceTax,
     ).toBe(0);
   });
 });
@@ -164,6 +206,7 @@ describe('calculateResidenceTax - 調整控除額 (Adjustment Credit)', () => {
       450_000,
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
@@ -181,6 +224,7 @@ describe('calculateResidenceTax - 調整控除額 (Adjustment Credit)', () => {
       700_000,
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
@@ -194,6 +238,7 @@ describe('calculateResidenceTax - 調整控除額 (Adjustment Credit)', () => {
       2_000_000,
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result.city.cityAdjustmentCredit).toBe(0);
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(0);
@@ -209,6 +254,7 @@ describe('calculateResidenceTax - 調整控除額 (Adjustment Credit)', () => {
       430_000,
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
@@ -226,6 +272,7 @@ describe('calculateResidenceTax - 調整控除額 (Adjustment Credit)', () => {
       430_000,
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result.city.cityAdjustmentCredit).toBe(2_500 * 0.6); // 1,500
     expect(result.prefecture.prefecturalAdjustmentCredit).toBe(2_500 * 0.4); // 1,000
@@ -239,6 +286,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       0,
       calculateDependentDeductions([], TEST_INCOME_YEAR),
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
@@ -249,6 +297,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       0,
       calculateDependentDeductions([], TEST_INCOME_YEAR),
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
@@ -258,14 +307,14 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
-    const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 
@@ -273,14 +322,14 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
-    const result = calculateResidenceTax(1_010_001, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(1_010_001, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
     expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 
@@ -289,14 +338,14 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '1',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([child], TEST_INCOME_YEAR);
 
-    const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 
@@ -305,7 +354,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -313,14 +362,14 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '2',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse, child], TEST_INCOME_YEAR);
 
-    const result = calculateResidenceTax(1_360_000, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(1_360_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 
@@ -328,7 +377,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -336,14 +385,14 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '2',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
     const dependents = calculateDependentDeductions([spouse, child], TEST_INCOME_YEAR);
 
-    const result = calculateResidenceTax(1_360_001, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(1_360_001, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
     expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 
@@ -354,7 +403,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_000_000 },
@@ -364,7 +413,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     // If spouse counted: Limit would be 350k*(1+1)+310k = 1,010,000 -> 500,000 would be non-taxable
     // If spouse NOT counted: Limit is 450,000 -> 500,000 is taxable
 
-    const result = calculateResidenceTax(500_000, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(500_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
     expect(result).not.toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 
@@ -374,7 +423,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const child: Dependent = {
       id: '1',
       relationship: 'child',
-      ageCategory: 'under16',
+      ageRange: 'under16',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -385,7 +434,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     expect(dependents.residenceTax.dependentDeduction).toBe(0);
 
     // Should be non-taxable at 1,000,000
-    const result = calculateResidenceTax(1_000_000, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(1_000_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
     expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 
@@ -397,7 +446,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageCategory: 'under65',
+      ageRange: 'under65',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -405,7 +454,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
     // Test income: 1,050,000 (Between 1,010,000 and 1,120,000)
-    const result = calculateResidenceTax(1_050_000, 0, dependents, TEST_INCOME_YEAR);
+    const result = calculateResidenceTax(1_050_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
 
     // Should have 0 income tax
     expect(result.city.cityIncomeTax).toBe(0);
@@ -427,6 +476,7 @@ describe('calculateResidenceTax - Personal Deduction Difference', () => {
       1_000_000,
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result.personalDeductionDifference).toBe(50_000);
   });
@@ -437,7 +487,248 @@ describe('calculateResidenceTax - Personal Deduction Difference', () => {
       1_000_000,
       EMPTY_DEPENDENT_DEDUCTIONS,
       TEST_INCOME_YEAR,
+      'age20to39',
     );
     expect(result.personalDeductionDifference).toBe(50_000);
+  });
+});
+
+describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation', () => {
+  it.each([
+    [{ disability: 'regular', widowOrSingleParent: 'none' }, 'disability'],
+    [{ disability: 'none', widowOrSingleParent: 'widowBereaved' }, 'widow'],
+    [{ disability: 'none', widowOrSingleParent: 'singleParentFather' }, 'singleParent'],
+  ] as const)('exempts %o at 合計所得金額 1,350,000', (circumstances, status) => {
+    expect(
+      calculateResidenceTax(
+        1_350_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+        circumstances,
+      ),
+    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: status });
+  });
+
+  it('reports the minor exemption first when a status also applies', () => {
+    const result = calculateResidenceTax(
+      1_350_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'under18',
+      { disability: 'special', widowOrSingleParent: 'widowBereaved' },
+    );
+    expect(result.nonTaxableStatus).toBe('minor');
+  });
+
+  it('reports disability first when a 寡婦 status also applies', () => {
+    // Any one status exempts; the order only picks which reason the display names.
+    const result = calculateResidenceTax(
+      1_350_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      { disability: 'regular', widowOrSingleParent: 'widowBereaved' },
+    );
+    expect(result.nonTaxableStatus).toBe('disability');
+  });
+
+  it('taxes a 寡婦 normally above the limit', () => {
+    const result = calculateResidenceTax(
+      1_350_001,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      { disability: 'none', widowOrSingleParent: 'widowBereaved' },
+    );
+    expect(result.totalResidenceTax).toBeGreaterThan(0);
+  });
+});
+
+describe('calculateResidenceTax personal deductions (人的控除)', () => {
+  it('deducts the 人的控除 and adds its statutory difference to the 調整控除 base', () => {
+    const args = [3_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39'] as const;
+    const base = calculateResidenceTax(...args);
+    const withDeduction = calculateResidenceTax(...args, {
+      disability: 'special',
+      widowOrSingleParent: 'none',
+    });
+
+    expect(base.taxableIncome - withDeduction.taxableIncome).toBe(300_000);
+    expect(withDeduction.personalDeductionDifference).toBe(
+      base.personalDeductionDifference + 100_000,
+    );
+    expect(withDeduction.totalResidenceTax).toBeLessThan(base.totalResidenceTax);
+  });
+
+  it('ignores a 寡婦/ひとり親 selection above the ¥5,000,000 ceiling', () => {
+    const args = [6_000_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'age20to39'] as const;
+    expect(
+      calculateResidenceTax(...args, { disability: 'none', widowOrSingleParent: 'widowBereaved' }),
+    ).toEqual(calculateResidenceTax(...args));
+  });
+});
+
+describe('calculateResidenceTax foreign tax credit (地方税法37条の3, 314条の8)', () => {
+  const NO_STATUS = { disability: 'none', widowOrSingleParent: 'none' } as const;
+
+  it('takes each side its own credit after the 調整控除, before the ¥100 floor', () => {
+    // 5,000,000 − 1,000,000 − 430,000 = 3,570,000: 市 214,200 − 1,500 = 212,700, − 9,467 =
+    // 203,233 → 203,200; 県 142,800 − 1,000 = 141,800, − 6,311 = 135,489 → 135,400; + 5,000.
+    const result = calculateResidenceTax(
+      5_000_000,
+      1_000_000,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      { homeLoan: 0, foreignTax: { city: 9_467, prefecture: 6_311 } },
+    );
+    expect(result.city.cityIncomeTax).toBe(203_200);
+    expect(result.prefecture.prefecturalIncomeTax).toBe(135_400);
+    expect(result.totalResidenceTax).toBe(343_600);
+    expect(result.foreignTaxCredit).toEqual({ city: 9_467, prefecture: 6_311 });
+  });
+
+  it("caps each side's credit at its own 所得割 and moves nothing to the other side", () => {
+    // 1,000,000 − 430,000 = 570,000: 市 34,200 − 1,500 = 32,700 absorbs 32,700 of the 50,000;
+    // 県 22,800 − 1,000 = 21,800 − 10,000 = 11,800. The 17,300 the city could not use does not
+    // reach the prefecture, which had room for it.
+    const result = calculateResidenceTax(
+      1_000_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      { homeLoan: 0, foreignTax: { city: 50_000, prefecture: 10_000 } },
+    );
+    expect(result.city.cityIncomeTax).toBe(0);
+    expect(result.prefecture.prefecturalIncomeTax).toBe(11_800);
+    expect(result.totalResidenceTax).toBe(16_800);
+    expect(result.foreignTaxCredit).toEqual({ city: 32_700, prefecture: 10_000 });
+  });
+
+  it('takes the home loan credit first and caps the foreign tax credit at what it leaves', () => {
+    // The 20,000 spillover splits 12,000 / 8,000: 市 32,700 − 12,000 = 20,700, all of it absorbed
+    // by the 25,000 credit; 県 21,800 − 8,000 = 13,800 − 5,000 = 8,800.
+    const result = calculateResidenceTax(
+      1_000_000,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      { homeLoan: 20_000, foreignTax: { city: 25_000, prefecture: 5_000 } },
+    );
+    expect(result.city.cityIncomeTax).toBe(0);
+    expect(result.prefecture.prefecturalIncomeTax).toBe(8_800);
+    expect(result.totalResidenceTax).toBe(13_800);
+    expect(result.foreignTaxCredit).toEqual({ city: 20_700, prefecture: 5_000 });
+  });
+
+  it('applies no credit when no 所得割 is levied', () => {
+    const credits = { homeLoan: 0, foreignTax: { city: 1_000, prefecture: 1_000 } };
+    // At or below the 450,000 均等割 limit: nothing is levied at all.
+    expect(
+      calculateResidenceTax(
+        450_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+        NO_STATUS,
+        credits,
+      ),
+    ).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    // A 地方税法295条1項2号 status at 1,350,000.
+    expect(
+      calculateResidenceTax(
+        1_350_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        'age20to39',
+        { disability: 'regular', widowOrSingleParent: 'none' },
+        credits,
+      ),
+    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: 'disability' });
+    // Deductions leave no 課税総所得金額, so the 所得割 is 0 and only the 均等割 remains.
+    const noTaxableIncome = calculateResidenceTax(
+      1_000_000,
+      600_000,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'age20to39',
+      NO_STATUS,
+      credits,
+    );
+    expect(noTaxableIncome.totalResidenceTax).toBe(5_000);
+    expect(noTaxableIncome.foreignTaxCredit).toBeUndefined();
+  });
+});
+
+describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
+  it('returns the non-taxable detail, marked as the minor exemption, at 合計所得金額 1,350,000', () => {
+    expect(
+      calculateResidenceTax(1_350_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'under18'),
+    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: 'minor' });
+    expect(NON_TAXABLE_STATUS_INCOME_LIMIT).toBe(1_350_000);
+  });
+
+  it('taxes a minor normally above the limit', () => {
+    const result = calculateResidenceTax(
+      1_350_001,
+      0,
+      EMPTY_DEPENDENT_DEDUCTIONS,
+      TEST_INCOME_YEAR,
+      'under18',
+    );
+    expect(result.totalResidenceTax).toBeGreaterThan(0);
+  });
+
+  it.each(['age18to19', 'age20to39'] as const)(
+    'taxes a non-minor (%s) normally at the same income',
+    ageRange => {
+      const result = calculateResidenceTax(
+        1_350_000,
+        0,
+        EMPTY_DEPENDENT_DEDUCTIONS,
+        TEST_INCOME_YEAR,
+        ageRange,
+      );
+      expect(result.totalResidenceTax).toBeGreaterThan(0);
+    },
+  );
+
+  it('still applies the general non-taxable limits to a minor above the minor limit', () => {
+    // A minor above 1.35M with enough dependents can still be non-taxable under the
+    // dependent-count limits (2 dependents → per-capita limit 1,360,000).
+    const dependents: Dependent[] = [
+      {
+        id: 'd1',
+        relationship: 'child',
+        ageRange: 'under16',
+        isCohabiting: true,
+        disability: 'none',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      },
+      {
+        id: 'd2',
+        relationship: 'child',
+        ageRange: 'under16',
+        isCohabiting: true,
+        disability: 'none',
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      },
+    ];
+    const deductions = calculateDependentDeductions(dependents, TEST_INCOME_YEAR, 1_355_000);
+    const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 'under18');
+    // The plain detail (no nonTaxableStatus flag) proves the general path produced it.
+    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
   });
 });

@@ -26,8 +26,12 @@ interface SpinnerNumberFieldProps {
   suffix?: string;
   min?: number;
   max?: number;
+  /** Most decimal places the field accepts. Amounts are whole yen, so none by default. */
+  decimalScale?: number;
   helperText?: React.ReactNode;
   error?: boolean;
+  /** Shows the value without allowing edits; the spinner buttons are dropped rather than shown inert. */
+  disabled?: boolean;
 }
 
 export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
@@ -44,8 +48,10 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   suffix = '',
   min = 0,
   max,
+  decimalScale = 0,
   helperText,
   error,
+  disabled,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -55,6 +61,9 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
     if (typeof min === 'number') clampedValue = Math.max(min, clampedValue);
     if (typeof max === 'number') clampedValue = Math.min(max, clampedValue);
 
+    // NumericFormat reports every change of the value prop back through onValueChange, so
+    // without this check each change from outside the field would be dispatched a second time.
+    if (clampedValue === value) return;
     onChange(clampedValue);
   };
 
@@ -105,37 +114,40 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       prefix={prefix}
       suffix={suffix}
       allowNegative={min < 0}
+      decimalScale={decimalScale}
       {...(label && { label })}
       {...(helperText && { helperText })}
       {...(error && { error })}
+      {...(disabled && { disabled })}
       slotProps={{
         htmlInput: {
           inputMode: 'numeric',
           ...inputProps,
         },
         input: {
-          endAdornment: !isMobile ? (
-            <InputAdornment position="end">
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                <IconButton
-                  size="small"
-                  onClick={handleIncrement}
-                  aria-label={label ? `Increase ${label}` : 'Increase value'}
-                  sx={{ p: 0.25, height: 16 }}
-                >
-                  <KeyboardArrowUpIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={handleDecrement}
-                  aria-label={label ? `Decrease ${label}` : 'Decrease value'}
-                  sx={{ p: 0.25, height: 16 }}
-                >
-                  <KeyboardArrowDownIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            </InputAdornment>
-          ) : undefined,
+          endAdornment:
+            !isMobile && !disabled ? (
+              <InputAdornment position="end">
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  <IconButton
+                    size="small"
+                    onClick={handleIncrement}
+                    aria-label={label ? `Increase ${label}` : 'Increase value'}
+                    sx={{ p: 0.25, height: 16 }}
+                  >
+                    <KeyboardArrowUpIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={handleDecrement}
+                    aria-label={label ? `Decrease ${label}` : 'Decrease value'}
+                    sx={{ p: 0.25, height: 16 }}
+                  >
+                    <KeyboardArrowDownIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </InputAdornment>
+            ) : undefined,
         },
       }}
       {...(sx && { sx })}

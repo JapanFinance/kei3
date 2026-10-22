@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Tab from '@mui/material/Tab';
@@ -9,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import React from 'react';
 
 import type { TakeHomeResults, TakeHomeInputs } from '../../types/tax';
+import { hasHighOutOfPocketCost } from '../../utils/furusatoNozei';
 import { useLoadMilestone } from '../../utils/loadMilestones';
 import FurusatoNozeiTab from './tabs/FurusatoNozeiTab';
 import SocialInsuranceTab from './tabs/SocialInsuranceTab';
@@ -26,9 +28,13 @@ interface DetailedTaxResultsProps {
 // fallbacks measure the same or narrower), so each regime gets its own
 // threshold, ~3.5% above the need for rendering variance. The 600px media
 // split must match the viewport breakpoint where the tab padding changes.
-const narrowTabs = (styles: Record<string, string>) => ({
-  '@container (max-width: 435px)': styles,
-  '@media (min-width: 600px)': { '@container (max-width: 485px)': styles },
+// The Furusato Nozei warning icon (16px plus its 4px margin) raises both
+// thresholds by 20px while it shows.
+const narrowTabs = (styles: Record<string, string>, furusatoWarning: boolean) => ({
+  [`@container (max-width: ${furusatoWarning ? 455 : 435}px)`]: styles,
+  '@media (min-width: 600px)': {
+    [`@container (max-width: ${furusatoWarning ? 505 : 485}px)`]: styles,
+  },
 });
 
 // Long tab wordings shorten by dropping their trailing words, which a container
@@ -43,15 +49,21 @@ const TAB_LABELS: readonly { head: string; tail?: string }[] = [
   { head: 'Furusato', tail: ' Nozei' },
 ];
 
-const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number]) => (
+const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number], furusatoWarning: boolean) => (
   // A single element keeps the wording on one line: MUI lays a Tab's children
   // out as a flex column, so a bare text node and the tail would stack.
   <span>
     {head}
     {tail && (
-      <Box component="span" sx={narrowTabs({ display: 'none' })}>
+      <Box component="span" sx={narrowTabs({ display: 'none' }, furusatoWarning)}>
         {tail}
       </Box>
+    )}
+    {furusatoWarning && head === 'Furusato' && (
+      <WarningIcon
+        titleAccess="High out-of-pocket cost"
+        sx={{ ml: 0.5, fontSize: '1rem', color: 'error.main', verticalAlign: 'text-bottom' }}
+      />
     )}
   </span>
 );
@@ -60,6 +72,8 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
   useLoadMilestone('results-rendered');
 
   const [currentTab, setCurrentTab] = React.useState(0);
+
+  const furusatoWarning = hasHighOutOfPocketCost(results.furusatoNozei);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -120,14 +134,14 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
               minWidth: 72,
               minHeight: { xs: 36, sm: 48 },
               padding: { xs: '6px 8px', sm: '12px 16px' },
-              ...narrowTabs({ fontSize: '0.8rem' }),
+              ...narrowTabs({ fontSize: '0.8rem' }, furusatoWarning),
             },
           }}
         >
           {TAB_LABELS.map((label, index) => (
             <Tab
               key={label.head}
-              label={renderTabLabel(label)}
+              label={renderTabLabel(label, furusatoWarning)}
               id={`tab-${index}`}
               aria-controls={`tabpanel-${index}`}
             />
@@ -161,4 +175,5 @@ const TakeHomeResultsDisplay: React.FC<DetailedTaxResultsProps> = ({ results, in
   );
 };
 
-export default TakeHomeResultsDisplay;
+// App's urgent render passes the previous results unchanged; memo lets it skip this panel.
+export default React.memo(TakeHomeResultsDisplay);

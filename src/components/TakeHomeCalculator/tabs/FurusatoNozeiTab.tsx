@@ -11,6 +11,7 @@ import React from 'react';
 
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
+import { hasHighOutOfPocketCost } from '../../../utils/furusatoNozei';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
@@ -44,6 +45,14 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
   const estimatedValueOfGifts = Math.round(
     results.furusatoNozei.limit * FURUSATO_NOZEI_AVERAGE_GIFT_COST_PERCENTAGE,
   );
+  const foreignTaxCredit = results.foreignTaxCredit?.credit;
+  const hasForeignTaxCredit =
+    foreignTaxCredit !== undefined &&
+    foreignTaxCredit.incomeTax +
+      foreignTaxCredit.reconstructionSurtax +
+      foreignTaxCredit.prefecture +
+      foreignTaxCredit.city >
+      0;
 
   return (
     <Box>
@@ -67,10 +76,10 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       {/* <Box sx={{ mb: 1, p: 2, bgcolor: 'info.light', borderRadius: 2, color: 'info.contrastText' }}>
         <Typography variant="body2">
           For comprehensive information about Furusato Nozei, see{' '}
-          <a 
-            href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/" 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href="https://wiki.japanfinance.org/tax/residence/furusato-nozei/"
+            target="_blank"
+            rel="noopener noreferrer"
             style={{ color: 'inherit', textDecoration: 'underline' }}
           >
             this wiki
@@ -93,6 +102,13 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     Actual limits may vary depending on the applicable deductions and municipality.
                   </Typography>
+                  {results.investmentIncome?.reported?.separate && (
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Investment income reported under separate taxation (申告分離課税) raises the
+                      limit through the residence tax it adds; with no other taxable income the
+                      limit is set from its own 15% rate.
+                    </Typography>
+                  )}
                   <Typography variant="body2">
                     If deductions or tax credits not supported by this calculator are claimed, this
                     limit will not be accurate (it will likely be too high).
@@ -240,7 +256,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           label={
             <span style={{ display: 'flex', alignItems: 'center' }}>
               Out-of-Pocket Cost
-              {results.furusatoNozei.outOfPocketCost > 2200 && (
+              {hasHighOutOfPocketCost(results.furusatoNozei) && (
                 <WarningIcon
                   fontSize="small"
                   sx={{
@@ -256,8 +272,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
             <Box
               component="span"
               sx={{
-                color: results.furusatoNozei.outOfPocketCost > 2200 ? 'error.main' : 'inherit',
-                fontWeight: results.furusatoNozei.outOfPocketCost > 2200 ? 700 : 500,
+                color: hasHighOutOfPocketCost(results.furusatoNozei) ? 'error.main' : 'inherit',
+                fontWeight: hasHighOutOfPocketCost(results.furusatoNozei) ? 700 : 500,
                 display: 'inline-flex',
                 alignItems: 'center',
               }}
@@ -312,7 +328,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
       </Box>
 
       {/* Warning for high out-of-pocket cost */}
-      {results.furusatoNozei.outOfPocketCost > 2200 && (
+      {hasHighOutOfPocketCost(results.furusatoNozei) && (
         <Box
           sx={{
             bgcolor: 'error.light',
@@ -325,14 +341,72 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>
             ⚠️ Warning: High Out-of-Pocket Cost
           </Typography>
-          <Typography variant="body2">
-            The out-of-pocket cost is higher than the expected ≈2,000 yen. This happens when filing
-            a tax return (確定申告) if taxable income changes income tax brackets after applying the
-            Furusato Nozei donation deduction.
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-            This issue is avoided by using the One-Stop Exception system (ワンストップ特例制度).
-          </Typography>
+          {hasForeignTaxCredit ? (
+            results.furusatoNozei.incomeTaxReduction === 0 ? (
+              <>
+                <Typography variant="body2">
+                  The out-of-pocket cost is higher than the expected ≈2,000 yen because the Foreign
+                  Tax Credit already reduces your Japanese national income tax to ¥0. As a result,
+                  the donation deduction cannot reduce it further.
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Any unused foreign tax credit can be carried forward for up to 3 years. Note that
+                  the One-Stop system (ワンストップ特例制度) cannot be used when claiming the
+                  Foreign Tax Credit, as filing a tax return is required.
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography variant="body2">
+                  The out-of-pocket cost is higher than the expected ≈2,000 yen. Applying the
+                  donation deduction lowers your Japanese income tax base, which reduces the
+                  allowable Foreign Tax Credit limit.
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  Any unused foreign tax credit can be carried forward for up to 3 years. Note that
+                  the One-Stop system (ワンストップ特例制度) cannot be used when claiming the
+                  Foreign Tax Credit, as filing a tax return is required.
+                </Typography>
+              </>
+            )
+          ) : results.homeLoanTaxCredit && results.furusatoNozei.incomeTaxReduction === 0 ? (
+            <>
+              <Typography variant="body2">
+                The out-of-pocket cost is higher than the expected ≈2,000 yen because the Home Loan
+                Tax Credit already reduces your Japanese national income tax to ¥0, and any
+                spillover into residence tax has reached its statutory cap.
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                If you are eligible (e.g. year 2+ of mortgage with salary income only), this issue
+                is avoided by using the One-Stop system (ワンストップ特例制度).
+              </Typography>
+            </>
+          ) : results.highIncomeMinimumTax ? (
+            <>
+              <Typography variant="body2">
+                The out-of-pocket cost is higher than the expected ≈2,000 yen because the Minimum
+                Tax on High Income Taxpayers (特定の基準所得金額の課税の特例) sets a statutory tax
+                floor on baseline income. Because baseline income does not subtract donation
+                deductions, any reduction in your baseline income tax is offset yen-for-yen by an
+                increase in the minimum tax addition.
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Note that filing a tax return is required when this minimum tax applies, so the
+                One-Stop system (ワンストップ特例制度) cannot be used.
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Typography variant="body2">
+                The out-of-pocket cost is higher than the expected ≈2,000 yen. This happens when
+                filing a tax return if taxable income changes income tax brackets after applying the
+                Furusato Nozei donation deduction.
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
+                This issue is avoided by using the One-Stop system (ワンストップ特例制度).
+              </Typography>
+            </>
+          )}
         </Box>
       )}
     </Box>

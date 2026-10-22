@@ -18,20 +18,21 @@
 
 import { getDependentEligibilityMax } from '../data/dependentDeductionThresholds';
 import { calculateIncomeAdjustmentDeductionAmount } from '../data/netEmploymentIncome';
-import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
 import type {
   Dependent,
   DisabilityLevel,
-  OtherDependent,
   DependentDeductionResults,
   DeductionAmount,
   DeductionType,
 } from '../types/dependents';
-import { DEDUCTION_TYPES, is65OrOlder } from '../types/dependents';
 import {
-  calculateNetEmploymentIncome,
-  calculatePensionIncomeAdjustmentDeduction,
-} from './taxCalculations';
+  DEDUCTION_TYPES,
+  DEPENDENT_AGE_BANDS,
+  SPOUSE_AGE_BANDS,
+  dependentAgeCoversBand,
+  dependentAgeRangeBounds,
+} from '../types/dependents';
+import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
 
 export { getDependentEligibilityMax };
 
@@ -46,7 +47,7 @@ const SPOUSE_SPECIAL_DEDUCTION_MAX_INCOME = 1_330_000;
 const SPECIFIC_RELATIVE_DEDUCTION_MAX_INCOME = 1_230_000;
 
 /** The subset of a {@link Dependent} needed to derive its income measures. */
-type DependentIncomeProfile = Pick<Dependent, 'income' | 'ageCategory' | 'disability'>;
+type DependentIncomeProfile = Pick<Dependent, 'income' | 'ageRange' | 'disability'>;
 
 /**
  * The 所得金額調整控除（子ども・特別障害者等を有する者等）a dependent qualifies for in their own
@@ -67,104 +68,44 @@ function calculateDependentIncomeAdjustmentDeduction(dependent: DependentIncomeP
 }
 
 /**
- * 給与所得 net of the 給与所得控除 and the 所得金額調整控除（子ども・特別障害者等）, but before the
- * 給与所得と年金所得の双方 variant. Both the 公的年金等控除 band and that variant key off this
- * figure, and the statute applies the 子ども・特別障害者等 variant first (措法41の3の12 subtracts
- * from the 給与所得 left after 措法41の3の11).
- */
-function calculateDependentNetEmploymentIncome(
-  dependent: DependentIncomeProfile,
-  year: number,
-): number {
-  return (
-    calculateNetEmploymentIncome(dependent.income.grossEmploymentIncome, year) -
-    calculateDependentIncomeAdjustmentDeduction(dependent)
-  );
-}
-
-/**
- * Calculate net public pension income (公的年金等に係る雑所得) for a dependent.
- *
- * The public pension deduction (公的年金等控除) depends on the age category (65 boundary) and on
- * the dependent's total net income other than public pension income — here the net employment
- * income plus other net income.
+ * Calculate net public pension income (公的年金等に係る雑所得) for a dependent, as
+ * {@link calculateDependentNetIncomeComponents} composes it — the 公的年金等控除 is decided there
+ * from the dependent's age and their total net income other than public pension income.
  */
 export function calculateDependentNetPublicPensionIncome(
   dependent: DependentIncomeProfile,
   year: number,
 ): number {
-  const { grossPublicPensionIncome, otherNetIncome } = dependent.income;
-  const otherTotalNetIncome =
-    calculateDependentNetEmploymentIncome(dependent, year) + otherNetIncome;
-  return calculateNetPublicPensionIncome(
-    grossPublicPensionIncome,
-    is65OrOlder(dependent.ageCategory),
-    otherTotalNetIncome,
-    year,
-  );
-}
-
-/** Per-category net incomes composing a dependent's 合計所得金額. */
-export interface DependentNetIncomeComponents {
-  /** 給与所得, net of the 給与所得控除 and both 所得金額調整控除 variants below. */
-  netEmploymentIncome: number;
-  /**
-   * 所得金額調整控除（子ども・特別障害者等を有する者等）, already reflected in
-   * {@link netEmploymentIncome}.
-   */
-  incomeAdjustmentDeduction: number;
-  /**
-   * 所得金額調整控除（給与所得と年金所得の双方を有する者）, already reflected in
-   * {@link netEmploymentIncome}.
-   */
-  pensionIncomeAdjustmentDeduction: number;
-  /** 公的年金等に係る雑所得. */
-  netPublicPensionIncome: number;
-  /** 合計所得金額: the net components above plus the other net income. */
-  totalNetIncome: number;
+  return calculateDependentNetIncomeComponents(dependent, year).netPublicPensionIncome;
 }
 
 /**
- * Derive the net income (所得) components of a dependent's 合計所得金額: 給与所得 via the
- * 給与所得控除 and the 所得金額調整控除（子ども・特別障害者等）
- * ({@link calculateDependentIncomeAdjustmentDeduction}), 公的年金等に係る雑所得 via the
- * 公的年金等控除 ({@link calculateDependentNetPublicPensionIncome}), and — when the dependent has
- * both — the 所得金額調整控除（給与所得と年金所得の双方を有する者）
- * ({@link calculatePensionIncomeAdjustmentDeduction}) subtracted from 給与所得.
+ * Derive the net income (所得) components of a dependent's 合計所得金額. A dependent is governed by
+ * the same rules as the taxpayer, so only the 所得金額調整控除（子ども・特別障害者等）the dependent
+ * qualifies for in their own right ({@link calculateDependentIncomeAdjustmentDeduction}) is
+ * decided here; {@link composeNetIncomeComponents} applies the rest.
  */
 export function calculateDependentNetIncomeComponents(
   dependent: DependentIncomeProfile,
   year: number,
-): DependentNetIncomeComponents {
-  const { otherNetIncome } = dependent.income;
+): NetIncomeComponents {
+  const { grossEmploymentIncome, grossPublicPensionIncome, otherNetIncome } = dependent.income;
 
-  const incomeAdjustmentDeduction = calculateDependentIncomeAdjustmentDeduction(dependent);
-  const netEmploymentIncomeBeforePensionAdjustment = calculateDependentNetEmploymentIncome(
-    dependent,
+  return composeNetIncomeComponents({
+    grossEmploymentIncome,
+    incomeAdjustmentDeduction: calculateDependentIncomeAdjustmentDeduction(dependent),
+    grossPublicPensionIncome,
+    recipientAgeRange: dependentAgeRangeBounds(dependent.ageRange),
+    otherNetIncome,
     year,
-  );
-  const netPublicPensionIncome = calculateDependentNetPublicPensionIncome(dependent, year);
-  const pensionIncomeAdjustmentDeduction = calculatePensionIncomeAdjustmentDeduction(
-    netEmploymentIncomeBeforePensionAdjustment,
-    netPublicPensionIncome,
-  );
-  const netEmploymentIncome =
-    netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
-
-  return {
-    netEmploymentIncome,
-    incomeAdjustmentDeduction,
-    pensionIncomeAdjustmentDeduction,
-    netPublicPensionIncome,
-    totalNetIncome: netEmploymentIncome + netPublicPensionIncome + otherNetIncome,
-  };
+  });
 }
 
 /**
  * Calculate total net income (合計所得金額) for a dependent
  * This is used to determine eligibility for various dependent deductions
  *
- * @param dependent The dependent's income breakdown and age category (the age category selects
+ * @param dependent The dependent's income breakdown and age range (the age range selects
  *                  the public pension deduction table)
  * @param year      Income year for the deduction table lookups
  */
@@ -177,16 +118,16 @@ export function calculateDependentTotalNetIncome(
 
 /**
  * Whether the taxpayer has a dependent that qualifies them for the
- * 所得金額調整控除（子ども・特別障害者等を有する者等）. Two of the three statutory conditions are
- * derivable from the dependent data this calculator models:
+ * 所得金額調整控除（子ども・特別障害者等を有する者等）— the two of the three statutory conditions
+ * that are about dependents:
  *
  *  - ロ 年齢23歳未満の扶養親族: a non-spouse dependent (扶養親族) under 23 whose 合計所得金額 is
  *    within the 扶養親族 threshold. Unlike 扶養控除, this includes children under 16.
  *  - ハ 特別障害者である同一生計配偶者または扶養親族: a spouse or non-spouse dependent with special
  *    disability whose 合計所得金額 is within the threshold (any age).
  *
- * The third condition — イ, the taxpayer being a 特別障害者 themselves — is NOT modeled, as the
- * calculator has no input for the taxpayer's own disability status.
+ * The third condition — イ, the taxpayer being a 特別障害者 themselves — is about the taxpayer, not
+ * a dependent, and is applied alongside this predicate in `taxCalculations.ts`.
  *
  * Note: a spouse is never a 扶養親族, so condition ロ cannot apply to a spouse; a spouse qualifies
  * only via ハ (a 特別障害者 同一生計配偶者).
@@ -207,10 +148,11 @@ export function hasIncomeAdjustmentDeductionDependent(
     if (dependent.relationship === 'spouse') {
       return isSpecialDisability;
     }
-    const isUnder23 =
-      dependent.ageCategory === 'under16' ||
-      dependent.ageCategory === '16to18' ||
-      dependent.ageCategory === '19to22'; // ロ
+    // ロ
+    const isUnder23 = dependentAgeCoversBand(
+      dependent.ageRange,
+      DEPENDENT_AGE_BANDS.dependentUnder23,
+    );
     return isUnder23 || isSpecialDisability;
   });
 }
@@ -226,8 +168,7 @@ export function hasDependentRelativeUnder23(dependents: Dependent[], year: numbe
   return dependents.some(dependent => {
     if (dependent.relationship === 'spouse') return false; // a spouse is never a 扶養親族
     if (calculateDependentTotalNetIncome(dependent, year) > eligibilityMax) return false;
-    const age = dependent.ageCategory;
-    return age === 'under16' || age === '16to18' || age === '19to22';
+    return dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.dependentUnder23);
   });
 }
 
@@ -244,7 +185,7 @@ function isEligibleForDependentDeduction(dependent: Dependent, year: number): bo
   // Dependents under 16 are not eligible for the dependent deduction (扶養控除)
   // They are eligible for disability deduction if applicable, but that is handled separately.
   // Note: Child Allowance (児童手当) replaces the tax deduction for this age group.
-  if (dependent.ageCategory === 'under16') {
+  if (!dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.dependentDeduction)) {
     return false;
   }
 
@@ -262,7 +203,7 @@ function isEligibleForDependentDeduction(dependent: Dependent, year: number): bo
 function isSpecialDependent(dependent: Dependent, year: number): boolean {
   return (
     isEligibleForDependentDeduction(dependent, year) &&
-    (dependent as OtherDependent).ageCategory === '19to22'
+    dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.specialDependent)
   );
 }
 
@@ -276,7 +217,7 @@ function isSpecialDependent(dependent: Dependent, year: number): boolean {
 function isElderlyDependent(dependent: Dependent, year: number): boolean {
   return (
     isEligibleForDependentDeduction(dependent, year) &&
-    (dependent as OtherDependent).ageCategory === '70plus'
+    dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.elderlyDependent)
   );
 }
 
@@ -341,11 +282,8 @@ function isEligibleForSpecificRelativeSpecialDeduction(
   if (dependent.relationship === 'spouse') {
     return false;
   }
-  const otherDependent = dependent;
-  const ageCategory = otherDependent.ageCategory;
-
   // Only age 19-22 are eligible (19歳以上23歳未満)
-  if (ageCategory !== '19to22') {
+  if (!dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.specificRelative)) {
     return false;
   }
 
@@ -399,6 +337,8 @@ const NATIONAL_TAX_DEDUCTIONS = {
   SPECIFIC_RELATIVE_120TO123: 30_000,
 
   // 障害者控除 (Disability Deduction) https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm
+  // The 一般/特別 rows mirror the taxpayer's own table in personalDeductions.ts (所法79 makes no
+  // taxpayer/dependent distinction); an amendment must change both files together.
   DISABILITY_REGULAR: 270_000, // 一般の障害者
   DISABILITY_SPECIAL: 400_000, // 特別障害者
   DISABILITY_SPECIAL_COHABITING: 750_000, // 同居特別障害者
@@ -427,6 +367,7 @@ const RESIDENCE_TAX_DEDUCTIONS = {
   SPECIFIC_RELATIVE_120TO123: 30_000,
 
   // 障害者控除 https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/shotokukojo/jintekikojo.html
+  // The 一般/特別 rows mirror personalDeductions.ts, as in NATIONAL_TAX_DEDUCTIONS above.
   DISABILITY_REGULAR: 260_000,
   DISABILITY_SPECIAL: 300_000,
   DISABILITY_SPECIAL_COHABITING: 530_000,
@@ -785,7 +726,7 @@ function calculateSpouseDeduction(
     return { national: 0, residence: 0 };
   }
 
-  const isElderly = dependent.ageCategory === '70plus';
+  const isElderly = dependentAgeCoversBand(dependent.ageRange, SPOUSE_AGE_BANDS.elderlySpouse);
 
   const getAmount = (
     taxTypeTable:
@@ -817,8 +758,8 @@ function calculateSpouseDeduction(
 interface MainDeduction {
   /**
    * The totals field this deduction accumulates into. Derived from the results shape, minus
-   * `total` (a getter, not assignable) and `disabilityDeduction` (accumulated separately —
-   * 障害者控除 is not a main deduction).
+   * `total` (the sum of the other fields, stored after every dependent is processed) and
+   * `disabilityDeduction` (accumulated separately — 障害者控除 is not a main deduction).
    */
   field: Exclude<keyof DependentDeductionResults['nationalTax'], 'total' | 'disabilityDeduction'>;
   type: DeductionType;
@@ -879,6 +820,13 @@ function determineMainDeduction(
   return null;
 }
 
+const sumDeductions = (deductions: DependentDeductionResults['nationalTax']): number =>
+  deductions.dependentDeduction +
+  deductions.spouseDeduction +
+  deductions.spouseSpecialDeduction +
+  deductions.specificRelativeDeduction +
+  deductions.disabilityDeduction;
+
 /**
  * Calculate all dependent-related deductions
  *
@@ -901,15 +849,7 @@ export function calculateDependentDeductions(
       spouseSpecialDeduction: 0,
       specificRelativeDeduction: 0,
       disabilityDeduction: 0,
-      get total() {
-        return (
-          this.dependentDeduction +
-          this.spouseDeduction +
-          this.spouseSpecialDeduction +
-          this.specificRelativeDeduction +
-          this.disabilityDeduction
-        );
-      },
+      total: 0,
     },
     residenceTax: {
       dependentDeduction: 0,
@@ -917,15 +857,7 @@ export function calculateDependentDeductions(
       spouseSpecialDeduction: 0,
       specificRelativeDeduction: 0,
       disabilityDeduction: 0,
-      get total() {
-        return (
-          this.dependentDeduction +
-          this.spouseDeduction +
-          this.spouseSpecialDeduction +
-          this.specificRelativeDeduction +
-          this.disabilityDeduction
-        );
-      },
+      total: 0,
     },
     breakdown: [],
   };
@@ -984,5 +916,7 @@ export function calculateDependentDeductions(
     }
   }
 
+  results.nationalTax.total = sumDeductions(results.nationalTax);
+  results.residenceTax.total = sumDeductions(results.residenceTax);
   return results;
 }

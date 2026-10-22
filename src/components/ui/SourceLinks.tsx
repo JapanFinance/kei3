@@ -20,6 +20,14 @@ export interface Source {
   href: string;
 }
 
+/**
+ * Whether the link downloads or opens a document rather than a web page, which the label says so
+ * that following it holds no surprise. Detected from the URL rather than declared per source, so
+ * that a citation added later cannot forget to mention it. Only the path is examined, so a query
+ * string or fragment does not hide the extension.
+ */
+const isPdfHref = (href: string): boolean => /\.pdf($|[?#])/i.test(href);
+
 interface SourceLinksProps {
   sources: Source[];
   /**
@@ -59,6 +67,7 @@ const SourceLinks: React.FC<SourceLinksProps> = ({ sources, heading }) => (
         <li key={i}>
           <a href={source.href} target="_blank" rel="noopener noreferrer" style={SOURCE_LINK_STYLE}>
             {source.label}
+            {isPdfHref(source.href) && ' (PDF)'}
             <OpenInNewIcon
               sx={{ fontSize: '0.85em', ml: 0.4, verticalAlign: '-0.15em', color: 'inherit' }}
             />

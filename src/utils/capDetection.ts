@@ -1,15 +1,27 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { getRegionalRatesForMonth } from '../data/employeesHealthInsurance/providerRates';
+import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import {
-  generateHealthInsurancePremiumTable,
-  generatePremiumTableFromRates,
-} from '../data/employeesHealthInsurance/providerRates';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
-import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../types/healthInsurance';
+  getNHIParamsForMonth,
+  nhiParamsDiffer,
+} from '../data/nationalHealthInsurance/nhiParamsData';
+import {
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  DEPENDENT_COVERAGE_ID,
+  LATTER_STAGE_ELDERLY_ID,
+  isEmployeeHealthProvider,
+} from '../types/healthInsurance';
 import type { TakeHomeResults } from '../types/tax';
+import {
+  isLongTermCareCategory2Insured,
+  isSubjectToEmployeesPension,
+  isSubjectToNationalPension,
+} from '../types/taxpayerAge';
 import type { EmployeesHealthInsuranceBonusBreakdownItem } from './healthInsuranceCalculator';
-import { EMPLOYEES_PENSION_BRACKETS } from './pensionCalculator';
+import { findPensionBracket } from './pensionCalculator';
 
 export interface CapStatus {
   healthInsuranceCapped: boolean;
@@ -35,13 +47,15 @@ export function detectCaps(
   year: number,
   healthInsuranceBonusBreakdown?: EmployeesHealthInsuranceBonusBreakdownItem[],
 ): CapStatus {
-  // Use salary + commuter allowance for social insurance cap detection (Standard Monthly Remuneration basis)
-  // instead of total annual income which might include business/misc income or bonuses.
-  const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowanceIncome ?? 0)) / 12;
+  // The remuneration the premiums were graded on: salary and commuting allowance over the year,
+  // divided once, as the calculation divides them. Business income and bonuses are not part of it.
+  const monthlyRemuneration = (results.salaryIncome + (results.commutingAllowance ?? 0)) / 12;
 
   const isNationalPension = results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
-  // Check pension cap
-  const pensionCapped = checkPensionCap(isNationalPension, monthlyRemuneration);
+  // Check pension cap; a 70+ employee pays no premium at all, so nothing can be capped.
+  const pensionCapped = isSubjectToEmployeesPension(results.ageRange)
+    ? checkPensionCap(isNationalPension, monthlyRemuneration)
+    : false;
   // Check health insurance cap
   const healthInsuranceCapInfo = checkHealthInsuranceCap(results, monthlyRemuneration, year);
 
@@ -58,14 +72,16 @@ export function detectCaps(
   return {
     healthInsuranceCapped: healthInsuranceCapInfo.capped,
     pensionCapped,
-    pensionFixed: isNationalPension,
+    // "Fixed amount" only applies while National Pension contributions are actually due.
+    pensionFixed: isNationalPension && isSubjectToNationalPension(results.ageRange),
     healthInsuranceBonusCapped,
     healthInsuranceCapDetails: healthInsuranceCapInfo.details,
   };
 }
 
 /**
- * Checks if pension contributions are at the maximum
+ * Whether the pension premium is charged on the top grade, which has no upper bound: the same
+ * lookup the premium calculation graded the remuneration with.
  */
 function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number): boolean {
   if (isNationalPension) {
@@ -73,15 +89,7 @@ function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number
     return false;
   }
 
-  // For employee pension, check if we're in the highest bracket
-  const lastBracket = EMPLOYEES_PENSION_BRACKETS[EMPLOYEES_PENSION_BRACKETS.length - 1];
-  if (!lastBracket) {
-    return false;
-  }
-  return (
-    monthlyRemuneration >= lastBracket.minIncomeInclusive &&
-    lastBracket.maxIncomeExclusive === Infinity
-  );
+  return findPensionBracket(monthlyRemuneration).maxIncomeExclusive === Infinity;
 }
 
 /**
@@ -103,126 +111,126 @@ function checkHealthInsuranceCap(
     childSupportCapped?: boolean;
   };
 } {
-  if (results.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
-    if (results.nhiMedicalPortion === undefined || results.nhiElderlySupportPortion === undefined) {
-      // This shouldn't happen anymore since all context is in results
-      console.warn('NHI component data missing in results:', {
-        nhiMedicalPortion: results.nhiMedicalPortion,
-        nhiElderlySupportPortion: results.nhiElderlySupportPortion,
-        nhiLongTermCarePortion: results.nhiLongTermCarePortion,
-      });
+  const provider = results.healthInsuranceProvider;
+
+  if (isEmployeeHealthProvider(provider) || provider === CUSTOM_PROVIDER_ID) {
+    // The SMR brackets are the same for every provider and year, so only the premium needs
+    // rates, and a provider without rates for the region has no premium to cap.
+    const hasRates =
+      provider === CUSTOM_PROVIDER_ID
+        ? results.customEHIRates !== undefined
+        : getRegionalRatesForMonth(provider, results.region, year, 3) !== undefined;
+    if (!hasRates) {
       return { capped: false };
     }
 
-    // Look up rates for both fiscal years that overlap this calendar year.
-    // A portion is truly "capped" (won't increase with more income) only when
-    // it's at the cap in *both* fiscal years. If only one FY is capped, the
-    // other FY's portion could still grow.
-    const prevFYParams = getNHIParamsForMonth(results.region, year, 0); // Jan → previous FY
-    const currFYParams = getNHIParamsForMonth(results.region, year, 3); // Apr → current FY
-    if (!currFYParams) {
-      return { capped: false };
-    }
+    // The top grade has no upper bound; the lookup is the one the premium calculation used.
+    return { capped: findSMRBracket(monthlyRemuneration).maxIncomeExclusive === Infinity };
+  }
 
-    // Helper: check if a portion is capped in both FYs.
-    // For portions that didn't exist in the previous FY (e.g., child support),
-    // the prev FY contribution is always 0 and trivially "capped".
-    const isCappedInBothFYs = (
-      portionAmount: number,
-      prevCap: number | undefined,
-      currCap: number,
-    ): boolean => {
-      if (!prevFYParams || prevFYParams === currFYParams) {
-        // No blending — single FY, just compare against current cap
-        return portionAmount === currCap;
-      }
-      // Blended: compute what the blended amount would be if both FYs are at their caps
-      const prevCapValue = prevCap ?? 0; // undefined means portion didn't exist → 0
-      const blendedCap = Math.round((prevCapValue * 3) / 10 + (currCap * 7) / 10);
-      return portionAmount >= blendedCap;
-    };
-
-    const medicalCapped = isCappedInBothFYs(
-      results.nhiMedicalPortion,
-      prevFYParams?.medicalCap,
-      currFYParams.medicalCap,
-    );
-    const supportCapped = isCappedInBothFYs(
-      results.nhiElderlySupportPortion,
-      prevFYParams?.supportCap,
-      currFYParams.supportCap,
-    );
-
-    let ltcCapped = false;
-    if (
-      results.nhiLongTermCarePortion !== undefined &&
-      results.isSubjectToLongTermCarePremium &&
-      currFYParams.ltcCapForEligible
-    ) {
-      ltcCapped = isCappedInBothFYs(
-        results.nhiLongTermCarePortion,
-        prevFYParams?.ltcCapForEligible,
-        currFYParams.ltcCapForEligible,
-      );
-    }
-
-    let childSupportCapped = false;
-    if (results.nhiChildSupportPortion !== undefined && currFYParams.childSupportCap) {
-      childSupportCapped = isCappedInBothFYs(
-        results.nhiChildSupportPortion,
-        prevFYParams?.childSupportCap,
-        currFYParams.childSupportCap,
-      );
-    }
-
-    const anyCapped = medicalCapped || supportCapped || ltcCapped || childSupportCapped;
-
-    return {
-      capped: anyCapped,
-      details: {
-        medicalCapped,
-        supportCapped,
-        ltcCapped,
-        childSupportCapped,
-      },
-    };
-  } else {
-    // Employee Health Insurance - check if in highest bracket
-    let premiumTable;
-    if (results.healthInsuranceProvider === CUSTOM_PROVIDER_ID) {
-      if (!results.customEHIRates) {
+  switch (provider) {
+    case LATTER_STAGE_ELDERLY_ID:
+      // 後期高齢者医療: the calendar-year medical portion blends two fiscal years, so it stops
+      // rising with income only once both fiscal years' 賦課限度額 are reached. With only the
+      // current fiscal year capped, the previous fiscal year's third still grows with income,
+      // so no badge is shown. calculateLatterStageElderlyPremium decides this, where both
+      // fiscal years' caps are already at hand.
+      return { capped: results.latterStageMedicalCapped === true };
+    case NATIONAL_HEALTH_INSURANCE_ID: {
+      if (
+        results.nhiMedicalPortion === undefined ||
+        results.nhiElderlySupportPortion === undefined
+      ) {
+        // This shouldn't happen anymore since all context is in results
+        console.warn('NHI component data missing in results:', {
+          nhiMedicalPortion: results.nhiMedicalPortion,
+          nhiElderlySupportPortion: results.nhiElderlySupportPortion,
+          nhiLongTermCarePortion: results.nhiLongTermCarePortion,
+        });
         return { capped: false };
       }
-      const customRates = {
-        employeeHealthInsuranceRate: results.customEHIRates.healthInsuranceRate / 100,
-        employeeLongTermCareRate: results.customEHIRates.longTermCareRate / 100,
-        employerHealthInsuranceRate: 0,
-        employerLongTermCareRate: 0,
+
+      // Look up rates for both fiscal years that overlap this calendar year.
+      // A portion is truly "capped" (won't increase with more income) only when
+      // it's at the cap in *both* fiscal years. If only one FY is capped, the
+      // other FY's portion could still grow.
+      const prevFYParams = getNHIParamsForMonth(results.region, year, 0); // Jan → previous FY
+      const currFYParams = getNHIParamsForMonth(results.region, year, 3); // Apr → current FY
+      if (!currFYParams) {
+        return { capped: false };
+      }
+
+      const blended = prevFYParams !== undefined && nhiParamsDiffer(prevFYParams, currFYParams);
+
+      // Helper: check if a portion is capped in both FYs.
+      // For portions that didn't exist in the previous FY (e.g., child support),
+      // the prev FY contribution is always 0 and trivially "capped".
+      const isCappedInBothFYs = (
+        portionAmount: number,
+        prevCap: number | undefined,
+        currCap: number,
+      ): boolean => {
+        if (!blended) {
+          // No blending — single FY, just compare against current cap
+          return portionAmount === currCap;
+        }
+        // Blended: compute what the blended amount would be if both FYs are at their caps
+        const prevCapValue = prevCap ?? 0; // undefined means portion didn't exist → 0
+        const blendedCap = Math.round((prevCapValue * 3) / 10 + (currCap * 7) / 10);
+        return portionAmount >= blendedCap;
       };
-      premiumTable = generatePremiumTableFromRates(customRates);
-    } else {
-      // Month is immaterial here — cap detection reads the (year-invariant) SMR bracket structure,
-      // not the premium values — so April (fiscal-year start) stands in for the income year.
-      premiumTable = generateHealthInsurancePremiumTable(
-        results.healthInsuranceProvider,
-        year,
-        3,
-        results.region,
+
+      const medicalCapped = isCappedInBothFYs(
+        results.nhiMedicalPortion,
+        prevFYParams?.medicalCap,
+        currFYParams.medicalCap,
       );
-    }
+      const supportCapped = isCappedInBothFYs(
+        results.nhiElderlySupportPortion,
+        prevFYParams?.supportCap,
+        currFYParams.supportCap,
+      );
 
-    if (!premiumTable || premiumTable.length === 0) {
+      let ltcCapped = false;
+      if (
+        results.nhiLongTermCarePortion !== undefined &&
+        isLongTermCareCategory2Insured(results.ageRange) &&
+        currFYParams.ltcCapForEligible
+      ) {
+        ltcCapped = isCappedInBothFYs(
+          results.nhiLongTermCarePortion,
+          prevFYParams?.ltcCapForEligible,
+          currFYParams.ltcCapForEligible,
+        );
+      }
+
+      let childSupportCapped = false;
+      if (results.nhiChildSupportPortion !== undefined && currFYParams.childSupportCap) {
+        childSupportCapped = isCappedInBothFYs(
+          results.nhiChildSupportPortion,
+          prevFYParams?.childSupportCap,
+          currFYParams.childSupportCap,
+        );
+      }
+
+      const anyCapped = medicalCapped || supportCapped || ltcCapped || childSupportCapped;
+
+      return {
+        capped: anyCapped,
+        details: {
+          medicalCapped,
+          supportCapped,
+          ltcCapped,
+          childSupportCapped,
+        },
+      };
+    }
+    case DEPENDENT_COVERAGE_ID:
+      // Dependent coverage charges no premium, so nothing can be capped.
       return { capped: false };
+    default: {
+      const unhandledProvider: never = provider;
+      throw new Error(`Unhandled health insurance provider: ${JSON.stringify(unhandledProvider)}`);
     }
-
-    const lastBracket = premiumTable[premiumTable.length - 1];
-    if (!lastBracket) {
-      return { capped: false };
-    }
-    const capped =
-      monthlyRemuneration >= lastBracket.minIncomeInclusive &&
-      lastBracket.maxIncomeExclusive === Infinity;
-
-    return { capped };
   }
 }

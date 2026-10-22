@@ -1,0 +1,130 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import React from 'react';
+
+import type { SeparateTaxationReportedIncome } from '../../../types/tax';
+import { formatJPY } from '../../../utils/formatters';
+import SourceLinks from '../../ui/SourceLinks';
+import { DetailedTooltip } from '../../ui/Tooltips';
+
+interface NetSeparateInvestmentIncomeTooltipProps {
+  separate: SeparateTaxationReportedIncome;
+}
+
+/**
+ * Tooltip for the "Net Investment Income (separate)" row: shows how the amounts reported under
+ * 申告分離課税 net into the figure that enters 合計所得金額. Renders its own DetailedTooltip
+ * trigger, so callers place it directly after the row label. Shared by the Taxes and Social
+ * Insurance tabs.
+ */
+const NetSeparateInvestmentIncomeTooltip: React.FC<NetSeparateInvestmentIncomeTooltipProps> = ({
+  separate,
+}) => {
+  const netIncome = separate.netIncome.capitalGains + separate.netIncome.dividends;
+
+  return (
+    <DetailedTooltip title="Investment Income under Separate Taxation">
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+        Calculation Breakdown
+      </Typography>
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '0.9rem',
+          marginBottom: '8px',
+        }}
+      >
+        <tbody>
+          {separate.gross.capitalGains !== 0 && (
+            <tr>
+              <td style={{ padding: '2px 0' }}>Capital Gains (net for the year):</td>
+              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                {formatJPY(separate.gross.capitalGains)}
+              </td>
+            </tr>
+          )}
+          {separate.gross.dividends !== 0 && (
+            <tr>
+              <td style={{ padding: '2px 0' }}>Dividends:</td>
+              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                {formatJPY(separate.gross.dividends)}
+              </td>
+            </tr>
+          )}
+          {separate.lossOffsetAgainstDividends > 0 && (
+            <tr>
+              <td style={{ padding: '2px 0' }}>Loss subtracted from dividends (損益通算):</td>
+              <Box
+                component="td"
+                sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
+              >
+                -{formatJPY(separate.lossOffsetAgainstDividends)}
+              </Box>
+            </tr>
+          )}
+          {separate.unabsorbedQualifyingLoss > 0 && (
+            <tr>
+              <td style={{ padding: '2px 0' }}>Loss left over (not carried forward here):</td>
+              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                {formatJPY(separate.unabsorbedQualifyingLoss)}
+              </td>
+            </tr>
+          )}
+          {separate.nonQualifyingLoss > 0 && (
+            <tr>
+              <td style={{ padding: '2px 0' }}>Foreign-account loss, offsetting nothing:</td>
+              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                {formatJPY(separate.nonQualifyingLoss)}
+              </td>
+            </tr>
+          )}
+          <Box component="tr" sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+            <td style={{ padding: '4px 0', fontWeight: 600 }}>Net Investment Income (separate):</td>
+            <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+              {formatJPY(netIncome)}
+            </td>
+          </Box>
+        </tbody>
+      </table>
+
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Investment income reported under separate taxation (申告分離課税) is part of total net
+        income (合計所得金額), so it counts toward the basic deduction, spouse and dependent
+        eligibility, residence-tax exemption and National Health Insurance, but tax on it is
+        calculated separate from other income at a flat 15% income tax and 5% residence tax.
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        A capital loss is first subtracted from the year's other reported capital gains. Any loss
+        that remains reduces reported dividends only if the shares were sold through a Japanese
+        broker.
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 1 }}>
+        Tax another country withholds on a foreign company's dividends is credited against the
+        Japanese income tax and residence tax up to a limit, through the foreign tax credit
+        (外国税額控除) shown on the Taxes tab.
+      </Typography>
+      <SourceLinks
+        sources={[
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm',
+            label: 'Tax on the sale of shares (株式等を譲渡したときの課税) - NTA',
+          },
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm',
+            label: 'Dividend income (配当所得) - NTA',
+          },
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1474.htm',
+            label: 'Offsetting and carrying forward listed-share losses (損益通算・繰越控除) - NTA',
+          },
+        ]}
+      />
+    </DetailedTooltip>
+  );
+};
+
+export default NetSeparateInvestmentIncomeTooltip;

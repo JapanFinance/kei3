@@ -1,7 +1,9 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import { useTheme } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -13,7 +15,8 @@ const labelTooltips: Record<string, string> = {
   'Health Insurance': 'Mandatory health insurance contributions.',
   'Pension Payments': 'Employees/National pension system contributions.',
   'Employment Insurance': 'Insurance for unemployment and work-related benefits.',
-  'Income Tax': 'Income tax paid to the national government.',
+  'Income Tax':
+    'Income tax paid to the national government, and any foreign tax paid on the income abroad.',
   'Residence Tax':
     'Local income tax paid to the local municipality and prefecture. Note that residence tax is billed in arrears. For example, residents on January 1, 2026 will be billed from June 2026 based on their income in 2025. If income fluctuates from year to year, consider the effect on the residence tax billed in arrears.',
   'Total Deductions': 'Sum of all taxes and social insurance payments.',
@@ -37,6 +40,16 @@ interface ResultRowProps {
     | 'detail-subtotal';
   valuePrefix?: string;
   labelSuffix?: React.ReactNode; // Additional content to show after the label and tooltip
+  /**
+   * Makes the label a disclosure button that toggles a collapsible region below the row.
+   * A chevron is drawn in the row's indent gutter so the label text keeps its alignment.
+   */
+  disclosure?: {
+    expanded: boolean;
+    onToggle: () => void;
+    /** id of the element the button controls (for aria-controls) */
+    controlsId: string;
+  };
 }
 
 export const ResultRow: React.FC<ResultRowProps> = ({
@@ -45,6 +58,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
   type = 'default',
   valuePrefix,
   labelSuffix,
+  disclosure,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -162,19 +176,57 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       break;
   }
 
-  // Responsive: stack label/value vertically on mobile
-  const leftColumnLayoutSx: SxProps<Theme> = isMobile
-    ? { width: '60%', textAlign: 'left', pr: 1 }
-    : { flexBasis: '60%', textAlign: 'left', pr: 2 };
-  const rightColumnLayoutSx: SxProps<Theme> = isMobile
-    ? { width: '40%', textAlign: 'right' }
-    : { flexBasis: '40%', textAlign: 'right' };
+  // The value keeps its own width and the label takes the rest, so a label wraps only when the
+  // row is too narrow for both, not at a fixed share of the row.
+  const leftColumnLayoutSx: SxProps<Theme> = {
+    flex: '1 1 auto',
+    minWidth: 0,
+    textAlign: 'left',
+    pr: isMobile ? 1 : 2,
+  };
+  const rightColumnLayoutSx: SxProps<Theme> = { flexShrink: 0, ml: 'auto', textAlign: 'right' };
 
   // Add tooltip and icon if available
-  const labelContent = (
-    <Box component="span" sx={{ display: 'inline-flex' }}>
+  const labelText = (
+    <>
       {iconMap[typeof label === 'string' ? label : ''] || null}
       {label}
+    </>
+  );
+  const labelContent = (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+      {disclosure ? (
+        <ButtonBase
+          onClick={disclosure.onToggle}
+          aria-expanded={disclosure.expanded}
+          aria-controls={disclosure.controlsId}
+          sx={{
+            font: 'inherit',
+            color: 'inherit',
+            textAlign: 'left',
+            borderRadius: 1,
+            ml: '-1.5em',
+            pl: '1.5em',
+            '@media (hover: hover)': { '&:hover': { color: 'text.secondary' } },
+          }}
+        >
+          <ExpandMoreIcon
+            aria-hidden
+            fontSize="inherit"
+            sx={{
+              position: 'absolute',
+              left: 0,
+              transition: theme.transitions.create('transform', {
+                duration: theme.transitions.duration.shortest,
+              }),
+              transform: disclosure.expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+            }}
+          />
+          {labelText}
+        </ButtonBase>
+      ) : (
+        labelText
+      )}
       {typeof label === 'string' && labelTooltips[label] && (
         <SimpleTooltip>{labelTooltips[label]}</SimpleTooltip>
       )}

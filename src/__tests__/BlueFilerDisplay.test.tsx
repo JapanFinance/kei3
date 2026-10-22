@@ -46,13 +46,15 @@ const mockResults: TakeHomeResults = {
   dcPlanContributions: 0,
   healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
   region: 'Tokyo',
-  isSubjectToLongTermCarePremium: false,
+  ageRange: 'age20to39' as const,
   residenceTaxBasicDeduction: 430_000,
+  netBusinessAndMiscIncome: 4_350_000,
   totalNetIncome: 4_350_000,
   nhiMedicalPortion: 150_000,
   nhiElderlySupportPortion: 50_000,
   nhiLongTermCarePortion: 0,
   salaryIncome: 0,
+  bonusIncome: 0,
   grossEmploymentIncome: 0,
   additionalDeductions: { national: 0, residence: 0, items: [] },
 };
@@ -67,7 +69,7 @@ const mockInputs: TakeHomeInputs = {
       blueFilerDeduction: 650_000,
     },
   ],
-  isSubjectToLongTermCarePremium: false,
+  ageRange: 'age20to39' as const,
   region: 'Tokyo',
   healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
   dependents: [],
@@ -122,6 +124,7 @@ describe('Blue-Filer Deduction Display', () => {
       // Mocking other necessary values
       netEmploymentIncome: 2_000_000, // Dummy
       grossEmploymentIncome: 3_000_000, // Dummy (salary 3M)
+      netBusinessAndMiscIncome: 1_900_000, // 2M − 100k blue-filer deduction
       totalNetIncome: 3_900_000, // Dummy total
       salaryIncome: 3_000_000,
     };
@@ -171,10 +174,11 @@ describe('Blue-Filer Deduction Display', () => {
       ],
     };
 
-    // Results don't matter much for this display test as logic is in component using inputs
+    // The tab shows the salary the calculation charged the premiums on, not the entered streams.
     const mixedResults: TakeHomeResults = {
       ...mockResults,
       annualIncome: 5_000_000,
+      salaryIncome: 3_000_000,
       healthInsuranceProvider: 'KyokaiKenpo',
     };
 
@@ -193,6 +197,8 @@ describe('Blue-Filer Deduction Display', () => {
     const noBlueFilerResults: TakeHomeResults = {
       ...mockResults,
       blueFilerDeduction: 0,
+      netBusinessAndMiscIncome: 5_000_000,
+      totalNetIncome: 5_000_000,
     };
     const noBlueFilerInputs: TakeHomeInputs = {
       ...mockInputs,

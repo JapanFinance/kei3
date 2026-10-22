@@ -1,12 +1,14 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { vi, describe, it, expect, beforeAll } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
-import type { TakeHomeResults, TakeHomeInputs, ResidenceTaxDetails } from '../types/tax';
+import type { CommutingAllowanceIncomeStream, TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { calculateTaxes } from '../utils/taxCalculations';
+import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 // Mock DetailedTooltip to render children directly for easier testing
 vi.mock('../components/ui/Tooltips', async () => {
@@ -23,7 +25,9 @@ vi.mock('../components/ui/Tooltips', async () => {
         )}
       </>
     ),
-    SimpleTooltip: () => <div data-testid="info-tooltip" />,
+    SimpleTooltip: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="info-tooltip">{children}</div>
+    ),
   };
 });
 
@@ -39,7 +43,7 @@ describe('SocialInsuranceTab', () => {
       { id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }, // 6M annual
       { id: '2', type: 'commutingAllowance', amount: 20000, frequency: 'monthly' }, // 240k annual
     ],
-    isSubjectToLongTermCarePremium: true,
+    ageRange: 'age40to59' as const,
     region: 'Tokyo',
     healthInsuranceProvider: 'KyokaiKenpo',
     dependents: [],
@@ -49,52 +53,24 @@ describe('SocialInsuranceTab', () => {
     incomeYear: 2025, // this fixture models income year 2025 (FY2025 rates); drives all tooltips via inputs
   };
 
-  const mockResidenceTax: ResidenceTaxDetails = {
-    taxableIncome: 0,
-    cityProportion: 0,
-    prefecturalProportion: 0,
-    residenceTaxRate: 0,
-    basicDeduction: 0,
-    personalDeductionDifference: 0,
-    city: { cityTaxableIncome: 0, cityAdjustmentCredit: 0, cityIncomeTax: 0, cityPerCapitaTax: 0 },
-    prefecture: {
-      prefecturalTaxableIncome: 0,
-      prefecturalAdjustmentCredit: 0,
-      prefecturalIncomeTax: 0,
-      prefecturalPerCapitaTax: 0,
-    },
-    perCapitaTax: 0,
-    forestEnvironmentTax: 0,
-    totalResidenceTax: 200000,
-  };
-
-  const mockResults: TakeHomeResults = {
+  const mockResults: TakeHomeResults = makeTakeHomeResults({
     annualIncome: 6000000,
     healthInsurance: 300000,
     pensionPayments: 500000,
     employmentInsurance: 30000,
     nationalIncomeTax: 100000,
-    residenceTax: mockResidenceTax,
+    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 200000 }),
     takeHomeIncome: 4870000,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
-    isSubjectToLongTermCarePremium: true,
+    ageRange: 'age40to59',
     hasEmploymentIncome: true,
     totalNetIncome: 4200000,
-    dcPlanContributions: 0,
-    furusatoNozei: {
-      limit: 0,
-      incomeTaxReduction: 0,
-      residenceTaxDonationBasicDeduction: 0,
-      residenceTaxSpecialDeduction: 0,
-      outOfPocketCost: 0,
-      residenceTaxReduction: 0,
-    },
     residenceTaxBasicDeduction: 430000,
     salaryIncome: 6000000,
+    commutingAllowance: 240000,
     grossEmploymentIncome: 6000000,
-    additionalDeductions: { national: 0, residence: 0, items: [] },
-  };
+  });
 
   it('displays Monthly Remuneration label', () => {
     render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
@@ -152,6 +128,57 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText('Employees Pension (厚生年金) SMR Table')).toBeInTheDocument();
   });
 
+  it('grades the remuneration on the yearly total, not the sum of its twelfths', () => {
+    // 560,000 + 194,000 + 2,000 is 756,000 a year, which is 63,000 a month: the first month of
+    // grade 68,000. Dividing each stream first gives 62,999.99999999999, one grade lower.
+    const severalStreamsInputs = {
+      ...mockInputs,
+      incomeStreams: [
+        { id: '1', type: 'salary', amount: 560000, frequency: 'annual' },
+        { id: '2', type: 'salary', amount: 194000, frequency: 'annual' },
+        { id: '3', type: 'commutingAllowance', amount: 2000, frequency: 'annual' },
+      ],
+    } as TakeHomeInputs;
+
+    render(
+      <SocialInsuranceTab
+        inputs={severalStreamsInputs}
+        results={calculateTaxes(severalStreamsInputs)}
+      />,
+    );
+
+    const smrRow = screen.getAllByText('Standard Monthly Remuneration')[0]!.parentElement!;
+    expect(within(smrRow).getByText('¥68,000')).toBeInTheDocument();
+  });
+
+  /** The text of the whole result row whose label is `label`: the label and its value. */
+  const resultRowText = (label: string) =>
+    screen.getByText(label).closest('div')!.parentElement!.textContent;
+
+  it('shows the salary and commuting allowance the calculation charged, not the entered streams', () => {
+    // The entered streams say 520,000 a month; the results say 63,000. The tab and the tooltips it
+    // opens show the results, so nothing on the tab can disagree with the premiums beside it.
+    const results = { ...mockResults, salaryIncome: 754_000, commutingAllowance: 2_000 };
+
+    render(<SocialInsuranceTab inputs={mockInputs} results={results} />);
+
+    expect(resultRowText('Annual Salary Income')).toContain('¥754,000');
+    expect(screen.getByText('Total:').nextElementSibling).toHaveTextContent('¥63,000');
+    expect(screen.queryByText('¥520,000')).not.toBeInTheDocument();
+    const smrRow = screen.getAllByText('Standard Monthly Remuneration')[0]!.parentElement!;
+    expect(within(smrRow).getByText('¥68,000')).toBeInTheDocument();
+  });
+
+  it('shows the bonus total the calculation summed', () => {
+    render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
+    expect(screen.queryByText('Annual Bonus Income')).not.toBeInTheDocument();
+
+    render(
+      <SocialInsuranceTab inputs={mockInputs} results={{ ...mockResults, bonusIncome: 900_000 }} />,
+    );
+    expect(resultRowText('Annual Bonus Income')).toContain('¥900,000');
+  });
+
   it('handles high income caps correctly (Health vs Pension SMR)', () => {
     const highIncomeInputs = {
       ...mockInputs,
@@ -162,7 +189,9 @@ describe('SocialInsuranceTab', () => {
 
     // 800k falls into Grade 39 (770k-810k) -> SMR 790k
     // Pension Caps at Grade 32 (635k+) -> SMR 650k
-    render(<SocialInsuranceTab inputs={highIncomeInputs} results={mockResults} />);
+    render(
+      <SocialInsuranceTab inputs={highIncomeInputs} results={calculateTaxes(highIncomeInputs)} />,
+    );
 
     // 1. Check Health Insurance Tooltip -> Should show SMR 790,000
     expect(screen.getAllByText(/Grade:/i).length).toBeGreaterThan(0);
@@ -177,13 +206,68 @@ describe('SocialInsuranceTab', () => {
     expect(screen.getByText(/\(Maximum Cap\)/)).toBeInTheDocument();
   });
 
+  it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
+    const inputs = {
+      ...mockInputs,
+      ageRange: 'age60to64' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      incomeStreams: [{ id: 'm1', type: 'miscellaneous' as const, amount: 4_000_000 }],
+    };
+    const results = {
+      ...mockResults,
+      ageRange: 'age60to64' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      netBusinessAndMiscIncome: 4_000_000,
+      totalNetIncome: 4_000_000,
+      pensionPayments: 0,
+      nhiMedicalPortion: 300_000,
+      nhiElderlySupportPortion: 100_000,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText('National Pension')).toBeInTheDocument();
+    expect(screen.getByText('Annual Contribution')).toBeInTheDocument();
+    expect(screen.getByText('¥0')).toBeInTheDocument();
+    expect(
+      screen.getByText(/no compulsory National Pension .* enrollment covers ages 20-59/),
+    ).toBeInTheDocument();
+    // The contribution-table tooltip is not shown while nothing is due.
+    expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
+  });
+
+  it('keeps the pension rows with zero values and an age tooltip for a 70-74 employee', () => {
+    const inputs = { ...mockInputs, ageRange: 'age70to74' as const };
+    const results = { ...mockResults, ageRange: 'age70to74' as const, pensionPayments: 0 };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText("Employees' Pension")).toBeInTheDocument();
+    expect(screen.getByText('Monthly Contribution')).toBeInTheDocument();
+    expect(screen.getByText('Annual Contribution')).toBeInTheDocument();
+    expect(
+      screen.getByText(/no compulsory Employees' Pension .* enrollment ends at age 70/),
+    ).toBeInTheDocument();
+    // The SMR-based contribution tooltip is not shown while nothing is due.
+    expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
+  });
+
   it('hides Monthly Commuting Allowance row when 0', () => {
     const noCommutingInputs = {
       ...mockInputs,
       incomeStreams: [{ id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }],
     } as TakeHomeInputs;
 
-    render(<SocialInsuranceTab inputs={noCommutingInputs} results={mockResults} />);
+    render(
+      <SocialInsuranceTab
+        inputs={noCommutingInputs}
+        results={{ ...mockResults, commutingAllowance: 0 }}
+      />,
+    );
 
     // Breakdown should be present
     expect(screen.getByText('Breakdown')).toBeInTheDocument();
@@ -197,4 +281,428 @@ describe('SocialInsuranceTab', () => {
     // Total should still be present
     expect(screen.getByText('Total:')).toBeInTheDocument();
   });
+});
+
+describe('SocialInsuranceTab at ages 65 and over', () => {
+  const baseInputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 4_000_000 }],
+    ageRange: 'age75plus',
+    region: 'Tokyo',
+    healthInsuranceProvider: 'LatterStageElderly',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    longTermCareCategory1Premium: 150_000,
+    incomeYear: 2026,
+  };
+
+  const baseResults: TakeHomeResults = makeTakeHomeResults({
+    annualIncome: 4_000_000,
+    healthInsurance: 408_500,
+    nationalIncomeTax: 100_000,
+    residenceTax: makeResidenceTaxDetails({ totalResidenceTax: 200_000 }),
+    takeHomeIncome: 3_000_000,
+    healthInsuranceProvider: 'LatterStageElderly',
+    region: 'Tokyo',
+    ageRange: 'age75plus',
+    totalNetIncome: 4_000_000,
+    residenceTaxBasicDeduction: 430_000,
+    latterStageMedicalPortion: 401_500,
+    latterStageChildSupportPortion: 7_000,
+    longTermCareCategory1Premium: 150_000,
+  });
+
+  it('renders the latter-stage premium breakdown and no-pension note at 75+', () => {
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    expect(screen.getByText('Medical System for the Elderly (75+)')).toBeInTheDocument();
+    expect(screen.getByText('Premium Calculation Base')).toBeInTheDocument();
+    expect(screen.getByText('Medical Portion')).toBeInTheDocument();
+    expect(screen.getByText('Child Support Portion')).toBeInTheDocument();
+    expect(screen.getAllByText('¥401,500').length).toBeGreaterThan(0);
+    expect(screen.getByText(/enrollment ends at age 70 and National Pension/)).toBeInTheDocument();
+    expect(screen.queryByText('Monthly Contribution')).not.toBeInTheDocument();
+  });
+
+  it('renders the 第1号 long-term care premium row and includes it in the total at 75+', () => {
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
+    expect(screen.getAllByText('¥150,000').length).toBeGreaterThan(0);
+    // 408,500 health insurance + 0 pension + 150,000 第1号.
+    expect(screen.getByText('Annual Social Insurance')).toBeInTheDocument();
+    expect(screen.getByText('¥558,500')).toBeInTheDocument();
+  });
+
+  const tooltipText = () =>
+    screen
+      .getAllByTestId('detail-info-tooltip-content')
+      .map(node => node.textContent ?? '')
+      .join('\n');
+
+  it('shows one ≈ row and leaves the derivation to the tooltip when estimated', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 128_900,
+          longTermCareCategory1Estimate: {
+            currentFiscalYear: {
+              tier: 9,
+              multiplier: 1.7,
+              annualBase: 75_840,
+              premium: 128_900,
+            },
+            baseScope: 'Tokyo',
+            total: 128_900,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Estimated Annual Premium')).toBeInTheDocument();
+    expect(screen.getByText('≈ ¥128,900')).toBeInTheDocument();
+    // 408,500 health insurance + 0 pension + the 128,900 estimate.
+    expect(screen.getByText('¥537,400')).toBeInTheDocument();
+    // The tier and 基準額 belong to the tooltip, not to rows that would read as the total's
+    // arithmetic. The region is named in English alone, unlike the bilingual dropdown.
+    expect(screen.queryByText('Income Tier (所得段階)')).not.toBeInTheDocument();
+    expect(tooltipText()).toContain('the Tokyo average');
+    expect(tooltipText()).not.toContain('東京都');
+    expect(tooltipText()).toContain('Tier 9 of 13: ¥75,840 × 1.7 = ¥128,900');
+  });
+
+  it('names the national average when the region resolves to no prefecture', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 89_600,
+          longTermCareCategory1Estimate: {
+            currentFiscalYear: { tier: 6, multiplier: 1.2, annualBase: 74_700, premium: 89_600 },
+            baseScope: 'national',
+            total: 89_600,
+          },
+        }}
+      />,
+    );
+
+    expect(tooltipText()).toContain('the national average');
+    expect(tooltipText()).not.toContain('東京都');
+  });
+
+  it('explains the premium without a derivation when the amount was entered', () => {
+    // baseResults carries an entered premium and no estimate. The same tooltip serves both the
+    // input form and this tab, so it has to drop the estimate's arithmetic and keep the rest
+    // rather than disappear.
+    render(<SocialInsuranceTab inputs={baseInputs} results={baseResults} />);
+
+    const text = tooltipText();
+    expect(text).toContain('billed by the municipality through income tiers');
+    expect(text).toContain('entered rather than estimated');
+    expect(text).not.toContain('Tier');
+    expect(text).not.toContain('weighted');
+  });
+
+  it('shows each fiscal year separately when the total is a blend', () => {
+    // The case the flattened rows could not express: no single tier and multiplier derive
+    // ¥26,200, so the tooltip has to show both years and how they are weighted.
+    render(
+      <SocialInsuranceTab
+        inputs={baseInputs}
+        results={{
+          ...baseResults,
+          longTermCareCategory1Premium: 26_200,
+          longTermCareCategory1Estimate: {
+            previousFiscalYear: {
+              tier: 2,
+              multiplier: 0.485,
+              annualBase: 74_700,
+              premium: 36_200,
+            },
+            currentFiscalYear: { tier: 1, multiplier: 0.285, annualBase: 74_700, premium: 21_200 },
+            baseScope: 'national',
+            total: 26_200,
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText('≈ ¥26,200')).toBeInTheDocument();
+    const text = tooltipText();
+    expect(text).toContain('Tier 2 of 13: ¥74,700 × 0.485 = ¥36,200');
+    expect(text).toContain('Tier 1 of 13: ¥74,700 × 0.285 = ¥21,200');
+    // The weights are stated as weights, not as a share of elapsed time: January-March is a
+    // quarter of the calendar year, not a third.
+    expect(text).toContain('January-March (weighted 1⁄3)');
+    expect(text).toContain('April-December (weighted 2⁄3)');
+    expect(text).toContain('¥36,200 × 1⁄3 + ¥21,200 × 2⁄3 = ¥26,200');
+  });
+
+  it('omits the 第1号 section when no premium applies at 75+', () => {
+    render(
+      <SocialInsuranceTab
+        inputs={{ ...baseInputs, longTermCareCategory1Premium: 0 }}
+        results={{ ...baseResults, longTermCareCategory1Premium: undefined }}
+      />,
+    );
+
+    expect(screen.queryByText('Age 65+ Long-term Care Insurance')).not.toBeInTheDocument();
+    // The annual premium and the social insurance total are both 408,500 with nothing else due.
+    expect(screen.getAllByText('¥408,500')).toHaveLength(2);
+  });
+
+  it('renders the 第1号 section alongside employee health insurance at 65-69', () => {
+    const inputs: TakeHomeInputs = {
+      ...baseInputs,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 300_000, frequency: 'monthly' }],
+      ageRange: 'age65to69',
+      healthInsuranceProvider: 'KyokaiKenpo',
+    };
+    const results: TakeHomeResults = {
+      ...baseResults,
+      ageRange: 'age65to69',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      hasEmploymentIncome: true,
+      grossEmploymentIncome: 3_600_000,
+      salaryIncome: 3_600_000,
+      healthInsurance: 200_000,
+      pensionPayments: 300_000,
+      employmentInsurance: 18_000,
+      latterStageMedicalPortion: undefined,
+      latterStageChildSupportPortion: undefined,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText("Employees' Health Insurance")).toBeInTheDocument();
+    expect(screen.queryByText('Medical System for the Elderly (75+)')).not.toBeInTheDocument();
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
+    // 200,000 + 300,000 + 18,000 + 150,000.
+    expect(screen.getByText('¥668,000')).toBeInTheDocument();
+  });
+});
+
+/**
+ * The tab divides the calculation's yearly salary and commuting allowance down to a monthly
+ * remuneration and looks up the standard remuneration (標準報酬月額) band from it. A commuting
+ * allowance entered per three months, per six months or per year reaches the calculation as a
+ * yearly amount, so these cases put the result on each side of a band boundary at every
+ * frequency, including the amounts whose division does not terminate in binary.
+ */
+describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
+  const baseInputs: TakeHomeInputs = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    incomeStreams: [],
+    ageRange: 'age40to59',
+    region: 'Tokyo',
+    healthInsuranceProvider: 'KyokaiKenpo',
+    dependents: [],
+    dcPlanContributions: 0,
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+    incomeYear: 2025,
+  };
+
+  interface BandCase {
+    /** Frequency the commuting allowance is entered at. */
+    frequency: CommutingAllowanceIncomeStream['frequency'];
+    /** Commuting allowance per period, as entered. */
+    commuting: number;
+    /** Monthly salary, chosen to place the total beside a band boundary. */
+    salary: number;
+    /** The commuting allowance per month, as the tab displays it. */
+    monthlyCommuting: string;
+    /** The monthly remuneration the bands are read from, as the tab displays it. */
+    remuneration: string;
+    /** Health insurance standard remuneration for that monthly remuneration. */
+    healthSMR: string;
+    /** Employees' pension standard remuneration for that monthly remuneration. */
+    pensionSMR: string;
+  }
+
+  // The boundary at 515,000 separates 500,000 from 530,000 in both tables. The one at 665,000
+  // separates 650,000 from 680,000 for health insurance while the pension table has already
+  // reached its 650,000 ceiling, so it reads the same monthly remuneration differently.
+  const BAND_CASES: BandCase[] = [
+    {
+      frequency: 'monthly',
+      commuting: 20_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: 'monthly',
+      commuting: 20_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 60_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 60_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 481_666,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 481_667,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 120_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 120_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 100_000,
+      salary: 498_333,
+      monthlyCommuting: '¥16,667',
+      remuneration: '¥515,000',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: '6-months',
+      commuting: 100_000,
+      salary: 498_334,
+      monthlyCommuting: '¥16,667',
+      remuneration: '¥515,001',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 240_000,
+      salary: 494_999,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 240_000,
+      salary: 495_000,
+      monthlyCommuting: '¥20,000',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 100_000,
+      salary: 506_666,
+      monthlyCommuting: '¥8,333',
+      remuneration: '¥514,999',
+      healthSMR: '¥500,000',
+      pensionSMR: '¥500,000',
+    },
+    {
+      frequency: 'annual',
+      commuting: 100_000,
+      salary: 506_667,
+      monthlyCommuting: '¥8,333',
+      remuneration: '¥515,000',
+      healthSMR: '¥530,000',
+      pensionSMR: '¥530,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 631_666,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥664,999',
+      healthSMR: '¥650,000',
+      pensionSMR: '¥650,000',
+    },
+    {
+      frequency: '3-months',
+      commuting: 100_000,
+      salary: 631_667,
+      monthlyCommuting: '¥33,333',
+      remuneration: '¥665,000',
+      healthSMR: '¥680,000',
+      pensionSMR: '¥650,000',
+    },
+  ];
+
+  /** The value cell of a `label` row in the monthly remuneration breakdown table. */
+  const breakdownValue = (label: string) => screen.getByText(label).nextElementSibling?.textContent;
+
+  /** Every `label` row of a tooltip's supporting-details block, as its displayed value. */
+  const detailValues = (label: string) =>
+    screen
+      .getAllByText(label)
+      .map(node => node.parentElement?.textContent?.slice(label.length) ?? '')
+      .filter(text => text.startsWith('¥'));
+
+  it.each(BAND_CASES)(
+    'reads $remuneration and health SMR $healthSMR from a commuting allowance of $commuting every $frequency',
+    ({ frequency, commuting, salary, monthlyCommuting, remuneration, healthSMR, pensionSMR }) => {
+      const inputs: TakeHomeInputs = {
+        ...baseInputs,
+        incomeStreams: [
+          { id: 's1', type: 'salary', amount: salary, frequency: 'monthly' },
+          { id: 'c1', type: 'commutingAllowance', amount: commuting, frequency },
+        ],
+      };
+
+      render(<SocialInsuranceTab inputs={inputs} results={calculateTaxes(inputs)} />);
+
+      expect(breakdownValue('Monthly Commuting Allowance:')).toBe(monthlyCommuting);
+      expect(breakdownValue('Total:')).toBe(remuneration);
+      // The health insurance and the pension tooltip each restate the monthly remuneration.
+      expect(detailValues('Monthly Remuneration')).toEqual([remuneration, remuneration]);
+      expect(detailValues('Standard Monthly Remuneration')).toEqual([healthSMR, pensionSMR]);
+    },
+  );
 });

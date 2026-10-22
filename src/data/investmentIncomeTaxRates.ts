@@ -1,0 +1,114 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * Tax rates on investment income, indexed by income year: the rates withheld at source on
+ * amounts that are 申告不要 (not on the return), and the rates the return assesses on amounts
+ * reported under 申告分離課税. The rates have been unchanged since the 上場株式等 regime's
+ * 2014-01-01 start (the 2013-12-31 sunset of the 10% 軽減税率); a new period is added only if
+ * that changes.
+ *
+ * Sources:
+ * - 上場株式等の配当等・譲渡所得等 reported under 申告分離課税, 道府県民税 2% + 市町村民税 3%:
+ *   地方税法附則第33条の2第1項・第5項, 附則第35条の2の2第1項・第5項
+ *   https://laws.e-gov.go.jp/law/325AC0000000226
+ * - 上場株式等の譲渡所得等 15%: 租税特別措置法第37条の11第1項
+ *   https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_4-Ss_9-At_37_11
+ * - 上場株式等の配当等 15%: 租税特別措置法第8条の4第1項
+ *   https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_1-At_8_4
+ * - 上場株式等の配当等の源泉徴収税率 15%: 租税特別措置法第9条の3
+ *   https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_1-At_9_3
+ * - 一般利子等 15% (源泉分離課税): 租税特別措置法第3条第1項
+ *   https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_1-At_3
+ * - 復興特別所得税 2.1% (基準所得税額に対する付加税, 2013-01-01〜2037-12-31):
+ *   東日本大震災からの復興のための施策を実施するために必要な財源の確保に関する特別措置法第13条・第28条
+ * - 配当割 5%: 地方税法第71条の28
+ *   https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_5-Di_1-At_71_28
+ * - 株式等譲渡所得割 5%: 地方税法第71条の49
+ *   https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_6-Di_1-At_71_49
+ * - 利子割 5%: 地方税法第71条の6
+ *   https://laws.e-gov.go.jp/law/325AC0000000226#Mp-Ch_2-Se_1-Ss_4-Di_1-At_71_6
+ *
+ * Combined withholding rates: national 15.315% = 15% + (15% × 2.1%); residence 5% (no surtax).
+ * Withholding rates are held as {@link PremiumRate}s to perform exact rational arithmetic
+ * and whole-yen flooring via `taxOn`. Under 復興財確法第28条 and NTA Tax Answer No. 2507, payors
+ * apply this single combined rate (合計税率 15.315%) and floor once to ¥1, rather than rounding
+ * base tax and surtax separately.
+ *
+ * The reported rates are the statute's own figures: the return applies the 復興特別所得税 to the
+ * whole 基準所得税額 at once, and the 住民税 splits its 5% into the 市町村民税 and 道府県民税
+ * 所得割, each floored to ¥100 together with the 所得割 on 課税総所得金額.
+ */
+
+import { percentTo, type PremiumRate } from './premiumRate';
+
+export interface InvestmentIncomeTaxRatePeriod {
+  /** The income year (calendar year) from which these rates apply (inclusive). */
+  effectiveYear: number;
+  /**
+   * 所得税 withheld on 上場株式等の譲渡所得等 and 配当等 that are 申告不要, including the
+   * 復興特別所得税 fold-in.
+   */
+  listedWithholdingNationalRate: PremiumRate;
+  /** 住民税 withheld (配当割・株式等譲渡所得割) on the same. */
+  listedWithholdingResidenceRate: PremiumRate;
+  /** 所得税 rate on 一般利子等 (源泉分離課税), including the 復興特別所得税 fold-in. */
+  interestWithholdingNationalRate: PremiumRate;
+  /** 住民税 rate (利子割) on the same. */
+  interestWithholdingResidenceRate: PremiumRate;
+  /**
+   * 所得税 the return assesses on 上場株式等の譲渡所得等 and 配当等 reported under 申告分離課税
+   * (措法37条の11①, 8条の4①), before the 復興特別所得税.
+   */
+  listedReportedNationalRate: PremiumRate;
+  /** 市町村民税所得割 on the same (地方税法附則第35条の2の2第5項, 第33条の2第5項). */
+  listedReportedMunicipalRate: PremiumRate;
+  /** 道府県民税所得割 on the same (地方税法附則第35条の2の2第1項, 第33条の2第1項). */
+  listedReportedPrefecturalRate: PremiumRate;
+}
+
+const percent = percentTo(3);
+
+/** Time-series of investment-income tax rates, sorted newest-first. */
+export const INVESTMENT_INCOME_TAX_RATE_PERIODS: ReadonlyArray<InvestmentIncomeTaxRatePeriod> = [
+  {
+    effectiveYear: 2014,
+    listedWithholdingNationalRate: percent(15.315),
+    listedWithholdingResidenceRate: percent(5),
+    interestWithholdingNationalRate: percent(15.315),
+    interestWithholdingResidenceRate: percent(5),
+    listedReportedNationalRate: percent(15),
+    listedReportedMunicipalRate: percent(3),
+    listedReportedPrefecturalRate: percent(2),
+  },
+];
+
+if (import.meta.env.DEV) {
+  // Validate that the periods are sorted newest-first
+  for (let i = 1; i < INVESTMENT_INCOME_TAX_RATE_PERIODS.length; i++) {
+    const prev = INVESTMENT_INCOME_TAX_RATE_PERIODS[i - 1]!.effectiveYear;
+    const curr = INVESTMENT_INCOME_TAX_RATE_PERIODS[i]!.effectiveYear;
+    if (prev <= curr) {
+      throw new Error(
+        `INVESTMENT_INCOME_TAX_RATE_PERIODS must be sorted newest-first, ` +
+          `but entry ${i - 1} (year ${prev}) is not after entry ${i} (year ${curr})`,
+      );
+    }
+  }
+}
+
+/**
+ * Returns the investment-income withholding rates applicable for the given income year.
+ * Finds the most recent period whose effectiveYear is on or before the given year.
+ *
+ * @param year Income year (calendar year the income was earned)
+ */
+export const getInvestmentIncomeTaxRates = (year: number): InvestmentIncomeTaxRatePeriod => {
+  for (const period of INVESTMENT_INCOME_TAX_RATE_PERIODS) {
+    if (year >= period.effectiveYear) {
+      return period;
+    }
+  }
+  // Fallback to the oldest known rates
+  return INVESTMENT_INCOME_TAX_RATE_PERIODS[INVESTMENT_INCOME_TAX_RATE_PERIODS.length - 1]!;
+};

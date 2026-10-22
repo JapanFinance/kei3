@@ -1,0 +1,192 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
+import { calculateNetPublicPensionIncome } from '../data/publicPensionDeduction';
+import type { AgeRange } from '../types/age';
+import type { SeparateNetIncome } from '../types/tax';
+import { NO_SEPARATE_NET_INCOME } from './investmentIncome';
+
+/**
+ * The ¥100,000 that caps both income terms of the
+ * 所得金額調整控除（給与所得と年金所得の双方を有する者）and is then subtracted from their sum.
+ */
+const PENSION_INCOME_ADJUSTMENT_CAP = 100_000;
+
+/**
+ * Calculates the 所得金額調整控除（給与所得と年金所得の双方を有する者）(措法41の3の11第2項): when both
+ * 給与所得 and 公的年金等に係る雑所得 are positive,
+ *
+ *   min(給与所得控除後の給与等の金額, ¥100,000) + min(公的年金等に係る雑所得, ¥100,000) − ¥100,000
+ *
+ * is deducted from 給与所得.
+ *
+ * The statute frames this as an adjustment made when computing 総所得金額, but what it reduces is
+ * 給与所得の金額 itself. Since 所法2条1項30号 defines 合計所得金額 as the same 22条 総所得金額 plus
+ * 退職所得金額 and 山林所得金額, the reduction carries into 合計所得金額 and so into the
+ * 同一生計配偶者 and 扶養親族 income tests.
+ *
+ * @param netEmploymentIncome     給与所得 with the 給与所得控除 already taken, and with the other
+ *                                variant — the 所得金額調整控除（子ども・特別障害者等を有する者等）,
+ *                                措法41の3の11 — already subtracted where it applies, since the
+ *                                statute deducts this one from the 給与所得 left after that. Strictly
+ *                                its own capped term is the 給与所得控除後の給与等の金額, i.e. the
+ *                                amount before that variant, but the variant only applies above
+ *                                ¥8,500,000 of gross salary, where 給与所得 far exceeds the
+ *                                ¥100,000 cap and the capped term is identical either way.
+ * @param netPublicPensionIncome  公的年金等に係る雑所得, with the 公的年金等控除 already taken.
+ * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm — 所得金額調整控除
+ */
+export const calculatePensionIncomeAdjustmentDeduction = (
+  netEmploymentIncome: number,
+  netPublicPensionIncome: number,
+): number =>
+  netEmploymentIncome > 0 && netPublicPensionIncome > 0
+    ? Math.max(
+        0,
+        Math.min(netEmploymentIncome, PENSION_INCOME_ADJUSTMENT_CAP) +
+          Math.min(netPublicPensionIncome, PENSION_INCOME_ADJUSTMENT_CAP) -
+          PENSION_INCOME_ADJUSTMENT_CAP,
+      )
+    : 0;
+
+/** Per-category net incomes composing a 合計所得金額. */
+export interface NetIncomeComponents {
+  /** 給与所得, net of the 給与所得控除 and both 所得金額調整控除 variants below. */
+  netEmploymentIncome: number;
+  /**
+   * 所得金額調整控除（子ども・特別障害者等を有する者等）, already reflected in
+   * {@link netEmploymentIncome}.
+   */
+  incomeAdjustmentDeduction: number;
+  /**
+   * 所得金額調整控除（給与所得と年金所得の双方を有する者）, already reflected in
+   * {@link netEmploymentIncome}.
+   */
+  pensionIncomeAdjustmentDeduction: number;
+  /** 公的年金等に係る雑所得. */
+  netPublicPensionIncome: number;
+  /** 配当所得 reported under 総合課税 — see {@link NetIncomeComposition.aggregateDividendIncome}. */
+  aggregateDividendIncome: number;
+  /** 利子所得 paid outside Japan — see {@link NetIncomeComposition.aggregateInterestIncome}. */
+  aggregateInterestIncome: number;
+  /**
+   * 総所得金額: the net components above plus the other net income taxed in the brackets
+   * (所法22条②一).
+   */
+  aggregateNetIncome: number;
+  /** The 申告分離課税 amounts, which 合計所得金額 includes and 総所得金額 does not. */
+  separateNetIncome: SeparateNetIncome;
+  /** 合計所得金額: {@link aggregateNetIncome} plus {@link separateNetIncome}. */
+  totalNetIncome: number;
+}
+
+/** Inputs to {@link composeNetIncomeComponents}. */
+export interface NetIncomeComposition {
+  /** 給与等の収入金額, before the 給与所得控除. */
+  grossEmploymentIncome: number;
+  /**
+   * The 所得金額調整控除（子ども・特別障害者等を有する者等）the earner qualifies for. Which of the
+   * statute's three conditions can be tested differs by earner, so each caller decides its own;
+   * the statute subtracts this variant from 給与所得 before the 給与所得と年金所得の双方 one below
+   * (措法41の3の11第2項 deducts from the 給与所得 left after 第1項).
+   */
+  incomeAdjustmentDeduction: number;
+  /** 公的年金等の収入金額, before the 公的年金等控除. */
+  grossPublicPensionIncome: number;
+  /**
+   * The ages the pension recipient's chosen age range spans, for
+   * {@link calculateNetPublicPensionIncome} to read its own band from. An {@link AgeRange} because
+   * the one rule serves both the taxpayer and a dependent.
+   */
+  recipientAgeRange: AgeRange;
+  /** Net income of every other category (事業所得, 公的年金等以外の雑所得, and so on). */
+  otherNetIncome: number;
+  /**
+   * 配当所得 reported under 総合課税: 上場株式等の配当等 for which 措法8条の4 was not elected, so
+   * 所法22条②一 counts it in 総所得金額 like any other 配当所得. Taken as the 収入金額 (所法24条②,
+   * the 負債利子 offset not modelled). Kept apart from {@link otherNetIncome} so the display can
+   * name it. Absent means none.
+   */
+  aggregateDividendIncome?: number | undefined;
+  /**
+   * 利子所得 paid outside Japan: 措法3条① settles by 源泉分離課税 only the 一般利子等
+   * 国内において支払を受けるべき, so interest with no Japanese payer has no Japanese tax
+   * withheld and 所法22条②一 counts it in 総所得金額 like any other 利子所得. Taken as the whole
+   * receipt (所法23条②, which allows no deduction). Kept apart from {@link otherNetIncome} so the
+   * display can name it. Absent means none.
+   */
+  aggregateInterestIncome?: number | undefined;
+  /**
+   * Investment income reported under 申告分離課税, after 損益通算. Part of 合計所得金額 but not
+   * of 総所得金額 (措法8条の4③一, 37条の10⑥一 as 37条の11⑥ applies it). Absent means none.
+   */
+  separateNetIncome?: SeparateNetIncome | undefined;
+  /** Income year for the deduction table lookups. */
+  year: number;
+}
+
+/**
+ * Composes a 合計所得金額 out of 給与所得, 公的年金等に係る雑所得 and the remaining net income,
+ * applying the 給与所得控除, the 公的年金等控除 and both variants of the 所得金額調整控除
+ * ({@link calculatePensionIncomeAdjustmentDeduction}) in statutory order. The taxpayer and each
+ * dependent are governed by the same rules from here on, so both feed this; they differ only in
+ * how the amounts below are gathered, and in which 所得金額調整控除 conditions their data can test.
+ */
+export const composeNetIncomeComponents = ({
+  grossEmploymentIncome,
+  incomeAdjustmentDeduction,
+  grossPublicPensionIncome,
+  recipientAgeRange,
+  otherNetIncome,
+  aggregateDividendIncome = 0,
+  aggregateInterestIncome = 0,
+  separateNetIncome = NO_SEPARATE_NET_INCOME,
+  year,
+}: NetIncomeComposition): NetIncomeComponents => {
+  const netEmploymentIncomeBeforePensionAdjustment =
+    calculateNetEmploymentIncome(grossEmploymentIncome, year) - incomeAdjustmentDeduction;
+  const separateNetIncomeTotal = separateNetIncome.capitalGains + separateNetIncome.dividends;
+
+  // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
+  // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額),
+  // which includes the 配当所得 and 利子所得 in 総所得金額 and the 申告分離課税 amounts (所法2条1項30号 as
+  // 措法8条の4③一 and 37条の10⑥一 read it). Without pension income the 給与+年金 adjustment
+  // below cannot apply, so 給与所得 enters the band test before that adjustment but after the
+  // 子ども・特別障害者等 variant.
+  const netPublicPensionIncome = calculateNetPublicPensionIncome(
+    grossPublicPensionIncome,
+    recipientAgeRange,
+    netEmploymentIncomeBeforePensionAdjustment +
+      otherNetIncome +
+      aggregateDividendIncome +
+      aggregateInterestIncome +
+      separateNetIncomeTotal,
+    year,
+  );
+
+  const pensionIncomeAdjustmentDeduction = calculatePensionIncomeAdjustmentDeduction(
+    netEmploymentIncomeBeforePensionAdjustment,
+    netPublicPensionIncome,
+  );
+  const netEmploymentIncome =
+    netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
+  const aggregateNetIncome =
+    netEmploymentIncome +
+    netPublicPensionIncome +
+    otherNetIncome +
+    aggregateDividendIncome +
+    aggregateInterestIncome;
+
+  return {
+    netEmploymentIncome,
+    incomeAdjustmentDeduction,
+    pensionIncomeAdjustmentDeduction,
+    netPublicPensionIncome,
+    aggregateDividendIncome,
+    aggregateInterestIncome,
+    aggregateNetIncome,
+    separateNetIncome,
+    totalNetIncome: aggregateNetIncome + separateNetIncomeTotal,
+  };
+};

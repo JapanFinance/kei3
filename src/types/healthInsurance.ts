@@ -4,55 +4,123 @@
 import {
   PROVIDER_DEFINITIONS,
   getProviderDefinition,
+  type EmployeeProviderId,
 } from '../data/employeesHealthInsurance/providerRateData';
+import type { Prefecture } from '../data/prefectures';
+import { STATUTORY_AGE_BANDS, type TaxpayerAgeRange, taxpayerAgeCoversBand } from './taxpayerAge';
 
 export const NATIONAL_HEALTH_INSURANCE_ID = 'NationalHealthInsurance' as const;
 export const DEPENDENT_COVERAGE_ID = 'DependentCoverage' as const;
 export const CUSTOM_PROVIDER_ID = 'CustomProvider' as const;
+export const LATTER_STAGE_ELDERLY_ID = 'LatterStageElderly' as const;
 export const DEFAULT_PROVIDER = 'KyokaiKenpo' as const;
 
-// Income threshold for dependent coverage eligibility (1.3 million yen)
-// Source: https://www.mhlw.go.jp/stf/taiou_001_00002.html
+// Annual income thresholds for dependent coverage eligibility (被扶養者認定): under 1.3
+// million yen as a base, 1.8 million yen for dependents aged 60 or over (or with a
+// disability-pension-grade disability, which the calculator does not model).
+//
+// The statutory test is on 年間収入 — a social-insurance concept matching no tax figure: the
+// PROSPECTIVE annual amount expected from the certification date onward (monthly guide
+// 108,334円未満), counting gross pay including bonuses and 通勤手当 regardless of tax
+// non-taxability, 財産収入 such as dividends and interest gross of the tax withheld, plus
+// receipts the tax system ignores (公的年金 including 障害・遺族年金, 雇用保険の失業等給付,
+// 傷病手当金・出産手当金). It is NOT the tax-side 合計所得金額, and the tax election on an
+// investment amount does not change it (see dependentTestAnnualIncome in utils/incomeStreams.ts).
+//
+// The 1.5 million yen band for ages 19-22 excluding spouses (effective 2025-10) is not
+// modeled: its 19/23 boundaries do not align with the age ranges the calculator collects.
+// Sources: https://www.mhlw.go.jp/web/t_doc?dataId=00tb0189&dataType=1&pageNo=1 (昭和52年 保発第9号)
+//          https://www.nenkin.go.jp/service/kounen/tekiyo/hihokensha1/20141202.html
+//          https://www.mhlw.go.jp/stf/taiou_001_00002.html
+//          https://www.kyoukaikenpo.or.jp/about/business/dependent_status/001/index.html
+//          https://www.nenkin.go.jp/oshirase/taisetu/jigyosho/2026/202605/0501.html (通勤手当)
 export const DEPENDENT_INCOME_THRESHOLD = 1_300_000;
+export const DEPENDENT_INCOME_THRESHOLD_ELDERLY = 1_800_000;
+
+/** The dependent-coverage income threshold applicable to a {@link TaxpayerAgeRange}. */
+export function getDependentIncomeThreshold(ageRange: TaxpayerAgeRange): number {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.elderlyDependentIncomeThreshold)
+    ? DEPENDENT_INCOME_THRESHOLD_ELDERLY
+    : DEPENDENT_INCOME_THRESHOLD;
+}
 
 // Exhaustive union type of all valid health insurance provider IDs
 export type HealthInsuranceProviderId =
-  | keyof typeof PROVIDER_DEFINITIONS
+  | EmployeeProviderId
   | typeof NATIONAL_HEALTH_INSURANCE_ID
   | typeof DEPENDENT_COVERAGE_ID
-  | typeof CUSTOM_PROVIDER_ID;
+  | typeof CUSTOM_PROVIDER_ID
+  | typeof LATTER_STAGE_ELDERLY_ID;
 
 /**
- * Checks if dependent coverage is eligible based on annual income.
- * Dependents must have income below 1.3 million yen to be covered.
- * Source: https://www.mhlw.go.jp/stf/taiou_001_00002.html
+ * Every provider id other than the 後期高齢者医療制度, whose premium is assessed on income by
+ * its own module rather than by the shared health insurance calculation. Narrowing a
+ * parameter to this makes handing 後期高齢者医療 to that calculation a compile error, where it
+ * would otherwise find no rates for any month and quietly total zero.
  */
-export function isDependentCoverageEligible(annualIncome: number): boolean {
-  return annualIncome < DEPENDENT_INCOME_THRESHOLD;
+export type NonLatterStageProviderId = Exclude<
+  HealthInsuranceProviderId,
+  typeof LATTER_STAGE_ELDERLY_ID
+>;
+
+/**
+ * Whether the id names one of the employee health insurance providers in
+ * {@link PROVIDER_DEFINITIONS}, as opposed to one of the ids standing for a coverage type of
+ * its own ({@link NATIONAL_HEALTH_INSURANCE_ID}, {@link DEPENDENT_COVERAGE_ID},
+ * {@link CUSTOM_PROVIDER_ID}, {@link LATTER_STAGE_ELDERLY_ID}).
+ *
+ * The test is membership in {@link PROVIDER_DEFINITIONS} rather than a list of the other ids,
+ * so a further coverage type added to {@link HealthInsuranceProviderId} is excluded here
+ * without any edit, and the call sites that pair this guard with a switch over the remaining
+ * ids stop compiling until they handle it.
+ */
+export function isEmployeeHealthProvider(id: HealthInsuranceProviderId): id is EmployeeProviderId {
+  return getProviderDefinition(id) !== undefined;
+}
+
+/**
+ * Checks if dependent coverage is eligible against the age-dependent 年間収入 threshold
+ * ({@link getDependentIncomeThreshold}).
+ *
+ * @param dependentTestIncome  Stands in for the statutory 年間収入 (see
+ *   {@link DEPENDENT_INCOME_THRESHOLD}). Callers pass `dependentTestAnnualIncome` from
+ *   utils/incomeStreams.ts: the earned income — salary, bonuses and public pension gross,
+ *   business and miscellaneous income after expenses, the same basis as 年間収入, which also
+ *   counts pension gross and allows business expenses but not the 青色申告特別控除 — plus the
+ *   commuting allowance, which 年間収入 counts and annual income does not, plus the investment
+ *   receipts whatever their tax election: dividends and interest gross, and the year's capital
+ *   gains when positive. It still understates 年間収入 where the person receives benefits the
+ *   calculator does not model.
+ */
+export function isDependentCoverageEligible(
+  dependentTestIncome: number,
+  ageRange: TaxpayerAgeRange,
+): boolean {
+  return dependentTestIncome < getDependentIncomeThreshold(ageRange);
 }
 
 /**
  * Get the display name for any health insurance provider ID
  */
 export function getProviderDisplayName(providerId: HealthInsuranceProviderId): string {
-  if (providerId === NATIONAL_HEALTH_INSURANCE_ID) {
-    return 'National Health Insurance';
+  if (isEmployeeHealthProvider(providerId)) {
+    return PROVIDER_DEFINITIONS[providerId].providerName;
   }
 
-  if (providerId === DEPENDENT_COVERAGE_ID) {
-    return 'None (dependent of insured employee)';
+  switch (providerId) {
+    case NATIONAL_HEALTH_INSURANCE_ID:
+      return 'National Health Insurance';
+    case DEPENDENT_COVERAGE_ID:
+      return 'None (dependent of insured employee)';
+    case CUSTOM_PROVIDER_ID:
+      return 'Custom Employee Health Insurance Provider';
+    case LATTER_STAGE_ELDERLY_ID:
+      return 'Medical System for the Elderly (75+)';
+    default: {
+      const unhandledProvider: never = providerId;
+      throw new Error(`Unknown provider ID: ${JSON.stringify(unhandledProvider)}`);
+    }
   }
-
-  if (providerId === CUSTOM_PROVIDER_ID) {
-    return 'Custom Employee Health Insurance Provider';
-  }
-
-  const providerDef = getProviderDefinition(providerId);
-  if (!providerDef) {
-    throw new Error(`Unknown provider ID: ${providerId}`);
-  }
-
-  return providerDef.providerName;
 }
 
 // A generic type for region. Can be a specific enum or a string for flexibility.
@@ -114,4 +182,76 @@ export interface NHIRegionDefinition {
   regionName: string;
   /** Rate periods sorted newest-first. Use getNHIParamsForMonth() for lookup. */
   periods: NHIRatePeriod[];
+}
+
+/**
+ * Parameters for calculating 後期高齢者医療制度 premiums. Rates are uniform across each
+ * prefecture (set by its 広域連合 on a two-year cycle). The premium is per-portion:
+ * 均等割額 + 所得割率 × (総所得金額等 − 基礎控除), each portion rounded down to ¥100 and
+ * capped at its 賦課限度額, then summed.
+ * Source: https://www.tokyo-ikiiki.net/seido/1001968/1002520.html (rounding/portions)
+ */
+export interface LatterStageElderlyRegionParams {
+  regionName: string;
+  /**
+   * Identifies the rate period these parameters come from. Two lookups that return the same
+   * id carry the same rates, including any field a future rate cycle adds.
+   */
+  periodId: string;
+  // Medical portion (医療分)
+  medicalPerCapita: number; // 均等割額 (annual)
+  medicalRate: number; // 所得割率 (e.g. 0.0988)
+  medicalCap: number; // 賦課限度額
+  /**
+   * Child/childcare support levy (子ども・子育て支援納付金分), introduced FY2026 and so
+   * absent for earlier rate periods. Its three numbers always arrive together.
+   */
+  childSupport?: {
+    perCapita: number; // 均等割額 (annual)
+    rate: number; // 所得割率
+    cap: number; // 賦課限度額
+  };
+}
+
+/**
+ * The estimated 介護保険 第1号被保険者 premium (`estimateLongTermCareCategory1Premium` in
+ * longTermCareCategory1.ts) and the parameters behind it, for display alongside the figure.
+ */
+export interface LongTermCareCategory1Estimate {
+  /** The fiscal year that begins in April of the modeled calendar year. */
+  currentFiscalYear: LongTermCareCategory1FiscalYearEstimate;
+  /**
+   * The fiscal year the calendar year opens in, covering its January-March months. Present only
+   * when its premium differs from {@link currentFiscalYear}'s — that is, when {@link total} is a
+   * genuine blend of two amounts rather than the same amount weighted against itself. The tier
+   * can differ between the two because the 年金収入等 boundary is revised every April.
+   */
+  previousFiscalYear?: LongTermCareCategory1FiscalYearEstimate | undefined;
+  /**
+   * Whose average the {@link LongTermCareCategory1FiscalYearEstimate.annualBase} figures are:
+   * the prefecture the selected region resolved to, or 'national' when it carries none. No
+   * prefecture is keyed 'national', so comparing against it narrows the other branch to a
+   * {@link Prefecture}. It depends on the region alone, so it is the same for both years.
+   */
+  baseScope: Prefecture | 'national';
+  /**
+   * Estimated annual premium for the calendar year: {@link currentFiscalYear}'s premium, or the
+   * 1/3 : 2/3 blend of the two when {@link previousFiscalYear} is present. Always positive.
+   */
+  total: number;
+}
+
+/**
+ * One fiscal year's own contribution to a calendar-year estimate. Kept per year rather than
+ * flattened onto {@link LongTermCareCategory1Estimate} because the two years can land in
+ * different 所得段階, in which case no single tier and multiplier derive the blended total.
+ */
+export interface LongTermCareCategory1FiscalYearEstimate {
+  /** The 所得段階 under the national standard in force that fiscal year, 1-13. */
+  tier: number;
+  multiplier: number;
+  /** Annual 基準額 the multiplier scaled (average monthly 基準額 × 12). */
+  annualBase: number;
+  /** {@link annualBase} × {@link multiplier}, floored to ¥100 — this year's own annual premium. */
+  premium: number;
 }

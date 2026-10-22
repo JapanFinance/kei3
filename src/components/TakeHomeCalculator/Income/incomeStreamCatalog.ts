@@ -1,0 +1,190 @@
+// Copyright the original author or authors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+import type { ChipProps } from '@mui/material/Chip';
+
+import { COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP } from '../../../constants/taxThresholds';
+import type { IncomeStream, IncomeStreamType } from '../../../types/tax';
+import { formatJPY } from '../../../utils/formatters';
+
+/**
+ * The income classification (所得区分) an Advanced-mode income stream belongs to. Groups the
+ * streams in {@link IncomeDetailsModal} and the types offered when adding one.
+ */
+export type IncomeCategoryKey =
+  | 'employment'
+  | 'business'
+  | 'miscellaneous'
+  | 'publicPension'
+  | 'investment';
+
+export interface IncomeCategory {
+  key: IncomeCategoryKey;
+  heading: string;
+  /** Label of the button that adds a stream to this category. */
+  addLabel: string;
+  /** Colour of each stream's type chip and of the group subtotal chip. */
+  chipColor: NonNullable<ChipProps['color']>;
+}
+
+/** Categories in display order. */
+export const INCOME_CATEGORIES: readonly IncomeCategory[] = [
+  {
+    key: 'employment',
+    heading: 'Employment Income (給与所得)',
+    addLabel: 'Add Employment Income/Benefit',
+    chipColor: 'primary',
+  },
+  {
+    key: 'business',
+    heading: 'Business Income (事業所得)',
+    addLabel: 'Add Business Income',
+    chipColor: 'success',
+  },
+  {
+    key: 'miscellaneous',
+    heading: 'Miscellaneous Income (雑所得)',
+    addLabel: 'Add Miscellaneous Income',
+    chipColor: 'warning',
+  },
+  {
+    key: 'publicPension',
+    heading: 'Public Pension Income (公的年金等)',
+    addLabel: 'Add Public Pension',
+    chipColor: 'secondary',
+  },
+  {
+    key: 'investment',
+    heading: 'Investment Income (配当・譲渡・利子)',
+    addLabel: 'Add Investment Income',
+    chipColor: 'info',
+  },
+];
+
+export const getIncomeCategory = (key: IncomeCategoryKey): IncomeCategory =>
+  INCOME_CATEGORIES.find(category => category.key === key)!;
+
+export interface IncomeStreamTypeInfo {
+  label: string;
+  /**
+   * A second, smaller line under {@link label} where the type is offered and in its form's
+   * heading: the official term for it, or what it covers. Kept out of the label so that the label
+   * fits a phone screen.
+   */
+  labelDetail?: string;
+  category: IncomeCategoryKey;
+  /** Uppercase badge on a stream in the list; its colour comes from the category. */
+  chipLabel: string;
+  amountLabel: string;
+  amountHelperText?: string;
+  /** Maximum number of streams of this type; unlimited when omitted. */
+  maxCount?: number;
+  /** Lower bound on the entered amount; 0 (no negative entry) when omitted. */
+  min?: number;
+}
+
+/** Per-type presentation, in display order within each category. */
+export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInfo> = {
+  salary: {
+    label: 'Salary',
+    category: 'employment',
+    chipLabel: 'SALARY',
+    amountLabel: 'Gross Income',
+    amountHelperText: 'Gross income before taxes and deductions',
+  },
+  bonus: {
+    label: 'Bonus',
+    category: 'employment',
+    chipLabel: 'BONUS',
+    amountLabel: 'Gross Income',
+    amountHelperText: 'Gross bonus amount before taxes and deductions',
+  },
+  commutingAllowance: {
+    label: 'Commuting Allowance',
+    category: 'employment',
+    chipLabel: 'COMMUTING',
+    amountLabel: 'Allowance Amount',
+    amountHelperText: `Commuting allowance up to ${formatJPY(COMMUTING_ALLOWANCE_NONTAXABLE_MONTHLY_CAP)} per month is non-taxable for income tax, but the full amount affects social insurance premiums.`,
+    maxCount: 1,
+  },
+  stockCompensation: {
+    label: 'Stock-Based Compensation',
+    category: 'employment',
+    chipLabel: 'STOCK',
+    amountLabel: 'Gross Income',
+    amountHelperText: 'Annual total across vests/exercises, or one entry per vest.',
+  },
+  business: {
+    label: 'Business',
+    category: 'business',
+    chipLabel: 'BUSINESS',
+    amountLabel: 'Annual Income After Expenses',
+    amountHelperText:
+      'Business revenue minus necessary expenses (収入金額 − 必要経費), before the blue-filer special deduction. For multiple businesses, combine the income across all businesses.',
+    maxCount: 1,
+  },
+  miscellaneous: {
+    label: 'Miscellaneous',
+    category: 'miscellaneous',
+    chipLabel: 'MISCELLANEOUS',
+    amountLabel: 'Annual Income After Expenses',
+    amountHelperText: 'Income minus necessary expenses (収入金額 − 必要経費)',
+  },
+  publicPension: {
+    label: 'Public Pension',
+    category: 'publicPension',
+    chipLabel: 'PENSION',
+    amountLabel: 'Annual Gross Pension Income',
+    amountHelperText:
+      'Public pension income received in the year, before withholding. The public pension deduction is applied automatically.',
+  },
+  withholdingAccount: {
+    label: 'Withholding Designated Account',
+    labelDetail: '特定口座（源泉徴収あり）',
+    category: 'investment',
+    chipLabel: 'ACCOUNT',
+    amountLabel: 'Net Capital Gains (譲渡損益)',
+    amountHelperText: 'The net gain or loss on sales; enter a loss as a negative amount.',
+    min: Number.MIN_SAFE_INTEGER,
+  },
+  capitalGains: {
+    label: 'Capital Gains',
+    labelDetail: 'Other accounts',
+    category: 'investment',
+    chipLabel: 'CAPITAL GAINS',
+    amountLabel: 'Net Capital Gains',
+    amountHelperText:
+      'Combine sales for the year or enter separately, net of costs (negative for a loss).',
+    min: Number.MIN_SAFE_INTEGER,
+  },
+  dividends: {
+    label: 'Dividends',
+    labelDetail: 'Other accounts or direct payout',
+    category: 'investment',
+    chipLabel: 'DIVIDEND',
+    amountLabel: 'Gross Dividends',
+    amountHelperText: 'Enter in yen, before withholding.',
+  },
+  interest: {
+    label: 'Interest',
+    labelDetail: 'Outside a designated withholding account',
+    category: 'investment',
+    chipLabel: 'INTEREST',
+    amountLabel: 'Gross Interest',
+    amountHelperText: 'Annual total (or per payment) before withholding.',
+  },
+};
+
+export const INCOME_STREAM_TYPES = Object.keys(INCOME_STREAM_CATALOG) as IncomeStreamType[];
+
+export const incomeStreamTypesInCategory = (category: IncomeCategoryKey): IncomeStreamType[] =>
+  INCOME_STREAM_TYPES.filter(type => INCOME_STREAM_CATALOG[type].category === category);
+
+/** Whether `streams` already holds {@link IncomeStreamTypeInfo.maxCount} streams of `type`. */
+export const isIncomeStreamTypeAtLimit = (
+  type: IncomeStreamType,
+  streams: readonly IncomeStream[],
+): boolean => {
+  const max = INCOME_STREAM_CATALOG[type].maxCount;
+  return max !== undefined && streams.filter(s => s.type === type).length >= max;
+};

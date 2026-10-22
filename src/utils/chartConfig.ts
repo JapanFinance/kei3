@@ -6,7 +6,13 @@ import type { ChartData, ChartOptions, Chart, TooltipItem, Scale, Plugin } from 
 import type { TakeHomeInputs, ChartRange, IncomeStream } from '../types/tax';
 import { detectCaps } from './capDetection';
 import { formatJPY, formatYenCompact } from './formatters';
-import { calculateTaxes } from './taxCalculations';
+import {
+  annualIncomeContribution,
+  annualIncomeStreamAmount,
+  isEarnedIncomeStream,
+  totalAnnualIncomeFromStreams,
+} from './incomeStreams';
+import { calculateTaxes, incomeTaxPaid, residenceTaxPaid } from './taxCalculations';
 
 // Create custom plugin for vertical lines
 export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
@@ -69,10 +75,30 @@ export interface ChartCalculationContext extends TakeHomeInputs {
 }
 
 /**
+ * Streams carried through the chart sweep at their entered amount instead of being scaled
+ * with the swept income: everything that is not earned income ({@link isEarnedIncomeStream}).
+ * A commuting allowance (通勤手当) is not income, does not grow with it, and scaling it can
+ * push it past the non-taxable cap, which the calculation rejects; investment income is
+ * asset-based and does not grow with earned income either.
+ */
+const isPassThroughStream = (stream: IncomeStream): boolean => !isEarnedIncomeStream(stream);
+
+/**
+ * The part of the annual income total that the sweep holds constant: pass-through streams that
+ * nonetheless count toward annual income, which is investment income, reported or settled by
+ * withholding. A swept income below this amount cannot be reached by scaling the earned
+ * streams, so the sweep starts here.
+ */
+export const heldIncomeInSweep = (streams: readonly IncomeStream[]): number =>
+  streams.reduce((sum, s) => (isPassThroughStream(s) ? sum + annualIncomeContribution(s) : sum), 0);
+
+/**
  * Scale a set of income streams so their annualized total matches `targetIncome`,
- * preserving the original composition (salary/bonus/business mix). When the base
- * streams sum to 0 (or none are provided), fall back to a single annual salary
- * stream at `targetIncome` so downstream calculations still see income.
+ * preserving the original composition (salary/bonus/business mix). Pass-through streams
+ * (see {@link isPassThroughStream}) keep their entered amount: the earned streams are scaled
+ * to the target less {@link heldIncomeInSweep}, so the ratio is exactly 1 at the taxpayer's
+ * own income. When the earned streams sum to 0 (or none are provided), fall back to a single
+ * annual salary stream at that remainder so downstream calculations still see income.
  *
  * Shared by the chart's per-income bars and the tooltip's cap-detection probe so
  * the "🔒 Max reached" badge matches the bars exactly.
@@ -81,27 +107,30 @@ export const scaleIncomeStreamsToIncome = (
   streams: IncomeStream[],
   targetIncome: number,
 ): IncomeStream[] => {
-  const baseTotal = streams.reduce((sum, s) => {
-    if (s.type === 'salary' && s.frequency === 'monthly') return sum + s.amount * 12;
-    return sum + s.amount;
-  }, 0);
+  const earnedTarget = targetIncome - heldIncomeInSweep(streams);
+  const earnedTotal = totalAnnualIncomeFromStreams(streams.filter(s => !isPassThroughStream(s)));
 
-  if (baseTotal > 0) {
-    const ratio = targetIncome / baseTotal;
-    return streams.map(s => ({
-      ...s,
-      amount: s.amount * ratio,
-    }));
+  if (earnedTotal > 0) {
+    const ratio = earnedTarget / earnedTotal;
+    return streams.map(s => {
+      if (!isEarnedIncomeStream(s)) return s;
+      // The foreign tax scales with its pension: held constant, it could exceed a scaled-down
+      // pension, which the calculation rejects.
+      return s.type === 'publicPension'
+        ? { ...s, amount: s.amount * ratio, foreignTax: s.foreignTax * ratio }
+        : { ...s, amount: s.amount * ratio };
+    });
   }
 
-  // Fallback if base is 0
+  // Fallback if the earned streams are 0
   return [
     {
       id: 'chart-salary-fallback',
       type: 'salary',
-      amount: targetIncome,
+      amount: earnedTarget,
       frequency: 'annual',
     },
+    ...streams.filter(isPassThroughStream),
   ];
 };
 
@@ -109,10 +138,15 @@ export const generateChartData = (
   chartRange: ChartRange,
   currentInputs: ChartCalculationContext,
 ): ChartData<'bar' | 'line'> => {
-  // Create income points based on the current range
+  // Create income points based on the current range. Points below the income the sweep holds
+  // constant are left out: no earned income could bring the total that low.
   const step = 1000000; // 1 million yen
   const numPoints = Math.floor((chartRange.max - chartRange.min) / step) + 1;
-  const incomePoints = Array.from({ length: numPoints }, (_, i) => chartRange.min + i * step);
+  const heldIncome = heldIncomeInSweep(currentInputs.incomeStreams);
+  const incomePoints = Array.from(
+    { length: numPoints },
+    (_, i) => chartRange.min + i * step,
+  ).filter(income => income >= heldIncome);
 
   // If manual social insurance is entered, we cannot accurately calculate the breakdown for other income levels.
   // We return a dummy dataset to ensure the chart renders (axes, background bands, vertical lines) but without misleading bars.
@@ -145,13 +179,47 @@ export const generateChartData = (
     // Calculate breakdown for display
     let breakdown: { label: string; amount: number }[] | undefined;
     if (calcStreams.length > 0) {
-      const groups = { salary: 0, bonus: 0, business: 0, miscellaneous: 0 };
+      const groups = {
+        salary: 0,
+        bonus: 0,
+        business: 0,
+        miscellaneous: 0,
+        publicPension: 0,
+        investment: 0,
+      };
       calcStreams.forEach(s => {
-        const val = s.type === 'salary' && s.frequency === 'monthly' ? s.amount * 12 : s.amount;
-        if (s.type === 'salary') groups.salary += val;
-        else if (s.type === 'bonus') groups.bonus += val;
-        else if (s.type === 'business') groups.business += val;
-        else if (s.type === 'miscellaneous') groups.miscellaneous += val;
+        switch (s.type) {
+          case 'salary':
+            groups.salary += annualIncomeStreamAmount(s);
+            break;
+          case 'bonus':
+            groups.bonus += annualIncomeStreamAmount(s);
+            break;
+          case 'business':
+            groups.business += annualIncomeStreamAmount(s);
+            break;
+          case 'miscellaneous':
+            groups.miscellaneous += annualIncomeStreamAmount(s);
+            break;
+          case 'publicPension':
+            groups.publicPension += annualIncomeStreamAmount(s);
+            break;
+          // Investment income is held constant across the sweep, reported or not; stock
+          // compensation has no row of its own and a commuting allowance is not income.
+          case 'withholdingAccount':
+          case 'capitalGains':
+          case 'dividends':
+          case 'interest':
+            groups.investment += annualIncomeContribution(s);
+            break;
+          case 'commutingAllowance':
+          case 'stockCompensation':
+            break;
+          default: {
+            const unhandled: never = s;
+            throw new Error(`Unhandled income stream type: ${JSON.stringify(unhandled)}`);
+          }
+        }
       });
 
       breakdown = [];
@@ -160,6 +228,10 @@ export const generateChartData = (
       if (groups.business > 0) breakdown.push({ label: 'Business', amount: groups.business });
       if (groups.miscellaneous > 0)
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
+      if (groups.publicPension > 0)
+        breakdown.push({ label: 'Public Pension Income', amount: groups.publicPension });
+      if (groups.investment !== 0)
+        breakdown.push({ label: 'Investment Income', amount: groups.investment });
     }
 
     const result = calculateTaxes(inputsForCalc);
@@ -214,6 +286,23 @@ export const generateChartData = (
           },
         ]
       : []),
+    // Without this bar the stack would fall short of the income by the 介護保険第1号 amount.
+    ...(resultsAndCaps.some(({ result }) => result.longTermCareCategory1Premium !== undefined)
+      ? [
+          {
+            label: 'Long-term Care Insurance',
+            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+              x: incomePoints[i]!,
+              y: result.longTermCareCategory1Premium ?? 0,
+              breakdown,
+            })),
+            backgroundColor: 'rgba(0, 139, 139, 0.7)',
+            yAxisID: 'y',
+            type: 'bar' as const,
+            stack: 'stack0',
+          },
+        ]
+      : []),
   ];
 
   const datasets = [
@@ -229,11 +318,14 @@ export const generateChartData = (
       type: 'bar' as const,
       stack: 'stack0',
     },
+    // The tax bars carry the tax withheld on investment income beside the assessed tax, and the
+    // income tax bar the foreign tax paid, so the bars stack to the income and the take-home bar
+    // is the take-home pay of the summary tab.
     {
       label: 'Income Tax',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.nationalIncomeTax,
+        y: incomeTaxPaid(result),
         breakdown,
       })),
       backgroundColor: 'rgba(220, 20, 60, 0.7)',
@@ -245,7 +337,7 @@ export const generateChartData = (
       label: 'Residence Tax',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.residenceTax.totalResidenceTax,
+        y: residenceTaxPaid(result),
         breakdown,
       })),
       backgroundColor: 'rgba(30, 144, 255, 0.7)',
@@ -279,6 +371,7 @@ export const getChartOptions = (
   currentIncome: number,
   medianIncome: number,
   useCompactLabelFormat: boolean = false,
+  animate: boolean = true,
 ): ChartOptions<'bar' | 'line'> => {
   const maxIncome = chartRange.max;
   const minIncome = chartRange.min;
@@ -294,6 +387,7 @@ export const getChartOptions = (
   return {
     responsive: true,
     maintainAspectRatio: false,
+    ...(animate ? {} : { animation: false as const }),
     interaction: {
       mode: 'index' as const,
       intersect: false,

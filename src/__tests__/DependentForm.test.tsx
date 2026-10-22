@@ -13,7 +13,7 @@ describe('DependentForm public pension income', () => {
   const pensionerParent: OtherDependent = {
     id: 'dep-1',
     relationship: 'parent',
-    ageCategory: '70plus',
+    ageRange: '70plus',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 1_580_000, otherNetIncome: 0 },
     disability: 'none',
     isCohabiting: true,

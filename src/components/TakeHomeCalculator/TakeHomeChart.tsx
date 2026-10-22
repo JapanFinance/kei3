@@ -38,11 +38,15 @@ import type {
   ChartRange,
   CustomEmployeesHealthInsuranceRates,
   IncomeStream,
+  ReportedDividendsTaxation,
   LifeInsuranceInput,
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
+  PersonalCircumstancesInput,
   HomeLoanTaxCreditInput,
+  ForeignTaxCreditInput,
 } from '../../types/tax';
+import type { TaxpayerAgeRange } from '../../types/taxpayerAge';
 import { detectCaps } from '../../utils/capDetection';
 import {
   generateChartData,
@@ -55,6 +59,7 @@ import {
   estimateIncomePercentile,
   estimateIncomeAtPercentile,
 } from '../../utils/incomeDistribution';
+import { totalAnnualIncomeFromStreams } from '../../utils/incomeStreams';
 import { useLoadMilestone } from '../../utils/loadMilestones';
 import { calculateTaxes } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
@@ -142,7 +147,9 @@ interface TakeHomeChartProps {
   currentIncome: number;
   incomeYear: number;
   isEmploymentIncome: boolean;
-  isSubjectToLongTermCarePremium: boolean;
+  ageRange: TaxpayerAgeRange;
+  longTermCareCategory1ManualEntry?: boolean;
+  longTermCareCategory1Premium: number;
   healthInsuranceProvider: HealthInsuranceProviderId;
   region: string;
   dcPlanContributions: number;
@@ -152,10 +159,15 @@ interface TakeHomeChartProps {
   manualSocialInsuranceEntry?: boolean;
   manualSocialInsuranceAmount?: number;
   incomeStreams?: IncomeStream[];
+  /** The election that taxes every reported dividend in {@link incomeStreams}; the default when omitted. */
+  reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
+  personalCircumstances: PersonalCircumstancesInput;
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
+  /** Foreign tax entered by hand; held at the entered amount across the sweep. */
+  foreignTaxCredit?: ForeignTaxCreditInput | undefined;
 }
 
 // Define a type for the mark objects
@@ -164,6 +176,8 @@ type ChartMark = {
   label: string;
 };
 
+export const MAX_CHART_INCOME = 100_000_000;
+
 // Define static marks outside the component
 const MAJOR_MARKS: ChartMark[] = [
   { value: 0, label: '¥0' },
@@ -171,7 +185,7 @@ const MAJOR_MARKS: ChartMark[] = [
   { value: 40000000, label: '¥40M' },
   { value: 60000000, label: '¥60M' },
   { value: 80000000, label: '¥80M' },
-  { value: 100000000, label: '¥100M' },
+  { value: MAX_CHART_INCOME, label: '¥100M' },
 ];
 
 const MINOR_MARKS: ChartMark[] = [
@@ -221,7 +235,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   currentIncome,
   incomeYear,
   isEmploymentIncome,
-  isSubjectToLongTermCarePremium,
+  ageRange,
+  longTermCareCategory1ManualEntry,
+  longTermCareCategory1Premium,
   healthInsuranceProvider,
   region,
   dcPlanContributions,
@@ -231,14 +247,23 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   manualSocialInsuranceEntry,
   manualSocialInsuranceAmount = 0,
   incomeStreams = [],
+  reportedDividendsTaxation,
   lifeInsurance,
   earthquakeInsurance,
   medicalExpenses,
+  personalCircumstances,
   homeLoanTaxCredit,
+  foreignTaxCredit,
 }) => {
   useLoadMilestone('chart-rendered');
 
   const theme = useTheme();
+
+  const totalIncome = Math.max(
+    currentIncome,
+    incomeStreams.length > 0 ? totalAnnualIncomeFromStreams(incomeStreams) : 0,
+  );
+  const isChartDisabled = totalIncome > MAX_CHART_INCOME;
 
   // Track whether the user has manually adjusted the range
   const [hasManuallyAdjustedRange, setHasManuallyAdjustedRange] = useState(false);
@@ -278,14 +303,14 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
     // Ensure range is never less than 0 or more than 100 million
     min = Math.max(0, min);
-    max = Math.min(100000000, max);
+    max = Math.min(MAX_CHART_INCOME, max);
 
     // If max would be less than min after the constraint, adjust accordingly
-    if (max - min < 10000000) {
+    if (max - min < 10_000_000) {
       if (min === 0) {
-        max = 10000000;
-      } else if (max === 100000000) {
-        min = 90000000;
+        max = 10_000_000;
+      } else if (max === MAX_CHART_INCOME) {
+        min = 90_000_000;
       }
     }
 
@@ -294,14 +319,17 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   // Calculate chart range - use manual range if set, otherwise auto-calculate
   const chartRange = useMemo(() => {
+    if (isChartDisabled) {
+      return { min: 0, max: 10_000_000 };
+    }
     if (hasManuallyAdjustedRange && manualChartRange) {
       return manualChartRange;
     }
     if (currentIncome > 0) {
       return calculateAutoCenteredRange(currentIncome);
     }
-    return { min: 0, max: 10000000 }; // Default range
-  }, [currentIncome, hasManuallyAdjustedRange, manualChartRange]);
+    return { min: 0, max: 10_000_000 }; // Default range
+  }, [currentIncome, hasManuallyAdjustedRange, isChartDisabled, manualChartRange]);
 
   const handleManualRangeChange = (_: Event, newValue: number | number[]) => {
     if (Array.isArray(newValue) && newValue.length >= 2) {
@@ -313,55 +341,77 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
   const useCompactLabelFormat = useMediaQuery(theme.breakpoints.down('md'));
 
+  // Below md the page is a single column with the chart under the form and the results, so the
+  // chart is off-screen while the inputs change. Chart.js still redraws an off-screen canvas on
+  // every frame of its 1 s update animation, so there the chart is drawn once per update, and
+  // its tooltips appear without a transition.
+  const animateChart = useMediaQuery(theme.breakpoints.up('md'));
+
   const chartRef = useRef<ChartJS<'bar' | 'line'>>(null);
 
   // Generate chart data using the utility function
-  const chartData = useMemo<ChartData<'bar' | 'line'>>(
-    () =>
-      generateChartData(chartRange, {
-        isEmploymentIncome,
-        incomeYear,
-        isSubjectToLongTermCarePremium,
-        healthInsuranceProvider,
-        region,
-        dcPlanContributions,
-        dependents,
-        customEHIRates,
-        manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
-        manualSocialInsuranceAmount,
-        incomeStreams,
-        lifeInsurance,
-        earthquakeInsurance,
-        medicalExpenses,
-        homeLoanTaxCredit,
-      }),
-    [
-      chartRange,
+  const chartData = useMemo<ChartData<'bar' | 'line'>>(() => {
+    if (isChartDisabled) {
+      return { datasets: [] };
+    }
+    return generateChartData(chartRange, {
       isEmploymentIncome,
       incomeYear,
-      isSubjectToLongTermCarePremium,
+      ageRange,
+      longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
+      longTermCareCategory1Premium,
       healthInsuranceProvider,
       region,
       dcPlanContributions,
       dependents,
       customEHIRates,
-      manualSocialInsuranceEntry,
+      manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
       manualSocialInsuranceAmount,
       incomeStreams,
+      reportedDividendsTaxation,
       lifeInsurance,
       earthquakeInsurance,
       medicalExpenses,
+      personalCircumstances,
       homeLoanTaxCredit,
-    ],
-  );
+      foreignTaxCredit,
+    });
+  }, [
+    isChartDisabled,
+    chartRange,
+    isEmploymentIncome,
+    incomeYear,
+    ageRange,
+    longTermCareCategory1ManualEntry,
+    longTermCareCategory1Premium,
+    healthInsuranceProvider,
+    region,
+    dcPlanContributions,
+    dependents,
+    customEHIRates,
+    manualSocialInsuranceEntry,
+    manualSocialInsuranceAmount,
+    incomeStreams,
+    reportedDividendsTaxation,
+    lifeInsurance,
+    earthquakeInsurance,
+    medicalExpenses,
+    personalCircumstances,
+    homeLoanTaxCredit,
+    foreignTaxCredit,
+  ]);
 
   // Get chart options using the utility function
   const chartOptions = useMemo<ChartOptions<'bar' | 'line'>>(() => {
+    if (isChartDisabled) {
+      return {};
+    }
     const baseOptions = getChartOptions(
       chartRange,
       currentIncome,
       distribution.median,
       useCompactLabelFormat,
+      animateChart,
     );
 
     // Enhance tooltips to include percentile and cap information
@@ -394,7 +444,9 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                 const taxInputs = {
                   incomeYear,
                   isEmploymentIncome,
-                  isSubjectToLongTermCarePremium,
+                  ageRange,
+                  longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
+                  longTermCareCategory1Premium,
                   healthInsuranceProvider,
                   region,
                   dcPlanContributions,
@@ -403,10 +455,13 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
                   manualSocialInsuranceAmount,
                   incomeStreams: scaleIncomeStreamsToIncome(incomeStreams, income),
+                  reportedDividendsTaxation,
                   lifeInsurance,
                   earthquakeInsurance,
                   medicalExpenses,
+                  personalCircumstances,
                   homeLoanTaxCredit,
+                  foreignTaxCredit,
                 };
 
                 const taxResults = calculateTaxes(taxInputs);
@@ -434,8 +489,11 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     currentIncome,
     incomeYear,
     useCompactLabelFormat,
+    animateChart,
     isEmploymentIncome,
-    isSubjectToLongTermCarePremium,
+    ageRange,
+    longTermCareCategory1ManualEntry,
+    longTermCareCategory1Premium,
     healthInsuranceProvider,
     region,
     dcPlanContributions,
@@ -446,10 +504,14 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     lifeInsurance,
     earthquakeInsurance,
     medicalExpenses,
+    personalCircumstances,
     homeLoanTaxCredit,
+    foreignTaxCredit,
     incomeStreams,
+    reportedDividendsTaxation,
     distribution,
     quintileBoundaries,
+    isChartDisabled,
   ]);
 
   // Use media query to determine if we should show minor marks
@@ -472,8 +534,11 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     distribution.median >= chartRange.min && distribution.median <= chartRange.max;
 
   const percentileEstimate = useMemo(
-    () => estimateIncomePercentile(currentIncome, distribution.ranges),
-    [currentIncome, distribution],
+    () =>
+      isChartDisabled
+        ? { percentile: 100, isTopBracket: true, topBracketPercent: 0 }
+        : estimateIncomePercentile(currentIncome, distribution.ranges),
+    [currentIncome, distribution, isChartDisabled],
   );
 
   return (
@@ -504,400 +569,434 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         </Typography>
       </Box>
 
-      <Box className="chart-container" sx={{ mb: { xs: 1.2, sm: 2 }, position: 'relative' }}>
-        <Chart
-          ref={chartRef}
-          type="bar"
-          data={chartData}
-          options={chartOptions}
-          style={{ height: '100%', width: '100%' }}
-        />
-        {manualSocialInsuranceEntry && (
-          <Paper
-            elevation={2}
+      {isChartDisabled ? (
+        <Paper
+          elevation={0}
+          sx={{
+            py: { xs: 6, sm: 8 },
+            px: 2,
+            textAlign: 'center',
+            bgcolor: 'action.hover',
+            borderRadius: 2,
+            border: '1px dashed',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography
+            variant="subtitle1"
             sx={{
-              position: 'absolute',
-              top: '15%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              bgcolor: 'background.paper',
-              opacity: 0.95,
-              p: 1.5,
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'warning.main',
-              textAlign: 'center',
-              maxWidth: '90%',
-              zIndex: 10,
+              fontWeight: 600,
+              color: 'text.secondary',
+              mb: 0.5,
             }}
           >
-            <Typography
-              variant="subtitle2"
-              color="warning.main"
-              sx={{ fontWeight: 600, fontSize: '0.9rem' }}
-            >
-              Comparative Data Unavailable
-            </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ display: 'block', lineHeight: 1.3, mt: 0.5 }}
-            >
-              Data for other income levels cannot be calculated
-              <br />
-              when using manual social insurance entry.
-            </Typography>
-          </Paper>
-        )}
-      </Box>
+            Chart Disabled
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            The take-home pay chart is disabled for total incomes over {formatJPY(MAX_CHART_INCOME)}
+            .
+          </Typography>
+        </Paper>
+      ) : (
+        <>
+          <Box className="chart-container" sx={{ mb: { xs: 1.2, sm: 2 }, position: 'relative' }}>
+            <Chart
+              ref={chartRef}
+              type="bar"
+              data={chartData}
+              options={chartOptions}
+              style={{ height: '100%', width: '100%' }}
+            />
+            {manualSocialInsuranceEntry && (
+              <Paper
+                elevation={2}
+                sx={{
+                  position: 'absolute',
+                  top: '15%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  bgcolor: 'background.paper',
+                  opacity: 0.95,
+                  p: 1.5,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'warning.main',
+                  textAlign: 'center',
+                  maxWidth: '90%',
+                  zIndex: 10,
+                }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.9rem' }}
+                >
+                  Comparative Data Unavailable
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.3, mt: 0.5 }}
+                >
+                  Data for other income levels cannot be calculated
+                  <br />
+                  when using manual social insurance entry.
+                </Typography>
+              </Paper>
+            )}
+          </Box>
 
-      {/* Custom Legend for Income Lines */}
-      <Box
-        className="chart-legend"
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          gap: { xs: 0.7, sm: 2 },
-          mb: { xs: 1.2, sm: 2 },
-          mt: 0,
-        }}
-      >
-        {currentIncome > 0 && (
+          {/* Custom Legend for Income Lines */}
           <Box
-            className="legend-item"
+            className="chart-legend"
             sx={{
               display: 'flex',
-              alignItems: 'center',
-              opacity: yourIncomeIsVisibleInChart ? 1 : 0.5,
-              gap: 1,
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              gap: { xs: 0.7, sm: 2 },
+              mb: { xs: 1.2, sm: 2 },
+              mt: 0,
+            }}
+          >
+            {currentIncome > 0 && (
+              <Box
+                className="legend-item"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  opacity: yourIncomeIsVisibleInChart ? 1 : 0.5,
+                  gap: 1,
+                }}
+              >
+                <Box
+                  className="legend-marker"
+                  sx={{
+                    width: 2, // vertical line: narrow width
+                    height: 24, // vertical line: tall height
+                    borderRadius: 1,
+                    backgroundColor: YOUR_INCOME_COLOR,
+                    display: 'inline-block',
+                    mr: 1,
+                  }}
+                />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: { xs: '0.97rem', sm: '1rem' },
+                    fontWeight: 500,
+                  }}
+                >
+                  Input Income: {formatJPY(currentIncome)}
+                </Typography>
+              </Box>
+            )}
+            <Box
+              className="legend-item"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                opacity: medianIncomeIsVisibleInChart ? 1 : 0.5,
+                gap: 1,
+              }}
+            >
+              <Box
+                className="legend-marker"
+                sx={{
+                  width: 2, // vertical line: narrow width
+                  height: 24, // vertical line: tall height
+                  borderRadius: 1,
+                  backgroundColor: MEDIAN_INCOME_COLOR,
+                  display: 'inline-block',
+                  mr: 1,
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.97rem', sm: '1rem' },
+                  fontWeight: 500,
+                }}
+              >
+                Median Income: {formatJPY(distribution.median)}
+              </Typography>
+            </Box>
+            {/* The comparison group reads inline within the percentile sentence. Always rendered
+            (not gated on income): the selection also drives the median line, which is meaningful
+            before any income is entered. */}
+            <Box className="legend-item" sx={{ display: 'flex', alignItems: 'center' }}>
+              <Typography
+                component="div"
+                variant="body2"
+                sx={{
+                  fontSize: { xs: '0.95rem', sm: '0.98rem' },
+                  fontWeight: 500,
+                  color: 'primary.main',
+                }}
+              >
+                {currentIncome > 0
+                  ? percentileEstimate.isTopBracket
+                    ? `This income is in the top ~${percentileEstimate.topBracketPercent.toFixed(1)}% of `
+                    : `This income is higher than ~${percentileEstimate.percentile.toFixed(1)}% of `
+                  : 'Comparison group: '}
+                <Select
+                  id="household-type"
+                  name="household-type"
+                  variant="standard"
+                  value={householdType}
+                  onChange={event => setHouseholdType(event.target.value as HouseholdType)}
+                  renderValue={value => lowercaseFirst(HOUSEHOLD_INCOME_DISTRIBUTIONS[value].label)}
+                  inputProps={{ 'aria-label': 'Comparison household type' }}
+                  sx={{
+                    verticalAlign: 'baseline',
+                    color: 'primary.main',
+                    fontSize: 'inherit',
+                    fontWeight: 600,
+                    '& .MuiSelect-select': { py: 0 },
+                    '& .MuiSelect-select:focus': { backgroundColor: 'transparent' },
+                    '& .MuiSelect-icon': { color: 'primary.main' },
+                  }}
+                >
+                  {HOUSEHOLD_TYPE_ORDER.map(type => (
+                    <MenuItem key={type} value={type}>
+                      {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {currentIncome > 0 && ' in Japan.'}
+                <DetailedTooltip
+                  title="Household types (世帯類型)"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                  iconAriaLabel="Learn more about the household types"
+                >
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1.5 }}>
+                      The survey reports the income distribution separately for each household type
+                      (世帯類型) below. Picking one changes the income distribution compared with
+                      the input income.
+                    </Typography>
+                    <Box component="dl" sx={{ m: 0 }}>
+                      {HOUSEHOLD_TYPE_ORDER.map(type => (
+                        <Box key={type} sx={{ mb: 1 }}>
+                          <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>
+                            {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label} (
+                            {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].labelJa})
+                          </Typography>
+                          <Typography
+                            component="dd"
+                            variant="body2"
+                            sx={{ m: 0, fontSize: '0.85rem', color: 'text.secondary' }}
+                          >
+                            {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].definition} Median{' '}
+                            {formatJPY(HOUSEHOLD_INCOME_DISTRIBUTIONS[type].median)}.
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                    <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
+                      Some groups overlap — a household can be counted in more than one — so the six
+                      do not add up to all households.
+                    </Typography>
+                    <SourceLinks sources={INCOME_SURVEY_SOURCES} />
+                  </Box>
+                </DetailedTooltip>
+              </Typography>
+            </Box>
+
+            {/* Quintile bands for the selected 世帯類型: published 五分位値 for 全世帯, estimated by
+            inverting the bucketed distribution for every other type. */}
+            <Box
+              className="legend-item"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.92rem', sm: '0.95rem' },
+                  fontWeight: 500,
+                }}
+              >
+                Background colors show income quintiles
+              </Typography>
+              <DetailedTooltip
+                title="Income Distribution Quintiles"
+                icon={SIMPLE_TOOLTIP_ICON}
+                iconAriaLabel="Learn more about income distribution quintiles"
+              >
+                <Box>
+                  <Typography variant="body2" sx={{ mb: 1.5 }}>
+                    The colored background bands divide the selected household type into five equal
+                    groups (quintiles) by household income:
+                  </Typography>
+
+                  {/* Quintile Data Table */}
+                  <Box
+                    component="table"
+                    sx={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      mb: 1.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      // Shared styles for table cells
+                      '& th, & td': {
+                        p: 1,
+                        fontSize: '0.85rem',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                      },
+                      '& th': {
+                        fontWeight: 600,
+                      },
+                      '& td:last-child, & th:last-child': {
+                        textAlign: 'right',
+                      },
+                      '& tr:last-child td': {
+                        borderBottom: 'none',
+                      },
+                    }}
+                  >
+                    <Box component="thead" sx={{ bgcolor: 'action.hover' }}>
+                      <Box component="tr">
+                        <Box component="th">Percentile</Box>
+                        <Box component="th">Income Range</Box>
+                      </Box>
+                    </Box>
+                    <Box component="tbody">
+                      {QUINTILE_BAND_STYLES.map((style, i) => (
+                        <Box component="tr" key={style.label}>
+                          <Box component="td">{style.label.replace(' percentile', '')}</Box>
+                          <Box component="td">
+                            {i === 0 && <>¥0 - {formatQuintileBoundary(quintileBoundaries[0]!)}</>}
+                            {i > 0 && i < QUINTILE_BAND_STYLES.length - 1 && (
+                              <>
+                                {formatQuintileBoundary(quintileBoundaries[i - 1]!)} -{' '}
+                                {formatQuintileBoundary(quintileBoundaries[i]!)}
+                              </>
+                            )}
+                            {i === QUINTILE_BAND_STYLES.length - 1 && (
+                              <>{formatQuintileBoundary(quintileBoundaries[3]!)} and above</>
+                            )}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {/* Explanation of quintiles and percentiles */}
+                  <Box
+                    sx={{
+                      mt: 1.5,
+                      p: 1.5,
+                      bgcolor: 'action.hover',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}
+                    >
+                      What are percentiles and quintiles?
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
+                      <strong>Percentiles:</strong> An income in the 70th percentile is higher than
+                      70% of all households.
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
+                      <strong>Quintiles:</strong> The population divided into 5 equal groups (20%
+                      each), from lowest to highest income.
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
+                      The survey publishes exact quintile boundaries only for all households. For
+                      other household types, boundaries are estimated from income distribution data.
+                    </Typography>
+                  </Box>
+                  <SourceLinks sources={INCOME_SURVEY_SOURCES} />
+                </Box>
+              </DetailedTooltip>
+            </Box>
+          </Box>
+
+          <Paper
+            elevation={0}
+            sx={{
+              mt: { xs: 1.2, sm: 2 },
+              p: { xs: 1.2, sm: 2 },
+              bgcolor: 'action.hover',
+              borderRadius: 2,
+              position: 'relative',
+              overflow: 'hidden', // keep for rounded corners
+              width: '100%',
+              boxShadow: 'none',
             }}
           >
             <Box
-              className="legend-marker"
               sx={{
-                width: 2, // vertical line: narrow width
-                height: 24, // vertical line: tall height
-                borderRadius: 1,
-                backgroundColor: YOUR_INCOME_COLOR,
-                display: 'inline-block',
-                mr: 1,
-              }}
-            />
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                fontSize: { xs: '0.97rem', sm: '1rem' },
-                fontWeight: 500,
+                position: 'relative',
+                zIndex: 1,
+                width: '100%',
+                pb: 3,
               }}
             >
-              Input Income: {formatJPY(currentIncome)}
-            </Typography>
-          </Box>
-        )}
-        <Box
-          className="legend-item"
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            opacity: medianIncomeIsVisibleInChart ? 1 : 0.5,
-            gap: 1,
-          }}
-        >
-          <Box
-            className="legend-marker"
-            sx={{
-              width: 2, // vertical line: narrow width
-              height: 24, // vertical line: tall height
-              borderRadius: 1,
-              backgroundColor: MEDIAN_INCOME_COLOR,
-              display: 'inline-block',
-              mr: 1,
-            }}
-          />
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              fontSize: { xs: '0.97rem', sm: '1rem' },
-              fontWeight: 500,
-            }}
-          >
-            Median Income: {formatJPY(distribution.median)}
-          </Typography>
-        </Box>
-        {/* The comparison group reads inline within the percentile sentence. Always rendered
-            (not gated on income): the selection also drives the median line, which is meaningful
-            before any income is entered. */}
-        <Box className="legend-item" sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography
-            component="div"
-            variant="body2"
-            sx={{
-              fontSize: { xs: '0.95rem', sm: '0.98rem' },
-              fontWeight: 500,
-              color: 'primary.main',
-            }}
-          >
-            {currentIncome > 0
-              ? percentileEstimate.isTopBracket
-                ? `This income is in the top ~${percentileEstimate.topBracketPercent.toFixed(1)}% of `
-                : `This income is higher than ~${percentileEstimate.percentile.toFixed(1)}% of `
-              : 'Comparison group: '}
-            <Select
-              id="household-type"
-              name="household-type"
-              variant="standard"
-              value={householdType}
-              onChange={event => setHouseholdType(event.target.value as HouseholdType)}
-              renderValue={value => lowercaseFirst(HOUSEHOLD_INCOME_DISTRIBUTIONS[value].label)}
-              inputProps={{ 'aria-label': 'Comparison household type' }}
-              sx={{
-                verticalAlign: 'baseline',
-                color: 'primary.main',
-                fontSize: 'inherit',
-                fontWeight: 600,
-                '& .MuiSelect-select': { py: 0 },
-                '& .MuiSelect-select:focus': { backgroundColor: 'transparent' },
-                '& .MuiSelect-icon': { color: 'primary.main' },
-              }}
-            >
-              {HOUSEHOLD_TYPE_ORDER.map(type => (
-                <MenuItem key={type} value={type}>
-                  {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label}
-                </MenuItem>
-              ))}
-            </Select>
-            {currentIncome > 0 && ' in Japan.'}
-            <DetailedTooltip
-              title="Household types (世帯類型)"
-              icon={SIMPLE_TOOLTIP_ICON}
-              iconAriaLabel="Learn more about the household types"
-            >
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1.5 }}>
-                  The survey reports the income distribution separately for each household type
-                  (世帯類型) below. Picking one changes the income distribution compared with the
-                  input income.
-                </Typography>
-                <Box component="dl" sx={{ m: 0 }}>
-                  {HOUSEHOLD_TYPE_ORDER.map(type => (
-                    <Box key={type} sx={{ mb: 1 }}>
-                      <Typography component="dt" variant="body2" sx={{ fontWeight: 600 }}>
-                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].label} (
-                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].labelJa})
-                      </Typography>
-                      <Typography
-                        component="dd"
-                        variant="body2"
-                        sx={{ m: 0, fontSize: '0.85rem', color: 'text.secondary' }}
-                      >
-                        {HOUSEHOLD_INCOME_DISTRIBUTIONS[type].definition} Median{' '}
-                        {formatJPY(HOUSEHOLD_INCOME_DISTRIBUTIONS[type].median)}.
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-                <Typography variant="body2" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
-                  Some groups overlap — a household can be counted in more than one — so the six do
-                  not add up to all households.
-                </Typography>
-                <SourceLinks sources={INCOME_SURVEY_SOURCES} />
-              </Box>
-            </DetailedTooltip>
-          </Typography>
-        </Box>
-
-        {/* Quintile bands for the selected 世帯類型: published 五分位値 for 全世帯, estimated by
-            inverting the bucketed distribution for every other type. */}
-        <Box
-          className="legend-item"
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              fontSize: { xs: '0.92rem', sm: '0.95rem' },
-              fontWeight: 500,
-            }}
-          >
-            Background colors show income quintiles
-          </Typography>
-          <DetailedTooltip
-            title="Income Distribution Quintiles"
-            icon={SIMPLE_TOOLTIP_ICON}
-            iconAriaLabel="Learn more about income distribution quintiles"
-          >
-            <Box>
-              <Typography variant="body2" sx={{ mb: 1.5 }}>
-                The colored background bands divide the selected household type into five equal
-                groups (quintiles) by household income:
+              <Typography
+                id="range-slider"
+                variant="subtitle2"
+                gutterBottom
+                sx={{
+                  fontSize: { xs: '1rem', sm: '1.1rem' },
+                  fontWeight: 600,
+                  mb: { xs: 0.5, sm: 1 },
+                }}
+              >
+                Chart Income Range: {formatJPY(chartRange.min)} - {formatJPY(chartRange.max)}
               </Typography>
-
-              {/* Quintile Data Table */}
               <Box
-                component="table"
                 sx={{
                   width: '100%',
-                  borderCollapse: 'collapse',
-                  mb: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  overflow: 'hidden',
-                  // Shared styles for table cells
-                  '& th, & td': {
-                    p: 1,
-                    fontSize: '0.85rem',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                  },
-                  '& th': {
-                    fontWeight: 600,
-                  },
-                  '& td:last-child, & th:last-child': {
-                    textAlign: 'right',
-                  },
-                  '& tr:last-child td': {
-                    borderBottom: 'none',
-                  },
+                  maxWidth: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 48px)' }, // leave space for labels
+                  mx: 'auto',
                 }}
               >
-                <Box component="thead" sx={{ bgcolor: 'action.hover' }}>
-                  <Box component="tr">
-                    <Box component="th">Percentile</Box>
-                    <Box component="th">Income Range</Box>
-                  </Box>
-                </Box>
-                <Box component="tbody">
-                  {QUINTILE_BAND_STYLES.map((style, i) => (
-                    <Box component="tr" key={style.label}>
-                      <Box component="td">{style.label.replace(' percentile', '')}</Box>
-                      <Box component="td">
-                        {i === 0 && <>¥0 - {formatQuintileBoundary(quintileBoundaries[0]!)}</>}
-                        {i > 0 && i < QUINTILE_BAND_STYLES.length - 1 && (
-                          <>
-                            {formatQuintileBoundary(quintileBoundaries[i - 1]!)} -{' '}
-                            {formatQuintileBoundary(quintileBoundaries[i]!)}
-                          </>
-                        )}
-                        {i === QUINTILE_BAND_STYLES.length - 1 && (
-                          <>{formatQuintileBoundary(quintileBoundaries[3]!)} and above</>
-                        )}
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
+                <Slider
+                  value={[chartRange.min, chartRange.max]}
+                  onChange={handleManualRangeChange}
+                  valueLabelDisplay="off"
+                  min={0}
+                  max={MAX_CHART_INCOME}
+                  step={STEP_SIZE}
+                  marks={visibleMarks}
+                  aria-labelledby="range-slider"
+                  getAriaLabel={index => (index === 0 ? 'Minimum income' : 'Maximum income')}
+                  getAriaValueText={value => formatJPY(value)}
+                  sx={{
+                    mt: 0,
+                    mb: 0,
+                    '& .MuiSlider-thumb': {
+                      width: 18,
+                      height: 18,
+                    },
+                    '& .MuiSlider-markLabel': {
+                      fontSize: { xs: '0.92rem', sm: '1rem' },
+                      whiteSpace: 'nowrap',
+                    },
+                  }}
+                />
               </Box>
-
-              {/* Explanation of quintiles and percentiles */}
-              <Box
-                sx={{
-                  mt: 1.5,
-                  p: 1.5,
-                  bgcolor: 'action.hover',
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Typography variant="body2" sx={{ fontSize: '0.85rem', fontWeight: 600, mb: 0.5 }}>
-                  What are percentiles and quintiles?
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
-                  <strong>Percentiles:</strong> An income in the 70th percentile is higher than 70%
-                  of all households.
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.82rem', mb: 0.5 }}>
-                  <strong>Quintiles:</strong> The population divided into 5 equal groups (20% each),
-                  from lowest to highest income.
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.82rem' }}>
-                  The survey publishes exact quintile boundaries only for all households. For other
-                  household types, boundaries are estimated from income distribution data.
-                </Typography>
-              </Box>
-              <SourceLinks sources={INCOME_SURVEY_SOURCES} />
             </Box>
-          </DetailedTooltip>
-        </Box>
-      </Box>
-
-      <Paper
-        elevation={0}
-        sx={{
-          mt: { xs: 1.2, sm: 2 },
-          p: { xs: 1.2, sm: 2 },
-          bgcolor: 'action.hover',
-          borderRadius: 2,
-          position: 'relative',
-          overflow: 'hidden', // keep for rounded corners
-          width: '100%',
-          boxShadow: 'none',
-        }}
-      >
-        <Box
-          sx={{
-            position: 'relative',
-            zIndex: 1,
-            width: '100%',
-            pb: 3,
-          }}
-        >
-          <Typography
-            id="range-slider"
-            variant="subtitle2"
-            gutterBottom
-            sx={{
-              fontSize: { xs: '1rem', sm: '1.1rem' },
-              fontWeight: 600,
-              mb: { xs: 0.5, sm: 1 },
-            }}
-          >
-            Chart Income Range: {formatJPY(chartRange.min)} - {formatJPY(chartRange.max)}
-          </Typography>
-          <Box
-            sx={{
-              width: '100%',
-              maxWidth: { xs: 'calc(100% - 32px)', sm: 'calc(100% - 48px)' }, // leave space for labels
-              mx: 'auto',
-            }}
-          >
-            <Slider
-              value={[chartRange.min, chartRange.max]}
-              onChange={handleManualRangeChange}
-              valueLabelDisplay="off"
-              min={0}
-              max={100000000}
-              step={STEP_SIZE}
-              marks={visibleMarks}
-              aria-labelledby="range-slider"
-              getAriaLabel={index => (index === 0 ? 'Minimum income' : 'Maximum income')}
-              getAriaValueText={value => formatJPY(value)}
-              sx={{
-                mt: 0,
-                mb: 0,
-                '& .MuiSlider-thumb': {
-                  width: 18,
-                  height: 18,
-                },
-                '& .MuiSlider-markLabel': {
-                  fontSize: { xs: '0.92rem', sm: '1rem' },
-                  whiteSpace: 'nowrap',
-                },
-              }}
-            />
-          </Box>
-        </Box>
-      </Paper>
+          </Paper>
+        </>
+      )}
     </Paper>
   );
 };
 
-export default TakeHomeChart;
+// App's urgent render passes the previous deferred inputs unchanged; memo lets it skip the chart.
+export default React.memo(TakeHomeChart);

@@ -11,8 +11,13 @@ import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import { useChangelogModal, CHANGELOG_HASH } from './hooks/useChangelogModal';
 import { takeHomeFormReducer, normalizeInitialFormState } from './state/takeHomeFormReducer';
 import { DEFAULT_PROVIDER } from './types/healthInsurance';
-import type { TakeHomeFormState, TakeHomeInputs } from './types/tax';
-import { DEFAULT_INCOME_YEAR, EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from './types/tax';
+import type { TakeHomeFormState } from './types/tax';
+import {
+  DEFAULT_INCOME_YEAR,
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+} from './types/tax';
+import { DEFAULT_TAXPAYER_AGE_RANGE } from './types/taxpayerAge';
 import { useLoadMilestone } from './utils/loadMilestones';
 import { calculateTaxes } from './utils/taxCalculations';
 
@@ -91,7 +96,10 @@ function App() {
       },
     ],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+    ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
@@ -110,8 +118,11 @@ function App() {
 
   // Recalculating on the deferred value keeps rapid input changes (e.g. slider
   // drags) responsive: the urgent render reuses the previous results and the
-  // recalculation runs in an interruptible background render.
-  const deferredInputs = useDeferredValue<TakeHomeInputs>(inputs);
+  // recalculation runs in an interruptible background render. The results panel
+  // and the chart receive only deferred values and are memoized, so the urgent
+  // render skips both. memo compares props by identity, so passing either one an
+  // object or function created during render would make it render every time.
+  const deferredInputs = useDeferredValue(inputs);
   const results = useMemo(() => calculateTaxes(deferredInputs), [deferredInputs]);
 
   return (
@@ -152,14 +163,21 @@ function App() {
             inputs={inputs}
             dispatch={dispatch}
             homeLoanTaxCreditResult={results.homeLoanTaxCredit}
+            foreignTaxCreditResult={results.foreignTaxCredit}
             additionalDeductions={results.additionalDeductions}
+            personalDeductions={results.personalDeductions}
+            longTermCareCategory1Estimate={results.longTermCareCategory1Estimate}
+            investmentIncome={results.investmentIncome}
           />
           <Suspense
             fallback={
               <Box
                 sx={{
-                  // Matches TakeHomeResultsDisplay's natural content height at default inputs.
-                  height: { xs: 617, md: 811 },
+                  // Sized without reference to the results' content. In the single column, a
+                  // viewport of height keeps everything after it below the fold until the results
+                  // replace it, so the swap moves nothing on screen. In two columns the box
+                  // stretches to the grid row that the input form sets, as the results Paper does.
+                  minHeight: { xs: '100svh', md: 0 },
                   borderRadius: 1,
                   bgcolor: 'action.hover',
                   animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -190,24 +208,29 @@ function App() {
           }
         >
           <TakeHomeChart
-            currentIncome={inputs.annualIncome}
-            incomeYear={inputs.incomeYear}
-            isEmploymentIncome={inputs.incomeStreams.some(
+            currentIncome={deferredInputs.annualIncome}
+            incomeYear={deferredInputs.incomeYear}
+            isEmploymentIncome={deferredInputs.incomeStreams.some(
               s => s.type === 'salary' || s.type === 'bonus',
             )}
-            isSubjectToLongTermCarePremium={inputs.isSubjectToLongTermCarePremium}
-            healthInsuranceProvider={inputs.healthInsuranceProvider}
-            region={inputs.region}
-            dcPlanContributions={inputs.dcPlanContributions}
-            dependents={inputs.dependents}
-            customEHIRates={inputs.customEHIRates}
-            manualSocialInsuranceEntry={inputs.manualSocialInsuranceEntry}
-            manualSocialInsuranceAmount={inputs.manualSocialInsuranceAmount}
-            incomeStreams={inputs.incomeStreams}
-            lifeInsurance={inputs.lifeInsurance}
-            earthquakeInsurance={inputs.earthquakeInsurance}
-            medicalExpenses={inputs.medicalExpenses}
-            homeLoanTaxCredit={inputs.homeLoanTaxCredit}
+            ageRange={deferredInputs.ageRange}
+            longTermCareCategory1ManualEntry={deferredInputs.longTermCareCategory1ManualEntry}
+            longTermCareCategory1Premium={deferredInputs.longTermCareCategory1Premium}
+            healthInsuranceProvider={deferredInputs.healthInsuranceProvider}
+            region={deferredInputs.region}
+            dcPlanContributions={deferredInputs.dcPlanContributions}
+            dependents={deferredInputs.dependents}
+            customEHIRates={deferredInputs.customEHIRates}
+            manualSocialInsuranceEntry={deferredInputs.manualSocialInsuranceEntry}
+            manualSocialInsuranceAmount={deferredInputs.manualSocialInsuranceAmount}
+            incomeStreams={deferredInputs.incomeStreams}
+            reportedDividendsTaxation={deferredInputs.reportedDividendsTaxation}
+            lifeInsurance={deferredInputs.lifeInsurance}
+            earthquakeInsurance={deferredInputs.earthquakeInsurance}
+            medicalExpenses={deferredInputs.medicalExpenses}
+            personalCircumstances={deferredInputs.personalCircumstances}
+            homeLoanTaxCredit={deferredInputs.homeLoanTaxCredit}
+            foreignTaxCredit={deferredInputs.foreignTaxCredit}
           />
         </Suspense>
 

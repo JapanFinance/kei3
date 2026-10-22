@@ -27,6 +27,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useState } from 'react';
 import type { Dispatch } from 'react';
 
+import { HEALTH_INSURANCE_RATE_PERCENT_DECIMALS } from '../../data/employeesHealthInsurance/providerRateData';
 import {
   availableProvidersFor,
   regionOptionsFor,
@@ -36,48 +37,117 @@ import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
   isDependentCoverageEligible,
-  DEPENDENT_INCOME_THRESHOLD,
+  getDependentIncomeThreshold,
+  type LongTermCareCategory1Estimate,
 } from '../../types/healthInsurance';
 import type {
   TakeHomeFormState,
+  TakeHomeResults,
   IncomeMode,
   IncomeStream,
+  ForeignTaxCreditInput,
+  ForeignTaxCreditResult,
   HomeLoanTaxCreditInput,
   HomeLoanTaxCreditResult,
   LifeInsuranceInput,
   EarthquakeInsuranceInput,
   MedicalExpensesInput,
   AdditionalDeductionsResult,
+  PersonalCircumstancesInput,
+  PersonalDeductionsResult,
+  ReportedDividendsTaxation,
 } from '../../types/tax';
+import {
+  TAXPAYER_AGE_RANGES,
+  TAXPAYER_AGE_RANGE_LABELS,
+  isLongTermCareCategory1Insured,
+} from '../../types/taxpayerAge';
 import { formatJPY } from '../../utils/formatters';
-import { calculateTotalNetIncome } from '../../utils/taxCalculations';
+import {
+  dependentTestAnnualIncome,
+  totalCommutingAllowanceFromStreams,
+} from '../../utils/incomeStreams';
+import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
+import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
+import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../ui/Tooltips';
-import { ADDITIONAL_DEDUCTION_INFO } from './additionalDeductionInfo';
+import { DetailedTooltip, SimpleTooltip } from '../ui/Tooltips';
+import { ADDITIONAL_DEDUCTION_INFO, getPersonalDeductionInfo } from './additionalDeductionInfo';
 import { AdditionalDeductionsModal } from './AdditionalDeductionsModal';
 import { DependentsModal } from './Dependents/DependentsModal';
 import { IncomeDetailsModal } from './Income/IncomeDetailsModal';
+import LongTermCareCategory1PremiumTooltip from './tabs/LongTermCareCategory1PremiumTooltip';
+
+// Ordered to match the tooltip's bullets (youngest rule first).
+const AGE_RANGE_SOURCES: Source[] = [
+  {
+    label: '個人住民税の非課税 (residence-tax exemption for minors)',
+    href: 'https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06',
+  },
+  {
+    label: '国民年金の「第1号被保険者」とは (National Pension enrollment, ages 20-59)',
+    href: 'https://www.nenkin.go.jp/section/faq/kokunen/seido/kanyu/seidosetsumei/20140602-01.html',
+  },
+  {
+    label: "適用事業所と被保険者 (Employees' Pension enrollment under age 70)",
+    href: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/20150518.html',
+  },
+  {
+    label: '介護保険制度について (long-term care insurance, ages 40-64)',
+    href: 'https://www.mhlw.go.jp/stf/newpage_10548.html',
+  },
+  {
+    label: '後期高齢者医療制度 (medical system for the elderly (75+))',
+    href: 'https://www.gov-online.go.jp/article/202209/entry-10482.html',
+  },
+];
+
+const fieldLabelSx = {
+  fontSize: '0.97rem',
+  fontWeight: 500,
+  display: 'flex',
+  alignItems: 'center',
+} as const;
 
 interface TaxInputFormProps {
   inputs: TakeHomeFormState;
   dispatch: Dispatch<FormAction>;
   /** Computed home loan tax credit result, used to flag when the credit was zeroed (income over the limit). */
   homeLoanTaxCreditResult?: HomeLoanTaxCreditResult | undefined;
+  /** Computed foreign tax credit, passed through to the modal for its summary. */
+  foreignTaxCreditResult?: ForeignTaxCreditResult | undefined;
   /** Computed additional deductions, passed through to the modal for live readouts and the summary. */
   additionalDeductions?: AdditionalDeductionsResult | undefined;
+  /** Computed 障害者・寡婦・ひとり親控除, passed through the same way; absent when none applies. */
+  personalDeductions?: PersonalDeductionsResult | undefined;
+  /** Computed 介護保険料第1号 estimate, shown next to the estimate switch; absent below 65. */
+  longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
+  /** Computed investment income (gross amounts and tax withheld at source), passed through to
+   *  the income modal for its group footer; absent when every amount is 0. */
+  investmentIncome?: TakeHomeResults['investmentIncome'];
 }
 
 export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
   inputs,
   dispatch,
   homeLoanTaxCreditResult,
+  foreignTaxCreditResult,
   additionalDeductions,
+  personalDeductions,
+  longTermCareCategory1Estimate,
+  investmentIncome,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Check if dependent coverage is eligible based on income
-  const isDependentEligible = isDependentCoverageEligible(inputs.annualIncome);
+  // The stored field names the manual side, so that its false default means "estimate".
+  const useLongTermCareEstimate = !inputs.longTermCareCategory1ManualEntry;
+
+  // Check if dependent coverage is eligible based on income and age
+  const isDependentEligible = isDependentCoverageEligible(
+    dependentTestAnnualIncome(inputs.incomeStreams),
+    inputs.ageRange,
+  );
 
   // Dependents modal state
   const [dependentsModalOpen, setDependentsModalOpen] = useState(false);
@@ -100,6 +170,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     dispatch({ type: 'setField', field: 'homeLoanTaxCredit', value: newInput });
   };
 
+  const handleForeignTaxCreditChange = (newInput: ForeignTaxCreditInput | undefined) => {
+    dispatch({ type: 'setField', field: 'foreignTaxCredit', value: newInput });
+  };
+
   const handleDcPlanContributionsChange = (value: number) => {
     dispatch({ type: 'setField', field: 'dcPlanContributions', value });
   };
@@ -114,6 +188,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   const handleMedicalExpensesChange = (newInput: MedicalExpensesInput) => {
     dispatch({ type: 'setField', field: 'medicalExpenses', value: newInput });
+  };
+
+  const handlePersonalCircumstancesChange = (newInput: PersonalCircumstancesInput) => {
+    dispatch({ type: 'setField', field: 'personalCircumstances', value: newInput });
+  };
+
+  const handleReportedDividendsTaxationChange = (value: ReportedDividendsTaxation) => {
+    dispatch({ type: 'setField', field: 'reportedDividendsTaxation', value });
   };
 
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
@@ -195,11 +277,27 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     },
   };
 
-  // We only need the total net income for the dependents modal. Pass dependents so the
-  // 所得金額調整控除 is reflected, keeping the modal's eligibility hints consistent with the results.
-  const taxpayerNetIncome = React.useMemo(
-    () => calculateTotalNetIncome(inputs.incomeStreams, inputs.incomeYear, inputs.dependents),
-    [inputs.incomeStreams, inputs.incomeYear, inputs.dependents],
+  // 合計所得金額 for the dependents modal's eligibility hints, and 公的年金等に係る雑所得 for the
+  // income modal's pension group. Pass dependents and the taxpayer's disability status so the
+  // 所得金額調整控除 is reflected, keeping both consistent with the results.
+  const netIncomeComponents = React.useMemo(
+    () =>
+      calculateNetIncomeComponents(
+        inputs.incomeStreams,
+        inputs.incomeYear,
+        inputs.ageRange,
+        inputs.dependents,
+        inputs.personalCircumstances,
+        inputs.reportedDividendsTaxation,
+      ),
+    [
+      inputs.incomeStreams,
+      inputs.incomeYear,
+      inputs.dependents,
+      inputs.ageRange,
+      inputs.personalCircumstances,
+      inputs.reportedDividendsTaxation,
+    ],
   );
 
   return (
@@ -243,10 +341,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 size="small"
                 fullWidth
               >
-                <ToggleButton value="salary">Salary</ToggleButton>
-                <ToggleButton value="miscellaneous">
-                  {isMobile ? 'Misc' : 'Miscellaneous'}
-                </ToggleButton>
+                <ToggleButton value="salary">Salary only</ToggleButton>
                 <ToggleButton value="advanced">Advanced</ToggleButton>
               </ToggleButtonGroup>
             </Box>
@@ -270,15 +365,9 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   </Box>
 
                   {(() => {
-                    const totalNontaxableBenefits = inputs.incomeStreams.reduce((sum, s) => {
-                      if (s.type === 'commutingAllowance') {
-                        if (s.frequency === 'monthly') return sum + s.amount * 12;
-                        if (s.frequency === '3-months') return sum + s.amount * 4;
-                        if (s.frequency === '6-months') return sum + s.amount * 2;
-                        return sum + s.amount;
-                      }
-                      return sum;
-                    }, 0);
+                    const totalNontaxableBenefits = totalCommutingAllowanceFromStreams(
+                      inputs.incomeStreams,
+                    );
 
                     return totalNontaxableBenefits > 0 ? (
                       <Box
@@ -289,13 +378,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                           px: 1,
                         }}
                       >
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           Total Nontaxable Benefits
                         </Typography>
                         <Typography
                           variant="subtitle1"
-                          color="text.secondary"
-                          sx={{ fontWeight: 'medium' }}
+                          sx={{ color: 'text.secondary', fontWeight: 'medium' }}
                         >
                           {formatJPY(totalNontaxableBenefits)}
                         </Typography>
@@ -336,14 +424,6 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  '& .MuiInputBase-root': {
-                    fontSize: { xs: '0.97rem', sm: '1.05rem' },
-                    py: { xs: 0.2, sm: 0.4 },
-                  },
-                  '& .MuiInputBase-input': {
-                    fontSize: { xs: '0.95rem', sm: '1rem' },
-                    py: { xs: 0.2, sm: 0.4 },
-                  },
                 }}
               >
                 <SpinnerNumberField
@@ -351,22 +431,20 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   name="annualIncome"
                   value={inputs.annualIncome}
                   onChange={handleAnnualIncomeChange}
-                  label={
-                    inputs.incomeMode === 'salary' ? 'Gross Annual Salary' : 'Net Annual Income'
-                  }
+                  label="Gross Annual Salary"
                   step={10_000}
                   shiftStep={100_000}
                   helperText={
                     isMobile
-                      ? 'Input amount directly for ¥20M+ incomes.'
-                      : 'For incomes over 20 million yen, input the amount directly.'
+                      ? 'Input amount directly for ¥20M+ salaries.'
+                      : 'For salaries over 20 million yen, input the amount directly.'
                   }
                   sx={sharedInputSx}
                 />
               </Box>
             )}
 
-            {/* Annual Income Slider - Only show for simple modes */}
+            {/* Annual Income Slider - Only show in salary mode */}
             {inputs.incomeMode !== 'advanced' && (
               <Box sx={{ px: 1, mb: { xs: 0.3, sm: 0.5 }, mt: 0.5 }}>
                 <Slider
@@ -408,7 +486,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             flexWrap: 'wrap',
           }}
         >
-          {/* Age Switch */}
+          {/* Age */}
           <Box
             sx={{
               flex: 1,
@@ -421,54 +499,65 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               mb: { xs: 1, sm: 0 },
             }}
           >
-            <Typography
-              sx={{
-                mb: 0.2,
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: '0.97rem',
-                fontWeight: 500,
-              }}
-            >
-              Age Range
-              <SimpleTooltip>
-                People aged 40-64 are required to pay long-term care insurance premiums as part of
-                their health insurance.
-              </SimpleTooltip>
+            <Typography sx={{ ...fieldLabelSx, mb: 0.2 }}>
+              <span id="ageRange-label">Age</span>
+              <DetailedTooltip title="Age" icon={SIMPLE_TOOLTIP_ICON}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Age determines which social insurance and tax rules apply. Select the range for
+                  the age reached by the end of the income year.
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.5 } }}>
+                  <li>
+                    <Typography variant="body2">
+                      Minors (under 18) with total net income of ¥1,350,000 or less are exempt from
+                      residence tax (minor status is judged as of January 1 following the income
+                      year).
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      National Pension (国民年金) contributions apply to ages 20-59; Employees'
+                      Pension (厚生年金保険) enrollment ends at age 70.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      Ages 40-64 pay long-term care insurance premiums (介護保険料) as part of
+                      health insurance.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      From age 65, long-term care premiums are billed directly by the municipality
+                      and are deducted from public pension payments when the annual pension is
+                      ¥180,000 or more.
+                    </Typography>
+                  </li>
+                  <li>
+                    <Typography variant="body2">
+                      From age 75, health coverage moves to the Medical System for the Elderly
+                      (後期高齢者医療制度).
+                    </Typography>
+                  </li>
+                </Box>
+                <SourceLinks sources={AGE_RANGE_SOURCES} />
+              </DetailedTooltip>
             </Typography>
-            <ToggleButtonGroup
-              value={inputs.isSubjectToLongTermCarePremium}
-              exclusive
-              onChange={(_, newValue: boolean | null) => {
-                if (newValue !== null) {
-                  dispatch({
-                    type: 'setField',
-                    field: 'isSubjectToLongTermCarePremium',
-                    value: newValue,
-                  });
-                }
-              }}
-              aria-label="age range"
+            <Select
+              id="ageRange"
+              name="ageRange"
+              labelId="ageRange-label"
+              value={inputs.ageRange}
+              onChange={e => dispatch({ type: 'ageRangeChanged', ageRange: e.target.value })}
               size="small"
-              sx={{
-                '& .MuiToggleButton-root': {
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.85rem',
-                  fontWeight: 500,
-                  '&.Mui-selected': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    '&:hover': {
-                      bgcolor: 'primary.dark',
-                    },
-                  },
-                },
-              }}
+              sx={{ ...sharedInputSx, minWidth: 120 }}
             >
-              <ToggleButton value={false}>&lt;40 or 65+</ToggleButton>
-              <ToggleButton value={true}>40-64</ToggleButton>
-            </ToggleButtonGroup>
+              {TAXPAYER_AGE_RANGES.map(range => (
+                <MenuItem key={range} value={range}>
+                  {TAXPAYER_AGE_RANGE_LABELS[range]}
+                </MenuItem>
+              ))}
+            </Select>
           </Box>
           {/* Dependents Button */}
           <Box
@@ -482,16 +571,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               maxWidth: 200,
             }}
           >
-            <Typography
-              sx={{
-                mb: 0.5,
-                fontSize: '0.97rem',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-              }}
-            >
+            <Typography sx={{ ...fieldLabelSx, mb: 0.5, gap: 0.5 }}>
               Dependents
               <SimpleTooltip>
                 Add spouse and dependents to calculate applicable tax deductions.
@@ -578,16 +658,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 1.5 }, mt: 1 }}>
               <FormControl fullWidth>
-                <Typography
-                  gutterBottom
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.97rem',
-                    fontWeight: 500,
-                    mb: 0.2,
-                  }}
-                >
+                <Typography gutterBottom sx={{ ...fieldLabelSx, mb: 0.2 }}>
                   <span id="healthInsuranceProvider-label">Health Insurance Provider</span>
                   <SimpleTooltip>
                     The health insurance provider affects premium calculations. Employment income
@@ -625,7 +696,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                 )}
                 {!isHealthInsuranceProviderDropdownDisabled && isDependentEligible && (
                   <FormHelperText>
-                    {`If covered as a dependent under employee health insurance, select "None". This is only available if income is below ${formatJPY(DEPENDENT_INCOME_THRESHOLD)}.`}
+                    {`If covered as a dependent under employee health insurance, select "None". This is only available if prospective annual income, including any commuting allowance and investment income (dividends and interest before withholding, and a year's capital gains), is below ${formatJPY(getDependentIncomeThreshold(inputs.ageRange))}.`}
                   </FormHelperText>
                 )}
               </FormControl>
@@ -633,15 +704,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
               {inputs.healthInsuranceProvider === CUSTOM_PROVIDER_ID ? (
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <FormControl fullWidth>
-                    <Typography
-                      gutterBottom
-                      sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <Typography gutterBottom sx={fieldLabelSx}>
                       Health Insurance
                       <SimpleTooltip>
                         Enter the employee's share of the health insurance premium rate (usually
@@ -661,19 +724,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       prefix=""
                       suffix="%"
                       max={100}
+                      decimalScale={HEALTH_INSURANCE_RATE_PERCENT_DECIMALS}
                       sx={sharedInputSx}
                     />
                   </FormControl>
                   <FormControl fullWidth>
-                    <Typography
-                      gutterBottom
-                      sx={{
-                        fontSize: '0.97rem',
-                        fontWeight: 500,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
+                    <Typography gutterBottom sx={fieldLabelSx}>
                       Long-term Care
                       <SimpleTooltip>
                         Enter the employee's share of the Long-term Care premium rate (usually half
@@ -692,6 +748,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       prefix=""
                       suffix="%"
                       max={100}
+                      decimalScale={HEALTH_INSURANCE_RATE_PERCENT_DECIMALS}
                       sx={sharedInputSx}
                     />
                   </FormControl>
@@ -733,6 +790,71 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   />
                 </FormControl>
               )}
+
+              {isLongTermCareCategory1Insured(inputs.ageRange) && (
+                <FormControl fullWidth>
+                  <Typography gutterBottom sx={{ ...fieldLabelSx, mb: 0.2 }}>
+                    Age 65+ Long-term Care Insurance
+                    <DetailedTooltip
+                      title="Age 65+ Long-term Care Insurance"
+                      icon={SIMPLE_TOOLTIP_ICON}
+                    >
+                      <LongTermCareCategory1PremiumTooltip
+                        estimate={longTermCareCategory1Estimate}
+                      />
+                    </DetailedTooltip>
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                    <SpinnerNumberField
+                      id="longTermCareCategory1Premium"
+                      name="longTermCareCategory1Premium"
+                      value={
+                        useLongTermCareEstimate
+                          ? (longTermCareCategory1Estimate?.total ?? 0)
+                          : inputs.longTermCareCategory1Premium
+                      }
+                      onChange={value => {
+                        // The number formatter reports the value it is given, so while the field
+                        // is displaying the estimate it would store the estimate over whatever
+                        // amount was entered before.
+                        if (useLongTermCareEstimate) return;
+                        dispatch({
+                          type: 'setField',
+                          field: 'longTermCareCategory1Premium',
+                          value,
+                        });
+                      }}
+                      label={
+                        useLongTermCareEstimate ? 'Annual Premium (estimate)' : 'Annual Premium'
+                      }
+                      step={1000}
+                      shiftStep={10000}
+                      min={0}
+                      disabled={useLongTermCareEstimate}
+                      sx={{ ...sharedInputSx, flex: 1, minWidth: 0 }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={useLongTermCareEstimate}
+                          onChange={e =>
+                            dispatch({
+                              type: 'setField',
+                              field: 'longTermCareCategory1ManualEntry',
+                              value: !e.target.checked,
+                            })
+                          }
+                          name="longTermCareCategory1ManualEntry"
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={<Typography sx={{ fontSize: '0.9rem' }}>Estimate</Typography>}
+                      sx={{ mr: 0, mt: 0.9, whiteSpace: 'nowrap' }}
+                    />
+                  </Box>
+                </FormControl>
+              )}
             </Box>
           )}
         </Box>
@@ -746,20 +868,12 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             alignItems: 'stretch',
           }}
         >
-          <Typography
-            sx={{
-              mb: 0.5,
-              fontSize: '0.97rem',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-            }}
-          >
+          <Typography sx={{ ...fieldLabelSx, mb: 0.5, gap: 0.5 }}>
             Additional Deductions &amp; Credits
             <SimpleTooltip>
-              Income deductions (所得控除, e.g. iDeCo) and tax credits (税額控除, e.g. home loan tax
-              credit). These affect income tax, residence tax, and the furusato nozei limit.
+              Income deductions (所得控除, e.g. iDeCo or 小規模企業共済) and tax credits (税額控除,
+              e.g. the home loan tax credit or the foreign tax credit). These affect income tax,
+              residence tax, and the furusato nozei limit.
             </SimpleTooltip>
           </Typography>
           <Button
@@ -773,11 +887,20 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             {(() => {
               const parts: string[] = [];
               if (inputs.dcPlanContributions > 0)
-                parts.push(`DC ${formatJPY(inputs.dcPlanContributions)}`);
+                parts.push(`iDeCo/DC/Mutual Aid ${formatJPY(inputs.dcPlanContributions)}`);
               if (inputs.homeLoanTaxCredit && inputs.homeLoanTaxCredit.creditAmount > 0)
                 parts.push(
                   `Home loan tax credit ${formatJPY(inputs.homeLoanTaxCredit.creditAmount)}`,
                 );
+              if (inputs.foreignTaxCredit && inputs.foreignTaxCredit.foreignTaxOnTaxReturn > 0)
+                parts.push(
+                  `Foreign tax paid with a return ${formatJPY(inputs.foreignTaxCredit.foreignTaxOnTaxReturn)}`,
+                );
+              personalDeductions?.items.forEach(item => {
+                parts.push(
+                  `${getPersonalDeductionInfo(inputs.incomeYear)[item.key].name} ${formatJPY(item.national)}`,
+                );
+              });
               additionalDeductions?.items.forEach(item => {
                 const name = ADDITIONAL_DEDUCTION_INFO[item.key].name;
                 parts.push(`${name} ${formatJPY(item.national)}`);
@@ -816,7 +939,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   )}
                 </Box>
               ) : (
-                'Add iDeCo, home loan tax credit, etc.'
+                'Add iDeCo / 小規模企業共済, home loan tax credit, etc.'
               );
             })()}
           </Button>
@@ -828,7 +951,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={handleCloseDependentsModal}
         dependents={inputs.dependents}
         onDependentsChange={handleDependentsChange}
-        taxpayerNetIncome={taxpayerNetIncome}
+        taxpayerNetIncome={netIncomeComponents.totalNetIncome}
         incomeYear={inputs.incomeYear}
       />
 
@@ -837,6 +960,11 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+        reportedDividendsTaxation={inputs.reportedDividendsTaxation}
+        onReportedDividendsTaxationChange={handleReportedDividendsTaxationChange}
+        calculationInputs={inputs}
+        netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
+        investmentIncome={investmentIncome}
       />
 
       <AdditionalDeductionsModal
@@ -847,13 +975,21 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         homeLoanTaxCredit={inputs.homeLoanTaxCredit}
         onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
         homeLoanTaxCreditResult={homeLoanTaxCreditResult}
+        foreignTaxCredit={inputs.foreignTaxCredit}
+        onForeignTaxCreditChange={handleForeignTaxCreditChange}
+        foreignTaxCreditResult={foreignTaxCreditResult}
+        withheldForeignTax={investmentIncome?.withheld?.foreignTax}
         lifeInsurance={inputs.lifeInsurance}
         onLifeInsuranceChange={handleLifeInsuranceChange}
         earthquakeInsurance={inputs.earthquakeInsurance}
         onEarthquakeInsuranceChange={handleEarthquakeInsuranceChange}
         medicalExpenses={inputs.medicalExpenses}
         onMedicalExpensesChange={handleMedicalExpensesChange}
+        personalCircumstances={inputs.personalCircumstances}
+        onPersonalCircumstancesChange={handlePersonalCircumstancesChange}
+        dependents={inputs.dependents}
         additionalDeductions={additionalDeductions}
+        personalDeductions={personalDeductions}
         incomeYear={inputs.incomeYear}
       />
     </Box>

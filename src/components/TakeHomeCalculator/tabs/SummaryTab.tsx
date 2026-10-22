@@ -3,8 +3,6 @@
 
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import InsuranceIcon from '@mui/icons-material/HealthAndSafety';
-import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
-import WarningIcon from '@mui/icons-material/Warning';
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import { useTheme, alpha } from '@mui/material/styles';
@@ -14,15 +12,17 @@ import React from 'react';
 
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
 import { ResultRow } from '../ResultRow';
+import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 
 interface SummaryTabProps {
   results: TakeHomeResults;
 }
 
 /**
- * Formats an amount as "¥X (Y.Y%)" of the total, or bare "¥X" when the share is hidden.
+ * Formats an amount as "¥X (Y.Y%)" of the total, or bare "¥X" when the share is hidden or
+ * total income is zero/negative (e.g. when capital losses offset or exceed other income).
  * The summary hides the share on mobile, where horizontal space is tight.
  *
  * @param decimals Fraction digits for the share. Defaults to 1.
@@ -33,27 +33,44 @@ const formatAmountWithShare = (
   showShare: boolean,
   decimals = 1,
 ): string =>
-  showShare
+  showShare && total > 0
     ? `${formatJPY(amount)} (${((amount / total) * 100).toFixed(decimals)}%)`
     : formatJPY(amount);
 
 const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const showShare = !isMobile && results.annualIncome > 0;
 
   const totalSocialInsurance =
     results.socialInsuranceOverride ??
-    results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
-  const totalTaxes = results.nationalIncomeTax + results.residenceTax.totalResidenceTax;
+    results.healthInsurance +
+      results.pensionPayments +
+      (results.employmentInsurance ?? 0) +
+      (results.longTermCareCategory1Premium ?? 0);
+  // The tax withheld on investment income left to withholding counts with the assessed tax of
+  // the same kind, and the foreign tax paid with the income tax; the Taxes tab shows them apart.
+  const incomeTax = incomeTaxPaid(results);
+  const residenceTax = residenceTaxPaid(results);
+  const totalTaxes = incomeTax + residenceTax;
   const totalDeductions = totalSocialInsurance + totalTaxes;
   const takeHomePercentage =
-    results.annualIncome > 0
+    results.annualIncome > 0 && results.takeHomeIncome >= 0
       ? `${((results.takeHomeIncome / results.annualIncome) * 100).toFixed(1)}%`
-      : '100%';
+      : undefined;
 
   return (
     <Box>
-      <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
+      <ResultRow
+        label={
+          <span>
+            Annual Income
+            <AnnualIncomeTooltip />
+          </span>
+        }
+        value={formatJPY(results.annualIncome)}
+        type="header"
+      />
       <Divider sx={{ my: { xs: 1, sm: 1.5 } }} />
 
       {/* Social Insurance Section */}
@@ -119,6 +136,17 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
                 type="indented"
               />
             )}
+            {results.longTermCareCategory1Premium !== undefined && (
+              <ResultRow
+                label="Age 65+ Long-term Care Insurance"
+                value={`${results.longTermCareCategory1Estimate ? '≈ ' : ''}${formatAmountWithShare(
+                  results.longTermCareCategory1Premium,
+                  results.annualIncome,
+                  !isMobile,
+                )}`}
+                type="indented"
+              />
+            )}
             <ResultRow
               label="Total Social Insurance"
               value={formatAmountWithShare(totalSocialInsurance, results.annualIncome, !isMobile)}
@@ -155,16 +183,12 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         </Typography>
         <ResultRow
           label="Income Tax"
-          value={formatAmountWithShare(results.nationalIncomeTax, results.annualIncome, !isMobile)}
+          value={formatAmountWithShare(incomeTax, results.annualIncome, !isMobile)}
           type="indented"
         />
         <ResultRow
           label="Residence Tax"
-          value={formatAmountWithShare(
-            results.residenceTax.totalResidenceTax,
-            results.annualIncome,
-            !isMobile,
-          )}
+          value={formatAmountWithShare(residenceTax, results.annualIncome, !isMobile)}
           type="indented"
         />
         <ResultRow
@@ -184,7 +208,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         <ResultRow
           label="Total Deductions"
           value={
-            !isMobile
+            showShare
               ? `${formatJPY(-totalDeductions)} (${((totalDeductions / results.annualIncome) * 100).toFixed(1)}%)`
               : formatJPY(-totalDeductions)
           }
@@ -200,90 +224,23 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
         value={
           <Box component="span" sx={{ color: 'success.main', fontWeight: 700 }}>
             {formatJPY(results.takeHomeIncome)}
-            <Box
-              component="span"
-              sx={{
-                color: 'success.dark',
-                fontWeight: 600,
-                ml: 1,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              ({takeHomePercentage})
-            </Box>
+            {takeHomePercentage !== undefined && (
+              <Box
+                component="span"
+                sx={{
+                  color: 'success.dark',
+                  fontWeight: 600,
+                  ml: 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                ({takeHomePercentage})
+              </Box>
+            )}
           </Box>
         }
         type="final"
       />
-
-      {/* Furusato Nozei Summary */}
-      {results.furusatoNozei.limit > 0 && (
-        <Box
-          sx={{
-            bgcolor: theme => alpha(theme.palette.secondary.main, 0.07),
-            borderRadius: 2,
-            px: 1,
-            py: 1,
-            mt: { xs: 0.5, sm: 1 },
-            mb: { xs: 0.5, sm: 1 },
-          }}
-        >
-          <Typography
-            variant="subtitle2"
-            sx={{
-              mt: { xs: 0.5, sm: 1 },
-              mb: { xs: 0.5, sm: 1 },
-              color: 'secondary.main',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: isMobile ? '1rem' : '1.1rem',
-            }}
-          >
-            <VolunteerActivismIcon
-              sx={{ mr: 1, fontSize: isMobile ? 18 : 20, color: 'secondary.main' }}
-            />
-            Furusato Nozei
-          </Typography>
-          <ResultRow
-            label={
-              <span>
-                Furusato Nozei Limit
-                {results.furusatoNozei.outOfPocketCost > 2200 && (
-                  <DetailedTooltip
-                    title="Warning: High Out-of-Pocket Cost"
-                    icon={<WarningIcon fontSize="small" />}
-                    iconSx={{ color: 'error.main' }}
-                    iconAriaLabel="Warning: High out-of-pocket cost"
-                  >
-                    <Box>
-                      <Typography variant="body2" sx={{ mb: 0.5 }}>
-                        The out-of-pocket cost ({formatJPY(results.furusatoNozei.outOfPocketCost)})
-                        is higher than the expected ≈2,000 yen.
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        See the Furusato Nozei tab for details.
-                      </Typography>
-                    </Box>
-                  </DetailedTooltip>
-                )}
-              </span>
-            }
-            value={
-              <Box
-                component="span"
-                sx={{
-                  color: results.furusatoNozei.outOfPocketCost > 2200 ? 'error.main' : 'inherit',
-                  fontWeight: results.furusatoNozei.outOfPocketCost > 2200 ? 700 : 500,
-                }}
-              >
-                {formatJPY(results.furusatoNozei.limit)}
-              </Box>
-            }
-            type="subtotal"
-          />
-        </Box>
-      )}
     </Box>
   );
 };

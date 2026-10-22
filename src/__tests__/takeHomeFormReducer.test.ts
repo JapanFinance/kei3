@@ -5,7 +5,6 @@ import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerR
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   takeHomeFormReducer,
-  totalAnnualIncomeFromStreams,
   availableProvidersFor,
   regionOptionsFor,
 } from '../state/takeHomeFormReducer';
@@ -16,9 +15,14 @@ import {
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
   DEPENDENT_INCOME_THRESHOLD,
+  LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, DEFAULT_INCOME_YEAR } from '../types/tax';
+import {
+  EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+  DEFAULT_INCOME_YEAR,
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+} from '../types/tax';
 
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -27,7 +31,10 @@ const baseState: TakeHomeFormState = {
   incomeMode: 'salary',
   incomeStreams: [{ id: 'default-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
   savedIncomeStreams: [],
-  isSubjectToLongTermCarePremium: false,
+  reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  longTermCareCategory1ManualEntry: false,
+  longTermCareCategory1Premium: 0,
+  ageRange: 'age20to39',
   region: 'Tokyo',
   healthInsuranceProvider: DEFAULT_PROVIDER,
   dependents: [],
@@ -78,8 +85,66 @@ describe('takeHomeFormReducer', () => {
       takeHomeFormReducer(baseState, { type: 'setField', field: 'incomeStreams', value: [] });
       // @ts-expect-error 'savedIncomeStreams' is managed by incomeModeChanged.
       takeHomeFormReducer(baseState, { type: 'setField', field: 'savedIncomeStreams', value: [] });
+      // @ts-expect-error 'ageRange' has its own cascade (ageRangeChanged), which re-checks
+      // dependent-coverage eligibility against the age-dependent income threshold.
+      takeHomeFormReducer(baseState, { type: 'setField', field: 'ageRange', value: 'age40to59' });
 
       expect(true).toBe(true);
+    });
+  });
+
+  describe('ageRangeChanged', () => {
+    it('updates the age range and leaves a valid provider untouched', () => {
+      const result = takeHomeFormReducer(baseState, {
+        type: 'ageRangeChanged',
+        ageRange: 'age60to64',
+      });
+
+      expect(result).toEqual({ ...baseState, ageRange: 'age60to64' });
+    });
+
+    it('switches dependent coverage to NHI when the age change lowers the income threshold', () => {
+      // 1.5M is eligible at 60-64 (threshold 1.8M) but not at 40-59 (threshold 1.3M).
+      const state: TakeHomeFormState = {
+        ...baseState,
+        annualIncome: 1_500_000,
+        incomeStreams: [
+          { id: 'default-salary', type: 'salary', amount: 1_500_000, frequency: 'annual' },
+        ],
+        ageRange: 'age60to64',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'ageRangeChanged',
+        ageRange: 'age40to59',
+      });
+
+      expect(result.ageRange).toBe('age40to59');
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('keeps dependent coverage across age changes within the same threshold band', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        annualIncome: 1_200_000,
+        incomeStreams: [
+          { id: 'default-salary', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        ],
+        ageRange: 'age18to19',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'ageRangeChanged',
+        ageRange: 'age40to59',
+      });
+
+      expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);
+      expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
     });
   });
 
@@ -87,7 +152,8 @@ describe('takeHomeFormReducer', () => {
     it('resets to KyokaiKenpo and its default region when switching to salary mode', () => {
       const state: TakeHomeFormState = {
         ...baseState,
-        incomeMode: 'miscellaneous',
+        incomeMode: 'advanced',
+        incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 5_000_000 }],
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
         region: NATIONAL_HEALTH_INSURANCE_REGIONS[0]!,
       };
@@ -104,17 +170,6 @@ describe('takeHomeFormReducer', () => {
       expect(result.region).toBe('Tokyo');
     });
 
-    it('resets to National Health Insurance and its default region when switching to miscellaneous mode', () => {
-      const result = takeHomeFormReducer(baseState, {
-        type: 'incomeModeChanged',
-        mode: 'miscellaneous',
-      });
-
-      expect(result.incomeMode).toBe('miscellaneous');
-      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
-      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
-    });
-
     it('leaves health insurance provider and region untouched when switching to advanced mode', () => {
       const result = takeHomeFormReducer(baseState, {
         type: 'incomeModeChanged',
@@ -129,8 +184,8 @@ describe('takeHomeFormReducer', () => {
     it('syncs the streams to a single annual salary stream when switching to salary mode', () => {
       const state: TakeHomeFormState = {
         ...baseState,
-        incomeMode: 'miscellaneous',
-        incomeStreams: [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount: 5_000_000 }],
+        incomeMode: 'advanced',
+        incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 5_000_000 }],
       };
 
       const result = takeHomeFormReducer(state, {
@@ -140,17 +195,6 @@ describe('takeHomeFormReducer', () => {
 
       expect(result.incomeStreams).toEqual([
         { id: 'simple-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
-      ]);
-    });
-
-    it('syncs the streams to a single miscellaneous stream when switching to miscellaneous mode', () => {
-      const result = takeHomeFormReducer(baseState, {
-        type: 'incomeModeChanged',
-        mode: 'miscellaneous',
-      });
-
-      expect(result.incomeStreams).toEqual([
-        { id: 'simple-miscellaneous', type: 'miscellaneous', amount: 5_000_000 },
       ]);
     });
 
@@ -230,25 +274,6 @@ describe('takeHomeFormReducer', () => {
 
       expect(result.incomeStreams).toEqual([
         { id: 'simple-salary', type: 'salary', frequency: 'annual', amount: 6_000_000 },
-      ]);
-    });
-
-    it('keeps the current miscellaneous stream when entering advanced mode from miscellaneous with a stale saved total', () => {
-      const state: TakeHomeFormState = {
-        ...baseState,
-        incomeMode: 'miscellaneous',
-        annualIncome: 6_000_000,
-        incomeStreams: [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount: 6_000_000 }],
-        savedIncomeStreams: [{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
-      };
-
-      const result = takeHomeFormReducer(state, {
-        type: 'incomeModeChanged',
-        mode: 'advanced',
-      });
-
-      expect(result.incomeStreams).toEqual([
-        { id: 'simple-miscellaneous', type: 'miscellaneous', amount: 6_000_000 },
       ]);
     });
 
@@ -452,20 +477,6 @@ describe('takeHomeFormReducer', () => {
       ]);
     });
 
-    it('syncs the single stream to the new amount in miscellaneous mode', () => {
-      const state: TakeHomeFormState = {
-        ...baseState,
-        incomeMode: 'miscellaneous',
-        incomeStreams: [{ id: 'simple-miscellaneous', type: 'miscellaneous', amount: 5_000_000 }],
-      };
-
-      const result = takeHomeFormReducer(state, { type: 'annualIncomeChanged', value: 6_000_000 });
-
-      expect(result.incomeStreams).toEqual([
-        { id: 'simple-miscellaneous', type: 'miscellaneous', amount: 6_000_000 },
-      ]);
-    });
-
     it('is ignored in advanced mode, where annualIncome is derived from the streams', () => {
       const advancedStreams: TakeHomeFormState['incomeStreams'] = [
         { id: 's1', type: 'salary', amount: 4_000_000, frequency: 'annual' },
@@ -501,6 +512,27 @@ describe('takeHomeFormReducer', () => {
 
       expect(result.incomeStreams).toEqual(streams);
       expect(result.annualIncome).toBe(300_000 * 12 + 1_200_000);
+    });
+
+    it('counts public pension streams at face value in the annual income, and offers only NHI without employment streams', () => {
+      const state: TakeHomeFormState = { ...baseState, incomeMode: 'advanced' };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [
+          {
+            id: 'p1',
+            type: 'publicPension',
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+            amount: 2_400_000,
+          },
+        ],
+      });
+
+      expect(result.annualIncome).toBe(2_400_000);
+      // Pension income is not employment income, so the employee provider is no longer offered.
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
     });
 
     it('auto-switches from dependent coverage to NHI when the new stream total crosses the eligibility threshold', () => {
@@ -539,6 +571,51 @@ describe('takeHomeFormReducer', () => {
       });
 
       expect(result.annualIncome).toBe(DEPENDENT_INCOME_THRESHOLD - 1);
+      expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);
+      expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
+    });
+
+    it('drops dependent coverage when a commuting allowance pushes the 年間収入 over the threshold', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+        annualIncome: 1_200_000,
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [
+          { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+          { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+        ],
+      });
+
+      // The allowance stays out of annual income but counts toward the 年間収入 the
+      // dependent test is judged on: 1,200,000 + 120,000 is over the 1,300,000 threshold.
+      expect(result.annualIncome).toBe(1_200_000);
+      expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+    });
+
+    it('keeps dependent coverage for the same salary without a commuting allowance', () => {
+      const state: TakeHomeFormState = {
+        ...baseState,
+        incomeMode: 'advanced',
+        healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+        region: DEFAULT_PROVIDER_REGION,
+        annualIncome: 1_200_000,
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' }],
+      };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [{ id: 's1', type: 'salary', amount: 1_250_000, frequency: 'annual' }],
+      });
+
+      expect(result.annualIncome).toBe(1_250_000);
       expect(result.healthInsuranceProvider).toBe(DEPENDENT_COVERAGE_ID);
       expect(result.region).toBe(DEFAULT_PROVIDER_REGION);
     });
@@ -632,7 +709,14 @@ describe('takeHomeFormReducer', () => {
     it('adds dependent coverage for employment income under the threshold', () => {
       const ids = availableProvidersFor({
         ...baseState,
-        annualIncome: DEPENDENT_INCOME_THRESHOLD - 1,
+        incomeStreams: [
+          {
+            id: 'simple-salary',
+            type: 'salary',
+            amount: DEPENDENT_INCOME_THRESHOLD - 1,
+            frequency: 'annual',
+          },
+        ],
       }).map(option => option.id);
 
       expect(ids).toEqual([
@@ -643,18 +727,44 @@ describe('takeHomeFormReducer', () => {
       ]);
     });
 
+    it('withholds dependent coverage once a commuting allowance carries the 年間収入 over', () => {
+      const salaryUnderThreshold: TakeHomeFormState['incomeStreams'] = [
+        {
+          id: 's1',
+          type: 'salary',
+          amount: DEPENDENT_INCOME_THRESHOLD - 100_000,
+          frequency: 'annual',
+        },
+      ];
+      const advanced = { ...baseState, incomeMode: 'advanced' as const };
+
+      expect(
+        availableProvidersFor({ ...advanced, incomeStreams: salaryUnderThreshold }).map(o => o.id),
+      ).toContain(DEPENDENT_COVERAGE_ID);
+
+      // 100,000 short of the threshold, but a 10,000/month allowance is 120,000 over the year.
+      expect(
+        availableProvidersFor({
+          ...advanced,
+          incomeStreams: [
+            ...salaryUnderThreshold,
+            { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+          ],
+        }).map(o => o.id),
+      ).not.toContain(DEPENDENT_COVERAGE_ID);
+    });
+
     it('limits non-employment income to NHI, adding dependent coverage only under the threshold', () => {
       const overThreshold = availableProvidersFor({
         ...baseState,
-        incomeMode: 'miscellaneous',
+        incomeMode: 'advanced',
         incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 5_000_000 }],
       });
       expect(overThreshold.map(option => option.id)).toEqual([NATIONAL_HEALTH_INSURANCE_ID]);
 
       const underThreshold = availableProvidersFor({
         ...baseState,
-        incomeMode: 'miscellaneous',
-        annualIncome: 1_000_000,
+        incomeMode: 'advanced',
         incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: 1_000_000 }],
       });
       expect(underThreshold.map(option => option.id)).toEqual([
@@ -662,23 +772,139 @@ describe('takeHomeFormReducer', () => {
         NATIONAL_HEALTH_INSURANCE_ID,
       ]);
     });
+
+    it('counts investment receipts toward the 年間収入 whatever their tax election', () => {
+      const advanced = { ...baseState, incomeMode: 'advanced' as const };
+      const salary = (amount: number) => ({
+        id: 's1',
+        type: 'salary' as const,
+        amount,
+        frequency: 'annual' as const,
+      });
+      const providerIds = (streams: TakeHomeFormState['incomeStreams']) =>
+        availableProvidersFor({ ...advanced, incomeStreams: streams }).map(o => o.id);
+
+      // 1,000,000 of salary is under the threshold; 300,000 of dividends carries the 年間収入 to
+      // it whether the dividends are withheld or reported — the test is a social-insurance rule,
+      // not a matter of the tax election.
+      expect(providerIds([salary(1_000_000)])).toContain(DEPENDENT_COVERAGE_ID);
+      for (const isReported of [false, true]) {
+        expect(
+          providerIds([
+            salary(1_000_000),
+            {
+              id: 'd1',
+              type: 'dividends',
+              shareType: 'listed',
+              paymentChannel: 'domestic',
+              isReported,
+              issuerDomicile: 'domestic',
+              foreignTax: 0,
+              amount: 300_000,
+            },
+          ]),
+        ).not.toContain(DEPENDENT_COVERAGE_ID);
+      }
+
+      // A year's capital gains count when positive; a losing year lowers nothing.
+      const gains = (amount: number) => ({
+        id: 'g1',
+        type: 'withholdingAccount' as const,
+        capitalGains: amount,
+        dividends: 0,
+        foreignDividends: 0,
+        foreignTax: 0,
+        reportsCapitalGains: false,
+        reportsDividends: false,
+      });
+      expect(providerIds([salary(1_000_000), gains(300_000)])).not.toContain(DEPENDENT_COVERAGE_ID);
+      expect(providerIds([salary(1_290_000), gains(-300_000)])).toContain(DEPENDENT_COVERAGE_ID);
+    });
+  });
+});
+
+describe('75+ provider forcing', () => {
+  it('offers only the latter-stage provider at 75+', () => {
+    const options = availableProvidersFor({ ...baseState, ageRange: 'age75plus' });
+    expect(options.map(o => o.id)).toEqual([LATTER_STAGE_ELDERLY_ID]);
   });
 
-  describe('totalAnnualIncomeFromStreams', () => {
-    it('annualizes monthly salaries, excludes commuting allowance, and sums everything else', () => {
-      expect(
-        totalAnnualIncomeFromStreams([
-          { id: 's1', type: 'salary', amount: 300_000, frequency: 'monthly' },
-          { id: 's2', type: 'salary', amount: 1_000_000, frequency: 'annual' },
-          { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
-          { id: 'b1', type: 'bonus', amount: 500_000, month: 5 },
-          { id: 'm1', type: 'miscellaneous', amount: 200_000 },
-        ]),
-      ).toBe(300_000 * 12 + 1_000_000 + 500_000 + 200_000);
+  it('forces the latter-stage provider when the age changes to 75+', () => {
+    const result = takeHomeFormReducer(baseState, {
+      type: 'ageRangeChanged',
+      ageRange: 'age75plus',
     });
 
-    it('returns 0 for an empty stream list', () => {
-      expect(totalAnnualIncomeFromStreams([])).toBe(0);
+    expect(result.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(result.region).toBe('Tokyo');
+  });
+
+  it('falls back to National Health Insurance when leaving 75+', () => {
+    const state: TakeHomeFormState = {
+      ...baseState,
+      ageRange: 'age75plus',
+      healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+      region: 'Tokyo',
+    };
+
+    const result = takeHomeFormReducer(state, {
+      type: 'ageRangeChanged',
+      ageRange: 'age65to69',
     });
+
+    // Latter-stage coverage is no longer offered below 75; the cascade falls back to NHI.
+    expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+    expect(NATIONAL_HEALTH_INSURANCE_REGIONS).toContain(result.region);
+  });
+
+  it('keeps the latter-stage provider and prefecture across income-mode changes at 75+', () => {
+    // A non-default prefecture, so a reset to the provider default (Tokyo) would be visible.
+    const state: TakeHomeFormState = {
+      ...baseState,
+      ageRange: 'age75plus',
+      healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+      region: 'Osaka',
+    };
+
+    const toAdvanced = takeHomeFormReducer(state, { type: 'incomeModeChanged', mode: 'advanced' });
+    expect(toAdvanced.incomeMode).toBe('advanced');
+    expect(toAdvanced.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(toAdvanced.region).toBe('Osaka');
+
+    const backToSalary = takeHomeFormReducer(toAdvanced, {
+      type: 'incomeModeChanged',
+      mode: 'salary',
+    });
+    expect(backToSalary.incomeMode).toBe('salary');
+    expect(backToSalary.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(backToSalary.region).toBe('Osaka');
+  });
+
+  it('resets an NHI municipality to a prefecture when forcing 75+', () => {
+    // An NHI region key that is not a prefecture key: if the cascade left it in place, the
+    // latter-stage lookup would find no parameters and silently return a ¥0 premium.
+    const state: TakeHomeFormState = {
+      ...baseState,
+      incomeMode: 'advanced',
+      incomeStreams: [{ id: 'm', type: 'miscellaneous', amount: 5_000_000 }],
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo-Chiyoda',
+    };
+
+    const result = takeHomeFormReducer(state, {
+      type: 'ageRangeChanged',
+      ageRange: 'age75plus',
+    });
+
+    expect(result.healthInsuranceProvider).toBe(LATTER_STAGE_ELDERLY_ID);
+    expect(regionOptionsFor(LATTER_STAGE_ELDERLY_ID).map(o => o.id)).toContain(result.region);
+    expect(result.region).toBe('Tokyo');
+  });
+
+  it('lists every prefecture as a latter-stage region', () => {
+    const ids = regionOptionsFor(LATTER_STAGE_ELDERLY_ID).map(o => o.id);
+    expect(ids).toHaveLength(47);
+    expect(ids).toContain('Tokyo');
+    expect(ids).toContain('Okinawa');
   });
 });

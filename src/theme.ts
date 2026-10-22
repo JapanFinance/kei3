@@ -5,6 +5,10 @@ import { createTheme } from '@mui/material/styles';
 
 export const theme = createTheme({
   cssVariables: { colorSchemeSelector: 'class' },
+  // Consistent keyboard-only focus ring (2px primary outline, 2px offset)
+  // across all components, replacing each component's own focus treatment.
+  // https://mui.com/material-ui/customization/focus-visible/
+  focusVisible: true,
   // Only `background` differs from MUI's defaults, overridden so paper
   // contrasts with the page.
   colorSchemes: {

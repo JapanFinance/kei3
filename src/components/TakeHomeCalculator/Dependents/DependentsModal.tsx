@@ -35,11 +35,7 @@ import type {
   OtherDependent,
   Spouse,
 } from '../../../types/dependents';
-import {
-  RELATIONSHIPS,
-  DEPENDENT_AGE_CATEGORIES,
-  DEDUCTION_TYPES,
-} from '../../../types/dependents';
+import { RELATIONSHIPS, DEPENDENT_AGE_RANGES, DEDUCTION_TYPES } from '../../../types/dependents';
 import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
@@ -121,7 +117,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
     const relationship =
       RELATIONSHIPS.find(r => r.value === dependent.relationship)?.label ?? 'Unknown';
     const ageLabel =
-      DEPENDENT_AGE_CATEGORIES.find(a => a.value === dependent.ageCategory)?.label ?? 'Unknown';
+      DEPENDENT_AGE_RANGES.find(a => a.value === dependent.ageRange)?.label ?? 'Unknown';
     const totalNetIncome = calculateDependentTotalNetIncome(dependent, incomeYear);
     const incomeLabel =
       totalNetIncome === 0 ? 'No income' : `Net income: ${formatJPY(totalNetIncome)}`;
@@ -132,7 +128,10 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
     const chips: React.ReactNode[] = [];
 
     if (dependent.disability !== 'none') {
-      let disabilityLabel = dependent.disability === 'regular' ? 'Disabled' : 'Special Disability';
+      // Names the 障害者控除 bracket claimed, matching DISABILITY_LEVELS, rather than labelling
+      // the dependent; the chip drops the Japanese term the dropdown carries, for width.
+      let disabilityLabel =
+        dependent.disability === 'regular' ? 'General disability' : 'Special disability';
       // Add cohabiting info to special disability chip
       if (dependent.disability === 'special' && dependent.isCohabiting) {
         disabilityLabel += ' (Cohabiting)';
@@ -358,7 +357,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           return (
                             <TableRow>
                               <TableCell colSpan={4} align="center">
-                                <Typography variant="body2" color="text.secondary">
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                                   No dependents added
                                 </Typography>
                               </TableCell>
@@ -430,8 +429,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                                 {group.count > 1 && (
                                   <Typography
                                     variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: 'block' }}
+                                    sx={{ color: 'text.secondary', display: 'block' }}
                                   >
                                     = {formatJPY(group.natAmount * group.count)}
                                   </Typography>
@@ -442,8 +440,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                                 {group.count > 1 && (
                                   <Typography
                                     variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: 'block' }}
+                                    sx={{ color: 'text.secondary', display: 'block' }}
                                   >
                                     = {formatJPY(group.resAmount * group.count)}
                                   </Typography>
@@ -497,7 +494,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       >
         {!showingForm && (
           <>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto', ml: 1 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mr: 'auto', ml: 1 }}>
               {spouse ? '1 spouse, ' : ''}
               {otherDependents.length} other dependent{otherDependents.length !== 1 ? 's' : ''}
             </Typography>

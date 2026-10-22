@@ -2,6 +2,62 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-10-21
+
+### New
+
+- Investment income can now be entered in Advanced mode: [capital gains on shares](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1463.htm), [dividends](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1330.htm) and [interest](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1310.htm), including a withholding designated account ([特定口座（源泉徴収あり）](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1476.htm)) entered as one entry from its annual transaction report. Each amount can be left to the tax withheld at source (if applicable) or reported on the tax return, under separate taxation (申告分離課税) or, for dividends, aggregate taxation (総合課税). Tax withheld abroad can be entered with the corresponding income (including eligible foreign pensions), and tax paid with a foreign tax return in the Additional Deductions & Credits dialog. Foreign tax paid on reported income is credited against income tax and residence tax up to the legal limits (see the [foreign tax credit](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm)). When investment income is entered, a reporting planner in the advanced income details dialog finds the choices that maximize take-home. The [Minimum Tax on Ultra-High Income](https://www.nta.go.jp/taxes/shiraberu/shinkoku/kiwataka/index.htm) is applied when applicable. The dividend tax credit (配当控除), the credit for foreign tax paid inside Japanese funds, and losses or foreign tax carried forward from earlier years are not supported yet.
+
+## 2026-09-21
+
+### Fixed
+
+- Fixed employee health insurance premiums that were ¥1 too high for some rates. A premium that ends in exactly 0.50 yen is rounded down (50銭以下切り捨て), but in rare cases it was incorrectly being rounded up. Premiums on bonuses were affected in the same way. Amounts are now entered in whole yen, and custom provider rates accept up to four decimal places (for example, 3.9947%). A custom rate entered with more than four decimal places is rounded to four.
+- Fixed the Social Insurance tab showing the wrong standard monthly remuneration (標準報酬月額) grade when three or more income streams were entered and their total landed exactly on a grade boundary. This was a display bug in the tooltip and did not affect the calculated premiums.
+
+## 2026-09-10
+
+### Updated
+
+- The income mode selection is now a choice between "Salary only" and "Advanced". The separate Miscellaneous mode has been removed. Instead, enter miscellaneous income (雑所得) in the Advanced mode, where it can also be combined with other income types.
+
+## 2026-09-06
+
+### Updated
+
+- The Advanced income mode's income list now shows every income type as its own section, each with an add button: sections with one income type open its form directly, and the employment section offers a menu of its types (salary, bonus, commuting allowance, stock-based compensation). This replaces the single Add Income/Benefit button and the type dropdown at the top of the form. An existing entry's type is fixed while editing; to change it, delete the entry and add a new one.
+
+### Fixed
+
+- Fixed a crash in the Advanced income mode when a commuting allowance (通勤手当) was entered alongside a salary. The take-home chart scales the entered income streams across its whole income range, and it was scaling the commuting allowance along with them, pushing it above the non-taxable limit (¥150,000 per month) at the upper end of the range. The commuting allowance is a fixed non-taxable benefit, so it is now held at the entered amount across the chart, as it already was in the income total.
+
+## 2026-08-30
+
+### Updated
+
+- The 65+ long-term care premium (介護保険料, 第1号被保険者) is now estimated by default. The estimate multiplies the average base amount (基準額) for the selected prefecture (or the national average) from the [MHLW FY2024-2026 publication](https://www.mhlw.go.jp/stf/newpage_40211.html) by the standard 13-tier income multiplier ([介護保険料等における基準額の調整について, PDF](https://www.mhlw.go.jp/content/12300000/001576452.pdf)), based on the entered income and household. Actual premiums and tiers are set per municipality and can differ substantially; the estimate can be switched off to enter the billed amount from the notice (介護保険料決定通知書) as before.
+
+## 2026-08-28
+
+### New
+
+- A new "Personal Circumstances" card in "Additional Deductions & Credits" covers the taxpayer's own personal deductions (人的控除): disability ([障害者控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm)), widow ([寡婦控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1170.htm)), and single parent ([ひとり親控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1171.htm)). Deduction amounts are included in the Taxes tab's "Other Deductions" line, with a per-item breakdown in its tooltip. These deductions also affect the personal deduction difference used in the residence tax adjustment credit (調整控除).
+- Two consequences of the taxpayer's status are now modelled: someone qualifying for special disability (特別障害者) with employment income over ¥8,500,000 gets the [所得金額調整控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1411.htm) (up to ¥150,000 off employment income) without needing a qualifying dependent, and anyone who qualifies for any of the added deductions whose total net income is ¥1,350,000 or less is [exempt from residence tax](https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06). Residence tax exemption previously applied only to minors (未成年者).
+
+## 2026-08-23
+
+### New
+
+- Public pension income ([公的年金等](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1600.htm)) is now available as an income type in the Advanced income mode and the Dependents modal. This covers annuities received from National Pension, Employees' Pension (厚生年金保険), foreign public pension, mutual-aid pensions, and pensions from past employment such as DB and DC plans (including iDeCo).
+
+## 2026-08-22
+
+### New
+
+- The age input now covers every age. Age now determines National Pension (20-59) and Employees' Pension (under 70) contributions, the residence-tax exemption for minors, and the dependent-coverage income threshold. Details are in the Age tooltip.
+- From age 65, long-term care premiums are billed directly by the municipality. For ages 65 and over, enter the billed annual amount from the notice (介護保険料決定通知書) received around June-July.
+- From age 75, health insurance coverage moves to the Medical System for the Elderly ([後期高齢者医療制度](https://www.gov-online.go.jp/article/202209/entry-10482.html)). The calculator computes its premium based on the selected prefecture.
+
 ## 2026-07-18
 
 ### New
@@ -10,7 +66,7 @@ All notable changes to the Japan Take-Home Pay Calculator will be documented in 
 
 ### Updated
 
-- Updated the income distribution to the Ministry of Health, Labour and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
+- Updated the income distribution to the Ministry of Health, Labour, and Welfare's [2025（令和７）年 国民生活基礎調査](https://www.mhlw.go.jp/toukei/saikin/hw/k-tyosa/k-tyosa25/index.html), which reports income earned during the 2024 calendar year.
 - The percentile estimate is more precise below ¥10,000,000, where the survey's income brackets now resolve in ¥500,000 steps instead of ¥1,000,000.
 
 ## 2026-06-29

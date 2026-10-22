@@ -6,13 +6,12 @@
  *
  * Gross employment income (給与等の収入金額) is reduced to 給与所得 by two things, both modelled here:
  *  - 給与所得控除 (employment income deduction): the year-indexed tables below, applied by
- *    {@link calculateNetEmploymentIncomeForPeriod}. Each period defines the flat-floor region, any
- *    fixed transition values, and the standard percentage-formula tiers for that income year.
+ *    {@link calculateNetEmploymentIncome}. Each period defines the flat-floor region, any fixed
+ *    transition values, and the standard percentage-formula tiers for that income year.
  *  - 所得金額調整控除（子ども・特別障害者等）: {@link calculateIncomeAdjustmentDeductionAmount} computes the amount
- *    purely from 給与等の収入金額; whether the taxpayer qualifies (a dependent under 23, or a special-disability
- *    spouse/dependent) is checked separately by
- *    {@link import("../utils/dependentDeductions").hasIncomeAdjustmentDeductionDependent}, and the two are
- *    combined in `taxCalculations.ts`.
+ *    purely from 給与等の収入金額; who qualifies for it differs between the taxpayer and a dependent, so each
+ *    decides its own, and
+ *    {@link import("../utils/netIncomeComponents").composeNetIncomeComponents} subtracts it.
  *
  * Sources:
  *  - 給与所得控除: https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm
@@ -176,7 +175,7 @@ export const getEmploymentIncomeDeductionPeriod = (
  * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
  * @param period                 The deduction period parameters to apply
  */
-export const calculateNetEmploymentIncomeForPeriod = (
+const calculateNetEmploymentIncomeForPeriod = (
   grossEmploymentIncome: number,
   period: EmploymentIncomeDeductionPeriod,
 ): number => {
@@ -202,10 +201,25 @@ export const calculateNetEmploymentIncomeForPeriod = (
   return 0; // unreachable: final tier has grossMaxInclusive = Infinity
 };
 
-/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). */
-const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
+/** 給与等の収入金額 above which the 所得金額調整控除 applies (措法41の3の11). Exported for
+ * display copy that names the threshold. */
+export const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_THRESHOLD = 8_500_000;
 /** 給与等の収入金額 is capped here in the formula, yielding a maximum deduction of ¥150,000. */
 const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
+
+/**
+ * Calculates net employment income (給与所得の金額) for the given income year: gross minus the
+ * 給与所得控除. The 所得金額調整控除 is not applied here — both variants of it are subtracted by the
+ * caller that knows whether the earner qualifies.
+ *
+ * @param grossEmploymentIncome  Gross employment income (給与等の収入金額) in yen
+ * @param year                   Income year (calendar year the income was earned)
+ */
+export const calculateNetEmploymentIncome = (grossEmploymentIncome: number, year: number): number =>
+  calculateNetEmploymentIncomeForPeriod(
+    grossEmploymentIncome,
+    getEmploymentIncomeDeductionPeriod(year),
+  );
 
 /**
  * 所得金額調整控除（子ども・特別障害者等を有する者等）— the income amount adjustment deduction.
@@ -216,9 +230,9 @@ const INCOME_ADJUSTMENT_EMPLOYMENT_INCOME_CAP = 10_000_000;
  *
  *   amount = ⌈{min(給与等の収入金額, ¥10,000,000) − ¥8,500,000} × 10%⌉   (max ¥150,000)
  *
- * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer having a
- * qualifying dependent or special-disability status) is checked separately by
- * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts`, with the two combined in
+ * This returns the amount as a pure function of salary only; ELIGIBILITY (the taxpayer being a
+ * 特別障害者, or having a qualifying dependent) is checked separately — see
+ * `hasIncomeAdjustmentDeductionDependent` in `dependentDeductions.ts` — with the parts combined in
  * `taxCalculations.ts`.
  *
  * Why it affects residence tax too: this is an adjustment to 給与所得 itself, NOT an 所得控除. The

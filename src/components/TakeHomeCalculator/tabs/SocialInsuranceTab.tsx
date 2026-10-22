@@ -8,10 +8,20 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
+import { getCustomProviderRates } from '../../../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
-import { NATIONAL_HEALTH_INSURANCE_ID, CUSTOM_PROVIDER_ID } from '../../../types/healthInsurance';
+import {
+  NATIONAL_HEALTH_INSURANCE_ID,
+  CUSTOM_PROVIDER_ID,
+  LATTER_STAGE_ELDERLY_ID,
+} from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import type { BonusIncomeStream } from '../../../types/tax';
+import {
+  isLongTermCareCategory2Insured,
+  isSubjectToEmployeesPension,
+  isSubjectToNationalPension,
+} from '../../../types/taxpayerAge';
 import { detectCaps } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
@@ -22,15 +32,42 @@ import {
 import CapIndicator from '../../ui/CapIndicator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
-import { DetailedTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { ResultRow } from '../ResultRow';
+import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
 import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
+import IncomeOverviewRows from './IncomeOverviewRows';
+import LatterStageElderlyPremiumTooltip from './LatterStageElderlyPremiumTooltip';
+import LongTermCareCategory1PremiumTooltip from './LongTermCareCategory1PremiumTooltip';
 import NationalPensionTooltip from './NationalPensionTooltip';
-import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import PensionBonusTooltip from './PensionBonusTooltip';
 import PensionPremiumTooltip from './PensionPremiumTooltip';
+
+type PensionKind = 'latterStageElderly' | 'nationalPension' | 'employeesPension';
+
+interface PensionSectionCopy {
+  title: string;
+  /** Note for the annual row when no contribution is due at the selected age. */
+  noContributionNote?: string;
+}
+
+const PENSION_SECTION_COPY: Record<PensionKind, PensionSectionCopy> = {
+  latterStageElderly: {
+    title: 'Pension',
+    noContributionNote:
+      "At the selected age there are no compulsory pension contributions: Employees' Pension (厚生年金保険) enrollment ends at age 70 and National Pension (国民年金) enrollment at age 60.",
+  },
+  nationalPension: {
+    title: 'National Pension',
+    noContributionNote:
+      'At the selected age there is no compulsory National Pension (国民年金) contribution: enrollment covers ages 20-59.',
+  },
+  employeesPension: {
+    title: "Employees' Pension",
+  },
+};
 
 interface SocialInsuranceTabProps {
   results: TakeHomeResults;
@@ -44,10 +81,17 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const totalSocialInsurance =
     results.socialInsuranceOverride !== undefined
       ? results.socialInsuranceOverride
-      : results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0);
+      : results.healthInsurance +
+        results.pensionPayments +
+        (results.employmentInsurance ?? 0) +
+        (results.longTermCareCategory1Premium ?? 0);
 
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
+  const isLatterStage = inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID;
+  // NHI and the 後期高齢者医療制度 both assess premiums on net income rather than SMR.
+  const isIncomeBasedProvider = isNationalHealthInsurance || isLatterStage;
+  const includeLTC = isLongTermCareCategory2Insured(inputs.ageRange);
 
   // Calculate Health Insurance Bonus Breakdown for Tooltip
   // We need to determine the rates here to pass to the breakdown calculator
@@ -56,19 +100,15 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   );
   let healthInsuranceBreakdown = undefined;
 
-  if (bonuses.length > 0 && !isNationalHealthInsurance) {
+  if (bonuses.length > 0 && !isIncomeBasedProvider) {
     const provider = inputs.healthInsuranceProvider;
     const region = inputs.region;
 
     if (provider === CUSTOM_PROVIDER_ID) {
-      const rates = {
-        employeeHealthInsuranceRate: (inputs.customEHIRates?.healthInsuranceRate ?? 0) / 100,
-        employeeLongTermCareRate: (inputs.customEHIRates?.longTermCareRate ?? 0) / 100,
-      };
       healthInsuranceBreakdown = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
-        rates,
-        inputs.isSubjectToLongTermCarePremium,
+        getCustomProviderRates(inputs.customEHIRates),
+        includeLTC,
         inputs.incomeYear,
       );
     } else {
@@ -77,13 +117,25 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         provider,
         region,
         inputs.incomeYear,
-        inputs.isSubjectToLongTermCarePremium,
+        includeLTC,
       );
     }
   }
 
   // Detect if any caps are applied
   const capStatus = detectCaps(results, inputs.incomeYear, healthInsuranceBreakdown);
+
+  const nationalPensionDue = isSubjectToNationalPension(inputs.ageRange);
+  const employeesPensionDue = isSubjectToEmployeesPension(inputs.ageRange);
+
+  const pensionCopy =
+    PENSION_SECTION_COPY[
+      isLatterStage
+        ? 'latterStageElderly'
+        : isNationalHealthInsurance
+          ? 'nationalPension'
+          : 'employeesPension'
+    ];
 
   if (results.socialInsuranceOverride !== undefined) {
     return (
@@ -103,7 +155,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           Social Insurance Details
         </Typography>
 
-        <ResultRow label="Annual Income" value={formatJPY(results.annualIncome)} type="header" />
+        <ResultRow
+          label={
+            <span>
+              Annual Income
+              <AnnualIncomeTooltip />
+            </span>
+          }
+          value={formatJPY(results.annualIncome)}
+          type="header"
+        />
 
         <Box
           sx={{
@@ -115,7 +176,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             borderColor: 'text.secondary',
           }}
         >
-          <Typography variant="body2" color="text.secondary" align="center">
+          <Typography variant="body2" align="center" sx={{ color: 'text.secondary' }}>
             Using manually entered social insurance amount.
             <br />
             Detailed breakdown is not available.
@@ -131,47 +192,23 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     );
   }
 
-  // Calculate specifically for display purposes
-  const salaryIncome =
-    inputs.incomeStreams.length > 0
-      ? inputs.incomeStreams
-          .filter(s => s.type === 'salary')
-          .reduce((sum, s) => sum + (s.frequency === 'monthly' ? s.amount * 12 : s.amount), 0)
-      : results.hasEmploymentIncome
-        ? results.annualIncome
-        : 0;
+  // The amounts the premiums were charged on, from the calculation that charged them rather than
+  // from the income streams it was given, so that every figure on this tab and in the tooltips it
+  // opens is the calculation's own.
+  const salaryIncome = results.salaryIncome;
+  const bonusIncome = results.bonusIncome;
+  const annualCommutingAllowance = results.commutingAllowance ?? 0;
 
-  const bonusIncome = inputs.incomeStreams
-    .filter(s => s.type === 'bonus')
-    .reduce((sum, s) => sum + s.amount, 0);
+  // The remuneration is summed over the year and divided once, as the calculation divides it.
+  // Adding a twelfth of each income stream instead can land just under a bracket bound and show
+  // a grade the premiums were not charged on: three yearly streams of 560,000, 194,000 and 2,000
+  // come to 62,999.99999999999 a month rather than 63,000, which is grade 58,000 rather than
+  // 68,000.
+  const annualRemuneration = salaryIncome + annualCommutingAllowance;
+  const monthlyCommutingAllowance = annualCommutingAllowance / 12;
+  const rawMonthlyRemuneration = annualRemuneration / 12;
 
-  const businessAndMiscIncome = inputs.incomeStreams
-    .filter(s => s.type === 'business' || s.type === 'miscellaneous')
-    .reduce((sum, s) => sum + s.amount, 0);
-
-  const hasEmploymentIncome = results.grossEmploymentIncome > 0;
-  const hasBusinessOrMiscIncome = businessAndMiscIncome > 0;
-
-  const monthlyCommutingAllowance = inputs.incomeStreams
-    .filter(s => s.type === 'commutingAllowance')
-    .reduce((sum, s) => {
-      if (s.frequency === 'monthly') return sum + s.amount;
-      if (s.frequency === '3-months') return sum + s.amount / 3;
-      if (s.frequency === '6-months') return sum + s.amount / 6;
-      return sum + s.amount / 12;
-    }, 0);
-
-  // Calculate Raw Monthly Remuneration (Salary + Commuting)
-  const rawMonthlyRemuneration = inputs.incomeStreams
-    .filter(s => s.type === 'salary' || s.type === 'commutingAllowance')
-    .reduce((sum, s) => {
-      if (s.frequency === 'monthly') return sum + s.amount;
-      if (s.frequency === '3-months') return sum + s.amount / 3;
-      if (s.frequency === '6-months') return sum + s.amount / 6;
-      return sum + s.amount / 12;
-    }, 0);
-
-  // Find SMR Brackets
+  // The grades the premiums were charged on, from the lookups the calculation used.
   const healthSMR = findSMRBracket(rawMonthlyRemuneration).smrAmount;
   const pensionSMR = findPensionBracket(rawMonthlyRemuneration).smrAmount;
 
@@ -192,115 +229,17 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         Social Insurance Details
       </Typography>
 
-      {isNationalHealthInsurance ? (
+      {isIncomeBasedProvider ? (
         <>
-          {/* For NHI, show the income calculation details regardless of employment status */}
-          {hasEmploymentIncome && results.netEmploymentIncome !== undefined && (
-            <ResultRow
-              label={
-                <span>
-                  Net Employment Income
-                  <NetEmploymentIncomeTooltip
-                    grossEmploymentIncome={results.grossEmploymentIncome}
-                    netEmploymentIncome={results.netEmploymentIncome}
-                    incomeAdjustmentDeduction={results.incomeAdjustmentDeduction ?? 0}
-                    year={inputs.incomeYear}
-                  />
-                </span>
-              }
-              value={formatJPY(results.netEmploymentIncome)}
-              type="default"
-            />
-          )}
-          {hasBusinessOrMiscIncome && (
-            <ResultRow
-              label={
-                <span>
-                  Net Business / Misc Income
-                  {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
-                    <DetailedTooltip title="Business & Miscellaneous Income">
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          Calculation Breakdown
-                        </Typography>
-                        <table
-                          style={{
-                            width: '100%',
-                            borderCollapse: 'collapse',
-                            fontSize: '0.9rem',
-                            marginBottom: '8px',
-                          }}
-                        >
-                          <tbody>
-                            <tr>
-                              <td style={{ padding: '2px 0' }}>Business/Miscellaneous Income:</td>
-                              <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                                {formatJPY(businessAndMiscIncome)}
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style={{ padding: '2px 0' }}>Blue-Filer Deduction:</td>
-                              <Box
-                                component="td"
-                                sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
-                              >
-                                -{formatJPY(results.blueFilerDeduction)}
-                              </Box>
-                            </tr>
-                            <tr style={{ borderTop: '1px solid #ddd' }}>
-                              <td style={{ padding: '4px 0', fontWeight: 600 }}>
-                                Net Business/Misc Income:
-                              </td>
-                              <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                                {formatJPY(
-                                  results.totalNetIncome - (results.netEmploymentIncome ?? 0),
-                                )}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                            Blue-Filer Special Deduction
-                          </Typography>
-                          <Typography variant="body2" sx={{ mb: 1 }}>
-                            A special deduction for business operators with permission to file a
-                            Blue Return. This amount is deducted from business income after expenses
-                            before calculating taxable income.
-                          </Typography>
-                          <SourceLinks
-                            sources={[
-                              {
-                                href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm',
-                                label: '青色申告特別控除 - NTA',
-                              },
-                            ]}
-                          />
-                        </Box>
-                      </Box>
-                    </DetailedTooltip>
-                  )}
-                </span>
-              }
-              value={formatJPY(results.totalNetIncome - (results.netEmploymentIncome ?? 0))}
-              type="default"
-            />
-          )}
-          {/* Total Net Income Row */}
-          {hasEmploymentIncome && hasBusinessOrMiscIncome && (
-            <ResultRow
-              label="Total Net Income"
-              value={formatJPY(results.totalNetIncome)}
-              type="subtotal"
-            />
-          )}
+          {/* For income-based providers, show the income calculation details regardless of employment status */}
+          <IncomeOverviewRows results={results} inputs={inputs} />
           <ResultRow
             label="Basic Deduction"
             value={formatJPY(-results.residenceTaxBasicDeduction!)}
             type="default"
           />
           <ResultRow
-            label="NHI Calculation Base"
+            label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
             value={formatJPY(
               Math.max(0, results.totalNetIncome - results.residenceTaxBasicDeduction!),
             )}
@@ -350,7 +289,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                       </tr>
                     </tbody>
                   </table>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     Monthly remuneration includes base salary and various allowances (e.g. commuting
                     allowance, housing allowance).
                   </Typography>
@@ -370,20 +309,61 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isNationalHealthInsurance
-              ? 'National Health Insurance'
-              : "Employees' Health Insurance"}
+            {isLatterStage
+              ? 'Medical System for the Elderly (75+)'
+              : isNationalHealthInsurance
+                ? 'National Health Insurance'
+                : "Employees' Health Insurance"}
             {isNationalHealthInsurance && (
               <DetailedTooltip title="Health Insurance Premium" icon={SIMPLE_TOOLTIP_ICON}>
                 <HealthInsurancePremiumTooltip
                   inputs={inputs}
+                  monthlyRemuneration={rawMonthlyRemuneration}
                   standardMonthlyRemuneration={healthSMR}
                 />
               </DetailedTooltip>
             )}
+            {isLatterStage && (
+              <DetailedTooltip
+                title="Medical System for the Elderly Premium"
+                icon={SIMPLE_TOOLTIP_ICON}
+              >
+                <LatterStageElderlyPremiumTooltip />
+              </DetailedTooltip>
+            )}
           </Typography>
         </Box>
-        {isNationalHealthInsurance ? (
+        {isLatterStage ? (
+          <>
+            <ResultRow
+              label="Medical Portion"
+              labelSuffix={
+                capStatus.healthInsuranceCapped ? (
+                  <CapIndicator
+                    capStatus={capStatus}
+                    contributionType="health insurance"
+                    iconOnly={isMobile}
+                  />
+                ) : undefined
+              }
+              value={formatJPY(results.latterStageMedicalPortion ?? 0)}
+              type="indented"
+            />
+            {results.latterStageChildSupportPortion !== undefined &&
+              results.latterStageChildSupportPortion > 0 && (
+                <ResultRow
+                  label="Child Support Portion"
+                  value={formatJPY(results.latterStageChildSupportPortion)}
+                  type="indented"
+                />
+              )}
+            <ResultRow
+              label="Annual Premium"
+              value={formatJPY(results.healthInsurance)}
+              type="subtotal"
+            />
+          </>
+        ) : isNationalHealthInsurance ? (
           <>
             <ResultRow
               label="Medical Portion"
@@ -481,6 +461,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                   <DetailedTooltip title="Health Insurance Premium">
                     <HealthInsurancePremiumTooltip
                       inputs={inputs}
+                      monthlyRemuneration={rawMonthlyRemuneration}
                       standardMonthlyRemuneration={healthSMR}
                     />
                   </DetailedTooltip>
@@ -533,25 +514,36 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-            {isNationalHealthInsurance ? 'National Pension' : "Employees' Pension"}
+            {pensionCopy.title}
           </Typography>
         </Box>
-        {!isNationalHealthInsurance && (
+        {!isIncomeBasedProvider && (
           <ResultRow
             label="Monthly Contribution"
             labelSuffix={
-              <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
-                <DetailedTooltip title="Pension Contribution">
-                  <PensionPremiumTooltip inputs={inputs} standardMonthlyRemuneration={pensionSMR} />
-                </DetailedTooltip>
-                {(capStatus.pensionCapped || capStatus.pensionFixed) && (
-                  <CapIndicator
-                    capStatus={capStatus}
-                    contributionType="pension"
-                    iconOnly={isMobile}
-                  />
-                )}
-              </Box>
+              employeesPensionDue ? (
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <DetailedTooltip title="Pension Contribution">
+                    <PensionPremiumTooltip
+                      inputs={inputs}
+                      monthlyRemuneration={rawMonthlyRemuneration}
+                      standardMonthlyRemuneration={pensionSMR}
+                    />
+                  </DetailedTooltip>
+                  {(capStatus.pensionCapped || capStatus.pensionFixed) && (
+                    <CapIndicator
+                      capStatus={capStatus}
+                      contributionType="pension"
+                      iconOnly={isMobile}
+                    />
+                  )}
+                </Box>
+              ) : (
+                <SimpleTooltip>
+                  At the selected age there is no compulsory Employees' Pension (厚生年金保険)
+                  contribution: enrollment ends at age 70.
+                </SimpleTooltip>
+              )
             }
             value={formatJPY(
               Math.round((results.pensionPayments - (results.pensionOnBonus ?? 0)) / 12),
@@ -574,16 +566,41 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         <ResultRow
           label="Annual Contribution"
           labelSuffix={
-            isNationalHealthInsurance ? (
+            isNationalHealthInsurance && nationalPensionDue ? (
               <DetailedTooltip title="Pension Contribution">
                 <NationalPensionTooltip year={inputs.incomeYear} />
               </DetailedTooltip>
+            ) : pensionCopy.noContributionNote !== undefined ? (
+              <SimpleTooltip>{pensionCopy.noContributionNote}</SimpleTooltip>
             ) : undefined
           }
           value={formatJPY(results.pensionPayments)}
           type="subtotal"
         />
       </Box>
+
+      {/* Long-term Care Insurance (第1号被保険者, ages 65+) */}
+      {results.longTermCareCategory1Premium !== undefined && (
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+            Age 65+ Long-term Care Insurance
+            <DetailedTooltip title="Age 65+ Long-term Care Insurance" icon={SIMPLE_TOOLTIP_ICON}>
+              <LongTermCareCategory1PremiumTooltip
+                estimate={results.longTermCareCategory1Estimate}
+              />
+            </DetailedTooltip>
+          </Typography>
+          <ResultRow
+            label={
+              results.longTermCareCategory1Estimate ? 'Estimated Annual Premium' : 'Annual Premium'
+            }
+            value={`${results.longTermCareCategory1Estimate ? '≈ ' : ''}${formatJPY(
+              results.longTermCareCategory1Premium,
+            )}`}
+            type="subtotal"
+          />
+        </Box>
+      )}
 
       {/* Employment Insurance */}
       {results.hasEmploymentIncome && (
@@ -616,10 +633,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             )}
             type="indented"
             labelSuffix={
-              <SalaryBreakdownTooltip
-                monthlyIncome={rawMonthlyRemuneration}
-                year={inputs.incomeYear}
-              />
+              <SalaryBreakdownTooltip annualWage={annualRemuneration} year={inputs.incomeYear} />
             }
           />
           {results.employmentInsuranceOnBonus !== undefined &&

@@ -23,7 +23,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useState } from 'react';
 
 import type { Spouse } from '../../../types/dependents';
-import { DISABILITY_LEVELS, SPOUSE_AGE_CATEGORIES } from '../../../types/dependents';
+import { DISABILITY_LEVELS, SPOUSE_AGE_RANGES } from '../../../types/dependents';
 import {
   calculateDependentNetIncomeComponents,
   calculateDependentNetPublicPensionIncome,
@@ -53,7 +53,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
       const newSpouse: Spouse = {
         id: crypto.randomUUID(),
         relationship: 'spouse',
-        ageCategory: 'under65',
+        ageRange: 'under65',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -128,7 +128,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       mb: 1,
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       Gross (収入)
                     </Typography>
                     <SpinnerNumberField
@@ -150,7 +150,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   <Box
                     sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       Net (所得)
                     </Typography>
                     <Typography variant="body2">
@@ -177,7 +177,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       mb: 1,
                     }}
                   >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       Gross (収入)
                     </Typography>
                     <SpinnerNumberField
@@ -199,7 +199,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   <Box
                     sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       Net (所得)
                     </Typography>
                     <Typography variant="body2">
@@ -218,7 +218,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   <Box
                     sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                   >
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                       Net (所得)
                     </Typography>
                     <SpinnerNumberField
@@ -272,7 +272,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       <TableCell>
                         Employment
                         <br />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           給与
                         </Typography>
                       </TableCell>
@@ -307,7 +307,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       <TableCell>
                         Public Pension
                         <br />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           公的年金等
                         </Typography>
                       </TableCell>
@@ -339,12 +339,12 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       <TableCell>
                         Other
                         <br />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                           その他
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           —
                         </Typography>
                       </TableCell>
@@ -384,20 +384,20 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
             )}
           </Box>
 
-          {/* Age Category and Living Together on same row */}
+          {/* Age Range and Living Together on same row */}
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <FormControl sx={{ flex: 1 }}>
               <InputLabel>Age</InputLabel>
               <Select
-                value={spouse.ageCategory}
+                value={spouse.ageRange}
                 label="Age"
                 onChange={e =>
                   handleSpouseChange({
-                    ageCategory: e.target.value,
+                    ageRange: e.target.value,
                   })
                 }
               >
-                {SPOUSE_AGE_CATEGORIES.map(cat => (
+                {SPOUSE_AGE_RANGES.map(cat => (
                   <MenuItem key={cat.value} value={cat.value}>
                     {cat.label}
                   </MenuItem>

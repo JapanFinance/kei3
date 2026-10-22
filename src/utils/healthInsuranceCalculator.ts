@@ -1,16 +1,25 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import type { RegionalRates } from '../data/employeesHealthInsurance/providerRateData';
 import {
-  calculateMonthlyEmployeePremium,
+  getCustomProviderRates,
+  getEmployeePremiumRate,
   getRegionalRatesForMonth,
+  type EmployeeRates,
 } from '../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../data/employeesHealthInsurance/smrBrackets';
-import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
+import { getLatterStageParamsForMonth } from '../data/latterStageElderlyParams';
+import {
+  getNHIParamsForMonth,
+  nhiParamsDiffer,
+} from '../data/nationalHealthInsurance/nhiParamsData';
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type {
   ProviderRegion,
   NationalHealthInsuranceRegionParams,
-  HealthInsuranceProviderId,
+  LatterStageElderlyRegionParams,
+  NonLatterStageProviderId,
 } from '../types/healthInsurance';
 import {
   DEFAULT_PROVIDER_REGION,
@@ -18,8 +27,7 @@ import {
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
-import type { BonusIncomeStream } from '../types/tax';
-import { roundSocialInsurancePremium } from './taxCalculations';
+import type { BonusIncomeStream, CustomEmployeesHealthInsuranceRates } from '../types/tax';
 
 /**
  * Breakdown of National Health Insurance premium components
@@ -46,10 +54,10 @@ export interface HealthInsuranceBreakdown {
 export function calculateHealthInsuranceBreakdown(
   annualIncome: number,
   isSubjectToLongTermCarePremium: boolean,
-  provider: HealthInsuranceProviderId,
+  provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-  customRates?: { healthRate: number; ltcRate: number },
+  customRates?: CustomEmployeesHealthInsuranceRates,
   bonuses: BonusIncomeStream[] = [],
 ): HealthInsuranceBreakdown {
   if (annualIncome < 0) {
@@ -82,19 +90,13 @@ export function calculateHealthInsuranceBreakdown(
         // Fallback if custom rates are missing but provider is custom
         return { total: 0, bonusPortion: 0 };
       }
-      const staticRates = {
-        employeeHealthInsuranceRate: customRates.healthRate / 100,
-        employeeLongTermCareRate: customRates.ltcRate / 100,
-        employerHealthInsuranceRate: 0,
-        employerLongTermCareRate: 0,
-      };
+      const staticRates = getCustomProviderRates(customRates);
 
       // Custom rates don't vary by month
-      const monthlyPremium = calculateMonthlyEmployeePremium(
-        smrBracket.smrAmount,
+      const monthlyPremium = getEmployeePremiumRate(
         staticRates,
         isSubjectToLongTermCarePremium,
-      );
+      ).premiumOn(smrBracket.smrAmount);
       let totalPremium = monthlyPremium * 12;
       let bonusPortion = 0;
 
@@ -112,16 +114,22 @@ export function calculateHealthInsuranceBreakdown(
       return { total: totalPremium, bonusPortion };
     }
 
-    // Calculate per-month premiums — rate may differ by month within a calendar year
+    // Calculate per-month premiums — rates may differ by month within a calendar year, and every
+    // month of one rate period shares the rates object the lookup returns, so the premium is
+    // computed once per period.
     let totalPremium = 0;
+    let periodRates: RegionalRates | undefined;
+    let premium = 0;
     for (let month = 0; month < 12; month++) {
       const monthRates = getRegionalRatesForMonth(provider, region, year, month);
       if (monthRates) {
-        totalPremium += calculateMonthlyEmployeePremium(
-          smrBracket.smrAmount,
-          monthRates,
-          isSubjectToLongTermCarePremium,
-        );
+        if (monthRates !== periodRates) {
+          premium = getEmployeePremiumRate(monthRates, isSubjectToLongTermCarePremium).premiumOn(
+            smrBracket.smrAmount,
+          );
+          periodRates = monthRates;
+        }
+        totalPremium += premium;
       }
     }
 
@@ -171,9 +179,7 @@ export const ANNUAL_CUMULATIVE_STANDARD_BONUS_AMOUNT_CAP = 5_730_000;
  */
 export function calculateEmployeesHealthInsuranceBonusBreakdown(
   bonuses: BonusIncomeStream[],
-  providerOrRates:
-    | string
-    | { employeeHealthInsuranceRate: number; employeeLongTermCareRate: number },
+  providerOrRates: string | EmployeeRates,
   regionOrLTC: string | boolean,
   year: number,
   isSubjectToLongTermCarePremium?: boolean,
@@ -223,9 +229,7 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
       continue;
     }
 
-    const rate =
-      rates.employeeHealthInsuranceRate + (includeLTC ? rates.employeeLongTermCareRate : 0);
-    const premium = roundSocialInsurancePremium(standardBonusAmount * rate);
+    const premium = getEmployeePremiumRate(rates, includeLTC).premiumOn(standardBonusAmount);
 
     breakdown.push({
       month: bonus.month,
@@ -255,10 +259,10 @@ export function calculateEmployeesHealthInsuranceBonusBreakdown(
 export function calculateHealthInsurancePremium(
   annualIncome: number,
   isSubjectToLongTermCarePremium: boolean,
-  provider: HealthInsuranceProviderId,
+  provider: NonLatterStageProviderId,
   year: number,
   region: ProviderRegion = DEFAULT_PROVIDER_REGION,
-  customRates?: { healthRate: number; ltcRate: number },
+  customRates?: CustomEmployeesHealthInsuranceRates,
   bonuses: BonusIncomeStream[] = [],
 ): number {
   return calculateHealthInsuranceBreakdown(
@@ -387,30 +391,7 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
 
   // If both fiscal years have the same params (no rate change), use single calculation
   // to avoid rounding artifacts from the blending arithmetic.
-  if (!prevFYParams || prevFYParams === currFYParams) {
-    return calculateNationalHealthInsurancePremiumBreakdown(
-      annualIncome,
-      isSubjectToLongTermCarePremium,
-      currFYParams,
-    );
-  }
-
-  // Check if the params are actually different by comparing key rate fields
-  const paramsMatch =
-    prevFYParams.medicalRate === currFYParams.medicalRate &&
-    prevFYParams.supportRate === currFYParams.supportRate &&
-    prevFYParams.medicalPerCapita === currFYParams.medicalPerCapita &&
-    prevFYParams.supportPerCapita === currFYParams.supportPerCapita &&
-    prevFYParams.medicalCap === currFYParams.medicalCap &&
-    prevFYParams.supportCap === currFYParams.supportCap &&
-    prevFYParams.ltcRateForEligible === currFYParams.ltcRateForEligible &&
-    prevFYParams.ltcPerCapitaForEligible === currFYParams.ltcPerCapitaForEligible &&
-    prevFYParams.ltcCapForEligible === currFYParams.ltcCapForEligible &&
-    prevFYParams.childSupportRate === currFYParams.childSupportRate &&
-    prevFYParams.childSupportPerCapita === currFYParams.childSupportPerCapita &&
-    prevFYParams.childSupportCap === currFYParams.childSupportCap;
-
-  if (paramsMatch) {
+  if (!prevFYParams || !nhiParamsDiffer(prevFYParams, currFYParams)) {
     return calculateNationalHealthInsurancePremiumBreakdown(
       annualIncome,
       isSubjectToLongTermCarePremium,
@@ -446,4 +427,137 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
   const total = medicalPortion + elderlySupportPortion + longTermCarePortion + childSupportPortion;
 
   return { medicalPortion, elderlySupportPortion, longTermCarePortion, childSupportPortion, total };
+}
+
+/** Breakdown of 後期高齢者医療制度 premium components. */
+export interface LatterStageElderlyBreakdown {
+  medicalPortion: number;
+  childSupportPortion: number;
+  total: number;
+  /**
+   * Whether the medical portion has stopped rising with income. For a calendar year that
+   * blends two fiscal years this needs both of them to be at their 賦課限度額: while only the
+   * current one is capped, the previous fiscal year's third still grows.
+   */
+  medicalCapped: boolean;
+}
+
+const ZERO_LATTER_STAGE_BREAKDOWN: LatterStageElderlyBreakdown = {
+  medicalPortion: 0,
+  childSupportPortion: 0,
+  total: 0,
+  medicalCapped: false,
+};
+
+/**
+ * The 賦課のもととなる所得金額: 総所得金額等 minus the 地方税法 basic deduction, which is the
+ * residence-tax basic deduction (43万円, stepping down above 合計所得金額 2,400万円).
+ * Source: https://www.tokyo-ikiiki.net/seido/1001968/1001975/index.html
+ */
+function latterStagePremiumBase(netIncome: number): number {
+  return Math.max(0, netIncome - calculateResidenceTaxBasicDeduction(netIncome));
+}
+
+/**
+ * Rates are published to 0.01% (e.g. 9.88%), so scaling by this factor turns every rate into
+ * an integer and keeps 均等割額 + 所得割率 × base in integer arithmetic. Multiplying by the
+ * decimal rate directly can land just below an exact ¥100 multiple (5,000,000 × 0.0928 =
+ * 463,999.99999999994 in binary floating point), and the statutory floor would then lose ¥100.
+ */
+const RATE_SCALE = 1_000_000;
+
+/** 均等割額 + 所得割率 × base, rounded down to ¥100 (100円未満切り捨て). */
+function portionFlooredToHundred(perCapita: number, base: number, rate: number): number {
+  const scaled = perCapita * RATE_SCALE + base * Math.round(rate * RATE_SCALE);
+  return Math.floor(scaled / (RATE_SCALE * 100)) * 100;
+}
+
+/**
+ * Premium for one fiscal year's parameters: per portion, 均等割額 + 所得割率 × base,
+ * rounded down to ¥100 and capped at the portion's 賦課限度額, then summed.
+ * The low-income 均等割軽減 (7/5/2割) and the 元被扶養者 reduction are not applied,
+ * matching the calculator's current NHI treatment.
+ */
+function calculateLatterStagePremiumForParams(
+  netIncome: number,
+  params: LatterStageElderlyRegionParams,
+): LatterStageElderlyBreakdown {
+  const base = latterStagePremiumBase(netIncome);
+
+  const medicalPortion = Math.min(
+    portionFlooredToHundred(params.medicalPerCapita, base, params.medicalRate),
+    params.medicalCap,
+  );
+
+  const { childSupport } = params;
+  const childSupportPortion = childSupport
+    ? Math.min(
+        portionFlooredToHundred(childSupport.perCapita, base, childSupport.rate),
+        childSupport.cap,
+      )
+    : 0;
+
+  return {
+    medicalPortion,
+    childSupportPortion,
+    total: medicalPortion + childSupportPortion,
+    medicalCapped: medicalPortion === params.medicalCap,
+  };
+}
+
+/**
+ * Calculates the annual 後期高齢者医療制度 premium for a calendar year.
+ *
+ * A calendar year straddles two fiscal years, and both collection routes weight them
+ * 1/3 previous FY : 2/3 current FY:
+ * - 特別徴収 (the default): six bimonthly pension deductions, April through February. The
+ *   April, June, and August payments are 仮徴収, each set to the same amount as the
+ *   previous February's deduction — the fiscal year's premium is only determined in July —
+ *   and the October, December, and February 本徴収 payments make up the difference. Counting
+ *   the calendar year's own February payment, four payments are at the previous fiscal
+ *   year's level and the two in-year 本徴収 payments are large enough to cover the rest of
+ *   the new annual total, which works out to 1/3 : 2/3.
+ * - 普通徴収: nine installments, July through March (Tokyo), so January-March pay 3/9 of
+ *   the previous fiscal year and July-December 6/9 of the current one — the same fraction.
+ * Municipalities may smooth the June/August 仮徴収 (平準化) when the gap is large; that
+ * shifts individual installments, not fiscal-year totals, and is not modeled.
+ * Sources:
+ * - https://www.city.tachikawa.lg.jp/kurashi/nenkin/1002477/1002485/1002501.html
+ * - https://www.city.koto.lg.jp/250107/fukushi/kokikoresha/hokenryo/209.html
+ *
+ * When both fiscal years resolve to the same rate period the blend collapses to a single
+ * calculation.
+ */
+export function calculateLatterStageElderlyPremium(
+  netIncome: number,
+  year: number,
+  region: string,
+): LatterStageElderlyBreakdown {
+  // January resolves to the previous fiscal year's rates, April to the current ones.
+  const prevFYParams = getLatterStageParamsForMonth(region, year, 0);
+  const currFYParams = getLatterStageParamsForMonth(region, year, 3);
+
+  if (!currFYParams) {
+    console.error(
+      `後期高齢者医療 parameters not found for region: ${region}. Returning zero breakdown.`,
+    );
+    return ZERO_LATTER_STAGE_BREAKDOWN;
+  }
+
+  const currFY = calculateLatterStagePremiumForParams(netIncome, currFYParams);
+  if (!prevFYParams || prevFYParams.periodId === currFYParams.periodId) {
+    return currFY;
+  }
+
+  const prevFY = calculateLatterStagePremiumForParams(netIncome, prevFYParams);
+  const medicalPortion = Math.round(prevFY.medicalPortion / 3 + (currFY.medicalPortion * 2) / 3);
+  const childSupportPortion = Math.round(
+    prevFY.childSupportPortion / 3 + (currFY.childSupportPortion * 2) / 3,
+  );
+  return {
+    medicalPortion,
+    childSupportPortion,
+    total: medicalPortion + childSupportPortion,
+    medicalCapped: prevFY.medicalCapped && currFY.medicalCapped,
+  };
 }

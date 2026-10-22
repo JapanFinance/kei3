@@ -1,12 +1,13 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitForElementToBeRemoved, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useReducer } from 'react';
 
 import { TakeHomeInputForm } from '../components/TakeHomeCalculator/InputForm';
 import { PROVIDER_DEFINITIONS } from '../data/employeesHealthInsurance/providerRateData';
+import { calculateNetEmploymentIncome } from '../data/netEmploymentIncome';
 import { takeHomeFormReducer } from '../state/takeHomeFormReducer';
 import {
   getProviderDisplayName,
@@ -17,7 +18,7 @@ import {
 } from '../types/healthInsurance';
 import type { TakeHomeFormState } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
-import { calculateNetEmploymentIncome } from '../utils/taxCalculations';
+import { calculateTaxes } from '../utils/taxCalculations';
 
 vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   DependentsModal: ({ taxpayerNetIncome }: { taxpayerNetIncome: number }) => (
@@ -27,6 +28,31 @@ vi.mock('../components/TakeHomeCalculator/Dependents/DependentsModal', () => ({
   ),
 }));
 
+/**
+ * A salary-mode form state at `annualIncome`, carrying the single stream the reducer keeps in
+ * sync with it. Overriding `annualIncome` alone would leave the two disagreeing, which no
+ * reducer path produces and which the provider selector — now stream-derived — would not see.
+ */
+const atSalaryIncome = (base: TakeHomeFormState, annualIncome: number): TakeHomeFormState => ({
+  ...base,
+  incomeMode: 'salary',
+  annualIncome,
+  incomeStreams: [
+    { id: 'simple-salary', type: 'salary', amount: annualIncome, frequency: 'annual' },
+  ],
+});
+
+/** An advanced-mode form state whose only stream is miscellaneous income of `annualIncome`. */
+const atMiscellaneousIncome = (
+  base: TakeHomeFormState,
+  annualIncome: number,
+): TakeHomeFormState => ({
+  ...base,
+  incomeMode: 'advanced',
+  annualIncome,
+  incomeStreams: [{ id: 'm1', type: 'miscellaneous', amount: annualIncome }],
+});
+
 describe('TakeHomeInputForm Tests', () => {
   const mockDispatch = vi.fn();
 
@@ -35,9 +61,12 @@ describe('TakeHomeInputForm Tests', () => {
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'salary',
-    incomeStreams: [],
+    incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
@@ -97,13 +126,11 @@ describe('TakeHomeInputForm Tests', () => {
     });
   });
 
-  describe('when in miscellaneous income mode (non-employment income)', () => {
+  describe('when in advanced mode with only non-employment income', () => {
     it('should show dependent coverage and NHI when income is below threshold', async () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
-        ...baseInputs,
-        incomeMode: 'miscellaneous' as const,
-        annualIncome: 1_000_000, // Below threshold
+        ...atMiscellaneousIncome(baseInputs, 1_000_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -128,9 +155,7 @@ describe('TakeHomeInputForm Tests', () => {
 
     it('should only show NHI when non-employment income is above threshold', () => {
       const nonEmploymentInputs = {
-        ...baseInputs,
-        incomeMode: 'miscellaneous' as const,
-        annualIncome: 1_500_000, // Above threshold
+        ...atMiscellaneousIncome(baseInputs, 1_500_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -149,9 +174,7 @@ describe('TakeHomeInputForm Tests', () => {
     it('should not show employee health insurance providers for non-employment income', async () => {
       const user = userEvent.setup();
       const nonEmploymentInputs = {
-        ...baseInputs,
-        incomeMode: 'miscellaneous' as const,
-        annualIncome: 1_000_000, // Below threshold to have options
+        ...atMiscellaneousIncome(baseInputs, 1_000_000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -190,20 +213,20 @@ describe('TakeHomeInputForm Tests', () => {
       const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
       expect(providerSelect).not.toBeDisabled();
 
-      // Find and click the Miscellaneous toggle
-      const miscToggle = screen.getByRole('button', { name: /misc/i });
-      await user.click(miscToggle);
+      // Find and click the Advanced toggle
+      const advancedToggle = screen.getByRole('button', { name: /advanced/i });
+      await user.click(advancedToggle);
 
       // Verify that the mode change was dispatched
       expect(mockDispatch).toHaveBeenCalledWith({
         type: 'incomeModeChanged',
-        mode: 'miscellaneous',
+        mode: 'advanced',
       });
 
-      // Update props to simulate the mode change taking effect
+      // Update props to simulate the mode change and a switch to miscellaneous income
       rerender(
         <TakeHomeInputForm
-          inputs={{ ...baseInputs, incomeMode: 'miscellaneous' as const }}
+          inputs={atMiscellaneousIncome(baseInputs, 5000000)}
           dispatch={mockDispatch}
         />,
       );
@@ -240,8 +263,7 @@ describe('TakeHomeInputForm Tests', () => {
 
     it('should maintain consistency with provider display names', () => {
       const nonEmploymentInputs = {
-        ...baseInputs,
-        incomeMode: 'miscellaneous' as const,
+        ...atMiscellaneousIncome(baseInputs, 5000000),
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       };
 
@@ -267,8 +289,8 @@ describe('TakeHomeInputForm Tests', () => {
 
       // Income mode selection should be present
       expect(screen.getByRole('group', { name: /income mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Salary' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /misc/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salary only' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Advanced' })).toBeInTheDocument();
     });
 
     it('should show helpful tooltips and explanatory text', () => {
@@ -281,8 +303,8 @@ describe('TakeHomeInputForm Tests', () => {
         screen.getByRole('combobox', { name: /health insurance provider/i }),
       ).toBeInTheDocument();
 
-      // Should have tooltip for Age Range
-      const ageRangeLabel = screen.getByText('Age Range');
+      // Should have tooltip for the Age input
+      const ageRangeLabel = screen.getByText('Age');
       expect(ageRangeLabel).toBeInTheDocument();
     });
   });
@@ -295,9 +317,12 @@ describe('Dependent Coverage UI Behavior', () => {
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'salary',
-    incomeStreams: [],
+    incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
@@ -312,7 +337,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should include dependent coverage option when income is below threshold for employment income', async () => {
     const user = userEvent.setup();
-    const inputs = { ...baseInputs, annualIncome: 1_200_000 };
+    const inputs = atSalaryIncome(baseInputs, 1_200_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -329,7 +354,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should NOT include dependent coverage option when income is at or above threshold', async () => {
     const user = userEvent.setup();
-    const inputs = { ...baseInputs, annualIncome: 1_300_000 };
+    const inputs = atSalaryIncome(baseInputs, 1_300_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -345,7 +370,7 @@ describe('Dependent Coverage UI Behavior', () => {
 
   it('should include dependent coverage option for non-employment income when below threshold', async () => {
     const user = userEvent.setup();
-    const inputs = { ...baseInputs, annualIncome: 1_000_000, incomeMode: 'miscellaneous' as const };
+    const inputs = atMiscellaneousIncome(baseInputs, 1_000_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -364,7 +389,7 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 
   it('should NOT include dependent coverage option for non-employment income above threshold', () => {
-    const inputs = { ...baseInputs, annualIncome: 1_500_000, incomeMode: 'miscellaneous' as const };
+    const inputs = atMiscellaneousIncome(baseInputs, 1_500_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -379,8 +404,128 @@ describe('Dependent Coverage UI Behavior', () => {
     ).toBeInTheDocument();
   });
 
+  it('should NOT include dependent coverage when a commuting allowance carries the 年間収入 over', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      ],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    const listbox = screen.getByRole('listbox');
+    const optionTexts = within(listbox)
+      .getAllByRole('option')
+      .map(option => option.textContent);
+
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it('should NOT include dependent coverage when dividends left off the return carry the 年間収入 over', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        // 100,000 short of the threshold; the dividends are 収入 whether or not they are reported.
+        {
+          id: 'd1',
+          type: 'dividends',
+          shareType: 'listed',
+          paymentChannel: 'domestic',
+          isReported: false,
+          issuerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 100_000,
+        },
+      ],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    const optionTexts = within(screen.getByRole('listbox'))
+      .getAllByRole('option')
+      .map(option => option.textContent);
+
+    expect(optionTexts).not.toContain('None (dependent of insured employee)');
+  });
+
+  it("should NOT include dependent coverage when a year's capital gains carry the 年間収入 over, but should for a losing year", async () => {
+    const user = userEvent.setup();
+    const withGains = (amount: number): TakeHomeFormState => ({
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' },
+        {
+          id: 'g1',
+          type: 'withholdingAccount',
+          capitalGains: amount,
+          dividends: 0,
+          foreignDividends: 0,
+          foreignTax: 0,
+          reportsCapitalGains: false,
+          reportsDividends: false,
+        },
+      ],
+    });
+
+    const { unmount } = render(
+      <TakeHomeInputForm inputs={withGains(100_000)} dispatch={mockDispatch} />,
+    );
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map(option => option.textContent),
+    ).not.toContain('None (dependent of insured employee)');
+    await user.keyboard('{Escape}');
+    unmount();
+
+    render(<TakeHomeInputForm inputs={withGains(-500_000)} dispatch={mockDispatch} />);
+    await user.click(screen.getByRole('combobox', { name: /health insurance provider/i }));
+    expect(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'None (dependent of insured employee)',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('should include dependent coverage for the same salary without a commuting allowance', async () => {
+    const user = userEvent.setup();
+    const inputs: TakeHomeFormState = {
+      ...baseInputs,
+      incomeMode: 'advanced',
+      annualIncome: 1_200_000,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 1_200_000, frequency: 'annual' }],
+    };
+
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    const providerSelect = screen.getByRole('combobox', { name: /health insurance provider/i });
+    await user.click(providerSelect);
+
+    expect(
+      within(screen.getByRole('listbox')).getByRole('option', {
+        name: 'None (dependent of insured employee)',
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('should show helper text about dependent coverage when income is below threshold', () => {
-    const inputs = { ...baseInputs, annualIncome: 1_200_000 };
+    const inputs = atSalaryIncome(baseInputs, 1_200_000);
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
@@ -488,16 +633,19 @@ describe('Dependent Coverage UI Behavior', () => {
   });
 });
 
-describe('Age Range Selection', () => {
+describe('Age Selection', () => {
   const mockDispatch = vi.fn();
   const baseInputs: TakeHomeFormState = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
     annualIncome: 5000000,
     incomeYear: 2026,
     incomeMode: 'salary',
-    incomeStreams: [],
+    incomeStreams: [{ id: 'simple-salary', type: 'salary', amount: 5000000, frequency: 'annual' }],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39' as const,
     healthInsuranceProvider: 'KyokaiKenpo',
     region: 'Tokyo',
     dcPlanContributions: 0,
@@ -506,25 +654,199 @@ describe('Age Range Selection', () => {
     manualSocialInsuranceAmount: 0,
   };
 
-  it('should toggle age range using segmented buttons', async () => {
+  beforeEach(() => {
+    mockDispatch.mockClear();
+  });
+
+  it('offers every age range and shows the current selection', async () => {
     const user = userEvent.setup();
     render(<TakeHomeInputForm inputs={baseInputs} dispatch={mockDispatch} />);
 
-    // Find the buttons
-    const under40Button = screen.getByRole('button', { name: /<40 or 65\+/i });
-    const over40Button = screen.getByRole('button', { name: /40-64/i });
+    const ageSelect = screen.getByRole('combobox', { name: 'Age' });
+    expect(ageSelect).toHaveTextContent('20-39');
 
-    // Initial state: <40 or 65+ is selected (false)
-    expect(under40Button).toHaveAttribute('aria-pressed', 'true');
-    expect(over40Button).toHaveAttribute('aria-pressed', 'false');
+    await user.click(ageSelect);
+    const listbox = screen.getByRole('listbox');
+    for (const label of ['Under 18', '18-19', '20-39', '40-59', '60-64', '65-69', '70-74', '75+']) {
+      expect(within(listbox).getByRole('option', { name: label })).toBeInTheDocument();
+    }
+  });
 
-    // Click 40-64
-    await user.click(over40Button);
+  it('dispatches ageRangeChanged when a range is selected', async () => {
+    const user = userEvent.setup();
+    render(<TakeHomeInputForm inputs={baseInputs} dispatch={mockDispatch} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Age' }));
+    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: '40-59' }));
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'ageRangeChanged',
+      ageRange: 'age40to59' as const,
+    });
+  });
+
+  it('shows the 第1号 premium field only from age 65', () => {
+    const { rerender } = render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age60to64' }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.queryByRole('switch', { name: 'Estimate' })).not.toBeInTheDocument();
+
+    rerender(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.getByText('Age 65+ Long-term Care Insurance')).toBeInTheDocument();
+    // The estimate switch defaults on, so the amount field stays in place but read-only.
+    expect(screen.getByRole('switch', { name: 'Estimate' })).toBeChecked();
+    expect(screen.getByLabelText('Annual Premium (estimate)')).toBeDisabled();
+
+    rerender(
+      <TakeHomeInputForm
+        inputs={{
+          ...baseInputs,
+          ageRange: 'age75plus',
+          healthInsuranceProvider: 'LatterStageElderly',
+        }}
+        dispatch={mockDispatch}
+      />,
+    );
+    expect(screen.getByRole('switch', { name: 'Estimate' })).toBeInTheDocument();
+  });
+
+  it('shows the estimated amount in the disabled field', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69', longTermCareCategory1Premium: 5_000 }}
+        dispatch={mockDispatch}
+        longTermCareCategory1Estimate={{
+          currentFiscalYear: { tier: 7, multiplier: 1.3, annualBase: 75_840, premium: 98_500 },
+          baseScope: 'Tokyo',
+          total: 98_500,
+        }}
+      />,
+    );
+
+    // The estimate displaces the stored manual amount while the switch is on, rather than the
+    // two fighting over one field.
+    const field = screen.getByLabelText('Annual Premium (estimate)');
+    expect(field).toHaveValue('¥98,500');
+    expect(field).toBeDisabled();
+  });
+
+  it('keeps the entered amount across a round trip through the estimate', async () => {
+    // Runs on the real reducer so the field's two sources are exercised through actual state.
+    // Note this does not reproduce the number formatter writing the estimate back over the
+    // entered amount, which only happens in a browser; it pins the surrounding behaviour.
+    const RoundTrip = () => {
+      const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+        ...baseInputs,
+        ageRange: 'age65to69' as const,
+        longTermCareCategory1ManualEntry: true,
+        longTermCareCategory1Premium: 200_000,
+      });
+      return (
+        <TakeHomeInputForm
+          inputs={inputs}
+          dispatch={dispatch}
+          longTermCareCategory1Estimate={{
+            currentFiscalYear: { tier: 7, multiplier: 1.3, annualBase: 75_840, premium: 98_500 },
+            baseScope: 'Tokyo',
+            total: 98_500,
+          }}
+        />
+      );
+    };
+    const user = userEvent.setup();
+    render(<RoundTrip />);
+
+    expect(screen.getByLabelText('Annual Premium')).toHaveValue('¥200,000');
+
+    await user.click(screen.getByRole('switch', { name: 'Estimate' }));
+    expect(screen.getByLabelText('Annual Premium (estimate)')).toHaveValue('¥98,500');
+
+    await user.click(screen.getByRole('switch', { name: 'Estimate' }));
+    expect(screen.getByLabelText('Annual Premium')).toHaveValue('¥200,000');
+  });
+
+  it('shows the entered amount once the estimate is switched off', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={{
+          ...baseInputs,
+          ageRange: 'age65to69',
+          longTermCareCategory1ManualEntry: true,
+          longTermCareCategory1Premium: 5_000,
+        }}
+        dispatch={mockDispatch}
+        longTermCareCategory1Estimate={undefined}
+      />,
+    );
+
+    const field = screen.getByLabelText('Annual Premium');
+    expect(field).toHaveValue('¥5,000');
+    expect(field).not.toBeDisabled();
+  });
+
+  it('dispatches the manual-entry flag when the estimate switch is turned off', async () => {
+    const user = userEvent.setup();
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69' }}
+        dispatch={mockDispatch}
+      />,
+    );
+
+    await user.click(screen.getByRole('switch', { name: 'Estimate' }));
 
     expect(mockDispatch).toHaveBeenCalledWith({
       type: 'setField',
-      field: 'isSubjectToLongTermCarePremium',
+      field: 'longTermCareCategory1ManualEntry',
       value: true,
+    });
+  });
+
+  it('turns the estimate back on from manual entry', async () => {
+    // The switch is driven by the negation of the stored field on both the checked prop and the
+    // dispatched value, so the off-to-on direction fails independently of the on-to-off one.
+    const user = userEvent.setup();
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69', longTermCareCategory1ManualEntry: true }}
+        dispatch={mockDispatch}
+      />,
+    );
+
+    const estimateSwitch = screen.getByRole('switch', { name: 'Estimate' });
+    expect(estimateSwitch).not.toBeChecked();
+    await user.click(estimateSwitch);
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'setField',
+      field: 'longTermCareCategory1ManualEntry',
+      value: false,
+    });
+  });
+
+  it('dispatches setField for the 第1号 premium under manual entry', async () => {
+    const user = userEvent.setup();
+    render(
+      <TakeHomeInputForm
+        inputs={{ ...baseInputs, ageRange: 'age65to69', longTermCareCategory1ManualEntry: true }}
+        dispatch={mockDispatch}
+      />,
+    );
+
+    await user.type(screen.getByLabelText('Annual Premium'), '5');
+
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: 'setField',
+      field: 'longTermCareCategory1Premium',
+      value: 5,
     });
   });
 });
@@ -537,7 +859,10 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     incomeMode: 'advanced',
     incomeStreams: [],
     savedIncomeStreams: [],
-    isSubjectToLongTermCarePremium: false,
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39' as const,
     region: DEFAULT_PROVIDER_REGION,
     healthInsuranceProvider: DEFAULT_PROVIDER,
     dependents: [],
@@ -570,6 +895,62 @@ describe('TakeHomeInputForm Dependents Modal', () => {
   });
 });
 
+describe('TakeHomeInputForm Income Details Modal', () => {
+  // Real reducer so switching the age range flows through the app's own state update.
+  const TestWrapper = ({ ageRange }: { ageRange: 'age60to64' | 'age65to69' }) => {
+    const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      annualIncome: 2_400_000,
+      incomeYear: 2026,
+      incomeMode: 'advanced' as const,
+      incomeStreams: [
+        {
+          id: 'p1',
+          type: 'publicPension' as const,
+          payerDomicile: 'domestic' as const,
+          foreignTax: 0,
+          amount: 2_400_000,
+        },
+      ],
+      savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
+      longTermCareCategory1ManualEntry: false,
+      longTermCareCategory1Premium: 0,
+      ageRange,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dcPlanContributions: 0,
+      dependents: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    });
+
+    return <TakeHomeInputForm inputs={inputs} dispatch={dispatch} />;
+  };
+
+  it('shows the age-appropriate 公的年金等控除 on the pension group', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper ageRange="age65to69" />);
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    // 措法41の15の3: at 65 or older the band-1 minimum deduction is 1,100,000, above the
+    // 400,000 + 25% × (2,400,000 − 500,000) = 875,000 the 所法35④一 formula gives.
+    expect(screen.getByText(/Public Pension Deduction.*-¥1,100,000/)).toBeInTheDocument();
+    expect(screen.getByText('Net Public Pension Income: ¥1,300,000')).toBeInTheDocument();
+
+    // Under 65 the formula governs instead, so the same gross nets a smaller deduction.
+    await user.click(screen.getByRole('button', { name: /close/i }));
+    await waitForElementToBeRemoved(() => screen.queryByRole('dialog'));
+    await user.click(screen.getByRole('combobox', { name: 'Age' }));
+    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: '60-64' }));
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+
+    expect(screen.getByText(/Public Pension Deduction.*-¥875,000/)).toBeInTheDocument();
+    expect(screen.getByText('Net Public Pension Income: ¥1,525,000')).toBeInTheDocument();
+  }, 10_000);
+});
+
 describe('Commuting Allowance Integration', () => {
   // Real reducer so the displayed total income is derived exactly as it is in the app;
   // the point of this test is that the commuting allowance is excluded from that total.
@@ -581,7 +962,10 @@ describe('Commuting Allowance Integration', () => {
       incomeMode: 'advanced',
       incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
       savedIncomeStreams: [],
-      isSubjectToLongTermCarePremium: false,
+      reportedDividendsTaxation: 'separate',
+      longTermCareCategory1ManualEntry: false,
+      longTermCareCategory1Premium: 0,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo',
       region: 'Tokyo',
       dcPlanContributions: 0,
@@ -605,14 +989,9 @@ describe('Commuting Allowance Integration', () => {
     // 1. Open Income Details Modal
     await user.click(screen.getByRole('button', { name: /edit income/i }));
 
-    // 2. Click Add Income
-    await user.click(screen.getByRole('button', { name: /add income/i }));
-
-    // 3. Select Commuting Allowance
-    const typeSelect = screen.getByRole('combobox', { name: /income\/benefit type/i });
-    await user.click(typeSelect);
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /commuting allowance/i }));
+    // 2. Open the employment-income type menu and choose Commuting Allowance
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /commuting allowance/i }));
 
     // 4. Enter Amount
     const amountInput = screen.getByRole('textbox', { name: /allowance amount/i });
@@ -629,6 +1008,74 @@ describe('Commuting Allowance Integration', () => {
   }, 10_000);
 });
 
+describe('Investment Income Integration', () => {
+  // Real reducer and calculateTaxes, mirroring how App.tsx derives investmentIncome from the
+  // streams, so the header row's presence and value depend on the actual engine output.
+  const TestWrapper = () => {
+    const [inputs, dispatch] = useReducer(takeHomeFormReducer, {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      annualIncome: 5000000,
+      incomeYear: 2026,
+      incomeMode: 'advanced',
+      incomeStreams: [{ id: '1', type: 'salary', amount: 5000000, frequency: 'annual' }],
+      savedIncomeStreams: [],
+      reportedDividendsTaxation: 'separate',
+      longTermCareCategory1ManualEntry: false,
+      longTermCareCategory1Premium: 0,
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dcPlanContributions: 0,
+      dependents: [],
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+    });
+    const results = calculateTaxes(inputs);
+
+    return (
+      <TakeHomeInputForm
+        inputs={inputs}
+        dispatch={dispatch}
+        investmentIncome={results.investmentIncome}
+      />
+    );
+  };
+
+  it('counts a withheld-only dividend in the income total, with no row of its own', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper />);
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
+
+    const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
+    await user.type(amountInput, '300000');
+    await user.click(screen.getByRole('button', { name: /add/i }));
+    await user.click(screen.getByRole('button', { name: /close/i }));
+
+    // Gross, before the 20.315% withheld at source: 5,000,000 + 300,000.
+    expect(screen.queryByText('Investment Income (withheld only)')).not.toBeInTheDocument();
+    expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
+  }, 10_000);
+
+  it('counts a dividend reported under 申告分離課税 in the income total the same way', async () => {
+    const user = userEvent.setup();
+    render(<TestWrapper />);
+
+    await user.click(screen.getByRole('button', { name: /edit income/i }));
+    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
+
+    await user.type(screen.getByRole('textbox', { name: /gross dividends/i }), '300000');
+    await user.click(screen.getByRole('button', { name: 'Reported' }));
+    await user.click(screen.getByRole('button', { name: /add/i }));
+    await user.click(screen.getByRole('button', { name: /close/i }));
+
+    expect(screen.getByText('¥5,300,000')).toBeInTheDocument();
+  }, 10_000);
+});
+
 describe('Regression: Health Insurance Provider Auto-Correction', () => {
   // Wrapper component to manage state like the real application
   const TestWrapper = () => {
@@ -642,7 +1089,10 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
         { id: '2', type: 'business', amount: 4000000 },
       ],
       savedIncomeStreams: [],
-      isSubjectToLongTermCarePremium: false,
+      reportedDividendsTaxation: 'separate',
+      longTermCareCategory1ManualEntry: false,
+      longTermCareCategory1Premium: 0,
+      ageRange: 'age20to39' as const,
       healthInsuranceProvider: 'KyokaiKenpo', // An employee provider
       region: 'Tokyo',
       dcPlanContributions: 0,
@@ -687,5 +1137,59 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
     // 5. Assert UI Outcome
     // The provider should now be "National Health Insurance"
     expect(providerSelect).toHaveTextContent('National Health Insurance');
+  });
+});
+
+describe('Additional Deductions & Credits: foreign tax credit', () => {
+  const salaryInputs: TakeHomeFormState = {
+    ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    annualIncome: 5_000_000,
+    incomeYear: 2026,
+    incomeMode: 'salary',
+    incomeStreams: [
+      { id: 'simple-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' },
+    ],
+    savedIncomeStreams: [],
+    reportedDividendsTaxation: 'separate',
+    longTermCareCategory1ManualEntry: false,
+    longTermCareCategory1Premium: 0,
+    ageRange: 'age20to39',
+    healthInsuranceProvider: 'KyokaiKenpo',
+    region: 'Tokyo',
+    dcPlanContributions: 0,
+    dependents: [],
+    manualSocialInsuranceEntry: false,
+    manualSocialInsuranceAmount: 0,
+  };
+
+  it('names the foreign tax paid with a return in the button summary', () => {
+    render(
+      <TakeHomeInputForm
+        inputs={{
+          ...salaryInputs,
+          foreignTaxCredit: { foreignTaxOnTaxReturn: 20_000 },
+        }}
+        dispatch={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Foreign tax paid with a return ¥20,000')).toBeInTheDocument();
+  });
+
+  it('dispatches the foreign tax entered in the dialog, in any income mode', async () => {
+    const user = userEvent.setup();
+    const dispatch = vi.fn();
+    render(<TakeHomeInputForm inputs={salaryInputs} dispatch={dispatch} />);
+
+    await user.click(screen.getByRole('button', { name: /Add iDeCo/ }));
+    const foreignTax = screen.getByLabelText('Foreign Tax Paid with a Tax Return (外国所得税)');
+    await user.clear(foreignTax);
+    await user.type(foreignTax, '20000');
+
+    expect(dispatch).toHaveBeenLastCalledWith({
+      type: 'setField',
+      field: 'foreignTaxCredit',
+      value: { foreignTaxOnTaxReturn: 20_000 },
+    });
   });
 });
