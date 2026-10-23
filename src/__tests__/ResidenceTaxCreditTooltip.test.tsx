@@ -25,7 +25,9 @@ const foreignTaxCredit: ForeignTaxCreditResult = {
   incomeTax: 400000,
   limit: { incomeTax: 40000, reconstructionSurtax: 840, prefecture: 4000, city: 6000 },
   credit: { incomeTax: 40000, reconstructionSurtax: 840, prefecture: 4000, city: 6000 },
-  excess: 49160,
+  statutoryExcess: 49160,
+  unabsorbedResidenceCredit: 0,
+  uncreditedTax: 49160,
 };
 
 describe('ResidenceTaxCreditTooltip', () => {

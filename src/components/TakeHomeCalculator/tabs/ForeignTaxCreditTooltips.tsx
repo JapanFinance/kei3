@@ -127,16 +127,16 @@ export const ForeignTaxCreditTooltip: React.FC<ForeignTaxCreditTooltipProps> = (
   withheldForeignTax = 0,
 }) => {
   const hasDetails = hasForeignTaxCreditDetails(credit);
-  const excess = hasDetails ? credit.excess : 0;
-  const hasExcess = excess > 0;
+  const uncreditedTax = hasDetails ? credit.uncreditedTax : 0;
+  const hasUncreditedTax = uncreditedTax > 0;
 
   return (
     <DetailedTooltip
       title="Foreign Tax Credit — Income Tax"
-      {...(hasExcess
+      {...(hasUncreditedTax
         ? {
             icon: <WarningIcon fontSize="small" color="warning" />,
-            iconAriaLabel: `Foreign tax credit warning: ${formatJPY(excess)} exceeds limits`,
+            iconAriaLabel: `Foreign tax credit warning: ${formatJPY(uncreditedTax)} uncredited`,
           }
         : {
             iconAriaLabel: 'Foreign tax credit details',
@@ -147,7 +147,7 @@ export const ForeignTaxCreditTooltip: React.FC<ForeignTaxCreditTooltipProps> = (
           <WithheldForeignTaxNote withheldForeignTax={withheldForeignTax} isAll />
         ) : (
           <>
-            {hasExcess && (
+            {hasUncreditedTax && (
               <Box
                 role="alert"
                 sx={{
@@ -159,18 +159,14 @@ export const ForeignTaxCreditTooltip: React.FC<ForeignTaxCreditTooltipProps> = (
                 }}
               >
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                  ⚠️ {formatJPY(excess)} of foreign tax is not credited this year
+                  ⚠️ {formatJPY(uncreditedTax)} of foreign tax is not credited this year
                 </Typography>
                 <Note>
                   {credit.adjustedForeignSourceIncome === 0
                     ? 'No foreign-source income to credit against (limit is ¥0).'
                     : credit.incomeTax === 0
                       ? 'Japanese income tax is ¥0 (limit is ¥0).'
-                      : credit.foreignTax <=
-                          credit.limit.incomeTax +
-                            credit.limit.reconstructionSurtax +
-                            credit.limit.prefecture +
-                            credit.limit.city
+                      : credit.statutoryExcess === 0
                         ? 'The residence-tax income-based portion (所得割) is less than the credit.'
                         : 'Foreign tax exceeds the allowable Japanese credit limits.'}{' '}
                   It can be carried forward for up to three years by attaching the foreign tax
@@ -402,7 +398,7 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
   credit,
   withheldForeignTax = 0,
 }) => {
-  const excess = credit?.excess ?? 0;
+  const uncreditedTax = credit?.uncreditedTax ?? 0;
   return (
     <DetailedTooltip title="Foreign Tax Paid">
       <Box>
@@ -438,7 +434,9 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
                 ]
               : []),
             { label: 'Foreign tax paid', amount: foreignTaxPaid, isResult: true },
-            ...(excess > 0 ? [{ label: 'Not credited this year', amount: excess }] : []),
+            ...(uncreditedTax > 0
+              ? [{ label: 'Not credited this year', amount: uncreditedTax }]
+              : []),
           ]}
         />
         {hasForeignTaxCreditDetails(credit) && (
@@ -448,15 +446,10 @@ export const ForeignTaxPaidTooltip: React.FC<ForeignTaxPaidTooltipProps> = ({
             to the limits shown under the Foreign Tax Credit rows.
           </Note>
         )}
-        {excess > 0 && (
+        {uncreditedTax > 0 && (
           <Note>
-            The {formatJPY(excess)}{' '}
-            {credit &&
-            credit.foreignTax <=
-              credit.limit.incomeTax +
-                credit.limit.reconstructionSurtax +
-                credit.limit.prefecture +
-                credit.limit.city
+            The {formatJPY(uncreditedTax)}{' '}
+            {credit && credit.statutoryExcess === 0
               ? 'unabsorbed by the residence-tax income-based portion (所得割) (控除不足額)'
               : 'above every limit (控除限度超過額)'}{' '}
             is not credited this year. It can be carried forward for up to three years by attaching

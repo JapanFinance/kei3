@@ -592,7 +592,9 @@ const withForeignTax: TakeHomeResults = {
     incomeTax: 134_850,
     limit: caseELimits,
     credit: caseELimits,
-    excess: 43_083,
+    statutoryExcess: 43_083,
+    unabsorbedResidenceCredit: 0,
+    uncreditedTax: 43_083,
   },
   foreignTaxPaid: 80_000,
 };
@@ -785,7 +787,9 @@ describe('TaxesTab with the foreign tax credit', () => {
       manualForeignTax: 20_000,
       limit: zero,
       credit: zero,
-      excess: 20_000,
+      statutoryExcess: 20_000,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 20_000,
     },
     foreignTaxPaid: 20_000,
   };
@@ -895,7 +899,7 @@ describe('TaxesTab with the foreign tax credit', () => {
 
     expect(trigger).toHaveAttribute(
       'aria-label',
-      expect.stringContaining('Foreign tax credit warning: ¥43,083 exceeds limits'),
+      expect.stringContaining('Foreign tax credit warning: ¥43,083 uncredited'),
     );
 
     const tooltip = tooltipTitled('Foreign Tax Credit — Income Tax')!;
@@ -917,7 +921,9 @@ describe('TaxesTab with the foreign tax credit', () => {
       ...withForeignTax,
       foreignTaxCredit: {
         ...withForeignTax.foreignTaxCredit!,
-        excess: 0,
+        statutoryExcess: 0,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 0,
       },
     };
     render(<TaxesTab results={fullyCreditedResults} inputs={inputs} />);

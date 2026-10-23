@@ -3960,7 +3960,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         incomeTax: 239_850,
         limit: limits,
         credit: limits,
-        excess: 30_520,
+        statutoryExcess: 30_520,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 30_520,
       });
       expect(result.reconstructionSurtax).toBe(5_036);
     });
@@ -4018,7 +4020,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       expect(withManual.foreignTaxCredit).toMatchObject({
         foreignTax: 105_000,
         manualForeignTax: 5_000,
-        excess: 35_520,
+        statutoryExcess: 35_520,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 35_520,
       });
       expect(withManual.nationalIncomeTax).toBe(191_100);
       expect(withManual.residenceTax.totalResidenceTax).toBe(277_300);
@@ -4076,7 +4080,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       incomeTax: 182_200,
       limit: limits,
       credit: limits,
-      excess: 47_219,
+      statutoryExcess: 47_219,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 47_219,
     });
     // ⌊(182,200 + 3,826 − 39,956 − 839) / 100⌋ × 100 = ⌊145,231 / 100⌋ × 100 = 145,200.
     expect(result.nationalIncomeTax).toBe(145_200);
@@ -4155,7 +4161,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       incomeTax: 134_850,
       limit: limits,
       credit: limits,
-      excess: 43_083,
+      statutoryExcess: 43_083,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 43_083,
     });
     // The surtax on the return drops the fraction: 2,831, not 2,831.85.
     expect(result.reconstructionSurtax).toBe(2_831);
@@ -4190,7 +4198,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         incomeTax: 94_850,
         limit: limits,
         credit: limits,
-        excess: 6_579,
+        statutoryExcess: 6_579,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 6_579,
       });
       // ⌊(94,850 + 1,991 − 2,591 − 54) / 100⌋ × 100 = ⌊94,196 / 100⌋ × 100 = 94,100.
       expect(result.nationalIncomeTax).toBe(94_100);
@@ -4237,7 +4247,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         incomeTax: 0,
         limit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
         credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
-        excess: 10_000,
+        statutoryExcess: 10_000,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 10_000,
       });
       expect(result.nationalIncomeTax).toBe(0);
       // Spillover 94,850 splits 56,910 / 37,940: 市 148,920 − 56,910 = 92,010 → 92,000; 県 99,280 −
@@ -4262,7 +4274,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       incomeTax: 0,
       limit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
       credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
-      excess: 100_000,
+      statutoryExcess: 100_000,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 100_000,
     });
     expect(result.nationalIncomeTax).toBe(0);
     // As without foreign tax: 32,700 + 21,800 + 5,000.
@@ -4285,7 +4299,10 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       city: 3_996_720,
     });
     // 30,000,000 − 22,204,000 − 466,284 − 2,400,000 − 3,600,000.
-    expect(result.foreignTaxCredit?.excess).toBe(1_329_716);
+    // Statutory excess is 668,516; unabsorbed residence credit is 264,480 + 396,720 = 661,200.
+    expect(result.foreignTaxCredit?.statutoryExcess).toBe(668_516);
+    expect(result.foreignTaxCredit?.unabsorbedResidenceCredit).toBe(661_200);
+    expect(result.foreignTaxCredit?.uncreditedTax).toBe(1_329_716);
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.foreignTaxCredit).toEqual({
       city: 3_600_000,
@@ -4312,8 +4329,10 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     });
     // 県 2,000,000 absorbs 2,000,000 of its 2,124,480; the other 124,480 is not added to the city's
     // 1,799,736: 市 3,000,000 − 1,799,736 = 1,200,264 → 1,200,200; + 5,000 = 1,205,200.
-    // The unabsorbed 124,480 prefectural credit is included in excess.
-    expect(result.foreignTaxCredit?.excess).toBe(124_480);
+    // The unabsorbed 124,480 prefectural credit is included in uncreditedTax.
+    expect(result.foreignTaxCredit?.statutoryExcess).toBe(0);
+    expect(result.foreignTaxCredit?.unabsorbedResidenceCredit).toBe(124_480);
+    expect(result.foreignTaxCredit?.uncreditedTax).toBe(124_480);
     expect(result.residenceTax.foreignTaxCredit).toEqual({
       city: 1_799_736,
       prefecture: 2_000_000,
@@ -4323,7 +4342,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     expect(result.takeHomeIncome).toBe(26_794_800);
   });
 
-  it('includes residence-tax FTC capped by 所得割 in excess when residence tax is 非課税', () => {
+  it('includes residence-tax FTC capped by 所得割 in uncreditedTax when residence tax is 非課税', () => {
     // Under 18 with total income at or below 1,350,000 is fully exempt from residence tax (地方税法第24条の5第1項第1号).
     // National income tax: 1,200,000 − 1,040,000 basic deduction = 160,000 @ 5% = 8,000; surtax = 168.
     // Statutory FTC limits: incomeTax 8,000, surtax 168, prefecture 960, city 1,440.
@@ -4331,8 +4350,8 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     // incomeTax credit = 8,000, surtax credit = 168, prefecture credit = 960, city credit = 1,440.
     // Statutory excess = 12,000 − 8,000 − 168 − 960 − 1,440 = 1,432.
     // But residence tax is fully 非課税 (所得割 is 0), so prefecture absorbs 0 and city absorbs 0.
-    // The entire residence credit 960 + 1,440 = 2,400 is unabsorbed and must be included in excess:
-    // excess = 1,432 + 2,400 = 3,832 (i.e. 12,000 − 8,000 − 168).
+    // The entire residence credit 960 + 1,440 = 2,400 is unabsorbed and must be included in uncreditedTax:
+    // uncreditedTax = 1,432 + 2,400 = 3,832 (i.e. 12,000 − 8,000 − 168).
     const result = calculateTaxes({
       ...interestOnly(1_200_000, 12_000),
       ageRange: 'under18',
@@ -4346,7 +4365,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     });
     expect(result.residenceTax.foreignTaxCredit).toBeUndefined();
     expect(result.residenceTax.totalResidenceTax).toBe(0);
-    expect(result.foreignTaxCredit?.excess).toBe(3_832);
+    expect(result.foreignTaxCredit?.statutoryExcess).toBe(1_432);
+    expect(result.foreignTaxCredit?.unabsorbedResidenceCredit).toBe(2_400);
+    expect(result.foreignTaxCredit?.uncreditedTax).toBe(3_832);
     expect(result.nationalIncomeTax).toBe(0);
   });
 
@@ -4367,7 +4388,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       incomeTax: 244_850,
       limit: { incomeTax: 57_797, reconstructionSurtax: 1_213, prefecture: 6_935, city: 10_403 },
       credit: { incomeTax: 10_000, reconstructionSurtax: 0, prefecture: 0, city: 0 },
-      excess: 0,
+      statutoryExcess: 0,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 0,
     });
     // ⌊(244,850 + 5,141 − 10,000) / 100⌋ × 100 = ⌊239,991 / 100⌋ × 100 = 239,900.
     expect(result.nationalIncomeTax).toBe(239_900);
@@ -4399,7 +4422,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       incomeTax: 239_850,
       limit: { incomeTax: 52_598, reconstructionSurtax: 1_104, prefecture: 6_311, city: 9_467 },
       credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
-      excess: 0,
+      statutoryExcess: 0,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 0,
     });
   });
 
@@ -4424,7 +4449,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       manualForeignTax: 20_000,
       limit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 2_930 },
       credit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 1_426 },
-      excess: 0,
+      statutoryExcess: 0,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 0,
     });
     // ⌊(132,200 + 2,776 − 16,280 − 341) / 100⌋ × 100 = ⌊118,355 / 100⌋ × 100 = 118,300.
     expect(result.nationalIncomeTax).toBe(118_300);
@@ -4457,7 +4484,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       manualForeignTax: 20_000,
       limit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
       credit: { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 },
-      excess: 20_000,
+      statutoryExcess: 20_000,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 20_000,
     });
     expect(result.nationalIncomeTax).toBe(91_700);
     expect(result.residenceTax.totalResidenceTax).toBe(243_100);
@@ -4585,7 +4614,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         incomeTax: 0,
         limit: noCredit,
         credit: noCredit,
-        excess: 100_000,
+        statutoryExcess: 100_000,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 100_000,
       });
       expect(result.nationalIncomeTax).toBe(0);
       // 900,000 − 430,000 = 470,000: 市 28,200 − 1,500 = 26,700; 県 18,800 − 1,000 = 17,800;
@@ -4625,7 +4656,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         incomeTax: 65_500,
         limit: limits,
         credit: limits,
-        excess: 66_864,
+        statutoryExcess: 66_864,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 66_864,
       });
       // ⌊(65,500 + 1,375 − 25,085 − 526) / 100⌋ × 100 = ⌊41,264 / 100⌋ × 100 = 41,200.
       expect(result.nationalIncomeTax).toBe(41_200);
@@ -4656,7 +4689,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         incomeTax: 65_500,
         limit: noCredit,
         credit: noCredit,
-        excess: 50_000,
+        statutoryExcess: 50_000,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 50_000,
       });
       // ⌊(65,500 + 1,375) / 100⌋ × 100 = ⌊66,875 / 100⌋ × 100 = 66,800; 住民税 113,700 + 75,800 +
       // 5,000 = 194,500.
@@ -5042,8 +5077,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
               ftc.credit.reconstructionSurtax +
               (resFtc?.prefecture ?? 0) +
               (resFtc?.city ?? 0) +
-              ftc.excess,
+              ftc.uncreditedTax,
           ).toBe(ftc.foreignTax);
+          expect(ftc.uncreditedTax).toBe(ftc.statutoryExcess + ftc.unabsorbedResidenceCredit);
         }
 
         // 6. High-Income Minimum Tax disallowance of 申告不要 on positive listed bases

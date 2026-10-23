@@ -32,27 +32,34 @@ vi.mock('../components/ui/Tooltips', () => ({
   ),
 }));
 
-const sampleCredit = (overrides: Partial<ForeignTaxCreditResult> = {}): ForeignTaxCreditResult => ({
-  foreignTax: 28_000,
-  foreignSourceIncome: 280_000,
-  adjustedForeignSourceIncome: 280_000,
-  totalIncome: 5_606_000,
-  incomeTax: 200_800,
-  limit: {
-    incomeTax: 10_029,
-    reconstructionSurtax: 210,
-    prefecture: 1_203,
-    city: 1_805,
-  },
-  credit: {
-    incomeTax: 10_029,
-    reconstructionSurtax: 210,
-    prefecture: 1_203,
-    city: 1_805,
-  },
-  excess: 14_753,
-  ...overrides,
-});
+const sampleCredit = (overrides: Partial<ForeignTaxCreditResult> = {}): ForeignTaxCreditResult => {
+  const statutoryExcess = overrides.statutoryExcess ?? 14_753;
+  const unabsorbedResidenceCredit = overrides.unabsorbedResidenceCredit ?? 0;
+  const uncreditedTax = overrides.uncreditedTax ?? statutoryExcess + unabsorbedResidenceCredit;
+  return {
+    foreignTax: 28_000,
+    foreignSourceIncome: 280_000,
+    adjustedForeignSourceIncome: 280_000,
+    totalIncome: 5_606_000,
+    incomeTax: 200_800,
+    limit: {
+      incomeTax: 10_029,
+      reconstructionSurtax: 210,
+      prefecture: 1_203,
+      city: 1_805,
+    },
+    credit: {
+      incomeTax: 10_029,
+      reconstructionSurtax: 210,
+      prefecture: 1_203,
+      city: 1_805,
+    },
+    statutoryExcess,
+    unabsorbedResidenceCredit,
+    uncreditedTax,
+    ...overrides,
+  };
+};
 
 describe('hasForeignTaxCreditDetails', () => {
   it('returns false for undefined or zero foreign tax', () => {
@@ -74,7 +81,7 @@ describe('ForeignTaxCreditTooltip', () => {
   });
 
   it('renders warning alert and excess amount when foreign tax exceeds limits', () => {
-    const credit = sampleCredit({ excess: 14_753 });
+    const credit = sampleCredit({ statutoryExcess: 14_753, uncreditedTax: 14_753 });
     render(<ForeignTaxCreditTooltip credit={credit} />);
 
     const alert = screen.getByRole('alert');
@@ -90,7 +97,9 @@ describe('ForeignTaxCreditTooltip', () => {
   it('explains residence-tax income-based portion limitation when foreign tax is within limits but unabsorbed', () => {
     const credit = sampleCredit({
       foreignTax: 10_000,
-      excess: 2_000,
+      statutoryExcess: 0,
+      unabsorbedResidenceCredit: 2_000,
+      uncreditedTax: 2_000,
     });
     render(<ForeignTaxCreditTooltip credit={credit} />);
 
@@ -107,7 +116,8 @@ describe('ForeignTaxCreditTooltip', () => {
   it('explains zero foreign-source income when adjustedForeignSourceIncome is 0', () => {
     const credit = sampleCredit({
       adjustedForeignSourceIncome: 0,
-      excess: 10_000,
+      statutoryExcess: 10_000,
+      uncreditedTax: 10_000,
     });
     render(<ForeignTaxCreditTooltip credit={credit} />);
 
@@ -120,7 +130,8 @@ describe('ForeignTaxCreditTooltip', () => {
     const credit = sampleCredit({
       adjustedForeignSourceIncome: 200_000,
       incomeTax: 0,
-      excess: 10_000,
+      statutoryExcess: 10_000,
+      uncreditedTax: 10_000,
     });
     render(<ForeignTaxCreditTooltip credit={credit} />);
 
@@ -128,7 +139,11 @@ describe('ForeignTaxCreditTooltip', () => {
   });
 
   it('does not render alert when excess is 0', () => {
-    const credit = sampleCredit({ excess: 0 });
+    const credit = sampleCredit({
+      statutoryExcess: 0,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 0,
+    });
     render(<ForeignTaxCreditTooltip credit={credit} />);
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -271,7 +286,8 @@ describe('ForeignTaxPaidTooltip', () => {
     const credit = sampleCredit({
       foreignTax: 50_000,
       manualForeignTax: 20_000,
-      excess: 14_753,
+      statutoryExcess: 14_753,
+      uncreditedTax: 14_753,
     });
     render(
       <ForeignTaxPaidTooltip foreignTaxPaid={65_000} credit={credit} withheldForeignTax={15_000} />,
@@ -292,7 +308,9 @@ describe('ForeignTaxPaidTooltip', () => {
   it('explains residence-tax unabsorbed credit when foreign tax is within limits but unabsorbed', () => {
     const credit = sampleCredit({
       foreignTax: 10_000,
-      excess: 2_000,
+      statutoryExcess: 0,
+      unabsorbedResidenceCredit: 2_000,
+      uncreditedTax: 2_000,
     });
     render(<ForeignTaxPaidTooltip foreignTaxPaid={10_000} credit={credit} />);
 

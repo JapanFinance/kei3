@@ -38,7 +38,7 @@ describe('calculateForeignTaxCredit', () => {
       incomeTax: 200_800,
       limit: NTA_LIMITS,
       credit: NTA_LIMITS,
-      excess: 14_753,
+      statutoryExcess: 14_753,
     });
   });
 
@@ -51,7 +51,7 @@ describe('calculateForeignTaxCredit', () => {
       prefecture: 0,
       city: 0,
     });
-    expect(result.excess).toBe(0);
+    expect(result.statutoryExcess).toBe(0);
   });
 
   it('credits what the income tax limit leaves against the reconstruction surtax', () => {
@@ -63,7 +63,7 @@ describe('calculateForeignTaxCredit', () => {
       prefecture: 0,
       city: 0,
     });
-    expect(result.excess).toBe(0);
+    expect(result.statutoryExcess).toBe(0);
   });
 
   it('credits the prefectural tax first and the municipal tax with what is left', () => {
@@ -76,7 +76,7 @@ describe('calculateForeignTaxCredit', () => {
       prefecture: 1_000,
       city: 0,
     });
-    expect(result.excess).toBe(0);
+    expect(result.statutoryExcess).toBe(0);
   });
 
   it('caps the foreign-source income at the total income (所令222③)', () => {
@@ -95,7 +95,7 @@ describe('calculateForeignTaxCredit', () => {
       city: 36_144,
     });
     expect(result.credit.incomeTax).toBe(28_000);
-    expect(result.excess).toBe(0);
+    expect(result.statutoryExcess).toBe(0);
   });
 
   it.each([
@@ -106,7 +106,7 @@ describe('calculateForeignTaxCredit', () => {
     const zero = { incomeTax: 0, reconstructionSurtax: 0, prefecture: 0, city: 0 };
     expect(result.limit).toEqual(zero);
     expect(result.credit).toEqual(zero);
-    expect(result.excess).toBe(28_000);
+    expect(result.statutoryExcess).toBe(28_000);
   });
 
   it('floors fractional inputs to the yen instead of throwing', () => {
@@ -139,7 +139,7 @@ describe('calculateForeignTaxCredit', () => {
       city: 17_409_105,
     });
     // 200,000,000 − 96,717,250 − 2,031,062 − 11,606,070 − 17,409,105.
-    expect(result.excess).toBe(72_236_513);
+    expect(result.statutoryExcess).toBe(72_236_513);
   });
 });
 

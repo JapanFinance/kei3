@@ -61,7 +61,9 @@ const CASE_A_WITH_RETURN: ForeignTaxCreditResult = {
   manualForeignTax: 5_000,
   limit: { incomeTax: 52_598, reconstructionSurtax: 1_104, prefecture: 6_311, city: 9_467 },
   credit: { incomeTax: 52_598, reconstructionSurtax: 1_104, prefecture: 6_311, city: 9_467 },
-  excess: 35_520,
+  statutoryExcess: 35_520,
+  unabsorbedResidenceCredit: 0,
+  uncreditedTax: 35_520,
 };
 
 describe('Foreign Tax Credit card', () => {
@@ -126,7 +128,9 @@ describe('Foreign Tax Credit card', () => {
         manualForeignTax: 20_000,
         limit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 2_930 },
         credit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 1_426 },
-        excess: 0,
+        statutoryExcess: 0,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 0,
       },
     );
 
@@ -152,7 +156,9 @@ describe('Foreign Tax Credit card', () => {
         manualForeignTax: 20_000,
         limit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 2_930 },
         credit: { incomeTax: 16_280, reconstructionSurtax: 341, prefecture: 1_953, city: 1_426 },
-        excess: 3_379,
+        statutoryExcess: 0,
+        unabsorbedResidenceCredit: 3_379,
+        uncreditedTax: 3_379,
       },
     );
 
@@ -173,7 +179,9 @@ describe('Foreign Tax Credit card', () => {
         manualForeignTax: 20_000,
         limit: NO_AMOUNTS,
         credit: NO_AMOUNTS,
-        excess: 20_000,
+        statutoryExcess: 20_000,
+        unabsorbedResidenceCredit: 0,
+        uncreditedTax: 20_000,
       },
     );
 
@@ -193,7 +201,9 @@ describe('Foreign Tax Credit card', () => {
       incomeTax: 239_850,
       limit: { incomeTax: 52_598, reconstructionSurtax: 1_104, prefecture: 6_311, city: 9_467 },
       credit: NO_AMOUNTS,
-      excess: 0,
+      statutoryExcess: 0,
+      unabsorbedResidenceCredit: 0,
+      uncreditedTax: 0,
     });
 
     expect(summaryRows()).toEqual([
