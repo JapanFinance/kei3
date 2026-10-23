@@ -31,7 +31,6 @@ import {
   type PersonalCircumstancesInput,
   type ReportedDividendsTaxation,
   type ResidenceTaxCredits,
-  type StatutoryForeignTaxCreditResult,
   type TakeHomeInputs,
   type TakeHomeResults,
   type WithholdingOnlyInvestmentIncome,
@@ -1074,21 +1073,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       incomeBreakdown.foreignSourceIncome,
       incomeYear,
     );
-  const statutoryForeignTaxCredit:
-    | (StatutoryForeignTaxCreditResult & { manualForeignTax?: number })
-    | undefined =
-    foreignTax > 0 || foreignSourceIncome > 0
-      ? {
-          ...calculateForeignTaxCredit({
-            incomeTax: incomeTaxAfterHomeLoanCredit,
-            reconstructionSurtax,
-            totalIncome: netIncome,
-            foreignSourceIncome,
-            foreignTax,
-          }),
-          ...(manualForeignTax > 0 && { manualForeignTax }),
-        }
-      : undefined;
+  const statutoryForeignTaxCredit = calculateForeignTaxCredit({
+    incomeTax: incomeTaxAfterHomeLoanCredit,
+    reconstructionSurtax,
+    totalIncome: netIncome,
+    foreignSourceIncome,
+    foreignTax,
+  });
   const nationalIncomeTax =
     Math.floor(
       (incomeTaxAfterHomeLoanCredit +
@@ -1143,6 +1134,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const foreignTaxCredit: ForeignTaxCreditResult | undefined = statutoryForeignTaxCredit
     ? {
         ...statutoryForeignTaxCredit,
+        ...(manualForeignTax > 0 && { manualForeignTax }),
         unabsorbedResidenceCredit,
         uncreditedTax: statutoryForeignTaxCredit.statutoryExcess + unabsorbedResidenceCredit,
       }

@@ -91,12 +91,16 @@ export interface ForeignTaxCreditInputs {
  */
 export const calculateForeignTaxCredit = (
   inputs: ForeignTaxCreditInputs,
-): StatutoryForeignTaxCreditResult => {
+): StatutoryForeignTaxCreditResult | undefined => {
+  const foreignSourceIncome = wholeYen(inputs.foreignSourceIncome);
+  const foreignTax = wholeYen(inputs.foreignTax);
+  if (foreignTax <= 0 && foreignSourceIncome <= 0) {
+    return undefined;
+  }
+
   const incomeTax = wholeYen(inputs.incomeTax);
   const reconstructionSurtax = wholeYen(inputs.reconstructionSurtax);
   const totalIncome = wholeYen(inputs.totalIncome);
-  const foreignSourceIncome = wholeYen(inputs.foreignSourceIncome);
-  const foreignTax = wholeYen(inputs.foreignTax);
   const adjustedForeignSourceIncome = Math.min(foreignSourceIncome, totalIncome);
 
   const hasLimit = incomeTax > 0 && totalIncome > 0;
