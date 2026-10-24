@@ -77,7 +77,7 @@ export interface NetIncomeComponents {
   aggregateNetIncome: number;
   /** The 申告分離課税 amounts, which 合計所得金額 includes and 総所得金額 does not. */
   separateNetIncome: SeparateNetIncome;
-  /** 合計所得金額: {@link aggregateNetIncome} plus {@link separateNetIncome}. */
+  /** 合計所得金額 (所法2条1項30号): {@link aggregateNetIncome} floored at zero plus {@link separateNetIncome}. */
   totalNetIncome: number;
 }
 
@@ -127,6 +127,17 @@ export interface NetIncomeComposition {
 }
 
 /**
+ * Calculates 合計所得金額 (total net income, 所法2条1項30号): the sum of aggregate net income
+ * (総所得金額) and separate investment income (措法8条の4③一, 37条の10⑥一 as applied by 37条の11⑥).
+ * Under the statute, aggregate income losses (所法69条① 損益通算) cannot offset separate
+ * investment income, so aggregate net income is floored at zero.
+ */
+export const calculateTotalNetIncome = (
+  aggregateNetIncome: number,
+  separateNetIncomeTotal: number,
+): number => Math.max(0, aggregateNetIncome) + separateNetIncomeTotal;
+
+/**
  * Composes a 合計所得金額 out of 給与所得, 公的年金等に係る雑所得 and the remaining net income,
  * applying the 給与所得控除, the 公的年金等控除 and both variants of the 所得金額調整控除
  * ({@link calculatePensionIncomeAdjustmentDeduction}) in statutory order. The taxpayer and each
@@ -148,20 +159,26 @@ export const composeNetIncomeComponents = ({
     calculateNetEmploymentIncome(grossEmploymentIncome, year) - incomeAdjustmentDeduction;
   const separateNetIncomeTotal = separateNetIncome.capitalGains + separateNetIncome.dividends;
 
+  // Other net income taxed under 総合課税 besides employment and public pension (事業所得,
+  // 公的年金等以外の雑所得, 総合配当, 総合利子).
+  const otherAggregateIncome = otherNetIncome + aggregateDividendIncome + aggregateInterestIncome;
+
+  // Aggregate net income without public pension income (and before the pension income adjustment
+  // deduction, which requires public pension income to apply).
+  const nonPensionAggregateNetIncome =
+    netEmploymentIncomeBeforePensionAdjustment + otherAggregateIncome;
+
   // The band of the 公的年金等控除 keys off the 合計所得金額 computed as if there were no public
-  // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額),
-  // which includes the 配当所得 and 利子所得 in 総所得金額 and the 申告分離課税 amounts (所法2条1項30号 as
-  // 措法8条の4③一 and 37条の10⑥一 read it). Without pension income the 給与+年金 adjustment
-  // below cannot apply, so 給与所得 enters the band test before that adjustment but after the
-  // 子ども・特別障害者等 variant.
+  // pension income (所法35条4項1号: 公的年金等の収入金額がないものとして計算した場合における合計所得金額).
+  const nonPensionTotalNetIncome = calculateTotalNetIncome(
+    nonPensionAggregateNetIncome,
+    separateNetIncomeTotal,
+  );
+
   const netPublicPensionIncome = calculateNetPublicPensionIncome(
     grossPublicPensionIncome,
     recipientAgeRange,
-    netEmploymentIncomeBeforePensionAdjustment +
-      otherNetIncome +
-      aggregateDividendIncome +
-      aggregateInterestIncome +
-      separateNetIncomeTotal,
+    nonPensionTotalNetIncome,
     year,
   );
 
@@ -171,12 +188,13 @@ export const composeNetIncomeComponents = ({
   );
   const netEmploymentIncome =
     netEmploymentIncomeBeforePensionAdjustment - pensionIncomeAdjustmentDeduction;
-  const aggregateNetIncome =
-    netEmploymentIncome +
-    netPublicPensionIncome +
-    otherNetIncome +
-    aggregateDividendIncome +
-    aggregateInterestIncome;
+
+  // 総所得金額 (所法22条②一): net sum of all 総合課税 categories after 損益通算 (所法69条①).
+  // Negative when operating losses exceed positive income.
+  const aggregateNetIncome = netEmploymentIncome + netPublicPensionIncome + otherAggregateIncome;
+
+  // 合計所得金額 (所法2条1項30号): aggregate losses cannot offset separate investment income.
+  const totalNetIncome = calculateTotalNetIncome(aggregateNetIncome, separateNetIncomeTotal);
 
   return {
     netEmploymentIncome,
@@ -187,6 +205,6 @@ export const composeNetIncomeComponents = ({
     aggregateInterestIncome,
     aggregateNetIncome,
     separateNetIncome,
-    totalNetIncome: aggregateNetIncome + separateNetIncomeTotal,
+    totalNetIncome,
   };
 };

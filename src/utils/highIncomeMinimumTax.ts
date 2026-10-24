@@ -6,6 +6,7 @@ import { getInvestmentIncomeTaxRates } from '../data/investmentIncomeTaxRates';
 import { RECONSTRUCTION_SURTAX_RATE } from '../data/nationalIncomeTaxBrackets';
 import type { HighIncomeMinimumTaxResult } from '../types/tax';
 import { floorTaxableIncome } from './investmentIncome';
+import { calculateTotalNetIncome } from './netIncomeComponents';
 
 /**
  * Calculates 基準所得金額 (baseline income amount, box ⑬ on the form 適用判定表 兼 税額計算書).
@@ -17,10 +18,10 @@ export const calculateHighIncomeBaselineIncome = (
   separateNetIncome: { capitalGains: number; dividends: number },
   listedWithholdingBase: number = 0,
 ): number =>
-  aggregateNetIncome +
-  separateNetIncome.capitalGains +
-  separateNetIncome.dividends +
-  listedWithholdingBase;
+  calculateTotalNetIncome(
+    aggregateNetIncome,
+    separateNetIncome.capitalGains + separateNetIncome.dividends,
+  ) + listedWithholdingBase;
 
 /**
  * Calculates baseline income tax under normal filing (box ⑱ on the form 適用判定表 兼 税額計算書):

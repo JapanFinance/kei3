@@ -258,10 +258,6 @@ export function calculateHealthInsuranceBreakdown(
   customRates?: CustomEmployeesHealthInsuranceRates,
   bonuses: BonusIncomeStream[] = [],
 ): HealthInsuranceBreakdown {
-  if (annualIncome < 0) {
-    throw new Error('Income cannot be negative.');
-  }
-
   // Dependent coverage has no premium
   if (provider === DEPENDENT_COVERAGE_ID) {
     return { total: 0, bonusPortion: 0 };
@@ -276,78 +272,82 @@ export function calculateHealthInsuranceBreakdown(
       region,
     ).total;
     return { total, bonusPortion: 0 };
-  } else {
-    const monthlyIncome = annualIncome / 12;
+  }
 
-    // Find the SMR bracket for this income (findSMRBracket always returns one: the
-    // brackets cover [0, ∞) and it throws on negative income).
-    const smrBracket = findSMRBracket(monthlyIncome);
+  if (annualIncome < 0) {
+    throw new Error("Income for Employees' Health Insurance cannot be negative.");
+  }
 
-    if (provider === CUSTOM_PROVIDER_ID) {
-      if (!customRates) {
-        // Fallback if custom rates are missing but provider is custom
-        return { total: 0, bonusPortion: 0 };
-      }
-      const staticRates = getCustomProviderRates(customRates);
+  const monthlyIncome = annualIncome / 12;
 
-      // Custom rates don't vary by month
-      const monthlyPremium = getEmployeePremiumRate(
-        staticRates,
-        isSubjectToLongTermCarePremium,
-      ).premiumOn(smrBracket.smrAmount);
-      let totalPremium = monthlyPremium * 12;
-      let bonusPortion = 0;
+  // Find the SMR bracket for this income (findSMRBracket always returns one: the
+  // brackets cover [0, ∞) and it throws on negative income).
+  const smrBracket = findSMRBracket(monthlyIncome);
 
-      if (bonuses.some(b => b.amount > 0)) {
-        const bonusDetails = calculateEmployeesHealthInsuranceBonusBreakdown(
-          bonuses,
-          staticRates,
-          isSubjectToLongTermCarePremium,
-          year,
-        );
-        bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
-        totalPremium += bonusPortion;
-      }
-
-      return { total: totalPremium, bonusPortion };
+  if (provider === CUSTOM_PROVIDER_ID) {
+    if (!customRates) {
+      // Fallback if custom rates are missing but provider is custom
+      return { total: 0, bonusPortion: 0 };
     }
+    const staticRates = getCustomProviderRates(customRates);
 
-    // Calculate per-month premiums — rates may differ by month within a calendar year, and every
-    // month of one rate period shares the rates object the lookup returns, so the premium is
-    // computed once per period.
-    let totalPremium = 0;
-    let periodRates: RegionalRates | undefined;
-    let premium = 0;
-    for (let month = 0; month < 12; month++) {
-      const monthRates = getRegionalRatesForMonth(provider, region, year, month);
-      if (monthRates) {
-        if (monthRates !== periodRates) {
-          premium = getEmployeePremiumRate(monthRates, isSubjectToLongTermCarePremium).premiumOn(
-            smrBracket.smrAmount,
-          );
-          periodRates = monthRates;
-        }
-        totalPremium += premium;
-      }
-    }
-
+    // Custom rates don't vary by month
+    const monthlyPremium = getEmployeePremiumRate(
+      staticRates,
+      isSubjectToLongTermCarePremium,
+    ).premiumOn(smrBracket.smrAmount);
+    let totalPremium = monthlyPremium * 12;
     let bonusPortion = 0;
 
     if (bonuses.some(b => b.amount > 0)) {
       const bonusDetails = calculateEmployeesHealthInsuranceBonusBreakdown(
         bonuses,
-        provider,
-        region,
-        year,
+        staticRates,
         isSubjectToLongTermCarePremium,
+        year,
       );
-
       bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
       totalPremium += bonusPortion;
     }
 
     return { total: totalPremium, bonusPortion };
   }
+
+  // Calculate per-month premiums — rates may differ by month within a calendar year, and every
+  // month of one rate period shares the rates object the lookup returns, so the premium is
+  // computed once per period.
+  let totalPremium = 0;
+  let periodRates: RegionalRates | undefined;
+  let premium = 0;
+  for (let month = 0; month < 12; month++) {
+    const monthRates = getRegionalRatesForMonth(provider, region, year, month);
+    if (monthRates) {
+      if (monthRates !== periodRates) {
+        premium = getEmployeePremiumRate(monthRates, isSubjectToLongTermCarePremium).premiumOn(
+          smrBracket.smrAmount,
+        );
+        periodRates = monthRates;
+      }
+      totalPremium += premium;
+    }
+  }
+
+  let bonusPortion = 0;
+
+  if (bonuses.some(b => b.amount > 0)) {
+    const bonusDetails = calculateEmployeesHealthInsuranceBonusBreakdown(
+      bonuses,
+      provider,
+      region,
+      year,
+      isSubjectToLongTermCarePremium,
+    );
+
+    bonusPortion = bonusDetails.reduce((sum, item) => sum + item.premium, 0);
+    totalPremium += bonusPortion;
+  }
+
+  return { total: totalPremium, bonusPortion };
 }
 
 /**
@@ -498,10 +498,6 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
   year: number,
   region?: string,
 ): NationalHealthInsuranceBreakdown {
-  if (netIncome < 0) {
-    throw new Error('Income cannot be negative.');
-  }
-
   const regionKey = region as string;
 
   // Look up rates for the two fiscal years that overlap this calendar year:
