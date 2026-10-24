@@ -70,11 +70,6 @@ export const EMPLOYEES_PENSION_BRACKETS: StandardMonthlyRemunerationBracket[] = 
  * 2020), which raised the base from 220,000円 to 320,000円 to neutralize the 2020 tax reform's
  * 100,000円 shift from employment income deduction to basic deduction. The 350,000円 per-person
  * factor has been unchanged since 2001. They do not index annually with inflation or wages.
- *
- * The statutory test is on the previous year's income; this calculator's steady-state
- * single-year model applies it to the current year's 合計所得金額, assuming income is the
- * same as the previous year. An application is required, and fully exempted periods accrue
- * one half of the normal basic pension amount.
  */
 export const NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON = 350_000;
 export const NATIONAL_PENSION_FULL_EXEMPTION_BASE = 320_000;

@@ -833,7 +833,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                       label={
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
-                            National Pension Full Exemption (全額免除)
+                            National Pension Full Exemption
                           </Typography>
                           <SimpleTooltip>
                             {`The National Pension system offers income-based contribution exemptions ` +
@@ -843,14 +843,14 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                               `${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_BASE)}. An application to the ` +
                               `municipal office or pension office is required — the exemption is not ` +
                               `applied automatically. Fully exempted periods accrue one half of the ` +
-                              `normal basic pension amount. This calculator assumes income is the same ` +
+                              `normal basic pension amount. This calculator assumes current income is the same ` +
                               `as the previous year.`}
                           </SimpleTooltip>
                         </Box>
                       }
                     />
                     <FormHelperText sx={{ mt: -0.5 }}>
-                      {`Income is within the full exemption threshold (${formatJPY(pensionExemptionThreshold)}).`}
+                      {`Eligible due to net income ≤ ${formatJPY(pensionExemptionThreshold)}.`}
                     </FormHelperText>
                   </Box>
                 )}

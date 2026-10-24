@@ -107,7 +107,7 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year, e
               `Income is at or below the threshold of ${formatJPY(exemption.incomeThreshold)} ` +
               `((number of dependents + 1) × ${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON)} + ` +
               `${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_BASE)}). An application is required — ` +
-              `the exemption is not applied automatically — and fully exempted periods accrue ` +
+              `the exemption is not applied automatically. Fully exempted periods accrue ` +
               `one half of the normal basic pension amount.`
             : `An income-based full exemption (全額免除) exists: it applies on application when ` +
               `the previous year's income is at or below (number of dependents + 1) × ` +
