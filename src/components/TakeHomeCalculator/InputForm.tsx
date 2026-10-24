@@ -205,6 +205,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
     dispatch({ type: 'setField', field: 'reportedDividendsTaxation', value });
   };
 
+  const handleBlueFilerDeductionChange = (value: number) => {
+    dispatch({ type: 'setField', field: 'blueFilerDeduction', value });
+  };
+
   const handleIncomeStreamsChange = (newStreams: IncomeStream[]) => {
     dispatch({ type: 'incomeStreamsChanged', streams: newStreams });
   };
@@ -1024,6 +1028,8 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onClose={() => setIncomeModalOpen(false)}
         streams={inputs.incomeStreams}
         onStreamsChange={handleIncomeStreamsChange}
+        blueFilerDeduction={inputs.blueFilerDeduction}
+        onBlueFilerDeductionChange={handleBlueFilerDeductionChange}
         reportedDividendsTaxation={inputs.reportedDividendsTaxation}
         onReportedDividendsTaxationChange={handleReportedDividendsTaxationChange}
         calculationInputs={inputs}

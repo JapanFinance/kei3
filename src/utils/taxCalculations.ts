@@ -21,6 +21,7 @@ import {
 } from '../types/healthInsurance';
 import {
   type BonusIncomeStream,
+  type BusinessIncomeStream,
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   type ForeignTaxCreditResult,
   type FurusatoNozeiDetails,
@@ -28,6 +29,7 @@ import {
   type IncomeStream,
   NO_RESIDENCE_TAX_CREDITS,
   type PersonalCircumstancesInput,
+  type RealEstateIncomeStream,
   type ReportedDividendsTaxation,
   type ResidenceTaxCredits,
   type TakeHomeInputs,
@@ -289,7 +291,11 @@ interface IncomeBreakdown {
   grossEmploymentIncome: number;
   netBusinessAndMiscIncomeBeforeBlueFilerDeduction: number;
   netBusinessAndMiscIncome: number;
+  netRealEstateIncomeBeforeBlueFilerDeduction: number;
+  netRealEstateIncome: number;
   blueFilerDeduction: number;
+  realEstateBlueFilerDeduction: number;
+  businessBlueFilerDeduction: number;
   /**
    * Annual income excluding investment income (employment + business/misc + public pension).
    * Investment income is gathered separately in {@link withheldBase}, {@link separateBase},
@@ -358,12 +364,11 @@ interface IncomeBreakdown {
 const calculateIncomeBreakdown = (
   incomeStreams: IncomeStream[],
   reportedDividendsTaxation: ReportedDividendsTaxation,
+  blueFilerDeductionInput?: number,
 ): IncomeBreakdown => {
   let salaryIncome = 0;
   const bonusIncome: BonusIncomeStream[] = [];
-  let netBusinessAndMiscIncomeBeforeBlueFilerDeduction = 0;
-  let netBusinessAndMiscIncome = 0;
-  let blueFilerDeduction = 0;
+  let miscIncome = 0;
   let commutingAllowance = 0;
   let stockCompensationIncome = 0;
   let grossPublicPensionIncome = 0;
@@ -384,7 +389,8 @@ const calculateIncomeBreakdown = (
   let aggregateInterest = 0;
   let foreignSourceIncome = 0;
   let creditableForeignTax = 0;
-  let processedBusinessIncome = false;
+  let processedBusinessStream: BusinessIncomeStream | undefined;
+  let processedRealEstateStream: RealEstateIncomeStream | undefined;
 
   // 措法8条の4② makes the 申告分離課税/総合課税 election one for every reported dividend of the
   // year, whichever entry it came from — a plain dividend or a withholding account's.
@@ -427,21 +433,21 @@ const calculateIncomeBreakdown = (
         stockCompensationIncome += income.amount;
         break;
       case 'business': {
-        if (processedBusinessIncome) {
+        if (processedBusinessStream) {
           throw new Error('Only one business income stream is allowed.');
         }
-        const maxDeduction = income.blueFilerDeduction || 0;
-        netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
-        // Net business income is reduced by the deduction, up to positive income (措法25条の2)
-        const effectiveDeduction = Math.min(Math.max(0, income.amount), maxDeduction);
-        netBusinessAndMiscIncome += income.amount - effectiveDeduction;
-        blueFilerDeduction = effectiveDeduction;
-        processedBusinessIncome = true;
+        processedBusinessStream = income;
+        break;
+      }
+      case 'realEstate': {
+        if (processedRealEstateStream) {
+          throw new Error('Only one real estate income stream is allowed.');
+        }
+        processedRealEstateStream = income;
         break;
       }
       case 'miscellaneous':
-        netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
-        netBusinessAndMiscIncome += income.amount;
+        miscIncome += income.amount;
         break;
       case 'publicPension': {
         grossPublicPensionIncome += income.amount;
@@ -541,11 +547,76 @@ const calculateIncomeBreakdown = (
     }
   }
 
+  // Allocate the blue-filer deduction in statutory sequence (措法25条の2②):
+  // 1. 不動産所得 (Real estate income) first
+  // 2. 事業所得 (Business income) second
+  let blueFilerPool = blueFilerDeductionInput ?? processedBusinessStream?.blueFilerDeduction ?? 0;
+
+  let netRealEstateIncomeBeforeBlueFilerDeduction = 0;
+  let netRealEstateIncome = 0;
+  let realEstateBlueFilerDeduction = 0;
+  if (processedRealEstateStream) {
+    const stream = processedRealEstateStream;
+    netRealEstateIncomeBeforeBlueFilerDeduction = stream.amount;
+    if (stream.amount > 0) {
+      const deduction = Math.min(stream.amount, blueFilerPool);
+      realEstateBlueFilerDeduction = deduction;
+      netRealEstateIncome = stream.amount - deduction;
+      blueFilerPool -= deduction;
+    } else {
+      realEstateBlueFilerDeduction = 0;
+      // 損益通算 loss netting restrictions:
+      // 措法41条の4: 土地等を取得するために要した負債の利子の額
+      // 措法41条の4の3: 国外中古建物の減価償却費等の特例
+      const loss = -stream.amount;
+      const disallowedLand = Math.min(loss, Math.max(0, stream.landDebtInterest ?? 0));
+      const disallowedForeign =
+        stream.location === 'foreign'
+          ? Math.min(
+              loss - disallowedLand,
+              Math.max(0, stream.foreignUsedBuildingDisallowedLoss ?? 0),
+            )
+          : 0;
+      const allowableLoss = loss - disallowedLand - disallowedForeign;
+      netRealEstateIncome = allowableLoss === 0 ? 0 : -allowableLoss;
+    }
+
+    if (stream.location === 'foreign') {
+      if (netRealEstateIncome > 0) {
+        foreignSourceIncome += netRealEstateIncome;
+      }
+      creditableForeignTax += stream.foreignTax;
+    }
+  }
+
+  let netBusinessIncomeBeforeBlueFilerDeduction = 0;
+  let netBusinessIncome = 0;
+  let businessBlueFilerDeduction = 0;
+  if (processedBusinessStream) {
+    const stream = processedBusinessStream;
+    netBusinessIncomeBeforeBlueFilerDeduction = stream.amount;
+    if (stream.amount > 0) {
+      const deduction = Math.min(stream.amount, blueFilerPool);
+      businessBlueFilerDeduction = deduction;
+      netBusinessIncome = stream.amount - deduction;
+      blueFilerPool -= deduction;
+    } else {
+      businessBlueFilerDeduction = 0;
+      netBusinessIncome = stream.amount;
+    }
+  }
+
+  const blueFilerDeduction = realEstateBlueFilerDeduction + businessBlueFilerDeduction;
+  const netBusinessAndMiscIncomeBeforeBlueFilerDeduction =
+    netBusinessIncomeBeforeBlueFilerDeduction + miscIncome;
+  const netBusinessAndMiscIncome = netBusinessIncome + miscIncome;
+
   const totalBonusIncome = bonusIncome.reduce((sum, b) => sum + b.amount, 0);
   const grossEmploymentIncome = salaryIncome + totalBonusIncome + stockCompensationIncome;
   const nonInvestmentAnnualIncome =
     grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
+    netRealEstateIncomeBeforeBlueFilerDeduction +
     grossPublicPensionIncome;
   const reportedSeparateBase = calculateReportedSeparateInvestmentIncomeTaxationBase({
     capitalGains: reportedCapitalGains,
@@ -560,7 +631,11 @@ const calculateIncomeBreakdown = (
     grossEmploymentIncome,
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
     netBusinessAndMiscIncome,
+    netRealEstateIncomeBeforeBlueFilerDeduction,
+    netRealEstateIncome,
     blueFilerDeduction,
+    realEstateBlueFilerDeduction,
+    businessBlueFilerDeduction,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -627,7 +702,12 @@ const composeTaxpayerNetIncomeComponents = (
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
 ): NetIncomeComponents => {
-  const { grossEmploymentIncome, netBusinessAndMiscIncome, grossPublicPensionIncome } = breakdown;
+  const {
+    grossEmploymentIncome,
+    netBusinessAndMiscIncome,
+    netRealEstateIncome,
+    grossPublicPensionIncome,
+  } = breakdown;
 
   return composeNetIncomeComponents({
     grossEmploymentIncome,
@@ -639,7 +719,7 @@ const composeTaxpayerNetIncomeComponents = (
     ),
     grossPublicPensionIncome,
     recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
-    otherNetIncome: netBusinessAndMiscIncome,
+    otherNetIncome: netBusinessAndMiscIncome + netRealEstateIncome,
     aggregateDividendIncome: breakdown.aggregateDividends,
     aggregateInterestIncome: breakdown.aggregateInterest,
     separateNetIncome: breakdown.separateBase.netIncome,
@@ -663,6 +743,7 @@ const composeTaxpayerNetIncomeComponents = (
  *                       same deduction
  * @param reportedDividendsTaxation  The election that taxes every reported dividend; the
  *                       default when the caller has none
+ * @param blueFilerDeduction  The return's blue-filer special deduction election
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
@@ -671,9 +752,10 @@ export const calculateNetIncomeComponents = (
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
   reportedDividendsTaxation: ReportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  blueFilerDeduction?: number,
 ): NetIncomeComponents =>
   composeTaxpayerNetIncomeComponents(
-    calculateIncomeBreakdown(incomeStreams, reportedDividendsTaxation),
+    calculateIncomeBreakdown(incomeStreams, reportedDividendsTaxation, blueFilerDeduction),
     year,
     ageRange,
     dependents,
@@ -684,6 +766,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const incomeBreakdown = calculateIncomeBreakdown(
     inputs.incomeStreams,
     inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+    inputs.blueFilerDeduction,
   );
   const {
     bonusIncome,
@@ -691,7 +774,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     grossEmploymentIncome,
     salaryIncome,
     netBusinessAndMiscIncome,
+    netRealEstateIncome,
     blueFilerDeduction,
+    realEstateBlueFilerDeduction,
+    businessBlueFilerDeduction,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -1213,6 +1299,14 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeAdjustmentDeduction,
     ...(pensionIncomeAdjustmentDeduction > 0 && { pensionIncomeAdjustmentDeduction }),
     netBusinessAndMiscIncome,
+    ...(inputs.incomeStreams.some(s => s.type === 'realEstate') && {
+      netRealEstateIncome,
+    }),
+    ...(blueFilerDeduction > 0 && {
+      blueFilerDeduction,
+      realEstateBlueFilerDeduction,
+      businessBlueFilerDeduction,
+    }),
     ...(grossPublicPensionIncome > 0 && {
       grossPublicPensionIncome,
       netPublicPensionIncome,
