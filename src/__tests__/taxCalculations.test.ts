@@ -156,10 +156,34 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.residenceTax.basicDeduction).toBe(430_000);
+    expect(result.residenceTaxBasicDeduction).toBe(430_000);
     expect(result.healthInsurance).toBe(0);
     expect(result.pensionPayments).toBe(0);
     expect(result.employmentInsurance).toBe(0);
     expect(result.takeHomeIncome).toBe(0);
+  });
+
+  it('populates statutory residence tax basic deduction for non-taxable incomes', () => {
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { type: 'business' as const, amount: 430_000, frequency: 'annual' as const, id: 'test' },
+      ],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
+    expect(result.totalNetIncome).toBe(430_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.residenceTax.basicDeduction).toBe(430_000);
+    expect(result.residenceTaxBasicDeduction).toBe(430_000);
   });
 
   it('handles negative income correctly', () => {

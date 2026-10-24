@@ -293,6 +293,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   incomeAdjustmentDeduction: 0,
   netBusinessAndMiscIncome: 0,
   totalNetIncome: 0,
+  residenceTaxBasicDeduction: 430_000,
   additionalDeductions: { national: 0, residence: 0, items: [] },
 };
 

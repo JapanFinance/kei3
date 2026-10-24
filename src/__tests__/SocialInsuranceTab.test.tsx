@@ -236,6 +236,35 @@ describe('SocialInsuranceTab', () => {
     expect(resultRowText('NHI Calculation Base')).toContain('¥24,850,000');
   });
 
+  it('displays the full basic deduction and a zero base for non-taxable net income', () => {
+    // When net income is within the municipal non-taxable threshold, residence tax is exempt,
+    // but the engine returns the statutory 地方税法 basic deduction of ¥430,000 in
+    // results.residenceTaxBasicDeduction, and NHI assesses after it.
+    const inputs = {
+      ...mockInputs,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      incomeStreams: [{ id: 'b1', type: 'business' as const, amount: 430_000 }],
+    };
+    const results = {
+      ...mockResults,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      salaryIncome: 0,
+      commutingAllowance: 0,
+      netBusinessAndMiscIncome: 430_000,
+      totalNetIncome: 430_000,
+      residenceTaxBasicDeduction: 430_000,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(resultRowText('Basic Deduction')).toContain('-¥430,000');
+    expect(resultRowText('NHI Calculation Base')).toContain('¥0');
+  });
+
   it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
     const inputs = {
       ...mockInputs,
