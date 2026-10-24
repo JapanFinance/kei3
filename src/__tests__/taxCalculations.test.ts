@@ -349,6 +349,8 @@ describe('calculateTaxes', () => {
 
     // Verify Blue-Filer deduction is returned
     expect(result.blueFilerDeduction).toBe(650_000);
+    expect(result.grossBusinessAndMiscIncome).toBe(5_000_000);
+    expect(result.netBusinessAndMiscIncome).toBe(4_350_000);
   });
 });
 
@@ -4002,6 +4004,8 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         incomeTaxReduction: 2_800,
         residenceTaxDonationBasicDeduction: 7_200,
         residenceTaxSpecialDeduction: 57_450,
+        municipalTaxCredit: 38_790,
+        prefecturalTaxCredit: 25_860,
         residenceTaxReduction: 64_300,
         outOfPocketCost: 6_900,
       });

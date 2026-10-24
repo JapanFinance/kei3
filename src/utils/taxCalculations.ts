@@ -291,6 +291,7 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
   grossEmploymentIncome: 0,
   incomeAdjustmentDeduction: 0,
+  grossBusinessAndMiscIncome: 0,
   netBusinessAndMiscIncome: 0,
   totalNetIncome: 0,
   additionalDeductions: { national: 0, residence: 0, items: [] },
@@ -710,6 +711,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     bonusIncome,
     totalBonusIncome,
     grossEmploymentIncome,
+    netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
     netBusinessAndMiscIncome,
     blueFilerDeduction,
     nonInvestmentAnnualIncome,
@@ -1197,6 +1199,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         incomeTaxReduction,
         residenceTaxDonationBasicDeduction: furusatoLimit.residenceTaxDonationBasicDeduction,
         residenceTaxSpecialDeduction: furusatoLimit.residenceTaxSpecialDeduction,
+        municipalTaxCredit: furusatoLimit.residenceCredits.city,
+        prefecturalTaxCredit: furusatoLimit.residenceCredits.prefecture,
         residenceTaxReduction,
         outOfPocketCost,
       };
@@ -1225,6 +1229,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     grossEmploymentIncome,
     incomeAdjustmentDeduction,
     ...(pensionIncomeAdjustmentDeduction > 0 && { pensionIncomeAdjustmentDeduction }),
+    grossBusinessAndMiscIncome: netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
     netBusinessAndMiscIncome,
     ...(grossPublicPensionIncome > 0 && {
       grossPublicPensionIncome,

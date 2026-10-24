@@ -944,6 +944,11 @@ export interface TakeHomeResults {
    */
   pensionIncomeAdjustmentDeduction?: number | undefined;
   /**
+   * 事業所得 and 雑所得 other than public pensions as entered, after 必要経費 but before the
+   * 青色申告特別控除. 0 when there is no business or miscellaneous income.
+   */
+  grossBusinessAndMiscIncome: number;
+  /**
    * 事業所得 and 雑所得 other than public pensions, net of the 青色申告特別控除
    * ({@link blueFilerDeduction}). 0 when there is no business or miscellaneous income.
    */
@@ -1168,6 +1173,14 @@ export interface FurusatoNozeiDetails {
   incomeTaxReduction: number;
   residenceTaxDonationBasicDeduction: number;
   residenceTaxSpecialDeduction: number;
+  /**
+   * The residence tax credit ({@link residenceTaxDonationBasicDeduction} plus
+   * {@link residenceTaxSpecialDeduction}) as applied to each level's 所得割: the municipal and
+   * prefectural shares are each rounded up to the yen, so together they can exceed the credit by
+   * ¥1.
+   */
+  municipalTaxCredit: number;
+  prefecturalTaxCredit: number;
   outOfPocketCost: number;
   residenceTaxReduction: number;
 }
@@ -1177,6 +1190,8 @@ export const ZERO_FURUSATO_NOZEI_DETAILS: FurusatoNozeiDetails = {
   incomeTaxReduction: 0,
   residenceTaxDonationBasicDeduction: 0,
   residenceTaxSpecialDeduction: 0,
+  municipalTaxCredit: 0,
+  prefecturalTaxCredit: 0,
   outOfPocketCost: 0,
   residenceTaxReduction: 0,
 };
