@@ -4,16 +4,17 @@
 import { describe, it, expect } from 'vitest';
 
 import { percent } from '../data/employeesHealthInsurance/providerRateData';
+import { getNHIParamsForMonth } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
   DEFAULT_PROVIDER_REGION,
-  NATIONAL_HEALTH_INSURANCE_ID,
   DEFAULT_PROVIDER,
   CUSTOM_PROVIDER_ID,
 } from '../types/healthInsurance';
 import {
-  calculateHealthInsurancePremium,
   calculateHealthInsuranceBreakdown,
   calculateEmployeesHealthInsuranceBonusBreakdown,
+  calculateNationalHealthInsurancePortion,
+  calculateNationalHealthInsurancePremiumWithBreakdown,
   premiumCalculationBase,
 } from '../utils/healthInsuranceCalculator';
 
@@ -22,47 +23,65 @@ const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
 
 const FY2025 = 2025;
 
-describe('calculateHealthInsurancePremium for employees', () => {
+describe('calculateHealthInsuranceBreakdown for employees', () => {
   describe('Kyokai Kenpo (Tokyo)', () => {
     it('calculates premium for people under 40', () => {
       expect(
-        calculateHealthInsurancePremium(5_000_000, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
+        calculateHealthInsuranceBreakdown(5_000_000, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo')
+          .total,
       ).toBe(243_780);
     });
 
     it('calculates employees health insurance premium for people under 40 with cap', () => {
       expect(
-        calculateHealthInsurancePremium(20_000_000, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
+        calculateHealthInsuranceBreakdown(20_000_000, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo')
+          .total,
       ).toBe(826_488);
     });
 
     it('calculates employees health insurance premium with nursing care for people over 40', () => {
       expect(
-        calculateHealthInsurancePremium(5_000_000, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
+        calculateHealthInsuranceBreakdown(5_000_000, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo')
+          .total,
       ).toBe(282_900);
     });
 
     it('calculates employees health insurance premium with nursing care for people over 40 with cap', () => {
       expect(
-        calculateHealthInsurancePremium(20_000_000, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
+        calculateHealthInsuranceBreakdown(20_000_000, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo')
+          .total,
       ).toBe(959_100);
     });
 
     it('handles zero income correctly', () => {
       expect(
-        calculateHealthInsurancePremium(0, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
+        calculateHealthInsuranceBreakdown(0, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo').total,
       ).toBe(34_488);
-      expect(calculateHealthInsurancePremium(0, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo')).toBe(
-        40_020,
-      );
+      expect(
+        calculateHealthInsuranceBreakdown(0, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo').total,
+      ).toBe(40_020);
     });
 
     it('handles negative income correctly', () => {
-      expect(() =>
-        calculateHealthInsurancePremium(-1_000_000, false, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
+      expect(
+        () =>
+          calculateHealthInsuranceBreakdown(
+            -1_000_000,
+            false,
+            KYOKAI_KENPO_PROVIDER,
+            FY2025,
+            'Tokyo',
+          ).total,
       ).toThrow('Income cannot be negative.');
-      expect(() =>
-        calculateHealthInsurancePremium(-1_000_000, true, KYOKAI_KENPO_PROVIDER, FY2025, 'Tokyo'),
+      expect(
+        () =>
+          calculateHealthInsuranceBreakdown(
+            -1_000_000,
+            true,
+            KYOKAI_KENPO_PROVIDER,
+            FY2025,
+            'Tokyo',
+          ).total,
       ).toThrow('Income cannot be negative.');
     });
   });
@@ -72,13 +91,13 @@ describe('calculateHealthInsurancePremium for employees', () => {
     // Employee No LTC: 19,475. Employee With LTC: 19,475 + 3,690 (LTC for 410k) = 23,165
     it('calculates premium for people under 40', () => {
       expect(
-        calculateHealthInsurancePremium(
+        calculateHealthInsuranceBreakdown(
           5_000_000,
           false,
           ITS_KENPO_PROVIDER,
           FY2025,
           DEFAULT_PROVIDER_REGION,
-        ),
+        ).total,
       ).toBe(19475 * 12); // 233_700
     });
 
@@ -86,37 +105,37 @@ describe('calculateHealthInsurancePremium for employees', () => {
     // Employee No LTC: 66,025. Employee With LTC: 66,025 + 12,510 (LTC for 1.39M) = 78,535
     it('calculates premium for people under 40 with cap', () => {
       expect(
-        calculateHealthInsurancePremium(
+        calculateHealthInsuranceBreakdown(
           20_000_000,
           false,
           ITS_KENPO_PROVIDER,
           FY2025,
           DEFAULT_PROVIDER_REGION,
-        ),
+        ).total,
       ).toBe(66025 * 12); // 792_300
     });
 
     it('calculates premium with nursing care for people over 40', () => {
       expect(
-        calculateHealthInsurancePremium(
+        calculateHealthInsuranceBreakdown(
           5_000_000,
           true,
           ITS_KENPO_PROVIDER,
           FY2025,
           DEFAULT_PROVIDER_REGION,
-        ),
+        ).total,
       ).toBe(23165 * 12); // 277_980
     });
 
     it('calculates premium with nursing care for people over 40 with cap', () => {
       expect(
-        calculateHealthInsurancePremium(
+        calculateHealthInsuranceBreakdown(
           20_000_000,
           true,
           ITS_KENPO_PROVIDER,
           FY2025,
           DEFAULT_PROVIDER_REGION,
-        ),
+        ).total,
       ).toBe(78535 * 12); // 942_420
     });
 
@@ -124,190 +143,138 @@ describe('calculateHealthInsurancePremium for employees', () => {
     // Employee No LTC: 2,755. Employee With LTC: 2,755 + 522 (LTC for 58k) = 3,277
     it('handles zero income correctly', () => {
       expect(
-        calculateHealthInsurancePremium(
+        calculateHealthInsuranceBreakdown(
           0,
           false,
           ITS_KENPO_PROVIDER,
           FY2025,
           DEFAULT_PROVIDER_REGION,
-        ),
+        ).total,
       ).toBe(2755 * 12); // 33_060
       expect(
-        calculateHealthInsurancePremium(
+        calculateHealthInsuranceBreakdown(
           0,
           true,
           ITS_KENPO_PROVIDER,
           FY2025,
           DEFAULT_PROVIDER_REGION,
-        ),
+        ).total,
       ).toBe(3277 * 12); // 39_324
     });
 
     it('handles negative income correctly', () => {
-      expect(() =>
-        calculateHealthInsurancePremium(
-          -1_000_000,
-          false,
-          ITS_KENPO_PROVIDER,
-          FY2025,
-          DEFAULT_PROVIDER_REGION,
-        ),
+      expect(
+        () =>
+          calculateHealthInsuranceBreakdown(
+            -1_000_000,
+            false,
+            ITS_KENPO_PROVIDER,
+            FY2025,
+            DEFAULT_PROVIDER_REGION,
+          ).total,
       ).toThrow('Income cannot be negative.');
-      expect(() =>
-        calculateHealthInsurancePremium(
-          -1_000_000,
-          true,
-          ITS_KENPO_PROVIDER,
-          FY2025,
-          DEFAULT_PROVIDER_REGION,
-        ),
+      expect(
+        () =>
+          calculateHealthInsuranceBreakdown(
+            -1_000_000,
+            true,
+            ITS_KENPO_PROVIDER,
+            FY2025,
+            DEFAULT_PROVIDER_REGION,
+          ).total,
       ).toThrow('Income cannot be negative.');
     });
   });
 });
 
-describe('calculateHealthInsurancePremium for non-employees', () => {
+describe('calculateNationalHealthInsurancePremiumWithBreakdown for non-employees', () => {
   it('calculates NHI premium', () => {
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, false, FY2025, 'Tokyo').total,
     ).toBe(539_380);
   });
 
   it('calculates NHI premium with cap', () => {
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, false, FY2025, 'Tokyo')
+        .total,
     ).toBe(920_000);
   });
 
   it('calculates NHI premium with nursing care', () => {
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, true, FY2025, 'Tokyo').total,
     ).toBe(658_805);
   });
 
   it('calculates NHI premium with nursing care and cap', () => {
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, true, FY2025, 'Tokyo').total,
     ).toBe(1_090_000);
   });
 
   it('handles zero income correctly', () => {
     expect(
-      calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, FY2025, 'Tokyo').total,
     ).toBe(64_100);
     expect(
-      calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, FY2025, 'Tokyo').total,
     ).toBe(80_700);
   });
 
   it('handles negative income correctly', () => {
-    expect(() =>
-      calculateHealthInsurancePremium(
-        -1_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+    expect(
+      () =>
+        calculateNationalHealthInsurancePremiumWithBreakdown(-1_000_000, false, FY2025, 'Tokyo')
+          .total,
     ).toThrow('Income cannot be negative.');
-    expect(() =>
-      calculateHealthInsurancePremium(
-        -1_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+    expect(
+      () =>
+        calculateNationalHealthInsurancePremiumWithBreakdown(-1_000_000, true, FY2025, 'Tokyo')
+          .total,
     ).toThrow('Income cannot be negative.');
   });
 });
 
-describe('calculateHealthInsurancePremium for employees with NHI', () => {
+describe('calculateNationalHealthInsurancePremiumWithBreakdown for employees with NHI', () => {
   // Test cases for employment income workers who are on NHI
   // (e.g., small employers, part-time workers, low income thresholds)
   it('calculates NHI premium for employment income', () => {
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, false, FY2025, 'Tokyo').total,
     ).toBe(539_380);
   });
 
   it('calculates NHI premium for employment income with nursing care', () => {
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, true, FY2025, 'Tokyo').total,
     ).toBe(658_805);
   });
 
   it('calculates NHI premium for employment income with cap', () => {
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, false, FY2025, 'Tokyo')
+        .total,
     ).toBe(920_000);
   });
 
   it('calculates NHI premium for employment income with nursing care and cap', () => {
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, true, FY2025, 'Tokyo').total,
     ).toBe(1_090_000);
   });
 
   it('handles zero employment income correctly', () => {
     expect(
-      calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, FY2025, 'Tokyo').total,
     ).toBe(64_100);
     expect(
-      calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Tokyo'),
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, FY2025, 'Tokyo').total,
     ).toBe(80_700);
   });
 });
 
-describe('calculateHealthInsurancePremium for Osaka (with household flat rate)', () => {
+describe('calculateNationalHealthInsurancePremiumWithBreakdown for Osaka', () => {
   // Osaka has household flat rate (平等割) components:
   // Medical: ¥33,574, Support: ¥10,761, LTC: ¥0
   // These are per-household amounts added to the calculation
@@ -319,13 +286,7 @@ describe('calculateHealthInsurancePremium for Osaka (with household flat rate)',
     // LTC: 0 (not applicable)
     // Total: 492,978 + 159,825 = 652,803 (adjusted for rounding: 652,817)
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Osaka',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, false, FY2025, 'Osaka').total,
     ).toBe(652_817);
   });
 
@@ -336,13 +297,7 @@ describe('calculateHealthInsurancePremium for Osaka (with household flat rate)',
     // LTC: (5M - 430k) * 2.56% + 18,784 + 0 = 116,915 + 18,784 = 135,699 (under cap 170k)
     // Total: 492,978 + 159,825 + 135,699 = 788,502 (adjusted for rounding: 788,593)
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Osaka',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, true, FY2025, 'Osaka').total,
     ).toBe(788_593);
   });
 
@@ -352,22 +307,11 @@ describe('calculateHealthInsurancePremium for Osaka (with household flat rate)',
     // Support: Capped at 240,000
     // LTC: Capped at 170,000 (if applicable)
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Osaka',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, false, FY2025, 'Osaka')
+        .total,
     ).toBe(890_000); // 650k + 240k
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Osaka',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, true, FY2025, 'Osaka').total,
     ).toBe(1_060_000); // 650k + 240k + 170k
   });
 
@@ -376,12 +320,12 @@ describe('calculateHealthInsurancePremium for Osaka (with household flat rate)',
     // Support: 0 + 11,034 + 10,761 = 21,795
     // Total without LTC: 89,793
     expect(
-      calculateHealthInsurancePremium(0, false, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Osaka'),
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, false, FY2025, 'Osaka').total,
     ).toBe(89_793);
 
     // With LTC: + 18,784 = 108,577
     expect(
-      calculateHealthInsurancePremium(0, true, NATIONAL_HEALTH_INSURANCE_ID, FY2025, 'Osaka'),
+      calculateNationalHealthInsurancePremiumWithBreakdown(0, true, FY2025, 'Osaka').total,
     ).toBe(108_577);
   });
 });
@@ -389,101 +333,101 @@ describe('calculateHealthInsurancePremium for Osaka (with household flat rate)',
 describe('Dependent Coverage', () => {
   it('returns zero premium for dependent coverage regardless of age', () => {
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         0,
         false,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         0,
         true,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         500_000,
         false,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         500_000,
         true,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         1_299_999,
         false,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         1_299_999,
         true,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
   });
 
   it('returns zero premium for dependent coverage at threshold income', () => {
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         1_300_000,
         false,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         1_300_000,
         true,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
   });
 
   it('returns zero premium for dependent coverage even above threshold (validation should be in UI)', () => {
     // The calculator itself doesn't enforce the threshold - that's done at the UI level
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         2_000_000,
         false,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         2_000_000,
         true,
         'DependentCoverage',
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
   });
 });
@@ -495,40 +439,40 @@ describe('Custom Provider', () => {
   // Employee No LTC: 410,000 * 0.05 = 20,500
   it('calculates premium with custom rates for people under 40', () => {
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         5_000_000,
         false,
         CUSTOM_PROVIDER_ID,
         FY2025,
         DEFAULT_PROVIDER_REGION,
         customRates,
-      ),
+      ).total,
     ).toBe(20500 * 12); // 246,000
   });
 
   // Employee With LTC: 410,000 * 0.05 + 410,000 * 0.01 = 20,500 + 4,100 = 24,600
   it('calculates premium with custom rates for people over 40', () => {
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         5_000_000,
         true,
         CUSTOM_PROVIDER_ID,
         FY2025,
         DEFAULT_PROVIDER_REGION,
         customRates,
-      ),
+      ).total,
     ).toBe(24600 * 12); // 295,200
   });
 
   it('returns 0 if custom rates are missing', () => {
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         5_000_000,
         false,
         CUSTOM_PROVIDER_ID,
         FY2025,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(0);
   });
 
@@ -536,14 +480,14 @@ describe('Custom Provider', () => {
     // SMR for 0 income is 58,000 (min bracket)
     // 58,000 * 0.05 = 2,900
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         0,
         false,
         CUSTOM_PROVIDER_ID,
         FY2025,
         DEFAULT_PROVIDER_REGION,
         customRates,
-      ),
+      ).total,
     ).toBe(2900 * 12);
   });
 });
@@ -743,7 +687,8 @@ describe('FY2026 time-series rate support', () => {
     // May-Dec (8 months):  410,000 × 0.05040 = 20,664.0 → 20,664 each → 165,312
     // Annual: 60,945 + 20,192 + 165,312 = 246,449
     expect(
-      calculateHealthInsurancePremium(5_000_000, false, KYOKAI_KENPO_PROVIDER, 2026, 'Tokyo'),
+      calculateHealthInsuranceBreakdown(5_000_000, false, KYOKAI_KENPO_PROVIDER, 2026, 'Tokyo')
+        .total,
     ).toBe(246_449);
   });
 
@@ -753,7 +698,8 @@ describe('FY2026 time-series rate support', () => {
     // May-Dec (8 months):  410,000 × (0.05040 + 0.00810) = 410,000 × 0.05850 = 23,985.0 → 23,985 each → 191,880
     // Annual: 70,725 + 23,513 + 191,880 = 286,118
     expect(
-      calculateHealthInsurancePremium(5_000_000, true, KYOKAI_KENPO_PROVIDER, 2026, 'Tokyo'),
+      calculateHealthInsuranceBreakdown(5_000_000, true, KYOKAI_KENPO_PROVIDER, 2026, 'Tokyo')
+        .total,
     ).toBe(286_118);
   });
 
@@ -792,13 +738,13 @@ describe('FY2026 time-series rate support', () => {
     // All months: 4.75% (FY2025: 4.75%, FY2026 Apr: 4.75%, FY2026 May+: 4.635% + 0.115% contribution = 4.75%)
     // 410,000 × 0.0475 = 19,475 × 12 = 233,700
     expect(
-      calculateHealthInsurancePremium(
+      calculateHealthInsuranceBreakdown(
         5_000_000,
         false,
         ITS_KENPO_PROVIDER,
         2026,
         DEFAULT_PROVIDER_REGION,
-      ),
+      ).total,
     ).toBe(233_700);
   });
 });
@@ -814,14 +760,25 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
   it('year=2025 uses single FY (both Jan and Apr resolve to same FY2025 params)', () => {
     // No blending needed — FY2024 has no separate entry, falls back to FY2025
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        FY2025,
-        'Tokyo-Nakano',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, false, FY2025, 'Tokyo-Nakano')
+        .total,
     ).toBe(554_903);
+  });
+
+  it('sums rounded portions to produce the annual total in single-fiscal-year calculations', () => {
+    // 2025 has identical rates across months (single FY path)
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      3_456_789,
+      true,
+      2025,
+      'Tokyo-Chiyoda',
+    );
+    expect(breakdown.total).toBe(
+      breakdown.medicalPortion +
+        breakdown.elderlySupportPortion +
+        breakdown.longTermCarePortion +
+        breakdown.childSupportPortion,
+    );
   });
 
   it('year=2026 blends FY2025 and FY2026 for Nakano (no LTC)', () => {
@@ -832,13 +789,8 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
     //          child   round(0×0.3 + 14,212×0.7)        = 9,948
     //          total: 412,113 + 150,438 + 9,948          = 572,499
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        2026,
-        'Tokyo-Nakano',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, false, 2026, 'Tokyo-Nakano')
+        .total,
     ).toBe(572_499);
   });
 
@@ -848,13 +800,8 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
     // Blended LTC: round(117,940×0.3 + 133,321×0.7) = 128,707
     // Total: 572,499 + 128,707 = 701,206
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        2026,
-        'Tokyo-Nakano',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, true, 2026, 'Tokyo-Nakano')
+        .total,
     ).toBe(701_206);
   });
 
@@ -866,13 +813,7 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
     //          child   round(0×0.3 + 14,637×0.7)        = 10,246
     //          total: 500,036 + 161,257 + 10,246         = 671,539
     expect(
-      calculateHealthInsurancePremium(
-        5_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        2026,
-        'Osaka',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(5_000_000, false, 2026, 'Osaka').total,
     ).toBe(671_539);
   });
 
@@ -885,13 +826,7 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
     //          child round(0×0.3 + 30k×0.7) = 21,000
     //          total: 657,000 + 254,000 + 170,000 + 21,000 = 1,102,000
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        true,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        2026,
-        'Osaka',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, true, 2026, 'Osaka').total,
     ).toBe(1_102_000);
   });
 
@@ -903,14 +838,34 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
     //          child round(0×0.3 + 30,000×0.7) = 21,000
     //          total: 667,000 + 260,000 + 21,000 = 948,000
     expect(
-      calculateHealthInsurancePremium(
-        20_000_000,
-        false,
-        NATIONAL_HEALTH_INSURANCE_ID,
-        2026,
-        'Tokyo-Nakano',
-      ),
+      calculateNationalHealthInsurancePremiumWithBreakdown(20_000_000, false, 2026, 'Tokyo-Nakano')
+        .total,
     ).toBe(948_000);
+  });
+});
+
+describe('NHI portions and the capped flags', () => {
+  // Chiyoda FY2025 caps its medical portion at 660,000 and FY2026 at 670,000. Between ¥8,377,000
+  // and ¥8,717,000 of income the FY2025 portion is at its cap and the FY2026 one is not.
+  const region = 'Tokyo-Chiyoda';
+  const prevFY = getNHIParamsForMonth(region, 2026, 0)!;
+  const currFY = getNHIParamsForMonth(region, 2026, 3)!;
+
+  it('reports a portion as levied only where its parameters exist', () => {
+    // Nakano introduced the child support portion in FY2026.
+    const nakano2025 = getNHIParamsForMonth('Tokyo-Nakano', 2026, 0)!;
+    const nakano2026 = getNHIParamsForMonth('Tokyo-Nakano', 2026, 3)!;
+    const base = premiumCalculationBase(5_000_000);
+
+    expect(calculateNationalHealthInsurancePortion(base, nakano2025, 'childSupport')).toBe(
+      undefined,
+    );
+    const portion = calculateNationalHealthInsurancePortion(base, nakano2026, 'childSupport')!;
+    expect(portion.rate).toBe(nakano2026.childSupportRate);
+    expect(portion.cap).toBe(nakano2026.childSupportCap);
+    expect(portion.uncapped).toBe(portion.incomeBased + portion.perCapita + portion.householdFlat);
+    expect(portion.premium).toBe(Math.round(Math.min(portion.uncapped, portion.cap)));
+    expect(portion.isCapped).toBe(false);
   });
 
   it('reduces the base by the stepped residence tax basic deduction, never below zero', () => {
@@ -921,5 +876,60 @@ describe('NHI split-year blending (3/10 prev FY + 7/10 curr FY)', () => {
     expect(premiumCalculationBase(24_200_000)).toBe(23_910_000);
     expect(premiumCalculationBase(25_000_000)).toBe(24_850_000);
     expect(premiumCalculationBase(26_000_000)).toBe(26_000_000);
+  });
+
+  it('marks a fiscal year portion capped from the first yen at its 賦課限度額', () => {
+    const base = premiumCalculationBase(8_377_000);
+    expect(calculateNationalHealthInsurancePortion(base, prevFY, 'medical')!.isCapped).toBe(true);
+    expect(calculateNationalHealthInsurancePortion(base, currFY, 'medical')!.isCapped).toBe(false);
+  });
+
+  it('marks a blended portion capped only when every fiscal year that levies it is capped', () => {
+    const prevOnly = calculateNationalHealthInsurancePremiumWithBreakdown(
+      8_377_000,
+      false,
+      2026,
+      region,
+    );
+    expect(prevOnly.medicalPortion).toBeLessThan(667_000);
+    expect(prevOnly.medicalCapped).toBe(false);
+
+    const both = calculateNationalHealthInsurancePremiumWithBreakdown(
+      8_718_000,
+      false,
+      2026,
+      region,
+    );
+    expect(both.medicalPortion).toBe(667_000);
+    expect(both.medicalCapped).toBe(true);
+    expect(both.elderlySupportCapped).toBe(false);
+  });
+
+  it('judges a portion the previous fiscal year did not levy on the current one alone', () => {
+    // Nakano FY2025 has no child support portion; at ¥20,000,000 the FY2026 one is at its cap.
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      20_000_000,
+      false,
+      2026,
+      'Tokyo-Nakano',
+    );
+    expect(breakdown.childSupportPortion).toBe(21_000);
+    expect(breakdown.childSupportCapped).toBe(true);
+    // Not levied at this age, so nothing is capped.
+    expect(breakdown.longTermCarePortion).toBe(0);
+    expect(breakdown.longTermCareCapped).toBe(false);
+  });
+
+  it('reports no caps at moderate income', () => {
+    const breakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
+      5_000_000,
+      true,
+      2026,
+      region,
+    );
+    expect(breakdown.medicalCapped).toBe(false);
+    expect(breakdown.elderlySupportCapped).toBe(false);
+    expect(breakdown.longTermCareCapped).toBe(false);
+    expect(breakdown.childSupportCapped).toBe(false);
   });
 });

@@ -23,109 +23,45 @@ import {
 import {
   getNHIParamsForMonth,
   nhiParamsDiffer,
-  type NHIParamsField,
 } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import type { Rate } from '../../../data/rate';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
-  type NationalHealthInsuranceRegionParams,
 } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
-import { premiumCalculationBase } from '../../../utils/healthInsuranceCalculator';
+import {
+  calculateNationalHealthInsurancePortion,
+  premiumCalculationBase,
+  nationalHealthInsurancePortionDiffers,
+  type NationalHealthInsurancePortion,
+  type NationalHealthInsurancePortionKey,
+} from '../../../utils/healthInsuranceCalculator';
 import SMRTableTooltip from './SMRTableTooltip';
 
-export type NHIPortionType = 'medical' | 'elderlySupport' | 'longTermCare' | 'childSupport';
-
-const PORTION_CONFIG: Record<
-  NHIPortionType,
-  {
-    label: string;
-    rateKey: NHIParamsField;
-    perCapitaKey: NHIParamsField;
-    householdFlatKey: NHIParamsField;
-    capKey: NHIParamsField;
-  }
-> = {
-  medical: {
-    label: 'Medical Portion',
-    rateKey: 'medicalRate',
-    perCapitaKey: 'medicalPerCapita',
-    householdFlatKey: 'medicalHouseholdFlat',
-    capKey: 'medicalCap',
-  },
-  elderlySupport: {
-    label: 'Elderly Support Portion',
-    rateKey: 'supportRate',
-    perCapitaKey: 'supportPerCapita',
-    householdFlatKey: 'supportHouseholdFlat',
-    capKey: 'supportCap',
-  },
-  longTermCare: {
-    label: 'Long-Term Care Portion',
-    rateKey: 'ltcRateForEligible',
-    perCapitaKey: 'ltcPerCapitaForEligible',
-    householdFlatKey: 'ltcHouseholdFlatForEligible',
-    capKey: 'ltcCapForEligible',
-  },
-  childSupport: {
-    label: 'Child Support Portion',
-    rateKey: 'childSupportRate',
-    perCapitaKey: 'childSupportPerCapita',
-    householdFlatKey: 'childSupportHouseholdFlat',
-    capKey: 'childSupportCap',
-  },
+const PORTION_LABELS: Record<NationalHealthInsurancePortionKey, string> = {
+  medical: 'Medical Portion',
+  elderlySupport: 'Elderly Support Portion',
+  longTermCare: 'Long-Term Care Portion',
+  childSupport: 'Child Support Portion',
 };
 
-function calculatePortionForFY(
-  nhiTaxableIncome: number,
-  params: NationalHealthInsuranceRegionParams,
-  portion: NHIPortionType,
-): {
-  incomeBasedAmount: number;
-  perCapita: number;
-  householdFlat: number;
-  uncapped: number;
-  cap: number;
-  final: number;
-} {
-  const config = PORTION_CONFIG[portion];
-  const rate = params[config.rateKey];
-  const perCapita = params[config.perCapitaKey] ?? 0;
-  const householdFlat = params[config.householdFlatKey] ?? 0;
-  const cap = params[config.capKey];
-
-  if (!rate || !cap) {
-    return { incomeBasedAmount: 0, perCapita: 0, householdFlat: 0, uncapped: 0, cap: 0, final: 0 };
-  }
-
-  const incomeBasedAmount = nhiTaxableIncome * rate;
-  const uncapped = incomeBasedAmount + perCapita + householdFlat;
-  return {
-    incomeBasedAmount,
-    perCapita,
-    householdFlat,
-    uncapped,
-    cap,
-    final: Math.min(uncapped, cap),
-  };
-}
-
 interface NHIPortionTooltipProps {
-  portion: NHIPortionType;
+  portion: NationalHealthInsurancePortionKey;
   results: TakeHomeResults;
   inputs: TakeHomeInputs;
 }
 
 const PortionBreakdown: React.FC<{
   label: string;
-  rate: number;
-  nhiTaxableIncome: number;
-  calc: ReturnType<typeof calculatePortionForFY>;
-}> = ({ label, rate, nhiTaxableIncome, calc }) => (
+  calculationBase: number;
+  calc: NationalHealthInsurancePortion;
+  /** The figure the breakdown arrives at, shown after the equals sign. */
+  premium: number;
+}> = ({ label, calculationBase, calc, premium }) => (
   <Box sx={{ mb: 0.5 }}>
     {label && (
       <Typography
@@ -136,11 +72,11 @@ const PortionBreakdown: React.FC<{
       </Typography>
     )}
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-      Income-based (所得割): <strong>{formatPercent(rate)}</strong>
+      Income-based (所得割): <strong>{formatPercent(calc.rate)}</strong>
       {' × '}
-      {formatJPY(nhiTaxableIncome)}
+      {formatJPY(calculationBase)}
       {' = '}
-      {formatJPY(calc.incomeBasedAmount)}
+      {formatJPY(calc.incomeBased)}
     </Typography>
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
       Per-capita (均等割): {formatJPY(calc.perCapita)}
@@ -158,14 +94,14 @@ const PortionBreakdown: React.FC<{
       sx={{
         fontSize: '0.85rem',
         fontWeight: 600,
-        color: calc.uncapped > calc.cap ? 'warning.main' : 'success.main',
+        color: calc.isCapped ? 'warning.main' : 'success.main',
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
       }}
     >
-      = <strong>{formatJPY(calc.final)}</strong>
-      {calc.uncapped > calc.cap && (
+      = <strong>{formatJPY(premium)}</strong>
+      {calc.isCapped && (
         <Box
           component="span"
           sx={{
@@ -185,6 +121,11 @@ const PortionBreakdown: React.FC<{
   </Box>
 );
 
+/**
+ * Explains one National Health Insurance portion: each fiscal year's premium from the same
+ * function the premium calculation used, and the calculation's own figure for the calendar year
+ * as the total, so the tooltip cannot arrive at a total the row beside it does not show.
+ */
 export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   portion,
   results,
@@ -203,72 +144,64 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     );
   }
 
-  const config = PORTION_CONFIG[portion];
-  const nhiTaxableIncome = premiumCalculationBase(results.totalNetIncome);
-
-  // Check if this portion has rates in the current FY data
-  const currRate = currFYData[config.rateKey];
-  if (!currRate) {
+  const base = premiumCalculationBase(results.totalNetIncome);
+  const currCalc = calculateNationalHealthInsurancePortion(base, currFYData, portion);
+  if (!currCalc) {
     return (
       <Box>
-        <Typography variant="body2">{config.label} data not available.</Typography>
+        <Typography variant="body2">{PORTION_LABELS[portion]} data not available.</Typography>
       </Box>
     );
   }
 
-  // Show both fiscal years only when this portion's amount can differ between them. The
-  // calculator blends every portion whenever any parameter differs, but a portion whose own
-  // parameters are unchanged blends to its single-year amount.
-  const prevRate = prevFYData ? prevFYData[config.rateKey] : undefined;
-  const ratesBlended =
-    prevFYData &&
-    nhiParamsDiffer(prevFYData, currFYData, [
-      config.rateKey,
-      config.perCapitaKey,
-      config.householdFlatKey,
-      config.capKey,
-    ]);
+  // The portion as the calculation charged it, which the row beside this tooltip shows.
+  const portionPremium =
+    {
+      medical: results.nhiMedicalPortion,
+      elderlySupport: results.nhiElderlySupportPortion,
+      longTermCare: results.nhiLongTermCarePortion,
+      childSupport: results.nhiChildSupportPortion,
+    }[portion] ?? 0;
 
-  const prevNhiTaxableIncome = nhiTaxableIncome;
+  // Show both fiscal years only when this portion's premium can differ between them. The
+  // calculation blends every portion whenever any parameter differs, but a portion whose own
+  // parameters are unchanged blends to its single-year premium.
+  const blended =
+    prevFYData !== undefined &&
+    nationalHealthInsurancePortionDiffers(prevFYData, currFYData, portion);
 
-  const currCalc = calculatePortionForFY(nhiTaxableIncome, currFYData, portion);
+  const source = currFYData.source && (
+    <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
+      Calculation parameters from{' '}
+      <a
+        href={currFYData.source}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: 'inherit' }}
+      >
+        {currFYData.regionName} NHI Rates
+      </a>
+    </Typography>
+  );
 
-  // The tooltip's displayed total should match the authoritative value from the calculator.
-  const resultValueByPortion: Record<NHIPortionType, number | undefined> = {
-    medical: results.nhiMedicalPortion,
-    elderlySupport: results.nhiElderlySupportPortion,
-    longTermCare: results.nhiLongTermCarePortion,
-    childSupport: results.nhiChildSupportPortion,
-  };
-
-  if (ratesBlended) {
-    const prevCalc = calculatePortionForFY(prevNhiTaxableIncome, prevFYData, portion);
-    const blendedAmount = Math.round((prevCalc.final * 3) / 10 + (currCalc.final * 7) / 10);
+  if (blended) {
+    const prevCalc = calculateNationalHealthInsurancePortion(base, prevFYData, portion);
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
-
-    if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
-      const expected = resultValueByPortion[portion];
-      if (expected !== undefined && Math.abs(blendedAmount - expected) > 1) {
-        throw new Error(
-          `NHIPortionTooltip: ${config.label} blended total (${blendedAmount}) does not match calculator result (${expected}). The tooltip and calculator blending logic may have diverged.`,
-        );
-      }
-    }
 
     return (
       <Box sx={{ minWidth: { xs: 0, sm: 320 }, maxWidth: { xs: '100vw', sm: 440 } }}>
         <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
-          NHI Calculation Base: {formatJPY(nhiTaxableIncome)}
+          NHI Calculation Base: {formatJPY(base)}
         </Typography>
 
         <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-          {prevRate ? (
+          {prevCalc ? (
             <PortionBreakdown
-              label={`${prevFYLabel} (Jan-Mar, 3\u204410 of annual):`}
-              rate={prevRate}
-              nhiTaxableIncome={prevNhiTaxableIncome}
+              label={`${prevFYLabel} (Jan-Mar, 3⁄10 of annual):`}
+              calculationBase={base}
               calc={prevCalc}
+              premium={prevCalc.premium}
             />
           ) : (
             <Box>
@@ -290,10 +223,10 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
 
         <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <PortionBreakdown
-            label={`${currFYLabel} (Jun-Dec, 7\u204410 of annual):`}
-            rate={currRate}
-            nhiTaxableIncome={nhiTaxableIncome}
+            label={`${currFYLabel} (Jun-Dec, 7⁄10 of annual):`}
+            calculationBase={base}
             calc={currCalc}
+            premium={currCalc.premium}
           />
         </Box>
 
@@ -301,68 +234,28 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
           sx={{ p: 1, bgcolor: theme => alpha(theme.palette.primary.main, 0.12), borderRadius: 1 }}
         >
           <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
-            Total: {formatJPY(prevCalc.final)} × 3⁄10
+            Total: {formatJPY(prevCalc?.premium ?? 0)} × 3⁄10
             {' + '}
-            {formatJPY(currCalc.final)} × 7⁄10
+            {formatJPY(currCalc.premium)} × 7⁄10
             {' = '}
-            <strong>{formatJPY(blendedAmount)}</strong>
+            <strong>{formatJPY(portionPremium)}</strong>
           </Typography>
         </Box>
 
-        {currFYData.source && (
-          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
-            Calculation parameters from{' '}
-            <a
-              href={currFYData.source}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'inherit' }}
-            >
-              {currFYData.regionName} NHI Rates
-            </a>
-          </Typography>
-        )}
+        {source}
       </Box>
     );
-  }
-
-  // Non-blended: single FY calculation
-  if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
-    const expected = resultValueByPortion[portion];
-    const tooltipTotal = Math.round(currCalc.final);
-    if (expected !== undefined && Math.abs(tooltipTotal - expected) > 1) {
-      throw new Error(
-        `NHIPortionTooltip: ${config.label} total (${tooltipTotal}) does not match calculator result (${expected}). The tooltip and calculator logic may have diverged.`,
-      );
-    }
   }
 
   return (
     <Box sx={{ minWidth: { xs: 0, sm: 280 }, maxWidth: { xs: '100vw', sm: 400 } }}>
       <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
-        NHI Calculation Base: {formatJPY(nhiTaxableIncome)}
+        NHI Calculation Base: {formatJPY(base)}
       </Typography>
 
-      <PortionBreakdown
-        label=""
-        rate={currRate}
-        nhiTaxableIncome={nhiTaxableIncome}
-        calc={currCalc}
-      />
+      <PortionBreakdown label="" calculationBase={base} calc={currCalc} premium={portionPremium} />
 
-      {currFYData.source && (
-        <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 1 }}>
-          Calculation parameters from{' '}
-          <a
-            href={currFYData.source}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: 'inherit' }}
-          >
-            {currFYData.regionName} NHI Rates
-          </a>
-        </Typography>
-      )}
+      {source}
     </Box>
   );
 };
