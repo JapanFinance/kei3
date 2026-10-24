@@ -13,7 +13,6 @@ import type { Rate } from '../data/rate';
 import type { Dependent } from '../types/dependents';
 import {
   CUSTOM_PROVIDER_ID,
-  DEFAULT_PROVIDER,
   DEPENDENT_COVERAGE_ID,
   isEmployeeHealthProvider,
   LATTER_STAGE_ELDERLY_ID,
@@ -37,7 +36,6 @@ import {
   ZERO_FURUSATO_NOZEI_DETAILS,
 } from '../types/tax';
 import {
-  DEFAULT_TAXPAYER_AGE_RANGE,
   isLongTermCareCategory1Insured,
   isLongTermCareCategory2Insured,
   isSubjectToEmployeesPension,
@@ -92,7 +90,6 @@ import {
   FURUSATO_OUT_OF_POCKET_COST,
   isDependentResidenceTaxable,
   isResidenceTaxExempt,
-  NON_TAXABLE_RESIDENCE_TAX_DETAIL,
 } from './residenceTax';
 
 /**
@@ -276,34 +273,6 @@ export const calculateNationalIncomeTax = (taxableIncome: number): number => {
   return Math.floor((baseTax + reconstructionSurtax) / 100) * 100;
 };
 
-const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
-  annualIncome: 0,
-  hasEmploymentIncome: true,
-  nationalIncomeTax: 0,
-  residenceTax: {
-    ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
-    nonTaxableStatus: 'incomeThreshold',
-    nonTaxableLimit: 450_000,
-  },
-  healthInsurance: 0,
-  pensionPayments: 0,
-  employmentInsurance: 0,
-  takeHomeIncome: 0,
-  furusatoNozei: ZERO_FURUSATO_NOZEI_DETAILS,
-  dcPlanContributions: 0,
-  salaryIncome: 0,
-  bonusIncome: 0,
-  healthInsuranceProvider: DEFAULT_PROVIDER,
-  region: 'Tokyo',
-  ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
-  grossEmploymentIncome: 0,
-  incomeAdjustmentDeduction: 0,
-  netBusinessAndMiscIncome: 0,
-  totalNetIncome: 0,
-  residenceTaxBasicDeduction: 430_000,
-  additionalDeductions: { national: 0, residence: 0, items: [] },
-};
-
 /**
  * Intermediate breakdown of income streams for calculation
  */
@@ -443,7 +412,10 @@ const calculateIncomeBreakdown = (
     }
     switch (income.type) {
       case 'salary':
-        salaryIncome += annualIncomeStreamAmount(income);
+        // Salary is wages from employment, which is intrinsically non-negative under labor and tax
+        // law. Floor to zero so a negative salary stream cannot distort employment figures or flow
+        // into employee standard monthly remuneration (SMR) lookups.
+        salaryIncome += Math.max(0, annualIncomeStreamAmount(income));
         break;
       case 'commutingAllowance':
         commutingAllowance += annualIncomeStreamAmount(income);
@@ -714,10 +686,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   );
   const {
-    salaryIncome,
     bonusIncome,
     totalBonusIncome,
     grossEmploymentIncome,
+    salaryIncome,
     netBusinessAndMiscIncome,
     blueFilerDeduction,
     nonInvestmentAnnualIncome,
@@ -739,34 +711,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const hasSeparateReportedInvestment = hasSeparateTaxationReportedInvestmentIncome(
     separateBase.gross,
   );
-  if (
-    nonInvestmentAnnualIncome <= 0 &&
-    !hasWithheldInvestment &&
-    !hasSeparateReportedInvestment &&
-    aggregateDividends === 0 &&
-    aggregateInterest === 0
-  ) {
-    const dependentDeductions = calculateDependentDeductions(
-      inputs.dependents,
-      inputs.incomeYear,
-      0,
-    );
-    const residenceTax = calculateResidenceTax(
-      0,
-      0,
-      dependentDeductions,
-      inputs.incomeYear,
-      inputs.ageRange,
-      inputs.personalCircumstances,
-    );
-    return {
-      ...DEFAULT_TAKE_HOME_RESULTS,
-      healthInsuranceProvider: inputs.healthInsuranceProvider,
-      region: inputs.region,
-      ageRange: inputs.ageRange,
-      residenceTax,
-    };
-  }
 
   // Annual income (see TakeHomeResults.annualIncome): non-investment income plus every investment
   // amount as entered, whether settled by withholding or reported under 申告分離課税 or 総合課税,

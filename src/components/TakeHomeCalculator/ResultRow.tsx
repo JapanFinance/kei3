@@ -4,7 +4,7 @@
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
@@ -50,6 +50,11 @@ interface ResultRowProps {
     /** id of the element the button controls (for aria-controls) */
     controlsId: string;
   };
+  /**
+   * Color treatment for the 'final' row: 'success' (default, green) or 'warning' for a
+   * negative take-home. Ignored by other row types.
+   */
+  tone?: 'success' | 'warning';
 }
 
 export const ResultRow: React.FC<ResultRowProps> = ({
@@ -59,6 +64,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
   valuePrefix,
   labelSuffix,
   disclosure,
+  tone = 'success',
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -69,7 +75,12 @@ export const ResultRow: React.FC<ResultRowProps> = ({
     display: 'flex',
     alignItems: 'center',
     py: isMobile ? 0.15 : 0.6, // reduced vertical padding for mobile
-    bgcolor: type === 'final' ? 'rgba(76, 175, 80, 0.07)' : undefined,
+    bgcolor:
+      type === 'final'
+        ? tone === 'warning'
+          ? alpha(theme.palette.warning.main, 0.07)
+          : 'rgba(76, 175, 80, 0.07)'
+        : undefined,
     borderRadius: type === 'final' ? 2 : undefined,
     mt: type === 'final' ? (isMobile ? 0.5 : 1) : undefined, // less margin on mobile
   };
@@ -124,7 +135,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
         ...labelSpecificSx,
         fontSize: isMobile ? '1.15rem' : '1.3rem', // Make it larger than total
         fontWeight: 700,
-        color: 'success.dark',
+        color: `${tone}.dark`,
         textAlign: 'left',
         minWidth: 0,
         pr: 2,
@@ -136,7 +147,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
         ...valueSpecificSx,
         fontSize: isMobile ? '1.15rem' : '1.3rem', // Match label
         fontWeight: 700,
-        color: 'success.main',
+        color: `${tone}.main`,
         textAlign: 'right',
         marginLeft: 'auto',
         minWidth: 0,

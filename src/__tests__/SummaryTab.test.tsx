@@ -182,4 +182,24 @@ describe('SummaryTab with zero or negative annual income from capital losses', (
     expect(container.textContent).not.toMatch(/%/);
     expect(screen.getByText('-¥1,208,500')).toBeInTheDocument();
   });
+
+  it('renders the negative take-home explanation tooltip only when take-home is negative', () => {
+    const { rerender } = render(<SummaryTab results={baseResults} />);
+    expect(
+      screen.queryByRole('button', { name: 'Negative take-home pay explanation' }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          annualIncome: 0,
+          takeHomeIncome: -131_486,
+        }}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Negative take-home pay explanation' }),
+    ).toBeInTheDocument();
+  });
 });
