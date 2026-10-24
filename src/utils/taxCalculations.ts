@@ -1320,6 +1320,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     nhiElderlySupportCapped: nhiBreakdown?.elderlySupportCapped,
     nhiLongTermCareCapped: nhiBreakdown?.longTermCareCapped,
     nhiChildSupportCapped: nhiBreakdown?.childSupportCapped,
+    nhiReductionRatios: nhiBreakdown?.reductionRatios,
     // 後期高齢者医療 breakdown fields (populated only at ages 75+)
     latterStageMedicalPortion: latterStageBreakdown?.medicalPortion,
     latterStageChildSupportPortion: latterStageBreakdown?.childSupportPortion,

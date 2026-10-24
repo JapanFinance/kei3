@@ -15,12 +15,17 @@ import {
   nhiParamsDiffer,
   type NHIParamsField,
 } from '../data/nationalHealthInsurance/nhiParamsData';
+import {
+  getNHIPremiumReductionThresholdsForMonth,
+  type NHIPremiumReductionThresholds,
+} from '../data/nationalHealthInsurance/nhiPremiumReduction';
 import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type {
   ProviderRegion,
   NationalHealthInsuranceRegionParams,
   LatterStageElderlyRegionParams,
   NonLatterStageProviderId,
+  NHIPremiumReductionRatio,
 } from '../types/healthInsurance';
 import {
   DEFAULT_PROVIDER_REGION,
@@ -47,6 +52,12 @@ export interface NationalHealthInsuranceBreakdown {
   longTermCarePortion: number;
   childSupportPortion: number;
   total: number;
+  /**
+   * Low-income reduction (均等割額・平等割額の軽減) ratio applied in each fiscal year of the
+   * calendar year (0 = no reduction, 0.7 = 7割軽減). The two can differ when the annual
+   * threshold revision moves the same income into a different tier across the April boundary.
+   */
+  reductionRatios: { prevFY: NHIPremiumReductionRatio; currFY: NHIPremiumReductionRatio };
   /**
    * Whether each portion has stopped rising with income: at its 賦課限度額 in every fiscal year
    * that levies it. A portion no fiscal year levies is not capped.
@@ -99,10 +110,16 @@ export interface NationalHealthInsurancePortion {
   rate: number;
   /** 所得割: the calculation base times {@link rate}. */
   incomeBased: number;
-  /** 均等割額. */
+  /** 均等割額 after any low-income reduction. */
   perCapita: number;
-  /** 平等割額, 0 where the region levies none. */
+  /** 平等割額 after any low-income reduction, 0 where the region levies none. */
   householdFlat: number;
+  /** Unreduced 均等割額 from the regional parameters. */
+  perCapitaFull: number;
+  /** Unreduced 平等割額 from the regional parameters. */
+  householdFlatFull: number;
+  /** Low-income reduction ratio applied to 均等割 and 平等割 (0, 0.2, 0.5, or 0.7). */
+  reductionRatio: NHIPremiumReductionRatio;
   /** The three added, before the 賦課限度額. */
   uncapped: number;
   /** 賦課限度額. */
@@ -137,14 +154,18 @@ export function calculateNationalHealthInsurancePortion(
   calculationBase: number,
   params: NationalHealthInsuranceRegionParams,
   portion: NationalHealthInsurancePortionKey,
+  reductionRatio: NHIPremiumReductionRatio = 0,
 ): NationalHealthInsurancePortion | undefined {
   const fields = NHI_PORTION_FIELDS[portion];
   const rate = params[fields.rate];
   const cap = params[fields.cap];
   if (!rate || !cap) return undefined;
 
-  const perCapita = params[fields.perCapita] ?? 0;
-  const householdFlat = params[fields.householdFlat] ?? 0;
+  const perCapitaFull = params[fields.perCapita] ?? 0;
+  const householdFlatFull = params[fields.householdFlat] ?? 0;
+  const reductionKeepFactor = 1 - reductionRatio;
+  const perCapita = perCapitaFull * reductionKeepFactor;
+  const householdFlat = householdFlatFull * reductionKeepFactor;
   const incomeBased = calculationBase * rate;
   const uncapped = incomeBased + perCapita + householdFlat;
   const premium = Math.round(Math.min(uncapped, cap));
@@ -153,6 +174,9 @@ export function calculateNationalHealthInsurancePortion(
     incomeBased,
     perCapita,
     householdFlat,
+    perCapitaFull,
+    householdFlatFull,
+    reductionRatio,
     uncapped,
     cap,
     premium,
@@ -171,6 +195,47 @@ export function nationalHealthInsurancePortionDiffers(
 ): boolean {
   const fields = NHI_PORTION_FIELDS[portion];
   return nhiParamsDiffer(a, b, [fields.rate, fields.perCapita, fields.householdFlat, fields.cap]);
+}
+
+/**
+ * Determines the NHI low-income premium reduction (均等割額・平等割額の軽減) ratio.
+ *
+ * The statutory test compares the household's 総所得金額等 to the thresholds. This calculator
+ * models a single insured person with no loss carryover or 専従者 items, so 合計所得金額
+ * (totalNetIncome) is the same figure, 被保険者数 = 1, and the 10万円 × (給与所得者等の数 − 1)
+ * allowance is zero. Boundaries are inclusive (以下).
+ */
+export function calculateNHIPremiumReductionRatio(
+  totalNetIncome: number,
+  thresholds: NHIPremiumReductionThresholds,
+): NHIPremiumReductionRatio {
+  const insuredCount = 1;
+  if (totalNetIncome <= thresholds.baseAmount) {
+    return 0.7;
+  }
+  if (totalNetIncome <= thresholds.baseAmount + thresholds.fiftyPercentPerInsured * insuredCount) {
+    return 0.5;
+  }
+  if (totalNetIncome <= thresholds.baseAmount + thresholds.twentyPercentPerInsured * insuredCount) {
+    return 0.2;
+  }
+  return 0;
+}
+
+/**
+ * Reduction ratio for the fiscal year in effect at the given year and month.
+ * Used by the engine (per fiscal year of the blend) and by the NHI tooltips, which must
+ * reproduce the engine's arithmetic exactly.
+ */
+export function getNHIPremiumReductionRatioForMonth(
+  totalNetIncome: number,
+  year: number,
+  month: number,
+): NHIPremiumReductionRatio {
+  return calculateNHIPremiumReductionRatio(
+    totalNetIncome,
+    getNHIPremiumReductionThresholdsForMonth(year, month),
+  );
 }
 
 /**
@@ -390,15 +455,26 @@ function calculateNationalHealthInsuranceFiscalYearPortions(
   netIncome: number,
   isSubjectToLongTermCarePremium: boolean,
   params: NationalHealthInsuranceRegionParams,
+  reductionRatio: NHIPremiumReductionRatio,
 ): NationalHealthInsuranceFiscalYearPortions {
   const base = premiumCalculationBase(netIncome);
   return {
-    medical: calculateNationalHealthInsurancePortion(base, params, 'medical'),
-    elderlySupport: calculateNationalHealthInsurancePortion(base, params, 'elderlySupport'),
+    medical: calculateNationalHealthInsurancePortion(base, params, 'medical', reductionRatio),
+    elderlySupport: calculateNationalHealthInsurancePortion(
+      base,
+      params,
+      'elderlySupport',
+      reductionRatio,
+    ),
     longTermCare: isSubjectToLongTermCarePremium
-      ? calculateNationalHealthInsurancePortion(base, params, 'longTermCare')
+      ? calculateNationalHealthInsurancePortion(base, params, 'longTermCare', reductionRatio)
       : undefined,
-    childSupport: calculateNationalHealthInsurancePortion(base, params, 'childSupport'),
+    childSupport: calculateNationalHealthInsurancePortion(
+      base,
+      params,
+      'childSupport',
+      reductionRatio,
+    ),
   };
 }
 
@@ -434,6 +510,11 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
   const prevFYParams = getNHIParamsForMonth(regionKey, year, 0);
   const currFYParams = getNHIParamsForMonth(regionKey, year, 3);
 
+  // The low-income reduction tier is judged per fiscal year: the annual threshold revision
+  // can move the same income into a different tier across the April boundary.
+  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(netIncome, year, 0);
+  const currReductionRatio = getNHIPremiumReductionRatioForMonth(netIncome, year, 3);
+
   if (!currFYParams) {
     console.error(
       `National Health Insurance parameters not found for region: ${region}. Returning zero breakdown.`,
@@ -444,6 +525,7 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
       longTermCarePortion: 0,
       childSupportPortion: 0,
       total: 0,
+      reductionRatios: { prevFY: 0, currFY: 0 },
       medicalCapped: false,
       elderlySupportCapped: false,
       longTermCareCapped: false,
@@ -456,13 +538,16 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
     netIncome,
     isSubjectToLongTermCarePremium,
     currFYParams,
+    currReductionRatio,
   );
   const prevFY =
-    prevFYParams && nhiParamsDiffer(prevFYParams, currFYParams)
+    prevFYParams &&
+    (nhiParamsDiffer(prevFYParams, currFYParams) || prevReductionRatio !== currReductionRatio)
       ? calculateNationalHealthInsuranceFiscalYearPortions(
           netIncome,
           isSubjectToLongTermCarePremium,
           prevFYParams,
+          prevReductionRatio,
         )
       : currFY;
 
@@ -493,6 +578,7 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
     longTermCarePortion,
     childSupportPortion,
     total,
+    reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
     medicalCapped: blendCapped('medical'),
     elderlySupportCapped: blendCapped('elderlySupport'),
     longTermCareCapped: blendCapped('longTermCare'),

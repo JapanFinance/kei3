@@ -269,6 +269,39 @@ describe('calculateTaxes', () => {
     expect(result.takeHomeIncome).toBe(3_563_671);
   });
 
+  it('applies the NHI low-income reduction for very low non-employment income', () => {
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ type: 'miscellaneous' as const, amount: 100_000, id: 'test' }],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
+
+    // Net income 100,000 is within the 7割軽減 tier (≤ 430,000) for both FY2025 and FY2026.
+    // 30% of per-capita amounts: (FY2025 19,230 × 0.3) + (FY2026 20,122 × 0.7) = 19,854
+    expect(result.healthInsurance).toBe(19_854);
+    expect(result.nhiReductionRatios).toEqual({ prevFY: 0.7, currFY: 0.7 });
+
+    // National pension for calendar 2026: 17,510 × 3 (FY2025) + 17,920 × 9 (FY2026) = 213,810
+    expect(result.pensionPayments).toBe(213_810);
+
+    // Net income ≤ 450,000 is below the residence tax non-taxation limit; income tax is zero
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.employmentInsurance).toBe(0);
+
+    // Fixed charges still exceed the income: the pension has no exemption modeled here, so
+    // take-home is honestly negative: 100,000 − (19,854 + 213,810) = −133,664
+    expect(result.takeHomeIncome).toBe(-133_664);
+  });
+
   it('calculates taxes correctly for employment income with NHI', () => {
     // Test case for employees who work for small employers or are part-time/low income
     // and are therefore enrolled in National Health Insurance instead of employee insurance

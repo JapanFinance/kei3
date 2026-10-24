@@ -56,6 +56,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     nhiElderlySupportPortion: breakdown.elderlySupportPortion,
     nhiLongTermCarePortion: breakdown.longTermCarePortion,
     nhiChildSupportPortion: breakdown.childSupportPortion,
+    nhiReductionRatios: breakdown.reductionRatios,
     nhiMedicalCapped: breakdown.medicalCapped,
     nhiElderlySupportCapped: breakdown.elderlySupportCapped,
     nhiLongTermCareCapped: breakdown.longTermCareCapped,
@@ -155,8 +156,8 @@ describe('NHIPortionTooltip consistency with calculator', () => {
   describe("blended year: each fiscal year's amount is rounded before it is weighted", () => {
     // The calculation rounds each fiscal year's portion to the yen and then weights the rounded
     // amounts. Weighting the unrounded amounts instead lands ¥1 away in these cases: Chiyoda's
-    // FY2025 medical portion at ¥434,000 is 47,608.4 and its FY2026 one 47,900.4, which weight to
-    // 47,812.8 unrounded but 47,812.4 rounded.
+    // FY2025 medical portion at ¥434,000 (with 5割軽減) is 23,958.4 and its FY2026 one 24,100.4,
+    // which weight to 24,057.8 unrounded but 24,057.4 rounded.
     const cases: {
       income: number;
       portion: NationalHealthInsurancePortionKey;
@@ -166,26 +167,26 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       {
         income: 434_000,
         portion: 'medical',
-        expected: 47_812,
-        total: 'Total: ¥47,608 × 3⁄10 + ¥47,900 × 7⁄10 = ¥47,812',
+        expected: 24_057,
+        total: 'Total: ¥23,958 × 3⁄10 + ¥24,100 × 7⁄10 = ¥24,057',
       },
       {
         income: 435_000,
         portion: 'elderlySupport',
-        expected: 17_499,
-        total: 'Total: ¥16,935 × 3⁄10 + ¥17,740 × 7⁄10 = ¥17,499',
+        expected: 8_819,
+        total: 'Total: ¥8,535 × 3⁄10 + ¥8,940 × 7⁄10 = ¥8,819',
       },
       {
         income: 436_000,
         portion: 'medical',
-        expected: 47_965,
-        total: 'Total: ¥47,763 × 3⁄10 + ¥48,051 × 7⁄10 = ¥47,965',
+        expected: 24_210,
+        total: 'Total: ¥24,113 × 3⁄10 + ¥24,251 × 7⁄10 = ¥24,210',
       },
       {
         income: 438_000,
         portion: 'childSupport',
-        expected: 1_327,
-        total: 'Total: ¥0 × 3⁄10 + ¥1,895 × 7⁄10 = ¥1,327',
+        expected: 671,
+        total: 'Total: ¥0 × 3⁄10 + ¥958 × 7⁄10 = ¥671',
       },
     ];
 
@@ -208,5 +209,69 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         expect(container.textContent).toContain(total);
       },
     );
+  });
+
+  describe('blended year at low income (均等割額の軽減 applies)', () => {
+    const { results, inputs, breakdown } = buildNHIScenario(100_000, region, false);
+
+    it('applies 7割軽減 in both fiscal years', () => {
+      expect(breakdown.reductionRatios).toEqual({ prevFY: 0.7, currFY: 0.7 });
+    });
+
+    const portionsToTest: { portion: NationalHealthInsurancePortionKey; expected: number }[] = [
+      { portion: 'medical', expected: breakdown.medicalPortion },
+      { portion: 'elderlySupport', expected: breakdown.elderlySupportPortion },
+      { portion: 'childSupport', expected: breakdown.childSupportPortion },
+    ];
+
+    it.each(portionsToTest)(
+      '$portion tooltip total matches calculator with the reduction ($expected)',
+      ({ portion, expected }) => {
+        const { container } = render(
+          <NHIPortionTooltip portion={portion} results={results} inputs={inputs} />,
+        );
+        const values = Array.from(container.querySelectorAll('strong')).map(el => el.textContent);
+        expect(values).toContain(formatJPY(expected));
+      },
+    );
+
+    it('renders the reduction math on the per-capita line with a superscript dagger pointing to the footnote', () => {
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('× 30%†');
+      const sups = Array.from(container.querySelectorAll('sup')).map(el => el.textContent);
+      expect(sups).toContain('†');
+      expect(container.textContent).not.toContain('× 30%*');
+      expect(container.textContent).not.toContain('× 30% (7割軽減)');
+    });
+
+    it('renders the low-income reduction footnote with tier details and municipal source link', () => {
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain(
+        '† Reflects the statutory 70% (7割軽減) low-income reduction',
+      );
+      expect(container.textContent).toContain('均等割額の軽減');
+      expect(container.textContent).toContain('世田谷区');
+      expect(container.textContent).not.toContain('e-Gov');
+    });
+
+    it('does not render the low-income reduction footnote when unreduced', () => {
+      const { results: highIncomeResults, inputs: highIncomeInputs } = buildNHIScenario(
+        2_000_000,
+        region,
+        false,
+      );
+      const { container } = render(
+        <NHIPortionTooltip
+          portion="medical"
+          results={highIncomeResults}
+          inputs={highIncomeInputs}
+        />,
+      );
+      expect(container.textContent).not.toContain('均等割額の軽減');
+    });
   });
 });

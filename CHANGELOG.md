@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-10-24
+
+### Fixed
+
+- National Health Insurance premiums now apply the statutory low-income reduction ([均等割額・平等割額の軽減](https://www.city.setagaya.lg.jp/02060/300.html)). Households with income at or below nationally set thresholds have the per capita (均等割) and household flat rate (平等割) amounts reduced by 70%, 50%, or 20%. Municipalities apply this reduction based on household income (determined through tax returns, employer wage reports, or pension statements). Premiums on low incomes were previously overstated. For example, at zero income in Osaka the 2026 premium is ¥27,563, not ¥91,881. The National Health Insurance portion tooltips show the applied reduction on the per capita and flat-rate amounts with thresholds and official municipal guidance.
+
 ## 2026-10-21
 
 ### New
