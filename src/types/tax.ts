@@ -1102,10 +1102,17 @@ export interface ResidenceTaxDetails {
   forestEnvironmentTax: number; // 森林環境税
   totalResidenceTax: number;
   /**
-   * Set when the result is non-taxable under 地方税法第295条第1項第2号, naming the status that
-   * applied, so the display can explain the zero rows without re-deriving the rule.
+   * Set when the result is non-taxable under 地方税法第295条第1項第2号 or municipal non-taxable
+   * thresholds (均等割非課税限度額), naming the status or reason that applied, so the display can
+   * explain the zero rows without re-deriving the rule.
    */
   nonTaxableStatus?: NonTaxableResidenceTaxStatus;
+  /**
+   * The total net income limit (合計所得金額の限度額) below which residence tax is not levied.
+   * For statutory statuses (地方税法第295条第1項第2号), this is fixed at ¥1,350,000.
+   * For municipal thresholds (均等割非課税限度額), this is the computed perCapitaLimit.
+   */
+  nonTaxableLimit?: number;
   /**
    * The 所得割 on investment income reported under 申告分離課税, which {@link city} and
    * {@link prefecture} already include. Present only when 所得割 is levied and an amount is
@@ -1158,10 +1165,18 @@ export interface ResidenceTaxSeparateDetails {
 }
 
 /**
- * The statuses 地方税法第295条第1項第2号 exempts from residence tax entirely when 合計所得金額 is
- * within the statutory limit: 障害者・未成年者・寡婦・ひとり親.
+ * The grounds exempting the taxpayer from residence tax entirely:
+ * - 地方税法第295条第1項第2号 statutory statuses when 合計所得金額 is <= ¥1,350,000:
+ *   障害者・未成年者・寡婦・ひとり親.
+ * - 地方税法第295条第3項 / 地方税法施行令第47条の3 municipal non-taxable threshold:
+ *   合計所得金額 <= perCapitaLimit.
  */
-export type NonTaxableResidenceTaxStatus = 'minor' | 'disability' | 'widow' | 'singleParent';
+export type NonTaxableResidenceTaxStatus =
+  | 'minor'
+  | 'disability'
+  | 'widow'
+  | 'singleParent'
+  | 'incomeThreshold';
 
 export interface FurusatoNozeiDetails {
   limit: number;

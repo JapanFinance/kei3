@@ -206,6 +206,7 @@ export const calculateResidenceTax = (
     return {
       ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
       nonTaxableStatus,
+      nonTaxableLimit: NON_TAXABLE_STATUS_INCOME_LIMIT,
       basicDeduction: calculateResidenceTaxBasicDeduction(netIncome),
     };
   }
@@ -219,6 +220,8 @@ export const calculateResidenceTax = (
   if (netIncome <= perCapitaLimit) {
     return {
       ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: perCapitaLimit,
       basicDeduction: calculateResidenceTaxBasicDeduction(netIncome),
     };
   }

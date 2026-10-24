@@ -28,6 +28,7 @@ import { formatJPY } from '../../../utils/formatters';
 import { applyDeductionSpillover } from '../../../utils/investmentIncome';
 import {
   CITY_RESIDENCE_TAX_RATE,
+  countResidenceTaxQualifiedDependents,
   NON_TAXABLE_STATUS_INCOME_LIMIT,
   PREFECTURAL_RESIDENCE_TAX_RATE,
 } from '../../../utils/residenceTax';
@@ -49,6 +50,7 @@ import {
 import { HighIncomeMinimumTaxTooltip } from './HighIncomeMinimumTaxTooltip';
 import IncomeBasedPortionTooltip from './IncomeBasedPortionTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
+import MunicipalNonTaxableTooltip from './MunicipalNonTaxableTooltip';
 import {
   buildNationalBasicDeductionRows,
   getNationalBasicDeductionHighlightIndex,
@@ -65,7 +67,10 @@ interface TaxesTabProps {
 }
 
 /** Plural subjects naming each 地方税法第295条第1項第2号 status in the non-taxable message. */
-const NON_TAXABLE_STATUS_LABELS: Record<NonTaxableResidenceTaxStatus, string> = {
+const NON_TAXABLE_STATUS_LABELS: Record<
+  Exclude<NonTaxableResidenceTaxStatus, 'incomeThreshold'>,
+  string
+> = {
   minor: 'people under 18 (未成年者)',
   disability: 'people with a disability (障害者)',
   widow: 'widowed or divorced women (寡婦)',
@@ -1401,9 +1406,17 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
         <ResultRow
           label="Total Residence Tax"
           labelSuffix={
-            results.residenceTax.nonTaxableStatus ? (
+            results.residenceTax.nonTaxableStatus === 'incomeThreshold' ? (
+              <MunicipalNonTaxableTooltip
+                limit={results.residenceTax.nonTaxableLimit ?? 450_000}
+                qualifiedDependentsCount={countResidenceTaxQualifiedDependents(
+                  inputs.dependents,
+                  inputs.incomeYear,
+                )}
+              />
+            ) : results.residenceTax.nonTaxableStatus ? (
               <SimpleTooltip>
-                {`No residence tax is levied on ${NON_TAXABLE_STATUS_LABELS[results.residenceTax.nonTaxableStatus]} with total net income of ${formatJPY(NON_TAXABLE_STATUS_INCOME_LIMIT)} or less.`}
+                {`No residence tax is levied on ${NON_TAXABLE_STATUS_LABELS[results.residenceTax.nonTaxableStatus]} with total net income of ${formatJPY(results.residenceTax.nonTaxableLimit ?? NON_TAXABLE_STATUS_INCOME_LIMIT)} or less.`}
               </SimpleTooltip>
             ) : undefined
           }

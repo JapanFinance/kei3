@@ -277,7 +277,11 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   annualIncome: 0,
   hasEmploymentIncome: true,
   nationalIncomeTax: 0,
-  residenceTax: NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+  residenceTax: {
+    ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+    nonTaxableStatus: 'incomeThreshold',
+    nonTaxableLimit: 450_000,
+  },
   healthInsurance: 0,
   pensionPayments: 0,
   employmentInsurance: 0,
