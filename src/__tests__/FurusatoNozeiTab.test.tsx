@@ -12,7 +12,12 @@ import type {
   HomeLoanTaxCreditResult,
   TakeHomeResults,
 } from '../types/tax';
-import { makeFurusatoNozeiDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
+import { CITY_TAX_PROPORTION, PREFECTURAL_TAX_PROPORTION } from '../utils/residenceTax';
+import {
+  makeFurusatoNozeiDetails,
+  makeResidenceTaxDetails,
+  makeTakeHomeResults,
+} from './fixtures/takeHomeResults';
 
 const mockMinimumTax: HighIncomeMinimumTaxResult = {
   baselineIncome: 353_560_000,
@@ -212,5 +217,34 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     render(<FurusatoNozeiTab results={results} />);
 
     expect(screen.getByText('No Furusato Nozei Data Available')).toBeInTheDocument();
+  });
+
+  it("shows each level's share of the residence tax credit as the calculation applied it", () => {
+    // The credit is 12,337: 7,402.2 municipal and 4,934.8 prefectural before each is rounded up.
+    // The rows show the rounded-up shares from the results, not shares rounded here.
+    const results = makeTakeHomeResults({
+      residenceTax: makeResidenceTaxDetails({
+        cityProportion: CITY_TAX_PROPORTION,
+        prefecturalProportion: PREFECTURAL_TAX_PROPORTION,
+      }),
+      furusatoNozei: makeFurusatoNozeiDetails({
+        limit: 15_000,
+        residenceTaxDonationBasicDeduction: 1_300,
+        residenceTaxSpecialDeduction: 11_037,
+        municipalTaxCredit: 7_403,
+        prefecturalTaxCredit: 4_935,
+        residenceTaxReduction: 12_300,
+        incomeTaxReduction: 600,
+        outOfPocketCost: 2_100,
+      }),
+    });
+
+    render(<FurusatoNozeiTab results={results} />);
+
+    const resultRowText = (label: string) =>
+      screen.getByText(label).closest('div')!.parentElement!.textContent;
+
+    expect(resultRowText('Municipal tax credit')).toContain('¥7,403');
+    expect(resultRowText('Prefectural tax credit')).toContain('¥4,935');
   });
 });
