@@ -265,6 +265,35 @@ describe('SocialInsuranceTab', () => {
     expect(resultRowText('NHI Calculation Base')).toContain('¥0');
   });
 
+  it('displays a positive NHI calculation base when net income is non-taxable for residence tax but exceeds ¥430,000', () => {
+    // At ¥436,000 of miscellaneous income, the taxpayer is within the municipal non-taxable
+    // threshold (e.g. ≤ ¥450,000 in Tokyo), so residence tax is 0. However, NHI assesses on
+    // income after the statutory basic deduction of ¥430,000, leaving a ¥6,000 calculation base.
+    const inputs = {
+      ...mockInputs,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      incomeStreams: [{ id: 'm1', type: 'miscellaneous' as const, amount: 436_000 }],
+    };
+    const results = {
+      ...mockResults,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo-Shinjuku',
+      hasEmploymentIncome: false,
+      grossEmploymentIncome: 0,
+      salaryIncome: 0,
+      commutingAllowance: 0,
+      netBusinessAndMiscIncome: 436_000,
+      totalNetIncome: 436_000,
+      residenceTaxBasicDeduction: 430_000,
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(resultRowText('Basic Deduction')).toContain('-¥430,000');
+    expect(resultRowText('NHI Calculation Base')).toContain('¥6,000');
+  });
+
   it('keeps the pension row with a zero value and an age tooltip for an NHI user outside 20-59', () => {
     const inputs = {
       ...mockInputs,

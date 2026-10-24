@@ -186,6 +186,37 @@ describe('calculateTaxes', () => {
     expect(result.residenceTaxBasicDeduction).toBe(430_000);
   });
 
+  it('assesses NHI on income above ¥430,000 even when net income is non-taxable for residence tax', () => {
+    // At ¥436,000 of miscellaneous income, the taxpayer is non-taxable for residence tax
+    // (≤ ¥450,000 perCapitaLimit in Tokyo), but NHI assesses on 基礎控除後の総所得金額等
+    // (436,000 - 430,000 = 6,000).
+    const inputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        {
+          type: 'miscellaneous' as const,
+          amount: 436_000,
+          frequency: 'annual' as const,
+          id: 'test',
+        },
+      ],
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: 'NationalHealthInsurance' as const,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+    const result = calculateTaxes(inputs);
+    expect(result.totalNetIncome).toBe(436_000);
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.residenceTax.basicDeduction).toBe(430_000);
+    expect(result.residenceTaxBasicDeduction).toBe(430_000);
+    expect(result.nhiMedicalPortion).toBeGreaterThan(0);
+  });
+
   it('handles negative income correctly', () => {
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
