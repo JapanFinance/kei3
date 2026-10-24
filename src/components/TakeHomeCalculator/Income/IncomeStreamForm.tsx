@@ -17,6 +17,7 @@ import {
   StockCompensationStreamForm,
 } from './forms/EmploymentStreamForms';
 import { PublicPensionStreamForm } from './forms/PublicPensionStreamForm';
+import { RealEstateStreamForm } from './forms/RealEstateStreamForm';
 import { MINIMUM_TAX_REPORTING_NOTE, type StreamTypeFormProps } from './forms/streamFormShared';
 import { WithholdingAccountStreamForm } from './forms/WithholdingAccountStreamForm';
 
@@ -44,6 +45,7 @@ const STREAM_FORM_COMPONENTS: { [T in IncomeStreamType]: React.FC<StreamTypeForm
   commutingAllowance: CommutingAllowanceStreamForm,
   stockCompensation: StockCompensationStreamForm,
   business: BusinessStreamForm,
+  realEstate: RealEstateStreamForm,
   miscellaneous: MiscellaneousStreamForm,
   publicPension: PublicPensionStreamForm,
   withholdingAccount: WithholdingAccountStreamForm,

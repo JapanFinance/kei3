@@ -96,6 +96,7 @@ function App() {
       },
     ],
     savedIncomeStreams: [],
+    blueFilerDeduction: 0,
     reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
     ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
     longTermCareCategory1ManualEntry: false,

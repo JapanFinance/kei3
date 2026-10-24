@@ -12,6 +12,7 @@ import type {
   InterestIncomeStream,
   MiscellaneousIncomeStream,
   PublicPensionIncomeStream,
+  RealEstateIncomeStream,
   SalaryIncomeStream,
   StockCompensationIncomeStream,
   WithholdingAccountIncomeStream,
@@ -30,6 +31,7 @@ export type EarnedIncomeStream =
   | SalaryIncomeStream
   | BonusIncomeStream
   | BusinessIncomeStream
+  | RealEstateIncomeStream
   | MiscellaneousIncomeStream
   | PublicPensionIncomeStream
   | StockCompensationIncomeStream;
@@ -43,10 +45,19 @@ export const foreignTaxEntryError = (
     | DividendsIncomeStream
     | InterestIncomeStream
     | PublicPensionIncomeStream
+    | RealEstateIncomeStream
     | WithholdingAccountIncomeStream,
 ): string | undefined => {
   if (stream.foreignTax < 0) return 'Foreign tax cannot be negative.';
   switch (stream.type) {
+    case 'realEstate':
+      if (stream.foreignTax > 0 && stream.location === 'domestic') {
+        return 'Foreign tax can be entered only for foreign real estate.';
+      }
+      if (stream.foreignTax > 0 && stream.amount > 0 && stream.foreignTax > stream.amount) {
+        return 'Foreign tax cannot be more than the net income.';
+      }
+      return undefined;
     case 'dividends':
       if (stream.foreignTax > 0 && stream.issuerDomicile === 'domestic') {
         return 'Only a dividend from a foreign company or fund has foreign tax withheld.';
@@ -161,6 +172,23 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
   salary: earned(s => (s.frequency === 'monthly' ? s.amount * 12 : s.amount)),
   bonus: earned(s => s.amount),
   business: earned(s => s.amount),
+  realEstate: earned(
+    s => s.amount,
+    s => {
+      const foreignError = foreignTaxEntryError(s);
+      if (foreignError) return foreignError;
+      if (s.landDebtInterest !== undefined && s.landDebtInterest < 0) {
+        return 'Interest on debt to acquire land cannot be negative.';
+      }
+      if (
+        s.foreignUsedBuildingDisallowedLoss !== undefined &&
+        s.foreignUsedBuildingDisallowedLoss < 0
+      ) {
+        return 'Disallowed foreign building loss cannot be negative.';
+      }
+      return undefined;
+    },
+  ),
   miscellaneous: earned(s => s.amount),
   publicPension: earned(s => s.amount, foreignTaxEntryError),
   stockCompensation: earned(s => s.amount),
@@ -364,6 +392,7 @@ export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): num
         total += annualIncomeStreamAmount(s);
         break;
       case 'business':
+      case 'realEstate':
         total += Math.max(0, annualIncomeStreamAmount(s));
         break;
       case 'commutingAllowance':

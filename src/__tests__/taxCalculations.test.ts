@@ -1382,6 +1382,269 @@ describe('Business Income Losses (事業所得の損失・損益通算)', () => 
   });
 });
 
+describe('Real Estate Income (不動産所得)', () => {
+  it('calculates taxes correctly with blue-filer deduction for real estate income', () => {
+    const incomeStreams = [
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: 3_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+
+    expect(result.netRealEstateIncome).toBe(2_350_000);
+    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.blueFilerDeduction).toBe(650_000);
+    expect(result.totalNetIncome).toBe(2_350_000);
+  });
+
+  it('allocates shared blue-filer deduction to real estate first, then business (措法25条の2②)', () => {
+    // Real Estate: 300k, Business: 1M
+    // Blue-filer deduction pool: 650k
+    // Real estate takes min(300k, 650k) = 300k -> netRealEstate = 0
+    // Business takes min(1M, 650k - 300k = 350k) = 350k -> netBusiness = 650k
+    // Total blue deduction = 650k, Total Net Income = 650k
+    const incomeStreams = [
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: 300_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 'b1',
+        type: 'business' as const,
+        amount: 1_000_000,
+      },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+      'separate',
+      650_000,
+    );
+    expect(components.aggregateNetIncome).toBe(650_000);
+    expect(components.totalNetIncome).toBe(650_000);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(0);
+    expect(result.realEstateBlueFilerDeduction).toBe(300_000);
+    expect(result.businessBlueFilerDeduction).toBe(350_000);
+    expect(result.blueFilerDeduction).toBe(650_000);
+    expect(result.netBusinessAndMiscIncome).toBe(650_000);
+    expect(result.totalNetIncome).toBe(650_000);
+  });
+
+  it('nets real estate loss against employment income across 総合課税 (所法69条①)', () => {
+    // Salary 5M -> Net Employment = 3.56M
+    // Real estate loss -1M
+    // Total Net Income = 3.56M - 1M = 2.56M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -1_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+      'separate',
+      650_000,
+    );
+    expect(components.netEmploymentIncome).toBe(3_560_000);
+    expect(components.aggregateNetIncome).toBe(2_560_000);
+    expect(components.totalNetIncome).toBe(2_560_000);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(-1_000_000);
+    expect(result.totalNetIncome).toBe(2_560_000);
+    expect(result.blueFilerDeduction).toBe(0);
+  });
+
+  it('restricts real estate loss netting by land debt interest (措法41条の4)', () => {
+    // Salary 5M -> Net Employment = 3.56M
+    // Real estate loss: -1,000,000
+    // Land loan interest: 400,000 (disallowed from loss netting)
+    // Allowable loss = -1,000,000 - (-400,000) = -600,000
+    // Total Net Income = 3.56M - 600k = 2.96M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -1_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+        landDebtInterest: 400_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(-600_000);
+    expect(result.totalNetIncome).toBe(2_960_000);
+  });
+
+  it('caps land debt interest disallowance at the total real estate loss', () => {
+    // Real estate loss: -500,000
+    // Land debt interest: 800,000 (exceeds total loss)
+    // Entire loss is disallowed -> allowable loss = 0
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -500_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+        landDebtInterest: 800_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(0);
+    expect(result.totalNetIncome).toBe(3_560_000);
+  });
+
+  it('restricts foreign real estate loss by land debt interest and foreign used building depreciation (措法41条の4 & 措法41条の4の3)', () => {
+    // Salary 5M -> Net Employment = 3.56M
+    // Foreign real estate loss: -2,000,000
+    // Land debt interest: 300,000
+    // Foreign used building disallowed depreciation: 700,000
+    // Total disallowed = 1,000,000 -> Allowable loss = -1,000,000
+    // Total Net Income = 3.56M - 1.0M = 2.56M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -2_000_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+        landDebtInterest: 300_000,
+        foreignUsedBuildingDisallowedLoss: 700_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(-1_000_000);
+    expect(result.totalNetIncome).toBe(2_560_000);
+  });
+
+  it('credits foreign income tax paid on foreign real estate income', () => {
+    // Salary 5M (net 3.56M), Foreign real estate 2M (positive)
+    // Foreign tax paid: 200,000
+    // Total Net Income = 3.56M + 2.0M = 5.56M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: 2_000_000,
+        location: 'foreign' as const,
+        foreignTax: 200_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(2_000_000);
+    expect(result.totalNetIncome).toBe(5_560_000);
+    expect(result.foreignTaxPaid).toBe(200_000);
+    expect(result.foreignTaxCredit).toBeDefined();
+    expect(result.foreignTaxCredit?.credit.incomeTax).toBeGreaterThan(0);
+    expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(2_000_000);
+  });
+});
+
 describe('Commuting Allowance', () => {
   it('is non-taxable up to 150,000 JPY/month but subject to social insurance', () => {
     const inputs = {

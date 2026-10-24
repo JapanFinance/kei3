@@ -197,6 +197,21 @@ describe('dependentTestAnnualIncome', () => {
     ).toBe(500_000);
   });
 
+  it('floors real estate income at zero for dependent testing and does not reduce other earnings', () => {
+    expect(
+      dependentTestAnnualIncome([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        { id: 're1', type: 'realEstate', amount: -400_000, location: 'domestic', foreignTax: 0 },
+      ]),
+    ).toBe(1_000_000);
+
+    expect(
+      dependentTestAnnualIncome([
+        { id: 're1', type: 'realEstate', amount: 500_000, location: 'domestic', foreignTax: 0 },
+      ]),
+    ).toBe(500_000);
+  });
+
   it('equals the annual income when there is no commuting allowance', () => {
     expect(
       dependentTestAnnualIncome([
@@ -207,10 +222,19 @@ describe('dependentTestAnnualIncome', () => {
 });
 
 describe('isEarnedIncomeStream', () => {
-  it('is true for pay, business, miscellaneous and pension income and false for the rest', () => {
+  it('is true for pay, business, real estate, miscellaneous and pension income and false for the rest', () => {
     expect(isEarnedIncomeStream({ id: 's1', type: 'salary', amount: 1, frequency: 'annual' })).toBe(
       true,
     );
+    expect(
+      isEarnedIncomeStream({
+        id: 're1',
+        type: 'realEstate',
+        amount: 1,
+        location: 'domestic',
+        foreignTax: 0,
+      }),
+    ).toBe(true);
     expect(
       isEarnedIncomeStream({
         id: 'p1',
@@ -531,6 +555,69 @@ describe('validateIncomeStream', () => {
       expect(
         validateIncomeStream({ id: 'b', type: 'business', amount: -1, blueFilerDeduction: 0 }),
       ).toBeUndefined();
+    });
+  });
+
+  describe('real estate income', () => {
+    it('accepts valid domestic real estate with negative amount (loss)', () => {
+      expect(
+        validateIncomeStream({
+          id: 're',
+          type: 'realEstate',
+          amount: -500_000,
+          location: 'domestic',
+          foreignTax: 0,
+          landDebtInterest: 100_000,
+        }),
+      ).toBeUndefined();
+    });
+
+    it('validates foreign tax entry invariants', () => {
+      expect(
+        validateIncomeStream({
+          id: 're',
+          type: 'realEstate',
+          amount: 1_000_000,
+          location: 'domestic',
+          foreignTax: 50_000,
+        }),
+      ).toBe('Foreign tax can be entered only for foreign real estate.');
+
+      expect(
+        validateIncomeStream({
+          id: 're',
+          type: 'realEstate',
+          amount: 1_000_000,
+          location: 'foreign',
+          foreignTax: -1,
+        }),
+      ).toBe('Foreign tax cannot be negative.');
+    });
+
+    it('rejects negative land debt interest', () => {
+      expect(
+        validateIncomeStream({
+          id: 're',
+          type: 'realEstate',
+          amount: -500_000,
+          location: 'domestic',
+          foreignTax: 0,
+          landDebtInterest: -100,
+        }),
+      ).toBe('Interest on debt to acquire land cannot be negative.');
+    });
+
+    it('rejects negative foreign used building disallowed loss', () => {
+      expect(
+        validateIncomeStream({
+          id: 're',
+          type: 'realEstate',
+          amount: -500_000,
+          location: 'foreign',
+          foreignTax: 0,
+          foreignUsedBuildingDisallowedLoss: -100,
+        }),
+      ).toBe('Disallowed foreign building loss cannot be negative.');
     });
   });
 
