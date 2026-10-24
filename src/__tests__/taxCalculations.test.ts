@@ -232,7 +232,7 @@ describe('calculateTaxes', () => {
     expect(result.nhiMedicalPortion).toBeGreaterThan(0);
   });
 
-  it('treats negative income the same as zero income', () => {
+  it('treats negative salary income the same as zero salary income', () => {
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
@@ -247,8 +247,8 @@ describe('calculateTaxes', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     };
-    // Negative amounts are only reachable through direct API use; they clamp to zero and
-    // produce the same result as zero income.
+    // Salary is non-negative; negative salary amounts clamp to zero and produce the
+    // same result as zero income.
     const result = calculateTaxes(inputs);
     expect(result.annualIncome).toBe(0);
     expect(result.nationalIncomeTax).toBe(0);

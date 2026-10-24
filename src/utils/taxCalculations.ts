@@ -412,7 +412,10 @@ const calculateIncomeBreakdown = (
     }
     switch (income.type) {
       case 'salary':
-        salaryIncome += annualIncomeStreamAmount(income);
+        // Salary is wages from employment, which is intrinsically non-negative under labor and tax
+        // law. Floor to zero so a negative salary stream cannot distort employment figures or flow
+        // into employee standard monthly remuneration (SMR) lookups.
+        salaryIncome += Math.max(0, annualIncomeStreamAmount(income));
         break;
       case 'commutingAllowance':
         commutingAllowance += annualIncomeStreamAmount(income);
@@ -686,7 +689,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     bonusIncome,
     totalBonusIncome,
     grossEmploymentIncome,
+    salaryIncome,
+    netBusinessAndMiscIncome,
     blueFilerDeduction,
+    nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
     grossPublicPensionIncome,
@@ -700,15 +706,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     withheldForeignTax,
   } = incomeBreakdown;
 
-  // Negative stream totals are only reachable through direct API use — the UI's inputs do
-  // not produce them. Clamp to zero so a negative amount cannot flow into the insurance
-  // calculators (which throw on negative income) or distort the totals. Zero income is NOT
-  // special-cased: fixed charges (NHI per-capita amounts, the National Pension, minimum-grade
-  // employee premiums) are still owed at zero income, so the result is computed normally and
-  // stays consistent with any small positive income.
-  const salaryIncome = Math.max(0, incomeBreakdown.salaryIncome);
-  const netBusinessAndMiscIncome = Math.max(0, incomeBreakdown.netBusinessAndMiscIncome);
-  const nonInvestmentAnnualIncome = Math.max(0, incomeBreakdown.nonInvestmentAnnualIncome);
   const hasWithheldInvestment =
     withheldBase.accounts.length > 0 || withheldBase.dividends > 0 || withheldBase.interest > 0;
   const hasSeparateReportedInvestment = hasSeparateTaxationReportedInvestmentIncome(
