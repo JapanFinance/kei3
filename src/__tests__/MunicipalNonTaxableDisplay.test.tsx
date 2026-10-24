@@ -164,4 +164,39 @@ describe('TaxesTab municipal non-taxable resident display (Issue #686)', () => {
     expect(screen.queryByText('Per Capita Portion')).not.toBeInTheDocument();
     expect(screen.getByTitle('Municipal Non-Taxable Threshold')).toBeInTheDocument();
   });
+
+  it('correctly calculates dependent threshold for zero income with configured dependents', () => {
+    const inputsWithDependent: TakeHomeInputs = {
+      ...baseInputs,
+      dependents: [
+        {
+          id: 'spouse1',
+          relationship: 'spouse',
+          ageRange: 'under65',
+          isCohabiting: true,
+          disability: 'none',
+          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+        },
+      ],
+    };
+    const results = calculateTaxes(inputsWithDependent);
+
+    expect(results.residenceTax.totalResidenceTax).toBe(0);
+    expect(results.residenceTax.nonTaxableStatus).toBe('incomeThreshold');
+    expect(results.residenceTax.nonTaxableLimit).toBe(1_010_000);
+
+    render(<TaxesTab results={results} inputs={inputsWithDependent} />);
+
+    const tooltip = screen.getByTitle('Municipal Non-Taxable Threshold');
+    expect(tooltip).toBeInTheDocument();
+    expect(
+      within(tooltip).getByText(
+        /No residence tax is levied when total net income \(合計所得金額\) is at or below the municipal non-taxable threshold \(¥1,010,000\)\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(tooltip).getByText(/For 1 dependent: ¥350,000 × 2 \+ ¥100,000 \+ ¥210,000 =/),
+    ).toBeInTheDocument();
+    expect(within(tooltip).getByText('¥1,010,000')).toBeInTheDocument();
+  });
 });

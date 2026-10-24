@@ -29,6 +29,7 @@ import { applyDeductionSpillover } from '../../../utils/investmentIncome';
 import {
   CITY_RESIDENCE_TAX_RATE,
   countResidenceTaxQualifiedDependents,
+  getResidenceTaxExemptionLimits,
   NON_TAXABLE_STATUS_INCOME_LIMIT,
   PREFECTURAL_RESIDENCE_TAX_RATE,
 } from '../../../utils/residenceTax';
@@ -1408,7 +1409,12 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           labelSuffix={
             results.residenceTax.nonTaxableStatus === 'incomeThreshold' ? (
               <MunicipalNonTaxableTooltip
-                limit={results.residenceTax.nonTaxableLimit ?? 450_000}
+                limit={
+                  results.residenceTax.nonTaxableLimit ??
+                  getResidenceTaxExemptionLimits(
+                    countResidenceTaxQualifiedDependents(inputs.dependents, inputs.incomeYear),
+                  ).perCapitaLimit
+                }
                 qualifiedDependentsCount={countResidenceTaxQualifiedDependents(
                   inputs.dependents,
                   inputs.incomeYear,
