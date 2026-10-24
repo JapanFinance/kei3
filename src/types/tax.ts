@@ -514,10 +514,11 @@ export interface ForeignTaxCreditAmounts {
 }
 
 /**
- * The foreign tax credit (外国税額控除) for the year — see
- * {@link import("../utils/foreignTaxCredit").calculateForeignTaxCredit} for the rules.
+ * Preliminary foreign tax credit (外国税額控除) result computed against the statutory limits alone.
+ * Evaluated before residence tax is calculated; see {@link ForeignTaxCreditResult} for the final
+ * result after residence-tax 所得割 clamping.
  */
-export interface ForeignTaxCreditResult {
+export interface StatutoryForeignTaxCreditResult {
   /**
    * F: the creditable foreign tax, on the reported entries and the foreign pensions plus the tax
    * paid with a foreign tax return.
@@ -537,17 +538,40 @@ export interface ForeignTaxCreditResult {
   totalIncome: number;
   /** B, 所得税額: after the home loan tax credit, before the 復興特別所得税. */
   incomeTax: number;
-  /** The part of {@link foreignTax} paid with a foreign tax return; absent when none was. */
-  manualForeignTax?: number;
   /** 控除限度額 for each tax. */
   limit: ForeignTaxCreditAmounts;
   /**
-   * What is credited against each tax. The residence parts are before the cap at each side's
-   * 所得割; {@link ResidenceTaxDetails.foreignTaxCredit} holds what the 所得割 absorbed.
+   * What is credited against each tax up to the statutory limits. The residence parts are before
+   * the cap at each side's 所得割; {@link ResidenceTaxDetails.foreignTaxCredit} holds what the
+   * 所得割 absorbed.
    */
   credit: ForeignTaxCreditAmounts;
-  /** 控除限度超過額: foreign tax above every limit. It carries forward in law, not modelled. */
-  excess: number;
+  /**
+   * 控除限度超過額: foreign tax above every statutory limit (所法95条①②; 地方税法施行令7条の19②,
+   * 48条の9の2②).
+   */
+  statutoryExcess: number;
+}
+
+/**
+ * The foreign tax credit (外国税額控除) for the year — see
+ * {@link import("../utils/foreignTaxCredit").calculateForeignTaxCredit} for the statutory rules.
+ */
+export interface ForeignTaxCreditResult extends StatutoryForeignTaxCreditResult {
+  /** The part of {@link foreignTax} paid with a foreign tax return; absent when none was. */
+  manualForeignTax?: number;
+  /**
+   * 控除不足額: residence foreign tax credit within the statutory limit that could not be absorbed
+   * because the income-based portion (所得割) was smaller than the limit (地方税法施行令7条の19⑧,
+   * 48条の9の2⑨).
+   */
+  unabsorbedResidenceCredit: number;
+  /**
+   * Total foreign tax that cannot be credited this year: statutoryExcess + unabsorbedResidenceCredit.
+   * It carries forward for up to three years in law (所法95条②③; 地方税法施行令7条の19②⑧,
+   * 48条の9の2②⑨), not modelled.
+   */
+  uncreditedTax: number;
 }
 
 /**

@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { ForeignTaxCreditAmounts, ForeignTaxCreditResult } from '../types/tax';
+import type { ForeignTaxCreditAmounts, StatutoryForeignTaxCreditResult } from '../types/tax';
 
 /**
  * The 道府県民税 limit as a percentage of the 所得税 limit (地方税法施行令7条の19③). A resident of
@@ -66,11 +66,13 @@ export interface ForeignTaxCreditInputs {
  *   復興特別所得税 credit as well, where the text of 37条の3 measures the excess over the 所得税
  *   limit alone; the two differ by at most L_R.
  *
- * Every limit is floored to the yen. What is left over is {@link ForeignTaxCreditResult.excess},
- * which carries forward for three years in law (所法95条②③; 地方税法施行令7条の19②, 48条の9の2②
- * for residence tax) and is not modelled. The residence credits are before the cap at each side's
- * 所得割, which the residence tax calculation applies; a credit a 所得割 cannot absorb also
- * carries forward in law (地方税法施行令7条の19⑧, 48条の9の2⑨), which is not modelled either.
+ * Every limit is floored to the yen. What is left over is {@link
+ * StatutoryForeignTaxCreditResult.statutoryExcess} (控除限度超過額), which carries forward for three
+ * years in law (所法95条②③; 地方税法施行令7条の19②, 48条の9の2② for residence tax) and is not
+ * modelled. The residence credits are before the cap at each side's 所得割, which the residence tax
+ * calculation applies; a credit a 所得割 cannot absorb also carries forward in law
+ * (地方税法施行令7条の19⑧, 48条の9の2⑨). Together with any unabsorbed residence credit, it forms the
+ * total uncredited foreign tax (uncreditedTax) in {@link ForeignTaxCreditResult}.
  *
  * @see https://laws.e-gov.go.jp/law/340AC0000000033#Mp-Pa_2-Ch_3-Se_2-At_95
  * @see https://laws.e-gov.go.jp/law/340CO0000000096#Mp-Pa_2-Ch_3-At_222
@@ -89,12 +91,16 @@ export interface ForeignTaxCreditInputs {
  */
 export const calculateForeignTaxCredit = (
   inputs: ForeignTaxCreditInputs,
-): ForeignTaxCreditResult => {
+): StatutoryForeignTaxCreditResult | undefined => {
+  const foreignSourceIncome = wholeYen(inputs.foreignSourceIncome);
+  const foreignTax = wholeYen(inputs.foreignTax);
+  if (foreignTax <= 0 && foreignSourceIncome <= 0) {
+    return undefined;
+  }
+
   const incomeTax = wholeYen(inputs.incomeTax);
   const reconstructionSurtax = wholeYen(inputs.reconstructionSurtax);
   const totalIncome = wholeYen(inputs.totalIncome);
-  const foreignSourceIncome = wholeYen(inputs.foreignSourceIncome);
-  const foreignTax = wholeYen(inputs.foreignTax);
   const adjustedForeignSourceIncome = Math.min(foreignSourceIncome, totalIncome);
 
   const hasLimit = incomeTax > 0 && totalIncome > 0;
@@ -129,6 +135,6 @@ export const calculateForeignTaxCredit = (
       prefecture: prefectureCredit,
       city: cityCredit,
     },
-    excess: leftForResidenceTax - prefectureCredit - cityCredit,
+    statutoryExcess: leftForResidenceTax - prefectureCredit - cityCredit,
   };
 };

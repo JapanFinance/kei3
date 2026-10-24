@@ -43,7 +43,9 @@ const mockForeignTaxCredit: ForeignTaxCreditResult = {
   incomeTax: 100_000,
   limit: { incomeTax: 40_000, reconstructionSurtax: 840, prefecture: 3_000, city: 6_000 },
   credit: { incomeTax: 40_000, reconstructionSurtax: 840, prefecture: 3_000, city: 6_000 },
-  excess: 160,
+  statutoryExcess: 160,
+  unabsorbedResidenceCredit: 0,
+  uncreditedTax: 160,
 };
 
 const mockHomeLoanCredit: HomeLoanTaxCreditResult = {
