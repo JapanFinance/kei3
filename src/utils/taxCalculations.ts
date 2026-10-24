@@ -89,7 +89,6 @@ import { calculatePersonalDeductions } from './personalDeductions';
 import {
   calculateFurusatoLimit,
   calculateResidenceTax,
-  countResidenceTaxQualifiedDependents,
   FURUSATO_OUT_OF_POCKET_COST,
   isDependentResidenceTaxable,
   isResidenceTaxExempt,
@@ -131,7 +130,7 @@ const longTermCareCategory1TierInputs = (
   netPublicPensionIncome: income.netPublicPensionIncome,
   taxpayerIsTaxable: !isResidenceTaxExempt(
     income.netIncome,
-    countResidenceTaxQualifiedDependents(inputs.dependents, inputs.incomeYear),
+    countDependentsWithinEligibilityIncome(inputs.dependents, inputs.incomeYear),
     inputs.ageRange,
     inputs.personalCircumstances,
   ),

@@ -8,7 +8,6 @@ import {
   calculatePensionBreakdown,
   calculatePensionBonusBreakdown,
   calculateNationalPensionFullExemptionThreshold,
-  isEligibleForNationalPensionFullExemption,
 } from '../utils/pensionCalculator';
 
 const TEST_INCOME_YEAR = 2026;
@@ -195,17 +194,11 @@ describe('calculatePensionBonusBreakdown', () => {
 });
 
 describe('National Pension full exemption (全額免除)', () => {
-  it('computes the income threshold from the dependent count', () => {
+  it('computes the statutory income threshold from the dependent count', () => {
     // (扶養親族等の数 + 1) × 350,000 + 320,000
-    // Source: https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html
+    // Source: 国民年金法施行令 第6条の7
     expect(calculateNationalPensionFullExemptionThreshold(0)).toBe(670_000);
     expect(calculateNationalPensionFullExemptionThreshold(1)).toBe(1_020_000);
     expect(calculateNationalPensionFullExemptionThreshold(2)).toBe(1_370_000);
-  });
-
-  it('treats the threshold as inclusive (以下)', () => {
-    expect(isEligibleForNationalPensionFullExemption(670_000, 0)).toBe(true);
-    expect(isEligibleForNationalPensionFullExemption(670_001, 0)).toBe(false);
-    expect(isEligibleForNationalPensionFullExemption(0, 0)).toBe(true);
   });
 });

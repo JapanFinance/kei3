@@ -25,7 +25,7 @@ import { EMPTY_PERSONAL_CIRCUMSTANCES, NO_RESIDENCE_TAX_CREDITS } from '../types
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
 import {
   calculateDependentTotalNetIncome,
-  getDependentEligibilityMax,
+  countDependentsWithinEligibilityIncome,
 } from './dependentDeductions';
 import {
   applyDeductionSpillover,
@@ -359,30 +359,7 @@ export const calculateResidenceTax = (
 };
 
 /**
- * Counts the 同一生計配偶者及び扶養親族 that raise the residence-tax non-taxable limits
- * ({@link getResidenceTaxExemptionLimits}).
- *
- * 地方税法施行令第47条の3第1号 limits the count to 「年齢十六歳未満の者及び法第三百十四条の二
- * 第一項第十一号に規定する控除対象扶養親族」. Those two categories together are just the
- * 扶養親族 whose 合計所得金額 is within the threshold at any age — 控除対象扶養親族 is the 16+
- * half of that set — so a single income test with no age condition implements both. The
- * 同一生計配偶者 is subject to the same income threshold, so the spouse needs no separate case.
- *
- * @see https://laws.e-gov.go.jp/law/325CO0000000245#Mp-Ch_3-Se_1-At_47_3
- * @see https://www.tax.metro.tokyo.lg.jp/kazei/life/kojin_ju#gaiyo_06
- */
-export function countResidenceTaxQualifiedDependents(
-  dependents: readonly Dependent[],
-  year: number,
-): number {
-  return dependents.filter(
-    dependent =>
-      calculateDependentTotalNetIncome(dependent, year) <= getDependentEligibilityMax(year),
-  ).length;
-}
-
-/**
- * {@link countResidenceTaxQualifiedDependents} for callers holding computed deductions rather
+ * {@link countDependentsWithinEligibilityIncome} for callers holding computed deductions rather
  * than the dependent list, which is what {@link calculateResidenceTax} is given. Deduplicates
  * because one dependent can contribute two breakdown rows (a 障害者控除 row alongside the main
  * deduction); every dependent contributes at least one, so this recovers the whole list.
@@ -396,7 +373,7 @@ function countQualifiedDependentsFromBreakdown(
     uniqueDependents.set(b.dependent.id, b.dependent);
   });
 
-  return countResidenceTaxQualifiedDependents([...uniqueDependents.values()], year);
+  return countDependentsWithinEligibilityIncome([...uniqueDependents.values()], year);
 }
 
 /**
@@ -415,7 +392,7 @@ function countQualifiedDependentsFromBreakdown(
  * {@link isDependentResidenceTaxable}), which shares the 級地1 simplification.
  *
  * @param qualifiedDependentsCount Number of
- *   {@link countResidenceTaxQualifiedDependents qualified dependents}
+ *   {@link countDependentsWithinEligibilityIncome qualified dependents}
  * @returns Object containing both net income limits
  * @see https://www.city.nerima.tokyo.jp/kurashi/zei/jyuminzei/hikazeikijun/juuminzei-hikazei.html
  */
