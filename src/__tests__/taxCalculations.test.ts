@@ -156,6 +156,8 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.nationalIncomeTax).toBe(0);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.residenceTax.nonTaxableStatus).toBe('incomeThreshold');
+    expect(result.residenceTax.nonTaxableLimit).toBe(450_000);
     expect(result.residenceTax.basicDeduction).toBe(430_000);
     expect(result.residenceTaxBasicDeduction).toBe(430_000);
     expect(result.healthInsurance).toBe(0);
@@ -182,6 +184,8 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.totalNetIncome).toBe(430_000);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.residenceTax.nonTaxableStatus).toBe('incomeThreshold');
+    expect(result.residenceTax.nonTaxableLimit).toBe(450_000);
     expect(result.residenceTax.basicDeduction).toBe(430_000);
     expect(result.residenceTaxBasicDeduction).toBe(430_000);
   });
@@ -212,6 +216,8 @@ describe('calculateTaxes', () => {
     const result = calculateTaxes(inputs);
     expect(result.totalNetIncome).toBe(436_000);
     expect(result.residenceTax.totalResidenceTax).toBe(0);
+    expect(result.residenceTax.nonTaxableStatus).toBe('incomeThreshold');
+    expect(result.residenceTax.nonTaxableLimit).toBe(450_000);
     expect(result.residenceTax.basicDeduction).toBe(430_000);
     expect(result.residenceTaxBasicDeduction).toBe(430_000);
     expect(result.nhiMedicalPortion).toBeGreaterThan(0);

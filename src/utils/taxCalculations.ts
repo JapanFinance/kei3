@@ -277,7 +277,11 @@ const DEFAULT_TAKE_HOME_RESULTS: TakeHomeResults = {
   annualIncome: 0,
   hasEmploymentIncome: true,
   nationalIncomeTax: 0,
-  residenceTax: NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+  residenceTax: {
+    ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+    nonTaxableStatus: 'incomeThreshold',
+    nonTaxableLimit: 450_000,
+  },
   healthInsurance: 0,
   pensionPayments: 0,
   employmentInsurance: 0,
@@ -739,7 +743,26 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     aggregateDividends === 0 &&
     aggregateInterest === 0
   ) {
-    return DEFAULT_TAKE_HOME_RESULTS;
+    const dependentDeductions = calculateDependentDeductions(
+      inputs.dependents,
+      inputs.incomeYear,
+      0,
+    );
+    const residenceTax = calculateResidenceTax(
+      0,
+      0,
+      dependentDeductions,
+      inputs.incomeYear,
+      inputs.ageRange,
+      inputs.personalCircumstances,
+    );
+    return {
+      ...DEFAULT_TAKE_HOME_RESULTS,
+      healthInsuranceProvider: inputs.healthInsuranceProvider,
+      region: inputs.region,
+      ageRange: inputs.ageRange,
+      residenceTax,
+    };
   }
 
   // Annual income (see TakeHomeResults.annualIncome): non-investment income plus every investment

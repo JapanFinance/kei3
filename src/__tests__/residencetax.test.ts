@@ -295,7 +295,11 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       TEST_INCOME_YEAR,
       'age20to39',
     );
-    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    expect(result).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: 450_000,
+    });
   });
 
   it('should be taxable for single person with income > 450,000', () => {
@@ -322,7 +326,11 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
-    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    expect(result).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: 1_010_000,
+    });
   });
 
   it('should be taxable for person with 1 dependent (spouse) with income > 1,010,000', () => {
@@ -353,7 +361,11 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const dependents = calculateDependentDeductions([child], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
-    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    expect(result).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: 1_010_000,
+    });
   });
 
   it('should be non-taxable for person with spouse and under 16 dependent (2 dependents) with income <= 1,360,000', () => {
@@ -377,7 +389,11 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     const dependents = calculateDependentDeductions([spouse, child], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_360_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
-    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    expect(result).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: 1_360_000,
+    });
   });
 
   it('should be taxable for person with spouse and under 16 dependent (2 dependents) with income > 1,360,000', () => {
@@ -442,7 +458,11 @@ describe('Residence Tax - Non-Taxable Limit', () => {
 
     // Should be non-taxable at 1,000,000
     const result = calculateResidenceTax(1_000_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
-    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    expect(result).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: 1_010_000,
+    });
   });
 
   it('should apply only per capita tax when income is between Per Capita Limit and Income Portion Limit', () => {
@@ -515,7 +535,11 @@ describe('calculateResidenceTax 障害者・寡婦・ひとり親 non-taxation',
         'age20to39',
         circumstances,
       ),
-    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: status });
+    ).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: status,
+      nonTaxableLimit: NON_TAXABLE_STATUS_INCOME_LIMIT,
+    });
   });
 
   it('reports the minor exemption first when a status also applies', () => {
@@ -651,7 +675,11 @@ describe('calculateResidenceTax foreign tax credit (地方税法37条の3, 314�
         NO_STATUS,
         credits,
       ),
-    ).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    ).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: 450_000,
+    });
     // A 地方税法295条1項2号 status at 1,350,000.
     expect(
       calculateResidenceTax(
@@ -663,7 +691,11 @@ describe('calculateResidenceTax foreign tax credit (地方税法37条の3, 314�
         { disability: 'regular', widowOrSingleParent: 'none' },
         credits,
       ),
-    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: 'disability' });
+    ).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'disability',
+      nonTaxableLimit: NON_TAXABLE_STATUS_INCOME_LIMIT,
+    });
     // Deductions leave no 課税総所得金額, so the 所得割 is 0 and only the 均等割 remains.
     const noTaxableIncome = calculateResidenceTax(
       1_000_000,
@@ -683,7 +715,11 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
   it('returns the non-taxable detail, marked as the minor exemption, at 合計所得金額 1,350,000', () => {
     expect(
       calculateResidenceTax(1_350_000, 0, EMPTY_DEPENDENT_DEDUCTIONS, TEST_INCOME_YEAR, 'under18'),
-    ).toEqual({ ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus: 'minor' });
+    ).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'minor',
+      nonTaxableLimit: NON_TAXABLE_STATUS_INCOME_LIMIT,
+    });
     expect(NON_TAXABLE_STATUS_INCOME_LIMIT).toBe(1_350_000);
   });
 
@@ -735,8 +771,12 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
     ];
     const deductions = calculateDependentDeductions(dependents, TEST_INCOME_YEAR, 1_355_000);
     const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 'under18');
-    // The plain detail (no nonTaxableStatus flag) proves the general path produced it.
-    expect(result).toEqual(NON_TAXABLE_RESIDENCE_TAX_DETAIL);
+    // The general non-taxable limit (with 2 dependents) applies even when income exceeds the minor limit.
+    expect(result).toEqual({
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus: 'incomeThreshold',
+      nonTaxableLimit: 1_360_000,
+    });
   });
 });
 
