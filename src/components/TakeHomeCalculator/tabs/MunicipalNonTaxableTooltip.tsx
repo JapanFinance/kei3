@@ -46,9 +46,6 @@ const MunicipalNonTaxableTooltip: React.FC<MunicipalNonTaxableTooltipProps> = ({
         {qualifiedDependentsCount === 0 ? (
           <Typography variant="body2" sx={{ mb: 1 }}>
             Single with no dependents: <strong>¥450,000</strong>
-            <br />
-            (Equivalent to ¥1,000,000 in employment income after the standard ¥550,000 employment
-            income deduction)
           </Typography>
         ) : (
           <>
