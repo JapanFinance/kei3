@@ -52,7 +52,7 @@ export const NON_TAXABLE_RESIDENCE_TAX_DETAIL: ResidenceTaxDetails = {
   cityProportion: CITY_TAX_PROPORTION,
   prefecturalProportion: PREFECTURAL_TAX_PROPORTION,
   residenceTaxRate: RESIDENCE_TAX_RATE,
-  basicDeduction: 0,
+  basicDeduction: 430_000,
   personalDeductionDifference: 0,
   city: {
     cityTaxableIncome: 0,
@@ -203,7 +203,11 @@ export const calculateResidenceTax = (
 ): ResidenceTaxDetails => {
   const nonTaxableStatus = nonTaxableStatusFor(ageRange, personalCircumstances, netIncome);
   if (nonTaxableStatus) {
-    return { ...NON_TAXABLE_RESIDENCE_TAX_DETAIL, nonTaxableStatus };
+    return {
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      nonTaxableStatus,
+      basicDeduction: calculateResidenceTaxBasicDeduction(netIncome),
+    };
   }
 
   const personalDeductions = calculatePersonalDeductions(personalCircumstances, netIncome);
@@ -213,7 +217,10 @@ export const calculateResidenceTax = (
     getResidenceTaxExemptionLimits(qualifiedDependentsCount);
 
   if (netIncome <= perCapitaLimit) {
-    return NON_TAXABLE_RESIDENCE_TAX_DETAIL;
+    return {
+      ...NON_TAXABLE_RESIDENCE_TAX_DETAIL,
+      basicDeduction: calculateResidenceTaxBasicDeduction(netIncome),
+    };
   }
 
   // If income is below Income Based Limit, Income portion is 0.
