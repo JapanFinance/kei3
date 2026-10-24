@@ -130,6 +130,11 @@ describe('calculateLatterStageElderlyPremium (Tokyo)', () => {
     expect(result.total).toBe(47_300);
   });
 
+  it('charges only the per-capita amount at negative income', () => {
+    const result = calculateLatterStageElderlyPremium(-1_000_000, 2025, 'Tokyo');
+    expect(result.total).toBe(47_300);
+  });
+
   it('blends the per-capita amounts at zero income without re-flooring', () => {
     // FY2025 47,300; FY2026 53,300 + child 1,300. Each fiscal year's amount is floored to
     // ¥100 on its own; the calendar-year blend is not floored again:

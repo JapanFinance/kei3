@@ -133,17 +133,22 @@ export interface IncomeClassAmounts {
  * the 所得控除 as well; the 通達 also accepts a taxpayer's return that deducts in a different
  * order among these classes. Both classes are taxed at the same rates, so the order changes the
  * tax only through the ¥1,000 floor each class's taxable amount gets. No class goes below zero.
+ * When an income class is negative (e.g. an aggregate business loss under 所法69条①, or a capital loss),
+ * it cannot absorb deductions and its taxable amount is zero.
  */
 export const applyDeductionSpillover = (
   classes: IncomeClassAmounts,
   deductions: number,
 ): IncomeClassAmounts => {
   let remaining = Math.max(0, deductions);
-  const aggregate = Math.max(0, classes.aggregate - remaining);
-  remaining = Math.max(0, remaining - Math.max(0, classes.aggregate));
-  const dividends = Math.max(0, classes.dividends - remaining);
-  remaining = Math.max(0, remaining - Math.max(0, classes.dividends));
-  const capitalGains = Math.max(0, classes.capitalGains - remaining);
+  const aggregateBase = Math.max(0, classes.aggregate);
+  const aggregate = Math.max(0, aggregateBase - remaining);
+  remaining = Math.max(0, remaining - aggregateBase);
+  const dividendsBase = Math.max(0, classes.dividends);
+  const dividends = Math.max(0, dividendsBase - remaining);
+  remaining = Math.max(0, remaining - dividendsBase);
+  const capitalGainsBase = Math.max(0, classes.capitalGains);
+  const capitalGains = Math.max(0, capitalGainsBase - remaining);
   return { aggregate, dividends, capitalGains };
 };
 

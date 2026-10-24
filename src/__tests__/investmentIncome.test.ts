@@ -262,6 +262,32 @@ describe('applyDeductionSpillover', () => {
     expect(applyDeductionSpillover(initial, 0)).toEqual(initial);
     expect(applyDeductionSpillover(initial, -100_000)).toEqual(initial);
   });
+
+  it('handles negative aggregate income (e.g. business operating loss)', () => {
+    // When aggregate income has an operating loss, it cannot absorb deductions.
+    // All deductions spill over to separate dividends and capital gains, and aggregate taxable income is 0.
+    const result = applyDeductionSpillover(
+      { aggregate: -1_000_000, dividends: 500_000, capitalGains: 1_000_000 },
+      800_000,
+    );
+    expect(result).toEqual({
+      aggregate: 0,
+      dividends: 0,
+      capitalGains: 700_000,
+    });
+  });
+
+  it('floors negative aggregate income to 0 when deductions are zero or negative', () => {
+    const result = applyDeductionSpillover(
+      { aggregate: -500_000, dividends: 300_000, capitalGains: 400_000 },
+      0,
+    );
+    expect(result).toEqual({
+      aggregate: 0,
+      dividends: 300_000,
+      capitalGains: 400_000,
+    });
+  });
 });
 
 describe('floorTaxableIncome', () => {

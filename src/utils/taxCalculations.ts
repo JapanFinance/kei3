@@ -432,8 +432,8 @@ const calculateIncomeBreakdown = (
         }
         const maxDeduction = income.blueFilerDeduction || 0;
         netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
-        // Net business income is reduced by the deduction, up to the amount of income
-        const effectiveDeduction = Math.min(income.amount, maxDeduction);
+        // Net business income is reduced by the deduction, up to positive income (措法25条の2)
+        const effectiveDeduction = Math.min(Math.max(0, income.amount), maxDeduction);
         netBusinessAndMiscIncome += income.amount - effectiveDeduction;
         blueFilerDeduction = effectiveDeduction;
         processedBusinessIncome = true;

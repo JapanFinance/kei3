@@ -24,12 +24,23 @@ interface IncomeOverviewRowsProps {
  * more than one category is present.
  */
 const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs }) => {
-  const grossBusinessAndMiscIncome = inputs.incomeStreams
-    .filter(s => s.type === 'business' || s.type === 'miscellaneous')
-    .reduce((sum, s) => sum + s.amount, 0);
+  const businessStreams = inputs.incomeStreams.filter(s => s.type === 'business');
+  const miscStreams = inputs.incomeStreams.filter(s => s.type === 'miscellaneous');
+  const hasBusinessStream = businessStreams.length > 0;
+  const hasMiscStream = miscStreams.length > 0;
+  const businessIncome = hasBusinessStream
+    ? businessStreams.reduce((sum, s) => sum + s.amount, 0)
+    : undefined;
+  const miscIncome = hasMiscStream ? miscStreams.reduce((sum, s) => sum + s.amount, 0) : undefined;
 
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
-  const hasBusinessOrMiscIncome = grossBusinessAndMiscIncome > 0;
+  const hasBusinessOrMiscIncome = hasBusinessStream || hasMiscStream;
+
+  const showBusinessMiscTooltip =
+    (results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0) ||
+    results.netBusinessAndMiscIncome < 0 ||
+    (businessIncome !== undefined && businessIncome < 0) ||
+    (hasBusinessStream && hasMiscStream);
   const hasPublicPensionIncome = (results.grossPublicPensionIncome ?? 0) > 0;
   const aggregate = results.investmentIncome?.reported?.aggregate;
   // 配当所得 and the 利子所得 paid outside Japan are both inside 総所得金額 and taxed in the
@@ -69,10 +80,11 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
           label={
             <span>
               Net Business / Misc Income
-              {results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0 && (
+              {showBusinessMiscTooltip && (
                 <NetBusinessAndMiscIncomeTooltip
-                  grossBusinessAndMiscIncome={grossBusinessAndMiscIncome}
-                  blueFilerDeduction={results.blueFilerDeduction}
+                  businessIncome={businessIncome}
+                  miscIncome={miscIncome}
+                  blueFilerDeduction={results.blueFilerDeduction ?? 0}
                   netBusinessAndMiscIncome={results.netBusinessAndMiscIncome}
                 />
               )}

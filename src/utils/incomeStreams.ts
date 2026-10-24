@@ -160,10 +160,7 @@ const earned = <T extends IncomeStreamType>(
 const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T> } = {
   salary: earned(s => (s.frequency === 'monthly' ? s.amount * 12 : s.amount)),
   bonus: earned(s => s.amount),
-  business: earned(
-    s => s.amount,
-    s => (s.amount < 0 ? 'Business income losses are not currently supported.' : undefined),
-  ),
+  business: earned(s => s.amount),
   miscellaneous: earned(s => s.amount),
   publicPension: earned(s => s.amount, foreignTaxEntryError),
   stockCompensation: earned(s => s.amount),
@@ -320,7 +317,8 @@ export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStrea
  * 必要経費, and any other income a 課税証明書 evidences. 協会けんぽ's 再確認 guidance lists
  * 給与収入, 事業収入, 地代・家賃収入などの財産収入, 公的年金 and the insurance benefits, and
  * judges a 給与所得者 on the 総収入額; dividends and interest are read here as 財産収入 and taken
- * gross, before the 20.315% withheld.
+ * gross, before the 20.315% withheld. A net loss from business income (事業所得の損失) does not
+ * reduce other earnings for dependent testing and is floored at ¥0.
  *
  * Capital gains have no uniform rule — a securities-company FAQ notes that whether 株式の譲渡所得
  * や配当 count as 恒常的な収入 has no explicit provision — so the written 健保組合 practice is
@@ -360,11 +358,13 @@ export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): num
     switch (s.type) {
       case 'salary':
       case 'bonus':
-      case 'business':
       case 'miscellaneous':
       case 'publicPension':
       case 'stockCompensation':
         total += annualIncomeStreamAmount(s);
+        break;
+      case 'business':
+        total += Math.max(0, annualIncomeStreamAmount(s));
         break;
       case 'commutingAllowance':
         // Commuting allowances are annualized in totalCommutingAllowanceFromStreams above.

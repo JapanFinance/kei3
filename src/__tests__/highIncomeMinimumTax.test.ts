@@ -152,6 +152,14 @@ describe('Minimum Tax Helper Functions', () => {
     expect(calculateHighIncomeBaselineIncome(50_000_000, { capitalGains: 0, dividends: 0 })).toBe(
       50_000_000,
     );
+
+    // Negative aggregate income cannot offset separate investment income (floored to 0)
+    expect(
+      calculateHighIncomeBaselineIncome(-10_000_000, {
+        capitalGains: 50_000_000,
+        dividends: 1_000_000_000,
+      }),
+    ).toBe(1_050_000_000);
   });
 
   it('calculateNormalBaselineTax computes base tax + surtax + withholding tax', () => {

@@ -182,6 +182,21 @@ describe('dependentTestAnnualIncome', () => {
     expect(dependentTestAnnualIncome(streams)).toBe(1_200_000 + 15_000 * 12);
   });
 
+  it('floors business income at zero for dependent testing and does not reduce other earnings', () => {
+    expect(
+      dependentTestAnnualIncome([
+        { id: 's1', type: 'salary', amount: 1_000_000, frequency: 'annual' },
+        { id: 'b1', type: 'business', amount: -400_000, blueFilerDeduction: 0 },
+      ]),
+    ).toBe(1_000_000);
+
+    expect(
+      dependentTestAnnualIncome([
+        { id: 'b1', type: 'business', amount: 500_000, blueFilerDeduction: 650_000 },
+      ]),
+    ).toBe(500_000);
+  });
+
   it('equals the annual income when there is no commuting allowance', () => {
     expect(
       dependentTestAnnualIncome([
@@ -512,10 +527,10 @@ describe('validateIncomeStream', () => {
   });
 
   describe('business income', () => {
-    it('rejects negative business income', () => {
+    it('accepts negative business income', () => {
       expect(
         validateIncomeStream({ id: 'b', type: 'business', amount: -1, blueFilerDeduction: 0 }),
-      ).toBe('Business income losses are not currently supported.');
+      ).toBeUndefined();
     });
   });
 

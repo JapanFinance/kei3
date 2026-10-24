@@ -74,7 +74,7 @@ describe('calculateHealthInsuranceBreakdown for employees', () => {
             FY2025,
             'Tokyo',
           ).total,
-      ).toThrow('Income cannot be negative.');
+      ).toThrow("Income for Employees' Health Insurance cannot be negative.");
       expect(
         () =>
           calculateHealthInsuranceBreakdown(
@@ -84,7 +84,7 @@ describe('calculateHealthInsuranceBreakdown for employees', () => {
             FY2025,
             'Tokyo',
           ).total,
-      ).toThrow('Income cannot be negative.');
+      ).toThrow("Income for Employees' Health Insurance cannot be negative.");
     });
   });
 
@@ -174,7 +174,7 @@ describe('calculateHealthInsuranceBreakdown for employees', () => {
             FY2025,
             DEFAULT_PROVIDER_REGION,
           ).total,
-      ).toThrow('Income cannot be negative.');
+      ).toThrow("Income for Employees' Health Insurance cannot be negative.");
       expect(
         () =>
           calculateHealthInsuranceBreakdown(
@@ -184,7 +184,7 @@ describe('calculateHealthInsuranceBreakdown for employees', () => {
             FY2025,
             DEFAULT_PROVIDER_REGION,
           ).total,
-      ).toThrow('Income cannot be negative.');
+      ).toThrow("Income for Employees' Health Insurance cannot be negative.");
     });
   });
 });
@@ -232,16 +232,19 @@ describe('calculateNationalHealthInsurancePremiumWithBreakdown for non-employees
   });
 
   it('handles negative income correctly', () => {
+    // Negative income is within the 7割軽減 tier (≤ ¥430,000) for FY2025.
+    // 均等割 is reduced by 70% (30% remains):
+    // Medical: 47,300 × 0.3 = 14,190
+    // Support: 16,800 × 0.3 = 5,040
+    // Total without LTC: 19,230
     expect(
-      () =>
-        calculateNationalHealthInsurancePremiumWithBreakdown(-1_000_000, false, FY2025, 'Tokyo')
-          .total,
-    ).toThrow('Income cannot be negative.');
+      calculateNationalHealthInsurancePremiumWithBreakdown(-1_000_000, false, FY2025, 'Tokyo')
+        .total,
+    ).toBe(19_230);
+    // With LTC: + 16,600 × 0.3 = 4,980 → total 24,210
     expect(
-      () =>
-        calculateNationalHealthInsurancePremiumWithBreakdown(-1_000_000, true, FY2025, 'Tokyo')
-          .total,
-    ).toThrow('Income cannot be negative.');
+      calculateNationalHealthInsurancePremiumWithBreakdown(-1_000_000, true, FY2025, 'Tokyo').total,
+    ).toBe(24_210);
   });
 });
 

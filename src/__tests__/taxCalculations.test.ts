@@ -19,6 +19,7 @@ import {
   type TakeHomeInputs,
 } from '../types/tax';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
+import { calculateTotalNetIncome } from '../utils/netIncomeComponents';
 import {
   calculateTaxes,
   calculateEmploymentInsurance,
@@ -1095,6 +1096,17 @@ describe('calculateTaxes with Dependent Coverage', () => {
   });
 });
 
+describe('calculateTotalNetIncome (所法2条1項30号)', () => {
+  it('sums aggregate and separate income when aggregate is positive', () => {
+    expect(calculateTotalNetIncome(3_000_000, 1_000_000)).toBe(4_000_000);
+  });
+
+  it('floors aggregate income to zero when aggregate has a net loss', () => {
+    expect(calculateTotalNetIncome(-1_000_000, 2_000_000)).toBe(2_000_000);
+    expect(calculateTotalNetIncome(-500_000, 0)).toBe(0);
+  });
+});
+
 describe('calculateNetIncomeComponents totalNetIncome', () => {
   it('calculates total net income correctly for salary only', () => {
     // Salary 5M -> Net Employment Income (R8: floor(5M * 0.8) - 440k = 4M - 440k = 3.56M)
@@ -1206,6 +1218,167 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
         incomeYear: 2026,
       }).netBusinessAndMiscIncome,
     ).toBe(2_000_000);
+  });
+});
+
+describe('Business Income Losses (事業所得の損失・損益通算)', () => {
+  it('nets business loss against employment income across 総合課税 (所法69条①)', () => {
+    // Salary 5M -> Net Employment = 3.56M
+    // Business loss -1M with blue-filer deduction 650k
+    // Blue-filer deduction is capped at positive net business income (Math.min(Math.max(0, -1M), 650k) = 0)
+    // Net Business = -1M
+    // Total Net Income = 3.56M - 1M = 2.56M
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      { type: 'business' as const, amount: -1_000_000, blueFilerDeduction: 650_000, id: 'b1' },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+    );
+    expect(components.netEmploymentIncome).toBe(3_560_000);
+    expect(components.aggregateNetIncome).toBe(2_560_000);
+    expect(components.totalNetIncome).toBe(2_560_000);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.blueFilerDeduction).toBe(0);
+    expect(result.netBusinessAndMiscIncome).toBe(-1_000_000);
+    expect(result.annualIncome).toBe(4_000_000);
+    expect(result.totalNetIncome).toBe(2_560_000);
+    expect(result.taxableIncomeForNationalIncomeTax).toBeLessThan(2_560_000);
+    expect(result.nationalIncomeTax).toBeGreaterThan(0);
+  });
+
+  it('handles business loss exceeding employment income (aggregate net income <= 0)', () => {
+    // Salary 3M -> Net Employment = 2.02M
+    // Business loss -4M
+    // Aggregate net income = 2.02M - 4M = -1.98M <= 0
+    // Total net income = Math.max(0, -1.98M) = 0
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
+      { type: 'business' as const, amount: -4_000_000, blueFilerDeduction: 0, id: 'b1' },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+    );
+    expect(components.netEmploymentIncome).toBe(2_020_000);
+    expect(components.aggregateNetIncome).toBe(-1_980_000);
+    expect(components.totalNetIncome).toBe(0);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.annualIncome).toBe(-1_000_000);
+    expect(result.totalNetIncome).toBe(0);
+    expect(result.taxableIncomeForNationalIncomeTax).toBe(0);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
+    // Social insurance is assessed on the 3M employment income
+    expect(result.healthInsurance).toBeGreaterThan(0);
+    expect(result.pensionPayments).toBeGreaterThan(0);
+    expect(result.employmentInsurance).toBeGreaterThan(0);
+    expect(result.takeHomeIncome).toBe(
+      -1_000_000 -
+        (result.healthInsurance + result.pensionPayments + (result.employmentInsurance ?? 0)),
+    );
+  });
+
+  it('isolates aggregate business loss from separated investment income (所法2条1項30号, 措法37条の11)', () => {
+    // Business loss -1M
+    // Listed share capital gains 2M (reported under 申告分離課税)
+    // Business loss cannot offset separate capital gains.
+    // Total net income = Math.max(0, -1M) + 2M = 2M.
+    const incomeStreams = [
+      { type: 'business' as const, amount: -1_000_000, blueFilerDeduction: 0, id: 'b1' },
+      {
+        type: 'capitalGains' as const,
+        shareType: 'listed' as const,
+        account: 'domesticNoWithholding' as const,
+        amount: 2_000_000,
+        id: 'cg1',
+      },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+    );
+    expect(components.aggregateNetIncome).toBe(-1_000_000);
+    expect(components.totalNetIncome).toBe(2_000_000);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Basic deduction of 1,040,000 in 2026 spills over onto separate capital gains: 2M - 1,040,000 = 960k taxable
+    // 15% separate tax base = 144,000 + 2.1% reconstruction = 147,024 -> 147,000
+    expect(result.nationalIncomeTax).toBe(147_000);
+    expect(result.totalNetIncome).toBe(2_000_000);
+  });
+
+  it('calculates NHI premium correctly with business loss', () => {
+    // Sole proprietor with -1M business loss and NHI
+    const incomeStreams = [
+      { type: 'business' as const, amount: -1_000_000, blueFilerDeduction: 0, id: 'b1' },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2025,
+    });
+    expect(result.annualIncome).toBe(-1_000_000);
+    expect(result.totalNetIncome).toBe(0);
+    // Income-based portion (所得割) is 0, flat per-capita portions remain due with 7割軽減 applied
+    // (47,300 × 0.3 = 14,190 medical + 16,800 × 0.3 = 5,040 support = 19,230 for FY2025 without LTC)
+    expect(result.healthInsurance).toBe(19_230);
+    expect(result.nhiMedicalPortion).toBe(14_190);
+    expect(result.nhiElderlySupportPortion).toBe(5_040);
+    expect(result.nationalIncomeTax).toBe(0);
+    expect(result.residenceTax.totalResidenceTax).toBe(0);
   });
 });
 
