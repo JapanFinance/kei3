@@ -151,6 +151,7 @@ interface TakeHomeChartProps {
   longTermCareCategory1ManualEntry?: boolean;
   longTermCareCategory1Premium: number;
   healthInsuranceProvider: HealthInsuranceProviderId;
+  nationalPensionExemption?: boolean;
   region: string;
   dcPlanContributions: number;
   dependents: Dependent[];
@@ -239,6 +240,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   longTermCareCategory1ManualEntry,
   longTermCareCategory1Premium,
   healthInsuranceProvider,
+  nationalPensionExemption,
   region,
   dcPlanContributions,
   dependents,
@@ -361,6 +363,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
       longTermCareCategory1Premium,
       healthInsuranceProvider,
+      nationalPensionExemption,
       region,
       dcPlanContributions,
       dependents,
@@ -385,6 +388,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     longTermCareCategory1ManualEntry,
     longTermCareCategory1Premium,
     healthInsuranceProvider,
+    nationalPensionExemption,
     region,
     dcPlanContributions,
     dependents,
@@ -448,6 +452,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
                   longTermCareCategory1Premium,
                   healthInsuranceProvider,
+                  nationalPensionExemption,
                   region,
                   dcPlanContributions,
                   dependents,
@@ -495,6 +500,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     longTermCareCategory1ManualEntry,
     longTermCareCategory1Premium,
     healthInsuranceProvider,
+    nationalPensionExemption,
     region,
     dcPlanContributions,
     dependents,

@@ -24,11 +24,11 @@ import type {
   TakeHomeInputs,
   WithholdingOnlyInvestmentIncome,
 } from '../../../types/tax';
+import { countDependentsWithinEligibilityIncome } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
 import { applyDeductionSpillover } from '../../../utils/investmentIncome';
 import {
   CITY_RESIDENCE_TAX_RATE,
-  countResidenceTaxQualifiedDependents,
   getResidenceTaxExemptionLimits,
   NON_TAXABLE_STATUS_INCOME_LIMIT,
   PREFECTURAL_RESIDENCE_TAX_RATE,
@@ -1412,10 +1412,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 limit={
                   results.residenceTax.nonTaxableLimit ??
                   getResidenceTaxExemptionLimits(
-                    countResidenceTaxQualifiedDependents(inputs.dependents, inputs.incomeYear),
+                    countDependentsWithinEligibilityIncome(inputs.dependents, inputs.incomeYear),
                   ).perCapitaLimit
                 }
-                qualifiedDependentsCount={countResidenceTaxQualifiedDependents(
+                qualifiedDependentsCount={countDependentsWithinEligibilityIncome(
                   inputs.dependents,
                   inputs.incomeYear,
                 )}

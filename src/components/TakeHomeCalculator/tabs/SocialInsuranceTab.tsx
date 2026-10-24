@@ -569,7 +569,10 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           labelSuffix={
             isNationalHealthInsurance && nationalPensionDue ? (
               <DetailedTooltip title="Pension Contribution">
-                <NationalPensionTooltip year={inputs.incomeYear} />
+                <NationalPensionTooltip
+                  year={inputs.incomeYear}
+                  exemption={results.nationalPensionExemption}
+                />
               </DetailedTooltip>
             ) : pensionCopy.noContributionNote !== undefined ? (
               <SimpleTooltip>{pensionCopy.noContributionNote}</SimpleTooltip>

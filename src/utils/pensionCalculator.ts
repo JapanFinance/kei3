@@ -57,6 +57,32 @@ export const EMPLOYEES_PENSION_BRACKETS: StandardMonthlyRemunerationBracket[] = 
 ];
 
 /**
+ * National Pension contribution full exemption (国民年金保険料の全額免除) income test:
+ * 前年所得 ≤ (扶養親族等の数 + 1) × 350,000円 + 320,000円.
+ *
+ * Statutory reference:
+ * - Order for Enforcement of the National Pension Act, Article 6-7 (国民年金法施行令 第6条の7)
+ *   https://laws.e-gov.go.jp/law/334CO0000000184#Mp-At_6_7
+ * - Overview: https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html
+ *
+ * Note on stability:
+ * These parameters have been in effect since April 1, 2021 (令和3年4月1日, Cabinet Order No. 369 of
+ * 2020), which raised the base from 220,000円 to 320,000円 to neutralize the 2020 tax reform's
+ * 100,000円 shift from employment income deduction to basic deduction. The 350,000円 per-person
+ * factor has been unchanged since 2001. They do not index annually with inflation or wages.
+ */
+export const NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON = 350_000;
+export const NATIONAL_PENSION_FULL_EXEMPTION_BASE = 320_000;
+
+/** The 全額免除 income threshold for a taxpayer with the given 扶養親族等の数. */
+export function calculateNationalPensionFullExemptionThreshold(dependentCount: number): number {
+  return (
+    (dependentCount + 1) * NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON +
+    NATIONAL_PENSION_FULL_EXEMPTION_BASE
+  );
+}
+
+/**
  * Utility function to find the Pension SMR bracket for a given monthly income
  */
 export function findPensionBracket(monthlyIncome: number): StandardMonthlyRemunerationBracket {

@@ -36,6 +36,7 @@ import {
 import {
   DEFAULT_PROVIDER_REGION,
   CUSTOM_PROVIDER_ID,
+  NATIONAL_HEALTH_INSURANCE_ID,
   isDependentCoverageEligible,
   getDependentIncomeThreshold,
   type LongTermCareCategory1Estimate,
@@ -62,11 +63,17 @@ import {
   TAXPAYER_AGE_RANGE_LABELS,
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
+import { countDependentsWithinEligibilityIncome } from '../../utils/dependentDeductions';
 import { formatJPY } from '../../utils/formatters';
 import {
   dependentTestAnnualIncome,
   totalCommutingAllowanceFromStreams,
 } from '../../utils/incomeStreams';
+import {
+  calculateNationalPensionFullExemptionThreshold,
+  NATIONAL_PENSION_FULL_EXEMPTION_BASE,
+  NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON,
+} from '../../utils/pensionCalculator';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
@@ -299,6 +306,19 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       inputs.reportedDividendsTaxation,
     ],
   );
+
+  // The National Pension full exemption toggle is rendered only while the income test
+  // passes; the engine re-checks eligibility, so a stale `true` above the threshold is a
+  // no-op rather than an error state.
+  const pensionExemptionThreshold = React.useMemo(
+    () =>
+      calculateNationalPensionFullExemptionThreshold(
+        countDependentsWithinEligibilityIncome(inputs.dependents, inputs.incomeYear),
+      ),
+    [inputs.dependents, inputs.incomeYear],
+  );
+  const taxpayerNetIncome = netIncomeComponents.totalNetIncome;
+  const isPensionExemptionEligible = taxpayerNetIncome <= pensionExemptionThreshold;
 
   return (
     <Box
@@ -790,6 +810,50 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
                   />
                 </FormControl>
               )}
+
+              {inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID &&
+                isPensionExemptionEligible && (
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={inputs.nationalPensionExemption}
+                          onChange={e =>
+                            dispatch({
+                              type: 'setField',
+                              field: 'nationalPensionExemption',
+                              value: e.target.checked,
+                            })
+                          }
+                          name="nationalPensionExemption"
+                          color="primary"
+                          size="small"
+                        />
+                      }
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography sx={{ fontSize: '0.95rem', fontWeight: 500 }}>
+                            National Pension Full Exemption
+                          </Typography>
+                          <SimpleTooltip>
+                            {`The National Pension system offers income-based contribution exemptions ` +
+                              `(国民年金保険料免除制度). Full exemption (全額免除) applies when the ` +
+                              `previous year's income is at or below (number of dependents + 1) × ` +
+                              `${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON)} + ` +
+                              `${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_BASE)}. An application to the ` +
+                              `municipal office or pension office is required — the exemption is not ` +
+                              `applied automatically. Fully exempted periods accrue one half of the ` +
+                              `normal basic pension amount. This calculator assumes current income is the same ` +
+                              `as the previous year.`}
+                          </SimpleTooltip>
+                        </Box>
+                      }
+                    />
+                    <FormHelperText sx={{ mt: -0.5 }}>
+                      {`Eligible due to net income ≤ ${formatJPY(pensionExemptionThreshold)}.`}
+                    </FormHelperText>
+                  </Box>
+                )}
 
               {isLongTermCareCategory1Insured(inputs.ageRange) && (
                 <FormControl fullWidth>

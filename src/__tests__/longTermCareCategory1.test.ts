@@ -6,16 +6,13 @@ import { describe, it, expect } from 'vitest';
 import { getLongTermCareCategory1ParamsForMonth } from '../data/longTermCareCategory1Params';
 import type { Dependent, OtherDependent, Spouse } from '../types/dependents';
 import { EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
+import { countDependentsWithinEligibilityIncome } from '../utils/dependentDeductions';
 import {
   estimateLongTermCareCategory1Premium,
   judgeLongTermCareCategory1Tier,
   type LongTermCareCategory1TierInputs,
 } from '../utils/longTermCareCategory1';
-import {
-  countResidenceTaxQualifiedDependents,
-  isDependentResidenceTaxable,
-  isResidenceTaxExempt,
-} from '../utils/residenceTax';
+import { isDependentResidenceTaxable, isResidenceTaxExempt } from '../utils/residenceTax';
 
 const tierInputs = (
   overrides: Partial<LongTermCareCategory1TierInputs>,
@@ -260,13 +257,13 @@ describe('isResidenceTaxExempt', () => {
   });
 });
 
-describe('countResidenceTaxQualifiedDependents', () => {
+describe('countDependentsWithinEligibilityIncome', () => {
   it('counts only dependents within the eligibility income limit', () => {
     const dependents: Dependent[] = [
       spouse({}),
       otherDependent({ id: 'dep-2', income: withOtherNetIncome(5_000_000) }),
     ];
-    expect(countResidenceTaxQualifiedDependents(dependents, 2026)).toBe(1);
+    expect(countDependentsWithinEligibilityIncome(dependents, 2026)).toBe(1);
   });
 });
 

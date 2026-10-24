@@ -37,6 +37,7 @@ const baseState: TakeHomeFormState = {
   ageRange: 'age20to39',
   region: 'Tokyo',
   healthInsuranceProvider: DEFAULT_PROVIDER,
+  nationalPensionExemption: false,
   dependents: [],
   dcPlanContributions: 0,
   manualSocialInsuranceEntry: false,
@@ -54,6 +55,16 @@ describe('takeHomeFormReducer', () => {
 
       expect(result.dcPlanContributions).toBe(23_000);
       expect(result).toEqual({ ...baseState, dcPlanContributions: 23_000 });
+    });
+
+    it('updates nationalPensionExemption without cascading into other fields', () => {
+      const result = takeHomeFormReducer(baseState, {
+        type: 'setField',
+        field: 'nationalPensionExemption',
+        value: true,
+      });
+
+      expect(result).toEqual({ ...baseState, nationalPensionExemption: true });
     });
 
     it('does not cascade into other fields (e.g. setting a plain field directly)', () => {

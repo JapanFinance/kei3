@@ -102,6 +102,7 @@ function App() {
     longTermCareCategory1Premium: 0,
     region: 'Tokyo',
     healthInsuranceProvider: DEFAULT_PROVIDER,
+    nationalPensionExemption: false,
     dependents: [],
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
@@ -217,6 +218,7 @@ function App() {
             longTermCareCategory1ManualEntry={deferredInputs.longTermCareCategory1ManualEntry}
             longTermCareCategory1Premium={deferredInputs.longTermCareCategory1Premium}
             healthInsuranceProvider={deferredInputs.healthInsuranceProvider}
+            nationalPensionExemption={deferredInputs.nationalPensionExemption}
             region={deferredInputs.region}
             dcPlanContributions={deferredInputs.dcPlanContributions}
             dependents={deferredInputs.dependents}

@@ -7,6 +7,10 @@ import React from 'react';
 
 import { getNationalPensionMonthlyContribution } from '../../../data/nationalPensionContribution';
 import { formatJPY, formatMonthShort } from '../../../utils/formatters';
+import {
+  NATIONAL_PENSION_FULL_EXEMPTION_BASE,
+  NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON,
+} from '../../../utils/pensionCalculator';
 import SourceLinks from '../../ui/SourceLinks';
 
 const cellStyle = { padding: '2px 8px 2px 0' } as const;
@@ -29,9 +33,13 @@ const totalStyle = {
 
 interface NationalPensionTooltipProps {
   year: number;
+  /** 全額免除 status from the calculation results; absent for employee pension contexts. */
+  exemption?:
+    | { requested: boolean; eligible: boolean; applied: boolean; incomeThreshold: number }
+    | undefined;
 }
 
-const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year }) => {
+const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year, exemption }) => {
   const months = Array.from({ length: 12 }, (_, month) => ({
     month,
     contribution: getNationalPensionMonthlyContribution(year, month),
@@ -92,12 +100,36 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year })
           </tr>
         </tbody>
       </table>
+      {exemption && (
+        <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85rem' }}>
+          {exemption.applied
+            ? `Full exemption (全額免除) applied: the contribution for the year is ¥0. ` +
+              `Income is at or below the threshold of ${formatJPY(exemption.incomeThreshold)} ` +
+              `((number of dependents + 1) × ${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON)} + ` +
+              `${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_BASE)}). An application is required — ` +
+              `the exemption is not applied automatically. Fully exempted periods accrue ` +
+              `one half of the normal basic pension amount.`
+            : `An income-based full exemption (全額免除) exists: it applies on application when ` +
+              `the previous year's income is at or below (number of dependents + 1) × ` +
+              `${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON)} + ` +
+              `${formatJPY(NATIONAL_PENSION_FULL_EXEMPTION_BASE)} (currently ${formatJPY(exemption.incomeThreshold)}). ` +
+              `Fully exempted periods accrue one half of the normal basic pension amount.`}
+        </Typography>
+      )}
       <SourceLinks
         sources={[
           {
             href: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01',
             label: '国民年金保険料の金額 (Japan Pension Service)',
           },
+          ...(exemption
+            ? [
+                {
+                  href: 'https://www.nenkin.go.jp/service/kokunen/menjo/20150428.html',
+                  label: '国民年金保険料の免除制度・納付猶予制度 - 日本年金機構',
+                },
+              ]
+            : []),
         ]}
       />
     </Box>

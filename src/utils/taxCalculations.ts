@@ -48,6 +48,7 @@ import {
 import { calculateAdditionalDeductions } from './additionalDeductions';
 import {
   calculateDependentDeductions,
+  countDependentsWithinEligibilityIncome,
   hasIncomeAdjustmentDeductionDependent,
 } from './dependentDeductions';
 import { calculateForeignTaxCredit } from './foreignTaxCredit';
@@ -80,12 +81,14 @@ import {
   type LongTermCareCategory1TierInputs,
 } from './longTermCareCategory1';
 import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
-import { calculatePensionBreakdown } from './pensionCalculator';
+import {
+  calculateNationalPensionFullExemptionThreshold,
+  calculatePensionBreakdown,
+} from './pensionCalculator';
 import { calculatePersonalDeductions } from './personalDeductions';
 import {
   calculateFurusatoLimit,
   calculateResidenceTax,
-  countResidenceTaxQualifiedDependents,
   FURUSATO_OUT_OF_POCKET_COST,
   isDependentResidenceTaxable,
   isResidenceTaxExempt,
@@ -127,7 +130,7 @@ const longTermCareCategory1TierInputs = (
   netPublicPensionIncome: income.netPublicPensionIncome,
   taxpayerIsTaxable: !isResidenceTaxExempt(
     income.netIncome,
-    countResidenceTaxQualifiedDependents(inputs.dependents, inputs.incomeYear),
+    countDependentsWithinEligibilityIncome(inputs.dependents, inputs.incomeYear),
     inputs.ageRange,
     inputs.personalCircumstances,
   ),
@@ -811,6 +814,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   let socialInsuranceDeduction: number;
   let nhiBreakdown = null;
   let latterStageBreakdown: LatterStageElderlyBreakdown | null = null;
+  let nationalPensionExemption: TakeHomeResults['nationalPensionExemption'];
 
   // Bonus breakdown variables
   let healthInsuranceOnBonus = 0;
@@ -885,15 +889,30 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       }
     } else if (isSubjectToNationalPension(inputs.ageRange)) {
       // National Pension: contributions are due only for ages 20-59.
-      const pensionResult = calculatePensionBreakdown(
-        isInEmployeePensionSystem,
-        0,
-        true,
-        [],
-        incomeYear,
-      );
-      pensionPayments = pensionResult.total;
-      pensionOnBonus = pensionResult.bonusPortion;
+      // The full exemption (全額免除) zeroes the contribution when requested and the income
+      // test passes; the statutory test is on 前年所得, applied here to the current year's
+      // 合計所得金額 (steady-state single-year model).
+      const dependentCount = countDependentsWithinEligibilityIncome(inputs.dependents, incomeYear);
+      const incomeThreshold = calculateNationalPensionFullExemptionThreshold(dependentCount);
+      const requested = inputs.nationalPensionExemption ?? false;
+      const eligible = netIncome <= incomeThreshold;
+      const applied = requested && eligible;
+      nationalPensionExemption = { requested, eligible, applied, incomeThreshold };
+
+      if (applied) {
+        pensionPayments = 0;
+        pensionOnBonus = 0;
+      } else {
+        const pensionResult = calculatePensionBreakdown(
+          isInEmployeePensionSystem,
+          0,
+          true,
+          [],
+          incomeYear,
+        );
+        pensionPayments = pensionResult.total;
+        pensionOnBonus = pensionResult.bonusPortion;
+      }
     }
 
     // Employment Insurance also includes full commuting allowance
@@ -1321,6 +1340,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     nhiLongTermCareCapped: nhiBreakdown?.longTermCareCapped,
     nhiChildSupportCapped: nhiBreakdown?.childSupportCapped,
     nhiReductionRatios: nhiBreakdown?.reductionRatios,
+    nationalPensionExemption,
     // 後期高齢者医療 breakdown fields (populated only at ages 75+)
     latterStageMedicalPortion: latterStageBreakdown?.medicalPortion,
     latterStageChildSupportPortion: latterStageBreakdown?.childSupportPortion,

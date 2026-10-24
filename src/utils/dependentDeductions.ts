@@ -117,6 +117,27 @@ export function calculateDependentTotalNetIncome(
 }
 
 /**
+ * Counts 扶養親族等 (同一生計配偶者と扶養親族): dependents — spouse included, children under
+ * 16 included — whose 合計所得金額 is within the year's eligibility threshold.
+ *
+ * This count serves as:
+ * - 扶養親族等の数 for the National Pension contribution full exemption (国民年金法施行令 第6条の7)
+ * - 控除対象配偶者・扶養親族（16歳未満含む）for residence tax non-taxable limits (地方税法施行令 第47条の3第1号)
+ *
+ * @see https://laws.e-gov.go.jp/law/334CO0000000184#Mp-At_6_7
+ * @see https://laws.e-gov.go.jp/law/325CO0000000245#Mp-Ch_3-Se_1-At_47_3
+ */
+export function countDependentsWithinEligibilityIncome(
+  dependents: readonly Dependent[],
+  year: number,
+): number {
+  const eligibilityMax = getDependentEligibilityMax(year);
+  return dependents.filter(
+    dependent => calculateDependentTotalNetIncome(dependent, year) <= eligibilityMax,
+  ).length;
+}
+
+/**
  * Whether the taxpayer has a dependent that qualifies them for the
  * 所得金額調整控除（子ども・特別障害者等を有する者等）— the two of the three statutory conditions
  * that are about dependents:
