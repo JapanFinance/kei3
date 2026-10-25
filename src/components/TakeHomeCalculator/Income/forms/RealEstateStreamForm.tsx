@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 
 import type { RealEstateIncomeStream } from '../../../../types/tax';
 import { foreignTaxEntryError } from '../../../../utils/incomeStreams';
+import SourceLinks from '../../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../../ui/SpinnerNumberField';
 import {
   createStreamId,
@@ -84,8 +85,8 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
                 }
               }}
             >
-              <MenuItem value="domestic">Domestic (Japan / 国内)</MenuItem>
-              <MenuItem value="foreign">Foreign (Outside Japan / 国外)</MenuItem>
+              <MenuItem value="domestic">Domestic (Japan)</MenuItem>
+              <MenuItem value="foreign">Foreign (Outside Japan)</MenuItem>
             </Select>
           </FormControl>
 
@@ -95,22 +96,7 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
               value={foreignTax}
               onChange={setForeignTax}
               error={!!foreignTaxError}
-              helperText={
-                foreignTaxError || (
-                  <span>
-                    Income tax paid abroad on this property (外国所得税). See{' '}
-                    <a
-                      href={NTA_TAX_ANSWERS.foreignTaxCredit.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ color: 'inherit', textDecoration: 'underline' }}
-                    >
-                      {NTA_TAX_ANSWERS.foreignTaxCredit.label}
-                    </a>
-                    .
-                  </span>
-                )
-              }
+              helperText={foreignTaxError ?? 'Income tax paid abroad on this income.'}
             />
           )}
         </Box>
@@ -120,43 +106,40 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
         {amount < 0 && (
           <Box sx={guidanceBoxSx}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              Loss Netting Adjustments (損益通算の制限)
+              Loss Netting Adjustments
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-              Under Japanese tax law, certain losses are disallowed from offsetting salary or other
-              income.
+              Under Japanese tax law, certain losses are disallowed from offsetting other income.
             </Typography>
             <Stack spacing={2}>
+              {/* 土地等を取得するために要した負債の利子の額 (措法41条の4) */}
               <SpinnerNumberField
                 label="Interest on Debt to Acquire Land"
                 value={landDebtInterest}
                 onChange={setLandDebtInterest}
-                helperText={
-                  <span>
-                    土地等を取得するために要した負債の利子の額 (措法41条の4). When real estate
-                    income is in deficit, interest paid on loans to purchase land cannot offset
-                    other income.
-                  </span>
-                }
+                helperText="Interest paid on loans to purchase land cannot offset other income."
               />
 
+              {/* 国外中古建物の減価償却費等の特例 (措法41条の4の3) */}
               {location === 'foreign' && (
                 <SpinnerNumberField
-                  label="Disallowed Foreign Used Building Depreciation Loss"
+                  label="Shortened Used Building Depreciation"
                   value={foreignUsedBuildingDisallowedLoss}
                   onChange={setForeignUsedBuildingDisallowedLoss}
-                  helperText={
-                    <span>
-                      国外中古建物の減価償却費等の特例 (措法41条の4の3). Losses from foreign used
-                      buildings attributable to shortened-life depreciation cannot offset other
-                      income.
-                    </span>
-                  }
+                  helperText="Depreciation calculated using shortened useful lives cannot offset other income."
                 />
               )}
             </Stack>
           </Box>
         )}
+
+        <SourceLinks
+          sources={[
+            NTA_TAX_ANSWERS.realEstateIncome,
+            ...(amount < 0 ? [NTA_TAX_ANSWERS.realEstateLossOffset] : []),
+            ...(location === 'foreign' ? [NTA_TAX_ANSWERS.foreignTaxCredit] : []),
+          ]}
+        />
       </Stack>
     </IncomeStreamFormShell>
   );
