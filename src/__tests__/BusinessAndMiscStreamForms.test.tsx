@@ -56,7 +56,6 @@ describe('BusinessStreamForm', () => {
           id: 'b-loss',
           type: 'business',
           amount: -500_000,
-          blueFilerDeduction: 650_000,
         }}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
@@ -75,7 +74,6 @@ describe('BusinessStreamForm', () => {
         id: 'b-loss',
         type: 'business',
         amount: -500_000,
-        blueFilerDeduction: 650_000,
       }),
     );
   });

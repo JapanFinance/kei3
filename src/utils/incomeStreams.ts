@@ -381,6 +381,7 @@ export function totalCommutingAllowanceFromStreams(streams: readonly IncomeStrea
  */
 export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): number {
   let capitalGains = 0;
+  let realEstate = 0;
   let total = totalCommutingAllowanceFromStreams(streams);
   for (const s of streams) {
     switch (s.type) {
@@ -392,8 +393,10 @@ export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): num
         total += annualIncomeStreamAmount(s);
         break;
       case 'business':
-      case 'realEstate':
         total += Math.max(0, annualIncomeStreamAmount(s));
+        break;
+      case 'realEstate':
+        realEstate += annualIncomeStreamAmount(s);
         break;
       case 'commutingAllowance':
         // Commuting allowances are annualized in totalCommutingAllowanceFromStreams above.
@@ -415,5 +418,5 @@ export function dependentTestAnnualIncome(streams: readonly IncomeStream[]): num
       }
     }
   }
-  return total + Math.max(0, capitalGains);
+  return total + Math.max(0, capitalGains) + Math.max(0, realEstate);
 }

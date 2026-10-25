@@ -24,9 +24,6 @@ export const BusinessStreamForm: React.FC<StreamTypeFormProps<'business'>> = ({
       id: createStreamId(initialData),
       type: 'business',
       amount,
-      ...(initialData?.blueFilerDeduction !== undefined && {
-        blueFilerDeduction: initialData.blueFilerDeduction,
-      }),
     };
     onSave(stream);
   };

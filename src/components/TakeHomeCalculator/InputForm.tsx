@@ -300,6 +300,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         inputs.dependents,
         inputs.personalCircumstances,
         inputs.reportedDividendsTaxation,
+        inputs.blueFilerDeduction,
       ),
     [
       inputs.incomeStreams,
@@ -308,6 +309,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       inputs.ageRange,
       inputs.personalCircumstances,
       inputs.reportedDividendsTaxation,
+      inputs.blueFilerDeduction,
     ],
   );
 

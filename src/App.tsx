@@ -228,6 +228,7 @@ function App() {
             manualSocialInsuranceAmount={deferredInputs.manualSocialInsuranceAmount}
             incomeStreams={deferredInputs.incomeStreams}
             reportedDividendsTaxation={deferredInputs.reportedDividendsTaxation}
+            blueFilerDeduction={deferredInputs.blueFilerDeduction}
             lifeInsurance={deferredInputs.lifeInsurance}
             earthquakeInsurance={deferredInputs.earthquakeInsurance}
             medicalExpenses={deferredInputs.medicalExpenses}

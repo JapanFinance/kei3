@@ -342,6 +342,81 @@ describe('IncomeDetailsModal - Business & Real Estate Income', () => {
     // Should NOT display a stray "0"
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
+
+  it('T12: displays blue-filer deduction on domestic card when foreign loss is disallowed under 措法41条の4の3', () => {
+    // Foreign property: -1,000,000 with 1,000,000 disallowed depreciation -> effective 0
+    // Domestic property: +800,000
+    // Combined before blue-filer: +800,000
+    // blueFilerDeduction: 650,000
+    // Domestic property should show Blue-filer Deduction: -¥650,000
+    const streams: IncomeStream[] = [
+      {
+        id: 're-dom',
+        type: 'realEstate',
+        amount: 800_000,
+        location: 'domestic',
+        foreignTax: 0,
+      },
+      {
+        id: 're-for',
+        type: 'realEstate',
+        amount: -1_000_000,
+        location: 'foreign',
+        foreignTax: 0,
+        foreignUsedBuildingDisallowedLoss: 1_000_000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={650_000}
+      />,
+    );
+
+    expect(screen.getByText(/Blue-filer Deduction: -¥650,000/i)).toBeInTheDocument();
+  });
+
+  it('T13: displays pro-rata blue-filer deduction across multiple positive real estate streams', () => {
+    // Property 1: +600,000
+    // Property 2: +400,000
+    // Total positive = 1,000,000
+    // blueFilerDeduction: 650,000
+    // Property 1: round(650k * 600k / 1M) = 390,000
+    // Property 2: 650k - 390k = 260,000
+    const streams: IncomeStream[] = [
+      {
+        id: 're-1',
+        type: 'realEstate',
+        amount: 600_000,
+        location: 'domestic',
+        foreignTax: 0,
+      },
+      {
+        id: 're-2',
+        type: 'realEstate',
+        amount: 400_000,
+        location: 'domestic',
+        foreignTax: 0,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={650_000}
+      />,
+    );
+
+    expect(screen.getByText(/Blue-filer Deduction: -¥390,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Blue-filer Deduction: -¥260,000/i)).toBeInTheDocument();
+  });
 });
 
 describe('IncomeDetailsModal - Commuting Allowance', () => {

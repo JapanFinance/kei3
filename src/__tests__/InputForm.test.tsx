@@ -901,6 +901,32 @@ describe('TakeHomeInputForm Dependents Modal', () => {
 
     expect(netIncomePassed).toBe(expectedTotalNet);
   });
+
+  test('T11: correctly calculates net income passed to dependents modal with real estate and blueFilerDeduction', () => {
+    const inputs: TakeHomeFormState = {
+      ...defaultInputs,
+      incomeMode: 'advanced',
+      blueFilerDeduction: 650_000,
+      incomeStreams: [
+        {
+          id: '1',
+          type: 'realEstate',
+          amount: 5_000_000,
+          location: 'domestic',
+          foreignTax: 0,
+        },
+      ],
+    };
+
+    const mockDispatch = vi.fn();
+    render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
+
+    const modal = screen.getByTestId('dependents-modal');
+    const netIncomePassed = Number(modal.getAttribute('data-net-income'));
+
+    // 5,000,000 real estate - 650,000 blue-filer deduction = 4,350,000
+    expect(netIncomePassed).toBe(4_350_000);
+  });
 });
 
 describe('TakeHomeInputForm Income Details Modal', () => {

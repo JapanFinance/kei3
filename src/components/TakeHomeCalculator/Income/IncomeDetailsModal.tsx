@@ -29,10 +29,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
-  type BusinessIncomeStream,
   type IncomeStream,
   type IncomeStreamType,
-  type RealEstateIncomeStream,
   type ReportedDividendsTaxation,
   type TakeHomeInputs,
   type TakeHomeResults,
@@ -45,7 +43,10 @@ import {
   getCommutingAllowanceAnnualAmount,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
-import { calculateTaxes } from '../../../utils/taxCalculations';
+import {
+  calculateRealEstateAndBusinessAllocation,
+  calculateTaxes,
+} from '../../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import {
@@ -287,26 +288,18 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     s => s.type === 'business' || s.type === 'realEstate',
   );
 
-  const effectiveBlueFilerDeduction =
-    blueFilerDeduction ??
-    (streams.find(s => s.type === 'business') as BusinessIncomeStream | undefined)
-      ?.blueFilerDeduction ??
-    0;
+  const effectiveBlueFilerDeduction = blueFilerDeduction ?? 0;
 
-  const realEstateStreams = streams.filter(
-    (s): s is RealEstateIncomeStream => s.type === 'realEstate',
+  const realEstateAndBusinessAllocation = React.useMemo(
+    () => calculateRealEstateAndBusinessAllocation(streams, effectiveBlueFilerDeduction),
+    [streams, effectiveBlueFilerDeduction],
   );
-  const businessStream = streams.find(s => s.type === 'business') as
-    | BusinessIncomeStream
-    | undefined;
 
-  const realEstateNet = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
-  const realEstatePositive = Math.max(0, realEstateNet);
-  const realEstateDeduction = Math.min(realEstatePositive, effectiveBlueFilerDeduction);
-  const remainingBlueFiler = effectiveBlueFilerDeduction - realEstateDeduction;
-  const businessPositive = Math.max(0, businessStream?.amount ?? 0);
-  const businessDeduction = Math.min(businessPositive, remainingBlueFiler);
-  const totalBlueFilerDeductionApplied = realEstateDeduction + businessDeduction;
+  const {
+    businessBlueFilerDeduction: businessDeduction,
+    totalBlueFilerDeduction: totalBlueFilerDeductionApplied,
+    perStreamRealEstateBlueFilerDeduction,
+  } = realEstateAndBusinessAllocation;
 
   // 措法25条の2② sets a single shared blue-filer special deduction pool across business and real
   // estate income, deducted first from real estate income, then from business income.
@@ -331,9 +324,9 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
             iconAriaLabel="blue-filer deduction info"
           >
             <Typography sx={{ display: 'block', mb: 1 }}>
-              Shared across real estate and business income. Per statutory priority (措法25条の2②),
-              the deduction is applied first to real estate income, and any remaining balance is
-              applied to business income. It cannot reduce either income below ¥0 or create a loss.
+              Shared across real estate and business income. The deduction is applied first to real
+              estate income, and any remaining balance is applied to business income. It cannot
+              reduce either income below ¥0 or create a loss.
             </Typography>
             <Typography sx={{ display: 'block', mb: 1 }}>
               Requires prior tax office approval (see{' '}
@@ -449,6 +442,18 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   </Box>
                   <Box component="td" sx={{ color: 'text.disabled' }}>
                     —
+                  </Box>
+                </tr>
+                <tr>
+                  <td>Rental scale (if real estate only)</td>
+                  <Box component="td" sx={{ color: 'text.secondary' }}>
+                    Business scale (5棟10室)
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.secondary' }}>
+                    Business scale (5棟10室)
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.secondary' }}>
+                    Any scale
                   </Box>
                 </tr>
               </tbody>
@@ -766,33 +771,16 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                     </Typography>
                   )}
                   {stream.type === 'realEstate' &&
-                    realEstateDeduction > 0 &&
-                    (realEstateStreams.length === 1 ? (
-                      <Typography
-                        variant="caption"
-                        sx={{ color: 'text.secondary', display: 'block' }}
-                      >
-                        (Blue-filer Deduction: -{formatJPY(realEstateDeduction)})
-                      </Typography>
-                    ) : stream.amount > 0 ? (
+                    (perStreamRealEstateBlueFilerDeduction.get(stream.id) ?? 0) > 0 && (
                       <Typography
                         variant="caption"
                         sx={{ color: 'text.secondary', display: 'block' }}
                       >
                         (Blue-filer Deduction: -
-                        {formatJPY(
-                          Math.round(
-                            realEstateDeduction *
-                              (stream.amount /
-                                realEstateStreams
-                                  .filter(s => s.amount > 0)
-                                  .reduce((sum, s) => sum + s.amount, 0)),
-                          ),
-                        )}
-                        )
+                        {formatJPY(perStreamRealEstateBlueFilerDeduction.get(stream.id)!)})
                       </Typography>
-                    ) : null)}
-                  {stream.type === 'realEstate' && stream.amount < 0 && (
+                    )}
+                  {stream.type === 'realEstate' && (
                     <>
                       {stream.landDebtInterest !== undefined && stream.landDebtInterest > 0 && (
                         <Typography
@@ -802,7 +790,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                           Land debt interest: {formatJPY(stream.landDebtInterest)}
                         </Typography>
                       )}
-                      {stream.foreignUsedBuildingDisallowedLoss !== undefined &&
+                      {stream.amount < 0 &&
+                        stream.foreignUsedBuildingDisallowedLoss !== undefined &&
                         stream.foreignUsedBuildingDisallowedLoss > 0 && (
                           <Typography
                             variant="caption"

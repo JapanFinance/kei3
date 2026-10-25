@@ -66,7 +66,7 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
         >
           <tbody>
             <tr>
-              <td style={{ padding: '2px 0' }}>Real Estate Income (Gross / Net of Expenses):</td>
+              <td style={{ padding: '2px 0' }}>Real Estate Income:</td>
               <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
                 {formatJPY(grossRealEstateIncome)}
               </td>
@@ -84,7 +84,7 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
             )}
             {disallowedLand > 0 && (
               <tr>
-                <td style={{ padding: '2px 0' }}>Disallowed Land Loan Interest (措法41条の4):</td>
+                <td style={{ padding: '2px 0' }}>Disallowed Land Loan Interest:</td>
                 <Box
                   component="td"
                   sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
@@ -95,9 +95,7 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
             )}
             {disallowedForeign > 0 && (
               <tr>
-                <td style={{ padding: '2px 0' }}>
-                  Disallowed Overseas Used Building Loss (措法41条の4の3):
-                </td>
+                <td style={{ padding: '2px 0' }}>Disallowed Overseas Used Building Loss:</td>
                 <Box
                   component="td"
                   sx={{ padding: '2px 0', textAlign: 'right', color: 'error.main' }}
@@ -120,9 +118,9 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
               Blue-Filer Special Deduction
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Per statutory priority (措法25条の2②), the blue-filer deduction is allocated first to
-              real estate income, with any remaining amount allocated to business income. It cannot
-              reduce real estate income below ¥0 or create a loss.
+              The blue-filer deduction is allocated first to real estate income, with any remaining
+              amount allocated to business income. It cannot reduce real estate income below ¥0 or
+              create a loss.
             </Typography>
             <SourceLinks
               sources={[
@@ -140,11 +138,10 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
               Loss Netting (損益通算) &amp; Disallowances
             </Typography>
             <Typography variant="body2" sx={{ mb: 1 }}>
-              Under Income Tax Act Article 69 (所得税法第69条), an allowable loss from real estate
-              income can be netted against other aggregate income categories (such as employment or
-              business income). Under Special Taxation Measures Law, losses attributable to interest
-              on debt used to acquire land (措法41条の4) and depreciation from overseas used
-              buildings (措法41条の4の3) cannot offset other income.
+              An allowable loss from real estate income can be netted against other aggregate income
+              categories (such as employment or business income). Losses attributable to interest on
+              debt used to acquire land and depreciation from overseas used buildings cannot offset
+              other income.
             </Typography>
             <SourceLinks
               sources={[

@@ -770,8 +770,9 @@ describe('multiStartDescent', () => {
   // 総合課税 — two things have to change together, which a single-step descent never does.
   const inputs: TakeHomeInputs = {
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+    blueFilerDeduction: 650_000,
     incomeStreams: [
-      { id: 'b', type: 'business', amount: 6_000_000, blueFilerDeduction: 650_000 },
+      { id: 'b', type: 'business', amount: 6_000_000 },
       account({ id: 'a1', capitalGains: 3_000_000, dividends: 500_000 }),
       account({ id: 'a2', capitalGains: -600_000, dividends: 40_000 }),
       dividend({ id: 'd1', amount: 150_000 }),
@@ -929,5 +930,59 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
     // calculateTaxes forces reporting internally under 措法41条の19, so figures match
     expect(evalWithheld.figures.kept).toBe(evalReported.figures.kept);
     expect(evalWithheld.figures.incomeTax).toBe(evalReported.figures.incomeTax);
+  });
+
+  it('T8: reporting planner accounts for real estate income and shared blueFilerDeduction', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        {
+          id: 're',
+          type: 'realEstate',
+          amount: 3_000_000,
+          location: 'domestic',
+          foreignTax: 0,
+        },
+        account({ id: 'a1', capitalGains: 1_000_000, dividends: 300_000 }),
+      ],
+      blueFilerDeduction: 650_000,
+      reportedDividendsTaxation: 'aggregate',
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    const currentPlanInstance = currentPlan(inputs);
+    const currentEvaluated = evaluatePlan(inputs, currentPlanInstance);
+    expect(currentEvaluated.figures.kept).toBeGreaterThan(0);
+    // Real estate gets the full 650,000 blue-filer deduction: 3,000,000 - 650,000 = 2,350,000
+    expect(currentEvaluated.figures.totalIncome).toBe(2_350_000);
+
+    const planReportedAggregate: ReportingPlan = {
+      streams: [
+        inputs.incomeStreams[0]!,
+        {
+          ...inputs.incomeStreams[1]!,
+          reportsCapitalGains: true,
+          reportsDividends: true,
+        } as WithholdingAccountIncomeStream,
+      ],
+      election: 'aggregate',
+    };
+    const reportedAgg = evaluatePlan(inputs, planReportedAggregate);
+    // 2,350,000 net real estate + 300,000 dividends + 1,000,000 capital gains = 3,650,000 total income
+    expect(reportedAgg.figures.totalIncome).toBe(3_650_000);
+
+    const units = deriveReportingUnits(inputs.incomeStreams);
+    const bestPlan = descend(inputs, units, {
+      plan: currentPlanInstance,
+      evaluated: currentEvaluated,
+    });
+    expect(bestPlan.evaluated.figures.kept).toBeGreaterThan(0);
   });
 });

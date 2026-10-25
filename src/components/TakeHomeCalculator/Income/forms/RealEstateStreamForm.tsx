@@ -46,7 +46,7 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
     amount,
     location,
     foreignTax: location === 'foreign' ? foreignTax : 0,
-    ...(amount < 0 && landDebtInterest > 0 && { landDebtInterest }),
+    ...(landDebtInterest > 0 && { landDebtInterest }),
     ...(amount < 0 &&
       location === 'foreign' &&
       foreignUsedBuildingDisallowedLoss > 0 && {
@@ -103,40 +103,38 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
 
         <StreamAmountField type="realEstate" value={amount} onChange={setAmount} />
 
-        {amount < 0 && (
-          <Box sx={guidanceBoxSx}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-              Loss Netting Adjustments
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-              Under Japanese tax law, certain losses are disallowed from offsetting other income.
-            </Typography>
-            <Stack spacing={2}>
-              {/* 土地等を取得するために要した負債の利子の額 (措法41条の4) */}
-              <SpinnerNumberField
-                label="Interest on Debt to Acquire Land"
-                value={landDebtInterest}
-                onChange={setLandDebtInterest}
-                helperText="Interest paid on loans to purchase land cannot offset other income."
-              />
+        <Box sx={guidanceBoxSx}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+            Loss Netting Adjustments
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
+            Certain losses are disallowed from offsetting other income.
+          </Typography>
+          <Stack spacing={2}>
+            {/* 土地等を取得するために要した負債の利子の額 (措法41条の4) */}
+            <SpinnerNumberField
+              label="Interest on Debt to Acquire Land"
+              value={landDebtInterest}
+              onChange={setLandDebtInterest}
+              helperText="Interest paid on loans to purchase land. Only restricts loss-netting if total real estate income is a net loss."
+            />
 
-              {/* 国外中古建物の減価償却費等の特例 (措法41条の4の3) */}
-              {location === 'foreign' && (
-                <SpinnerNumberField
-                  label="Shortened Used Building Depreciation"
-                  value={foreignUsedBuildingDisallowedLoss}
-                  onChange={setForeignUsedBuildingDisallowedLoss}
-                  helperText="Depreciation calculated using shortened useful lives cannot offset other income."
-                />
-              )}
-            </Stack>
-          </Box>
-        )}
+            {/* 国外中古建物の減価償却費等の特例 (措法41条の4の3) */}
+            {amount < 0 && location === 'foreign' && (
+              <SpinnerNumberField
+                label="Shortened Used Building Depreciation"
+                value={foreignUsedBuildingDisallowedLoss}
+                onChange={setForeignUsedBuildingDisallowedLoss}
+                helperText="Depreciation calculated using shortened useful life cannot offset other income."
+              />
+            )}
+          </Stack>
+        </Box>
 
         <SourceLinks
           sources={[
             NTA_TAX_ANSWERS.realEstateIncome,
-            ...(amount < 0 ? [NTA_TAX_ANSWERS.realEstateLossOffset] : []),
+            ...(amount < 0 || landDebtInterest > 0 ? [NTA_TAX_ANSWERS.realEstateLossOffset] : []),
             ...(location === 'foreign' ? [NTA_TAX_ANSWERS.foreignTaxCredit] : []),
           ]}
         />

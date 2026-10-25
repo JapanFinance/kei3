@@ -199,7 +199,6 @@ describe('calculateTaxes End-to-End Integration with High Income Minimum Tax', (
           id: 'real-estate',
           type: 'business',
           amount: 3_000_000,
-          blueFilerDeduction: 0,
         },
         {
           id: 'dividends',
@@ -242,7 +241,6 @@ describe('calculateTaxes End-to-End Integration with High Income Minimum Tax', (
           id: 'real-estate',
           type: 'business',
           amount: 3_000_000,
-          blueFilerDeduction: 0,
         },
         {
           id: 'withholding-account',
@@ -326,7 +324,6 @@ describe('calculateTaxes End-to-End Integration with High Income Minimum Tax', (
           id: 'real-estate',
           type: 'business',
           amount: 3_000_000,
-          blueFilerDeduction: 0,
         },
         {
           id: 'withholding-account',
@@ -467,7 +464,6 @@ describe('calculateTaxes End-to-End Integration with High Income Minimum Tax', (
           id: 'real-estate',
           type: 'business',
           amount: 3_000_000,
-          blueFilerDeduction: 0,
         },
         {
           id: 'dividends',
@@ -512,5 +508,39 @@ describe('calculateTaxes End-to-End Integration with High Income Minimum Tax', (
     expect(withInterestResults.highIncomeMinimumTax?.additionalIncomeTax).toBe(
       baseResults.highIncomeMinimumTax?.additionalIncomeTax,
     );
+  });
+
+  it('T7: applies high-income minimum tax with real estate income and shared blue-filer deduction', () => {
+    // 1.1B capital gains + 10M real estate income with 650k blue-filer deduction
+    // Net real estate income: 9,350,000
+    // Baseline income: 1,100,000,000 + 9,350,000 = 1,109,350,000
+    const inputs = createBaseInputs({
+      incomeStreams: [
+        {
+          id: 're',
+          type: 'realEstate',
+          amount: 10_000_000,
+          location: 'domestic',
+          foreignTax: 0,
+        },
+        {
+          id: 'cg',
+          type: 'capitalGains',
+          amount: 1_100_000_000,
+          shareType: 'listed',
+          account: 'domesticNoWithholding',
+        },
+      ],
+      blueFilerDeduction: 650_000,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 1_000_000,
+      incomeYear: 2026,
+    });
+
+    const results = calculateTaxes(inputs);
+    expect(results.highIncomeMinimumTax).toBeDefined();
+    expect(results.highIncomeMinimumTax?.baselineIncome).toBe(1_109_350_000);
+    expect(results.blueFilerDeduction).toBe(650_000);
+    expect(results.realEstateBlueFilerDeduction).toBe(650_000);
   });
 });

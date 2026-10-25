@@ -13,6 +13,7 @@ import {
   LATTER_STAGE_ELDERLY_ID,
 } from '../types/healthInsurance';
 import {
+  DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   EMPTY_PERSONAL_CIRCUMSTANCES,
   type PublicPensionTreatyCredit,
@@ -579,9 +580,9 @@ describe('calculateTaxes', () => {
           id: '1',
           type: 'business' as const,
           amount: 5_000_000,
-          blueFilerDeduction: 650_000,
         },
       ],
+      blueFilerDeduction: 650_000,
       ageRange: 'age20to39' as const,
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       region: 'Tokyo',
@@ -599,12 +600,12 @@ describe('calculateTaxes', () => {
     // For comparison, let's look at business income of 4,350,000 without deduction
     const inputsReference = {
       ...inputs,
+      blueFilerDeduction: 0,
       incomeStreams: [
         {
           id: '1',
           type: 'business' as const,
           amount: 4_350_000,
-          blueFilerDeduction: 0,
         },
       ],
     };
@@ -1038,12 +1039,12 @@ describe('calculateTaxes with Dependent Coverage', () => {
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
+      blueFilerDeduction: 650_000,
       incomeStreams: [
         {
           id: '1',
           type: 'business' as const,
           amount: 300_000,
-          blueFilerDeduction: 650_000,
         },
       ],
     };
@@ -1126,9 +1127,7 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
 
   it('calculates total net income correctly for business only', () => {
     // Business 5M, Deduction 650k -> Taxable Business Income = 4.35M
-    const incomeStreams = [
-      { type: 'business' as const, amount: 5_000_000, blueFilerDeduction: 650_000, id: 'test' },
-    ];
+    const incomeStreams = [{ type: 'business' as const, amount: 5_000_000, id: 'test' }];
     expect(
       calculateNetIncomeComponents(
         incomeStreams,
@@ -1136,6 +1135,8 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
         'age20to39',
         [],
         EMPTY_PERSONAL_CIRCUMSTANCES,
+        DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+        650_000,
       ).totalNetIncome,
     ).toBe(4_350_000);
   });
@@ -1146,7 +1147,7 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
     // Total = 3.02M
     const incomeStreams = [
       { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
-      { type: 'business' as const, amount: 1_000_000, blueFilerDeduction: 0, id: 'b1' },
+      { type: 'business' as const, amount: 1_000_000, id: 'b1' },
     ];
     expect(
       calculateNetIncomeComponents(
@@ -1155,6 +1156,8 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
         'age20to39',
         [],
         EMPTY_PERSONAL_CIRCUMSTANCES,
+        DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+        0,
       ).totalNetIncome,
     ).toBe(3_020_000);
   });
@@ -1166,7 +1169,7 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
     // Total Net = 2.02M + 0 + 100k = 2.12M
     const incomeStreams = [
       { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
-      { type: 'business' as const, amount: 200_000, blueFilerDeduction: 650_000, id: 'b1' },
+      { type: 'business' as const, amount: 200_000, id: 'b1' },
       { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' },
     ];
     expect(
@@ -1176,6 +1179,8 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
         'age20to39',
         [],
         EMPTY_PERSONAL_CIRCUMSTANCES,
+        DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+        650_000,
       ).totalNetIncome,
     ).toBe(2_120_000);
   });
@@ -1184,7 +1189,7 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
     // Business 2M, Deduction 100k -> 1.9M; Misc 100k; pension stays in its own component.
     const incomeStreams = [
       { type: 'salary' as const, amount: 3_000_000, frequency: 'annual' as const, id: 's1' },
-      { type: 'business' as const, amount: 2_000_000, blueFilerDeduction: 100_000, id: 'b1' },
+      { type: 'business' as const, amount: 2_000_000, id: 'b1' },
       { type: 'miscellaneous' as const, amount: 100_000, id: 'm1' },
       {
         type: 'publicPension' as const,
@@ -1200,6 +1205,8 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       'age65to69',
       [],
       EMPTY_PERSONAL_CIRCUMSTANCES,
+      DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+      100_000,
     );
     expect(components.totalNetIncome).toBe(
       components.netEmploymentIncome + 2_000_000 + components.netPublicPensionIncome,
@@ -1208,6 +1215,7 @@ describe('calculateNetIncomeComponents totalNetIncome', () => {
       calculateTaxes({
         ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeStreams,
+        blueFilerDeduction: 100_000,
         ageRange: 'age65to69',
         healthInsuranceProvider: DEFAULT_PROVIDER,
         region: 'Tokyo',
@@ -1230,7 +1238,7 @@ describe('Business Income Losses (事業所得の損失・損益通算)', () => 
     // Total Net Income = 3.56M - 1M = 2.56M
     const incomeStreams = [
       { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
-      { type: 'business' as const, amount: -1_000_000, blueFilerDeduction: 650_000, id: 'b1' },
+      { type: 'business' as const, amount: -1_000_000, id: 'b1' },
     ];
     const components = calculateNetIncomeComponents(
       incomeStreams,
@@ -1238,6 +1246,8 @@ describe('Business Income Losses (事業所得の損失・損益通算)', () => 
       'age20to39',
       [],
       EMPTY_PERSONAL_CIRCUMSTANCES,
+      DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+      650_000,
     );
     expect(components.netEmploymentIncome).toBe(3_560_000);
     expect(components.aggregateNetIncome).toBe(2_560_000);
@@ -1982,7 +1992,9 @@ describe('Real Estate Income (不動産所得)', () => {
     expect(result.netRealEstateIncome).toBe(850_000);
     expect(result.realEstateBlueFilerDeduction).toBe(650_000);
     expect(result.foreignTaxPaid).toBe(150_000);
-    expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(850_000);
+    // Under 所令221条の6①, domestic real estate loss does not reduce foreign-source income (Finding 4).
+    // Foreign real estate: 2,000,000 - 650,000 blue filer = 1,350,000 foreign-source income.
+    expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(1_350_000);
     expect(result.foreignTaxCredit?.credit.incomeTax).toBeGreaterThan(0);
   });
 
@@ -2120,6 +2132,288 @@ describe('Real Estate Income (不動産所得)', () => {
     expect(withLoss.totalNetIncome).toBe(2_560_000);
     expect(baseline.totalNetIncome).toBe(3_560_000);
     expect(withLoss.healthInsurance).toBeLessThan(baseline.healthInsurance);
+  });
+
+  it('T1: multi-property 措法41条の4 disallows net loss up to total land debt interest across all properties', () => {
+    // Property 1: +1,000,000 with 500,000 land debt interest
+    // Property 2: -1,800,000 with 0 land debt interest
+    // Combined real estate: -800,000
+    // Total land debt interest across all properties: 500,000
+    // Disallowed land debt interest: min(800,000, 500,000) = 500,000
+    // Allowable loss: 800,000 - 500,000 = 300,000 (netRealEstateIncome: -300,000)
+    const incomeStreams = [
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: 1_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+        landDebtInterest: 500_000,
+      },
+      {
+        id: 're2',
+        type: 'realEstate' as const,
+        amount: -1_800_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.realEstateDisallowedLandDebtInterest).toBe(500_000);
+    expect(result.netRealEstateIncome).toBe(-300_000);
+  });
+
+  it('T2: caps foreign shortened used building depreciation per building under 措法41条の4の3 (措令26条の6の3)', () => {
+    // Building 1: -300,000 with 800,000 shortened depreciation -> capped at building 1's loss = 300,000
+    // Building 2: -600,000 with 0 shortened depreciation -> 0
+    // Total disallowed foreign depreciation: 300,000
+    // Net foreign loss = 900,000 - 300,000 = 600,000 allowable loss (netRealEstateIncome: -600,000)
+    const incomeStreams = [
+      {
+        id: 're-for-1',
+        type: 'realEstate' as const,
+        amount: -300_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+        foreignUsedBuildingDisallowedLoss: 800_000,
+      },
+      {
+        id: 're-for-2',
+        type: 'realEstate' as const,
+        amount: -600_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.realEstateDisallowedForeignDepreciation).toBe(300_000);
+    expect(result.netRealEstateIncome).toBe(-600_000);
+  });
+
+  it('T3: domestic real estate loss does not reduce foreign-source income for Foreign Tax Credit (所令221条の6①)', () => {
+    // Foreign real estate: +1,000,000, foreign tax: 150,000
+    // Domestic real estate: -1,500,000
+    // Salary: 10,000,000
+    const incomeStreams = [
+      { id: 's1', type: 'salary' as const, amount: 10_000_000, frequency: 'annual' as const },
+      {
+        id: 're-dom',
+        type: 'realEstate' as const,
+        amount: -1_500_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: 1_000_000,
+        location: 'foreign' as const,
+        foreignTax: 150_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.foreignTaxPaid).toBe(150_000);
+    expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(1_000_000);
+    expect(result.foreignTaxCredit?.credit.incomeTax).toBeGreaterThan(0);
+  });
+
+  it('T4: allowable foreign real estate loss offsets aggregate foreign income but does not offset separate foreign dividends', () => {
+    // Part A: Foreign real estate loss offsets foreign interest (both 総合課税)
+    const streamsWithInterest = [
+      { id: 's1', type: 'salary' as const, amount: 8_000_000, frequency: 'annual' as const },
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: -400_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 'int',
+        type: 'interest' as const,
+        amount: 1_000_000,
+        payerDomicile: 'foreign' as const,
+        foreignTax: 150_000,
+      },
+    ];
+    const resultA = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: streamsWithInterest,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // 1,000,000 foreign interest - 400,000 allowable loss = 600,000 foreign-source income
+    expect(resultA.foreignTaxCredit?.foreignSourceIncome).toBe(600_000);
+
+    // Part B: Foreign real estate loss cannot offset separate foreign dividends (申告分離課税, 措法8条の4①)
+    const streamsWithDividends = [
+      { id: 's1', type: 'salary' as const, amount: 8_000_000, frequency: 'annual' as const },
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: -400_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 'div',
+        type: 'dividends' as const,
+        amount: 1_000_000,
+        shareType: 'listed' as const,
+        paymentChannel: 'abroad' as const,
+        issuerDomicile: 'foreign' as const,
+        isReported: true,
+        foreignTax: 100_000,
+      },
+    ];
+    const resultB = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: streamsWithDividends,
+      reportedDividendsTaxation: 'separate',
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Separate foreign dividends stay at 1,000,000; aggregate loss is floored at 0 under 所令221条の2
+    expect(resultB.foreignTaxCredit?.foreignSourceIncome).toBe(1_000_000);
+  });
+
+  it('T5: foreign real estate loss nets against gross foreign public pension in FTC numerator', () => {
+    // Foreign real estate: -400,000
+    // Foreign public pension: 2,000,000 (standard net pension at age 65-69 is 900,000)
+    // Foreign-source income in FTC: 900,000 - 400,000 = 500,000
+    const incomeStreams = [
+      { id: 's1', type: 'salary' as const, amount: 8_000_000, frequency: 'annual' as const },
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: -400_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 'pen',
+        type: 'publicPension' as const,
+        amount: 2_000_000,
+        payerDomicile: 'foreign' as const,
+        treatyCredit: 'available' as const,
+        foreignTax: 50_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age65to69',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(500_000);
+  });
+
+  it('T6: furusato donation limit reflects net real estate income and ignores disallowed losses', () => {
+    const baseInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      ageRange: 'age20to39' as const,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    const baseResult = calculateTaxes({
+      ...baseInputs,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 8_000_000, frequency: 'annual' }],
+    });
+
+    // 1. Positive real estate increases furusato limit
+    const positiveResult = calculateTaxes({
+      ...baseInputs,
+      blueFilerDeduction: 650_000,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 8_000_000, frequency: 'annual' },
+        { id: 're', type: 'realEstate', amount: 2_000_000, location: 'domestic', foreignTax: 0 },
+      ],
+    });
+    expect(positiveResult.furusatoNozei!.limit).toBeGreaterThan(baseResult.furusatoNozei!.limit);
+
+    // 2. Allowable real estate loss reduces furusato limit
+    const lossResult = calculateTaxes({
+      ...baseInputs,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 8_000_000, frequency: 'annual' },
+        { id: 're', type: 'realEstate', amount: -1_000_000, location: 'domestic', foreignTax: 0 },
+      ],
+    });
+    expect(lossResult.furusatoNozei!.limit).toBeLessThan(baseResult.furusatoNozei!.limit);
+
+    // 3. Fully disallowed real estate loss (all land debt interest) does not reduce furusato limit
+    const disallowedResult = calculateTaxes({
+      ...baseInputs,
+      incomeStreams: [
+        { id: 's1', type: 'salary', amount: 8_000_000, frequency: 'annual' },
+        {
+          id: 're',
+          type: 'realEstate',
+          amount: -1_000_000,
+          location: 'domestic',
+          foreignTax: 0,
+          landDebtInterest: 1_000_000,
+        },
+      ],
+    });
+    expect(disallowedResult.furusatoNozei!.limit).toBe(baseResult.furusatoNozei!.limit);
   });
 });
 
@@ -6040,7 +6334,20 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
             id: 'biz',
             type: 'business',
             amount: randInt(100_000, 8_000_000),
-            blueFilerDeduction: pick([0, 100_000, 550_000, 650_000]),
+          });
+        }
+        if (rand() < 0.25) {
+          const isForeign = rand() < 0.4;
+          const amount = randInt(-2_000_000, 5_000_000);
+          streams.push({
+            id: 're',
+            type: 'realEstate',
+            amount,
+            location: isForeign ? 'foreign' : 'domestic',
+            foreignTax: isForeign && amount > 0 ? randInt(0, Math.floor(amount * 0.2)) : 0,
+            ...(amount < 0 && { landDebtInterest: randInt(0, 500_000) }),
+            ...(isForeign &&
+              amount < 0 && { foreignUsedBuildingDisallowedLoss: randInt(0, 500_000) }),
           });
         }
         if (rand() < 0.35) {
@@ -6160,6 +6467,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
                 ]
               : [],
           dcPlanContributions: pick([0, 276_000]),
+          blueFilerDeduction: pick([0, 100_000, 550_000, 650_000]),
           manualSocialInsuranceEntry: false,
           manualSocialInsuranceAmount: 0,
           incomeYear,

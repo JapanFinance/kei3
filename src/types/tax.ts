@@ -35,7 +35,6 @@ export interface BonusIncomeStream extends BaseIncomeStream {
 
 export interface BusinessIncomeStream extends BaseIncomeStream {
   type: 'business';
-  blueFilerDeduction?: number; // 0, 100000, 550000, or 650000
 }
 
 /**
@@ -51,7 +50,7 @@ export interface BusinessIncomeStream extends BaseIncomeStream {
 export interface RealEstateIncomeStream extends BaseIncomeStream {
   type: 'realEstate';
   /**
-   * Where the real estate is located. Determines whether income is domestic or foreign-source (所法95条④二).
+   * Where the real estate is located. Determines whether income is domestic or foreign-source (所法95条④五).
    * - 'domestic' — Property located in Japan.
    * - 'foreign' — Property located outside Japan (国外源泉所得).
    */
@@ -889,7 +888,12 @@ export interface TakeHomeInputs {
    * The blue-filer special deduction (青色申告特別控除) elected for the return: 0, 100_000, 550_000, or 650_000.
    * Shared between real estate income (不動産所得) and business income (事業所得) under
    * Special Tax Measures Act Art. 25-2 (措法25条の2). Applied to real estate income first, and any
-   * remaining deduction to business income. Absent means 0 (or falls back to stream-level setting).
+   * remaining deduction to business income. Absent means 0.
+   *
+   * Note: When claiming the ¥550,000 or ¥650,000 deduction solely for real estate income (without business
+   * income), the real estate rental activity must be conducted at business scale (事業的規模, generally
+   * 5 buildings or 10 units / 5棟10室 standard under 措法25条の2③ and 所基通26-9); otherwise the maximum
+   * real estate deduction is ¥100,000.
    */
   blueFilerDeduction?: number | undefined;
   ageRange: TaxpayerAgeRange;
