@@ -37,8 +37,8 @@ export const INCOME_CATEGORIES: readonly IncomeCategory[] = [
   },
   {
     key: 'business',
-    heading: 'Business Income (事業所得)',
-    addLabel: 'Add Business Income',
+    heading: 'Business & Real Estate Income (事業・不動産所得)',
+    addLabel: 'Add Business / Real Estate Income',
     chipColor: 'success',
   },
   {
@@ -116,12 +116,23 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   },
   business: {
     label: 'Business',
+    labelDetail: '事業所得',
     category: 'business',
     chipLabel: 'BUSINESS',
     amountLabel: 'Annual Income After Expenses',
     amountHelperText:
-      'Business revenue minus necessary expenses (収入金額 − 必要経費), before the blue-filer special deduction; enter a loss as a negative amount. For multiple businesses, combine the income across all businesses.',
+      'Business revenue minus necessary expenses (収入金額 − 必要経費); enter a loss as a negative amount. For multiple businesses, combine the income across all businesses.',
     maxCount: 1,
+    min: Number.MIN_SAFE_INTEGER,
+  },
+  realEstate: {
+    label: 'Real Estate',
+    labelDetail: '不動産所得',
+    category: 'business',
+    chipLabel: 'REAL ESTATE',
+    amountLabel: 'Annual Income After Expenses',
+    amountHelperText:
+      'Rental revenue minus necessary expenses (収入金額 − 必要経費); enter a loss as a negative amount.',
     min: Number.MIN_SAFE_INTEGER,
   },
   miscellaneous: {

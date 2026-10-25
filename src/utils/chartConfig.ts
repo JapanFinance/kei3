@@ -116,9 +116,23 @@ export const scaleIncomeStreamsToIncome = (
       if (!isEarnedIncomeStream(s)) return s;
       // The foreign tax scales with its pension: held constant, it could exceed a scaled-down
       // pension, which the calculation rejects.
-      return s.type === 'publicPension'
-        ? { ...s, amount: s.amount * ratio, foreignTax: s.foreignTax * ratio }
-        : { ...s, amount: s.amount * ratio };
+      if (s.type === 'publicPension') {
+        return { ...s, amount: s.amount * ratio, foreignTax: s.foreignTax * ratio };
+      }
+      if (s.type === 'realEstate') {
+        return {
+          ...s,
+          amount: s.amount * ratio,
+          foreignTax: s.foreignTax * ratio,
+          ...(s.landDebtInterest !== undefined && {
+            landDebtInterest: s.landDebtInterest * ratio,
+          }),
+          ...(s.foreignUsedBuildingDepreciation !== undefined && {
+            foreignUsedBuildingDepreciation: s.foreignUsedBuildingDepreciation * ratio,
+          }),
+        };
+      }
+      return { ...s, amount: s.amount * ratio };
     });
   }
 
@@ -183,6 +197,7 @@ export const generateChartData = (
         salary: 0,
         bonus: 0,
         business: 0,
+        realEstate: 0,
         miscellaneous: 0,
         publicPension: 0,
         investment: 0,
@@ -197,6 +212,9 @@ export const generateChartData = (
             break;
           case 'business':
             groups.business += annualIncomeStreamAmount(s);
+            break;
+          case 'realEstate':
+            groups.realEstate += annualIncomeStreamAmount(s);
             break;
           case 'miscellaneous':
             groups.miscellaneous += annualIncomeStreamAmount(s);
@@ -225,7 +243,9 @@ export const generateChartData = (
       breakdown = [];
       if (groups.salary > 0) breakdown.push({ label: 'Salary', amount: groups.salary });
       if (groups.bonus > 0) breakdown.push({ label: 'Bonus', amount: groups.bonus });
-      if (groups.business > 0) breakdown.push({ label: 'Business', amount: groups.business });
+      if (groups.business !== 0) breakdown.push({ label: 'Business', amount: groups.business });
+      if (groups.realEstate !== 0)
+        breakdown.push({ label: 'Real Estate', amount: groups.realEstate });
       if (groups.miscellaneous > 0)
         breakdown.push({ label: 'Miscellaneous', amount: groups.miscellaneous });
       if (groups.publicPension > 0)

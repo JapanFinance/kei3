@@ -71,6 +71,15 @@ export const NTA_TAX_ANSWERS = {
     href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm',
     label: 'Foreign tax credit (外国税額控除) - NTA',
   },
+  realEstateIncome: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1370.htm',
+    label: 'Real estate income (不動産所得) - NTA',
+  },
+  realEstateLossOffset: {
+    href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1391.htm',
+    label:
+      'Offsetting real estate losses against other income (不動産所得が赤字のときの通算) - NTA',
+  },
 };
 
 interface IncomeStreamFormShellProps {

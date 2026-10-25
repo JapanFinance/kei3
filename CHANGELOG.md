@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-10-25
+
+### New
+
+- Real estate income ([不動産所得](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1370.htm)) can now be entered in Advanced mode. The blue-filer special deduction ([青色申告特別控除](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm)) is shared across business and real estate income: applied first to real estate income, and any remainder to business income. Foreign income tax paid on foreign real estate income is creditable against income tax and residence tax via the [foreign tax credit](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1240.htm). When a real estate business operates at a loss, it reduces other aggregate income under loss netting ([損益通算](https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1391.htm)), with adjustments for statutory disallowances: interest on debt to acquire land and certain depreciation on foreign used buildings.
+
 ## 2026-10-24
 
 ### New

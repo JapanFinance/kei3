@@ -96,6 +96,7 @@ function App() {
       },
     ],
     savedIncomeStreams: [],
+    blueFilerDeduction: 0,
     reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
     ageRange: DEFAULT_TAXPAYER_AGE_RANGE,
     longTermCareCategory1ManualEntry: false,
@@ -227,6 +228,7 @@ function App() {
             manualSocialInsuranceAmount={deferredInputs.manualSocialInsuranceAmount}
             incomeStreams={deferredInputs.incomeStreams}
             reportedDividendsTaxation={deferredInputs.reportedDividendsTaxation}
+            blueFilerDeduction={deferredInputs.blueFilerDeduction}
             lifeInsurance={deferredInputs.lifeInsurance}
             earthquakeInsurance={deferredInputs.earthquakeInsurance}
             medicalExpenses={deferredInputs.medicalExpenses}

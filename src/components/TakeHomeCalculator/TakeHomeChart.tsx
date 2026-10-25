@@ -162,6 +162,7 @@ interface TakeHomeChartProps {
   incomeStreams?: IncomeStream[];
   /** The election that taxes every reported dividend in {@link incomeStreams}; the default when omitted. */
   reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
+  blueFilerDeduction?: number | undefined;
   lifeInsurance: LifeInsuranceInput;
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
@@ -250,6 +251,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   manualSocialInsuranceAmount = 0,
   incomeStreams = [],
   reportedDividendsTaxation,
+  blueFilerDeduction,
   lifeInsurance,
   earthquakeInsurance,
   medicalExpenses,
@@ -372,6 +374,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       manualSocialInsuranceAmount,
       incomeStreams,
       reportedDividendsTaxation,
+      blueFilerDeduction,
       lifeInsurance,
       earthquakeInsurance,
       medicalExpenses,
@@ -397,6 +400,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     manualSocialInsuranceAmount,
     incomeStreams,
     reportedDividendsTaxation,
+    blueFilerDeduction,
     lifeInsurance,
     earthquakeInsurance,
     medicalExpenses,
@@ -461,6 +465,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   manualSocialInsuranceAmount,
                   incomeStreams: scaleIncomeStreamsToIncome(incomeStreams, income),
                   reportedDividendsTaxation,
+                  ...(blueFilerDeduction !== undefined && { blueFilerDeduction }),
                   lifeInsurance,
                   earthquakeInsurance,
                   medicalExpenses,
@@ -515,6 +520,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     foreignTaxCredit,
     incomeStreams,
     reportedDividendsTaxation,
+    blueFilerDeduction,
     distribution,
     quintileBoundaries,
     isChartDisabled,

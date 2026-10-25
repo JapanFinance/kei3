@@ -3,13 +3,14 @@
 
 import React from 'react';
 
-import type { TakeHomeInputs, TakeHomeResults } from '../../../types/tax';
+import type { RealEstateIncomeStream, TakeHomeInputs, TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
 import { ResultRow } from '../ResultRow';
 import NetAggregateInvestmentIncomeTooltip from './NetAggregateInvestmentIncomeTooltip';
 import NetBusinessAndMiscIncomeTooltip from './NetBusinessAndMiscIncomeTooltip';
 import NetEmploymentIncomeTooltip from './NetEmploymentIncomeTooltip';
 import NetPublicPensionIncomeTooltip from './NetPublicPensionIncomeTooltip';
+import NetRealEstateIncomeTooltip from './NetRealEstateIncomeTooltip';
 import NetSeparateInvestmentIncomeTooltip from './NetSeparateInvestmentIncomeTooltip';
 
 interface IncomeOverviewRowsProps {
@@ -35,9 +36,16 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
 
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = hasBusinessStream || hasMiscStream;
+  const realEstateStreams = inputs.incomeStreams.filter(
+    (s): s is RealEstateIncomeStream => s.type === 'realEstate',
+  );
+  const hasRealEstateIncome = results.realEstate !== undefined;
+  const grossRealEstateIncome = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+
+  const businessBlueFilerDeduction = results.businessBlueFilerDeduction ?? 0;
 
   const showBusinessMiscTooltip =
-    (results.blueFilerDeduction !== undefined && results.blueFilerDeduction > 0) ||
+    businessBlueFilerDeduction > 0 ||
     results.netBusinessAndMiscIncome < 0 ||
     (businessIncome !== undefined && businessIncome < 0) ||
     (hasBusinessStream && hasMiscStream);
@@ -49,6 +57,7 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
   const presentIncomeComponents = [
     hasEmploymentIncome,
     hasBusinessOrMiscIncome,
+    hasRealEstateIncome,
     hasPublicPensionIncome,
     aggregate !== undefined,
     separate !== undefined,
@@ -84,13 +93,42 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
                 <NetBusinessAndMiscIncomeTooltip
                   businessIncome={businessIncome}
                   miscIncome={miscIncome}
-                  blueFilerDeduction={results.blueFilerDeduction ?? 0}
+                  blueFilerDeduction={businessBlueFilerDeduction}
                   netBusinessAndMiscIncome={results.netBusinessAndMiscIncome}
                 />
               )}
             </span>
           }
           value={formatJPY(results.netBusinessAndMiscIncome)}
+          type="default"
+        />
+      )}
+
+      {results.realEstate && (
+        <ResultRow
+          label={
+            <span>
+              Net Real Estate Income
+              {(results.realEstate.blueFilerDeduction > 0 ||
+                results.realEstate.netIncome < 0 ||
+                grossRealEstateIncome < 0 ||
+                (results.realEstate.disallowedForeignDepreciationLoss !== undefined &&
+                  results.realEstate.disallowedForeignDepreciationLoss > 0) ||
+                (results.realEstate.disallowedLandDebtInterest !== undefined &&
+                  results.realEstate.disallowedLandDebtInterest > 0)) && (
+                <NetRealEstateIncomeTooltip
+                  grossRealEstateIncome={grossRealEstateIncome}
+                  blueFilerDeduction={results.realEstate.blueFilerDeduction}
+                  netRealEstateIncome={results.realEstate.netIncome}
+                  disallowedLandDebtInterest={results.realEstate.disallowedLandDebtInterest}
+                  disallowedForeignDepreciationLoss={
+                    results.realEstate.disallowedForeignDepreciationLoss
+                  }
+                />
+              )}
+            </span>
+          }
+          value={formatJPY(results.realEstate.netIncome)}
           type="default"
         />
       )}

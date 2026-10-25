@@ -219,7 +219,6 @@ describe('withAllInvestmentReported', () => {
       id: 'b1',
       type: 'business',
       amount: 3_000_000,
-      blueFilerDeduction: 650_000,
     };
     expect(withAllInvestmentReported(business)).toBe(business);
   });

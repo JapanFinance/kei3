@@ -48,9 +48,8 @@ export const ENGINE_SCENARIOS = {
   'self-employed-nhi': [
     {
       ...EMPLOYEE,
-      incomeStreams: [
-        { id: 'business', type: 'business', amount: 5_000_000, blueFilerDeduction: 650_000 },
-      ],
+      incomeStreams: [{ id: 'business', type: 'business', amount: 5_000_000 }],
+      blueFilerDeduction: 650_000,
       ageRange: 'age40to59',
       healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
       dependents: [

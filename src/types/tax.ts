@@ -35,7 +35,45 @@ export interface BonusIncomeStream extends BaseIncomeStream {
 
 export interface BusinessIncomeStream extends BaseIncomeStream {
   type: 'business';
-  blueFilerDeduction?: number; // 0, 100000, 550000, or 650000
+}
+
+/**
+ * Real estate income (不動産所得): {@link BaseIncomeStream.amount} is the annual net income
+ * after necessary expenses, before the blue-filer special deduction (青色申告特別控除前の所得金額),
+ * i.e. 収入金額 minus 必要経費.
+ *
+ * When negative, loss-netting (損益通算, 所法69条) against other aggregate income is permitted,
+ * subject to:
+ * - 措法41条の4: Disallowing loss attributable to interest on debt used to acquire land ({@link landDebtInterest}).
+ * - 措法41条の4の3: Disallowing loss from foreign used buildings attributable to depreciation ({@link foreignUsedBuildingDepreciation}).
+ */
+export interface RealEstateIncomeStream extends BaseIncomeStream {
+  type: 'realEstate';
+  /**
+   * Where the real estate is located. Determines whether income is domestic or foreign-source (所法95条④五).
+   * - 'domestic' — Property located in Japan.
+   * - 'foreign' — Property located outside Japan (国外源泉所得).
+   */
+  location: 'domestic' | 'foreign';
+  /**
+   * Foreign income tax (外国所得税) paid abroad on foreign real estate income, inside {@link BaseIncomeStream.amount}.
+   * 0 unless {@link location} is 'foreign'. Credited within the limits of the foreign tax credit (所法95条).
+   */
+  foreignTax: number;
+  /**
+   * 土地等を取得するために要した負債の利子の額 (措法41条の4).
+   * When net income is negative, the loss attributable to interest on loans for acquiring land is
+   * disallowed from loss netting against other income. Capped at the loss amount.
+   * Relevant only when {@link BaseIncomeStream.amount} is negative.
+   */
+  landDebtInterest?: number;
+  /**
+   * 国外中古建物の減価償却費等の特例 (措法41条の4の3).
+   * Shortened useful life depreciation expense for foreign used buildings (簡便法等による減価償却費).
+   * When the property has a net loss, loss up to this amount is disallowed from loss netting against other income.
+   * Relevant only when {@link location} is 'foreign' and {@link BaseIncomeStream.amount} is negative.
+   */
+  foreignUsedBuildingDepreciation?: number;
 }
 
 export interface MiscellaneousIncomeStream extends BaseIncomeStream {
@@ -272,6 +310,7 @@ export type IncomeStream =
   | SalaryIncomeStream
   | BonusIncomeStream
   | BusinessIncomeStream
+  | RealEstateIncomeStream
   | MiscellaneousIncomeStream
   | PublicPensionIncomeStream
   | CommutingAllowanceIncomeStream
@@ -795,6 +834,8 @@ export interface TakeHomeFormState {
   incomeStreams: IncomeStream[];
   /** See {@link TakeHomeInputs.reportedDividendsTaxation}. */
   reportedDividendsTaxation: ReportedDividendsTaxation;
+  /** See {@link TakeHomeInputs.blueFilerDeduction}. */
+  blueFilerDeduction: number;
   ageRange: TaxpayerAgeRange;
   /**
    * True when the user has switched off the calculated 介護保険料 estimate to enter the billed
@@ -843,6 +884,18 @@ export interface TakeHomeInputs {
    * {@link ReportedDividendsTaxation}. Absent means {@link DEFAULT_REPORTED_DIVIDENDS_TAXATION}.
    */
   reportedDividendsTaxation?: ReportedDividendsTaxation | undefined;
+  /**
+   * The blue-filer special deduction (青色申告特別控除) elected for the return: 0, 100_000, 550_000, or 650_000.
+   * Shared between real estate income (不動産所得) and business income (事業所得) under
+   * Special Tax Measures Act Art. 25-2 (措法25条の2). Applied to real estate income first, and any
+   * remaining deduction to business income. Absent means 0.
+   *
+   * Note: When claiming the ¥550,000 or ¥650,000 deduction solely for real estate income (without business
+   * income), the real estate rental activity must be conducted at business scale (事業的規模, generally
+   * 5 buildings or 10 units / 5棟10室 standard under 措法25条の2③ and 所基通26-9); otherwise the maximum
+   * real estate deduction is ¥100,000.
+   */
+  blueFilerDeduction?: number | undefined;
   ageRange: TaxpayerAgeRange;
   /** See {@link TakeHomeFormState.longTermCareCategory1ManualEntry}. Absent means false. */
   longTermCareCategory1ManualEntry?: boolean | undefined;
@@ -895,6 +948,25 @@ export interface CustomEmployeesHealthInsuranceRates {
   longTermCareRate: number;
 }
 
+export interface RealEstateResults {
+  /**
+   * 不動産所得, net of the 青色申告特別控除 and loss disallowance rules (措法41条の4, 41条の4の3).
+   */
+  netIncome: number;
+  /**
+   * The portion of {@link TakeHomeInputs.blueFilerDeduction} applied against 不動産所得 (措法25条の2②).
+   */
+  blueFilerDeduction: number;
+  /**
+   * The portion of real estate loss disallowed under 措法41条の4 (土地等を取得するために要した負債の利子の額).
+   */
+  disallowedLandDebtInterest?: number | undefined;
+  /**
+   * The portion of foreign real estate loss disallowed under 措法41条の4の3 (国外中古建物の減価償却費等の特例).
+   */
+  disallowedForeignDepreciationLoss?: number | undefined;
+}
+
 export interface TakeHomeResults {
   /**
    * The income received over the year before taxes and social insurance: net of the real costs
@@ -921,7 +993,15 @@ export interface TakeHomeResults {
    */
   annualIncome: number;
   hasEmploymentIncome: boolean;
-  blueFilerDeduction?: number;
+  /**
+   * The portion of {@link TakeHomeInputs.blueFilerDeduction} applied against 事業所得 (措法25条の2②).
+   */
+  businessBlueFilerDeduction?: number | undefined;
+  /**
+   * Real estate income breakdown and statutory adjustments.
+   * Absent when there are no real estate streams.
+   */
+  realEstate?: RealEstateResults | undefined;
   nationalIncomeTax: number;
   residenceTax: ResidenceTaxDetails;
   healthInsurance: number;
@@ -958,7 +1038,7 @@ export interface TakeHomeResults {
   pensionIncomeAdjustmentDeduction?: number | undefined;
   /**
    * 事業所得 and 雑所得 other than public pensions, net of the 青色申告特別控除
-   * ({@link blueFilerDeduction}). 0 when there is no business or miscellaneous income.
+   * ({@link businessBlueFilerDeduction}). 0 when there is no business or miscellaneous income.
    */
   netBusinessAndMiscIncome: number;
   /** Gross public pension income (公的年金等の収入金額). Absent when there is none. */

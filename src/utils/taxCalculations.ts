@@ -21,6 +21,7 @@ import {
 } from '../types/healthInsurance';
 import {
   type BonusIncomeStream,
+  type BusinessIncomeStream,
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   type ForeignTaxCreditResult,
   type FurusatoNozeiDetails,
@@ -28,6 +29,7 @@ import {
   type IncomeStream,
   NO_RESIDENCE_TAX_CREDITS,
   type PersonalCircumstancesInput,
+  type RealEstateIncomeStream,
   type ReportedDividendsTaxation,
   type ResidenceTaxCredits,
   type TakeHomeInputs,
@@ -78,7 +80,11 @@ import {
   estimateLongTermCareCategory1Premium,
   type LongTermCareCategory1TierInputs,
 } from './longTermCareCategory1';
-import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncomeComponents';
+import {
+  calculateTotalNetIncome,
+  composeNetIncomeComponents,
+  type NetIncomeComponents,
+} from './netIncomeComponents';
 import {
   calculateNationalPensionFullExemptionThreshold,
   calculatePensionBreakdown,
@@ -289,7 +295,13 @@ interface IncomeBreakdown {
   grossEmploymentIncome: number;
   netBusinessAndMiscIncomeBeforeBlueFilerDeduction: number;
   netBusinessAndMiscIncome: number;
+  netRealEstateIncomeBeforeBlueFilerDeduction: number;
+  netRealEstateIncome: number;
   blueFilerDeduction: number;
+  realEstateBlueFilerDeduction: number;
+  businessBlueFilerDeduction: number;
+  realEstateDisallowedLandDebtInterest: number;
+  disallowedForeignDepreciationLoss: number;
   /**
    * Annual income excluding investment income (employment + business/misc + public pension).
    * Investment income is gathered separately in {@link withheldBase}, {@link separateBase},
@@ -318,6 +330,10 @@ interface IncomeBreakdown {
    * The foreign pensions are apart, in {@link grossForeignPublicPensionIncome}.
    */
   foreignSourceIncome: number;
+  /** Foreign-source income on reported aggregate (総合課税) entries, net of allowable foreign real estate losses. */
+  aggregateForeignSourceIncome: number;
+  /** Foreign-source income on reported separate (申告分離課税) entries. */
+  separateForeignSourceIncome: number;
   /**
    * 公的年金等の収入金額 of the pensions under a foreign system, inside
    * {@link grossPublicPensionIncome}: foreign-source income (所法95条④十ロ), measured for the
@@ -348,6 +364,166 @@ interface IncomeBreakdown {
 }
 
 /**
+ * Result of allocating real estate disallowances and the shared blue-filer deduction.
+ */
+export interface RealEstateAndBusinessAllocation {
+  grossRealEstateIncome: number;
+  realEstateDisallowedLandDebtInterest: number;
+  disallowedForeignDepreciationLoss: number;
+  combinedRealEstateAmount: number;
+  netRealEstateBeforeDeduction: number;
+  effectiveForeignRealEstateAmount: number;
+  domesticRealEstateGrossAmount: number;
+  grossBusinessIncome: number;
+  realEstateBlueFilerDeduction: number;
+  businessBlueFilerDeduction: number;
+  totalBlueFilerDeduction: number;
+  netRealEstateIncome: number;
+  netBusinessIncome: number;
+  perStreamRealEstateBlueFilerDeduction: Map<string, number>;
+}
+
+/**
+ * Calculates statutory disallowances for real estate income (措法41条の4, 措法41条の4の3)
+ * and allocates the shared blue-filer special deduction (青色申告特別控除, 措法25条の2) across
+ * real estate and business income.
+ *
+ * Exported so both the calculation engine and UI components (e.g. IncomeDetailsModal)
+ * share the exact same statutory allocation logic.
+ */
+export const calculateRealEstateAndBusinessAllocation = (
+  incomeStreams: readonly IncomeStream[],
+  blueFilerDeductionInput?: number,
+): RealEstateAndBusinessAllocation => {
+  const realEstateStreams = incomeStreams.filter(
+    (s): s is RealEstateIncomeStream => s.type === 'realEstate',
+  );
+  const businessStream = incomeStreams.find(
+    (s): s is BusinessIncomeStream => s.type === 'business',
+  );
+
+  let realEstateDisallowedLandDebtInterest = 0;
+  let disallowedForeignDepreciationLoss = 0;
+  let domesticRealEstateGrossAmount = 0;
+  let effectiveForeignRealEstateAmount = 0;
+  let combinedRealEstateAmount = 0;
+  let netRealEstateBeforeDeduction = 0;
+  let realEstateBlueFilerDeduction = 0;
+  let netRealEstateIncome = 0;
+
+  const grossRealEstateIncome = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+
+  if (realEstateStreams.length > 0) {
+    const domesticRealEstateStreams = realEstateStreams.filter(s => s.location === 'domestic');
+    const foreignRealEstateStreams = realEstateStreams.filter(s => s.location === 'foreign');
+
+    // 1. Foreign real estate aggregation and 措法41条の4の3 (国外中古建物の減価償却費等の特例)
+    // Loss attributable to foreign used building depreciation is deemed not to exist ("生じなかったものとみなす").
+    // Under 措令26条の6の3, each foreign loss-making building's disallowed depreciation is capped at that
+    // individual building's loss, and overall disallowed depreciation cannot exceed the net foreign loss.
+    const foreignGrossAmount = foreignRealEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+    effectiveForeignRealEstateAmount = foreignGrossAmount;
+    if (foreignGrossAmount < 0) {
+      const foreignLoss = -foreignGrossAmount;
+      const totalForeignDeprecDisallowed = foreignRealEstateStreams
+        .filter(s => s.amount < 0)
+        .reduce(
+          (sum, s) =>
+            sum + Math.min(-s.amount, Math.max(0, s.foreignUsedBuildingDepreciation ?? 0)),
+          0,
+        );
+      disallowedForeignDepreciationLoss = Math.min(foreignLoss, totalForeignDeprecDisallowed);
+      const allowableForeignLoss = foreignLoss - disallowedForeignDepreciationLoss;
+      effectiveForeignRealEstateAmount = allowableForeignLoss === 0 ? 0 : -allowableForeignLoss;
+    }
+
+    // 2. Domestic real estate aggregation
+    domesticRealEstateGrossAmount = domesticRealEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+
+    // 3. Combine domestic and allowable foreign real estate
+    combinedRealEstateAmount = domesticRealEstateGrossAmount + effectiveForeignRealEstateAmount;
+
+    // 4. 措法41条の4: 土地等を取得するために要した負債の利子の額
+    // Unlike Art. 41-4-3, Art. 41-4 does NOT restrict internal netting within real estate income.
+    // If combined real estate is positive, all land debt interest is fully deductible within the category.
+    // When overall real estate income is negative, 措法41条の4① and 措令26条の6① disallow the portion of the net loss
+    // up to the total interest on debt incurred to acquire land across ALL real estate properties (including profitable ones).
+    netRealEstateBeforeDeduction = combinedRealEstateAmount;
+    if (combinedRealEstateAmount < 0) {
+      const overallLoss = -combinedRealEstateAmount;
+      const totalLandDebtInterest = realEstateStreams.reduce(
+        (sum, s) => sum + Math.max(0, s.landDebtInterest ?? 0),
+        0,
+      );
+      realEstateDisallowedLandDebtInterest = Math.min(overallLoss, totalLandDebtInterest);
+      const allowableOverallLoss = overallLoss - realEstateDisallowedLandDebtInterest;
+      netRealEstateBeforeDeduction = allowableOverallLoss === 0 ? 0 : -allowableOverallLoss;
+    }
+  }
+
+  // 5. Blue-filer special deduction (措法25条の2②):
+  // Deducted first from real estate income, up to the net positive real estate income.
+  // Any remaining deduction is applied to business income.
+  let blueFilerPool = blueFilerDeductionInput ?? 0;
+  if (netRealEstateBeforeDeduction > 0) {
+    const deduction = Math.min(netRealEstateBeforeDeduction, blueFilerPool);
+    realEstateBlueFilerDeduction = deduction;
+    netRealEstateIncome = netRealEstateBeforeDeduction - deduction;
+    blueFilerPool -= deduction;
+  } else {
+    realEstateBlueFilerDeduction = 0;
+    netRealEstateIncome = netRealEstateBeforeDeduction;
+  }
+
+  // 6. Business income
+  const grossBusinessIncome = businessStream?.amount ?? 0;
+  let businessBlueFilerDeduction = 0;
+  let netBusinessIncome = grossBusinessIncome;
+  if (grossBusinessIncome > 0) {
+    const deduction = Math.min(grossBusinessIncome, blueFilerPool);
+    businessBlueFilerDeduction = deduction;
+    netBusinessIncome = grossBusinessIncome - deduction;
+    blueFilerPool -= deduction;
+  }
+
+  const totalBlueFilerDeduction = realEstateBlueFilerDeduction + businessBlueFilerDeduction;
+
+  // 7. Per-stream allocation of real estate blue-filer deduction
+  const perStreamRealEstateBlueFilerDeduction = new Map<string, number>();
+  if (realEstateBlueFilerDeduction > 0) {
+    const positiveStreams = realEstateStreams.filter(s => s.amount > 0);
+    const positiveSum = positiveStreams.reduce((sum, s) => sum + s.amount, 0);
+    let remainingToAllocate = realEstateBlueFilerDeduction;
+    positiveStreams.forEach((s, idx) => {
+      if (idx === positiveStreams.length - 1) {
+        perStreamRealEstateBlueFilerDeduction.set(s.id, remainingToAllocate);
+      } else {
+        const share = Math.round(realEstateBlueFilerDeduction * (s.amount / positiveSum));
+        perStreamRealEstateBlueFilerDeduction.set(s.id, share);
+        remainingToAllocate -= share;
+      }
+    });
+  }
+
+  return {
+    grossRealEstateIncome,
+    realEstateDisallowedLandDebtInterest,
+    disallowedForeignDepreciationLoss,
+    combinedRealEstateAmount,
+    netRealEstateBeforeDeduction,
+    effectiveForeignRealEstateAmount,
+    domesticRealEstateGrossAmount,
+    grossBusinessIncome,
+    realEstateBlueFilerDeduction,
+    businessBlueFilerDeduction,
+    totalBlueFilerDeduction,
+    netRealEstateIncome,
+    netBusinessIncome,
+    perStreamRealEstateBlueFilerDeduction,
+  };
+};
+
+/**
  * Processes income streams to categorize them and calculate totals.
  * This is used by both the main tax calculation and the net income calculation.
  *
@@ -358,12 +534,11 @@ interface IncomeBreakdown {
 const calculateIncomeBreakdown = (
   incomeStreams: IncomeStream[],
   reportedDividendsTaxation: ReportedDividendsTaxation,
+  blueFilerDeductionInput?: number,
 ): IncomeBreakdown => {
   let salaryIncome = 0;
   const bonusIncome: BonusIncomeStream[] = [];
-  let netBusinessAndMiscIncomeBeforeBlueFilerDeduction = 0;
-  let netBusinessAndMiscIncome = 0;
-  let blueFilerDeduction = 0;
+  let miscIncome = 0;
   let commutingAllowance = 0;
   let stockCompensationIncome = 0;
   let grossPublicPensionIncome = 0;
@@ -382,9 +557,11 @@ const calculateIncomeBreakdown = (
   let reportedSeparateDividends = 0;
   let aggregateDividends = 0;
   let aggregateInterest = 0;
-  let foreignSourceIncome = 0;
+  let separateForeignSourceIncome = 0;
+  let aggregateForeignSourceIncome = 0;
   let creditableForeignTax = 0;
-  let processedBusinessIncome = false;
+  let processedBusinessStream: BusinessIncomeStream | undefined;
+  const realEstateStreams: RealEstateIncomeStream[] = [];
 
   // 措法8条の4② makes the 申告分離課税/総合課税 election one for every reported dividend of the
   // year, whichever entry it came from — a plain dividend or a withholding account's.
@@ -427,21 +604,18 @@ const calculateIncomeBreakdown = (
         stockCompensationIncome += income.amount;
         break;
       case 'business': {
-        if (processedBusinessIncome) {
+        if (processedBusinessStream) {
           throw new Error('Only one business income stream is allowed.');
         }
-        const maxDeduction = income.blueFilerDeduction || 0;
-        netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
-        // Net business income is reduced by the deduction, up to positive income (措法25条の2)
-        const effectiveDeduction = Math.min(Math.max(0, income.amount), maxDeduction);
-        netBusinessAndMiscIncome += income.amount - effectiveDeduction;
-        blueFilerDeduction = effectiveDeduction;
-        processedBusinessIncome = true;
+        processedBusinessStream = income;
+        break;
+      }
+      case 'realEstate': {
+        realEstateStreams.push(income);
         break;
       }
       case 'miscellaneous':
-        netBusinessAndMiscIncomeBeforeBlueFilerDeduction += income.amount;
-        netBusinessAndMiscIncome += income.amount;
+        miscIncome += income.amount;
         break;
       case 'publicPension': {
         grossPublicPensionIncome += income.amount;
@@ -489,7 +663,11 @@ const calculateIncomeBreakdown = (
         }
         if (income.reportsDividends) {
           addReportedDividends(income.dividends);
-          foreignSourceIncome += income.foreignDividends;
+          if (reportedDividendsTaxation === 'separate') {
+            separateForeignSourceIncome += income.foreignDividends;
+          } else {
+            aggregateForeignSourceIncome += income.foreignDividends;
+          }
           creditableForeignTax += income.foreignTax;
         }
         break;
@@ -516,7 +694,11 @@ const calculateIncomeBreakdown = (
         }
         addReportedDividends(income.amount);
         if (income.issuerDomicile === 'foreign') {
-          foreignSourceIncome += income.amount;
+          if (reportedDividendsTaxation === 'separate') {
+            separateForeignSourceIncome += income.amount;
+          } else {
+            aggregateForeignSourceIncome += income.amount;
+          }
           creditableForeignTax += income.foreignTax;
         }
         break;
@@ -529,7 +711,7 @@ const calculateIncomeBreakdown = (
           withholdingOnlyInterest += income.amount;
         } else {
           aggregateInterest += income.amount;
-          foreignSourceIncome += income.amount;
+          aggregateForeignSourceIncome += income.amount;
           creditableForeignTax += income.foreignTax;
         }
         break;
@@ -541,11 +723,87 @@ const calculateIncomeBreakdown = (
     }
   }
 
+  // Calculate real estate disallowances and blue-filer special deduction allocations
+  const realEstateAndBusiness = calculateRealEstateAndBusinessAllocation(
+    incomeStreams,
+    blueFilerDeductionInput,
+  );
+
+  const {
+    grossRealEstateIncome,
+    realEstateDisallowedLandDebtInterest,
+    disallowedForeignDepreciationLoss,
+    effectiveForeignRealEstateAmount,
+    domesticRealEstateGrossAmount,
+    grossBusinessIncome,
+    realEstateBlueFilerDeduction,
+    businessBlueFilerDeduction,
+    totalBlueFilerDeduction: blueFilerDeduction,
+    netRealEstateIncome,
+    netBusinessIncome,
+  } = realEstateAndBusiness;
+
+  const netRealEstateIncomeBeforeBlueFilerDeduction = grossRealEstateIncome;
+  const netBusinessIncomeBeforeBlueFilerDeduction = grossBusinessIncome;
+
+  // Foreign real estate source income and creditable foreign tax (所法95条 / 所令221条の2〜222条)
+  const foreignRealEstateStreams = realEstateStreams.filter(s => s.location === 'foreign');
+  if (foreignRealEstateStreams.length > 0) {
+    creditableForeignTax += foreignRealEstateStreams.reduce((sum, s) => sum + s.foreignTax, 0);
+
+    let foreignRealEstateSourceIncome = 0;
+    if (effectiveForeignRealEstateAmount > 0) {
+      if (domesticRealEstateGrossAmount > 0) {
+        // Both domestic and foreign are positive: allocate blue-filer deduction pro-rata under 所令222条
+        const foreignBlueFiler = Math.round(
+          realEstateBlueFilerDeduction *
+            (effectiveForeignRealEstateAmount /
+              (domesticRealEstateGrossAmount + effectiveForeignRealEstateAmount)),
+        );
+        foreignRealEstateSourceIncome = Math.max(
+          0,
+          effectiveForeignRealEstateAmount - foreignBlueFiler,
+        );
+      } else {
+        // Domestic was non-positive; entire real estate blue-filer deduction is absorbed by foreign
+        foreignRealEstateSourceIncome = Math.max(
+          0,
+          effectiveForeignRealEstateAmount - realEstateBlueFilerDeduction,
+        );
+      }
+    } else if (effectiveForeignRealEstateAmount < 0) {
+      // Under 所令221条の6① and 所法69条①, an allowable foreign real estate loss offsets other aggregate
+      // foreign-source income (interest, aggregate dividends, foreign pension), but cannot offset separate
+      // foreign dividends or take total foreign-source income below zero (所令221条の2).
+      // Under 措法41条の4, the portion of the foreign loss attributable to foreign land debt interest is disallowed.
+      const foreignLoss = -effectiveForeignRealEstateAmount;
+      const foreignLandInterest = foreignRealEstateStreams.reduce(
+        (sum, s) => sum + Math.max(0, s.landDebtInterest ?? 0),
+        0,
+      );
+      const foreignDisallowedLandInterest = Math.min(foreignLoss, foreignLandInterest);
+      const foreignAllowableLoss = foreignLoss - foreignDisallowedLandInterest;
+      foreignRealEstateSourceIncome = foreignAllowableLoss === 0 ? 0 : -foreignAllowableLoss;
+    }
+
+    aggregateForeignSourceIncome += foreignRealEstateSourceIncome;
+  }
+
+  const foreignSourceIncome = calculateTotalNetIncome(
+    aggregateForeignSourceIncome,
+    separateForeignSourceIncome,
+  );
+
+  const netBusinessAndMiscIncomeBeforeBlueFilerDeduction =
+    netBusinessIncomeBeforeBlueFilerDeduction + miscIncome;
+  const netBusinessAndMiscIncome = netBusinessIncome + miscIncome;
+
   const totalBonusIncome = bonusIncome.reduce((sum, b) => sum + b.amount, 0);
   const grossEmploymentIncome = salaryIncome + totalBonusIncome + stockCompensationIncome;
   const nonInvestmentAnnualIncome =
     grossEmploymentIncome +
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction +
+    netRealEstateIncomeBeforeBlueFilerDeduction +
     grossPublicPensionIncome;
   const reportedSeparateBase = calculateReportedSeparateInvestmentIncomeTaxationBase({
     capitalGains: reportedCapitalGains,
@@ -560,7 +818,13 @@ const calculateIncomeBreakdown = (
     grossEmploymentIncome,
     netBusinessAndMiscIncomeBeforeBlueFilerDeduction,
     netBusinessAndMiscIncome,
+    netRealEstateIncomeBeforeBlueFilerDeduction,
+    netRealEstateIncome,
     blueFilerDeduction,
+    realEstateBlueFilerDeduction,
+    businessBlueFilerDeduction,
+    realEstateDisallowedLandDebtInterest,
+    disallowedForeignDepreciationLoss,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -579,6 +843,8 @@ const calculateIncomeBreakdown = (
     aggregateDividends,
     aggregateInterest,
     foreignSourceIncome,
+    aggregateForeignSourceIncome,
+    separateForeignSourceIncome,
     grossForeignPublicPensionIncome,
     creditableForeignTax,
     withheldForeignTax,
@@ -627,7 +893,12 @@ const composeTaxpayerNetIncomeComponents = (
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
 ): NetIncomeComponents => {
-  const { grossEmploymentIncome, netBusinessAndMiscIncome, grossPublicPensionIncome } = breakdown;
+  const {
+    grossEmploymentIncome,
+    netBusinessAndMiscIncome,
+    netRealEstateIncome,
+    grossPublicPensionIncome,
+  } = breakdown;
 
   return composeNetIncomeComponents({
     grossEmploymentIncome,
@@ -639,7 +910,7 @@ const composeTaxpayerNetIncomeComponents = (
     ),
     grossPublicPensionIncome,
     recipientAgeRange: taxpayerAgeRangeBounds(ageRange),
-    otherNetIncome: netBusinessAndMiscIncome,
+    otherNetIncome: netBusinessAndMiscIncome + netRealEstateIncome,
     aggregateDividendIncome: breakdown.aggregateDividends,
     aggregateInterestIncome: breakdown.aggregateInterest,
     separateNetIncome: breakdown.separateBase.netIncome,
@@ -663,6 +934,7 @@ const composeTaxpayerNetIncomeComponents = (
  *                       same deduction
  * @param reportedDividendsTaxation  The election that taxes every reported dividend; the
  *                       default when the caller has none
+ * @param blueFilerDeduction  The return's blue-filer special deduction election
  */
 export const calculateNetIncomeComponents = (
   incomeStreams: IncomeStream[],
@@ -671,9 +943,10 @@ export const calculateNetIncomeComponents = (
   dependents: Dependent[],
   personalCircumstances: PersonalCircumstancesInput,
   reportedDividendsTaxation: ReportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  blueFilerDeduction?: number,
 ): NetIncomeComponents =>
   composeTaxpayerNetIncomeComponents(
-    calculateIncomeBreakdown(incomeStreams, reportedDividendsTaxation),
+    calculateIncomeBreakdown(incomeStreams, reportedDividendsTaxation, blueFilerDeduction),
     year,
     ageRange,
     dependents,
@@ -684,6 +957,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   const incomeBreakdown = calculateIncomeBreakdown(
     inputs.incomeStreams,
     inputs.reportedDividendsTaxation ?? DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+    inputs.blueFilerDeduction,
   );
   const {
     bonusIncome,
@@ -691,7 +965,11 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     grossEmploymentIncome,
     salaryIncome,
     netBusinessAndMiscIncome,
-    blueFilerDeduction,
+    netRealEstateIncome,
+    realEstateBlueFilerDeduction,
+    businessBlueFilerDeduction,
+    realEstateDisallowedLandDebtInterest,
+    disallowedForeignDepreciationLoss,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -1052,14 +1330,20 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     throw new Error('Foreign tax cannot be negative.');
   }
   const foreignTax = creditableForeignTax + manualForeignTax;
-  const foreignSourceIncome =
-    incomeBreakdown.foreignSourceIncome +
-    foreignPensionSourceIncome(
-      grossForeignPublicPensionIncome,
-      inputs.ageRange,
-      incomeBreakdown.foreignSourceIncome,
-      incomeYear,
-    );
+  const otherForeignSourceIncomeForPension = calculateTotalNetIncome(
+    incomeBreakdown.aggregateForeignSourceIncome,
+    incomeBreakdown.separateForeignSourceIncome,
+  );
+  const netForeignPension = foreignPensionSourceIncome(
+    grossForeignPublicPensionIncome,
+    inputs.ageRange,
+    otherForeignSourceIncomeForPension,
+    incomeYear,
+  );
+  const foreignSourceIncome = calculateTotalNetIncome(
+    incomeBreakdown.aggregateForeignSourceIncome + netForeignPension,
+    incomeBreakdown.separateForeignSourceIncome,
+  );
   const statutoryForeignTaxCredit = calculateForeignTaxCredit({
     incomeTax: incomeTaxAfterHomeLoanCredit,
     reconstructionSurtax,
@@ -1193,7 +1477,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   return {
     annualIncome,
     hasEmploymentIncome,
-    blueFilerDeduction,
     nationalIncomeTax,
     residenceTax,
     healthInsurance,
@@ -1213,6 +1496,22 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeAdjustmentDeduction,
     ...(pensionIncomeAdjustmentDeduction > 0 && { pensionIncomeAdjustmentDeduction }),
     netBusinessAndMiscIncome,
+    ...(inputs.incomeStreams.some(s => s.type === 'realEstate') && {
+      realEstate: {
+        netIncome: netRealEstateIncome,
+        blueFilerDeduction: realEstateBlueFilerDeduction,
+        ...(realEstateDisallowedLandDebtInterest > 0 && {
+          disallowedLandDebtInterest: realEstateDisallowedLandDebtInterest,
+        }),
+        ...(disallowedForeignDepreciationLoss > 0 && {
+          disallowedForeignDepreciationLoss,
+        }),
+      },
+    }),
+    ...((inputs.incomeStreams.some(s => s.type === 'business') ||
+      businessBlueFilerDeduction > 0) && {
+      businessBlueFilerDeduction,
+    }),
     ...(grossPublicPensionIncome > 0 && {
       grossPublicPensionIncome,
       netPublicPensionIncome,

@@ -43,7 +43,10 @@ import {
   getCommutingAllowanceAnnualAmount,
   totalAnnualIncomeFromStreams,
 } from '../../../utils/incomeStreams';
-import { calculateTaxes } from '../../../utils/taxCalculations';
+import {
+  calculateRealEstateAndBusinessAllocation,
+  calculateTaxes,
+} from '../../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import { DetailedTooltip } from '../../ui/Tooltips';
 import {
@@ -63,6 +66,13 @@ interface IncomeDetailsModalProps {
   onClose: () => void;
   streams: IncomeStream[];
   onStreamsChange: (streams: IncomeStream[]) => void;
+  /**
+   * The return's blue-filer special deduction election (青色申告特別控除) shared between
+   * business income and real estate income. Changed through {@link onBlueFilerDeductionChange},
+   * without which the control is not shown.
+   */
+  blueFilerDeduction?: number | undefined;
+  onBlueFilerDeductionChange?: ((deduction: number) => void) | undefined;
   /**
    * The election that taxes every reported dividend among {@link streams}
    * ({@link ReportedDividendsTaxation}); the default when omitted. Changed through
@@ -127,6 +137,7 @@ const getStreamCardPrimaryAmount = (stream: IncomeStream): number => {
     case 'salary':
     case 'bonus':
     case 'business':
+    case 'realEstate':
     case 'commutingAllowance':
     case 'stockCompensation':
     case 'miscellaneous':
@@ -147,6 +158,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   onClose,
   streams,
   onStreamsChange,
+  blueFilerDeduction,
+  onBlueFilerDeductionChange,
   reportedDividendsTaxation = DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   onReportedDividendsTaxationChange,
   calculationInputs,
@@ -259,6 +272,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
         return stream.payerDomicile === 'foreign' ? 'Paid outside Japan' : null;
       case 'publicPension':
         return stream.payerDomicile === 'foreign' ? 'Foreign system' : null;
+      case 'realEstate':
+        return stream.location === 'foreign' ? 'Foreign property' : 'Domestic property';
       case 'business':
       case 'miscellaneous':
         return null;
@@ -268,6 +283,206 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       }
     }
   };
+
+  const hasBusinessOrRealEstate = streams.some(
+    s => s.type === 'business' || s.type === 'realEstate',
+  );
+
+  const effectiveBlueFilerDeduction = blueFilerDeduction ?? 0;
+
+  const realEstateAndBusinessAllocation = React.useMemo(
+    () => calculateRealEstateAndBusinessAllocation(streams, effectiveBlueFilerDeduction),
+    [streams, effectiveBlueFilerDeduction],
+  );
+
+  const {
+    netRealEstateIncome,
+    netBusinessIncome,
+    realEstateDisallowedLandDebtInterest,
+    disallowedForeignDepreciationLoss,
+    businessBlueFilerDeduction: businessDeduction,
+    totalBlueFilerDeduction: totalBlueFilerDeductionApplied,
+    perStreamRealEstateBlueFilerDeduction,
+  } = realEstateAndBusinessAllocation;
+
+  // 措法25条の2② sets a single shared blue-filer special deduction pool across business and real
+  // estate income, deducted first from real estate income, then from business income.
+  const blueFilerDeductionControl =
+    hasBusinessOrRealEstate && onBlueFilerDeductionChange ? (
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          columnGap: 2,
+          rowGap: 0.5,
+          px: 0.5,
+        }}
+      >
+        <FormLabel sx={{ ...variantLabelSx, mb: 0 }}>
+          <span id="blue-filer-deduction-label">Blue-filer deduction</span>
+          <DetailedTooltip
+            title="Blue-Filer Requirements"
+            icon={SIMPLE_TOOLTIP_ICON}
+            iconAriaLabel="blue-filer deduction info"
+          >
+            <Typography sx={{ display: 'block', mb: 1 }}>
+              Shared across real estate and business income. The deduction is applied first to real
+              estate income, and any remaining balance is applied to business income. It cannot
+              reduce either income below ¥0 or create a loss.
+            </Typography>
+            <Typography sx={{ display: 'block', mb: 1 }}>
+              Requires prior tax office approval (see{' '}
+              <a
+                href="https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/09.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', textDecoration: 'underline' }}
+              >
+                Blue-Form Approval Application
+              </a>
+              ). For real estate income, the ¥550,000 and ¥650,000 deductions require the activity
+              to be of a business scale (事業的規模: e.g. 5 buildings or 10 apartments). See{' '}
+              <a
+                href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2072.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'inherit', textDecoration: 'underline' }}
+              >
+                No.2072 青色申告特別控除 (NTA)
+              </a>
+              .
+            </Typography>
+
+            <Box
+              component="table"
+              sx={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '0.75rem',
+                '& th': {
+                  textAlign: 'center',
+                  p: 0.5,
+                  fontWeight: 600,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  verticalAlign: 'middle',
+                },
+                '& td': {
+                  textAlign: 'center',
+                  p: 0.5,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  verticalAlign: 'middle',
+                },
+                '& td:first-of-type': {
+                  textAlign: 'left',
+                  fontWeight: 500,
+                  color: 'text.secondary',
+                },
+              }}
+            >
+              <thead>
+                <tr>
+                  <Box component="th" sx={{ width: '30%', textAlign: 'left' }}>
+                    Requirement
+                  </Box>
+                  <Box component="th" sx={{ color: 'primary.main' }}>
+                    ¥650k
+                  </Box>
+                  <Box component="th" sx={{ color: 'text.primary' }}>
+                    ¥550k
+                  </Box>
+                  <Box component="th" sx={{ color: 'text.secondary' }}>
+                    ¥100k
+                  </Box>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Bookkeeping</td>
+                  <Box component="td" sx={{ color: 'success.main' }}>
+                    Double Entry
+                  </Box>
+                  <Box component="td" sx={{ color: 'success.main' }}>
+                    Double Entry
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.secondary' }}>
+                    Simple
+                  </Box>
+                </tr>
+                <tr>
+                  <td>Balance Sheet, Profit &amp; Loss Statement</td>
+                  <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                    ○
+                  </Box>
+                  <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                    ○
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.disabled' }}>
+                    —
+                  </Box>
+                </tr>
+                <tr>
+                  <td>On-time Filing</td>
+                  <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                    ○
+                  </Box>
+                  <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                    ○
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.disabled' }}>
+                    —
+                  </Box>
+                </tr>
+                <tr>
+                  <td>e-Tax or Electronic Books</td>
+                  <Box component="td" sx={{ color: 'success.main', fontSize: '1rem' }}>
+                    ○
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.disabled' }}>
+                    —
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.disabled' }}>
+                    —
+                  </Box>
+                </tr>
+                <tr>
+                  <td>Rental scale (if real estate only)</td>
+                  <Box component="td" sx={{ color: 'text.secondary' }}>
+                    Business scale (5棟10室)
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.secondary' }}>
+                    Business scale (5棟10室)
+                  </Box>
+                  <Box component="td" sx={{ color: 'text.secondary' }}>
+                    Any scale
+                  </Box>
+                </tr>
+              </tbody>
+            </Box>
+          </DetailedTooltip>
+        </FormLabel>
+        <ToggleButtonGroup
+          value={effectiveBlueFilerDeduction}
+          exclusive
+          onChange={(_, newValue: number | null) => {
+            if (newValue !== null) {
+              onBlueFilerDeductionChange(newValue);
+            }
+          }}
+          aria-labelledby="blue-filer-deduction-label"
+          size="small"
+          sx={variantToggleGroupSx}
+        >
+          <ToggleButton value={0}>None</ToggleButton>
+          <ToggleButton value={100_000}>¥100k</ToggleButton>
+          <ToggleButton value={550_000}>¥550k</ToggleButton>
+          <ToggleButton value={650_000}>¥650k</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+    ) : null;
 
   const hasReportedDividend = streams.some(
     s =>
@@ -410,7 +625,37 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     s => s.type === 'withholdingAccount' || s.type === 'capitalGains' || s.type === 'dividends',
   );
 
+  const netBusinessAndRealEstateIncome = netBusinessIncome + netRealEstateIncome;
+  const hasBusinessOrRealEstateAdjustments =
+    totalBlueFilerDeductionApplied > 0 ||
+    disallowedForeignDepreciationLoss > 0 ||
+    realEstateDisallowedLandDebtInterest > 0;
+
+  const businessSubtotalFooter = hasBusinessOrRealEstateAdjustments ? (
+    <>
+      {disallowedForeignDepreciationLoss > 0 && (
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Disallowed Foreign Building Depreciation: +{formatJPY(disallowedForeignDepreciationLoss)}
+        </Typography>
+      )}
+      {realEstateDisallowedLandDebtInterest > 0 && (
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Disallowed Land Debt Interest: +{formatJPY(realEstateDisallowedLandDebtInterest)}
+        </Typography>
+      )}
+      {totalBlueFilerDeductionApplied > 0 && (
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Blue-Filer Deduction (青色申告特別控除): -{formatJPY(totalBlueFilerDeductionApplied)}
+        </Typography>
+      )}
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        Net Business &amp; Real Estate Income: {formatJPY(netBusinessAndRealEstateIncome)}
+      </Typography>
+    </>
+  ) : null;
+
   const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
+    business: businessSubtotalFooter,
     publicPension: publicPensionSubtotalFooter,
     investment: investmentSubtotalFooter,
   };
@@ -519,7 +764,8 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                   )}
                   {(stream.type === 'dividends' ||
                     stream.type === 'interest' ||
-                    stream.type === 'publicPension') &&
+                    stream.type === 'publicPension' ||
+                    stream.type === 'realEstate') &&
                     stream.foreignTax > 0 && (
                       <Typography
                         variant="caption"
@@ -536,14 +782,46 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       (Annual: {formatJPY(annualIncomeStreamAmount(stream))})
                     </Typography>
                   )}
-                  {stream.type === 'business' && !!stream.blueFilerDeduction && (
+                  {stream.type === 'business' && businessDeduction > 0 && (
                     <Typography
                       variant="caption"
                       sx={{ color: 'text.secondary', display: 'block' }}
                     >
-                      (Blue-filer Deduction: -
-                      {formatJPY(Math.min(Math.max(0, stream.amount), stream.blueFilerDeduction))})
+                      (Blue-filer Deduction: -{formatJPY(businessDeduction)})
                     </Typography>
+                  )}
+                  {stream.type === 'realEstate' &&
+                    (perStreamRealEstateBlueFilerDeduction.get(stream.id) ?? 0) > 0 && (
+                      <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary', display: 'block' }}
+                      >
+                        (Blue-filer Deduction: -
+                        {formatJPY(perStreamRealEstateBlueFilerDeduction.get(stream.id)!)})
+                      </Typography>
+                    )}
+                  {stream.type === 'realEstate' && (
+                    <>
+                      {stream.landDebtInterest !== undefined && stream.landDebtInterest > 0 && (
+                        <Typography
+                          variant="caption"
+                          sx={{ color: 'text.secondary', display: 'block' }}
+                        >
+                          Land debt interest: {formatJPY(stream.landDebtInterest)}
+                        </Typography>
+                      )}
+                      {stream.amount < 0 &&
+                        stream.foreignUsedBuildingDepreciation !== undefined &&
+                        stream.foreignUsedBuildingDepreciation > 0 && (
+                          <Typography
+                            variant="caption"
+                            sx={{ color: 'text.secondary', display: 'block' }}
+                          >
+                            Shortened building depreciation:{' '}
+                            {formatJPY(stream.foreignUsedBuildingDepreciation)}
+                          </Typography>
+                        )}
+                    </>
                   )}
                   {stream.type === 'commutingAllowance' && stream.frequency !== 'annual' && (
                     <Typography
@@ -575,6 +853,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
               </CardContent>
             </Card>
           ))}
+          {category.key === 'business' && blueFilerDeductionControl}
           {category.key === 'investment' && reportedDividendsTaxationControl}
           {groupStreams.length > 0 && (
             <Box

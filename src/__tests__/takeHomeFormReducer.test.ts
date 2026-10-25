@@ -31,6 +31,7 @@ const baseState: TakeHomeFormState = {
   incomeMode: 'salary',
   incomeStreams: [{ id: 'default-salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
   savedIncomeStreams: [],
+  blueFilerDeduction: 0,
   reportedDividendsTaxation: DEFAULT_REPORTED_DIVIDENDS_TAXATION,
   longTermCareCategory1ManualEntry: false,
   longTermCareCategory1Premium: 0,

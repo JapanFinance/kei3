@@ -13,8 +13,8 @@ import {
   type TakeHomeInputs,
 } from '../types/tax';
 
-describe('IncomeDetailsModal - Business Income', () => {
-  it('allows adding business income with blue-filer deduction', async () => {
+describe('IncomeDetailsModal - Business & Real Estate Income', () => {
+  it('allows adding business income', async () => {
     const user = userEvent.setup();
     const handleStreamsChange = vi.fn();
     const streams: IncomeStream[] = [];
@@ -28,52 +28,103 @@ describe('IncomeDetailsModal - Business Income', () => {
       />,
     );
 
-    // 1. Add from the Business Income section
-    await user.click(screen.getByRole('button', { name: /add business income/i }));
+    // 1. Add from the Business & Real Estate Income section
+    await user.click(screen.getByRole('button', { name: /add business \/ real estate income/i }));
 
-    // 3. Verify Blue-Filer Deduction input and text appears
-    const deductionSelect = screen.getByRole('combobox', { name: /blue-filer special deduction/i });
-    expect(deductionSelect).toBeInTheDocument();
+    // 2. Select Business from the dropdown menu
+    const menu = screen.getByRole('menu');
+    await user.click(within(menu).getByRole('menuitem', { name: /business/i }));
 
-    // Check for explanation text (NTA No.2072 is visible outside tooltip)
-    expect(screen.getByText(/No.2072/i)).toBeInTheDocument();
-
-    // 3b. Verify Tooltip Trigger (Info Icon)
-    const infoButton = screen.getByRole('button', { name: /requirements/i });
-    expect(infoButton).toBeInTheDocument();
-
-    // 4. Select deduction (e.g., ¥650,000)
-    await user.click(deductionSelect);
-    const deductionListbox = screen.getByRole('listbox');
-    await user.click(within(deductionListbox).getByRole('option', { name: /¥650,000/i }));
-
-    // 5. Enter Amount
-    // SpinnerNumberField renders as a textbox type="text" for formatting
+    // 3. Enter Amount
     const amountInput = screen.getByRole('textbox', { name: /annual income after expenses/i });
     await user.clear(amountInput);
     await user.type(amountInput, '6000000');
 
-    // 6. Save
+    // 4. Save
     await user.click(screen.getByRole('button', { name: /add/i }));
 
-    // 7. Verify callback
+    // 5. Verify callback
     expect(handleStreamsChange).toHaveBeenCalledWith([
       expect.objectContaining({
         type: 'business',
         amount: 6000000,
-        blueFilerDeduction: 650000,
       }),
     ]);
   });
 
-  it('disables Business option if a business stream already exists', async () => {
+  it('allows adding real estate income (domestic property)', async () => {
+    const user = userEvent.setup();
+    const handleStreamsChange = vi.fn();
+    const streams: IncomeStream[] = [];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={handleStreamsChange}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add business \/ real estate income/i }));
+    const menu = screen.getByRole('menu');
+    await user.click(within(menu).getByRole('menuitem', { name: /real estate/i }));
+
+    const amountInput = screen.getByRole('textbox', { name: /annual income after expenses/i });
+    await user.clear(amountInput);
+    await user.type(amountInput, '2400000');
+
+    await user.click(screen.getByRole('button', { name: /add/i }));
+
+    expect(handleStreamsChange).toHaveBeenCalledWith([
+      expect.objectContaining({
+        type: 'realEstate',
+        amount: 2400000,
+        location: 'domestic',
+        foreignTax: 0,
+      }),
+    ]);
+  });
+
+  it('allows selecting blue-filer deduction at category level', async () => {
+    const user = userEvent.setup();
+    const handleBlueFilerChange = vi.fn();
+    const streams: IncomeStream[] = [
+      {
+        id: '1',
+        type: 'business',
+        amount: 5000000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={0}
+        onBlueFilerDeductionChange={handleBlueFilerChange}
+      />,
+    );
+
+    // Verify Blue-Filer Deduction control appears at category level
+    expect(screen.getByLabelText('blue-filer deduction info')).toBeInTheDocument();
+    const btn650k = screen.getByRole('button', { name: '¥650k' });
+    expect(btn650k).toBeInTheDocument();
+
+    await user.click(btn650k);
+    expect(handleBlueFilerChange).toHaveBeenCalledWith(650000);
+  });
+
+  it('disables Business option if a business stream already exists, but allows Real Estate', async () => {
+    const user = userEvent.setup();
     const handleStreamsChange = vi.fn();
     const streams: IncomeStream[] = [
       {
         id: '1',
         type: 'business',
         amount: 3000000,
-        blueFilerDeduction: 100000,
       },
     ];
 
@@ -86,19 +137,108 @@ describe('IncomeDetailsModal - Business Income', () => {
       />,
     );
 
-    // The Business Income section has its one entry, so it offers no add button
-    expect(screen.queryByRole('button', { name: /add business income/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add employment income/i })).toBeInTheDocument();
+    // The add button should still be present because Real Estate has not been added
+    await user.click(screen.getByRole('button', { name: /add business \/ real estate income/i }));
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: /business/i })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(within(menu).getByRole('menuitem', { name: /real estate/i })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
-  it('displays Blue-filer Deduction in the list', () => {
-    // Render with an existing business stream with deduction
+  it('keeps the Add button available to add further Real Estate streams when both Business and Real Estate streams exist', async () => {
+    const user = userEvent.setup();
+    const streams: IncomeStream[] = [
+      { id: '1', type: 'business', amount: 3000000 },
+      { id: '2', type: 'realEstate', amount: 1500000, location: 'domestic', foreignTax: 0 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    const addButton = screen.getByRole('button', { name: /add business \/ real estate income/i });
+    expect(addButton).toBeInTheDocument();
+    await user.click(addButton);
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: /business/i })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(within(menu).getByRole('menuitem', { name: /real estate/i })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('allocates blue-filer deduction pro-rata across multiple positive real estate streams', () => {
+    const streams: IncomeStream[] = [
+      { id: '1', type: 'realEstate', amount: 1000000, location: 'domestic', foreignTax: 0 },
+      { id: '2', type: 'realEstate', amount: 3000000, location: 'foreign', foreignTax: 50000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={650000}
+      />,
+    );
+
+    // 1M / 4M * 650k = 162.5k -> 162,500
+    expect(screen.getByText(/Blue-filer Deduction: -¥162,500/i)).toBeInTheDocument();
+    // 3M / 4M * 650k = 487.5k -> 487,500
+    expect(screen.getByText(/Blue-filer Deduction: -¥487,500/i)).toBeInTheDocument();
+    // Category footer shows total
+    expect(
+      screen.getByText(/Blue-Filer Deduction \(青色申告特別控除\): -¥650,000/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Net Business & Real Estate Income: ¥3,350,000/i)).toBeInTheDocument();
+  });
+
+  it('displays land debt interest and shortened building depreciation on loss-making real estate stream cards', () => {
+    const streams: IncomeStream[] = [
+      {
+        id: 're-loss',
+        type: 'realEstate',
+        amount: -800000,
+        location: 'foreign',
+        foreignTax: 0,
+        landDebtInterest: 200000,
+        foreignUsedBuildingDepreciation: 300000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/Land debt interest: ¥200,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Shortened building depreciation: ¥300,000/i)).toBeInTheDocument();
+  });
+
+  it('displays Blue-filer Deduction in the list and subtotal footer', () => {
     const streams: IncomeStream[] = [
       {
         id: '1',
         type: 'business',
         amount: 5000000,
-        blueFilerDeduction: 650000,
       },
     ];
 
@@ -108,20 +248,57 @@ describe('IncomeDetailsModal - Business Income', () => {
         onClose={() => {}}
         streams={streams}
         onStreamsChange={() => {}}
+        blueFilerDeduction={650000}
       />,
     );
 
     expect(screen.getByText(/Blue-filer Deduction: -¥650,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Net Business & Real Estate Income: ¥4,350,000/i)).toBeInTheDocument();
+  });
+
+  it('allocates blue-filer deduction to real estate first, then business per statutory priority', () => {
+    const streams: IncomeStream[] = [
+      {
+        id: 're-1',
+        type: 'realEstate',
+        amount: 200000,
+        location: 'domestic',
+        foreignTax: 0,
+      },
+      {
+        id: 'b-1',
+        type: 'business',
+        amount: 1000000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={650000}
+      />,
+    );
+
+    // Real estate gets 200k (capped at amount)
+    expect(screen.getByText(/Blue-filer Deduction: -¥200,000/i)).toBeInTheDocument();
+    // Business gets remaining 450k
+    expect(screen.getByText(/Blue-filer Deduction: -¥450,000/i)).toBeInTheDocument();
+    // Combined subtotal footer shows total 650k deduction and net 550k
+    expect(
+      screen.getByText(/Blue-Filer Deduction \(青色申告特別控除\): -¥650,000/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Net Business & Real Estate Income: ¥550,000/i)).toBeInTheDocument();
   });
 
   it('displays capped Blue-filer Deduction when income is less than deduction', () => {
-    // Income (300k) < Deduction (650k)
     const streams: IncomeStream[] = [
       {
         id: '1',
         type: 'business',
         amount: 300000,
-        blueFilerDeduction: 650000,
       },
     ];
 
@@ -131,11 +308,13 @@ describe('IncomeDetailsModal - Business Income', () => {
         onClose={() => {}}
         streams={streams}
         onStreamsChange={() => {}}
+        blueFilerDeduction={650000}
       />,
     );
 
     // Should display capped amount (-300,000)
     expect(screen.getByText(/Blue-filer Deduction: -¥300,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Net Business & Real Estate Income: ¥0/i)).toBeInTheDocument();
   });
 
   it('does not display Blue-filer Deduction or stray 0 when it is 0/None', () => {
@@ -143,8 +322,7 @@ describe('IncomeDetailsModal - Business Income', () => {
       {
         id: '1',
         type: 'business',
-        amount: 1111111, // Use an amount with no zeros
-        blueFilerDeduction: 0,
+        amount: 1111111,
       },
     ];
 
@@ -154,6 +332,7 @@ describe('IncomeDetailsModal - Business Income', () => {
         onClose={() => {}}
         streams={streams}
         onStreamsChange={() => {}}
+        blueFilerDeduction={0}
       />,
     );
 
@@ -162,6 +341,88 @@ describe('IncomeDetailsModal - Business Income', () => {
 
     // Should NOT display a stray "0"
     expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('T12: displays blue-filer deduction on domestic card when foreign loss is disallowed under 措法41条の4の3', () => {
+    // Foreign property: -1,000,000 with 1,000,000 disallowed depreciation -> effective 0
+    // Domestic property: +800,000
+    // Combined before blue-filer: +800,000
+    // blueFilerDeduction: 650,000
+    // Domestic property should show Blue-filer Deduction: -¥650,000
+    const streams: IncomeStream[] = [
+      {
+        id: 're-dom',
+        type: 'realEstate',
+        amount: 800_000,
+        location: 'domestic',
+        foreignTax: 0,
+      },
+      {
+        id: 're-for',
+        type: 'realEstate',
+        amount: -1_000_000,
+        location: 'foreign',
+        foreignTax: 0,
+        foreignUsedBuildingDepreciation: 1_000_000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={650_000}
+      />,
+    );
+
+    expect(screen.getByText(/Blue-filer Deduction: -¥650,000/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Disallowed Foreign Building Depreciation: \+¥1,000,000/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Blue-Filer Deduction \(青色申告特別控除\): -¥650,000/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Net Business & Real Estate Income: ¥150,000/i)).toBeInTheDocument();
+  });
+
+  it('T13: displays pro-rata blue-filer deduction across multiple positive real estate streams', () => {
+    // Property 1: +600,000
+    // Property 2: +400,000
+    // Total positive = 1,000,000
+    // blueFilerDeduction: 650,000
+    // Property 1: round(650k * 600k / 1M) = 390,000
+    // Property 2: 650k - 390k = 260,000
+    const streams: IncomeStream[] = [
+      {
+        id: 're-1',
+        type: 'realEstate',
+        amount: 600_000,
+        location: 'domestic',
+        foreignTax: 0,
+      },
+      {
+        id: 're-2',
+        type: 'realEstate',
+        amount: 400_000,
+        location: 'domestic',
+        foreignTax: 0,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={650_000}
+      />,
+    );
+
+    expect(screen.getByText(/Blue-filer Deduction: -¥390,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Blue-filer Deduction: -¥260,000/i)).toBeInTheDocument();
   });
 });
 
@@ -1388,7 +1649,7 @@ describe('IncomeDetailsModal - Adding from each section', () => {
 
     for (const heading of [
       'Employment Income (給与所得)',
-      'Business Income (事業所得)',
+      'Business & Real Estate Income (事業・不動産所得)',
       'Miscellaneous Income (雑所得)',
       'Public Pension Income (公的年金等)',
     ]) {
@@ -1396,7 +1657,7 @@ describe('IncomeDetailsModal - Adding from each section', () => {
     }
     for (const label of [
       /add employment income/i,
-      /add business income/i,
+      /add business \/ real estate income/i,
       /add miscellaneous income/i,
       /add public pension/i,
     ]) {

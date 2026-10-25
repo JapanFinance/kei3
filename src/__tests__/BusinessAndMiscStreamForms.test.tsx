@@ -1,7 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -44,7 +44,6 @@ describe('BusinessStreamForm', () => {
       expect.objectContaining({
         type: 'business',
         amount: -1_500_000,
-        blueFilerDeduction: 0,
       }),
     );
   });
@@ -57,7 +56,6 @@ describe('BusinessStreamForm', () => {
           id: 'b-loss',
           type: 'business',
           amount: -500_000,
-          blueFilerDeduction: 650_000,
         }}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
@@ -76,31 +74,6 @@ describe('BusinessStreamForm', () => {
         id: 'b-loss',
         type: 'business',
         amount: -500_000,
-        blueFilerDeduction: 650_000,
-      }),
-    );
-  });
-
-  it('allows selecting blue-filer special deduction', async () => {
-    const user = userEvent.setup();
-    render(<BusinessStreamForm onSave={mockOnSave} onCancel={mockOnCancel} />);
-
-    const deductionSelect = screen.getByRole('combobox', { name: /blue-filer special deduction/i });
-    await user.click(deductionSelect);
-    const listbox = screen.getByRole('listbox');
-    await user.click(within(listbox).getByRole('option', { name: /¥650,000/i }));
-
-    const amountInput = screen.getByRole('textbox', { name: /annual income after expenses/i });
-    await user.clear(amountInput);
-    await user.type(amountInput, '3000000');
-
-    await user.click(screen.getByRole('button', { name: /add/i }));
-
-    expect(mockOnSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'business',
-        amount: 3_000_000,
-        blueFilerDeduction: 650_000,
       }),
     );
   });

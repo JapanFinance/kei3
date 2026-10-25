@@ -413,6 +413,33 @@ describe('generateChartData with foreign tax', () => {
     // 1,000,000 carries 50,000 of foreign tax, 2,000,000 the 100,000 entered.
     expect(incomeTax.slice(0, 2).map(p => p.y)).toEqual([50_000, 100_000]);
   });
+
+  it('T10: reflects blueFilerDeduction for real estate income across the chart sweep', () => {
+    const baseCtx: ChartCalculationContext = {
+      ...context,
+      incomeStreams: [
+        {
+          id: 're',
+          type: 'realEstate',
+          amount: 5_000_000,
+          location: 'domestic',
+          foreignTax: 0,
+        },
+      ],
+      isEmploymentIncome: false,
+    };
+    const withoutDeduction = generateChartData(range, { ...baseCtx, blueFilerDeduction: 0 });
+    const withDeduction = generateChartData(range, { ...baseCtx, blueFilerDeduction: 650_000 });
+
+    const takeHomeWithout = pointsOf(
+      withoutDeduction.datasets.find(d => d.label === 'Take-Home Pay')!,
+    );
+    const takeHomeWith = pointsOf(withDeduction.datasets.find(d => d.label === 'Take-Home Pay')!);
+
+    const ptWithout = takeHomeWithout.find(p => p.x === 5_000_000);
+    const ptWith = takeHomeWith.find(p => p.x === 5_000_000);
+    expect(ptWith!.y).toBeGreaterThan(ptWithout!.y);
+  });
 });
 
 describe('getChartOptions animation', () => {
