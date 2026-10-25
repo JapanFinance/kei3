@@ -296,6 +296,10 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
   );
 
   const {
+    netRealEstateIncome,
+    netBusinessIncome,
+    realEstateDisallowedLandDebtInterest,
+    disallowedForeignDepreciationLoss,
     businessBlueFilerDeduction: businessDeduction,
     totalBlueFilerDeduction: totalBlueFilerDeductionApplied,
     perStreamRealEstateBlueFilerDeduction,
@@ -621,18 +625,34 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
     s => s.type === 'withholdingAccount' || s.type === 'capitalGains' || s.type === 'dividends',
   );
 
-  const businessSubtotalFooter =
-    totalBlueFilerDeductionApplied > 0 ? (
-      <>
+  const netBusinessAndRealEstateIncome = netBusinessIncome + netRealEstateIncome;
+  const hasBusinessOrRealEstateAdjustments =
+    totalBlueFilerDeductionApplied > 0 ||
+    disallowedForeignDepreciationLoss > 0 ||
+    realEstateDisallowedLandDebtInterest > 0;
+
+  const businessSubtotalFooter = hasBusinessOrRealEstateAdjustments ? (
+    <>
+      {disallowedForeignDepreciationLoss > 0 && (
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Disallowed Foreign Building Depreciation: +{formatJPY(disallowedForeignDepreciationLoss)}
+        </Typography>
+      )}
+      {realEstateDisallowedLandDebtInterest > 0 && (
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Disallowed Land Debt Interest: +{formatJPY(realEstateDisallowedLandDebtInterest)}
+        </Typography>
+      )}
+      {totalBlueFilerDeductionApplied > 0 && (
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           Blue-Filer Deduction (青色申告特別控除): -{formatJPY(totalBlueFilerDeductionApplied)}
         </Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          Net Business &amp; Real Estate Income:{' '}
-          {formatJPY(subtotals.business - totalBlueFilerDeductionApplied)}
-        </Typography>
-      </>
-    ) : null;
+      )}
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        Net Business &amp; Real Estate Income: {formatJPY(netBusinessAndRealEstateIncome)}
+      </Typography>
+    </>
+  ) : null;
 
   const subtotalFooters: Partial<Record<IncomeCategoryKey, React.ReactNode>> = {
     business: businessSubtotalFooter,

@@ -378,6 +378,13 @@ describe('IncomeDetailsModal - Business & Real Estate Income', () => {
     );
 
     expect(screen.getByText(/Blue-filer Deduction: -¥650,000/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Disallowed Foreign Building Depreciation: \+¥1,000,000/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Blue-Filer Deduction \(青色申告特別控除\): -¥650,000/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Net Business & Real Estate Income: ¥150,000/i)).toBeInTheDocument();
   });
 
   it('T13: displays pro-rata blue-filer deduction across multiple positive real estate streams', () => {
