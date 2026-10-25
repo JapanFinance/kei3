@@ -16,16 +16,10 @@ interface NetRealEstateIncomeTooltipProps {
   blueFilerDeduction: number;
   /** Net real estate income (allowable loss if negative) (yen). */
   netRealEstateIncome: number;
-  /** Pre-calculated disallowed land debt interest under 措法41条の4 (yen). */
+  /** Disallowed land debt interest under 措法41条の4 (yen). */
   disallowedLandDebtInterest?: number | undefined;
-  /** Pre-calculated disallowed foreign used building depreciation loss under 措法41条の4の3 (yen). */
-  disallowedForeignBuildingDepreciation?: number | undefined;
+  /** Disallowed foreign used building depreciation loss under 措法41条の4の3 (yen). */
   disallowedForeignDepreciationLoss?: number | undefined;
-  /** Interest on debt used to acquire land (yen). Fallback when disallowedLandDebtInterest is omitted. */
-  landDebtInterest?: number | undefined;
-  /** Depreciation expense from foreign used building (yen). Fallback when disallowedForeignDepreciationLoss is omitted. */
-  foreignUsedBuildingDepreciation?: number | undefined;
-  foreignUsedBuildingDisallowedLoss?: number | undefined;
 }
 
 /**
@@ -37,26 +31,11 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
   grossRealEstateIncome,
   blueFilerDeduction,
   netRealEstateIncome,
-  disallowedLandDebtInterest,
-  disallowedForeignBuildingDepreciation,
-  disallowedForeignDepreciationLoss,
-  landDebtInterest,
-  foreignUsedBuildingDepreciation,
-  foreignUsedBuildingDisallowedLoss,
+  disallowedLandDebtInterest = 0,
+  disallowedForeignDepreciationLoss = 0,
 }) => {
-  const disallowedLand =
-    disallowedLandDebtInterest ??
-    Math.min(Math.max(0, -grossRealEstateIncome), Math.max(0, landDebtInterest ?? 0));
-  const effectiveDisallowedForeignLoss =
-    disallowedForeignDepreciationLoss ?? disallowedForeignBuildingDepreciation;
-  const effectiveForeignDepreciation =
-    foreignUsedBuildingDepreciation ?? foreignUsedBuildingDisallowedLoss;
-  const disallowedForeign =
-    effectiveDisallowedForeignLoss ??
-    Math.min(
-      Math.max(0, -grossRealEstateIncome) - disallowedLand,
-      Math.max(0, effectiveForeignDepreciation ?? 0),
-    );
+  const disallowedLand = disallowedLandDebtInterest;
+  const disallowedForeign = disallowedForeignDepreciationLoss;
 
   return (
     <DetailedTooltip title="Real Estate Income" iconAriaLabel="real estate income info">

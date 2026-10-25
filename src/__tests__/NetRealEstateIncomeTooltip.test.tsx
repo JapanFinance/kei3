@@ -42,7 +42,7 @@ describe('NetRealEstateIncomeTooltip', () => {
         grossRealEstateIncome={-1_000_000}
         blueFilerDeduction={0}
         netRealEstateIncome={-600_000}
-        landDebtInterest={400_000}
+        disallowedLandDebtInterest={400_000}
       />,
     );
 
@@ -61,8 +61,8 @@ describe('NetRealEstateIncomeTooltip', () => {
         grossRealEstateIncome={-2_000_000}
         blueFilerDeduction={0}
         netRealEstateIncome={-1_000_000}
-        landDebtInterest={300_000}
-        foreignUsedBuildingDisallowedLoss={700_000}
+        disallowedLandDebtInterest={300_000}
+        disallowedForeignDepreciationLoss={700_000}
       />,
     );
 

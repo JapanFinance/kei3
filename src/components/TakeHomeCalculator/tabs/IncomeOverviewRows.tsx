@@ -122,7 +122,7 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
                   blueFilerDeduction={results.realEstate.blueFilerDeduction}
                   netRealEstateIncome={results.realEstate.netIncome}
                   disallowedLandDebtInterest={results.realEstate.disallowedLandDebtInterest}
-                  disallowedForeignBuildingDepreciation={
+                  disallowedForeignDepreciationLoss={
                     results.realEstate.disallowedForeignDepreciationLoss
                   }
                 />
