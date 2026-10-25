@@ -39,8 +39,7 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
   const realEstateStreams = inputs.incomeStreams.filter(
     (s): s is RealEstateIncomeStream => s.type === 'realEstate',
   );
-  const hasRealEstateIncome =
-    realEstateStreams.length > 0 && results.netRealEstateIncome !== undefined;
+  const hasRealEstateIncome = results.realEstate !== undefined;
   const grossRealEstateIncome = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
 
   const businessBlueFilerDeduction =
@@ -106,32 +105,31 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
         />
       )}
 
-      {hasRealEstateIncome && results.netRealEstateIncome !== undefined && (
+      {results.realEstate && (
         <ResultRow
           label={
             <span>
               Net Real Estate Income
-              {((results.realEstateBlueFilerDeduction !== undefined &&
-                results.realEstateBlueFilerDeduction > 0) ||
-                results.netRealEstateIncome < 0 ||
+              {(results.realEstate.blueFilerDeduction > 0 ||
+                results.realEstate.netIncome < 0 ||
                 grossRealEstateIncome < 0 ||
-                (results.realEstateDisallowedForeignDepreciation !== undefined &&
-                  results.realEstateDisallowedForeignDepreciation > 0) ||
-                (results.realEstateDisallowedLandDebtInterest !== undefined &&
-                  results.realEstateDisallowedLandDebtInterest > 0)) && (
+                (results.realEstate.disallowedForeignDepreciationLoss !== undefined &&
+                  results.realEstate.disallowedForeignDepreciationLoss > 0) ||
+                (results.realEstate.disallowedLandDebtInterest !== undefined &&
+                  results.realEstate.disallowedLandDebtInterest > 0)) && (
                 <NetRealEstateIncomeTooltip
                   grossRealEstateIncome={grossRealEstateIncome}
-                  blueFilerDeduction={results.realEstateBlueFilerDeduction ?? 0}
-                  netRealEstateIncome={results.netRealEstateIncome}
-                  disallowedLandDebtInterest={results.realEstateDisallowedLandDebtInterest}
+                  blueFilerDeduction={results.realEstate.blueFilerDeduction}
+                  netRealEstateIncome={results.realEstate.netIncome}
+                  disallowedLandDebtInterest={results.realEstate.disallowedLandDebtInterest}
                   disallowedForeignBuildingDepreciation={
-                    results.realEstateDisallowedForeignDepreciation
+                    results.realEstate.disallowedForeignDepreciationLoss
                   }
                 />
               )}
             </span>
           }
-          value={formatJPY(results.netRealEstateIncome)}
+          value={formatJPY(results.realEstate.netIncome)}
           type="default"
         />
       )}

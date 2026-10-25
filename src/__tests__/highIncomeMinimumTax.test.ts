@@ -541,6 +541,6 @@ describe('calculateTaxes End-to-End Integration with High Income Minimum Tax', (
     expect(results.highIncomeMinimumTax).toBeDefined();
     expect(results.highIncomeMinimumTax?.baselineIncome).toBe(1_109_350_000);
     expect(results.blueFilerDeduction).toBe(650_000);
-    expect(results.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(results.realEstate?.blueFilerDeduction).toBe(650_000);
   });
 });

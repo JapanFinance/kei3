@@ -37,8 +37,9 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
   const [landDebtInterest, setLandDebtInterest] = useState<number>(
     initialData?.landDebtInterest ?? 0,
   );
-  const [foreignUsedBuildingDisallowedLoss, setForeignUsedBuildingDisallowedLoss] =
-    useState<number>(initialData?.foreignUsedBuildingDisallowedLoss ?? 0);
+  const [foreignUsedBuildingDepreciation, setForeignUsedBuildingDepreciation] = useState<number>(
+    initialData?.foreignUsedBuildingDepreciation ?? 0,
+  );
 
   const draftStream: RealEstateIncomeStream = {
     id: createStreamId(initialData),
@@ -49,8 +50,8 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
     ...(landDebtInterest > 0 && { landDebtInterest }),
     ...(amount < 0 &&
       location === 'foreign' &&
-      foreignUsedBuildingDisallowedLoss > 0 && {
-        foreignUsedBuildingDisallowedLoss,
+      foreignUsedBuildingDepreciation > 0 && {
+        foreignUsedBuildingDepreciation,
       }),
   };
 
@@ -81,7 +82,7 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
                 setLocation(newLocation);
                 if (newLocation === 'domestic') {
                   setForeignTax(0);
-                  setForeignUsedBuildingDisallowedLoss(0);
+                  setForeignUsedBuildingDepreciation(0);
                 }
               }}
             >
@@ -123,8 +124,8 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
             {amount < 0 && location === 'foreign' && (
               <SpinnerNumberField
                 label="Shortened Used Building Depreciation"
-                value={foreignUsedBuildingDisallowedLoss}
-                onChange={setForeignUsedBuildingDisallowedLoss}
+                value={foreignUsedBuildingDepreciation}
+                onChange={setForeignUsedBuildingDepreciation}
                 helperText="Depreciation calculated using shortened useful life cannot offset other income."
               />
             )}

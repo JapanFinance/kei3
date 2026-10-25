@@ -1417,8 +1417,8 @@ describe('Real Estate Income (不動産所得)', () => {
       incomeYear: 2026,
     });
 
-    expect(result.netRealEstateIncome).toBe(2_350_000);
-    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.realEstate?.netIncome).toBe(2_350_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
     expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.totalNetIncome).toBe(2_350_000);
   });
@@ -1468,8 +1468,8 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(0);
-    expect(result.realEstateBlueFilerDeduction).toBe(300_000);
+    expect(result.realEstate?.netIncome).toBe(0);
+    expect(result.realEstate?.blueFilerDeduction).toBe(300_000);
     expect(result.businessBlueFilerDeduction).toBe(350_000);
     expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.netBusinessAndMiscIncome).toBe(650_000);
@@ -1516,7 +1516,7 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(-1_000_000);
+    expect(result.realEstate?.netIncome).toBe(-1_000_000);
     expect(result.totalNetIncome).toBe(2_560_000);
     expect(result.blueFilerDeduction).toBe(0);
   });
@@ -1550,7 +1550,7 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(-600_000);
+    expect(result.realEstate?.netIncome).toBe(-600_000);
     expect(result.totalNetIncome).toBe(2_960_000);
   });
 
@@ -1581,7 +1581,7 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(0);
+    expect(result.realEstate?.netIncome).toBe(0);
     expect(result.totalNetIncome).toBe(3_560_000);
   });
 
@@ -1601,7 +1601,7 @@ describe('Real Estate Income (不動産所得)', () => {
         location: 'foreign' as const,
         foreignTax: 0,
         landDebtInterest: 300_000,
-        foreignUsedBuildingDisallowedLoss: 700_000,
+        foreignUsedBuildingDepreciation: 700_000,
       },
     ];
     const result = calculateTaxes({
@@ -1616,7 +1616,7 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(-1_000_000);
+    expect(result.realEstate?.netIncome).toBe(-1_000_000);
     expect(result.totalNetIncome).toBe(2_560_000);
   });
 
@@ -1646,7 +1646,7 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(2_000_000);
+    expect(result.realEstate?.netIncome).toBe(2_000_000);
     expect(result.totalNetIncome).toBe(5_560_000);
     expect(result.foreignTaxPaid).toBe(200_000);
     expect(result.foreignTaxCredit).toBeDefined();
@@ -1685,8 +1685,8 @@ describe('Real Estate Income (不動産所得)', () => {
       incomeYear: 2026,
     });
     // Total gross = 5M. Blue filer = 650k. Net real estate = 4.35M.
-    expect(result.netRealEstateIncome).toBe(4_350_000);
-    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.realEstate?.netIncome).toBe(4_350_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
     expect(result.foreignTaxPaid).toBe(100_000);
     // Foreign blue-filer pro-rata: 650k * (2M / 5M) = 260k. Foreign source income: 2M - 260k = 1.74M.
     expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(1_740_000);
@@ -1707,7 +1707,7 @@ describe('Real Estate Income (不動産所得)', () => {
         amount: -1_000_000,
         location: 'foreign' as const,
         foreignTax: 0,
-        foreignUsedBuildingDisallowedLoss: 600_000,
+        foreignUsedBuildingDepreciation: 600_000,
       },
     ];
     const result = calculateTaxes({
@@ -1727,9 +1727,9 @@ describe('Real Estate Income (不動産所得)', () => {
     // Remaining allowable foreign loss = 400k.
     // Net before blue-filer = 2M - 400k = 1.6M.
     // Blue-filer deduction = 650k. Net real estate = 1.6M - 650k = 950k.
-    expect(result.netRealEstateIncome).toBe(950_000);
-    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
-    expect(result.realEstateDisallowedForeignDepreciation).toBe(600_000);
+    expect(result.realEstate?.netIncome).toBe(950_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
+    expect(result.realEstate?.disallowedForeignDepreciationLoss).toBe(600_000);
   });
 
   it('permits internal netting between domestic profit and loss with land debt interest (措法41条の4)', () => {
@@ -1766,9 +1766,9 @@ describe('Real Estate Income (不動産所得)', () => {
     // Overall real estate is 3M - 1M = 2M (positive).
     // Land debt interest restriction (Art. 41-4) only applies when overall real estate income is negative.
     // So 1M loss is fully absorbed internally; blue-filer deduction = 650k; net = 2M - 650k = 1.35M.
-    expect(result.netRealEstateIncome).toBe(1_350_000);
-    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
-    expect(result.realEstateDisallowedLandDebtInterest).toBeUndefined();
+    expect(result.realEstate?.netIncome).toBe(1_350_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
+    expect(result.realEstate?.disallowedLandDebtInterest).toBeUndefined();
   });
 
   it('nets multiple foreign properties internally before capping Art. 41-4-3 disallowed depreciation', () => {
@@ -1786,7 +1786,7 @@ describe('Real Estate Income (不動産所得)', () => {
         amount: -1_500_000,
         location: 'foreign' as const,
         foreignTax: 0,
-        foreignUsedBuildingDisallowedLoss: 800_000,
+        foreignUsedBuildingDepreciation: 800_000,
       },
     ];
     const result = calculateTaxes({
@@ -1805,8 +1805,8 @@ describe('Real Estate Income (不動産所得)', () => {
     // Foreign gross = 1M - 1.5M = -500k.
     // Art. 41-4-3 disallowed depreciation is capped at the net foreign loss: min(500k, 800k) = 500k.
     // Allowable foreign loss = 500k - 500k = 0. Net real estate income = 0.
-    expect(result.netRealEstateIncome).toBe(0);
-    expect(result.realEstateDisallowedForeignDepreciation).toBe(500_000);
+    expect(result.realEstate?.netIncome).toBe(0);
+    expect(result.realEstate?.disallowedForeignDepreciationLoss).toBe(500_000);
   });
 
   it('disallows land debt interest across multiple loss-making properties when overall real estate is negative', () => {
@@ -1843,8 +1843,8 @@ describe('Real Estate Income (不動産所得)', () => {
     });
     // Overall loss = 1M. Total land debt interest = 200k + 100k = 300k.
     // Disallowed = min(1M, 300k) = 300k. Allowable loss = 1M - 300k = 700k.
-    expect(result.netRealEstateIncome).toBe(-700_000);
-    expect(result.realEstateDisallowedLandDebtInterest).toBe(300_000);
+    expect(result.realEstate?.netIncome).toBe(-700_000);
+    expect(result.realEstate?.disallowedLandDebtInterest).toBe(300_000);
   });
 
   it('handles real estate loss with business profit and blue-filer deduction', () => {
@@ -1892,8 +1892,8 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(-400_000);
-    expect(result.realEstateBlueFilerDeduction).toBe(0);
+    expect(result.realEstate?.netIncome).toBe(-400_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(0);
     expect(result.businessBlueFilerDeduction).toBe(650_000);
     expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.netBusinessAndMiscIncome).toBe(350_000);
@@ -1945,8 +1945,8 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(150_000);
-    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.realEstate?.netIncome).toBe(150_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
     expect(result.businessBlueFilerDeduction).toBe(0);
     expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.netBusinessAndMiscIncome).toBe(-300_000);
@@ -1989,8 +1989,8 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(850_000);
-    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.realEstate?.netIncome).toBe(850_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
     expect(result.foreignTaxPaid).toBe(150_000);
     // Under 所令221条の6①, domestic real estate loss does not reduce foreign-source income (Finding 4).
     // Foreign real estate: 2,000,000 - 650,000 blue filer = 1,350,000 foreign-source income.
@@ -2014,7 +2014,7 @@ describe('Real Estate Income (不動産所得)', () => {
         amount: -800_000,
         location: 'foreign' as const,
         foreignTax: 0,
-        foreignUsedBuildingDisallowedLoss: 600_000,
+        foreignUsedBuildingDepreciation: 600_000,
         landDebtInterest: 400_000,
       },
     ];
@@ -2030,9 +2030,9 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(0);
-    expect(result.realEstateDisallowedForeignDepreciation).toBe(600_000);
-    expect(result.realEstateDisallowedLandDebtInterest).toBe(200_000);
+    expect(result.realEstate?.netIncome).toBe(0);
+    expect(result.realEstate?.disallowedForeignDepreciationLoss).toBe(600_000);
+    expect(result.realEstate?.disallowedLandDebtInterest).toBe(200_000);
   });
 
   it('does not allow real estate loss to offset separate stock investment income (措法37条の10)', () => {
@@ -2080,7 +2080,7 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.netRealEstateIncome).toBe(-1_000_000);
+    expect(result.realEstate?.netIncome).toBe(-1_000_000);
     expect(result.totalNetIncome).toBe(2_000_000);
     // Separate tax is still assessed on 2M capital gains (aggregate loss does not net against separate capital gains).
     // Note: Deductions from income (basic deduction + NHI) spill over to separate capital gains (地方税法附則第33条の2第5項).
@@ -2170,8 +2170,8 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.realEstateDisallowedLandDebtInterest).toBe(500_000);
-    expect(result.netRealEstateIncome).toBe(-300_000);
+    expect(result.realEstate?.disallowedLandDebtInterest).toBe(500_000);
+    expect(result.realEstate?.netIncome).toBe(-300_000);
   });
 
   it('T2: caps foreign shortened used building depreciation per building under 措法41条の4の3 (措令26条の6の3)', () => {
@@ -2186,7 +2186,7 @@ describe('Real Estate Income (不動産所得)', () => {
         amount: -300_000,
         location: 'foreign' as const,
         foreignTax: 0,
-        foreignUsedBuildingDisallowedLoss: 800_000,
+        foreignUsedBuildingDepreciation: 800_000,
       },
       {
         id: 're-for-2',
@@ -2208,8 +2208,8 @@ describe('Real Estate Income (不動産所得)', () => {
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.realEstateDisallowedForeignDepreciation).toBe(300_000);
-    expect(result.netRealEstateIncome).toBe(-600_000);
+    expect(result.realEstate?.disallowedForeignDepreciationLoss).toBe(300_000);
+    expect(result.realEstate?.netIncome).toBe(-600_000);
   });
 
   it('T3: domestic real estate loss does not reduce foreign-source income for Foreign Tax Credit (所令221条の6①)', () => {
@@ -6347,7 +6347,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
             foreignTax: isForeign && amount > 0 ? randInt(0, Math.floor(amount * 0.2)) : 0,
             ...(amount < 0 && { landDebtInterest: randInt(0, 500_000) }),
             ...(isForeign &&
-              amount < 0 && { foreignUsedBuildingDisallowedLoss: randInt(0, 500_000) }),
+              amount < 0 && { foreignUsedBuildingDepreciation: randInt(0, 500_000) }),
           });
         }
         if (rand() < 0.35) {

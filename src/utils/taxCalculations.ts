@@ -301,7 +301,7 @@ interface IncomeBreakdown {
   realEstateBlueFilerDeduction: number;
   businessBlueFilerDeduction: number;
   realEstateDisallowedLandDebtInterest: number;
-  realEstateDisallowedForeignDepreciation: number;
+  disallowedForeignDepreciationLoss: number;
   /**
    * Annual income excluding investment income (employment + business/misc + public pension).
    * Investment income is gathered separately in {@link withheldBase}, {@link separateBase},
@@ -369,7 +369,7 @@ interface IncomeBreakdown {
 export interface RealEstateAndBusinessAllocation {
   grossRealEstateIncome: number;
   realEstateDisallowedLandDebtInterest: number;
-  realEstateDisallowedForeignDepreciation: number;
+  disallowedForeignDepreciationLoss: number;
   combinedRealEstateAmount: number;
   netRealEstateBeforeDeduction: number;
   effectiveForeignRealEstateAmount: number;
@@ -403,7 +403,7 @@ export const calculateRealEstateAndBusinessAllocation = (
   );
 
   let realEstateDisallowedLandDebtInterest = 0;
-  let realEstateDisallowedForeignDepreciation = 0;
+  let disallowedForeignDepreciationLoss = 0;
   let domesticRealEstateGrossAmount = 0;
   let effectiveForeignRealEstateAmount = 0;
   let combinedRealEstateAmount = 0;
@@ -429,11 +429,11 @@ export const calculateRealEstateAndBusinessAllocation = (
         .filter(s => s.amount < 0)
         .reduce(
           (sum, s) =>
-            sum + Math.min(-s.amount, Math.max(0, s.foreignUsedBuildingDisallowedLoss ?? 0)),
+            sum + Math.min(-s.amount, Math.max(0, s.foreignUsedBuildingDepreciation ?? 0)),
           0,
         );
-      realEstateDisallowedForeignDepreciation = Math.min(foreignLoss, totalForeignDeprecDisallowed);
-      const allowableForeignLoss = foreignLoss - realEstateDisallowedForeignDepreciation;
+      disallowedForeignDepreciationLoss = Math.min(foreignLoss, totalForeignDeprecDisallowed);
+      const allowableForeignLoss = foreignLoss - disallowedForeignDepreciationLoss;
       effectiveForeignRealEstateAmount = allowableForeignLoss === 0 ? 0 : -allowableForeignLoss;
     }
 
@@ -508,7 +508,7 @@ export const calculateRealEstateAndBusinessAllocation = (
   return {
     grossRealEstateIncome,
     realEstateDisallowedLandDebtInterest,
-    realEstateDisallowedForeignDepreciation,
+    disallowedForeignDepreciationLoss,
     combinedRealEstateAmount,
     netRealEstateBeforeDeduction,
     effectiveForeignRealEstateAmount,
@@ -732,7 +732,7 @@ const calculateIncomeBreakdown = (
   const {
     grossRealEstateIncome,
     realEstateDisallowedLandDebtInterest,
-    realEstateDisallowedForeignDepreciation,
+    disallowedForeignDepreciationLoss,
     effectiveForeignRealEstateAmount,
     domesticRealEstateGrossAmount,
     grossBusinessIncome,
@@ -824,7 +824,7 @@ const calculateIncomeBreakdown = (
     realEstateBlueFilerDeduction,
     businessBlueFilerDeduction,
     realEstateDisallowedLandDebtInterest,
-    realEstateDisallowedForeignDepreciation,
+    disallowedForeignDepreciationLoss,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -970,7 +970,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     realEstateBlueFilerDeduction,
     businessBlueFilerDeduction,
     realEstateDisallowedLandDebtInterest,
-    realEstateDisallowedForeignDepreciation,
+    disallowedForeignDepreciationLoss,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -1499,17 +1499,19 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     ...(pensionIncomeAdjustmentDeduction > 0 && { pensionIncomeAdjustmentDeduction }),
     netBusinessAndMiscIncome,
     ...(inputs.incomeStreams.some(s => s.type === 'realEstate') && {
-      netRealEstateIncome,
-      ...(realEstateDisallowedLandDebtInterest > 0 && {
-        realEstateDisallowedLandDebtInterest,
-      }),
-      ...(realEstateDisallowedForeignDepreciation > 0 && {
-        realEstateDisallowedForeignDepreciation,
-      }),
+      realEstate: {
+        netIncome: netRealEstateIncome,
+        blueFilerDeduction: realEstateBlueFilerDeduction,
+        ...(realEstateDisallowedLandDebtInterest > 0 && {
+          disallowedLandDebtInterest: realEstateDisallowedLandDebtInterest,
+        }),
+        ...(disallowedForeignDepreciationLoss > 0 && {
+          disallowedForeignDepreciationLoss,
+        }),
+      },
     }),
     ...(blueFilerDeduction > 0 && {
       blueFilerDeduction,
-      realEstateBlueFilerDeduction,
       businessBlueFilerDeduction,
     }),
     ...(grossPublicPensionIncome > 0 && {

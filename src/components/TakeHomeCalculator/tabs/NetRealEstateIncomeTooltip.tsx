@@ -20,9 +20,11 @@ interface NetRealEstateIncomeTooltipProps {
   disallowedLandDebtInterest?: number | undefined;
   /** Pre-calculated disallowed foreign used building depreciation loss under 措法41条の4の3 (yen). */
   disallowedForeignBuildingDepreciation?: number | undefined;
+  disallowedForeignDepreciationLoss?: number | undefined;
   /** Interest on debt used to acquire land (yen). Fallback when disallowedLandDebtInterest is omitted. */
   landDebtInterest?: number | undefined;
-  /** Disallowed loss from foreign used building depreciation (yen). Fallback when disallowedForeignBuildingDepreciation is omitted. */
+  /** Depreciation expense from foreign used building (yen). Fallback when disallowedForeignDepreciationLoss is omitted. */
+  foreignUsedBuildingDepreciation?: number | undefined;
   foreignUsedBuildingDisallowedLoss?: number | undefined;
 }
 
@@ -37,17 +39,23 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
   netRealEstateIncome,
   disallowedLandDebtInterest,
   disallowedForeignBuildingDepreciation,
+  disallowedForeignDepreciationLoss,
   landDebtInterest,
+  foreignUsedBuildingDepreciation,
   foreignUsedBuildingDisallowedLoss,
 }) => {
   const disallowedLand =
     disallowedLandDebtInterest ??
     Math.min(Math.max(0, -grossRealEstateIncome), Math.max(0, landDebtInterest ?? 0));
+  const effectiveDisallowedForeignLoss =
+    disallowedForeignDepreciationLoss ?? disallowedForeignBuildingDepreciation;
+  const effectiveForeignDepreciation =
+    foreignUsedBuildingDepreciation ?? foreignUsedBuildingDisallowedLoss;
   const disallowedForeign =
-    disallowedForeignBuildingDepreciation ??
+    effectiveDisallowedForeignLoss ??
     Math.min(
       Math.max(0, -grossRealEstateIncome) - disallowedLand,
-      Math.max(0, foreignUsedBuildingDisallowedLoss ?? 0),
+      Math.max(0, effectiveForeignDepreciation ?? 0),
     );
 
   return (

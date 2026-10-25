@@ -628,9 +628,9 @@ describe('validateIncomeStream', () => {
           amount: -500_000,
           location: 'foreign',
           foreignTax: 0,
-          foreignUsedBuildingDisallowedLoss: -100,
+          foreignUsedBuildingDepreciation: -100,
         }),
-      ).toBe('Disallowed foreign building loss cannot be negative.');
+      ).toBe('Shortened used building depreciation cannot be negative.');
     });
   });
 

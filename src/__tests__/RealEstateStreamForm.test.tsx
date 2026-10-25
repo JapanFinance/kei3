@@ -118,7 +118,7 @@ describe('RealEstateStreamForm', () => {
           amount: -1_000_000,
           foreignTax: 0,
           landDebtInterest: 100_000,
-          foreignUsedBuildingDisallowedLoss: 300_000,
+          foreignUsedBuildingDepreciation: 300_000,
         }}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
@@ -149,7 +149,7 @@ describe('RealEstateStreamForm', () => {
         location: 'foreign',
         amount: -1_000_000,
         landDebtInterest: 100_000,
-        foreignUsedBuildingDisallowedLoss: 300_000,
+        foreignUsedBuildingDepreciation: 300_000,
       }),
     );
   });
@@ -165,7 +165,7 @@ describe('RealEstateStreamForm', () => {
           amount: 1_200_000,
           foreignTax: 50_000,
           landDebtInterest: 300_000,
-          foreignUsedBuildingDisallowedLoss: 400_000, // Should be omitted since amount > 0
+          foreignUsedBuildingDepreciation: 400_000, // Should be omitted since amount > 0
         }}
         onSave={mockOnSave}
         onCancel={mockOnCancel}

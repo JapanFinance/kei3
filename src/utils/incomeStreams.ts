@@ -181,10 +181,10 @@ const INCOME_STREAM_BEHAVIOR: { [T in IncomeStreamType]: IncomeStreamBehavior<T>
         return 'Interest on debt to acquire land cannot be negative.';
       }
       if (
-        s.foreignUsedBuildingDisallowedLoss !== undefined &&
-        s.foreignUsedBuildingDisallowedLoss < 0
+        s.foreignUsedBuildingDepreciation !== undefined &&
+        s.foreignUsedBuildingDepreciation < 0
       ) {
-        return 'Disallowed foreign building loss cannot be negative.';
+        return 'Shortened used building depreciation cannot be negative.';
       }
       return undefined;
     },

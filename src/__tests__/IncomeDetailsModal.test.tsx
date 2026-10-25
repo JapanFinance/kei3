@@ -216,7 +216,7 @@ describe('IncomeDetailsModal - Business & Real Estate Income', () => {
         location: 'foreign',
         foreignTax: 0,
         landDebtInterest: 200000,
-        foreignUsedBuildingDisallowedLoss: 300000,
+        foreignUsedBuildingDepreciation: 300000,
       },
     ];
 
@@ -363,7 +363,7 @@ describe('IncomeDetailsModal - Business & Real Estate Income', () => {
         amount: -1_000_000,
         location: 'foreign',
         foreignTax: 0,
-        foreignUsedBuildingDisallowedLoss: 1_000_000,
+        foreignUsedBuildingDepreciation: 1_000_000,
       },
     ];
 

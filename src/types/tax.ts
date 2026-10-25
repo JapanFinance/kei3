@@ -45,7 +45,7 @@ export interface BusinessIncomeStream extends BaseIncomeStream {
  * When negative, loss-netting (損益通算, 所法69条) against other aggregate income is permitted,
  * subject to:
  * - 措法41条の4: Disallowing loss attributable to interest on debt used to acquire land ({@link landDebtInterest}).
- * - 措法41条の4の3: Disallowing loss from foreign used buildings attributable to depreciation ({@link foreignUsedBuildingDisallowedLoss}).
+ * - 措法41条の4の3: Disallowing loss from foreign used buildings attributable to depreciation ({@link foreignUsedBuildingDepreciation}).
  */
 export interface RealEstateIncomeStream extends BaseIncomeStream {
   type: 'realEstate';
@@ -69,11 +69,11 @@ export interface RealEstateIncomeStream extends BaseIncomeStream {
   landDebtInterest?: number;
   /**
    * 国外中古建物の減価償却費等の特例 (措法41条の4の3).
-   * Disallowed loss from foreign used buildings attributable to depreciation (簡便法等).
-   * Disallowed from loss netting against other income.
+   * Shortened useful life depreciation expense for foreign used buildings (簡便法等による減価償却費).
+   * When the property has a net loss, loss up to this amount is disallowed from loss netting against other income.
    * Relevant only when {@link location} is 'foreign' and {@link BaseIncomeStream.amount} is negative.
    */
-  foreignUsedBuildingDisallowedLoss?: number;
+  foreignUsedBuildingDepreciation?: number;
 }
 
 export interface MiscellaneousIncomeStream extends BaseIncomeStream {
@@ -948,6 +948,25 @@ export interface CustomEmployeesHealthInsuranceRates {
   longTermCareRate: number;
 }
 
+export interface RealEstateResults {
+  /**
+   * 不動産所得, net of the 青色申告特別控除 and loss disallowance rules (措法41条の4, 41条の4の3).
+   */
+  netIncome: number;
+  /**
+   * The portion of {@link blueFilerDeduction} applied against 不動産所得 (措法25条の2②).
+   */
+  blueFilerDeduction: number;
+  /**
+   * The portion of real estate loss disallowed under 措法41条の4 (土地等を取得するために要した負債の利子の額).
+   */
+  disallowedLandDebtInterest?: number | undefined;
+  /**
+   * The portion of foreign real estate loss disallowed under 措法41条の4の3 (国外中古建物の減価償却費等の特例).
+   */
+  disallowedForeignDepreciationLoss?: number | undefined;
+}
+
 export interface TakeHomeResults {
   /**
    * The income received over the year before taxes and social insurance: net of the real costs
@@ -976,26 +995,14 @@ export interface TakeHomeResults {
   hasEmploymentIncome: boolean;
   blueFilerDeduction?: number;
   /**
-   * 不動産所得, net of the 青色申告特別控除 and loss disallowance rules (措法41条の4, 41条の4の3).
-   * Absent when there is no real estate income.
-   */
-  netRealEstateIncome?: number | undefined;
-  /**
-   * The portion of {@link blueFilerDeduction} applied against 不動産所得 (措法25条の2②).
-   */
-  realEstateBlueFilerDeduction?: number | undefined;
-  /**
    * The portion of {@link blueFilerDeduction} applied against 事業所得 (措法25条の2②).
    */
   businessBlueFilerDeduction?: number | undefined;
   /**
-   * The portion of real estate loss disallowed under 措法41条の4 (土地等を取得するために要した負債の利子の額).
+   * Real estate income breakdown and statutory adjustments.
+   * Absent when there are no real estate streams.
    */
-  realEstateDisallowedLandDebtInterest?: number | undefined;
-  /**
-   * The portion of foreign real estate loss disallowed under 措法41条の4の3 (国外中古建物の減価償却費等の特例).
-   */
-  realEstateDisallowedForeignDepreciation?: number | undefined;
+  realEstate?: RealEstateResults | undefined;
   nationalIncomeTax: number;
   residenceTax: ResidenceTaxDetails;
   healthInsurance: number;

@@ -791,14 +791,14 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                         </Typography>
                       )}
                       {stream.amount < 0 &&
-                        stream.foreignUsedBuildingDisallowedLoss !== undefined &&
-                        stream.foreignUsedBuildingDisallowedLoss > 0 && (
+                        stream.foreignUsedBuildingDepreciation !== undefined &&
+                        stream.foreignUsedBuildingDepreciation > 0 && (
                           <Typography
                             variant="caption"
                             sx={{ color: 'text.secondary', display: 'block' }}
                           >
                             Shortened building depreciation:{' '}
-                            {formatJPY(stream.foreignUsedBuildingDisallowedLoss)}
+                            {formatJPY(stream.foreignUsedBuildingDepreciation)}
                           </Typography>
                         )}
                     </>

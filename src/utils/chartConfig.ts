@@ -127,8 +127,8 @@ export const scaleIncomeStreamsToIncome = (
           ...(s.landDebtInterest !== undefined && {
             landDebtInterest: s.landDebtInterest * ratio,
           }),
-          ...(s.foreignUsedBuildingDisallowedLoss !== undefined && {
-            foreignUsedBuildingDisallowedLoss: s.foreignUsedBuildingDisallowedLoss * ratio,
+          ...(s.foreignUsedBuildingDepreciation !== undefined && {
+            foreignUsedBuildingDepreciation: s.foreignUsedBuildingDepreciation * ratio,
           }),
         };
       }
