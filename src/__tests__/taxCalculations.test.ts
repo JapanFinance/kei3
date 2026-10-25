@@ -1643,6 +1643,199 @@ describe('Real Estate Income (不動産所得)', () => {
     expect(result.foreignTaxCredit?.credit.incomeTax).toBeGreaterThan(0);
     expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(2_000_000);
   });
+
+  it('handles multiple profitable properties (domestic + foreign) with pro-rata blue-filer allocation for foreign source income', () => {
+    const incomeStreams = [
+      {
+        id: 're-dom',
+        type: 'realEstate' as const,
+        amount: 3_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: 2_000_000,
+        location: 'foreign' as const,
+        foreignTax: 100_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Total gross = 5M. Blue filer = 650k. Net real estate = 4.35M.
+    expect(result.netRealEstateIncome).toBe(4_350_000);
+    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.foreignTaxPaid).toBe(100_000);
+    // Foreign blue-filer pro-rata: 650k * (2M / 5M) = 260k. Foreign source income: 2M - 260k = 1.74M.
+    expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(1_740_000);
+  });
+
+  it('disallows foreign used building depreciation from offsetting domestic real estate income (措法41条の4の3)', () => {
+    const incomeStreams = [
+      {
+        id: 're-dom',
+        type: 'realEstate' as const,
+        amount: 2_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: -1_000_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+        foreignUsedBuildingDisallowedLoss: 600_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Foreign loss is 1M, but 600k depreciation is disallowed under 41-4-3 ("生じなかったものとみなす").
+    // Remaining allowable foreign loss = 400k.
+    // Net before blue-filer = 2M - 400k = 1.6M.
+    // Blue-filer deduction = 650k. Net real estate = 1.6M - 650k = 950k.
+    expect(result.netRealEstateIncome).toBe(950_000);
+    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.realEstateDisallowedForeignDepreciation).toBe(600_000);
+  });
+
+  it('permits internal netting between domestic profit and loss with land debt interest (措法41条の4)', () => {
+    const incomeStreams = [
+      {
+        id: 're-dom1',
+        type: 'realEstate' as const,
+        amount: 3_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 're-dom2',
+        type: 'realEstate' as const,
+        amount: -1_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+        landDebtInterest: 400_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Overall real estate is 3M - 1M = 2M (positive).
+    // Land debt interest restriction (Art. 41-4) only applies when overall real estate income is negative.
+    // So 1M loss is fully absorbed internally; blue-filer deduction = 650k; net = 2M - 650k = 1.35M.
+    expect(result.netRealEstateIncome).toBe(1_350_000);
+    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.realEstateDisallowedLandDebtInterest).toBeUndefined();
+  });
+
+  it('nets multiple foreign properties internally before capping Art. 41-4-3 disallowed depreciation', () => {
+    const incomeStreams = [
+      {
+        id: 're-for1',
+        type: 'realEstate' as const,
+        amount: 1_000_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 're-for2',
+        type: 'realEstate' as const,
+        amount: -1_500_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+        foreignUsedBuildingDisallowedLoss: 800_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 0,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Foreign gross = 1M - 1.5M = -500k.
+    // Art. 41-4-3 disallowed depreciation is capped at the net foreign loss: min(500k, 800k) = 500k.
+    // Allowable foreign loss = 500k - 500k = 0. Net real estate income = 0.
+    expect(result.netRealEstateIncome).toBe(0);
+    expect(result.realEstateDisallowedForeignDepreciation).toBe(500_000);
+  });
+
+  it('disallows land debt interest across multiple loss-making properties when overall real estate is negative', () => {
+    const incomeStreams = [
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -600_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+        landDebtInterest: 200_000,
+      },
+      {
+        id: 're2',
+        type: 'realEstate' as const,
+        amount: -400_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+        landDebtInterest: 100_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 0,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Overall loss = 1M. Total land debt interest = 200k + 100k = 300k.
+    // Disallowed = min(1M, 300k) = 300k. Allowable loss = 1M - 300k = 700k.
+    expect(result.netRealEstateIncome).toBe(-700_000);
+    expect(result.realEstateDisallowedLandDebtInterest).toBe(300_000);
+  });
 });
 
 describe('Commuting Allowance', () => {

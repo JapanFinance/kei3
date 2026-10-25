@@ -293,14 +293,15 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       ?.blueFilerDeduction ??
     0;
 
-  const realEstateStream = streams.find(s => s.type === 'realEstate') as
-    | RealEstateIncomeStream
-    | undefined;
+  const realEstateStreams = streams.filter(
+    (s): s is RealEstateIncomeStream => s.type === 'realEstate',
+  );
   const businessStream = streams.find(s => s.type === 'business') as
     | BusinessIncomeStream
     | undefined;
 
-  const realEstatePositive = Math.max(0, realEstateStream?.amount ?? 0);
+  const realEstateNet = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+  const realEstatePositive = Math.max(0, realEstateNet);
   const realEstateDeduction = Math.min(realEstatePositive, effectiveBlueFilerDeduction);
   const remainingBlueFiler = effectiveBlueFilerDeduction - realEstateDeduction;
   const businessPositive = Math.max(0, businessStream?.amount ?? 0);
@@ -764,14 +765,33 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                       (Blue-filer Deduction: -{formatJPY(businessDeduction)})
                     </Typography>
                   )}
-                  {stream.type === 'realEstate' && realEstateDeduction > 0 && (
-                    <Typography
-                      variant="caption"
-                      sx={{ color: 'text.secondary', display: 'block' }}
-                    >
-                      (Blue-filer Deduction: -{formatJPY(realEstateDeduction)})
-                    </Typography>
-                  )}
+                  {stream.type === 'realEstate' &&
+                    realEstateDeduction > 0 &&
+                    (realEstateStreams.length === 1 ? (
+                      <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary', display: 'block' }}
+                      >
+                        (Blue-filer Deduction: -{formatJPY(realEstateDeduction)})
+                      </Typography>
+                    ) : stream.amount > 0 ? (
+                      <Typography
+                        variant="caption"
+                        sx={{ color: 'text.secondary', display: 'block' }}
+                      >
+                        (Blue-filer Deduction: -
+                        {formatJPY(
+                          Math.round(
+                            realEstateDeduction *
+                              (stream.amount /
+                                realEstateStreams
+                                  .filter(s => s.amount > 0)
+                                  .reduce((sum, s) => sum + s.amount, 0)),
+                          ),
+                        )}
+                        )
+                      </Typography>
+                    ) : null)}
                   {stream.type === 'realEstate' && stream.amount < 0 && (
                     <>
                       {stream.landDebtInterest !== undefined && stream.landDebtInterest > 0 && (

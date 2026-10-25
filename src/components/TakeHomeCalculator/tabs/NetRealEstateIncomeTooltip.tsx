@@ -16,9 +16,13 @@ interface NetRealEstateIncomeTooltipProps {
   blueFilerDeduction: number;
   /** Net real estate income (allowable loss if negative) (yen). */
   netRealEstateIncome: number;
-  /** Interest on debt used to acquire land (yen). */
+  /** Pre-calculated disallowed land debt interest under 措法41条の4 (yen). */
+  disallowedLandDebtInterest?: number | undefined;
+  /** Pre-calculated disallowed foreign used building depreciation loss under 措法41条の4の3 (yen). */
+  disallowedForeignBuildingDepreciation?: number | undefined;
+  /** Interest on debt used to acquire land (yen). Fallback when disallowedLandDebtInterest is omitted. */
   landDebtInterest?: number | undefined;
-  /** Disallowed loss from foreign used building depreciation (yen). */
+  /** Disallowed loss from foreign used building depreciation (yen). Fallback when disallowedForeignBuildingDepreciation is omitted. */
   foreignUsedBuildingDisallowedLoss?: number | undefined;
 }
 
@@ -31,15 +35,20 @@ const NetRealEstateIncomeTooltip: React.FC<NetRealEstateIncomeTooltipProps> = ({
   grossRealEstateIncome,
   blueFilerDeduction,
   netRealEstateIncome,
+  disallowedLandDebtInterest,
+  disallowedForeignBuildingDepreciation,
   landDebtInterest,
   foreignUsedBuildingDisallowedLoss,
 }) => {
-  const grossLoss = Math.max(0, -grossRealEstateIncome);
-  const disallowedLand = Math.min(grossLoss, Math.max(0, landDebtInterest ?? 0));
-  const disallowedForeign = Math.min(
-    grossLoss - disallowedLand,
-    Math.max(0, foreignUsedBuildingDisallowedLoss ?? 0),
-  );
+  const disallowedLand =
+    disallowedLandDebtInterest ??
+    Math.min(Math.max(0, -grossRealEstateIncome), Math.max(0, landDebtInterest ?? 0));
+  const disallowedForeign =
+    disallowedForeignBuildingDepreciation ??
+    Math.min(
+      Math.max(0, -grossRealEstateIncome) - disallowedLand,
+      Math.max(0, foreignUsedBuildingDisallowedLoss ?? 0),
+    );
 
   return (
     <DetailedTooltip title="Real Estate Income" iconAriaLabel="real estate income info">

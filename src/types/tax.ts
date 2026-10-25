@@ -984,6 +984,14 @@ export interface TakeHomeResults {
    * The portion of {@link blueFilerDeduction} applied against 事業所得 (措法25条の2②).
    */
   businessBlueFilerDeduction?: number | undefined;
+  /**
+   * The portion of real estate loss disallowed under 措法41条の4 (土地等を取得するために要した負債の利子の額).
+   */
+  realEstateDisallowedLandDebtInterest?: number | undefined;
+  /**
+   * The portion of foreign real estate loss disallowed under 措法41条の4の3 (国外中古建物の減価償却費等の特例).
+   */
+  realEstateDisallowedForeignDepreciation?: number | undefined;
   nationalIncomeTax: number;
   residenceTax: ResidenceTaxDetails;
   healthInsurance: number;

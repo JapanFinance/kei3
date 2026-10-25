@@ -296,6 +296,8 @@ interface IncomeBreakdown {
   blueFilerDeduction: number;
   realEstateBlueFilerDeduction: number;
   businessBlueFilerDeduction: number;
+  realEstateDisallowedLandDebtInterest: number;
+  realEstateDisallowedForeignDepreciation: number;
   /**
    * Annual income excluding investment income (employment + business/misc + public pension).
    * Investment income is gathered separately in {@link withheldBase}, {@link separateBase},
@@ -390,7 +392,7 @@ const calculateIncomeBreakdown = (
   let foreignSourceIncome = 0;
   let creditableForeignTax = 0;
   let processedBusinessStream: BusinessIncomeStream | undefined;
-  let processedRealEstateStream: RealEstateIncomeStream | undefined;
+  const realEstateStreams: RealEstateIncomeStream[] = [];
 
   // 措法8条の4② makes the 申告分離課税/総合課税 election one for every reported dividend of the
   // year, whichever entry it came from — a plain dividend or a withholding account's.
@@ -440,10 +442,7 @@ const calculateIncomeBreakdown = (
         break;
       }
       case 'realEstate': {
-        if (processedRealEstateStream) {
-          throw new Error('Only one real estate income stream is allowed.');
-        }
-        processedRealEstateStream = income;
+        realEstateStreams.push(income);
         break;
       }
       case 'miscellaneous':
@@ -552,40 +551,85 @@ const calculateIncomeBreakdown = (
   // 2. 事業所得 (Business income) second
   let blueFilerPool = blueFilerDeductionInput ?? processedBusinessStream?.blueFilerDeduction ?? 0;
 
-  let netRealEstateIncomeBeforeBlueFilerDeduction = 0;
+  const grossRealEstateIncome = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+  const netRealEstateIncomeBeforeBlueFilerDeduction = grossRealEstateIncome;
+
+  let realEstateDisallowedLandDebtInterest = 0;
+  let realEstateDisallowedForeignDepreciation = 0;
   let netRealEstateIncome = 0;
   let realEstateBlueFilerDeduction = 0;
-  if (processedRealEstateStream) {
-    const stream = processedRealEstateStream;
-    netRealEstateIncomeBeforeBlueFilerDeduction = stream.amount;
-    if (stream.amount > 0) {
-      const deduction = Math.min(stream.amount, blueFilerPool);
+
+  if (realEstateStreams.length > 0) {
+    const domesticRealEstateStreams = realEstateStreams.filter(s => s.location === 'domestic');
+    const foreignRealEstateStreams = realEstateStreams.filter(s => s.location === 'foreign');
+
+    // 1. Foreign real estate aggregation and 措法41条の4の3 (国外中古建物の減価償却費等の特例)
+    // Loss attributable to foreign used building depreciation is deemed not to exist ("生じなかったものとみなす").
+    // It cannot offset domestic real estate income (内部通算の制限) or other income categories.
+    // Multiple foreign properties net internally first; disallowed depreciation is capped at the net foreign loss.
+    const foreignGrossAmount = foreignRealEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+    let effectiveForeignAmount = foreignGrossAmount;
+    if (foreignGrossAmount < 0) {
+      const foreignLoss = -foreignGrossAmount;
+      const totalForeignDeprecDisallowed = foreignRealEstateStreams.reduce(
+        (sum, s) => sum + Math.max(0, s.foreignUsedBuildingDisallowedLoss ?? 0),
+        0,
+      );
+      realEstateDisallowedForeignDepreciation = Math.min(foreignLoss, totalForeignDeprecDisallowed);
+      const allowableForeignLoss = foreignLoss - realEstateDisallowedForeignDepreciation;
+      effectiveForeignAmount = allowableForeignLoss === 0 ? 0 : -allowableForeignLoss;
+    }
+
+    // 2. Domestic real estate aggregation
+    const domesticGrossAmount = domesticRealEstateStreams.reduce((sum, s) => sum + s.amount, 0);
+
+    // 3. Combine domestic and allowable foreign real estate
+    const combinedRealEstateAmount = domesticGrossAmount + effectiveForeignAmount;
+
+    // 4. 措法41条の4: 土地等を取得するために要した負債の利子の額
+    // Unlike Art. 41-4-3, Art. 41-4 does NOT restrict internal netting within real estate income.
+    // If combined real estate is positive, all land debt interest is fully deductible within the category.
+    // Only when overall real estate income is negative does the disallowance restrict loss netting against other income.
+    let netRealEstateBeforeDeduction = combinedRealEstateAmount;
+    if (combinedRealEstateAmount < 0) {
+      const overallLoss = -combinedRealEstateAmount;
+      const totalLandDebtInterest = realEstateStreams
+        .filter(s => s.amount < 0)
+        .reduce((sum, s) => sum + Math.max(0, s.landDebtInterest ?? 0), 0);
+      realEstateDisallowedLandDebtInterest = Math.min(overallLoss, totalLandDebtInterest);
+      const allowableOverallLoss = overallLoss - realEstateDisallowedLandDebtInterest;
+      netRealEstateBeforeDeduction = allowableOverallLoss === 0 ? 0 : -allowableOverallLoss;
+    }
+
+    // 5. Blue-filer special deduction (措法25条の2②):
+    // Deducted first from real estate income, up to the net positive real estate income.
+    if (netRealEstateBeforeDeduction > 0) {
+      const deduction = Math.min(netRealEstateBeforeDeduction, blueFilerPool);
       realEstateBlueFilerDeduction = deduction;
-      netRealEstateIncome = stream.amount - deduction;
+      netRealEstateIncome = netRealEstateBeforeDeduction - deduction;
       blueFilerPool -= deduction;
     } else {
       realEstateBlueFilerDeduction = 0;
-      // 損益通算 loss netting restrictions:
-      // 措法41条の4: 土地等を取得するために要した負債の利子の額
-      // 措法41条の4の3: 国外中古建物の減価償却費等の特例
-      const loss = -stream.amount;
-      const disallowedLand = Math.min(loss, Math.max(0, stream.landDebtInterest ?? 0));
-      const disallowedForeign =
-        stream.location === 'foreign'
-          ? Math.min(
-              loss - disallowedLand,
-              Math.max(0, stream.foreignUsedBuildingDisallowedLoss ?? 0),
-            )
-          : 0;
-      const allowableLoss = loss - disallowedLand - disallowedForeign;
-      netRealEstateIncome = allowableLoss === 0 ? 0 : -allowableLoss;
+      netRealEstateIncome = netRealEstateBeforeDeduction;
     }
 
-    if (stream.location === 'foreign') {
-      if (netRealEstateIncome > 0) {
-        foreignSourceIncome += netRealEstateIncome;
+    // 6. Foreign-source income (所法95条 / 所令222条) and foreign tax
+    if (foreignRealEstateStreams.length > 0) {
+      creditableForeignTax += foreignRealEstateStreams.reduce((sum, s) => sum + s.foreignTax, 0);
+
+      if (effectiveForeignAmount > 0 && netRealEstateIncome > 0) {
+        if (domesticGrossAmount > 0) {
+          // Both domestic and foreign are positive: allocate blue-filer deduction pro-rata under 所令222条
+          const foreignBlueFiler = Math.round(
+            realEstateBlueFilerDeduction *
+              (effectiveForeignAmount / (domesticGrossAmount + effectiveForeignAmount)),
+          );
+          foreignSourceIncome += Math.max(0, effectiveForeignAmount - foreignBlueFiler);
+        } else {
+          // Domestic was non-positive; entire net real estate income is foreign-source
+          foreignSourceIncome += netRealEstateIncome;
+        }
       }
-      creditableForeignTax += stream.foreignTax;
     }
   }
 
@@ -636,6 +680,8 @@ const calculateIncomeBreakdown = (
     blueFilerDeduction,
     realEstateBlueFilerDeduction,
     businessBlueFilerDeduction,
+    realEstateDisallowedLandDebtInterest,
+    realEstateDisallowedForeignDepreciation,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -778,6 +824,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     blueFilerDeduction,
     realEstateBlueFilerDeduction,
     businessBlueFilerDeduction,
+    realEstateDisallowedLandDebtInterest,
+    realEstateDisallowedForeignDepreciation,
     nonInvestmentAnnualIncome,
     commutingAllowance,
     stockCompensationIncome,
@@ -1301,6 +1349,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     netBusinessAndMiscIncome,
     ...(inputs.incomeStreams.some(s => s.type === 'realEstate') && {
       netRealEstateIncome,
+      ...(realEstateDisallowedLandDebtInterest > 0 && {
+        realEstateDisallowedLandDebtInterest,
+      }),
+      ...(realEstateDisallowedForeignDepreciation > 0 && {
+        realEstateDisallowedForeignDepreciation,
+      }),
     }),
     ...(blueFilerDeduction > 0 && {
       blueFilerDeduction,

@@ -36,11 +36,12 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
 
   const hasEmploymentIncome = results.grossEmploymentIncome > 0;
   const hasBusinessOrMiscIncome = hasBusinessStream || hasMiscStream;
-  const realEstateStream = inputs.incomeStreams.find(s => s.type === 'realEstate') as
-    | RealEstateIncomeStream
-    | undefined;
+  const realEstateStreams = inputs.incomeStreams.filter(
+    (s): s is RealEstateIncomeStream => s.type === 'realEstate',
+  );
   const hasRealEstateIncome =
-    realEstateStream !== undefined && results.netRealEstateIncome !== undefined;
+    realEstateStreams.length > 0 && results.netRealEstateIncome !== undefined;
+  const grossRealEstateIncome = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
 
   const businessBlueFilerDeduction =
     results.businessBlueFilerDeduction ?? results.blueFilerDeduction ?? 0;
@@ -113,14 +114,18 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
               {((results.realEstateBlueFilerDeduction !== undefined &&
                 results.realEstateBlueFilerDeduction > 0) ||
                 results.netRealEstateIncome < 0 ||
-                realEstateStream.amount < 0) && (
+                grossRealEstateIncome < 0 ||
+                (results.realEstateDisallowedForeignDepreciation !== undefined &&
+                  results.realEstateDisallowedForeignDepreciation > 0) ||
+                (results.realEstateDisallowedLandDebtInterest !== undefined &&
+                  results.realEstateDisallowedLandDebtInterest > 0)) && (
                 <NetRealEstateIncomeTooltip
-                  grossRealEstateIncome={realEstateStream.amount}
+                  grossRealEstateIncome={grossRealEstateIncome}
                   blueFilerDeduction={results.realEstateBlueFilerDeduction ?? 0}
                   netRealEstateIncome={results.netRealEstateIncome}
-                  landDebtInterest={realEstateStream.landDebtInterest}
-                  foreignUsedBuildingDisallowedLoss={
-                    realEstateStream.foreignUsedBuildingDisallowedLoss
+                  disallowedLandDebtInterest={results.realEstateDisallowedLandDebtInterest}
+                  disallowedForeignBuildingDepreciation={
+                    results.realEstateDisallowedForeignDepreciation
                   }
                 />
               )}

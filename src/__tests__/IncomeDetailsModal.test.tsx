@@ -150,7 +150,8 @@ describe('IncomeDetailsModal - Business & Real Estate Income', () => {
     );
   });
 
-  it('hides the Add button when both Business and Real Estate streams exist', () => {
+  it('keeps the Add button available to add further Real Estate streams when both Business and Real Estate streams exist', async () => {
+    const user = userEvent.setup();
     const streams: IncomeStream[] = [
       { id: '1', type: 'business', amount: 3000000 },
       { id: '2', type: 'realEstate', amount: 1500000, location: 'domestic', foreignTax: 0 },
@@ -165,9 +166,45 @@ describe('IncomeDetailsModal - Business & Real Estate Income', () => {
       />,
     );
 
+    const addButton = screen.getByRole('button', { name: /add business \/ real estate income/i });
+    expect(addButton).toBeInTheDocument();
+    await user.click(addButton);
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: /business/i })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(within(menu).getByRole('menuitem', { name: /real estate/i })).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('allocates blue-filer deduction pro-rata across multiple positive real estate streams', () => {
+    const streams: IncomeStream[] = [
+      { id: '1', type: 'realEstate', amount: 1000000, location: 'domestic', foreignTax: 0 },
+      { id: '2', type: 'realEstate', amount: 3000000, location: 'foreign', foreignTax: 50000 },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+        blueFilerDeduction={650000}
+      />,
+    );
+
+    // 1M / 4M * 650k = 162.5k -> 162,500
+    expect(screen.getByText(/Blue-filer Deduction: -¥162,500/i)).toBeInTheDocument();
+    // 3M / 4M * 650k = 487.5k -> 487,500
+    expect(screen.getByText(/Blue-filer Deduction: -¥487,500/i)).toBeInTheDocument();
+    // Category footer shows total
     expect(
-      screen.queryByRole('button', { name: /add business \/ real estate income/i }),
-    ).not.toBeInTheDocument();
+      screen.getByText(/Blue-Filer Deduction \(青色申告特別控除\): -¥650,000/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Net Business & Real Estate Income: ¥3,350,000/i)).toBeInTheDocument();
   });
 
   it('displays Blue-filer Deduction in the list and subtotal footer', () => {

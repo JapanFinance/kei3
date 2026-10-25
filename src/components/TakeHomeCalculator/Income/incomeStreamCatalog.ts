@@ -132,8 +132,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
     chipLabel: 'REAL ESTATE',
     amountLabel: 'Annual Income After Expenses',
     amountHelperText:
-      'Rental revenue minus necessary expenses (収入金額 − 必要経費), before the blue-filer special deduction; enter a loss as a negative amount. For multiple properties, combine the income across all properties.',
-    maxCount: 1,
+      'Rental revenue minus necessary expenses (収入金額 − 必要経費), before the blue-filer special deduction; enter a loss as a negative amount.',
     min: Number.MIN_SAFE_INTEGER,
   },
   miscellaneous: {
