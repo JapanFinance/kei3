@@ -1836,6 +1836,291 @@ describe('Real Estate Income (不動産所得)', () => {
     expect(result.netRealEstateIncome).toBe(-700_000);
     expect(result.realEstateDisallowedLandDebtInterest).toBe(300_000);
   });
+
+  it('handles real estate loss with business profit and blue-filer deduction', () => {
+    // Real estate: -400k (loss), Business: +1M (profit)
+    // Blue-filer deduction: 650k
+    // Real estate is in loss -> 0 blue-filer deduction (措法25条の2② cannot create/increase loss)
+    // Business takes min(1M, 650k) = 650k -> net business = 350k
+    // Aggregate income = 350k - 400k = -50k -> totalNetIncome = 0
+    const incomeStreams = [
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -400_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 'b1',
+        type: 'business' as const,
+        amount: 1_000_000,
+      },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+      'separate',
+      650_000,
+    );
+    expect(components.aggregateNetIncome).toBe(-50_000);
+    expect(components.totalNetIncome).toBe(0);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(-400_000);
+    expect(result.realEstateBlueFilerDeduction).toBe(0);
+    expect(result.businessBlueFilerDeduction).toBe(650_000);
+    expect(result.blueFilerDeduction).toBe(650_000);
+    expect(result.netBusinessAndMiscIncome).toBe(350_000);
+    expect(result.totalNetIncome).toBe(0);
+  });
+
+  it('handles real estate profit with business loss and blue-filer deduction', () => {
+    // Real estate: +800k (profit), Business: -300k (loss)
+    // Blue-filer deduction: 650k
+    // Real estate takes min(800k, 650k) = 650k -> net real estate = 150k
+    // Business is negative -> takes 0 blue-filer deduction
+    // Aggregate income = 150k - 300k = -150k -> totalNetIncome = 0
+    const incomeStreams = [
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: 800_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 'b1',
+        type: 'business' as const,
+        amount: -300_000,
+      },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+      'separate',
+      650_000,
+    );
+    expect(components.aggregateNetIncome).toBe(-150_000);
+    expect(components.totalNetIncome).toBe(0);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(150_000);
+    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.businessBlueFilerDeduction).toBe(0);
+    expect(result.blueFilerDeduction).toBe(650_000);
+    expect(result.netBusinessAndMiscIncome).toBe(-300_000);
+    expect(result.totalNetIncome).toBe(0);
+  });
+
+  it('caps foreign source income and calculates foreign tax credit when domestic real estate is in deficit', () => {
+    // Salary 5M (net 3.56M), Domestic real estate: -500k, Foreign real estate: +2M
+    // Foreign income tax: 150k
+    // Combined real estate before blue-filer: 1.5M. Blue-filer: 650k -> Net real estate: 850k.
+    // Total Net Income = 3.56M + 850k = 4.41M.
+    // Domestic had no positive income, so all net real estate (850k) is foreign source income.
+    const incomeStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      {
+        id: 're-dom',
+        type: 'realEstate' as const,
+        amount: -500_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: 2_000_000,
+        location: 'foreign' as const,
+        foreignTax: 150_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      blueFilerDeduction: 650_000,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(850_000);
+    expect(result.realEstateBlueFilerDeduction).toBe(650_000);
+    expect(result.foreignTaxPaid).toBe(150_000);
+    expect(result.foreignTaxCredit?.foreignSourceIncome).toBe(850_000);
+    expect(result.foreignTaxCredit?.credit.incomeTax).toBeGreaterThan(0);
+  });
+
+  it('caps combined foreign shortened depreciation and land debt interest at total deficit', () => {
+    // Foreign loss: -800,000
+    // Shortened depreciation: 600,000
+    // Land debt interest: 400,000
+    // Sum of inputs = 1,000,000 > total loss 800,000
+    // Sequence:
+    // 1. Foreign shortened depreciation disallowed = min(800k, 600k) = 600k -> remaining loss = 200k
+    // 2. Land debt interest disallowed = min(200k, 400k) = 200k -> remaining loss = 0
+    // Total disallowed = 600k + 200k = 800k. Allowable loss = 0.
+    const incomeStreams = [
+      {
+        id: 're-for',
+        type: 'realEstate' as const,
+        amount: -800_000,
+        location: 'foreign' as const,
+        foreignTax: 0,
+        foreignUsedBuildingDisallowedLoss: 600_000,
+        landDebtInterest: 400_000,
+      },
+    ];
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(0);
+    expect(result.realEstateDisallowedForeignDepreciation).toBe(600_000);
+    expect(result.realEstateDisallowedLandDebtInterest).toBe(200_000);
+  });
+
+  it('does not allow real estate loss to offset separate stock investment income (措法37条の10)', () => {
+    // Real estate loss: -1,000,000
+    // Separate capital gains: +2,000,000
+    // Aggregate income is -1M, but totalNetIncome preserves 2M separate income.
+    const incomeStreams = [
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -1_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+      {
+        id: 'cg1',
+        type: 'capitalGains' as const,
+        shareType: 'listed' as const,
+        account: 'domesticNoWithholding' as const,
+        amount: 2_000_000,
+      },
+    ];
+    const components = calculateNetIncomeComponents(
+      incomeStreams,
+      2026,
+      'age20to39',
+      [],
+      EMPTY_PERSONAL_CIRCUMSTANCES,
+      'separate',
+      0,
+    );
+    expect(components.aggregateNetIncome).toBe(-1_000_000);
+    expect(components.totalNetIncome).toBe(2_000_000);
+    expect(components.separateNetIncome.capitalGains).toBe(2_000_000);
+
+    const result = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    expect(result.netRealEstateIncome).toBe(-1_000_000);
+    expect(result.totalNetIncome).toBe(2_000_000);
+    // Separate tax is still assessed on 2M capital gains (aggregate loss does not net against separate capital gains).
+    // Note: Deductions from income (basic deduction + NHI) spill over to separate capital gains (地方税法附則第33条の2第5項).
+    expect(result.investmentIncome?.reported?.separate).toBeDefined();
+    expect(result.residenceTax.separate?.taxableCapitalGains).toBe(1_438_000);
+    expect(result.nationalIncomeTax).toBeGreaterThan(0);
+  });
+
+  it('reduces National Health Insurance premiums when real estate has an allowable loss', () => {
+    // Salary 5M alone vs Salary 5M + Real estate loss -1M
+    const baselineStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+    ];
+    const lossStreams = [
+      { type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const, id: 's1' },
+      {
+        id: 're1',
+        type: 'realEstate' as const,
+        amount: -1_000_000,
+        location: 'domestic' as const,
+        foreignTax: 0,
+      },
+    ];
+    const baseline = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: baselineStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    const withLoss = calculateTaxes({
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: lossStreams,
+      ageRange: 'age20to39',
+      healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    });
+    // Loss reduces net income from 3.56M to 2.56M, lowering NHI premium
+    expect(withLoss.totalNetIncome).toBe(2_560_000);
+    expect(baseline.totalNetIncome).toBe(3_560_000);
+    expect(withLoss.healthInsurance).toBeLessThan(baseline.healthInsurance);
+  });
 });
 
 describe('Commuting Allowance', () => {

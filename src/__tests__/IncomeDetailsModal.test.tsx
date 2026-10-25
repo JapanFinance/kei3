@@ -207,6 +207,32 @@ describe('IncomeDetailsModal - Business & Real Estate Income', () => {
     expect(screen.getByText(/Net Business & Real Estate Income: ¥3,350,000/i)).toBeInTheDocument();
   });
 
+  it('displays land debt interest and shortened building depreciation on loss-making real estate stream cards', () => {
+    const streams: IncomeStream[] = [
+      {
+        id: 're-loss',
+        type: 'realEstate',
+        amount: -800000,
+        location: 'foreign',
+        foreignTax: 0,
+        landDebtInterest: 200000,
+        foreignUsedBuildingDisallowedLoss: 300000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByText(/Land debt interest: ¥200,000/i)).toBeInTheDocument();
+    expect(screen.getByText(/Shortened building depreciation: ¥300,000/i)).toBeInTheDocument();
+  });
+
   it('displays Blue-filer Deduction in the list and subtotal footer', () => {
     const streams: IncomeStream[] = [
       {

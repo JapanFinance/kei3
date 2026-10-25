@@ -799,7 +799,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                           variant="caption"
                           sx={{ color: 'text.secondary', display: 'block' }}
                         >
-                          Land loan interest (disallowed loss): {formatJPY(stream.landDebtInterest)}
+                          Land debt interest: {formatJPY(stream.landDebtInterest)}
                         </Typography>
                       )}
                       {stream.foreignUsedBuildingDisallowedLoss !== undefined &&
@@ -808,7 +808,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
                             variant="caption"
                             sx={{ color: 'text.secondary', display: 'block' }}
                           >
-                            Foreign used building loss (disallowed):{' '}
+                            Shortened building depreciation:{' '}
                             {formatJPY(stream.foreignUsedBuildingDisallowedLoss)}
                           </Typography>
                         )}
