@@ -31,7 +31,7 @@ Element.prototype.scrollTo = vi.fn();
 const mockResults: TakeHomeResults = {
   annualIncome: 5_000_000,
   hasEmploymentIncome: false,
-  blueFilerDeduction: 650_000,
+  businessBlueFilerDeduction: 650_000,
   nationalIncomeTax: 100_000,
   residenceTax: {
     totalResidenceTax: 200_000,
@@ -197,7 +197,7 @@ describe('Blue-Filer Deduction Display', () => {
   it('does not display instructions tooltip for Net Business / Misc Income when there is no Blue-Filer deduction', () => {
     const noBlueFilerResults: TakeHomeResults = {
       ...mockResults,
-      blueFilerDeduction: 0,
+      businessBlueFilerDeduction: 0,
       netBusinessAndMiscIncome: 5_000_000,
       totalNetIncome: 5_000_000,
     };

@@ -42,8 +42,7 @@ const IncomeOverviewRows: React.FC<IncomeOverviewRowsProps> = ({ results, inputs
   const hasRealEstateIncome = results.realEstate !== undefined;
   const grossRealEstateIncome = realEstateStreams.reduce((sum, s) => sum + s.amount, 0);
 
-  const businessBlueFilerDeduction =
-    results.businessBlueFilerDeduction ?? results.blueFilerDeduction ?? 0;
+  const businessBlueFilerDeduction = results.businessBlueFilerDeduction ?? 0;
 
   const showBusinessMiscTooltip =
     businessBlueFilerDeduction > 0 ||

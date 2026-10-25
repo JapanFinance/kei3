@@ -625,7 +625,7 @@ describe('calculateTaxes', () => {
     expect(result.takeHomeIncome).toBe(resultReference.takeHomeIncome + 650_000);
 
     // Verify Blue-Filer deduction is returned
-    expect(result.blueFilerDeduction).toBe(650_000);
+    expect(result.businessBlueFilerDeduction).toBe(650_000);
   });
 });
 
@@ -1051,7 +1051,7 @@ describe('calculateTaxes with Dependent Coverage', () => {
     const result = calculateTaxes(inputs);
 
     // Deduction (650k) > Income (300k) => Effective deduction should be 300k
-    expect(result.blueFilerDeduction).toBe(300_000);
+    expect(result.businessBlueFilerDeduction).toBe(300_000);
 
     // Taxable income should be 0
     expect(result.annualIncome).toBe(300_000);
@@ -1265,7 +1265,7 @@ describe('Business Income Losses (事業所得の損失・損益通算)', () => 
       manualSocialInsuranceAmount: 0,
       incomeYear: 2026,
     });
-    expect(result.blueFilerDeduction).toBe(0);
+    expect(result.businessBlueFilerDeduction).toBe(0);
     expect(result.netBusinessAndMiscIncome).toBe(-1_000_000);
     expect(result.annualIncome).toBe(4_000_000);
     expect(result.totalNetIncome).toBe(2_560_000);
@@ -1419,7 +1419,6 @@ describe('Real Estate Income (不動産所得)', () => {
 
     expect(result.realEstate?.netIncome).toBe(2_350_000);
     expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
-    expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.totalNetIncome).toBe(2_350_000);
   });
 
@@ -1471,7 +1470,6 @@ describe('Real Estate Income (不動産所得)', () => {
     expect(result.realEstate?.netIncome).toBe(0);
     expect(result.realEstate?.blueFilerDeduction).toBe(300_000);
     expect(result.businessBlueFilerDeduction).toBe(350_000);
-    expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.netBusinessAndMiscIncome).toBe(650_000);
     expect(result.totalNetIncome).toBe(650_000);
   });
@@ -1517,8 +1515,8 @@ describe('Real Estate Income (不動産所得)', () => {
       incomeYear: 2026,
     });
     expect(result.realEstate?.netIncome).toBe(-1_000_000);
+    expect(result.realEstate?.blueFilerDeduction).toBe(0);
     expect(result.totalNetIncome).toBe(2_560_000);
-    expect(result.blueFilerDeduction).toBe(0);
   });
 
   it('restricts real estate loss netting by land debt interest (措法41条の4)', () => {
@@ -1895,7 +1893,6 @@ describe('Real Estate Income (不動産所得)', () => {
     expect(result.realEstate?.netIncome).toBe(-400_000);
     expect(result.realEstate?.blueFilerDeduction).toBe(0);
     expect(result.businessBlueFilerDeduction).toBe(650_000);
-    expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.netBusinessAndMiscIncome).toBe(350_000);
     expect(result.totalNetIncome).toBe(0);
   });
@@ -1948,7 +1945,6 @@ describe('Real Estate Income (不動産所得)', () => {
     expect(result.realEstate?.netIncome).toBe(150_000);
     expect(result.realEstate?.blueFilerDeduction).toBe(650_000);
     expect(result.businessBlueFilerDeduction).toBe(0);
-    expect(result.blueFilerDeduction).toBe(650_000);
     expect(result.netBusinessAndMiscIncome).toBe(-300_000);
     expect(result.totalNetIncome).toBe(0);
   });

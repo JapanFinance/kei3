@@ -966,7 +966,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     salaryIncome,
     netBusinessAndMiscIncome,
     netRealEstateIncome,
-    blueFilerDeduction,
     realEstateBlueFilerDeduction,
     businessBlueFilerDeduction,
     realEstateDisallowedLandDebtInterest,
@@ -1478,7 +1477,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   return {
     annualIncome,
     hasEmploymentIncome,
-    blueFilerDeduction,
     nationalIncomeTax,
     residenceTax,
     healthInsurance,
@@ -1510,8 +1508,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         }),
       },
     }),
-    ...(blueFilerDeduction > 0 && {
-      blueFilerDeduction,
+    ...((inputs.incomeStreams.some(s => s.type === 'business') ||
+      businessBlueFilerDeduction > 0) && {
       businessBlueFilerDeduction,
     }),
     ...(grossPublicPensionIncome > 0 && {

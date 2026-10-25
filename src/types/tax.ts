@@ -954,7 +954,7 @@ export interface RealEstateResults {
    */
   netIncome: number;
   /**
-   * The portion of {@link blueFilerDeduction} applied against 不動産所得 (措法25条の2②).
+   * The portion of {@link TakeHomeInputs.blueFilerDeduction} applied against 不動産所得 (措法25条の2②).
    */
   blueFilerDeduction: number;
   /**
@@ -993,9 +993,8 @@ export interface TakeHomeResults {
    */
   annualIncome: number;
   hasEmploymentIncome: boolean;
-  blueFilerDeduction?: number;
   /**
-   * The portion of {@link blueFilerDeduction} applied against 事業所得 (措法25条の2②).
+   * The portion of {@link TakeHomeInputs.blueFilerDeduction} applied against 事業所得 (措法25条の2②).
    */
   businessBlueFilerDeduction?: number | undefined;
   /**
@@ -1039,7 +1038,7 @@ export interface TakeHomeResults {
   pensionIncomeAdjustmentDeduction?: number | undefined;
   /**
    * 事業所得 and 雑所得 other than public pensions, net of the 青色申告特別控除
-   * ({@link blueFilerDeduction}). 0 when there is no business or miscellaneous income.
+   * ({@link businessBlueFilerDeduction}). 0 when there is no business or miscellaneous income.
    */
   netBusinessAndMiscIncome: number;
   /** Gross public pension income (公的年金等の収入金額). Absent when there is none. */
