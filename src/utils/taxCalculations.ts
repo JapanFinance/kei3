@@ -92,10 +92,12 @@ import {
 import { calculatePersonalDeductions } from './personalDeductions';
 import {
   calculateFurusatoLimit,
+  calculateFurusatoResidenceCredit,
   calculateResidenceTax,
   FURUSATO_OUT_OF_POCKET_COST,
   isDependentResidenceTaxable,
   isResidenceTaxExempt,
+  NATIONAL_DONATION_INCOME_CEILING_RATE,
 } from './residenceTax';
 
 /**
@@ -1192,9 +1194,15 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     incomeYear,
   );
 
-  const furusatoDonationDeduction = inputs.furusatoDonation
-    ? Math.max(0, inputs.furusatoDonation.amount - FURUSATO_OUT_OF_POCKET_COST)
-    : 0;
+  const furusatoDonationAmount = Math.max(0, inputs.furusatoDonation || 0);
+  const furusatoDonationDeduction =
+    furusatoDonationAmount > 0
+      ? Math.max(
+          0,
+          Math.min(furusatoDonationAmount, NATIONAL_DONATION_INCOME_CEILING_RATE.taxOn(netIncome)) -
+            FURUSATO_OUT_OF_POCKET_COST,
+        )
+      : 0;
 
   // The 所得控除 come off 総所得金額 first, and what they cannot absorb off the 申告分離課税
   // classes (措法8条の4③三, 37条の10⑥五 as 37条の11⑥ applies it). Each class is floored to
@@ -1372,13 +1380,24 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
           prefecture: statutoryForeignTaxCredit.credit.prefecture,
         }
       : undefined;
-  const furusatoResidenceCredit = inputs.furusatoDonation?.residenceCredits;
+  const furusatoResidenceCredit =
+    furusatoDonationAmount > 0
+      ? calculateFurusatoResidenceCredit(furusatoDonationAmount, preCreditResidenceTax, incomeYear)
+      : undefined;
+  const furusatoCreditsApplicable =
+    furusatoResidenceCredit &&
+    (furusatoResidenceCredit.city > 0 || furusatoResidenceCredit.prefecture > 0)
+      ? {
+          city: furusatoResidenceCredit.city,
+          prefecture: furusatoResidenceCredit.prefecture,
+        }
+      : undefined;
   const residenceTaxCredits: ResidenceTaxCredits | undefined =
-    homeLoanResidenceCredit > 0 || foreignResidenceCredit || furusatoResidenceCredit
+    homeLoanResidenceCredit > 0 || foreignResidenceCredit || furusatoCreditsApplicable
       ? {
           homeLoan: homeLoanResidenceCredit,
           ...(foreignResidenceCredit && { foreignTax: foreignResidenceCredit }),
-          ...(furusatoResidenceCredit && { furusato: furusatoResidenceCredit }),
+          ...(furusatoCreditsApplicable && { furusato: furusatoCreditsApplicable }),
         }
       : undefined;
   const residenceTax = residenceTaxCredits
@@ -1432,6 +1451,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
   let furusatoNozei: FurusatoNozeiDetails = ZERO_FURUSATO_NOZEI_DETAILS;
 
+  // Calculate furusato limit even if furusato donation is not provided
   if (!inputs.furusatoDonation) {
     const furusatoLimit = calculateFurusatoLimit(
       nationalTaxableClasses.aggregate,
@@ -1450,10 +1470,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     if (furusatoLimit.finalLimit > 0) {
       const withFurusato = calculateTaxes({
         ...inputs,
-        furusatoDonation: {
-          amount: furusatoLimit.finalLimit,
-          residenceCredits: furusatoLimit.residenceCredits,
-        },
+        furusatoDonation: furusatoLimit.finalLimit,
       });
 
       const incomeTaxReduction = Math.max(0, nationalIncomeTax - withFurusato.nationalIncomeTax);

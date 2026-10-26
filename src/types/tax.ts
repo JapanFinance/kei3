@@ -927,15 +927,12 @@ export interface TakeHomeInputs {
   medicalExpenses: MedicalExpensesInput;
   personalCircumstances: PersonalCircumstancesInput;
   /**
-   * Internal simulation parameter: Furusato Nozei donation details used when re-calculating
-   * taxes to evaluate exact out-of-pocket cost and tax reductions.
+   * Annual Furusato Nozei donation amount (ふるさと納税の寄附金額) in yen. When positive, the
+   * engine derives and applies both the national income tax donation deduction (寄附金控除) and
+   * the residence tax donation credit (寄附金税額控除: 基本控除 + 特例控除). Absent or 0 means no
+   * donation.
    */
-  furusatoDonation?:
-    | {
-        amount: number;
-        residenceCredits: { city: number; prefecture: number };
-      }
-    | undefined;
+  furusatoDonation?: number | undefined;
 }
 
 /**
