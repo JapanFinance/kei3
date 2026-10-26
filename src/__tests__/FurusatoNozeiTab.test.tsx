@@ -28,8 +28,20 @@ const mockMinimumTax: HighIncomeMinimumTaxResult = {
 
 vi.mock('../components/ui/Tooltips', () => ({
   SimpleTooltip: () => <div data-testid="info-tooltip" />,
-  DetailedTooltip: ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <span data-testid="detail-info-tooltip" title={title}>
+  DetailedTooltip: ({
+    title,
+    children,
+    icon,
+    iconAriaLabel,
+  }: {
+    title: string;
+    children: React.ReactNode;
+    icon?: React.ReactNode;
+    iconAriaLabel?: string;
+  }) => (
+    <span data-testid="detail-info-tooltip" title={title} aria-label={iconAriaLabel}>
+      {icon && <span data-testid="detail-info-tooltip-icon">{icon}</span>}
+      {title && <span data-testid="detail-info-tooltip-title">{title}</span>}
       {children}
     </span>
   ),
@@ -69,7 +81,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.queryByText(/Warning: High Out-of-Pocket Cost/)).not.toBeInTheDocument();
+    expect(screen.queryByText('High Out-of-Pocket Cost')).not.toBeInTheDocument();
   });
 
   it('displays Branch 1 warning when FTC wipes out Japanese national income tax to 0', () => {
@@ -86,7 +98,9 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
+    expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
+    expect(screen.getByLabelText('High out-of-pocket cost warning')).toBeInTheDocument();
+    expect(screen.getByTestId('WarningIcon')).toHaveClass('MuiSvgIcon-colorWarning');
     expect(
       screen.getByText(
         /because the Foreign Tax Credit already reduces your Japanese national income tax to ¥0/,
@@ -112,7 +126,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
+    expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
     expect(
       screen.getByText(
         /Applying the donation deduction lowers your Japanese income tax base, which reduces the allowable Foreign Tax Credit limit/,
@@ -138,7 +152,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
+    expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
     expect(
       screen.getByText(
         /because the Home Loan Tax Credit already reduces your Japanese national income tax to ¥0, and any spillover into residence tax has reached its statutory cap/,
@@ -163,7 +177,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
+    expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
     expect(
       screen.getByText(
         /because the Minimum Tax on High Income Taxpayers \(特定の基準所得金額の課税の特例\) sets a statutory tax floor on baseline income/,
@@ -193,7 +207,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
 
     render(<FurusatoNozeiTab results={results} />);
 
-    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
+    expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
     expect(
       screen.getByText(
         /This happens when filing a tax return if taxable income changes income tax brackets after applying the Furusato Nozei donation deduction/,
