@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { FurusatoNozeiDetails } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { calculateFurusatoResidenceCredit } from '../utils/residenceTax';
 import { calculateTaxes } from '../utils/taxCalculations';
 
 describe('calculateFurusatoNozeiLimit', () => {
@@ -566,6 +567,151 @@ describe('calculateFurusatoNozeiLimit', () => {
     }).furusatoNozei;
 
     expect(fnWithLowSocialInsurance.limit).toBeGreaterThan(62_000);
+  });
+
+  describe('direct furusatoDonation input in calculateTaxes', () => {
+    const baseInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [
+        { id: 'test', type: 'salary' as const, amount: 5_000_000, frequency: 'annual' as const },
+      ],
+      ageRange: 'age20to39' as const,
+      region: 'Tokyo',
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    it('matches the simulated tax reductions when donating at the calculated limit', () => {
+      const baseline = calculateTaxes(baseInputs);
+      const withDonation = calculateTaxes({
+        ...baseInputs,
+        furusatoDonation: baseline.furusatoNozei.limit,
+      });
+
+      expect(baseline.nationalIncomeTax - withDonation.nationalIncomeTax).toBe(
+        baseline.furusatoNozei.incomeTaxReduction,
+      );
+      expect(
+        baseline.residenceTax.totalResidenceTax - withDonation.residenceTax.totalResidenceTax,
+      ).toBe(baseline.furusatoNozei.residenceTaxReduction);
+    });
+
+    it('produces no tax reductions when donation is at or below the 2,000 yen out-of-pocket threshold', () => {
+      const baseline = calculateTaxes(baseInputs);
+      const withThreshold = calculateTaxes({
+        ...baseInputs,
+        furusatoDonation: 2_000,
+      });
+
+      expect(withThreshold.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+      expect(withThreshold.residenceTax.totalResidenceTax).toBe(
+        baseline.residenceTax.totalResidenceTax,
+      );
+    });
+
+    it('retains simulated furusatoNozei limit when furusatoDonation is 0', () => {
+      const baseline = calculateTaxes(baseInputs);
+      const withZero = calculateTaxes({
+        ...baseInputs,
+        furusatoDonation: 0,
+      });
+
+      expect(withZero.nationalIncomeTax).toBe(baseline.nationalIncomeTax);
+      expect(withZero.residenceTax.totalResidenceTax).toBe(baseline.residenceTax.totalResidenceTax);
+      expect(withZero.furusatoNozei.limit).toBe(baseline.furusatoNozei.limit);
+    });
+
+    it('caps the special deduction at 20% of 所得割 when donation exceeds the optimal limit', () => {
+      const baseline = calculateTaxes(baseInputs);
+      // Donate 100,000 yen, exceeding the optimal limit (61,000 yen) where the 20% cap binds
+      const withExcessDonation = calculateTaxes({
+        ...baseInputs,
+        furusatoDonation: 100_000,
+      });
+
+      // 所得割 = 243,100 - 5,000 = 238,100. 20% cap = 47,620 yen.
+      // Basic deduction = (100,000 - 2,000) * 10% = 9,800 yen.
+      // Total residence credit = 47,620 + 9,800 = 57,420 yen (city: 34,452, prefecture: 22,968).
+      // Pre-credit: city 142,920, prefecture 95,280.
+      // Post-credit floored to 100 yen: city 108,400, prefecture 72,300.
+      // Residence tax reduction = 243,100 - (108,400 + 72,300 + 5,000) = 57,400 yen.
+      expect(
+        baseline.residenceTax.totalResidenceTax - withExcessDonation.residenceTax.totalResidenceTax,
+      ).toBe(57_400);
+    });
+  });
+
+  describe('calculateFurusatoResidenceCredit', () => {
+    it('returns zero credits for donation <= 2000', () => {
+      const baseline = calculateTaxes({
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+        ageRange: 'age20to39' as const,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      });
+
+      const credits = calculateFurusatoResidenceCredit(2000, baseline.residenceTax, 2026);
+      expect(credits).toEqual({
+        residenceTaxDonationBasicDeduction: 0,
+        residenceTaxSpecialDeduction: 0,
+        city: 0,
+        prefecture: 0,
+      });
+    });
+
+    it('calculates correct credits for a 50,000 yen donation', () => {
+      const baseline = calculateTaxes({
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+        ageRange: 'age20to39' as const,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      });
+
+      const credits = calculateFurusatoResidenceCredit(50_000, baseline.residenceTax, 2026);
+      // Basic deduction is 10% of (50,000 - 2,000) = 4,800 yen
+      expect(credits.residenceTaxDonationBasicDeduction).toBe(4_800);
+      expect(credits.residenceTaxSpecialDeduction).toBe(38_300);
+      expect(credits.city).toBe(25_860);
+      expect(credits.prefecture).toBe(17_240);
+    });
+
+    it('caps special deduction at 20% of pre-credit 所得割 for donations above limit', () => {
+      const baseline = calculateTaxes({
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 'test', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+        ageRange: 'age20to39' as const,
+        region: 'Tokyo',
+        healthInsuranceProvider: DEFAULT_PROVIDER,
+        dependents: [],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      });
+
+      // 所得割 = 243,100 - 5,000 = 238,100. 20% cap = 47,620 yen.
+      const credits = calculateFurusatoResidenceCredit(100_000, baseline.residenceTax, 2026);
+      expect(credits.residenceTaxSpecialDeduction).toBe(47_620);
+      expect(credits.residenceTaxDonationBasicDeduction).toBe(9_800);
+      expect(credits.city).toBe(34_452);
+      expect(credits.prefecture).toBe(22_968);
+    });
   });
 });
 
