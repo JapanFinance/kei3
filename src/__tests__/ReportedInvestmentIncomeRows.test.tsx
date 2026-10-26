@@ -953,7 +953,7 @@ describe('FurusatoNozeiTab with the foreign tax credit', () => {
     };
     render(<FurusatoNozeiTab results={wipedOutResults} />);
 
-    expect(screen.getByText(/Warning: High Out-of-Pocket Cost/)).toBeInTheDocument();
+    expect(screen.getByTitle('High Out-of-Pocket Cost')).toBeInTheDocument();
     expect(
       screen.getByText(
         /because the Foreign Tax Credit already reduces your Japanese national income tax to ¥0/,

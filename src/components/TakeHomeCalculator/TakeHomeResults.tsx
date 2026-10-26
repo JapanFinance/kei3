@@ -62,7 +62,8 @@ const renderTabLabel = ({ head, tail }: (typeof TAB_LABELS)[number], furusatoWar
     {furusatoWarning && head === 'Furusato' && (
       <WarningIcon
         titleAccess="High out-of-pocket cost"
-        sx={{ ml: 0.5, fontSize: '1rem', color: 'error.main', verticalAlign: 'text-bottom' }}
+        color="warning"
+        sx={{ ml: 0.5, fontSize: '1rem', verticalAlign: 'text-bottom' }}
       />
     )}
   </span>
