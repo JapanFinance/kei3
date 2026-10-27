@@ -439,14 +439,20 @@ describe('generateChartData with foreign tax', () => {
 
 describe('generateChartData employment insurance bar', () => {
   it('shows the bar wherever the calculation charges the premium, even with no salary or bonus', () => {
-    // A commuting allowance beside business income is employment for social insurance, so the
-    // premium is charged on it: ¥10,000 a month at the 2026 rates comes to ¥615 a year. The bar
-    // used to be gated on a salary or bonus being entered, which left the stack short by ¥615.
+    // A commuting allowance beside stock compensation has no salary or bonus, but employment
+    // insurance is charged on the commuting allowance: ¥10,000 a month at the 2026 rates comes
+    // to ¥615 a year. The bar used to be gated on a salary or bonus being entered, which left
+    // the stack short by ¥615.
     const { datasets } = generateChartData(range, {
       ...context,
       ageRange: 'age20to39',
       incomeStreams: [
-        { id: 'b', type: 'business', amount: 4_000_000 },
+        {
+          id: 'sc',
+          type: 'stockCompensation',
+          amount: 4_000_000,
+          issuerDomicile: 'foreign',
+        },
         { id: 'c', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
       ],
     });

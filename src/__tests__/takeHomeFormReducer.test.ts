@@ -547,6 +547,21 @@ describe('takeHomeFormReducer', () => {
       expect(result.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
     });
 
+    it('strips commuting allowance if no employment income stream is present', () => {
+      const state: TakeHomeFormState = { ...baseState, incomeMode: 'advanced' };
+
+      const result = takeHomeFormReducer(state, {
+        type: 'incomeStreamsChanged',
+        streams: [
+          { id: 'b1', type: 'business', amount: 3_000_000 },
+          { id: 'c1', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+        ],
+      });
+
+      expect(result.incomeStreams).toEqual([{ id: 'b1', type: 'business', amount: 3_000_000 }]);
+      expect(result.annualIncome).toBe(3_000_000);
+    });
+
     it('auto-switches from dependent coverage to NHI when the new stream total crosses the eligibility threshold', () => {
       const state: TakeHomeFormState = {
         ...baseState,

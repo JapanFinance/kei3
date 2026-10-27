@@ -142,6 +142,7 @@ export const CommutingAllowanceStreamForm: React.FC<StreamTypeFormProps<'commuti
   initialData,
   onSave,
   onCancel,
+  hasEmploymentIncome,
 }) => {
   const [amount, setAmount] = useState<number>(initialData?.amount ?? 0);
   const [frequency, setFrequency] = useState<CommutingAllowanceIncomeStream['frequency']>(
@@ -149,7 +150,18 @@ export const CommutingAllowanceStreamForm: React.FC<StreamTypeFormProps<'commuti
   );
   const [error, setError] = useState<string | null>(null);
 
+  const missingEmploymentError =
+    hasEmploymentIncome === false
+      ? 'A commuting allowance requires employment income (salary, bonus, or stock-based compensation).'
+      : null;
+
   const handleSave = () => {
+    if (hasEmploymentIncome === false) {
+      setError(
+        'A commuting allowance requires employment income (salary, bonus, or stock-based compensation).',
+      );
+      return;
+    }
     const stream: CommutingAllowanceIncomeStream = {
       id: createStreamId(initialData),
       type: 'commutingAllowance',
@@ -171,6 +183,7 @@ export const CommutingAllowanceStreamForm: React.FC<StreamTypeFormProps<'commuti
       isEditing={!!initialData}
       onSave={handleSave}
       onCancel={onCancel}
+      saveDisabled={hasEmploymentIncome === false}
     >
       <FormControl fullWidth>
         <InputLabel id="commuting-allowance-frequency-label">Frequency</InputLabel>
@@ -197,7 +210,7 @@ export const CommutingAllowanceStreamForm: React.FC<StreamTypeFormProps<'commuti
             setAmount(val);
             setError(null);
           }}
-          error={error}
+          error={error ?? missingEmploymentError}
         />
         {amount > 0 && (
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 0.5 }}>

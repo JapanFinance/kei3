@@ -17,7 +17,11 @@ import {
 } from '../types/healthInsurance';
 import type { IncomeStream, TakeHomeFormState } from '../types/tax';
 import { isLatterStageElderly } from '../types/taxpayerAge';
-import { dependentTestAnnualIncome, totalAnnualIncomeFromStreams } from '../utils/incomeStreams';
+import {
+  dependentTestAnnualIncome,
+  hasEmploymentIncomeStream,
+  totalAnnualIncomeFromStreams,
+} from '../utils/incomeStreams';
 
 export function selectDefaultRegion(regions: readonly string[]): string {
   return regions.includes('Tokyo')
@@ -84,10 +88,7 @@ export function hasEmploymentIncome(
 ): boolean {
   return (
     state.incomeMode === 'salary' ||
-    (state.incomeMode === 'advanced' &&
-      state.incomeStreams.some(
-        s => s.type === 'salary' || s.type === 'bonus' || s.type === 'stockCompensation',
-      ))
+    (state.incomeMode === 'advanced' && hasEmploymentIncomeStream(state.incomeStreams))
   );
 }
 
@@ -398,8 +399,12 @@ function reduceIncomeStreamsChanged(
   state: TakeHomeFormState,
   action: IncomeStreamsChangedAction,
 ): TakeHomeFormState {
-  const newState = { ...state, annualIncome: totalAnnualIncomeFromStreams(action.streams) };
-  newState.incomeStreams = action.streams;
+  const hasEmployment = hasEmploymentIncomeStream(action.streams);
+  const streams = hasEmployment
+    ? action.streams
+    : action.streams.filter(s => s.type !== 'commutingAllowance');
+  const newState = { ...state, annualIncome: totalAnnualIncomeFromStreams(streams) };
+  newState.incomeStreams = streams;
   // Removing the last employment stream (or dependent coverage crossing the income threshold)
   // can strand a provider that is no longer offered; correct it here so the returned state is
   // already valid.
