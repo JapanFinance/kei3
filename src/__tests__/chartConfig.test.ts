@@ -4,17 +4,16 @@
 import { describe, it, expect } from 'vitest';
 
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, type TakeHomeInputs } from '../types/tax';
 import {
   generateChartData,
   heldIncomeInSweep,
   getChartOptions,
   scaleIncomeStreamsToIncome,
-  type ChartCalculationContext,
 } from '../utils/chartConfig';
 import { calculateTaxes } from '../utils/taxCalculations';
 
-const context: ChartCalculationContext = {
+const context: TakeHomeInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   incomeStreams: [{ id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' }],
   ageRange: 'age65to69',
@@ -27,7 +26,6 @@ const context: ChartCalculationContext = {
   incomeYear: 2026,
   longTermCareCategory1ManualEntry: false,
   longTermCareCategory1Premium: 0,
-  isEmploymentIncome: true,
 };
 
 // Five income points: 1M, 2M, 3M, 4M, 5M.
@@ -89,7 +87,7 @@ describe('generateChartData with the 介護保険第1号 premium', () => {
 });
 
 describe('generateChartData with public pension income', () => {
-  const pensionContext: ChartCalculationContext = {
+  const pensionContext: TakeHomeInputs = {
     ...context,
     incomeStreams: [
       {
@@ -100,7 +98,6 @@ describe('generateChartData with public pension income', () => {
         amount: 2_400_000,
       },
     ],
-    isEmploymentIncome: false,
   };
 
   it('labels the pension in the breakdown at every point of the sweep', () => {
@@ -136,7 +133,7 @@ describe('generateChartData with public pension income', () => {
 describe('generateChartData with a commuting allowance', () => {
   // 100,000円/month is under the 150,000円 non-taxable cap, but scaling it with the swept
   // income would carry it past the cap and the calculation would reject it.
-  const commutingContext: ChartCalculationContext = {
+  const commutingContext: TakeHomeInputs = {
     ...context,
     incomeStreams: [
       { id: 's', type: 'salary', amount: 5_000_000, frequency: 'annual' },
@@ -181,7 +178,7 @@ describe('generateChartData with investment income', () => {
   // 申告不要 investment income is money received, so it is inside the income the x-axis sweeps
   // and inside take-home. It is asset-based, so the sweep holds it at the entered amount, and the
   // tax withheld on it rides in the tax bars beside the assessed tax.
-  const investmentContext: ChartCalculationContext = {
+  const investmentContext: TakeHomeInputs = {
     ...context,
     incomeStreams: [
       { id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' },
@@ -243,7 +240,7 @@ describe('generateChartData with investment income reported under 申告分離�
     foreignTax: 0,
     amount: 1_000_000,
   };
-  const reportedContext: ChartCalculationContext = {
+  const reportedContext: TakeHomeInputs = {
     ...context,
     incomeStreams: [{ id: 's', type: 'salary', amount: 4_000_000, frequency: 'annual' }, dividends],
   };
@@ -277,7 +274,7 @@ describe('generateChartData with investment income reported under 申告分離�
     // At 6,000,000 on the return — 5,000,000 of salary beside the held 1,000,000 — take-home is
     // 4,739,848 under 申告分離課税 and 4,748,648 under 総合課税 (the calculateTaxes cases, whose
     // taxpayer is 20-39).
-    const takeHomeAt = (election: ChartCalculationContext['reportedDividendsTaxation']) => {
+    const takeHomeAt = (election: TakeHomeInputs['reportedDividendsTaxation']) => {
       const { datasets } = generateChartData(
         { min: 1_000_000, max: 6_000_000 },
         { ...reportedContext, ageRange: 'age20to39', reportedDividendsTaxation: election },
@@ -315,7 +312,7 @@ describe('generateChartData with foreign tax', () => {
   // paid is a tax on the income the x-axis sweeps, so it rides in the income tax bar with the
   // assessed tax, and the bars still stack to the income.
   const stacksToIncomeWithForeignTaxInIncomeTaxBar = (
-    chartContext: ChartCalculationContext,
+    chartContext: TakeHomeInputs,
     foreignTaxPaid: number,
     chartRange = { min: 1_000_000, max: 6_000_000 },
   ) => {
@@ -388,7 +385,7 @@ describe('generateChartData with foreign tax', () => {
     // A lone pension from a foreign system, 2,000,000 with 100,000 of foreign tax, is scaled to
     // each point with its tax. Up to 2,000,000 the 1,100,000 minimum deduction leaves at most
     // 900,000, under the 1,040,000 基礎控除, so the income tax bar is the foreign tax alone.
-    const pensionContext: ChartCalculationContext = {
+    const pensionContext: TakeHomeInputs = {
       ...context,
       incomeStreams: [
         {
@@ -399,7 +396,6 @@ describe('generateChartData with foreign tax', () => {
           amount: 2_000_000,
         },
       ],
-      isEmploymentIncome: false,
       longTermCareCategory1ManualEntry: true,
     };
     const { datasets } = generateChartData(range, pensionContext);
@@ -415,7 +411,7 @@ describe('generateChartData with foreign tax', () => {
   });
 
   it('T10: reflects blueFilerDeduction for real estate income across the chart sweep', () => {
-    const baseCtx: ChartCalculationContext = {
+    const baseCtx: TakeHomeInputs = {
       ...context,
       incomeStreams: [
         {
@@ -426,7 +422,6 @@ describe('generateChartData with foreign tax', () => {
           foreignTax: 0,
         },
       ],
-      isEmploymentIncome: false,
     };
     const withoutDeduction = generateChartData(range, { ...baseCtx, blueFilerDeduction: 0 });
     const withDeduction = generateChartData(range, { ...baseCtx, blueFilerDeduction: 650_000 });
@@ -439,6 +434,48 @@ describe('generateChartData with foreign tax', () => {
     const ptWithout = takeHomeWithout.find(p => p.x === 5_000_000);
     const ptWith = takeHomeWith.find(p => p.x === 5_000_000);
     expect(ptWith!.y).toBeGreaterThan(ptWithout!.y);
+  });
+});
+
+describe('generateChartData employment insurance bar', () => {
+  it('shows the bar wherever the calculation charges the premium, even with no salary or bonus', () => {
+    // A commuting allowance beside business income is employment for social insurance, so the
+    // premium is charged on it: ¥10,000 a month at the 2026 rates comes to ¥615 a year. The bar
+    // used to be gated on a salary or bonus being entered, which left the stack short by ¥615.
+    const { datasets } = generateChartData(range, {
+      ...context,
+      ageRange: 'age20to39',
+      incomeStreams: [
+        { id: 'b', type: 'business', amount: 4_000_000 },
+        { id: 'c', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+      ],
+    });
+
+    const employmentInsurance = datasets.find(d => d.label === 'Employment Insurance');
+    expect(employmentInsurance).toBeDefined();
+    pointsOf(employmentInsurance!).forEach(point => expect(point.y, `income ${point.x}`).toBe(615));
+
+    const bars = datasets.filter(d => d.type === 'bar');
+    pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!).forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
+  });
+
+  it('omits the bar when no point of the sweep charges the premium', () => {
+    const { datasets } = generateChartData(range, {
+      ...context,
+      incomeStreams: [
+        {
+          id: 'p',
+          type: 'publicPension',
+          payerDomicile: 'domestic',
+          foreignTax: 0,
+          amount: 2_400_000,
+        },
+      ],
+    });
+    expect(datasets.some(d => d.label === 'Employment Insurance')).toBe(false);
   });
 });
 
