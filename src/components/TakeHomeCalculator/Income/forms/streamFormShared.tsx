@@ -17,6 +17,7 @@ export interface StreamTypeFormProps<T extends IncomeStreamType = IncomeStreamTy
   onSave: (stream: Extract<IncomeStream, { type: T }>) => void;
   onCancel: () => void;
   isMinimumTaxTriggered?: ((draft: IncomeStream) => boolean) | undefined;
+  hasEmploymentIncome?: boolean | undefined;
 }
 
 export const createStreamId = (initialData?: { id: string }): string =>
@@ -88,6 +89,7 @@ interface IncomeStreamFormShellProps {
   onSave: () => void;
   onCancel: () => void;
   children: React.ReactNode;
+  saveDisabled?: boolean;
 }
 
 export const IncomeStreamFormShell: React.FC<IncomeStreamFormShellProps> = ({
@@ -96,6 +98,7 @@ export const IncomeStreamFormShell: React.FC<IncomeStreamFormShellProps> = ({
   onSave,
   onCancel,
   children,
+  saveDisabled = false,
 }) => {
   const info = INCOME_STREAM_CATALOG[type];
   return (
@@ -122,7 +125,7 @@ export const IncomeStreamFormShell: React.FC<IncomeStreamFormShellProps> = ({
 
         <Stack direction="row" spacing={2} sx={{ justifyContent: 'flex-end' }}>
           <Button onClick={onCancel}>Cancel</Button>
-          <Button variant="contained" onClick={onSave}>
+          <Button variant="contained" onClick={onSave} disabled={saveDisabled}>
             {isEditing ? 'Update' : 'Add'}
           </Button>
         </Stack>

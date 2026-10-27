@@ -64,7 +64,11 @@ import {
   isHighIncomeMinimumTaxApplicable,
 } from './highIncomeMinimumTax';
 import { applyHomeLoanTaxCredit } from './homeLoanTaxCredit';
-import { annualIncomeStreamAmount, validateIncomeStream } from './incomeStreams';
+import {
+  annualIncomeStreamAmount,
+  hasEmploymentIncomeStream,
+  validateIncomeStream,
+} from './incomeStreams';
 import {
   applyDeductionSpillover,
   calculateReportedSeparateInvestmentIncomeTaxationBase,
@@ -312,7 +316,6 @@ interface IncomeBreakdown {
    */
   nonInvestmentAnnualIncome: number;
   commutingAllowance: number;
-  stockCompensationIncome: number;
   grossPublicPensionIncome: number;
   /**
    * The base the listed-share withholding rate applies to: every withholding account's
@@ -829,7 +832,6 @@ const calculateIncomeBreakdown = (
     disallowedForeignDepreciationLoss,
     nonInvestmentAnnualIncome,
     commutingAllowance,
-    stockCompensationIncome,
     grossPublicPensionIncome,
     listedWithholdingBase,
     withheldBase: {
@@ -974,7 +976,6 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     disallowedForeignDepreciationLoss,
     nonInvestmentAnnualIncome,
     commutingAllowance,
-    stockCompensationIncome,
     grossPublicPensionIncome,
     listedWithholdingBase,
     withheldBase,
@@ -1004,13 +1005,14 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     aggregateDividends +
     aggregateInterest;
 
-  // Whether the person is employed at all, which a commuting allowance alone attests to even
-  // though none of it is 給与等の収入金額 — social insurance is charged on it either way.
-  const hasEmploymentIncome =
-    salaryIncome > 0 ||
-    bonusIncome.some(b => b.amount > 0) ||
-    commutingAllowance > 0 ||
-    stockCompensationIncome > 0;
+  // Whether the return includes actual employment income (給与等の収入金額 > 0).
+  const hasEmploymentIncome = grossEmploymentIncome > 0;
+
+  if (commutingAllowance > 0 && !hasEmploymentIncomeStream(inputs.incomeStreams)) {
+    throw new Error(
+      'A commuting allowance requires employment income (salary, bonus, or stock-based compensation).',
+    );
+  }
 
   const incomeYear = inputs.incomeYear;
 
