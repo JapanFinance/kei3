@@ -30,6 +30,7 @@ import {
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
@@ -420,7 +421,10 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   In the same household
-                  <DetailedTooltip title="Same Municipal Household (同一世帯)">
+                  <DetailedTooltip
+                    title="Same Municipal Household (同一世帯)"
+                    icon={SIMPLE_TOOLTIP_ICON}
+                  >
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       Registered under the same municipal resident record (住民票上の同一世帯).
                     </Typography>
