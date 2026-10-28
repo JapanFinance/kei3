@@ -33,7 +33,7 @@ export interface NHIHouseholdMember {
   id: string;
   relationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
   isTaxpayer: boolean;
-  isCohabiting: boolean;
+  isSameHousehold: boolean;
   isHouseholdHead: boolean;
   isNHIInsured: boolean;
   isLtcCat2: boolean;
@@ -84,10 +84,10 @@ export interface NHIHouseholdComposition {
 }
 
 /**
- * Resolves whether a cohabiting dependent is enrolled in National Health Insurance in this household.
+ * Resolves whether a same-household dependent is enrolled in National Health Insurance in this household.
  *
  * Rules:
- * - Members who do not live together (isCohabiting === false) belong to a separate household
+ * - Members who are not in the same municipal household (isSameHousehold === false) belong to a separate household
  * - Members aged 75 or older (後期高齢者医療制度) cannot be enrolled in NHI
  * - 'nhi': explicitly enrolled in NHI
  * - 'other': explicitly covered under Employees' Health Insurance or other system
@@ -97,7 +97,7 @@ export function resolveDependentNHIEnrollment(
   dependent: Dependent,
   taxpayerOnNHI: boolean,
 ): boolean {
-  if (!dependent.isCohabiting) {
+  if (!dependent.isSameHousehold) {
     return false;
   }
   // Age 75+ moves to Latter-Stage Elderly Healthcare System
@@ -167,15 +167,15 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
     ? Math.min(taxpayer.netPublicPensionIncome, NHI_ELDERLY_PENSION_REDUCTION_SPECIAL_DEDUCTION)
     : 0;
 
-  // Check if any cohabiting dependent is designated as household head
-  const cohabitingDependents = dependents.filter(d => d.isCohabiting);
-  const designatedHeadDep = cohabitingDependents.find(d => d.isHouseholdHead === true);
+  // Check if any same-household dependent is designated as household head
+  const sameHouseholdDependents = dependents.filter(d => d.isSameHousehold);
+  const designatedHeadDep = sameHouseholdDependents.find(d => d.isHouseholdHead === true);
 
   const taxpayerMember: NHIHouseholdMember = {
     id: 'taxpayer',
     relationship: 'taxpayer',
     isTaxpayer: true,
-    isCohabiting: true,
+    isSameHousehold: true,
     isHouseholdHead: designatedHeadDep === undefined,
     isNHIInsured: taxpayerOnNHI,
     isLtcCat2: isLongTermCareCategory2Insured(taxpayer.ageRange),
@@ -191,7 +191,7 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
 
   const members: NHIHouseholdMember[] = [taxpayerMember];
 
-  for (const dep of cohabitingDependents) {
+  for (const dep of sameHouseholdDependents) {
     const isNHIInsured = resolveDependentNHIEnrollment(dep, taxpayerOnNHI);
     const isHead = designatedHeadDep !== undefined && dep.id === designatedHeadDep.id;
     const isLtcCat2 =
@@ -219,7 +219,7 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
       id: dep.id,
       relationship: dep.relationship,
       isTaxpayer: false,
-      isCohabiting: true,
+      isSameHousehold: true,
       isHouseholdHead: isHead,
       isNHIInsured,
       isLtcCat2,

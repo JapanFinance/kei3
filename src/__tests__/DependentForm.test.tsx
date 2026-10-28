@@ -16,7 +16,7 @@ describe('DependentForm public pension income', () => {
     ageRange: '70to74',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 1_580_000, otherNetIncome: 0 },
     disability: 'none',
-    isCohabiting: true,
+    isSameHousehold: true,
   };
 
   it('shows the pension row and applies the 公的年金等控除 in the previews', () => {

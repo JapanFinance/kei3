@@ -71,7 +71,7 @@ function getSpouseSpecialDeduction(
     id: 'test-spouse',
     relationship: 'spouse',
     ageRange: 'under40',
-    isCohabiting: true,
+    isSameHousehold: true,
     disability: 'none',
     income: {
       grossEmploymentIncome: 0,
@@ -95,7 +95,7 @@ function getSpecificRelativeDeduction(dependentNetIncome: number, year?: number)
     id: 'test-child',
     relationship: 'child',
     ageRange: '19to22',
-    isCohabiting: false,
+    isSameHousehold: false,
     disability: 'none',
     income: {
       grossEmploymentIncome: 0,
@@ -118,7 +118,7 @@ function getSpouseDeduction(isElderly: boolean, taxpayerNetIncome: number) {
     id: 'test-spouse',
     relationship: 'spouse',
     ageRange: isElderly ? '70to74' : 'under40',
-    isCohabiting: true,
+    isSameHousehold: true,
     disability: 'none',
     income: {
       grossEmploymentIncome: 0,
@@ -156,7 +156,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
@@ -172,7 +172,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
@@ -188,7 +188,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_359_999, // Net = 619,999
@@ -206,7 +206,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_130_001, // Net = 480,001
@@ -222,7 +222,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_200_000, // Net = 550,000
@@ -240,7 +240,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
@@ -256,7 +256,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_150_000, // Net = 500,000
@@ -276,7 +276,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
@@ -292,7 +292,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
@@ -308,7 +308,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_229_999, // Net = 579,999
@@ -326,7 +326,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_130_001, // Net = 480,001
@@ -344,7 +344,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
@@ -364,7 +364,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
@@ -380,7 +380,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
@@ -398,7 +398,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_980_000, // Net = 1,330,000
@@ -414,7 +414,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0, // Using otherNetIncome for exact control
@@ -432,7 +432,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_130_001, // Net = 480,001
@@ -452,7 +452,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_390_000, // Net = 650,000
@@ -468,7 +468,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
@@ -566,7 +566,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_000, // Net = 620,000
@@ -584,7 +584,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_360_001, // Net = 620,001
@@ -600,7 +600,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0,
@@ -616,7 +616,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 0, // Using otherNetIncome for exact control
@@ -634,7 +634,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
@@ -650,7 +650,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'child',
         ageRange: '23to39',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
@@ -666,7 +666,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'parent',
         ageRange: '70to74',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
@@ -684,7 +684,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: {
           grossEmploymentIncome: 1_650_000, // Net = 1,000,000
@@ -830,7 +830,7 @@ describe('Special Dependent (特定扶養親族) Classification', () => {
       id: '1',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
@@ -846,7 +846,7 @@ describe('Special Dependent (特定扶養親族) Classification', () => {
       id: '1',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_360_001, // Net = 620,001
@@ -864,7 +864,7 @@ describe('Elderly Dependent Classification', () => {
       id: '1',
       relationship: 'parent',
       ageRange: '70to74',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
@@ -880,7 +880,7 @@ describe('Elderly Dependent Classification', () => {
       id: '1',
       relationship: 'parent',
       ageRange: '70to74',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_360_001, // Net = 620,001
@@ -898,11 +898,11 @@ describe('同居老親等 (cohabiting elderly direct ascendant) deduction', () =
   // ("Parent or Grandparent"). A cohabiting elderly 'other' ("Other Relative") is not a 直系尊属
   // and gets the plain 老人扶養親族 amounts (48万/38万) under the ELDERLY_DEPENDENT type.
   // @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm
-  const makeElderly = (relationship: 'parent' | 'other', isCohabiting: boolean): Dependent => ({
+  const makeElderly = (relationship: 'parent' | 'other', isSameHousehold: boolean): Dependent => ({
     id: '1',
     relationship,
     ageRange: '70to74',
-    isCohabiting,
+    isSameHousehold,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   });
@@ -952,7 +952,7 @@ describe('Total Net Income Calculation with Other Income', () => {
       id: '1',
       relationship: 'child',
       ageRange: '16to18',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_000_000, // Net = 260,000
@@ -968,7 +968,7 @@ describe('Total Net Income Calculation with Other Income', () => {
       id: '1',
       relationship: 'child',
       ageRange: '16to18',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_000_000, // Net = 260,000
@@ -1363,7 +1363,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
@@ -1402,7 +1402,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_690_001, // Net = 950,001 (95万円超～100万円 bracket)
@@ -1441,7 +1441,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
       id: '1',
       relationship: 'spouse',
       ageRange: '70to74',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 900_000, // Net = 350,000
@@ -1480,7 +1480,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
       id: '1',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: {
         grossEmploymentIncome: 1_230_000, // Net = 580,000
@@ -1507,7 +1507,7 @@ describe('Dependent Deductions - Under 16', () => {
       id: '1',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: {
         grossEmploymentIncome: 0,
@@ -1532,7 +1532,7 @@ describe('Dependent Deductions - Under 16', () => {
       id: '1',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'regular',
       income: {
         grossEmploymentIncome: 0,
@@ -1567,7 +1567,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'regular',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
       };
@@ -1584,7 +1584,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'regular',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
       };
@@ -1602,7 +1602,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'special',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
       };
@@ -1621,7 +1621,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'spouse',
         ageRange: 'under40',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'special',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
       };
@@ -1642,7 +1642,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'child',
         ageRange: '23to39',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'regular',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
       };
@@ -1661,7 +1661,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'child',
         ageRange: '23to39',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'regular',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
       };
@@ -1681,7 +1681,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'child',
         ageRange: '23to39',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'special',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
       };
@@ -1702,7 +1702,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
         id: '1',
         relationship: 'child',
         ageRange: '23to39',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'special',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
       };
@@ -1723,7 +1723,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'special',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 2_000_000 }, // Using otherNetIncome for exact control
     };
@@ -1741,7 +1741,7 @@ describe('NOT_ELIGIBLE breakdown entry for a spouse with no applicable deduction
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_330_001 }, // Using otherNetIncome for exact control
     };
@@ -1763,7 +1763,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
       id: 'test',
       relationship: 'child',
       ageRange: '16to18',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: netIncome },
     };
@@ -1774,7 +1774,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
       id: 'test-spouse',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: netIncome },
     };
@@ -1840,7 +1840,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
         id: 'test',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 580_000 },
       };
@@ -1853,7 +1853,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
         id: 'test',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 580_001 },
       };
@@ -1871,7 +1871,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
         id: 'test',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 600_000 },
       };
@@ -1888,7 +1888,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
       id: 'dep',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: false,
+      isSameHousehold: false,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       ...overrides,
@@ -1988,7 +1988,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
           id: 'sp',
           relationship: 'spouse',
           ageRange: 'under40',
-          isCohabiting: true,
+          isSameHousehold: true,
           disability: 'none',
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           ...overrides,
@@ -2017,7 +2017,7 @@ describe('hasDependentRelativeUnder23', () => {
     ageRange,
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome },
     disability: 'none',
-    isCohabiting: true,
+    isSameHousehold: true,
   });
 
   const spouseUnder70: Dependent = {
@@ -2026,7 +2026,7 @@ describe('hasDependentRelativeUnder23', () => {
     ageRange: 'under40',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     disability: 'none',
-    isCohabiting: true,
+    isSameHousehold: true,
   };
 
   it('is true for a non-spouse dependent under 23 within the threshold (incl. under 16)', () => {
@@ -2053,14 +2053,14 @@ describe('Public Pension Income in Total Net Income', () => {
   const pensionerParent = (
     ageRange: '23to39' | '65to69' | '70to74',
     grossPublicPensionIncome: number,
-    isCohabiting = false,
+    isSameHousehold = false,
   ): Dependent => ({
     id: 'p',
     relationship: 'parent',
     ageRange,
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome, otherNetIncome: 0 },
     disability: 'none',
-    isCohabiting,
+    isSameHousehold,
   });
 
   it('applies the public pension deduction using the age range', () => {
@@ -2081,7 +2081,7 @@ describe('Public Pension Income in Total Net Income', () => {
       ageRange,
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 1_500_000, otherNetIncome: 0 },
       disability: 'none',
-      isCohabiting: true,
+      isSameHousehold: true,
     });
     // 65-69: net 400,000 ≤ 620,000 → 配偶者控除
     expect(isEligibleForSpouseDeduction(spouse('65to69'))).toBe(true);
@@ -2121,7 +2121,7 @@ const salaryAndPensionParent = (
   ageRange: '65to69',
   income: { grossEmploymentIncome, grossPublicPensionIncome, otherNetIncome: 0 },
   disability,
-  isCohabiting: false,
+  isSameHousehold: false,
 });
 
 describe('所得金額調整控除（給与所得と年金所得の双方を有する者）', () => {
@@ -2238,7 +2238,7 @@ describe('countDependentsWithinEligibilityIncome', () => {
       id,
       relationship,
       ageRange,
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome },
     }) as Dependent;

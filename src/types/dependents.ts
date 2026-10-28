@@ -44,7 +44,7 @@ export interface DependentIncome {
  * - regular: 一般の障害者
  * - special: 特別障害者
  *
- * Note: 同居特別障害者 is determined by combining disability='special' with isCohabiting=true
+ * Note: 同居特別障害者 is determined by combining disability='special' with isSameHousehold=true
  */
 export type DisabilityLevel = 'none' | 'regular' | 'special';
 
@@ -227,25 +227,25 @@ export interface Spouse {
   /** Disability status and level */
   disability: DisabilityLevel;
 
-  /** Whether the spouse lives with the taxpayer */
-  isCohabiting: boolean;
+  /** Whether the spouse is in the same municipal household as the taxpayer */
+  isSameHousehold: boolean;
 
   /**
    * Whether to claim this spouse as a tax dependent for 配偶者控除 / 配偶者特別控除 / 障害者控除.
    * Defaults to true when omitted. When false, no tax deductions are claimed for this spouse,
-   * but their cohabiting household status still participates in NHI and residence tax limits.
+   * but their same-household status still participates in NHI and residence tax limits.
    */
   isClaimedAsDependent?: boolean | undefined;
 
   /**
-   * Health insurance enrollment for this cohabiting member:
-   * Defaults to 'auto' when omitted. Ignored when not cohabiting or aged 75+.
+   * Health insurance enrollment for this same-household member:
+   * Defaults to 'auto' when omitted. Ignored when not in the same household or aged 75+.
    */
   healthInsurance?: HouseholdMemberHealthInsurance | undefined;
 
   /**
-   * Whether this cohabiting non-NHI member is designated as the household head (擬制世帯主)
-   * when the taxpayer is on National Health Insurance. At most one cohabiting member can be head.
+   * Whether this same-household non-NHI member is designated as the household head (擬制世帯主)
+   * when the taxpayer is on National Health Insurance. At most one same-household member can be head.
    */
   isHouseholdHead?: boolean | undefined;
 }
@@ -269,19 +269,19 @@ export interface OtherDependent {
   /** Disability status and level */
   disability: DisabilityLevel;
 
-  /** Whether the dependent lives with the taxpayer */
-  isCohabiting: boolean;
+  /** Whether the dependent is in the same municipal household as the taxpayer */
+  isSameHousehold: boolean;
 
   /**
    * Whether to claim this dependent for 扶養控除 / 障害者控除 / 所得金額調整控除.
    * Defaults to true when omitted. When false, no tax deductions are claimed for this person
-   * (e.g. child claimed by the other parent under 所得税法第85条第5項, or independent cohabiting relative).
+   * (e.g. child claimed by the other parent under 所得税法第85条第5項, or independent same-household relative).
    */
   isClaimedAsDependent?: boolean | undefined;
 
   /**
-   * Health insurance enrollment for this cohabiting member:
-   * Defaults to 'auto' when omitted. Ignored when not cohabiting or aged 75+.
+   * Health insurance enrollment for this same-household member:
+   * Defaults to 'auto' when omitted. Ignored when not in the same household or aged 75+.
    */
   healthInsurance?: HouseholdMemberHealthInsurance | undefined;
 

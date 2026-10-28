@@ -1088,7 +1088,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       id: 'spouse',
       relationship: 'spouse',
       ageRange: '40to64',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 1_200_000,
         grossPublicPensionIncome: 0,
@@ -1125,7 +1125,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       id: 'spouse',
       relationship: 'spouse',
       ageRange: '40to64',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 2_000_000,
         grossPublicPensionIncome: 0,
@@ -1164,7 +1164,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       id: 'spouse',
       relationship: 'spouse',
       ageRange: '40to64',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 4_300_000, // Same gross income as taxpayer
         grossPublicPensionIncome: 0,
@@ -1201,7 +1201,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       id: 'spouse',
       relationship: 'spouse',
       ageRange: '40to64',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 1_000_000,
         grossPublicPensionIncome: 0,
@@ -1237,7 +1237,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       id: 'child-preschool',
       relationship: 'child',
       ageRange: 'under6',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
@@ -1265,7 +1265,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       id: 'adult-dep',
       relationship: 'child',
       ageRange: '23to39',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,

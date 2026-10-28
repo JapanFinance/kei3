@@ -109,13 +109,13 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
     isTaxpayerNHI ||
     Boolean(
       spouse &&
-      spouse.isCohabiting &&
+      spouse.isSameHousehold &&
       spouse.ageRange !== '75plus' &&
       resolveDependentNHIEnrollment(spouse, isTaxpayerNHI),
     ) ||
     otherDependents.some(
       d =>
-        d.isCohabiting &&
+        d.isSameHousehold &&
         d.ageRange !== '75plus' &&
         resolveDependentNHIEnrollment(d, isTaxpayerNHI),
     );
@@ -184,24 +184,32 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       let disabilityLabel =
         dependent.disability === 'regular' ? 'General disability' : 'Special disability';
       // Add cohabiting info to special disability chip
-      if (dependent.disability === 'special' && dependent.isCohabiting) {
+      if (dependent.disability === 'special' && dependent.isSameHousehold) {
         disabilityLabel += ' (Cohabiting)';
       }
 
       chips.push(<Chip key="disability" label={disabilityLabel} size="small" color="secondary" />);
     }
 
-    // Only show separate cohabiting chip if not special disability
+    // Only show separate same-household chip if not special disability
     // (to avoid redundancy since special disability chip already shows it)
-    if (dependent.isCohabiting && dependent.disability !== 'special') {
-      chips.push(<Chip key="cohabiting" label="Cohabiting" size="small" variant="outlined" />);
+    if (dependent.isSameHousehold && dependent.disability !== 'special') {
+      chips.push(
+        <Chip key="same-household" label="Same household" size="small" variant="outlined" />,
+      );
+    }
+
+    if (dependent.isClaimedAsDependent === false && !dependent.isSameHousehold) {
+      chips.push(
+        <Chip key="no-impact" label="No tax/NHI impact" size="small" variant="outlined" />,
+      );
     }
 
     if (dependent.ageRange === '75plus') {
       chips.push(
         <Chip key="elderly" label="75+ Elderly Medical" size="small" variant="outlined" />,
       );
-    } else if (dependent.isCohabiting) {
+    } else if (dependent.isSameHousehold) {
       const isNHI = resolveDependentNHIEnrollment(dependent, isTaxpayerNHI);
       if (isNHI) {
         chips.push(

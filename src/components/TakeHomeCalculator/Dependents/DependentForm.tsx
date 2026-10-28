@@ -79,7 +79,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
     },
   );
   const [disability, setDisability] = useState<DisabilityLevel>(dependent?.disability ?? 'none');
-  const [isCohabiting, setIsCohabiting] = useState(dependent?.isCohabiting ?? false);
+  const [isSameHousehold, setIsSameHousehold] = useState(dependent?.isSameHousehold ?? true);
   const [isClaimedAsDependent, setIsClaimedAsDependent] = useState<boolean>(
     dependent?.isClaimedAsDependent !== false,
   );
@@ -97,7 +97,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       ageRange,
       income,
       disability,
-      isCohabiting,
+      isSameHousehold,
       isClaimedAsDependent,
       healthInsurance,
       isHouseholdHead,
@@ -105,6 +105,8 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
     onSave(newDependent);
   };
+
+  const hasAnyImpact = isClaimedAsDependent || isSameHousehold;
 
   const canSubmit = true; // All fields have defaults, always submittable
 
@@ -141,7 +143,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           labelId="relationship-label"
           label="Relationship"
           value={relationship}
-          onChange={e => setRelationship(e.target.value)}
+          onChange={e =>
+            setRelationship(e.target.value as Exclude<DependentRelationship, 'spouse'>)
+          }
         >
           {RELATIONSHIPS.filter(rel => rel.value !== 'spouse').map(rel => (
             <MenuItem key={rel.value} value={rel.value}>
@@ -151,298 +155,52 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         </Select>
       </FormControl>
 
-      {/* Income Information */}
-      <Box>
-        <Typography
-          gutterBottom
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            mb: 1,
-          }}
+      {/* Age */}
+      <FormControl fullWidth>
+        <InputLabel id="age-label">Age</InputLabel>
+        <Select
+          labelId="age-label"
+          label="Age"
+          value={ageRange}
+          onChange={e => setAgeRange(e.target.value as DependentAgeRange)}
         >
-          Income Information
-          <SimpleTooltip>
-            Enter income amounts to calculate total net income (合計所得金額) and determine
-            deduction eligibility. Survivor and disability pensions (遺族年金・障害年金) are
-            non-taxable and are not included.
-          </SimpleTooltip>
-        </Typography>
+          {DEPENDENT_AGE_RANGES.map(cat => (
+            <MenuItem key={cat.value} value={cat.value}>
+              {cat.label}
+            </MenuItem>
+          ))}
+        </Select>
+        <FormHelperText>On December 31</FormHelperText>
+      </FormControl>
 
-        {isMobile ? (
-          /* Mobile: Stacked Layout */
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            {/* Employment Income */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                Employment Income (給与)
-              </Typography>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 1,
-                }}
-              >
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Gross (収入)
-                </Typography>
-                <SpinnerNumberField
-                  value={income.grossEmploymentIncome}
-                  onChange={(value: number) =>
-                    setIncome({
-                      ...income,
-                      grossEmploymentIncome: value,
-                    })
-                  }
-                  step={10_000}
-                  shiftStep={100_000}
-                  sx={{ maxWidth: 180 }}
-                  inputProps={{ style: { textAlign: 'right' } }}
-                />
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Net (所得)
-                </Typography>
-                <Typography variant="body2">
-                  {formatJPY(netEmploymentIncome)}
-                  {incomeAdjustmentNote && <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>}
-                </Typography>
-              </Box>
+      {/* Tax & Household Status Switches */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isClaimedAsDependent}
+              onChange={e => setIsClaimedAsDependent(e.target.checked)}
+            />
+          }
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              Claim as tax dependent
+              <SimpleTooltip>
+                Leave checked to claim 扶養控除 / 障害者控除 / 所得金額調整控除. Uncheck if this
+                person is not claimed on your tax return (e.g. child claimed by the other parent
+                under 所得税法第85条第5項, or an independent same-household earner), while still
+                including them in the household for National Health Insurance.
+              </SimpleTooltip>
             </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            {/* Public Pension Income */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                Public Pension (公的年金等)
-              </Typography>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 1,
-                }}
-              >
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Gross (収入)
-                </Typography>
-                <SpinnerNumberField
-                  value={income.grossPublicPensionIncome}
-                  onChange={(value: number) =>
-                    setIncome({
-                      ...income,
-                      grossPublicPensionIncome: value,
-                    })
-                  }
-                  step={10_000}
-                  shiftStep={100_000}
-                  sx={{ maxWidth: 180 }}
-                  inputProps={{ style: { textAlign: 'right' } }}
-                />
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Net (所得)
-                </Typography>
-                <Typography variant="body2">
-                  {formatJPY(calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear))}
-                </Typography>
-              </Box>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            {/* Other Income */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                Other Income (その他)
-              </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Net (所得)
-                </Typography>
-                <SpinnerNumberField
-                  value={income.otherNetIncome}
-                  onChange={(value: number) =>
-                    setIncome({
-                      ...income,
-                      otherNetIncome: value,
-                    })
-                  }
-                  step={10_000}
-                  shiftStep={100_000}
-                  sx={{ maxWidth: 180 }}
-                  inputProps={{ style: { textAlign: 'right' } }}
-                />
-              </Box>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            {/* Total */}
-            <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                  Total (合計所得金額)
-                </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                  {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        ) : (
-          /* Desktop: Table Layout */
-          <Paper variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Income Category</TableCell>
-                  <TableCell align="right">Gross (収入)</TableCell>
-                  <TableCell align="right">Net (所得)</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {/* Employment Income Row */}
-                <TableRow>
-                  <TableCell>
-                    Employment
-                    <br />
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      給与
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <SpinnerNumberField
-                      value={income.grossEmploymentIncome}
-                      onChange={(value: number) =>
-                        setIncome({
-                          ...income,
-                          grossEmploymentIncome: value,
-                        })
-                      }
-                      step={10_000}
-                      shiftStep={100_000}
-                      sx={{ maxWidth: 150 }}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2">
-                      {formatJPY(netEmploymentIncome)}
-                      {incomeAdjustmentNote && (
-                        <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
-                      )}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-
-                {/* Public Pension Income Row */}
-                <TableRow>
-                  <TableCell>
-                    Public Pension
-                    <br />
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      公的年金等
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <SpinnerNumberField
-                      value={income.grossPublicPensionIncome}
-                      onChange={(value: number) =>
-                        setIncome({
-                          ...income,
-                          grossPublicPensionIncome: value,
-                        })
-                      }
-                      step={10_000}
-                      shiftStep={100_000}
-                      sx={{ maxWidth: 150 }}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2">
-                      {formatJPY(
-                        calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear),
-                      )}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-
-                {/* Other Income Row */}
-                <TableRow>
-                  <TableCell>
-                    Other
-                    <br />
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      その他
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      —
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <SpinnerNumberField
-                      value={income.otherNetIncome}
-                      onChange={(value: number) =>
-                        setIncome({
-                          ...income,
-                          otherNetIncome: value,
-                        })
-                      }
-                      step={10_000}
-                      shiftStep={100_000}
-                      sx={{ maxWidth: 150 }}
-                    />
-                  </TableCell>
-                </TableRow>
-
-                {/* Total Row */}
-                <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                  <TableCell>
-                    <strong>Total (合計所得金額)</strong>
-                  </TableCell>
-                  <TableCell align="right"></TableCell>
-                  <TableCell align="right">
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Paper>
-        )}
-      </Box>
-
-      {/* Age and Living Together on same row */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-        <FormControl sx={{ flex: 1 }}>
-          <InputLabel id="age-label">Age</InputLabel>
-          <Select
-            labelId="age-label"
-            label="Age"
-            value={ageRange}
-            onChange={e => setAgeRange(e.target.value)}
-          >
-            {DEPENDENT_AGE_RANGES.map(cat => (
-              <MenuItem key={cat.value} value={cat.value}>
-                {cat.label}
-              </MenuItem>
-            ))}
-          </Select>
-          <FormHelperText>On December 31</FormHelperText>
-        </FormControl>
+          }
+        />
 
         <FormControlLabel
           control={
-            <Switch checked={isCohabiting} onChange={e => setIsCohabiting(e.target.checked)} />
+            <Switch
+              checked={isSameHousehold}
+              onChange={e => setIsSameHousehold(e.target.checked)}
+            />
           }
           label={
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -467,9 +225,14 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 <SourceLinks
                   sources={[
                     {
-                      href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/kokuho/index.html',
+                      href: 'https://laws.e-gov.go.jp/law/333AC0000000192#Mp-At_76',
                       label:
-                        'MHLW: National Health Insurance Overview (厚生労働省: 国民健康保険の概要)',
+                        'e-Gov: National Health Insurance Act Art. 76 (国民健康保険法第76条: 世帯主の納付義務)',
+                    },
+                    {
+                      href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/koukikourei/index_00002.html',
+                      label:
+                        'MHLW: National Health Insurance System (厚生労働省: 国民健康保険制度)',
                     },
                     {
                       href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm',
@@ -480,214 +243,497 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               </DetailedTooltip>
             </Box>
           }
-          sx={{ flex: 1, mt: 1 }}
         />
       </Box>
 
-      {/* Tax dependent claim & Household Insurance Controls */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={isClaimedAsDependent}
-              onChange={e => setIsClaimedAsDependent(e.target.checked)}
-            />
-          }
-          label={
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              Claim as tax dependent
-              <SimpleTooltip>
-                Leave checked to claim 扶養控除 / 障害者控除 / 所得金額調整控除. Uncheck if this
-                person is not claimed on your tax return (e.g. child claimed by the other parent
-                under 所得税法第85条第5項, or an independent cohabiting earner), while still
-                including them in the household for National Health Insurance.
-              </SimpleTooltip>
-            </Box>
-          }
-        />
-      </Box>
-
-      {isCohabiting && (
-        <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'background.default' }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Household & Health Insurance Status
+      {!hasAnyImpact ? (
+        <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            This person is neither claimed on your tax return nor enrolled in your municipal
+            household for National Health Insurance. As a result, they will have no effect on your
+            taxes or health insurance premiums.
           </Typography>
-
-          {ageRange === '75plus' ? (
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Aged 75+: Enrolled in Medical System for the Elderly (後期高齢者医療制度); not
-              enrolled in National Health Insurance.
+        </Paper>
+      ) : (
+        <>
+          {/* Income Information */}
+          <Box>
+            <Typography
+              gutterBottom
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                mb: 1,
+              }}
+            >
+              Income Information
+              <SimpleTooltip>
+                Enter income amounts to calculate total net income (合計所得金額) and determine
+                deduction eligibility. Survivor and disability pensions (遺族年金・障害年金) are
+                non-taxable and are not included.
+              </SimpleTooltip>
             </Typography>
-          ) : (
-            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
-              <InputLabel id="dep-hi-label">Health Insurance</InputLabel>
+
+            {isMobile ? (
+              /* Mobile: Stacked Layout */
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                {/* Employment Income */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
+                    Employment Income (給与)
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Gross (収入)
+                    </Typography>
+                    <SpinnerNumberField
+                      value={income.grossEmploymentIncome}
+                      onChange={(value: number) =>
+                        setIncome({
+                          ...income,
+                          grossEmploymentIncome: value,
+                        })
+                      }
+                      step={10_000}
+                      shiftStep={100_000}
+                      sx={{ maxWidth: 180 }}
+                      inputProps={{ style: { textAlign: 'right' } }}
+                    />
+                  </Box>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Net (所得)
+                    </Typography>
+                    <Typography variant="body2">
+                      {formatJPY(netEmploymentIncome)}
+                      {incomeAdjustmentNote && (
+                        <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
+                      )}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Public Pension Income */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
+                    Public Pension (公的年金等)
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Gross (収入)
+                    </Typography>
+                    <SpinnerNumberField
+                      value={income.grossPublicPensionIncome}
+                      onChange={(value: number) =>
+                        setIncome({
+                          ...income,
+                          grossPublicPensionIncome: value,
+                        })
+                      }
+                      step={10_000}
+                      shiftStep={100_000}
+                      sx={{ maxWidth: 180 }}
+                      inputProps={{ style: { textAlign: 'right' } }}
+                    />
+                  </Box>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Net (所得)
+                    </Typography>
+                    <Typography variant="body2">
+                      {formatJPY(
+                        calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear),
+                      )}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Other Income */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
+                    Other Income (その他)
+                  </Typography>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Net (所得)
+                    </Typography>
+                    <SpinnerNumberField
+                      value={income.otherNetIncome}
+                      onChange={(value: number) =>
+                        setIncome({
+                          ...income,
+                          otherNetIncome: value,
+                        })
+                      }
+                      step={10_000}
+                      shiftStep={100_000}
+                      sx={{ maxWidth: 180 }}
+                      inputProps={{ style: { textAlign: 'right' } }}
+                    />
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Total */}
+                <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      Total (合計所得金額)
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            ) : (
+              /* Desktop: Table Layout */
+              <Paper variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Income Category</TableCell>
+                      <TableCell align="right">Gross (収入)</TableCell>
+                      <TableCell align="right">Net (所得)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {/* Employment Income Row */}
+                    <TableRow>
+                      <TableCell>
+                        Employment
+                        <br />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          給与
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <SpinnerNumberField
+                          value={income.grossEmploymentIncome}
+                          onChange={(value: number) =>
+                            setIncome({
+                              ...income,
+                              grossEmploymentIncome: value,
+                            })
+                          }
+                          step={10_000}
+                          shiftStep={100_000}
+                          sx={{ maxWidth: 150 }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2">
+                          {formatJPY(netEmploymentIncome)}
+                          {incomeAdjustmentNote && (
+                            <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
+                          )}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Public Pension Income Row */}
+                    <TableRow>
+                      <TableCell>
+                        Public Pension
+                        <br />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          公的年金等
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <SpinnerNumberField
+                          value={income.grossPublicPensionIncome}
+                          onChange={(value: number) =>
+                            setIncome({
+                              ...income,
+                              grossPublicPensionIncome: value,
+                            })
+                          }
+                          step={10_000}
+                          shiftStep={100_000}
+                          sx={{ maxWidth: 150 }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2">
+                          {formatJPY(
+                            calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear),
+                          )}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Other Income Row */}
+                    <TableRow>
+                      <TableCell>
+                        Other
+                        <br />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          その他
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          —
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <SpinnerNumberField
+                          value={income.otherNetIncome}
+                          onChange={(value: number) =>
+                            setIncome({
+                              ...income,
+                              otherNetIncome: value,
+                            })
+                          }
+                          step={10_000}
+                          shiftStep={100_000}
+                          sx={{ maxWidth: 150 }}
+                        />
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Total Row */}
+                    <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                      <TableCell>
+                        <strong>Total (合計所得金額)</strong>
+                      </TableCell>
+                      <TableCell align="right"></TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </Paper>
+            )}
+          </Box>
+
+          {/* Household & Health Insurance Status */}
+          {isSameHousehold && (
+            <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'background.default' }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Household & Health Insurance Status
+              </Typography>
+
+              {ageRange === '75plus' ? (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Aged 75+: Enrolled in Medical System for the Elderly (後期高齢者医療制度); not
+                  enrolled in National Health Insurance.
+                </Typography>
+              ) : (
+                <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+                  <InputLabel id="dep-hi-label">Health Insurance</InputLabel>
+                  <Select
+                    labelId="dep-hi-label"
+                    label="Health Insurance"
+                    value={healthInsurance}
+                    onChange={e =>
+                      setHealthInsurance(e.target.value as HouseholdMemberHealthInsurance)
+                    }
+                  >
+                    <MenuItem value="auto">Follow taxpayer's insurance (default)</MenuItem>
+                    <MenuItem value="nhi">National Health Insurance (国民健康保険)</MenuItem>
+                    <MenuItem value="other">
+                      Employees' Health Insurance / Other (社会保険等)
+                    </MenuItem>
+                  </Select>
+                  <FormHelperText>
+                    Determines whether this member is covered under household National Health
+                    Insurance.
+                  </FormHelperText>
+                </FormControl>
+              )}
+
+              {(healthInsurance === 'other' || ageRange === '75plus') && (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isHouseholdHead}
+                      onChange={e => setIsHouseholdHead(e.target.checked)}
+                    />
+                  }
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      Designate as household head (擬制世帯主)
+                      <SimpleTooltip>
+                        Check if this member is the official household head (世帯主) on the 住民票.
+                        Under NHI law, a non-NHI household head's income is counted toward the
+                        7/5/2割 low-income premium reduction test.
+                      </SimpleTooltip>
+                    </Box>
+                  }
+                />
+              )}
+            </Paper>
+          )}
+
+          {/* Disability Status */}
+          {isClaimedAsDependent && (
+            <FormControl fullWidth>
+              <InputLabel>Disability Status</InputLabel>
               <Select
-                labelId="dep-hi-label"
-                label="Health Insurance"
-                value={healthInsurance}
-                onChange={e => setHealthInsurance(e.target.value as HouseholdMemberHealthInsurance)}
+                value={disability}
+                label="Disability Status"
+                onChange={e => setDisability(e.target.value as DisabilityLevel)}
               >
-                <MenuItem value="auto">Follow taxpayer's insurance (default)</MenuItem>
-                <MenuItem value="nhi">National Health Insurance (国民健康保険)</MenuItem>
-                <MenuItem value="other">Employees' Health Insurance / Other (社会保険等)</MenuItem>
+                {DISABILITY_LEVELS.map(level => (
+                  <MenuItem key={level.value} value={level.value}>
+                    {level.label}
+                  </MenuItem>
+                ))}
               </Select>
               <FormHelperText>
-                Determines whether this member is covered under household National Health Insurance.
+                See{' '}
+                <Link
+                  href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  NTA disability deduction guide
+                </Link>
               </FormHelperText>
             </FormControl>
           )}
 
-          {(healthInsurance === 'other' || ageRange === '75plus') && (
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isHouseholdHead}
-                  onChange={e => setIsHouseholdHead(e.target.checked)}
-                />
-              }
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Designate as household head (擬制世帯主)
-                  <SimpleTooltip>
-                    Check if this member is the official household head (世帯主) on the 住民票.
-                    Under NHI law, a non-NHI household head's income is counted toward the 7/5/2割
-                    low-income premium reduction test.
-                  </SimpleTooltip>
-                </Box>
-              }
-            />
-          )}
-        </Paper>
-      )}
-
-      {/* Disability Status */}
-      <FormControl fullWidth>
-        <InputLabel>Disability Status</InputLabel>
-        <Select
-          value={disability}
-          label="Disability Status"
-          onChange={e => setDisability(e.target.value)}
-        >
-          {DISABILITY_LEVELS.map(level => (
-            <MenuItem key={level.value} value={level.value}>
-              {level.label}
-            </MenuItem>
-          ))}
-        </Select>
-        <FormHelperText>
-          See{' '}
-          <Link
-            href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            NTA disability deduction guide
-          </Link>
-        </FormHelperText>
-      </FormControl>
-
-      {/* Eligible Deductions Table */}
-      <Box sx={{ mt: 3 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Eligible Deductions:
-        </Typography>
-        <Paper variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Deduction Type</TableCell>
-                <TableCell align="right">Income Tax</TableCell>
-                <TableCell align="right">Residence Tax</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(() => {
-                const tempDependent: OtherDependent = {
-                  id: 'temp',
-                  relationship,
-                  ageRange,
-                  income,
-                  disability,
-                  isCohabiting,
-                };
-
-                // Calculate all deductions for this dependent
-                const results = calculateDependentDeductions([tempDependent], incomeYear);
-                const rows: React.ReactNode[] = [];
-
-                // Dependent Deduction
-                if (
-                  results.nationalTax.dependentDeduction > 0 ||
-                  results.residenceTax.dependentDeduction > 0
-                ) {
-                  rows.push(
-                    <TableRow key="dependent">
-                      <TableCell>Dependent Deduction (扶養控除)</TableCell>
-                      <TableCell align="right">
-                        {formatJPY(results.nationalTax.dependentDeduction)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatJPY(results.residenceTax.dependentDeduction)}
-                      </TableCell>
-                    </TableRow>,
-                  );
-                }
-
-                // Specific Relative Special Deduction
-                if (
-                  results.nationalTax.specificRelativeDeduction > 0 ||
-                  results.residenceTax.specificRelativeDeduction > 0
-                ) {
-                  rows.push(
-                    <TableRow key="specific-relative">
-                      <TableCell>Specific Relative Special Deduction (特定親族特別控除)</TableCell>
-                      <TableCell align="right">
-                        {formatJPY(results.nationalTax.specificRelativeDeduction)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatJPY(results.residenceTax.specificRelativeDeduction)}
-                      </TableCell>
-                    </TableRow>,
-                  );
-                }
-
-                // Disability Deduction
-                if (
-                  results.nationalTax.disabilityDeduction > 0 ||
-                  results.residenceTax.disabilityDeduction > 0
-                ) {
-                  rows.push(
-                    <TableRow key="disability">
-                      <TableCell>Disability Deduction (障害者控除)</TableCell>
-                      <TableCell align="right">
-                        {formatJPY(results.nationalTax.disabilityDeduction)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {formatJPY(results.residenceTax.disabilityDeduction)}
-                      </TableCell>
-                    </TableRow>,
-                  );
-                }
-
-                // No deductions message
-                if (rows.length === 0) {
-                  return (
+          {/* Eligible Deductions Table */}
+          {isClaimedAsDependent && (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Eligible Deductions:
+              </Typography>
+              <Paper variant="outlined">
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={3} align="center">
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          No deductions available
-                        </Typography>
-                      </TableCell>
+                      <TableCell>Deduction Type</TableCell>
+                      <TableCell align="right">Income Tax</TableCell>
+                      <TableCell align="right">Residence Tax</TableCell>
                     </TableRow>
-                  );
-                }
+                  </TableHead>
+                  <TableBody>
+                    {(() => {
+                      const tempDependent: OtherDependent = {
+                        id: 'temp',
+                        relationship,
+                        ageRange,
+                        income,
+                        disability,
+                        isSameHousehold,
+                        isClaimedAsDependent,
+                      };
 
-                return rows;
-              })()}
-            </TableBody>
-          </Table>
-        </Paper>
-      </Box>
+                      // Calculate all deductions for this dependent
+                      const results = calculateDependentDeductions([tempDependent], incomeYear);
+                      const rows: React.ReactNode[] = [];
+
+                      // Dependent Deduction
+                      if (
+                        results.nationalTax.dependentDeduction > 0 ||
+                        results.residenceTax.dependentDeduction > 0
+                      ) {
+                        rows.push(
+                          <TableRow key="dependent">
+                            <TableCell>Dependent Deduction (扶養控除)</TableCell>
+                            <TableCell align="right">
+                              {formatJPY(results.nationalTax.dependentDeduction)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatJPY(results.residenceTax.dependentDeduction)}
+                            </TableCell>
+                          </TableRow>,
+                        );
+                      }
+
+                      // Specific Relative Special Deduction
+                      if (
+                        results.nationalTax.specificRelativeDeduction > 0 ||
+                        results.residenceTax.specificRelativeDeduction > 0
+                      ) {
+                        rows.push(
+                          <TableRow key="specific-relative">
+                            <TableCell>
+                              Specific Relative Special Deduction (特定親族特別控除)
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatJPY(results.nationalTax.specificRelativeDeduction)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatJPY(results.residenceTax.specificRelativeDeduction)}
+                            </TableCell>
+                          </TableRow>,
+                        );
+                      }
+
+                      // Disability Deduction
+                      if (
+                        results.nationalTax.disabilityDeduction > 0 ||
+                        results.residenceTax.disabilityDeduction > 0
+                      ) {
+                        rows.push(
+                          <TableRow key="disability">
+                            <TableCell>Disability Deduction (障害者控除)</TableCell>
+                            <TableCell align="right">
+                              {formatJPY(results.nationalTax.disabilityDeduction)}
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatJPY(results.residenceTax.disabilityDeduction)}
+                            </TableCell>
+                          </TableRow>,
+                        );
+                      }
+
+                      // No deductions message
+                      if (rows.length === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={3} align="center">
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                No deductions available
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+
+                      return rows;
+                    })()}
+                  </TableBody>
+                </Table>
+              </Paper>
+            </Box>
+          )}
+        </>
+      )}
 
       {/* Action Buttons */}
       <Box

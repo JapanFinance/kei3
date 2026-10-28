@@ -269,7 +269,7 @@ function isElderlyDependent(dependent: Dependent, year: number): boolean {
 function isCohabitingElderlyDependent(dependent: Dependent, year: number): boolean {
   return (
     isElderlyDependent(dependent, year) &&
-    dependent.isCohabiting &&
+    dependent.isSameHousehold &&
     dependent.relationship === 'parent'
   );
 }
@@ -423,11 +423,11 @@ function isEligibleForDisabilityDeduction(dependent: Dependent, year: number): b
 /**
  * Get disability deduction amount for a given disability level
  * @param disability - The disability level
- * @param isCohabiting - Whether the dependent lives with the taxpayer
+ * @param isSameHousehold - Whether the dependent is in the same municipal household as the taxpayer
  */
 export function getDisabilityDeduction(
   disability: DisabilityLevel,
-  isCohabiting: boolean,
+  isSameHousehold: boolean,
 ): DeductionAmount {
   if (disability === 'none') {
     return { national: 0, residence: 0 };
@@ -440,8 +440,8 @@ export function getDisabilityDeduction(
       case 'regular':
         return deductions.DISABILITY_REGULAR;
       case 'special':
-        // Special disability with cohabitation gets higher deduction
-        return isCohabiting
+        // Special disability with same-household cohabitation gets higher deduction
+        return isSameHousehold
           ? deductions.DISABILITY_SPECIAL_COHABITING
           : deductions.DISABILITY_SPECIAL;
       default:
@@ -903,7 +903,7 @@ export function calculateDependentDeductions(
     if (isDisabilityDeductionEligible) {
       const disabilityDeduction = getDisabilityDeduction(
         dependent.disability,
-        dependent.isCohabiting,
+        dependent.isSameHousehold,
       );
 
       results.nationalTax.disabilityDeduction += disabilityDeduction.national;
@@ -911,7 +911,7 @@ export function calculateDependentDeductions(
 
       let disabilityType: DeductionType = DEDUCTION_TYPES.DISABILITY;
       if (dependent.disability === 'special') {
-        disabilityType = dependent.isCohabiting
+        disabilityType = dependent.isSameHousehold
           ? DEDUCTION_TYPES.SPECIAL_DISABILITY_COHABITING
           : DEDUCTION_TYPES.SPECIAL_DISABILITY;
       }
