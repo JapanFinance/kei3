@@ -30,8 +30,9 @@ import {
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
+import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
 
 interface SpouseSectionProps {
@@ -416,7 +417,38 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   onChange={e => handleSpouseChange({ isCohabiting: e.target.checked })}
                 />
               }
-              label="Living together"
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  In the same household
+                  <DetailedTooltip title="Same Municipal Household (同一世帯)">
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Registered under the same municipal resident record (住民票上の同一世帯).
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      National Health Insurance (国民健康保険) pools premiums and calculates 7/5/2割
+                      reductions across all enrolled members registered in the same household.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Uncheck if registered at a separate address (e.g. for work relocation
+                      単身赴任). Spousal tax deductions (配偶者控除・配偶者特別控除) are not
+                      affected as long as you share living expenses.
+                    </Typography>
+                    <SourceLinks
+                      sources={[
+                        {
+                          href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/kokuho/index.html',
+                          label:
+                            'MHLW: National Health Insurance Overview (厚生労働省: 国民健康保険の概要)',
+                        },
+                        {
+                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180_qa.htm',
+                          label: 'NTA: Spouses living apart (国税庁:「生計を一にする」の意義)',
+                        },
+                      ]}
+                    />
+                  </DetailedTooltip>
+                </Box>
+              }
               sx={{ flex: 1 }}
             />
           </Box>
