@@ -155,26 +155,33 @@ export const DependentForm: React.FC<DependentFormProps> = ({
         </Select>
       </FormControl>
 
-      {/* Age */}
-      <FormControl fullWidth>
-        <InputLabel id="age-label">Age</InputLabel>
-        <Select
-          labelId="age-label"
-          label="Age"
-          value={ageRange}
-          onChange={e => setAgeRange(e.target.value as DependentAgeRange)}
-        >
-          {DEPENDENT_AGE_RANGES.map(cat => (
-            <MenuItem key={cat.value} value={cat.value}>
-              {cat.label}
-            </MenuItem>
-          ))}
-        </Select>
-        <FormHelperText>On December 31</FormHelperText>
-      </FormControl>
+      {/* Age & Status Switches on one row on desktop */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          flexWrap: 'wrap',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          gap: { xs: 1.5, sm: 2.5 },
+        }}
+      >
+        <FormControl sx={{ minWidth: { xs: '100%', sm: 170 }, flex: { sm: '0 0 auto' } }}>
+          <InputLabel id="age-label">Age</InputLabel>
+          <Select
+            labelId="age-label"
+            label="Age"
+            value={ageRange}
+            onChange={e => setAgeRange(e.target.value as DependentAgeRange)}
+          >
+            {DEPENDENT_AGE_RANGES.map(cat => (
+              <MenuItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </MenuItem>
+            ))}
+          </Select>
+          <FormHelperText>On December 31</FormHelperText>
+        </FormControl>
 
-      {/* Tax & Household Status Switches */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         <FormControlLabel
           control={
             <Switch
@@ -193,6 +200,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               </SimpleTooltip>
             </Box>
           }
+          sx={{ m: 0 }}
         />
 
         <FormControlLabel
@@ -243,6 +251,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               </DetailedTooltip>
             </Box>
           }
+          sx={{ m: 0 }}
         />
       </Box>
 
