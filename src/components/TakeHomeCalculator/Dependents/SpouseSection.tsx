@@ -115,29 +115,36 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
 
       {hasSpouse && spouse && (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Age */}
-          <FormControl fullWidth>
-            <InputLabel>Age</InputLabel>
-            <Select
-              value={spouse.ageRange}
-              label="Age"
-              onChange={e =>
-                handleSpouseChange({
-                  ageRange: e.target.value as SpouseAgeRange,
-                })
-              }
-            >
-              {SPOUSE_AGE_RANGES.map(cat => (
-                <MenuItem key={cat.value} value={cat.value}>
-                  {cat.label}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>On December 31</FormHelperText>
-          </FormControl>
+          {/* Age & Status Switches on one row on desktop */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              flexWrap: 'wrap',
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              gap: { xs: 1.5, sm: 2.5 },
+            }}
+          >
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 170 }, flex: { sm: '0 0 auto' } }}>
+              <InputLabel>Age</InputLabel>
+              <Select
+                value={spouse.ageRange}
+                label="Age"
+                onChange={e =>
+                  handleSpouseChange({
+                    ageRange: e.target.value as SpouseAgeRange,
+                  })
+                }
+              >
+                {SPOUSE_AGE_RANGES.map(cat => (
+                  <MenuItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>On December 31</FormHelperText>
+            </FormControl>
 
-          {/* Tax dependent claim & Household Insurance Controls */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             <FormControlLabel
               control={
                 <Switch
@@ -155,6 +162,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   </SimpleTooltip>
                 </Box>
               }
+              sx={{ m: 0 }}
             />
 
             <FormControlLabel
@@ -204,6 +212,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   </DetailedTooltip>
                 </Box>
               }
+              sx={{ m: 0 }}
             />
           </Box>
 
