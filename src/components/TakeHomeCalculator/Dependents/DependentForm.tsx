@@ -39,8 +39,9 @@ import {
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
+import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
 
 interface DependentFormProps {
@@ -444,12 +445,35 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           }
           label={
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              Living Together
-              <SimpleTooltip>
-                Check this if the dependent lives with the taxpayer. This affects elderly parent
-                deductions, special disability deductions, and participation in the same 住民票
-                household for National Health Insurance.
-              </SimpleTooltip>
+              In the same household
+              <DetailedTooltip title="Same Municipal Household (同一世帯)">
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Registered under the same municipal resident record (住民票上の同一世帯).
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Determines whether National Health Insurance covers this person in your municipal
+                  household and pools their per-capita fee and income.
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Also qualifies elderly parents (70+) for the cohabiting elderly parent deduction
+                  (同居老親等: +¥100k national / +¥70k residence tax) and disabled persons for the
+                  cohabiting special disability deduction (同居特別障害者: +¥350k national / +¥230k
+                  residence tax).
+                </Typography>
+                <SourceLinks
+                  sources={[
+                    {
+                      href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/kokuho/index.html',
+                      label:
+                        'MHLW: National Health Insurance Overview (厚生労働省: 国民健康保険の概要)',
+                    },
+                    {
+                      href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm',
+                      label: 'NTA: Dependent Deductions (国税庁: 扶養控除)',
+                    },
+                  ]}
+                />
+              </DetailedTooltip>
             </Box>
           }
           sx={{ flex: 1, mt: 1 }}

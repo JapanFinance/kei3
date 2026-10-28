@@ -53,6 +53,8 @@ import {
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
 import { resolveDependentNHIEnrollment } from '../../../utils/nhiHousehold';
+import SourceLinks from '../../ui/SourceLinks';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
 
@@ -291,6 +293,37 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           />
         ) : (
           <Box>
+            {/* Livelihood / Shared Expenses Disclaimer */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 0.5 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Only add persons with whom you share living expenses (生計を一にする).
+              </Typography>
+              <DetailedTooltip title="Sharing Living Expenses (生計を一にする)">
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Under Japanese tax law, claiming spousal or dependent deductions
+                  (配偶者控除・扶養控除) strictly requires sharing living expenses (生計を一にする).
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Family members living together are presumed to share expenses. Family members
+                  living apart (e.g. for work relocation 単身赴任, university, or medical
+                  convalescence) fully qualify as long as living, educational, or medical funds are
+                  regularly remitted.
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Independent housemates or roommates with separate finances do not share living
+                  expenses and should not be added.
+                </Typography>
+                <SourceLinks
+                  sources={[
+                    {
+                      href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180_qa.htm',
+                      label: 'NTA: Meaning of Sharing Livelihood (国税庁:「生計を一にする」の意義)',
+                    },
+                  ]}
+                />
+              </DetailedTooltip>
+            </Box>
+
             {/* Spouse Section */}
             <SpouseSection
               spouse={spouse || null}
@@ -300,9 +333,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
             <Divider sx={{ my: 3 }} />
 
-            {/* Other Dependents Section */}
+            {/* Other Household Members & Dependents Section */}
             <Typography variant="h6" gutterBottom>
-              Other Dependents
+              Other Household Members & Dependents
             </Typography>
 
             {/* List of other dependents */}
@@ -315,7 +348,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 }}
               >
                 <PersonIcon sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
-                <Typography variant="body2">No other dependents added yet</Typography>
+                <Typography variant="body2">No other members added yet</Typography>
               </Box>
             ) : (
               <List sx={{ width: '100%' }}>
@@ -391,7 +424,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 size="large"
                 fullWidth={isMobile}
               >
-                Add Other Dependent
+                Add Other Person
               </Button>
             </Box>
 
