@@ -211,7 +211,7 @@ describe('estimateLongTermCareCategory1Premium', () => {
 const spouse = (overrides: Partial<Spouse>): Spouse => ({
   id: 'spouse-1',
   relationship: 'spouse',
-  ageRange: 'under65',
+  ageRange: 'under40',
   income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   disability: 'none',
   isCohabiting: true,
@@ -279,7 +279,7 @@ describe('isDependentResidenceTaxable', () => {
 
   it('treats an under-16 dependent as a 未成年者 within the 135万円 limit', () => {
     const child = (otherNetIncome: number) =>
-      otherDependent({ ageRange: 'under16', income: withOtherNetIncome(otherNetIncome) });
+      otherDependent({ ageRange: '6to15', income: withOtherNetIncome(otherNetIncome) });
     expect(isDependentResidenceTaxable(child(1_350_000), 2026)).toBe(false);
     expect(isDependentResidenceTaxable(child(1_350_001), 2026)).toBe(true);
   });

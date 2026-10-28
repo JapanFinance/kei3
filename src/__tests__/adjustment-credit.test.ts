@@ -23,7 +23,7 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageRange: 'under65',
+      ageRange: 'under40',
       isCohabiting: false,
       disability: 'none',
       income: {
@@ -116,7 +116,7 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
     const elderlySpouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageRange: '70plus',
+      ageRange: '70to74',
       isCohabiting: false,
       disability: 'none',
       income: {
@@ -184,7 +184,7 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageRange: 'under65',
+      ageRange: 'under40',
       isCohabiting: false,
       disability: 'none',
       income: {
@@ -228,7 +228,7 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
         const spouse: Dependent = {
           id: '1',
           relationship: 'spouse',
-          ageRange: 'under65',
+          ageRange: 'under40',
           isCohabiting: false,
           disability: 'none',
           income: {
@@ -293,7 +293,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       const dependent: Dependent = {
         id: '1',
         relationship: 'parent',
-        ageRange: '23to64',
+        ageRange: '23to39',
         isCohabiting: false,
         disability: 'none',
         income: {
@@ -357,7 +357,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       const dependent: Dependent = {
         id: '1',
         relationship: 'parent',
-        ageRange: '70plus',
+        ageRange: '70to74',
         isCohabiting: false,
         disability: 'none',
         income: {
@@ -387,7 +387,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       const dependent: Dependent = {
         id: '1',
         relationship: 'parent',
-        ageRange: '70plus',
+        ageRange: '70to74',
         isCohabiting: true,
         disability: 'none',
         income: {
@@ -421,7 +421,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       const dependent: Dependent = {
         id: '1',
         relationship: 'other',
-        ageRange: '70plus',
+        ageRange: '70to74',
         isCohabiting: true,
         disability: 'none',
         income: {
@@ -458,7 +458,7 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
     const makeElderly = (relationship: 'parent' | 'other'): Dependent => ({
       id: '1',
       relationship,
-      ageRange: '70plus',
+      ageRange: '70to74',
       isCohabiting: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -622,7 +622,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageRange: 'under65',
+      ageRange: 'under40',
       isCohabiting: false,
       disability: 'none',
       income: {
@@ -684,7 +684,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageRange: '70plus',
+      ageRange: '70to74',
       isCohabiting: false,
       disability: 'none',
       income: {
@@ -697,7 +697,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     const parent: Dependent = {
       id: '2',
       relationship: 'parent',
-      ageRange: '70plus',
+      ageRange: '70to74',
       isCohabiting: true,
       disability: 'special',
       income: {
@@ -732,7 +732,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
     const spouse: Dependent = {
       id: '1',
       relationship: 'spouse',
-      ageRange: '70plus',
+      ageRange: '70to74',
       isCohabiting: false,
       disability: 'none',
       income: {
@@ -797,7 +797,7 @@ describe('Adjustment Credit - Combined Scenarios', () => {
       {
         id: '3',
         relationship: 'child',
-        ageRange: '23to64',
+        ageRange: '23to39',
         isCohabiting: false,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },

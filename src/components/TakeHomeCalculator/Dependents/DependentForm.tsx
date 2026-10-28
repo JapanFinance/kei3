@@ -29,6 +29,7 @@ import type {
   DependentAgeRange,
   DisabilityLevel,
   DependentIncome,
+  HouseholdMemberHealthInsurance,
 } from '../../../types/dependents';
 import { RELATIONSHIPS, DISABILITY_LEVELS, DEPENDENT_AGE_RANGES } from '../../../types/dependents';
 import {
@@ -77,6 +78,15 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   );
   const [disability, setDisability] = useState<DisabilityLevel>(dependent?.disability ?? 'none');
   const [isCohabiting, setIsCohabiting] = useState(dependent?.isCohabiting ?? false);
+  const [isClaimedAsDependent, setIsClaimedAsDependent] = useState<boolean>(
+    dependent?.isClaimedAsDependent !== false,
+  );
+  const [healthInsurance, setHealthInsurance] = useState<HouseholdMemberHealthInsurance>(
+    dependent?.healthInsurance ?? 'auto',
+  );
+  const [isHouseholdHead, setIsHouseholdHead] = useState<boolean>(
+    dependent?.isHouseholdHead ?? false,
+  );
 
   const handleSubmit = () => {
     const newDependent: OtherDependent = {
@@ -86,6 +96,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       income,
       disability,
       isCohabiting,
+      isClaimedAsDependent,
+      healthInsurance,
+      isHouseholdHead,
     };
 
     onSave(newDependent);
@@ -433,15 +446,91 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               Living Together
               <SimpleTooltip>
-                Check this if the dependent lives with the taxpayer. This may affect the deduction
-                amounts for an elderly parent, or where the dependent qualifies with a special
-                disability (特別障害者).
+                Check this if the dependent lives with the taxpayer. This affects elderly parent
+                deductions, special disability deductions, and participation in the same 住民票
+                household for National Health Insurance.
               </SimpleTooltip>
             </Box>
           }
           sx={{ flex: 1, mt: 1 }}
         />
       </Box>
+
+      {/* Tax dependent claim & Household Insurance Controls */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isClaimedAsDependent}
+              onChange={e => setIsClaimedAsDependent(e.target.checked)}
+            />
+          }
+          label={
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              Claim as tax dependent
+              <SimpleTooltip>
+                Leave checked to claim 扶養控除 / 障害者控除 / 所得金額調整控除. Uncheck if this
+                person is not claimed on your tax return (e.g. child claimed by the other parent
+                under 所得税法第85条第5項, or an independent cohabiting earner), while still
+                including them in the household for National Health Insurance.
+              </SimpleTooltip>
+            </Box>
+          }
+        />
+      </Box>
+
+      {isCohabiting && (
+        <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'background.default' }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Household & Health Insurance Status
+          </Typography>
+
+          {ageRange === '75plus' ? (
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Aged 75+: Enrolled in Medical System for the Elderly (後期高齢者医療制度); not
+              enrolled in National Health Insurance.
+            </Typography>
+          ) : (
+            <FormControl fullWidth size="small" sx={{ mb: 1.5 }}>
+              <InputLabel id="dep-hi-label">Health Insurance</InputLabel>
+              <Select
+                labelId="dep-hi-label"
+                label="Health Insurance"
+                value={healthInsurance}
+                onChange={e => setHealthInsurance(e.target.value as HouseholdMemberHealthInsurance)}
+              >
+                <MenuItem value="auto">Follow taxpayer's insurance (default)</MenuItem>
+                <MenuItem value="nhi">National Health Insurance (国民健康保険)</MenuItem>
+                <MenuItem value="other">Employees' Health Insurance / Other (社会保険等)</MenuItem>
+              </Select>
+              <FormHelperText>
+                Determines whether this member is covered under household National Health Insurance.
+              </FormHelperText>
+            </FormControl>
+          )}
+
+          {(healthInsurance === 'other' || ageRange === '75plus') && (
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isHouseholdHead}
+                  onChange={e => setIsHouseholdHead(e.target.checked)}
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  Designate as household head (擬制世帯主)
+                  <SimpleTooltip>
+                    Check if this member is the official household head (世帯主) on the 住民票.
+                    Under NHI law, a non-NHI household head's income is counted toward the 7/5/2割
+                    low-income premium reduction test.
+                  </SimpleTooltip>
+                </Box>
+              }
+            />
+          )}
+        </Paper>
+      )}
 
       {/* Disability Status */}
       <FormControl fullWidth>

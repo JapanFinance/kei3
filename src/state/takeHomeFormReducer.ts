@@ -388,9 +388,15 @@ function reduceRegionChanged(
   const isValid = regionOptionsFor(state.healthInsuranceProvider).some(
     option => option.id === action.region,
   );
+  const newRegion = isValid
+    ? action.region
+    : defaultRegionForProvider(state.healthInsuranceProvider);
   return {
     ...state,
-    region: isValid ? action.region : defaultRegionForProvider(state.healthInsuranceProvider),
+    region: newRegion,
+    ...(state.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID && {
+      nhiHouseholdRegion: newRegion,
+    }),
   };
 }
 
@@ -419,12 +425,17 @@ export function takeHomeFormReducer(
     case 'incomeModeChanged':
       return reduceIncomeModeChanged(state, action);
 
-    case 'providerChanged':
+    case 'providerChanged': {
+      const newRegion = defaultRegionForProvider(action.provider);
       return {
         ...state,
         healthInsuranceProvider: action.provider,
-        region: defaultRegionForProvider(action.provider),
+        region: newRegion,
+        ...(action.provider === NATIONAL_HEALTH_INSURANCE_ID && {
+          nhiHouseholdRegion: newRegion,
+        }),
       };
+    }
 
     case 'regionChanged':
       return reduceRegionChanged(state, action);

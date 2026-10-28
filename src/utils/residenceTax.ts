@@ -8,6 +8,7 @@ import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDe
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import {
   DEDUCTION_TYPES,
+  DEPENDENT_AGE_BANDS,
   SPOUSE_AGE_BANDS,
   type DependentAgeRange,
   type SpouseAgeRange,
@@ -167,7 +168,8 @@ export function isDependentResidenceTaxable(dependent: Dependent, year: number):
   if (netIncome <= getResidenceTaxExemptionLimits(0).perCapitaLimit) return false;
   const hasExemptStatus =
     dependent.disability !== 'none' ||
-    (dependent.relationship !== 'spouse' && dependent.ageRange === 'under16');
+    (dependent.relationship !== 'spouse' &&
+      dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.dependentUnder16));
   return !(hasExemptStatus && netIncome <= NON_TAXABLE_STATUS_INCOME_LIMIT);
 }
 

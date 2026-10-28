@@ -12,7 +12,11 @@ import React from 'react';
 
 import type { TakeHomeResults } from '../../../types/tax';
 import { formatJPY } from '../../../utils/formatters';
-import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
+import {
+  incomeTaxPaid,
+  residenceTaxPaid,
+  totalSocialInsurancePaid,
+} from '../../../utils/taxCalculations';
 import { ResultRow } from '../ResultRow';
 import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 import NegativeTakeHomeTooltip from './NegativeTakeHomeTooltip';
@@ -43,12 +47,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const showShare = !isMobile && results.annualIncome > 0;
 
-  const totalSocialInsurance =
-    results.socialInsuranceOverride ??
-    results.healthInsurance +
-      results.pensionPayments +
-      (results.employmentInsurance ?? 0) +
-      (results.longTermCareCategory1Premium ?? 0);
+  const totalSocialInsurance = totalSocialInsurancePaid(results);
   // The tax withheld on investment income left to withholding counts with the assessed tax of
   // the same kind, and the foreign tax paid with the income tax; the Taxes tab shows them apart.
   const incomeTax = incomeTaxPaid(results);
@@ -118,6 +117,17 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
               )}
               type="indented"
             />
+            {results.householdNHIPremium !== undefined && results.householdNHIPremium > 0 && (
+              <ResultRow
+                label="Household National Health Insurance"
+                value={formatAmountWithShare(
+                  results.householdNHIPremium,
+                  results.annualIncome,
+                  !isMobile,
+                )}
+                type="indented"
+              />
+            )}
             <ResultRow
               label="Pension Payments"
               value={formatAmountWithShare(

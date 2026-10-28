@@ -33,7 +33,7 @@ import {
   type HouseholdType,
 } from '../../data/income';
 import type { Dependent } from '../../types/dependents';
-import type { HealthInsuranceProviderId } from '../../types/healthInsurance';
+import type { HealthInsuranceProviderId, NHIPaymentAttribution } from '../../types/healthInsurance';
 import type {
   ChartRange,
   CustomEmployeesHealthInsuranceRates,
@@ -170,6 +170,8 @@ interface TakeHomeChartProps {
   homeLoanTaxCredit?: HomeLoanTaxCreditInput | undefined;
   /** Foreign tax entered by hand; held at the entered amount across the sweep. */
   foreignTaxCredit?: ForeignTaxCreditInput | undefined;
+  nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
+  nhiHouseholdRegion?: string | undefined;
 }
 
 // Define a type for the mark objects
@@ -258,6 +260,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   personalCircumstances,
   homeLoanTaxCredit,
   foreignTaxCredit,
+  nhiPaymentAttribution,
+  nhiHouseholdRegion,
 }) => {
   useLoadMilestone('chart-rendered');
 
@@ -381,6 +385,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       personalCircumstances,
       homeLoanTaxCredit,
       foreignTaxCredit,
+      nhiPaymentAttribution,
+      nhiHouseholdRegion,
     });
   }, [
     isChartDisabled,
@@ -407,6 +413,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     personalCircumstances,
     homeLoanTaxCredit,
     foreignTaxCredit,
+    nhiPaymentAttribution,
+    nhiHouseholdRegion,
   ]);
 
   // Get chart options using the utility function

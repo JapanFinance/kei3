@@ -94,7 +94,7 @@ describe('TaxesTab municipal non-taxable resident display (Issue #686)', () => {
         {
           id: 'spouse1',
           relationship: 'spouse',
-          ageRange: 'under65',
+          ageRange: 'under40',
           isCohabiting: true,
           disability: 'none',
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
@@ -172,7 +172,7 @@ describe('TaxesTab municipal non-taxable resident display (Issue #686)', () => {
         {
           id: 'spouse1',
           relationship: 'spouse',
-          ageRange: 'under65',
+          ageRange: 'under40',
           isCohabiting: true,
           disability: 'none',
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
