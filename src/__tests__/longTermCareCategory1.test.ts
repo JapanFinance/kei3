@@ -214,7 +214,7 @@ const spouse = (overrides: Partial<Spouse>): Spouse => ({
   ageRange: 'under40',
   income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   disability: 'none',
-  isCohabiting: true,
+  isSameHousehold: true,
   ...overrides,
 });
 
@@ -224,7 +224,7 @@ const otherDependent = (overrides: Partial<OtherDependent>): OtherDependent => (
   ageRange: '16to18',
   income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   disability: 'none',
-  isCohabiting: true,
+  isSameHousehold: true,
   ...overrides,
 });
 

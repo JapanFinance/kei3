@@ -422,7 +422,7 @@ describe('calculateTaxes', () => {
       id: 'spouse',
       relationship: 'spouse' as const,
       ageRange: 'under40' as const,
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none' as const,
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -2644,7 +2644,7 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
           ageRange: '19to22' as const,
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           disability: 'none' as const,
-          isCohabiting: true,
+          isSameHousehold: true,
         },
       ],
       lifeInsurance: { generalNew: 120_000, medicalCareNew: 0, pensionNew: 0 },
@@ -2968,7 +2968,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     id: 'c1',
     relationship: 'child',
     ageRange: '19to22',
-    isCohabiting: false,
+    isSameHousehold: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   };
@@ -2976,7 +2976,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     id: 'c2',
     relationship: 'child',
     ageRange: '23to39',
-    isCohabiting: false,
+    isSameHousehold: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   };
@@ -3166,7 +3166,7 @@ describe('home loan credit spillover vs. a residence tax that levies no 所得�
     ageRange: '6to15',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     disability: 'none',
-    isCohabiting: true,
+    isSameHousehold: true,
     healthInsurance: 'other',
   });
 
@@ -3579,7 +3579,7 @@ describe('calculateTaxes at ages 65 and over', () => {
               otherNetIncome: 500_000,
             },
             disability: 'none' as const,
-            isCohabiting: true,
+            isSameHousehold: true,
           },
         ],
       });
@@ -3607,7 +3607,7 @@ describe('calculateTaxes at ages 65 and over', () => {
             ageRange: 'under40' as const,
             income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
             disability: 'none' as const,
-            isCohabiting: true,
+            isSameHousehold: true,
           },
         ],
       });
@@ -5019,7 +5019,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
           ageRange: 'under40',
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           disability: 'none',
-          isCohabiting: true,
+          isSameHousehold: true,
         },
       ],
     });
@@ -6459,7 +6459,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
                       otherNetIncome: 0,
                     },
                     disability: 'none',
-                    isCohabiting: true,
+                    isSameHousehold: true,
                   },
                 ]
               : [],

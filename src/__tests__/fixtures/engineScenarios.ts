@@ -59,7 +59,7 @@ export const ENGINE_SCENARIOS = {
           ageRange: '40to64',
           income: NO_INCOME,
           disability: 'none',
-          isCohabiting: true,
+          isSameHousehold: true,
         },
         {
           id: 'child',
@@ -67,7 +67,7 @@ export const ENGINE_SCENARIOS = {
           ageRange: '16to18',
           income: NO_INCOME,
           disability: 'none',
-          isCohabiting: true,
+          isSameHousehold: true,
         },
       ],
     },

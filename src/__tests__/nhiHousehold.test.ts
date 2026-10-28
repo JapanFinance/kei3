@@ -24,7 +24,7 @@ describe('resolveDependentNHIEnrollment', () => {
     id: 'dep-1',
     relationship: 'child',
     ageRange: '6to15',
-    isCohabiting: true,
+    isSameHousehold: true,
     income: {
       grossEmploymentIncome: 0,
       grossPublicPensionIncome: 0,
@@ -37,7 +37,7 @@ describe('resolveDependentNHIEnrollment', () => {
   it('returns false when the dependent is not cohabiting', () => {
     const nonCohabiting: Dependent = {
       ...baseDependent,
-      isCohabiting: false,
+      isSameHousehold: false,
       healthInsurance: 'nhi',
     };
     expect(resolveDependentNHIEnrollment(nonCohabiting, true)).toBe(false);
@@ -185,7 +185,7 @@ describe('composeNHIHousehold', () => {
       id: 'spouse',
       relationship: 'spouse',
       ageRange: '40to64',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 1_000_000,
         grossPublicPensionIncome: 0,
@@ -224,7 +224,7 @@ describe('composeNHIHousehold', () => {
       id: 'parent',
       relationship: 'parent',
       ageRange: '65to69',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 1_200_000,
@@ -259,7 +259,7 @@ describe('composeNHIHousehold', () => {
       id: 'child-away',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: false,
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
@@ -292,7 +292,7 @@ describe('composeNHIHousehold', () => {
       id: 'child-preschool',
       relationship: 'child',
       ageRange: 'under6',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
@@ -306,7 +306,7 @@ describe('composeNHIHousehold', () => {
       id: 'child-school',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
@@ -320,7 +320,7 @@ describe('composeNHIHousehold', () => {
       id: 'child-highschool',
       relationship: 'child',
       ageRange: '16to18',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
@@ -334,7 +334,7 @@ describe('composeNHIHousehold', () => {
       id: 'child-college',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
@@ -367,7 +367,7 @@ describe('composeNHIHousehold', () => {
       id: 'elderly-spouse',
       relationship: 'spouse',
       ageRange: '65to69',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 1_000_000, // net pension income will be calculated
@@ -404,7 +404,7 @@ describe('composeNHIHousehold', () => {
       id: 'earner-spouse',
       relationship: 'spouse',
       ageRange: '40to64',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD + 10_000,
         grossPublicPensionIncome: 0,
@@ -419,7 +419,7 @@ describe('composeNHIHousehold', () => {
       id: 'child',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 200_000, // below threshold
         grossPublicPensionIncome: 0,

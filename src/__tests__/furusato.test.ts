@@ -425,7 +425,7 @@ describe('calculateFurusatoNozeiLimit', () => {
             ageRange: 'under40',
             income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
             disability: 'none',
-            isCohabiting: true,
+            isSameHousehold: true,
           },
           {
             id: 'child',
@@ -433,7 +433,7 @@ describe('calculateFurusatoNozeiLimit', () => {
             ageRange: '16to18',
             income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
             disability: 'none',
-            isCohabiting: true,
+            isSameHousehold: true,
           },
         ],
         homeLoanTaxCredit,

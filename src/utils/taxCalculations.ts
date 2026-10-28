@@ -143,7 +143,7 @@ const longTermCareCategory1TierInputs = (
   ),
   householdHasOtherTaxableMember: inputs.dependents.some(
     dependent =>
-      dependent.isCohabiting && isDependentResidenceTaxable(dependent, inputs.incomeYear),
+      dependent.isSameHousehold && isDependentResidenceTaxable(dependent, inputs.incomeYear),
   ),
 });
 

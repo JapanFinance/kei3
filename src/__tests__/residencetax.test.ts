@@ -319,7 +319,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -338,7 +338,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -354,7 +354,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -374,7 +374,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -382,7 +382,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '2',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -401,7 +401,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -409,7 +409,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '2',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -427,7 +427,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_000_000 },
     };
@@ -447,7 +447,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'child',
       ageRange: '6to15',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -474,7 +474,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
       id: '1',
       relationship: 'spouse',
       ageRange: 'under40',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -756,7 +756,7 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
         id: 'd1',
         relationship: 'child',
         ageRange: '6to15',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       },
@@ -764,7 +764,7 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
         id: 'd2',
         relationship: 'child',
         ageRange: '6to15',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       },
