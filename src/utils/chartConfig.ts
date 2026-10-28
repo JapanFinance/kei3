@@ -322,6 +322,23 @@ export const generateChartData = (
           },
         ]
       : []),
+    // Without this bar the stack would fall short of the income by the household NHI amount paid as deemed head.
+    ...(resultsAndCaps.some(({ result }) => (result.householdNHIPremium ?? 0) > 0)
+      ? [
+          {
+            label: 'Household National Health Insurance',
+            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
+              x: incomePoints[i]!,
+              y: result.householdNHIPremium ?? 0,
+              breakdown,
+            })),
+            backgroundColor: 'rgba(233, 30, 99, 0.7)',
+            yAxisID: 'y',
+            type: 'bar' as const,
+            stack: 'stack0',
+          },
+        ]
+      : []),
   ];
 
   const datasets = [

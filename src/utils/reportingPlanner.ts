@@ -12,7 +12,12 @@ import {
 } from '../types/tax';
 import { formatJPY } from './formatters';
 import { withRequiredReporting } from './investmentReporting';
-import { calculateTaxes, incomeTaxPaid, residenceTaxPaid } from './taxCalculations';
+import {
+  calculateTaxes,
+  incomeTaxPaid,
+  residenceTaxPaid,
+  totalSocialInsurancePaid,
+} from './taxCalculations';
 
 /**
  * One reporting choice a {@link ReportingUnit} could be set to.
@@ -395,12 +400,7 @@ const figuresOf = (results: TakeHomeResults): PlanFigures => ({
   kept: results.takeHomeIncome,
   incomeTax: incomeTaxPaid(results),
   residenceTax: residenceTaxPaid(results),
-  socialInsurance:
-    results.socialInsuranceOverride ??
-    results.healthInsurance +
-      results.pensionPayments +
-      (results.employmentInsurance ?? 0) +
-      (results.longTermCareCategory1Premium ?? 0),
+  socialInsurance: results.socialInsuranceOverride ?? totalSocialInsurancePaid(results),
   furusatoNozeiLimit: results.furusatoNozei.limit,
   totalIncome: results.totalNetIncome,
 });

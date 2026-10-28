@@ -56,7 +56,7 @@ export const ENGINE_SCENARIOS = {
         {
           id: 'spouse',
           relationship: 'spouse',
-          ageRange: 'under65',
+          ageRange: '40to64',
           income: NO_INCOME,
           disability: 'none',
           isCohabiting: true,

@@ -130,6 +130,34 @@ export type ProviderRegion = string;
 export const DEFAULT_PROVIDER_REGION = 'DEFAULT';
 
 /**
+ * Statutory age band for preschool children (未就学児) receiving the 50% discount
+ * on NHI per-capita premiums (国民健康保険法施行令第29条の7第5項).
+ */
+export const NHI_PRESCHOOL_AGE_BAND = { maxAgeExclusive: 6 } as const;
+
+/**
+ * Statutory age band for children exempt from the FY2026 Child/Childcare Support levy
+ * per-capita premium (子ども・子育て支援納付金分均等割額の10割軽減, through end of fiscal year reaching age 18).
+ */
+export const NHI_CHILD_SUPPORT_EXEMPT_AGE_BAND = { maxAgeExclusive: 19 } as const;
+
+/**
+ * Statutory age band for National Health Insurance eligibility (under 75).
+ * At age 75, individuals transition to the Medical System for the Elderly (後期高齢者医療制度).
+ */
+export const NHI_ELIGIBLE_AGE_BAND = { maxAgeExclusive: 75 } as const;
+
+/**
+ * How the household National Health Insurance bill is attributed to the taxpayer:
+ * - 'fullHousehold': Taxpayer pays 100% of the household NHI bill (out-of-pocket & 社会保険料控除).
+ * - 'taxpayerShare': Taxpayer pays only their apportioned share of each portion.
+ * - 'none': Another household member pays the NHI bill (¥0 out-of-pocket & ¥0 deduction for taxpayer).
+ */
+export type NHIPaymentAttribution = 'fullHousehold' | 'taxpayerShare' | 'none';
+
+export const DEFAULT_NHI_PAYMENT_ATTRIBUTION: NHIPaymentAttribution = 'fullHousehold';
+
+/**
  * Statutory NHI low-income premium reduction (均等割額・平等割額の軽減) ratio:
  * - 0.7: 7割軽減 (70% reduction)
  * - 0.5: 5割軽減 (50% reduction)

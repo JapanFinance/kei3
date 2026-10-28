@@ -6,6 +6,7 @@ import type { Dependent, DependentDeductionResults, DisabilityLevel } from './de
 import type {
   HealthInsuranceProviderId,
   LongTermCareCategory1Estimate,
+  NHIPaymentAttribution,
   NHIPremiumReductionRatio,
 } from './healthInsurance';
 import type { TaxpayerAgeRange } from './taxpayerAge';
@@ -874,6 +875,13 @@ export interface TakeHomeFormState {
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
   personalCircumstances: PersonalCircumstancesInput;
+  /** How household NHI premiums are attributed to the taxpayer */
+  nhiPaymentAttribution?: NHIPaymentAttribution;
+  /**
+   * Region used for household NHI when the taxpayer is on another provider
+   * (e.g. Employees' Health Insurance) but household members are on NHI.
+   */
+  nhiHouseholdRegion?: string;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -933,6 +941,10 @@ export interface TakeHomeInputs {
    * donation.
    */
   furusatoDonation?: number | undefined;
+  /** How household NHI premiums are attributed to the taxpayer */
+  nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
+  /** Region used for household NHI when taxpayer is on non-NHI provider */
+  nhiHouseholdRegion?: string | undefined;
 }
 
 /**
@@ -1173,6 +1185,17 @@ export interface TakeHomeResults {
    * rather than an entered billed amount; carries the 所得段階 and 基準額 behind the figure.
    */
   longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
+  /**
+   * Annual household NHI premium attributed to the taxpayer when the taxpayer themselves
+   * is NOT enrolled in NHI (e.g. on Employees' Health Insurance or 75+ Latter-Stage Elderly)
+   * but pays the household NHI bill as 擬制世帯主. Deductible as 社会保険料控除 under 所得税法第74条.
+   */
+  householdNHIPremium?: number | undefined;
+  /**
+   * Household-level National Health Insurance calculation summary and attribution breakdown.
+   * Present whenever the household has at least one NHI-insured member.
+   */
+  nhiHousehold?: NHIHouseholdSummary | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   /** The bonus streams' amounts added up. 0 when there are none. */
@@ -1182,6 +1205,54 @@ export interface TakeHomeResults {
   ageRange: TaxpayerAgeRange;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+}
+
+/**
+ * Summary of household-level National Health Insurance calculations and member breakdown
+ */
+export interface NHIHouseholdSummary {
+  /** Total number of members enrolled in NHI in this household */
+  insuredCount: number;
+  /** Number of NHI-insured members aged 40-64 (subject to 介護納付金分) */
+  ltcInsuredCount: number;
+  /** Number of NHI-insured preschool children under age 6 (subject to 50% 均等割 reduction) */
+  preschoolCount: number;
+  /** Number of NHI-insured children under 19 exempt from 子ども・子育て支援納付金分均等割 */
+  childSupportExemptCount: number;
+  /** Combined premium calculation base across all NHI-insured members */
+  calculationBase: number;
+  /** Combined premium calculation base across NHI-insured members aged 40-64 */
+  ltcCalculationBase: number;
+  /** Whether a deemed household head (擬制世帯主) is present */
+  isDeemedHead: boolean;
+  /** Who the household head is */
+  householdHeadRelationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
+  /** Total reduction test income (軽減判定所得) across head and NHI members */
+  reductionTestIncome: number;
+  /** Number of salary/pension earners in reduction test group (給与所得者等の数) */
+  salaryEarnersCount: number;
+  /** Low-income reduction ratio applied (0, 0.2, 0.5, 0.7) for prev and curr FY */
+  reductionRatios: { prevFY: NHIPremiumReductionRatio; currFY: NHIPremiumReductionRatio };
+  /** Full household annual premium breakdown */
+  householdTotal: number;
+  householdPortions: {
+    medical: number;
+    elderlySupport: number;
+    longTermCare: number;
+    childSupport: number;
+  };
+  /** Taxpayer's attributed annual premium breakdown */
+  taxpayerTotal: number;
+  taxpayerPortions: {
+    medical: number;
+    elderlySupport: number;
+    longTermCare: number;
+    childSupport: number;
+  };
+  /** Configured payment attribution */
+  paymentAttribution: NHIPaymentAttribution;
+  /** Region key used for NHI parameters */
+  effectiveRegion: string;
 }
 
 export interface ResidenceTaxDetails {

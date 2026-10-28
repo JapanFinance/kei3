@@ -72,7 +72,8 @@ const PortionBreakdown: React.FC<{
   calc: NationalHealthInsurancePortion;
   /** The figure the breakdown arrives at, shown after the equals sign. */
   premium: number;
-}> = ({ label, calculationBase, calc, premium }) => (
+  isTaxpayerShare?: boolean;
+}> = ({ label, calculationBase, calc, premium, isTaxpayerShare }) => (
   <Box sx={{ mb: 0.5 }}>
     {label && (
       <Typography
@@ -125,9 +126,15 @@ const PortionBreakdown: React.FC<{
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
+        flexWrap: 'wrap',
       }}
     >
       = <strong>{formatJPY(premium)}</strong>
+      {isTaxpayerShare && (
+        <Typography component="span" variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
+          (Taxpayer share; Household: {formatJPY(calc.premium)})
+        </Typography>
+      )}
       {calc.isCapped && (
         <Box
           component="span"
@@ -158,15 +165,35 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   results,
   inputs,
 }) => {
-  const region = inputs.region;
+  const region = results.nhiHousehold?.effectiveRegion ?? inputs.region;
   const year = inputs.incomeYear;
   const prevFYData = getNHIParamsForMonth(region, year, 0); // Jan → previous FY
   const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
 
   // Low-income reduction tier per fiscal year — must reproduce the calculator's judgement
   // exactly, or the parity assertions below throw in dev builds.
-  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 0);
-  const currReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 3);
+  const reductionOptions = results.nhiHousehold
+    ? {
+        insuredCount: results.nhiHousehold.insuredCount,
+        salaryEarnersCount: results.nhiHousehold.salaryEarnersCount,
+      }
+    : undefined;
+  const reductionIncome = results.nhiHousehold
+    ? results.nhiHousehold.reductionTestIncome
+    : results.totalNetIncome;
+
+  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(
+    reductionIncome,
+    year,
+    0,
+    reductionOptions,
+  );
+  const currReductionRatio = getNHIPremiumReductionRatioForMonth(
+    reductionIncome,
+    year,
+    3,
+    reductionOptions,
+  );
 
   if (!currFYData) {
     return (
@@ -176,12 +203,31 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     );
   }
 
-  const base = premiumCalculationBase(results.totalNetIncome);
+  const isLtc = portion === 'longTermCare';
+  const base = results.nhiHousehold
+    ? isLtc
+      ? results.nhiHousehold.ltcCalculationBase
+      : results.nhiHousehold.calculationBase
+    : premiumCalculationBase(results.totalNetIncome);
+
+  const householdOptions = results.nhiHousehold
+    ? {
+        insuredCount: isLtc
+          ? results.nhiHousehold.ltcInsuredCount
+          : results.nhiHousehold.insuredCount,
+        preschoolCount: isLtc ? 0 : results.nhiHousehold.preschoolCount,
+        childSupportExemptCount:
+          portion === 'childSupport' ? results.nhiHousehold.childSupportExemptCount : 0,
+        isHouseholdHead: true,
+      }
+    : undefined;
+
   const currCalc = calculateNationalHealthInsurancePortion(
     base,
     currFYData,
     portion,
     currReductionRatio,
+    householdOptions,
   );
   if (!currCalc) {
     return (
@@ -199,6 +245,8 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
       longTermCare: results.nhiLongTermCarePortion,
       childSupport: results.nhiChildSupportPortion,
     }[portion] ?? 0;
+
+  const isTaxpayerShare = results.nhiHousehold?.paymentAttribution === 'taxpayerShare';
 
   // Show both fiscal years only when this portion's premium can differ between them. The
   // calculation blends every portion whenever any parameter differs, but a portion whose own
@@ -244,11 +292,19 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
       <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
         {(() => {
           const thresholds = getNHIPremiumReductionThresholdsForMonth(year, 3);
+          const insuredCount = results.nhiHousehold?.insuredCount ?? 1;
+          const salaryEarnersCount = results.nhiHousehold?.salaryEarnersCount ?? 1;
+          const earnerAllowance =
+            thresholds.perAdditionalSalaryEarner * Math.max(0, salaryEarnersCount - 1);
+          const isHousehold = insuredCount > 1 || salaryEarnersCount > 1;
+          const labelPrefix = isHousehold
+            ? `Household (${insuredCount} insured, ${salaryEarnersCount} earner(s))`
+            : 'Single-person';
           return (
-            `Single-person thresholds for FY${year}: ` +
-            `70% ≤ ${formatJPY(thresholds.baseAmount)}; ` +
-            `50% ≤ ${formatJPY(thresholds.baseAmount + thresholds.fiftyPercentPerInsured)}; ` +
-            `20% ≤ ${formatJPY(thresholds.baseAmount + thresholds.twentyPercentPerInsured)}.`
+            `${labelPrefix} thresholds for FY${year}: ` +
+            `70% ≤ ${formatJPY(thresholds.baseAmount + earnerAllowance)}; ` +
+            `50% ≤ ${formatJPY(thresholds.baseAmount + thresholds.fiftyPercentPerInsured * insuredCount + earnerAllowance)}; ` +
+            `20% ≤ ${formatJPY(thresholds.baseAmount + thresholds.twentyPercentPerInsured * insuredCount + earnerAllowance)}.`
           );
         })()}
       </Typography>
@@ -263,12 +319,24 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     </Box>
   );
 
+  const householdInfo = results.nhiHousehold && results.nhiHousehold.insuredCount > 1 && (
+    <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
+      Household: {results.nhiHousehold.insuredCount} insured member(s)
+      {results.nhiHousehold.preschoolCount > 0 &&
+        ` (${results.nhiHousehold.preschoolCount} preschool with 50% discount)`}
+      {portion === 'childSupport' &&
+        results.nhiHousehold.childSupportExemptCount > 0 &&
+        ` (${results.nhiHousehold.childSupportExemptCount} under 19 exempt)`}
+    </Typography>
+  );
+
   if (blended) {
     const prevCalc = calculateNationalHealthInsurancePortion(
       base,
       prevFYData,
       portion,
       prevReductionRatio,
+      householdOptions,
     );
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
@@ -278,6 +346,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
         <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
           NHI Calculation Base: {formatJPY(base)}
         </Typography>
+        {householdInfo}
 
         <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           {prevCalc ? (
@@ -323,6 +392,15 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
             {formatJPY(currCalc.premium)} × 7⁄10
             {' = '}
             <strong>{formatJPY(portionPremium)}</strong>
+            {isTaxpayerShare && (
+              <Typography
+                component="span"
+                variant="caption"
+                sx={{ color: 'text.secondary', display: 'block' }}
+              >
+                (Taxpayer apportioned share)
+              </Typography>
+            )}
           </Typography>
         </Box>
 
@@ -337,8 +415,15 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
       <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
         NHI Calculation Base: {formatJPY(base)}
       </Typography>
+      {householdInfo}
 
-      <PortionBreakdown label="" calculationBase={base} calc={currCalc} premium={portionPremium} />
+      <PortionBreakdown
+        label=""
+        calculationBase={base}
+        calc={currCalc}
+        premium={portionPremium}
+        isTaxpayerShare={isTaxpayerShare}
+      />
 
       {source}
       {reductionFootnote}
