@@ -36,6 +36,15 @@ import { composeNetIncomeComponents, type NetIncomeComponents } from './netIncom
 
 export { getDependentEligibilityMax };
 
+/**
+ * Whether a dependent is claimed for tax deductions (扶養控除 / 配偶者控除 / 障害者控除 等).
+ * Defaults to true when omitted. When false, the person is not claimed as a tax dependent
+ * by the taxpayer (e.g. child claimed on the other parent's return, or independent cohabiting earner).
+ */
+export function isClaimedTaxDependent(dependent: Dependent): boolean {
+  return dependent.isClaimedAsDependent !== false;
+}
+
 /** Maximum total net income (合計所得金額) for spouse special deduction eligibility (配偶者特別控除).
  * @see https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1195.htm
  */
@@ -132,9 +141,10 @@ export function countDependentsWithinEligibilityIncome(
   year: number,
 ): number {
   const eligibilityMax = getDependentEligibilityMax(year);
-  return dependents.filter(
-    dependent => calculateDependentTotalNetIncome(dependent, year) <= eligibilityMax,
-  ).length;
+  return dependents
+    .filter(isClaimedTaxDependent)
+    .filter(dependent => calculateDependentTotalNetIncome(dependent, year) <= eligibilityMax)
+    .length;
 }
 
 /**
@@ -160,7 +170,7 @@ export function hasIncomeAdjustmentDeductionDependent(
   year: number,
 ): boolean {
   const eligibilityMax = getDependentEligibilityMax(year);
-  return dependents.some(dependent => {
+  return dependents.filter(isClaimedTaxDependent).some(dependent => {
     // 扶養親族 / 同一生計配偶者 status requires 合計所得金額 within the threshold.
     if (calculateDependentTotalNetIncome(dependent, year) > eligibilityMax) {
       return false;
@@ -186,7 +196,7 @@ export function hasIncomeAdjustmentDeductionDependent(
  */
 export function hasDependentRelativeUnder23(dependents: Dependent[], year: number): boolean {
   const eligibilityMax = getDependentEligibilityMax(year);
-  return dependents.some(dependent => {
+  return dependents.filter(isClaimedTaxDependent).some(dependent => {
     if (dependent.relationship === 'spouse') return false; // a spouse is never a 扶養親族
     if (calculateDependentTotalNetIncome(dependent, year) > eligibilityMax) return false;
     return dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.dependentUnder23);
@@ -259,7 +269,7 @@ function isElderlyDependent(dependent: Dependent, year: number): boolean {
 function isCohabitingElderlyDependent(dependent: Dependent, year: number): boolean {
   return (
     isElderlyDependent(dependent, year) &&
-    dependent.isCohabiting &&
+    dependent.isSameHousehold &&
     dependent.relationship === 'parent'
   );
 }
@@ -413,11 +423,11 @@ function isEligibleForDisabilityDeduction(dependent: Dependent, year: number): b
 /**
  * Get disability deduction amount for a given disability level
  * @param disability - The disability level
- * @param isCohabiting - Whether the dependent lives with the taxpayer
+ * @param isSameHousehold - Whether the dependent is in the same municipal household as the taxpayer
  */
 export function getDisabilityDeduction(
   disability: DisabilityLevel,
-  isCohabiting: boolean,
+  isSameHousehold: boolean,
 ): DeductionAmount {
   if (disability === 'none') {
     return { national: 0, residence: 0 };
@@ -430,8 +440,8 @@ export function getDisabilityDeduction(
       case 'regular':
         return deductions.DISABILITY_REGULAR;
       case 'special':
-        // Special disability with cohabitation gets higher deduction
-        return isCohabiting
+        // Special disability with same-household cohabitation gets higher deduction
+        return isSameHousehold
           ? deductions.DISABILITY_SPECIAL_COHABITING
           : deductions.DISABILITY_SPECIAL;
       default:
@@ -885,12 +895,15 @@ export function calculateDependentDeductions(
 
   // Process each dependent
   for (const dependent of dependents) {
+    if (!isClaimedTaxDependent(dependent)) {
+      continue;
+    }
     // 1. Handle Disability Deduction (separate entry)
     const isDisabilityDeductionEligible = isEligibleForDisabilityDeduction(dependent, year);
     if (isDisabilityDeductionEligible) {
       const disabilityDeduction = getDisabilityDeduction(
         dependent.disability,
-        dependent.isCohabiting,
+        dependent.isSameHousehold,
       );
 
       results.nationalTax.disabilityDeduction += disabilityDeduction.national;
@@ -898,7 +911,7 @@ export function calculateDependentDeductions(
 
       let disabilityType: DeductionType = DEDUCTION_TYPES.DISABILITY;
       if (dependent.disability === 'special') {
-        disabilityType = dependent.isCohabiting
+        disabilityType = dependent.isSameHousehold
           ? DEDUCTION_TYPES.SPECIAL_DISABILITY_COHABITING
           : DEDUCTION_TYPES.SPECIAL_DISABILITY;
       }

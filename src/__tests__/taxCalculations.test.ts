@@ -421,8 +421,8 @@ describe('calculateTaxes', () => {
     const spouse = {
       id: 'spouse',
       relationship: 'spouse' as const,
-      ageRange: 'under65' as const,
-      isCohabiting: true,
+      ageRange: 'under40' as const,
+      isSameHousehold: true,
       disability: 'none' as const,
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     };
@@ -2644,7 +2644,7 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
           ageRange: '19to22' as const,
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           disability: 'none' as const,
-          isCohabiting: true,
+          isSameHousehold: true,
         },
       ],
       lifeInsurance: { generalNew: 120_000, medicalCareNew: 0, pensionNew: 0 },
@@ -2968,15 +2968,15 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
     id: 'c1',
     relationship: 'child',
     ageRange: '19to22',
-    isCohabiting: false,
+    isSameHousehold: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   };
   const adultChild: Dependent = {
     id: 'c2',
     relationship: 'child',
-    ageRange: '23to64',
-    isCohabiting: false,
+    ageRange: '23to39',
+    isSameHousehold: false,
     disability: 'none',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   };
@@ -3163,10 +3163,11 @@ describe('home loan credit spillover vs. a residence tax that levies no 所得�
   const underSixteen = (id: string): Dependent => ({
     id,
     relationship: 'child',
-    ageRange: 'under16',
+    ageRange: '6to15',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
     disability: 'none',
-    isCohabiting: true,
+    isSameHousehold: true,
+    healthInsurance: 'other',
   });
 
   const householdWithSalary = (amount: number) =>
@@ -3260,11 +3261,11 @@ describe('home loan credit spillover vs. a residence tax that levies no 所得�
     expect(result.residenceTax.nonTaxableStatus).toBe('minor');
 
     const credit = result.homeLoanTaxCredit!;
-    expect(credit.appliedToIncomeTax).toBe(5_000);
-    expect(credit.residenceTaxSpilloverCap?.incomeRateCap).toBe(5_000);
+    expect(credit.appliedToIncomeTax).toBe(5_050);
+    expect(credit.residenceTaxSpilloverCap?.incomeRateCap).toBe(5_050);
     expect(credit.residenceTaxSpilloverCap?.residenceIncomeBasedCap).toBe(0);
     expect(credit.appliedToResidenceTax).toBe(0);
-    expect(credit.unusedCredit).toBe(295_000);
+    expect(credit.unusedCredit).toBe(294_950);
     expect(credit.warnings[0]).toContain('所得割');
     expect(result.residenceTaxIncomeBasedBeforeHomeLoanCredit).toBeUndefined();
   });
@@ -3571,14 +3572,14 @@ describe('calculateTaxes at ages 65 and over', () => {
           {
             id: 'spouse-1',
             relationship: 'spouse' as const,
-            ageRange: 'under65' as const,
+            ageRange: 'under40' as const,
             income: {
               grossEmploymentIncome: 0,
               grossPublicPensionIncome: 0,
               otherNetIncome: 500_000,
             },
             disability: 'none' as const,
-            isCohabiting: true,
+            isSameHousehold: true,
           },
         ],
       });
@@ -3603,10 +3604,10 @@ describe('calculateTaxes at ages 65 and over', () => {
           {
             id: 'spouse-1',
             relationship: 'spouse' as const,
-            ageRange: 'under65' as const,
+            ageRange: 'under40' as const,
             income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
             disability: 'none' as const,
-            isCohabiting: true,
+            isSameHousehold: true,
           },
         ],
       });
@@ -5015,10 +5016,10 @@ describe('calculateTaxes with investment income reported under 申告分離課�
         {
           id: 'spouse',
           relationship: 'spouse',
-          ageRange: 'under65',
+          ageRange: 'under40',
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
           disability: 'none',
-          isCohabiting: true,
+          isSameHousehold: true,
         },
       ],
     });
@@ -6451,14 +6452,14 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
                   {
                     id: 'sp1',
                     relationship: 'spouse',
-                    ageRange: 'under65',
+                    ageRange: 'under40',
                     income: {
                       grossEmploymentIncome: randInt(0, 1_500_000),
                       grossPublicPensionIncome: 0,
                       otherNetIncome: 0,
                     },
                     disability: 'none',
-                    isCohabiting: true,
+                    isSameHousehold: true,
                   },
                 ]
               : [],

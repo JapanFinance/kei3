@@ -13,10 +13,10 @@ describe('DependentForm public pension income', () => {
   const pensionerParent: OtherDependent = {
     id: 'dep-1',
     relationship: 'parent',
-    ageRange: '70plus',
+    ageRange: '70to74',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 1_580_000, otherNetIncome: 0 },
     disability: 'none',
-    isCohabiting: true,
+    isSameHousehold: true,
   };
 
   it('shows the pension row and applies the 公的年金等控除 in the previews', () => {
@@ -62,8 +62,11 @@ describe('DependentForm public pension income', () => {
 
     await user.click(screen.getByRole('combobox', { name: 'Age' }));
     const listbox = screen.getByRole('listbox');
-    expect(within(listbox).getByRole('option', { name: '23 - 64' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '23 - 39' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '40 - 64' })).toBeInTheDocument();
     expect(within(listbox).getByRole('option', { name: '65 - 69' })).toBeInTheDocument();
-    expect(within(listbox).queryByRole('option', { name: '23 - 69' })).not.toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '70 - 74' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '75 or Older' })).toBeInTheDocument();
+    expect(within(listbox).queryByRole('option', { name: '23 - 64' })).not.toBeInTheDocument();
   });
 });

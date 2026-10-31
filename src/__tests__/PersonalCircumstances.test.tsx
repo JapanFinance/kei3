@@ -128,8 +128,8 @@ describe('Personal Circumstances card', () => {
         {
           id: 'c1',
           relationship: 'child',
-          ageRange: 'under16',
-          isCohabiting: true,
+          ageRange: '6to15',
+          isSameHousehold: true,
           disability: 'none',
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
         },

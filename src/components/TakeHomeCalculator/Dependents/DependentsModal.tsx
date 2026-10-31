@@ -14,11 +14,16 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
+import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
 import IconButton from '@mui/material/IconButton';
+import InputLabel from '@mui/material/InputLabel';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
+import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import { useTheme } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -29,6 +34,7 @@ import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useState } from 'react';
 
+import { NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import type {
   Dependent,
   DependentDeductionBreakdown,
@@ -37,10 +43,19 @@ import type {
 } from '../../../types/dependents';
 import { RELATIONSHIPS, DEPENDENT_AGE_RANGES, DEDUCTION_TYPES } from '../../../types/dependents';
 import {
+  NATIONAL_HEALTH_INSURANCE_ID,
+  type HealthInsuranceProviderId,
+  type NHIPaymentAttribution,
+} from '../../../types/healthInsurance';
+import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
+import { resolveDependentNHIEnrollment } from '../../../utils/nhiHousehold';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import SourceLinks from '../../ui/SourceLinks';
+import { DetailedTooltip } from '../../ui/Tooltips';
 import { DependentForm } from './DependentForm';
 import SpouseSection from './SpouseSection';
 
@@ -52,6 +67,14 @@ interface DependentsModalProps {
   taxpayerNetIncome: number;
   /** Income year used for the dependent-deduction eligibility/threshold lookup. */
   incomeYear: number;
+  /** Taxpayer's current health insurance provider */
+  healthInsuranceProvider?: HealthInsuranceProviderId | undefined;
+  /** NHI payment attribution setting */
+  nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
+  onNHIPaymentAttributionChange?: ((attribution: NHIPaymentAttribution) => void) | undefined;
+  /** NHI household region setting */
+  nhiHouseholdRegion?: string | undefined;
+  onNHIHouseholdRegionChange?: ((region: string) => void) | undefined;
 }
 
 /**
@@ -65,6 +88,11 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   onDependentsChange,
   taxpayerNetIncome,
   incomeYear,
+  healthInsuranceProvider,
+  nhiPaymentAttribution = 'fullHousehold',
+  onNHIPaymentAttributionChange,
+  nhiHouseholdRegion = 'Tokyo',
+  onNHIHouseholdRegionChange,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -74,6 +102,23 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   // Separate spouse from other dependents
   const spouse = dependents.find(d => d.relationship === 'spouse');
   const otherDependents = dependents.filter(d => d.relationship !== 'spouse');
+
+  const isTaxpayerNHI = healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
+
+  const hasNHIMembers =
+    isTaxpayerNHI ||
+    Boolean(
+      spouse &&
+      spouse.isSameHousehold &&
+      spouse.ageRange !== '75plus' &&
+      resolveDependentNHIEnrollment(spouse, isTaxpayerNHI),
+    ) ||
+    otherDependents.some(
+      d =>
+        d.isSameHousehold &&
+        d.ageRange !== '75plus' &&
+        resolveDependentNHIEnrollment(d, isTaxpayerNHI),
+    );
 
   const handleSpouseChange = (newSpouse: Spouse | null) => {
     const nonSpouseDependents = dependents.filter(d => d.relationship !== 'spouse');
@@ -127,23 +172,58 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   const getDependentChips = (dependent: OtherDependent): React.ReactNode[] => {
     const chips: React.ReactNode[] = [];
 
+    if (dependent.isClaimedAsDependent === false) {
+      chips.push(
+        <Chip key="not-tax-dep" label="Not tax dependent" size="small" variant="outlined" />,
+      );
+    }
+
     if (dependent.disability !== 'none') {
       // Names the 障害者控除 bracket claimed, matching DISABILITY_LEVELS, rather than labelling
       // the dependent; the chip drops the Japanese term the dropdown carries, for width.
       let disabilityLabel =
         dependent.disability === 'regular' ? 'General disability' : 'Special disability';
       // Add cohabiting info to special disability chip
-      if (dependent.disability === 'special' && dependent.isCohabiting) {
+      if (dependent.disability === 'special' && dependent.isSameHousehold) {
         disabilityLabel += ' (Cohabiting)';
       }
 
       chips.push(<Chip key="disability" label={disabilityLabel} size="small" color="secondary" />);
     }
 
-    // Only show separate cohabiting chip if not special disability
+    // Only show separate same-household chip if not special disability
     // (to avoid redundancy since special disability chip already shows it)
-    if (dependent.isCohabiting && dependent.disability !== 'special') {
-      chips.push(<Chip key="cohabiting" label="Cohabiting" size="small" variant="outlined" />);
+    if (dependent.isSameHousehold && dependent.disability !== 'special') {
+      chips.push(
+        <Chip key="same-household" label="Same household" size="small" variant="outlined" />,
+      );
+    }
+
+    if (dependent.isClaimedAsDependent === false && !dependent.isSameHousehold) {
+      chips.push(
+        <Chip key="no-impact" label="No tax/NHI impact" size="small" variant="outlined" />,
+      );
+    }
+
+    if (dependent.ageRange === '75plus') {
+      chips.push(
+        <Chip key="elderly" label="75+ Elderly Medical" size="small" variant="outlined" />,
+      );
+    } else if (dependent.isSameHousehold) {
+      const isNHI = resolveDependentNHIEnrollment(dependent, isTaxpayerNHI);
+      if (isNHI) {
+        chips.push(
+          <Chip key="insurance" label="NHI" size="small" color="primary" variant="outlined" />,
+        );
+      } else {
+        chips.push(
+          <Chip key="insurance" label="Other Insurance" size="small" variant="outlined" />,
+        );
+      }
+    }
+
+    if (dependent.isHouseholdHead) {
+      chips.push(<Chip key="head" label="Household Head" size="small" color="info" />);
     }
 
     return chips;
@@ -197,7 +277,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonIcon />
           <Typography variant="h6" component="span">
-            Manage Dependents
+            Manage Dependents & Household
           </Typography>
         </Box>
         <IconButton edge="end" onClick={onClose} aria-label="close" size="small">
@@ -222,6 +302,40 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           />
         ) : (
           <Box>
+            {/* Livelihood / Shared Expenses Disclaimer */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 0.5 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Only add persons with whom you share living expenses (生計を一にする).
+              </Typography>
+              <DetailedTooltip
+                title="Sharing Living Expenses (生計を一にする)"
+                icon={SIMPLE_TOOLTIP_ICON}
+              >
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Under Japanese tax law, claiming spousal or dependent deductions
+                  (配偶者控除・扶養控除) strictly requires sharing living expenses (生計を一にする).
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Family members living together are presumed to share expenses. Family members
+                  living apart (e.g. for work relocation 単身赴任, university, or medical
+                  convalescence) fully qualify as long as living, educational, or medical funds are
+                  regularly remitted.
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Independent housemates or roommates with separate finances do not share living
+                  expenses and should not be added.
+                </Typography>
+                <SourceLinks
+                  sources={[
+                    {
+                      href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180_qa.htm',
+                      label: 'NTA: Meaning of Sharing Livelihood (国税庁:「生計を一にする」の意義)',
+                    },
+                  ]}
+                />
+              </DetailedTooltip>
+            </Box>
+
             {/* Spouse Section */}
             <SpouseSection
               spouse={spouse || null}
@@ -325,6 +439,80 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 Add Other Dependent
               </Button>
             </Box>
+
+            {/* Household National Health Insurance Section */}
+            {hasNHIMembers && (
+              <Box sx={{ mt: 4 }}>
+                <Divider sx={{ mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Household National Health Insurance (国民健康保険)
+                </Typography>
+                <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'background.default' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                    {isTaxpayerNHI
+                      ? 'National Health Insurance is assessed at the household level on the combined income and per-capita counts of all enrolled members.'
+                      : 'Cohabiting household member(s) are enrolled in National Health Insurance under the municipal household.'}
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="nhi-modal-attribution-label">
+                        Payment Attribution & Deduction
+                      </InputLabel>
+                      <Select
+                        labelId="nhi-modal-attribution-label"
+                        label="Payment Attribution & Deduction"
+                        value={nhiPaymentAttribution}
+                        onChange={e =>
+                          onNHIPaymentAttributionChange?.(e.target.value as NHIPaymentAttribution)
+                        }
+                      >
+                        <MenuItem value="fullHousehold">
+                          Taxpayer pays full household NHI (full social insurance deduction)
+                        </MenuItem>
+                        <MenuItem value="taxpayerShare">
+                          {isTaxpayerNHI
+                            ? 'Taxpayer pays their own share only (taxpayer NHI share deducted)'
+                            : 'Taxpayer pays pro-rata share (deduct pro-rata portion)'}
+                        </MenuItem>
+                        <MenuItem value="none">
+                          Paid separately / not by taxpayer (no tax deduction for taxpayer)
+                        </MenuItem>
+                      </Select>
+                      <FormHelperText>
+                        Under Japanese tax law, when the taxpayer pays NHI premiums for cohabiting
+                        family members, the full paid amount qualifies for the social insurance
+                        deduction (社会保険料控除).
+                      </FormHelperText>
+                    </FormControl>
+
+                    {!isTaxpayerNHI && (
+                      <FormControl fullWidth size="small">
+                        <InputLabel id="nhi-modal-region-label">
+                          Household NHI Municipality / Region
+                        </InputLabel>
+                        <Select
+                          labelId="nhi-modal-region-label"
+                          label="Household NHI Municipality / Region"
+                          value={nhiHouseholdRegion}
+                          onChange={e => onNHIHouseholdRegionChange?.(e.target.value)}
+                        >
+                          {NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS.map(opt => (
+                            <MenuItem key={opt.id} value={opt.id}>
+                              {opt.displayName}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        <FormHelperText>
+                          Since you are on employment or other insurance, select the municipality
+                          where your cohabiting family members' NHI is registered.
+                        </FormHelperText>
+                      </FormControl>
+                    )}
+                  </Box>
+                </Paper>
+              </Box>
+            )}
 
             {/* Deduction Summary */}
             {(spouse || otherDependents.length > 0) && (

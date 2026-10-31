@@ -44,7 +44,7 @@ export interface DependentIncome {
  * - regular: 一般の障害者
  * - special: 特別障害者
  *
- * Note: 同居特別障害者 is determined by combining disability='special' with isCohabiting=true
+ * Note: 同居特別障害者 is determined by combining disability='special' with isSameHousehold=true
  */
 export type DisabilityLevel = 'none' | 'regular' | 'special';
 
@@ -55,36 +55,50 @@ export type DependentRelationship = 'spouse' | 'child' | 'parent' | 'other';
 
 /**
  * Age range for spouse
- * - under65: Under 65 years old
- * - 65to69: Age 65-69
- * - 70plus: 70 years or older (老人控除対象配偶者, higher spouse deduction)
- *
- * The 65 boundary changes a computed amount only through the public pension deduction
- * (公的年金等控除) — see {@link DEPENDENT_AGE_BANDS}.
+ * - under40: Under 40 years old
+ * - 40to64: Age 40-64 (subject to 介護保険第2号)
+ * - 65to69: Age 65-69 (higher public pension deduction minimum)
+ * - 70to74: Age 70-74 (老人控除対象配偶者, higher spouse deduction)
+ * - 75plus: 75 years or older (老人控除対象配偶者; moves to 後期高齢者医療制度)
  */
-export type SpouseAgeRange = 'under65' | '65to69' | '70plus';
+export type SpouseAgeRange = 'under40' | '40to64' | '65to69' | '70to74' | '75plus';
 
 /**
  * Age range for non-spouse dependents
- * - under16: Under 16 years old (not eligible for dependent deduction)
+ * - under6: Under 6 years old (未就学児, eligible for 50% NHI per-capita reduction)
+ * - 6to15: Age 6-15 (minor, not eligible for income tax dependent deduction)
  * - 16to18: Age 16-18 (eligible for standard dependent deduction)
  * - 19to22: Age 19-22 (eligible for special dependent deduction if income within the eligibility
  *   threshold, or specific relative special deduction above it)
- * - 23to64, 65to69: Age 23-69 (eligible for standard dependent deduction; the 65 boundary changes
- *   a computed amount only through the public pension deduction — see {@link DEPENDENT_AGE_BANDS})
- * - 70plus: 70 years or older (eligible for elderly dependent deduction)
+ * - 23to39: Age 23-39 (eligible for standard dependent deduction)
+ * - 40to64: Age 40-64 (eligible for standard dependent deduction; subject to 介護保険第2号)
+ * - 65to69: Age 65-69 (eligible for standard dependent deduction; higher public pension deduction minimum)
+ * - 70to74: Age 70-74 (eligible for elderly dependent deduction)
+ * - 75plus: 75 years or older (eligible for elderly dependent deduction; moves to 後期高齢者医療制度)
  */
-export type DependentAgeRange = 'under16' | '16to18' | '19to22' | '23to64' | '65to69' | '70plus';
+export type DependentAgeRange =
+  | 'under6'
+  | '6to15'
+  | '16to18'
+  | '19to22'
+  | '23to39'
+  | '40to64'
+  | '65to69'
+  | '70to74'
+  | '75plus';
 
 /** The ages each {@link SpouseAgeRange} and {@link DependentAgeRange} spans. */
 const AGE_RANGE_BOUNDS = {
-  under16: { minAgeInclusive: 0, maxAgeExclusive: 16 },
+  under6: { minAgeInclusive: 0, maxAgeExclusive: 6 },
+  '6to15': { minAgeInclusive: 6, maxAgeExclusive: 16 },
   '16to18': { minAgeInclusive: 16, maxAgeExclusive: 19 },
   '19to22': { minAgeInclusive: 19, maxAgeExclusive: 23 },
-  '23to64': { minAgeInclusive: 23, maxAgeExclusive: 65 },
-  under65: { minAgeInclusive: 0, maxAgeExclusive: 65 },
+  '23to39': { minAgeInclusive: 23, maxAgeExclusive: 40 },
+  '40to64': { minAgeInclusive: 40, maxAgeExclusive: 65 },
+  under40: { minAgeInclusive: 0, maxAgeExclusive: 40 },
   '65to69': { minAgeInclusive: 65, maxAgeExclusive: 70 },
-  '70plus': { minAgeInclusive: 70, maxAgeExclusive: Infinity },
+  '70to74': { minAgeInclusive: 70, maxAgeExclusive: 75 },
+  '75plus': { minAgeInclusive: 75, maxAgeExclusive: Infinity },
 } satisfies Record<SpouseAgeRange | DependentAgeRange, AgeRange>;
 
 /**
@@ -110,6 +124,10 @@ export const SPOUSE_AGE_BANDS = {
    * the 配偶者控除 amount and the 調整控除 statutory difference.
    */
   residenceTaxElderlySpouse: { minAgeInclusive: 70 },
+  /** 介護保険第2号被保険者: ages 40 to 64 */
+  longTermCareCategory2: { minAgeInclusive: 40, maxAgeExclusive: 65 },
+  /** 国民健康保険被保険者適格: ages under 75 */
+  nhiEligible: { maxAgeExclusive: 75 },
 } satisfies Record<string, AgeBand>;
 
 /**
@@ -143,6 +161,16 @@ export const DEPENDENT_AGE_BANDS = {
   elderlyDependent: { minAgeInclusive: 70 },
   /** 年齢23歳未満の扶養親族, condition ロ of the 所得金額調整控除（子ども・特別障害者等）. */
   dependentUnder23: { maxAgeExclusive: 23 },
+  /** 16歳未満の扶養親族 (住民税非課税限度額加算対象・未成年者判定) */
+  dependentUnder16: { maxAgeExclusive: 16 },
+  /** 未就学児 (国民健康保険均等割5割軽減対象) */
+  nhiPreschool: { maxAgeExclusive: 6 },
+  /** 子ども・子育て支援納付金分均等割10割軽減対象 (18歳年度末まで) */
+  nhiChildSupportExempt: { maxAgeExclusive: 19 },
+  /** 介護保険第2号被保険者: ages 40 to 64 */
+  longTermCareCategory2: { minAgeInclusive: 40, maxAgeExclusive: 65 },
+  /** 国民健康保険被保険者適格: ages under 75 */
+  nhiEligible: { maxAgeExclusive: 75 },
 } satisfies Record<string, AgeBand>;
 
 /**
@@ -173,7 +201,15 @@ export interface DeductionAmount {
 }
 
 /**
- * Represents a spouse for tax deduction purposes
+ * Health insurance coverage status for a cohabiting household member:
+ * - 'auto': Follows taxpayer's insurance (enrolled in NHI if taxpayer is on NHI, otherwise not)
+ * - 'nhi': Explicitly enrolled in National Health Insurance in this household
+ * - 'other': Covered under Employees' Health Insurance or other system (excluded from household NHI)
+ */
+export type HouseholdMemberHealthInsurance = 'auto' | 'nhi' | 'other';
+
+/**
+ * Represents a spouse for tax deduction purposes and household social insurance modeling
  */
 export interface Spouse {
   /** Unique identifier */
@@ -191,12 +227,31 @@ export interface Spouse {
   /** Disability status and level */
   disability: DisabilityLevel;
 
-  /** Whether the spouse lives with the taxpayer */
-  isCohabiting: boolean;
+  /** Whether the spouse is in the same municipal household as the taxpayer */
+  isSameHousehold: boolean;
+
+  /**
+   * Whether to claim this spouse as a tax dependent for 配偶者控除 / 配偶者特別控除 / 障害者控除.
+   * Defaults to true when omitted. When false, no tax deductions are claimed for this spouse,
+   * but their same-household status still participates in NHI and residence tax limits.
+   */
+  isClaimedAsDependent?: boolean | undefined;
+
+  /**
+   * Health insurance enrollment for this same-household member:
+   * Defaults to 'auto' when omitted. Ignored when not in the same household or aged 75+.
+   */
+  healthInsurance?: HouseholdMemberHealthInsurance | undefined;
+
+  /**
+   * Whether this same-household non-NHI member is designated as the household head (擬制世帯主)
+   * when the taxpayer is on National Health Insurance. At most one same-household member can be head.
+   */
+  isHouseholdHead?: boolean | undefined;
 }
 
 /**
- * Represents a non-spouse dependent for tax deduction purposes
+ * Represents a non-spouse dependent for tax deduction purposes and household social insurance modeling
  */
 export interface OtherDependent {
   /** Unique identifier */
@@ -214,8 +269,26 @@ export interface OtherDependent {
   /** Disability status and level */
   disability: DisabilityLevel;
 
-  /** Whether the dependent lives with the taxpayer */
-  isCohabiting: boolean;
+  /** Whether the dependent is in the same municipal household as the taxpayer */
+  isSameHousehold: boolean;
+
+  /**
+   * Whether to claim this dependent for 扶養控除 / 障害者控除 / 所得金額調整控除.
+   * Defaults to true when omitted. When false, no tax deductions are claimed for this person
+   * (e.g. child claimed by the other parent under 所得税法第85条第5項, or independent same-household relative).
+   */
+  isClaimedAsDependent?: boolean | undefined;
+
+  /**
+   * Health insurance enrollment for this same-household member:
+   * Defaults to 'auto' when omitted. Ignored when not in the same household or aged 75+.
+   */
+  healthInsurance?: HouseholdMemberHealthInsurance | undefined;
+
+  /**
+   * Whether this cohabiting non-NHI member is designated as the household head (擬制世帯主).
+   */
+  isHouseholdHead?: boolean | undefined;
 }
 
 /**
@@ -282,16 +355,24 @@ export interface SpouseAgeRangeInfo {
  */
 export const SPOUSE_AGE_RANGES: SpouseAgeRangeInfo[] = [
   {
-    value: 'under65',
-    label: 'Under 65',
+    value: 'under40',
+    label: 'Under 40',
+  },
+  {
+    value: '40to64',
+    label: '40 - 64',
   },
   {
     value: '65to69',
     label: '65 - 69',
   },
   {
-    value: '70plus',
-    label: '70 or Older',
+    value: '70to74',
+    label: '70 - 74',
+  },
+  {
+    value: '75plus',
+    label: '75 or Older',
   },
 ];
 
@@ -308,8 +389,12 @@ export interface DependentAgeRangeInfo {
  */
 export const DEPENDENT_AGE_RANGES: DependentAgeRangeInfo[] = [
   {
-    value: 'under16',
-    label: 'Under 16',
+    value: 'under6',
+    label: 'Under 6 (preschool)',
+  },
+  {
+    value: '6to15',
+    label: '6 - 15',
   },
   {
     value: '16to18',
@@ -320,16 +405,24 @@ export const DEPENDENT_AGE_RANGES: DependentAgeRangeInfo[] = [
     label: '19 - 22',
   },
   {
-    value: '23to64',
-    label: '23 - 64',
+    value: '23to39',
+    label: '23 - 39',
+  },
+  {
+    value: '40to64',
+    label: '40 - 64',
   },
   {
     value: '65to69',
     label: '65 - 69',
   },
   {
-    value: '70plus',
-    label: '70 or Older',
+    value: '70to74',
+    label: '70 - 74',
+  },
+  {
+    value: '75plus',
+    label: '75 or Older',
   },
 ];
 

@@ -19,6 +19,19 @@
  *   series; also confirms the reduction covers 平等割 and the 子ども・子育て支援金分)
  */
 
+/**
+ * Gross employment income threshold for a salary earner under the reduction test
+ * (給与所得者等の数: 給与収入 > 55万円, 国民健康保険法施行令第29条の7第5項).
+ */
+export const NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD = 550_000;
+
+/**
+ * Special deduction for public pension income of individuals aged 65 and over
+ * when assessing the NHI low-income reduction (高齢者特別控除: up to 15万円 from
+ * 公的年金等に係る雑所得, 国民健康保険法施行令第29条の7第5項).
+ */
+export const NHI_ELDERLY_PENSION_REDUCTION_SPECIAL_DEDUCTION = 150_000;
+
 export interface NHIPremiumReductionThresholds {
   /** The date from which these thresholds apply (inclusive). Month is 0-indexed (3 = April). */
   effectiveFrom: { year: number; month: number };

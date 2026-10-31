@@ -132,8 +132,8 @@ describe('getPersonalCircumstanceWarnings', () => {
     ({
       id: 'd1',
       relationship: 'child',
-      ageRange: 'under16',
-      isCohabiting: true,
+      ageRange: '6to15',
+      isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       ...patch,
@@ -146,7 +146,7 @@ describe('getPersonalCircumstanceWarnings', () => {
   });
 
   it('flags an entered spouse against any selection', () => {
-    const spouse = member({ relationship: 'spouse', ageRange: 'under65' } as Partial<Dependent>);
+    const spouse = member({ relationship: 'spouse', ageRange: 'under40' } as Partial<Dependent>);
     expect(
       getPersonalCircumstanceWarnings(
         circumstances({ widowOrSingleParent: 'widowBereaved' }),
@@ -201,7 +201,7 @@ describe('getPersonalCircumstanceWarnings', () => {
     expect(
       getPersonalCircumstanceWarnings(
         circumstances({ widowOrSingleParent: 'widowDivorced' }),
-        [member({ relationship: 'parent', ageRange: '70plus' } as Partial<Dependent>)],
+        [member({ relationship: 'parent', ageRange: '70to74' } as Partial<Dependent>)],
         YEAR,
       ),
     ).toEqual([]);
