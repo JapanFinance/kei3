@@ -36,7 +36,7 @@
     "react-number-format": "^5.4.5"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.65.0",
+    "@cloudflare/vite-plugin": "^1.66.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.8",
@@ -55,7 +55,7 @@
     "vite": "^8.3.5",
     "vite-plugin-sitemap": "^0.8.2",
     "vitest": "^5.0.5",
-    "wrangler": "^4.151.1"
+    "wrangler": "^4.154.0"
   },
   "lint-staged": {
     "*": "oxfmt --no-error-on-unmatched-pattern",
