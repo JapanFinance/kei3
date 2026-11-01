@@ -514,8 +514,8 @@ const formatMemberLabel = (relationship: string, isTaxpayer: boolean): string =>
 };
 
 /**
- * Tooltip explaining how the National Health Insurance calculation base (算定基礎額 / 旧ただし書き所得)
- * is determined across all household members under Local Tax Law Art. 703-4 and NHI regulations.
+ * Tooltip explaining how the National Health Insurance calculation base
+ * is determined across all household members.
  */
 export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps> = ({
   results,
