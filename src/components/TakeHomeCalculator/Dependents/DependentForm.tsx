@@ -148,7 +148,18 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           width: '100%',
         }}
       >
-        <FormControl fullWidth size="small">
+        <FormControl
+          fullWidth
+          size="small"
+          sx={{
+            flex: { xs: '1.45 1 0', sm: 1 },
+            '& .MuiSelect-select': {
+              pr: { xs: '28px !important', sm: undefined },
+              pl: { xs: 1.25, sm: 1.75 },
+              fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+            },
+          }}
+        >
           <InputLabel id="relationship-label">Relationship</InputLabel>
           <Select
             labelId="relationship-label"
@@ -166,11 +177,20 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           </Select>
         </FormControl>
 
-        <FormControl fullWidth size="small">
-          <InputLabel id="age-label">Age on December 31</InputLabel>
+        <FormControl
+          fullWidth
+          size="small"
+          sx={{
+            flex: { xs: '0.95 1 0', sm: 1 },
+            '& .MuiSelect-select': {
+              fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+            },
+          }}
+        >
+          <InputLabel id="age-label">Age on Dec 31</InputLabel>
           <Select
             labelId="age-label"
-            label="Age on December 31"
+            label="Age on Dec 31"
             value={ageRange}
             onChange={e => setAgeRange(e.target.value as DependentAgeRange)}
           >
