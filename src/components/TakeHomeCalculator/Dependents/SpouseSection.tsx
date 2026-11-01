@@ -251,8 +251,16 @@ export default function SpouseSection({
                     minWidth: 0,
                   }}
                 >
-                  <Typography variant="subtitle2" gutterBottom>
-                    Income Information{' '}
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      minHeight: 28,
+                      mb: 1,
+                    }}
+                  >
+                    Income Information
                     <SimpleTooltip>
                       Enter income amounts to calculate total net income (合計所得金額) to determine
                       deduction eligibility and National Health Insurance premiums (if applicable).
@@ -263,7 +271,7 @@ export default function SpouseSection({
 
                   {isMobile ? (
                     /* Mobile: Stacked Layout */
-                    <Paper variant="outlined" sx={{ mt: 1, p: 2 }}>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
                       {/* Employment Income */}
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
@@ -424,7 +432,7 @@ export default function SpouseSection({
                     </Paper>
                   ) : (
                     /* Desktop: Table Layout */
-                    <Paper variant="outlined" sx={{ mt: 1 }}>
+                    <Paper variant="outlined">
                       <Table size="small">
                         <TableHead>
                           <TableRow>
@@ -574,17 +582,25 @@ export default function SpouseSection({
                   >
                     {spouse.isSameHousehold && (
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="subtitle2" gutterBottom>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            minHeight: 28,
+                            mb: 1,
+                          }}
+                        >
                           Household & Health Insurance
                         </Typography>
                         <Paper
                           variant="outlined"
                           sx={{
-                            p: 2,
+                            p: 1.5,
                             backgroundColor: 'background.default',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: 2,
+                            gap: 1,
                           }}
                         >
                           {spouse.ageRange === '75plus' ? (
@@ -617,7 +633,7 @@ export default function SpouseSection({
                                 </MenuItem>
                               </Select>
                               <FormHelperText>
-                                Whether the spouse is covered under National Health Insurance.
+                                Health insurance system covering the spouse.
                               </FormHelperText>
                             </FormControl>
                           )}
@@ -639,7 +655,7 @@ export default function SpouseSection({
                                   on the municipal resident record (住民票). By default, the
                                   taxpayer is assumed to be the household head. Under National
                                   Health Insurance, a non-enrolled head acts as a deemed head
-                                  (擬制世帯主) whose income is tested for low-income premium
+                                  (擬制世帯主) whose income is included for low-income premium
                                   reductions.
                                 </SimpleTooltip>
                               </Box>
@@ -653,15 +669,20 @@ export default function SpouseSection({
                     {/* Disability Status */}
                     {spouse.isClaimedAsDependent !== false && (
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="subtitle2" gutterBottom>
+                        <Typography
+                          id="spouse-disability-label"
+                          variant="subtitle2"
+                          component="label"
+                          htmlFor="spouse-disability-select"
+                          sx={{ display: 'block', mb: 0.5 }}
+                        >
                           Disability Status
                         </Typography>
                         <FormControl fullWidth size="small">
-                          <InputLabel id="spouse-disability-label">Disability Status</InputLabel>
                           <Select
+                            id="spouse-disability-select"
                             labelId="spouse-disability-label"
                             value={spouse.disability}
-                            label="Disability Status"
                             onChange={e =>
                               handleSpouseChange({
                                 disability: e.target.value as DisabilityLevel,

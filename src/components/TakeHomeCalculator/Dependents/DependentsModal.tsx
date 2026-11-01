@@ -472,13 +472,13 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               <Box>
                 <Divider sx={{ my: 2.5 }} />
                 <Typography variant="h6" gutterBottom>
-                  Household National Health Insurance (国民健康保険)
+                  Household National Health Insurance
                 </Typography>
                 <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'background.default' }}>
                   <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
                     {isTaxpayerNHI
-                      ? 'National Health Insurance is assessed at the household level on the combined income and per-capita counts of all enrolled members.'
-                      : 'Cohabiting household member(s) are enrolled in National Health Insurance under the municipal household.'}
+                      ? 'NHI is assessed at the household level on the combined income of all enrolled members.'
+                      : "Member(s) not covered by Employees' Health Insurance are enrolled in NHI."}
                   </Typography>
 
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -494,22 +494,17 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           onNHIPaymentAttributionChange?.(e.target.value as NHIPaymentAttribution)
                         }
                       >
-                        <MenuItem value="fullHousehold">
-                          Taxpayer pays full household NHI (full social insurance deduction)
-                        </MenuItem>
+                        <MenuItem value="fullHousehold">Taxpayer pays full household NHI</MenuItem>
                         <MenuItem value="taxpayerShare">
                           {isTaxpayerNHI
-                            ? 'Taxpayer pays their own share only (taxpayer NHI share deducted)'
-                            : 'Taxpayer pays pro-rata share (deduct pro-rata portion)'}
+                            ? 'Taxpayer pays their own share only'
+                            : 'Taxpayer pays pro-rata share'}
                         </MenuItem>
-                        <MenuItem value="none">
-                          Paid separately / not by taxpayer (no tax deduction for taxpayer)
-                        </MenuItem>
+                        <MenuItem value="none">Not paid by taxpayer</MenuItem>
                       </Select>
                       <FormHelperText>
-                        Under Japanese tax law, when the taxpayer pays NHI premiums for cohabiting
-                        family members, the full paid amount qualifies for the social insurance
-                        deduction (社会保険料控除).
+                        Whoever pays NHI premiums for family members can claim the amount paid as
+                        the social insurance deduction.
                       </FormHelperText>
                     </FormControl>
 
@@ -531,8 +526,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           ))}
                         </Select>
                         <FormHelperText>
-                          When the taxpayer is on employment or other insurance, select the
-                          municipality where the household members' NHI is registered.
+                          The municipality where the household members' NHI is registered.
                         </FormHelperText>
                       </FormControl>
                     )}

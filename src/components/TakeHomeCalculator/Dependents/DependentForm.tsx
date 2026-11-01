@@ -282,10 +282,11 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               }}
             >
               <Typography
-                gutterBottom
+                variant="subtitle2"
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
+                  minHeight: 28,
                   mb: 1,
                 }}
               >
@@ -600,10 +601,11 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 {isSameHousehold && (
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                     <Typography
-                      gutterBottom
+                      variant="subtitle2"
                       sx={{
                         display: 'flex',
                         alignItems: 'center',
+                        minHeight: 28,
                         mb: 1,
                       }}
                     >
@@ -612,11 +614,11 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                     <Paper
                       variant="outlined"
                       sx={{
-                        p: 2,
+                        p: 1.5,
                         backgroundColor: 'background.default',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 2,
+                        gap: 1,
                       }}
                     >
                       {ageRange === '75plus' ? (
@@ -646,7 +648,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                             </MenuItem>
                           </Select>
                           <FormHelperText>
-                            Whether this member is covered under National Health Insurance.
+                            Health insurance system covering this member.
                           </FormHelperText>
                         </FormControl>
                       )}
@@ -680,21 +682,22 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 {isClaimedAsDependent && (
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                     <Typography
-                      gutterBottom
+                      id="dep-disability-label"
+                      variant="subtitle2"
+                      component="label"
+                      htmlFor="dep-disability-select"
                       sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        mb: 1,
+                        display: 'block',
+                        mb: 0.5,
                       }}
                     >
                       Disability Status
                     </Typography>
                     <FormControl fullWidth size="small">
-                      <InputLabel id="dep-disability-label">Disability Status</InputLabel>
                       <Select
+                        id="dep-disability-select"
                         labelId="dep-disability-label"
                         value={disability}
-                        label="Disability Status"
                         onChange={e => setDisability(e.target.value as DisabilityLevel)}
                       >
                         {DISABILITY_LEVELS.map(level => (

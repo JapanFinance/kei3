@@ -526,7 +526,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <Box sx={{ mt: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                Household National Health Insurance (国民健康保険)
+                Household National Health Insurance
               </Typography>
             </Box>
             {results.nhiHousehold && (
