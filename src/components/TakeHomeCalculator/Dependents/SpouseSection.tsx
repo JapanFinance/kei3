@@ -139,11 +139,11 @@ export default function SpouseSection({
               size="small"
               sx={{ minWidth: { xs: '100%', sm: 190 }, flex: { sm: '0 0 auto' } }}
             >
-              <InputLabel id="spouse-age-label">Age on Dec 31</InputLabel>
+              <InputLabel id="spouse-age-label">Age on December 31</InputLabel>
               <Select
                 labelId="spouse-age-label"
                 value={spouse.ageRange}
-                label="Age on Dec 31"
+                label="Age on December 31"
                 onChange={e =>
                   handleSpouseChange({
                     ageRange: e.target.value as SpouseAgeRange,

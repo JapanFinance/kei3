@@ -822,6 +822,9 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
       ageRange: 'age40to59',
       region: 'Tokyo-Setagaya',
       healthInsuranceProvider: 'NationalHealthInsurance',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
       dependents: [
         {
           id: 'spouse',

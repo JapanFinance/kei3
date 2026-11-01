@@ -288,6 +288,9 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         ageRange: 'age40to59',
         region: 'Tokyo-Setagaya',
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
         dependents: [
           {
             id: 'spouse',
@@ -321,6 +324,9 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         ageRange: 'age40to59',
         region: 'Tokyo-Setagaya',
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
         dependents: [
           {
             id: 'spouse',
