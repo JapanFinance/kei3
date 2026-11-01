@@ -3,6 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 
+import type { Dependent } from '../types/dependents';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, type TakeHomeInputs } from '../types/tax';
 import {
@@ -476,6 +477,44 @@ describe('generateChartData employment insurance bar', () => {
       ],
     });
     expect(datasets.some(d => d.label === 'Employment Insurance')).toBe(false);
+  });
+});
+
+describe('generateChartData with household National Health Insurance', () => {
+  it('renders Household National Health Insurance bar and stacks to total income', () => {
+    // EHI employee whose cohabiting spouse is on NHI
+    const spouse: Dependent = {
+      id: 'spouse',
+      relationship: 'spouse',
+      ageRange: '40to64',
+      isSameHousehold: true,
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      disability: 'none',
+      isClaimedAsDependent: false,
+      healthInsurance: 'nhi',
+    };
+
+    const householdContext: TakeHomeInputs = {
+      ...context,
+      dependents: [spouse],
+      nhiPaymentAttribution: 'fullHousehold',
+    };
+
+    const { datasets } = generateChartData(range, householdContext);
+
+    // Verify dataset exists and is a stacked bar
+    const householdNhi = datasets.find(d => d.label === 'Household National Health Insurance');
+    expect(householdNhi).toBeDefined();
+    expect(householdNhi!.type).toBe('bar');
+    expect(pointsOf(householdNhi!)[0]!.y).toBeGreaterThan(0);
+
+    // Verify all bars stack to total swept income at every point
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
   });
 });
 

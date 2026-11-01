@@ -445,4 +445,104 @@ describe('composeNHIHousehold', () => {
     // Taxpayer (earner) + Spouse (earner) = 2 salary earners
     expect(composition.salaryEarnersCount).toBe(2);
   });
+
+  it('counts a pensioner with adjusted pension > 0 as a salary/pension earner', () => {
+    const pensionerParent: Dependent = {
+      id: 'parent',
+      relationship: 'parent',
+      ageRange: '65to69',
+      isSameHousehold: true,
+      income: {
+        grossEmploymentIncome: 0,
+        // Gross pension 1.5M -> Net pension (65+) = 1.5M - 1.1M = 400,000
+        // Elderly pension adjustment = 150,000
+        // Adjusted pension = 400,000 - 150,000 = 250,000 > 0
+        grossPublicPensionIncome: 1_500_000,
+        otherNetIncome: 0,
+      },
+      disability: 'none',
+      isClaimedAsDependent: false,
+      healthInsurance: 'nhi',
+    };
+
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 3_000_000, // Business income (not a salary or pension earner)
+        grossEmploymentIncome: 0,
+        netPublicPensionIncome: 0,
+        ageRange: 'age40to59',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      },
+      dependents: [pensionerParent],
+      incomeYear: defaultYear,
+    });
+
+    // Parent qualifies as salary/pension earner via adjusted pension > 0
+    expect(composition.salaryEarnersCount).toBe(1);
+  });
+
+  it('sums calculationBase per member and ensures unused basic deductions do not transfer', () => {
+    // Member 1 (Taxpayer, age 40-59): Net 1,000,000 -> Base: 1,000,000 - 430,000 = 570,000 (LTC: true)
+    // Member 2 (Child, age 16-18): Net 200,000 -> Base: max(0, 200,000 - 430,000) = 0 (LTC: false)
+    //   Unused deduction: 230,000 (must NOT transfer to reduce Taxpayer or Spouse base)
+    // Member 3 (Spouse, age 40-64): Net 600,000 -> Base: 600,000 - 430,000 = 170,000 (LTC: true)
+    const child: Dependent = {
+      id: 'child',
+      relationship: 'child',
+      ageRange: '16to18',
+      isSameHousehold: true,
+      income: {
+        grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 200_000,
+      },
+      disability: 'none',
+      isClaimedAsDependent: true,
+      healthInsurance: 'nhi',
+    };
+
+    const spouse: Dependent = {
+      id: 'spouse',
+      relationship: 'spouse',
+      ageRange: '40to64',
+      isSameHousehold: true,
+      income: {
+        grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 600_000,
+      },
+      disability: 'none',
+      isClaimedAsDependent: true,
+      healthInsurance: 'nhi',
+    };
+
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 1_000_000,
+        grossEmploymentIncome: 0,
+        netPublicPensionIncome: 0,
+        ageRange: 'age40to59',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      },
+      dependents: [child, spouse],
+      incomeYear: defaultYear,
+    });
+
+    expect(composition.insuredCount).toBe(3);
+    expect(composition.ltcInsuredCount).toBe(2); // taxpayer + spouse
+
+    // Taxpayer base: 570,000; Child base: 0; Spouse base: 170,000
+    // Total calculation base: 570,000 + 0 + 170,000 = 740,000
+    expect(composition.calculationBase).toBe(740_000);
+    // LTC base: only members aged 40-64 (taxpayer 570,000 + spouse 170,000)
+    expect(composition.ltcCalculationBase).toBe(740_000);
+
+    const childMember = composition.members.find(m => m.id === 'child')!;
+    expect(childMember.calculationBase).toBe(0);
+    const spouseMember = composition.members.find(m => m.id === 'spouse')!;
+    expect(spouseMember.calculationBase).toBe(170_000);
+    expect(composition.taxpayerMember.calculationBase).toBe(570_000);
+  });
 });

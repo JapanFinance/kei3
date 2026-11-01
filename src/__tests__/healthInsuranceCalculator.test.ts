@@ -1297,4 +1297,149 @@ describe('calculateHouseholdNHIBreakdown', () => {
     expect(resPreschool.summary.preschoolCount).toBe(1);
     expect(resPreschool.summary.childSupportExemptCount).toBe(1);
   });
+
+  describe('household low-income premium reductions (7割 / 5割 / 2割)', () => {
+    // 2-person NHI household: Taxpayer + Spouse
+    // FY2026 thresholds for 2 insured members (0 salary earners):
+    // 7割: <= 430,000
+    // 5割: <= 430,000 + 310,000 * 2 = 1,050,000
+    // 2割: <= 430,000 + 570,000 * 2 = 1,570,000
+    const createTwoPersonHousehold = (taxpayerNet: number, spouseNet: number) => {
+      const spouse: Dependent = {
+        id: 'spouse',
+        relationship: 'spouse',
+        ageRange: 'under40',
+        isSameHousehold: true,
+        income: {
+          grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
+          otherNetIncome: spouseNet,
+        },
+        disability: 'none',
+        isClaimedAsDependent: true,
+        healthInsurance: 'nhi',
+      };
+      return composeNHIHousehold({
+        taxpayer: {
+          netIncome: taxpayerNet,
+          grossEmploymentIncome: 0,
+          netPublicPensionIncome: 0,
+          ageRange: 'age20to39',
+          provider: NATIONAL_HEALTH_INSURANCE_ID,
+          region: 'Tokyo-Shibuya',
+        },
+        dependents: [spouse],
+        incomeYear: year,
+      });
+    };
+
+    it('applies 7割 reduction when combined household income is <= 430,000', () => {
+      // 200,000 + 200,000 = 400,000 <= 430,000
+      const household = createTwoPersonHousehold(200_000, 200_000);
+      const res = calculateHouseholdNHIBreakdown(household, year);
+      expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0.7, currFY: 0.7 });
+    });
+
+    it('applies 5割 reduction when combined household income is <= 1,050,000', () => {
+      // 500,000 + 300,000 = 800,000 (430,000 < 800,000 <= 1,050,000)
+      const household = createTwoPersonHousehold(500_000, 300_000);
+      const res = calculateHouseholdNHIBreakdown(household, year);
+      expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0.5, currFY: 0.5 });
+    });
+
+    it('applies 2割 reduction when combined household income is <= 1,570,000', () => {
+      // 700,000 + 600,000 = 1,300,000 (1,050,000 < 1,300,000 <= 1,570,000)
+      const household = createTwoPersonHousehold(700_000, 600_000);
+      const res = calculateHouseholdNHIBreakdown(household, year);
+      expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0.2, currFY: 0.2 });
+    });
+
+    it('applies 0% reduction when combined household income exceeds 2割 limit', () => {
+      // 1,000,000 + 800,000 = 1,800,000 > 1,570,000
+      const household = createTwoPersonHousehold(1_000_000, 800_000);
+      const res = calculateHouseholdNHIBreakdown(household, year);
+      expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0, currFY: 0 });
+    });
+
+    it('disqualifies household from reduction when deemed household head has high income', () => {
+      // Taxpayer on EHI (Kyokai Kenpo) earning 8M gross (6M net).
+      // Spouse on NHI has 0 income.
+      // Under 国民健康保険法施行令第29条の7第2項, deemed head's income is tested.
+      // Even though spouse has 0 income, household gets 0% reduction.
+      const spouse: Dependent = {
+        id: 'spouse',
+        relationship: 'spouse',
+        ageRange: 'under40',
+        isSameHousehold: true,
+        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+        disability: 'none',
+        isClaimedAsDependent: true,
+        healthInsurance: 'nhi',
+      };
+      const household = composeNHIHousehold({
+        taxpayer: {
+          netIncome: 6_000_000,
+          grossEmploymentIncome: 8_000_000,
+          netPublicPensionIncome: 0,
+          ageRange: 'age20to39',
+          provider: DEFAULT_PROVIDER, // EHI
+          region: 'Tokyo-Shibuya',
+        },
+        dependents: [spouse],
+        incomeYear: year,
+      });
+      const res = calculateHouseholdNHIBreakdown(household, year);
+      expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0, currFY: 0 });
+    });
+  });
+
+  describe('asymmetric Long-Term Care (介護保険第2号) age configurations', () => {
+    it('assesses LTC only on 40-64 member and gives 0 LTC share to under-40 taxpayer under taxpayerShare', () => {
+      // Taxpayer is 30 (<40, not LTC Cat 2), net income 2,000,000 (base: 1,570,000)
+      // Spouse is 50 (40-64, LTC Cat 2), other net income 2,000,000 (base: 1,570,000)
+      const spouse: Dependent = {
+        id: 'spouse',
+        relationship: 'spouse',
+        ageRange: '40to64',
+        isSameHousehold: true,
+        income: {
+          grossEmploymentIncome: 0,
+          grossPublicPensionIncome: 0,
+          otherNetIncome: 2_000_000,
+        },
+        disability: 'none',
+        isClaimedAsDependent: false,
+        healthInsurance: 'nhi',
+      };
+      const household = composeNHIHousehold({
+        taxpayer: {
+          netIncome: 2_000_000,
+          grossEmploymentIncome: 0,
+          netPublicPensionIncome: 0,
+          ageRange: 'age20to39',
+          provider: NATIONAL_HEALTH_INSURANCE_ID,
+          region: 'Tokyo-Shibuya',
+        },
+        dependents: [spouse],
+        incomeYear: year,
+        paymentAttribution: 'taxpayerShare',
+      });
+
+      const res = calculateHouseholdNHIBreakdown(household, year);
+
+      // Household LTC portion is positive (covering the spouse)
+      expect(res.householdBreakdown.longTermCarePortion).toBeGreaterThan(0);
+      expect(res.summary.ltcInsuredCount).toBe(1);
+      // LTC calculation base should only include spouse (1,570,000), not taxpayer
+      expect(res.summary.ltcCalculationBase).toBe(1_570_000);
+
+      // Taxpayer is under 40, so under taxpayerShare their LTC share must be exactly 0
+      expect(res.taxpayerBreakdown.longTermCarePortion).toBe(0);
+
+      // But taxpayer DOES pay their ~50% share of medical and elderly support
+      expect(res.taxpayerBreakdown.medicalPortion).toBeGreaterThan(0);
+      expect(res.taxpayerBreakdown.elderlySupportPortion).toBeGreaterThan(0);
+      expect(res.taxpayerBreakdown.total).toBeLessThan(res.householdBreakdown.total);
+    });
+  });
 });

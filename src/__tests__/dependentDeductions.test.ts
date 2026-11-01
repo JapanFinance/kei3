@@ -2264,4 +2264,73 @@ describe('countDependentsWithinEligibilityIncome', () => {
   it('is zero with no dependents', () => {
     expect(countDependentsWithinEligibilityIncome([], 2026)).toBe(0);
   });
+
+  it('excludes dependents where isClaimedAsDependent is false even when income is within eligibility', () => {
+    const dependents = [
+      { ...makeDependent('c1', 'child', '6to15', 0), isClaimedAsDependent: false },
+      makeDependent('c2', 'child', '19to22', 0),
+    ];
+    expect(countDependentsWithinEligibilityIncome(dependents, 2026)).toBe(1);
+  });
+});
+
+describe('isClaimedAsDependent separation from tax deductions', () => {
+  it('zeros out all deductions (扶養控除, 障害者控除, 配偶者控除) when isClaimedAsDependent is false', () => {
+    const claimedSpouse: Dependent = {
+      id: 'spouse-1',
+      relationship: 'spouse',
+      ageRange: 'under40',
+      isSameHousehold: true,
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      disability: 'special',
+      isClaimedAsDependent: true,
+    };
+    const claimedChild: Dependent = {
+      id: 'child-1',
+      relationship: 'child',
+      ageRange: '19to22',
+      isSameHousehold: true,
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      disability: 'regular',
+      isClaimedAsDependent: true,
+    };
+
+    const claimedResult = calculateDependentDeductions([claimedSpouse, claimedChild], 2026);
+    expect(claimedResult.nationalTax.spouseDeduction).toBeGreaterThan(0);
+    expect(claimedResult.nationalTax.dependentDeduction).toBeGreaterThan(0);
+    expect(claimedResult.nationalTax.disabilityDeduction).toBeGreaterThan(0);
+
+    const unclaimedSpouse: Dependent = { ...claimedSpouse, isClaimedAsDependent: false };
+    const unclaimedChild: Dependent = { ...claimedChild, isClaimedAsDependent: false };
+
+    const unclaimedResult = calculateDependentDeductions([unclaimedSpouse, unclaimedChild], 2026);
+    expect(unclaimedResult.nationalTax.spouseDeduction).toBe(0);
+    expect(unclaimedResult.nationalTax.spouseSpecialDeduction).toBe(0);
+    expect(unclaimedResult.nationalTax.dependentDeduction).toBe(0);
+    expect(unclaimedResult.nationalTax.disabilityDeduction).toBe(0);
+    expect(unclaimedResult.residenceTax.spouseDeduction).toBe(0);
+    expect(unclaimedResult.residenceTax.spouseSpecialDeduction).toBe(0);
+    expect(unclaimedResult.residenceTax.dependentDeduction).toBe(0);
+    expect(unclaimedResult.residenceTax.disabilityDeduction).toBe(0);
+  });
+
+  it('excludes dependents with isClaimedAsDependent: false from income adjustment deduction conditions', () => {
+    const childUnder23: Dependent = {
+      id: 'c',
+      relationship: 'child',
+      ageRange: '19to22',
+      isSameHousehold: true,
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      disability: 'none',
+      isClaimedAsDependent: false,
+    };
+
+    // Even though child is under 23, they are not claimed as tax dependent
+    expect(hasDependentRelativeUnder23([childUnder23], 2026)).toBe(false);
+
+    // Once claimed, returns true
+    expect(
+      hasDependentRelativeUnder23([{ ...childUnder23, isClaimedAsDependent: true }], 2026),
+    ).toBe(true);
+  });
 });
