@@ -796,8 +796,20 @@ export function calculateHouseholdNHIBreakdown(
     reductionRatios: { prevFY: 0, currFY: 0 },
     householdTotal: 0,
     householdPortions: { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 },
+    householdCaps: {
+      medicalCapped: false,
+      elderlySupportCapped: false,
+      longTermCareCapped: false,
+      childSupportCapped: false,
+    },
     taxpayerTotal: 0,
     taxpayerPortions: { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 },
+    taxpayerCaps: {
+      medicalCapped: false,
+      elderlySupportCapped: false,
+      longTermCareCapped: false,
+      childSupportCapped: false,
+    },
     paymentAttribution: household.paymentAttribution,
     effectiveRegion: household.effectiveRegion,
   };
@@ -984,8 +996,20 @@ export function calculateHouseholdNHIBreakdown(
     reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
     householdTotal,
     householdPortions,
+    householdCaps: {
+      medicalCapped: householdBreakdown.medicalCapped,
+      elderlySupportCapped: householdBreakdown.elderlySupportCapped,
+      longTermCareCapped: householdBreakdown.longTermCareCapped,
+      childSupportCapped: householdBreakdown.childSupportCapped,
+    },
     taxpayerTotal,
     taxpayerPortions,
+    taxpayerCaps: {
+      medicalCapped: taxpayerBreakdown.medicalCapped,
+      elderlySupportCapped: taxpayerBreakdown.elderlySupportCapped,
+      longTermCareCapped: taxpayerBreakdown.longTermCareCapped,
+      childSupportCapped: taxpayerBreakdown.childSupportCapped,
+    },
     paymentAttribution: household.paymentAttribution,
     effectiveRegion: household.effectiveRegion,
   };

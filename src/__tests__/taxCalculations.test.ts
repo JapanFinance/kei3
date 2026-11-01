@@ -6608,6 +6608,27 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       });
       expect(total).toBe(400_000);
     });
+
+    it('returns socialInsuranceOverride when present, ignoring individual premium components', () => {
+      const total = totalSocialInsurancePaid({
+        healthInsurance: 0,
+        pensionPayments: 0,
+        employmentInsurance: 0,
+        longTermCareCategory1Premium: 0,
+        householdNHIPremium: 0,
+        socialInsuranceOverride: 500_000,
+      });
+      expect(total).toBe(500_000);
+    });
+
+    it('returns socialInsuranceOverride even when calculated components are non-zero', () => {
+      const total = totalSocialInsurancePaid({
+        healthInsurance: 300_000,
+        pensionPayments: 400_000,
+        socialInsuranceOverride: 600_000,
+      });
+      expect(total).toBe(600_000);
+    });
   });
 
   describe('household NHI integration in calculateTaxes', () => {

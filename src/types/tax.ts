@@ -1258,6 +1258,12 @@ export interface NHIHouseholdSummary {
     longTermCare: number;
     childSupport: number;
   };
+  householdCaps: {
+    medicalCapped: boolean;
+    elderlySupportCapped: boolean;
+    longTermCareCapped: boolean;
+    childSupportCapped: boolean;
+  };
   /** Taxpayer's attributed annual premium breakdown */
   taxpayerTotal: number;
   taxpayerPortions: {
@@ -1265,6 +1271,12 @@ export interface NHIHouseholdSummary {
     elderlySupport: number;
     longTermCare: number;
     childSupport: number;
+  };
+  taxpayerCaps: {
+    medicalCapped: boolean;
+    elderlySupportCapped: boolean;
+    longTermCareCapped: boolean;
+    childSupportCapped: boolean;
   };
   /** Configured payment attribution */
   paymentAttribution: NHIPaymentAttribution;

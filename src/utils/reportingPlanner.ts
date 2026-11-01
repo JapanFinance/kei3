@@ -400,7 +400,7 @@ const figuresOf = (results: TakeHomeResults): PlanFigures => ({
   kept: results.takeHomeIncome,
   incomeTax: incomeTaxPaid(results),
   residenceTax: residenceTaxPaid(results),
-  socialInsurance: results.socialInsuranceOverride ?? totalSocialInsurancePaid(results),
+  socialInsurance: totalSocialInsurancePaid(results),
   furusatoNozeiLimit: results.furusatoNozei.limit,
   totalIncome: results.totalNetIncome,
 });

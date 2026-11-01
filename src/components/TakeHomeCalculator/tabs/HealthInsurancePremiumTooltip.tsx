@@ -302,10 +302,13 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   // The portion as the calculation charged it, which the row beside this tooltip shows.
   const portionPremium =
     {
-      medical: results.nhiMedicalPortion,
-      elderlySupport: results.nhiElderlySupportPortion,
-      longTermCare: results.nhiLongTermCarePortion,
-      childSupport: results.nhiChildSupportPortion,
+      medical: results.nhiHousehold?.taxpayerPortions.medical ?? results.nhiMedicalPortion,
+      elderlySupport:
+        results.nhiHousehold?.taxpayerPortions.elderlySupport ?? results.nhiElderlySupportPortion,
+      longTermCare:
+        results.nhiHousehold?.taxpayerPortions.longTermCare ?? results.nhiLongTermCarePortion,
+      childSupport:
+        results.nhiHousehold?.taxpayerPortions.childSupport ?? results.nhiChildSupportPortion,
     }[portion] ?? 0;
 
   const isTaxpayerShare = results.nhiHousehold?.paymentAttribution === 'taxpayerShare';

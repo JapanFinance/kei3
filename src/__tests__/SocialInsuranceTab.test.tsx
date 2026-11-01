@@ -855,4 +855,73 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
     // Household total base: 4,570,000 + 20,000 = 4,590,000
     expect(resultRowText('Household NHI Calculation Base')).toContain('¥4,590,000');
   });
+
+  it('renders manual social insurance amount rather than ¥0 when manual entry is active', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+      incomeYear: 2026,
+      ageRange: 'age20to39',
+      region: 'Tokyo',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 680_000,
+      dependents: [],
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={calculateTaxes(inputs)} />);
+    expect(resultRowText('Total Social Insurance')).toContain('¥680,000');
+  });
+
+  it('renders deemed-head Household NHI portion rows and cap indicators for EHI taxpayer', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+      incomeYear: 2026,
+      ageRange: 'age20to39',
+      region: 'Tokyo-Setagaya',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [
+        {
+          id: 'spouse',
+          relationship: 'spouse',
+          ageRange: '40to64',
+          income: {
+            grossEmploymentIncome: 0,
+            grossPublicPensionIncome: 0,
+            otherNetIncome: 20_000_000, // Very high income to hit caps
+          },
+          disability: 'none',
+          isSameHousehold: true,
+          healthInsurance: 'nhi',
+        },
+      ],
+    };
+
+    const results = calculateTaxes(inputs);
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    // Deemed-head household NHI section should display all portion rows
+    expect(screen.getByText('Household National Health Insurance')).toBeDefined();
+    expect(resultRowText('Household NHI Calculation Base')).toBeDefined();
+    expect(resultRowText('Medical Portion')).toBeDefined();
+    expect(resultRowText('Elderly Support Portion')).toBeDefined();
+    expect(resultRowText('Long-term Care Portion')).toBeDefined();
+    expect(resultRowText('Child Support Portion')).toBeDefined();
+    expect(resultRowText('Household NHI Premium')).toBeDefined();
+
+    // Verify portions are non-zero and sum to household NHI premium
+    const summary = results.nhiHousehold!;
+    expect(summary.taxpayerPortions.medical).toBeGreaterThan(0);
+    expect(summary.taxpayerPortions.elderlySupport).toBeGreaterThan(0);
+    expect(summary.taxpayerPortions.longTermCare).toBeGreaterThan(0);
+    expect(summary.taxpayerPortions.childSupport).toBeGreaterThan(0);
+
+    // Caps should be flagged on the summary
+    expect(summary.taxpayerCaps.medicalCapped).toBe(true);
+  });
 });

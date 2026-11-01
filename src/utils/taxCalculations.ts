@@ -149,7 +149,8 @@ const longTermCareCategory1TierInputs = (
 
 /**
  * Total social insurance premiums paid by the taxpayer:
- * Health insurance + Pension + Employment insurance + LTC Category 1 + Household NHI (as 擬制世帯主).
+ * Health insurance + Pension + Employment insurance + LTC Category 1 + Household NHI (as 擬制世帯主),
+ * or the manually entered override amount when manual mode is active.
  * Single source of truth across calculations, charts, and reporting.
  */
 export function totalSocialInsurancePaid(results: {
@@ -158,7 +159,11 @@ export function totalSocialInsurancePaid(results: {
   employmentInsurance?: number | undefined;
   longTermCareCategory1Premium?: number | undefined;
   householdNHIPremium?: number | undefined;
+  socialInsuranceOverride?: number | undefined;
 }): number {
+  if (results.socialInsuranceOverride !== undefined) {
+    return results.socialInsuranceOverride;
+  }
   return (
     results.healthInsurance +
     results.pensionPayments +
