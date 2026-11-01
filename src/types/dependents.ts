@@ -390,7 +390,7 @@ export interface DependentAgeRangeInfo {
 export const DEPENDENT_AGE_RANGES: DependentAgeRangeInfo[] = [
   {
     value: 'under6',
-    label: 'Under 6 (preschool)',
+    label: 'Under 6',
   },
   {
     value: '6to15',

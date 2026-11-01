@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Box from '@mui/material/Box';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
@@ -11,7 +10,6 @@ import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
-import { useTheme } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -19,7 +17,6 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { useState } from 'react';
 
 import type {
@@ -41,6 +38,14 @@ import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
 
+const incomeInputSx = {
+  maxWidth: { xs: 125, sm: 160 },
+  '& .MuiInputBase-input': {
+    fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+    px: { xs: 0.75, sm: 1.5 },
+  },
+};
+
 interface SpouseSectionProps {
   spouse: Spouse | null;
   onChange: (spouse: Spouse | null) => void;
@@ -57,8 +62,6 @@ export default function SpouseSection({
   isTaxpayerNHI = false,
 }: SpouseSectionProps) {
   const [hasSpouse, setHasSpouse] = useState(spouse !== null);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleToggleSpouse = (checked: boolean) => {
     setHasSpouse(checked);
@@ -129,7 +132,7 @@ export default function SpouseSection({
               flexDirection: { xs: 'column', sm: 'row' },
               flexWrap: 'wrap',
               alignItems: { xs: 'flex-start', sm: 'center' },
-              gap: { xs: 1.5, sm: 2.5 },
+              gap: { xs: 1, sm: 2.5 },
             }}
           >
             <FormControl
@@ -288,304 +291,155 @@ export default function SpouseSection({
                     </SimpleTooltip>
                   </Typography>
 
-                  {isMobile ? (
-                    /* Mobile: Stacked Layout */
-                    <Paper variant="outlined" sx={{ p: 2 }}>
-                      {/* Employment Income */}
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                          Employment Income (給与)
-                        </Typography>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mb: 1,
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Gross (収入)
-                          </Typography>
-                          <SpinnerNumberField
-                            value={spouse.income.grossEmploymentIncome}
-                            onChange={(value: number) =>
-                              handleSpouseChange({
-                                income: {
-                                  ...spouse.income,
-                                  grossEmploymentIncome: value,
-                                },
-                              })
-                            }
-                            step={10_000}
-                            shiftStep={100_000}
-                            sx={{ maxWidth: 180 }}
-                            inputProps={{ style: { textAlign: 'right' } }}
-                          />
-                        </Box>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Net (所得)
-                          </Typography>
-                          <Typography variant="body2">
-                            {formatJPY(netEmploymentIncome)}
-                            {incomeAdjustmentNote && (
-                              <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
-                            )}
-                          </Typography>
-                        </Box>
-                      </Box>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      overflowX: 'auto',
+                      '& .MuiTableCell-root': {
+                        px: { xs: 0.75, sm: 2 },
+                        fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                      },
+                    }}
+                  >
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>Category</TableCell>
+                          <TableCell align="right">Gross (収入)</TableCell>
+                          <TableCell align="right">Net (所得)</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {/* Employment Income Row */}
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            Employment
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              給与
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <SpinnerNumberField
+                              value={spouse.income.grossEmploymentIncome}
+                              onChange={(value: number) =>
+                                handleSpouseChange({
+                                  income: {
+                                    ...spouse.income,
+                                    grossEmploymentIncome: value,
+                                  },
+                                })
+                              }
+                              step={10_000}
+                              shiftStep={100_000}
+                              size="small"
+                              hideSpinner
+                              inputProps={{ style: { textAlign: 'right' } }}
+                              sx={incomeInputSx}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" sx={{ fontSize: 'inherit' }}>
+                              {formatJPY(netEmploymentIncome)}
+                              {incomeAdjustmentNote && (
+                                <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
+                              )}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
 
-                      <Divider sx={{ my: 2 }} />
+                        {/* Public Pension Income Row */}
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            Public Pension
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              公的年金等
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <SpinnerNumberField
+                              value={spouse.income.grossPublicPensionIncome}
+                              onChange={(value: number) =>
+                                handleSpouseChange({
+                                  income: {
+                                    ...spouse.income,
+                                    grossPublicPensionIncome: value,
+                                  },
+                                })
+                              }
+                              step={10_000}
+                              shiftStep={100_000}
+                              size="small"
+                              hideSpinner
+                              inputProps={{ style: { textAlign: 'right' } }}
+                              sx={incomeInputSx}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" sx={{ fontSize: 'inherit' }}>
+                              {formatJPY(
+                                calculateDependentNetPublicPensionIncome(spouse, incomeYear),
+                              )}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
 
-                      {/* Public Pension Income */}
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                          Public Pension (公的年金等)
-                        </Typography>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mb: 1,
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Gross (収入)
-                          </Typography>
-                          <SpinnerNumberField
-                            value={spouse.income.grossPublicPensionIncome}
-                            onChange={(value: number) =>
-                              handleSpouseChange({
-                                income: {
-                                  ...spouse.income,
-                                  grossPublicPensionIncome: value,
-                                },
-                              })
-                            }
-                            step={10_000}
-                            shiftStep={100_000}
-                            sx={{ maxWidth: 180 }}
-                            inputProps={{ style: { textAlign: 'right' } }}
-                          />
-                        </Box>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Net (所得)
-                          </Typography>
-                          <Typography variant="body2">
-                            {formatJPY(
-                              calculateDependentNetPublicPensionIncome(spouse, incomeYear),
-                            )}
-                          </Typography>
-                        </Box>
-                      </Box>
+                        {/* Other Income Row */}
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            Other
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              その他
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              sx={{ color: 'text.secondary', fontSize: 'inherit' }}
+                            >
+                              —
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <SpinnerNumberField
+                              value={spouse.income.otherNetIncome}
+                              onChange={(value: number) =>
+                                handleSpouseChange({
+                                  income: {
+                                    ...spouse.income,
+                                    otherNetIncome: value,
+                                  },
+                                })
+                              }
+                              step={10_000}
+                              shiftStep={100_000}
+                              size="small"
+                              hideSpinner
+                              inputProps={{ style: { textAlign: 'right' } }}
+                              sx={incomeInputSx}
+                            />
+                          </TableCell>
+                        </TableRow>
 
-                      <Divider sx={{ my: 2 }} />
-
-                      {/* Other Income */}
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                          Other Income (その他)
-                        </Typography>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Net (所得)
-                          </Typography>
-                          <SpinnerNumberField
-                            value={spouse.income.otherNetIncome}
-                            onChange={(value: number) =>
-                              handleSpouseChange({
-                                income: {
-                                  ...spouse.income,
-                                  otherNetIncome: value,
-                                },
-                              })
-                            }
-                            step={10_000}
-                            shiftStep={100_000}
-                            sx={{ maxWidth: 180 }}
-                            inputProps={{ style: { textAlign: 'right' } }}
-                          />
-                        </Box>
-                      </Box>
-
-                      <Divider sx={{ my: 2 }} />
-
-                      {/* Total */}
-                      <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            Total (合計所得金額)
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Paper>
-                  ) : (
-                    /* Desktop: Table Layout */
-                    <Paper variant="outlined">
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ whiteSpace: 'nowrap' }}>Category</TableCell>
-                            <TableCell align="right">Gross (収入)</TableCell>
-                            <TableCell align="right">Net (所得)</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {/* Employment Income Row */}
-                          <TableRow>
-                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                              Employment
-                              <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                給与
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <SpinnerNumberField
-                                value={spouse.income.grossEmploymentIncome}
-                                onChange={(value: number) =>
-                                  handleSpouseChange({
-                                    income: {
-                                      ...spouse.income,
-                                      grossEmploymentIncome: value,
-                                    },
-                                  })
-                                }
-                                step={10_000}
-                                shiftStep={100_000}
-                                size="small"
-                                hideSpinner
-                                inputProps={{ style: { textAlign: 'right' } }}
-                                sx={{ maxWidth: 160 }}
-                              />
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2">
-                                {formatJPY(netEmploymentIncome)}
-                                {incomeAdjustmentNote && (
-                                  <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
-                                )}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-
-                          {/* Public Pension Income Row */}
-                          <TableRow>
-                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                              Public Pension
-                              <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                公的年金等
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <SpinnerNumberField
-                                value={spouse.income.grossPublicPensionIncome}
-                                onChange={(value: number) =>
-                                  handleSpouseChange({
-                                    income: {
-                                      ...spouse.income,
-                                      grossPublicPensionIncome: value,
-                                    },
-                                  })
-                                }
-                                step={10_000}
-                                shiftStep={100_000}
-                                size="small"
-                                hideSpinner
-                                inputProps={{ style: { textAlign: 'right' } }}
-                                sx={{ maxWidth: 160 }}
-                              />
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2">
-                                {formatJPY(
-                                  calculateDependentNetPublicPensionIncome(spouse, incomeYear),
-                                )}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-
-                          {/* Other Income Row */}
-                          <TableRow>
-                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                              Other
-                              <br />
-                              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                                その他
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                —
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <SpinnerNumberField
-                                value={spouse.income.otherNetIncome}
-                                onChange={(value: number) =>
-                                  handleSpouseChange({
-                                    income: {
-                                      ...spouse.income,
-                                      otherNetIncome: value,
-                                    },
-                                  })
-                                }
-                                step={10_000}
-                                shiftStep={100_000}
-                                size="small"
-                                hideSpinner
-                                inputProps={{ style: { textAlign: 'right' } }}
-                                sx={{ maxWidth: 160 }}
-                              />
-                            </TableCell>
-                          </TableRow>
-
-                          {/* Total Row */}
-                          <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                            <TableCell colSpan={2}>
-                              <strong>Total (合計所得金額)</strong>
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </Paper>
-                  )}
+                        {/* Total Row */}
+                        <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                          <TableCell colSpan={2}>
+                            <strong>Total (合計所得金額)</strong>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 'bold', fontSize: 'inherit' }}
+                            >
+                              {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </Paper>
                 </Box>
 
                 {/* Right Column: Household & Health Insurance and/or Disability Status */}

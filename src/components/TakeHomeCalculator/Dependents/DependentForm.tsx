@@ -3,7 +3,6 @@
 
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
@@ -12,7 +11,6 @@ import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
-import { useTheme } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -20,7 +18,6 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import React, { useState } from 'react';
 
 import type {
@@ -45,6 +42,14 @@ import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
 
+const incomeInputSx = {
+  maxWidth: { xs: 125, sm: 160 },
+  '& .MuiInputBase-input': {
+    fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+    px: { xs: 0.75, sm: 1.5 },
+  },
+};
+
 interface DependentFormProps {
   dependent: OtherDependent | null;
   onSave: (dependent: OtherDependent) => void;
@@ -65,8 +70,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   incomeYear,
   isTaxpayerNHI = false,
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isEditing = dependent !== null;
 
   // Form state
@@ -131,47 +134,39 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 3,
+        gap: { xs: 2, sm: 2.5 },
         width: '100%',
       }}
     >
-      <Typography variant="h6" gutterBottom>
-        {isEditing ? 'Edit Dependent' : 'Add New Dependent'}
-      </Typography>
+      <Typography variant="h6">{isEditing ? 'Edit Dependent' : 'Add New Dependent'}</Typography>
 
-      {/* Relationship */}
-      <FormControl fullWidth>
-        <InputLabel id="relationship-label">Relationship</InputLabel>
-        <Select
-          labelId="relationship-label"
-          label="Relationship"
-          value={relationship}
-          onChange={e =>
-            setRelationship(e.target.value as Exclude<DependentRelationship, 'spouse'>)
-          }
-        >
-          {RELATIONSHIPS.filter(rel => rel.value !== 'spouse').map(rel => (
-            <MenuItem key={rel.value} value={rel.value}>
-              {rel.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* Age & Status Switches on one row on desktop */}
+      {/* Relationship and Age on the same row */}
       <Box
         sx={{
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          flexWrap: 'wrap',
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          gap: { xs: 1.5, sm: 2.5 },
+          gap: { xs: 1.5, sm: 2 },
+          width: '100%',
         }}
       >
-        <FormControl
-          size="small"
-          sx={{ minWidth: { xs: '100%', sm: 190 }, flex: { sm: '0 0 auto' } }}
-        >
+        <FormControl fullWidth size="small">
+          <InputLabel id="relationship-label">Relationship</InputLabel>
+          <Select
+            labelId="relationship-label"
+            label="Relationship"
+            value={relationship}
+            onChange={e =>
+              setRelationship(e.target.value as Exclude<DependentRelationship, 'spouse'>)
+            }
+          >
+            {RELATIONSHIPS.filter(rel => rel.value !== 'spouse').map(rel => (
+              <MenuItem key={rel.value} value={rel.value}>
+                {rel.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth size="small">
           <InputLabel id="age-label">Age on December 31</InputLabel>
           <Select
             labelId="age-label"
@@ -186,7 +181,19 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             ))}
           </Select>
         </FormControl>
+      </Box>
 
+      {/* Status Switches on same line on desktop, clean column on mobile */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          flexWrap: 'wrap',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          gap: { xs: 0.5, sm: 2.5 },
+          my: { xs: -0.75, sm: 0 },
+        }}
+      >
         <FormControlLabel
           control={
             <Switch
@@ -298,292 +305,149 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                 </SimpleTooltip>
               </Typography>
 
-              {isMobile ? (
-                /* Mobile: Stacked Layout */
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                  {/* Employment Income */}
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                      Employment Income (給与)
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        mb: 1,
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Gross (収入)
-                      </Typography>
-                      <SpinnerNumberField
-                        value={income.grossEmploymentIncome}
-                        onChange={(value: number) =>
-                          setIncome({
-                            ...income,
-                            grossEmploymentIncome: value,
-                          })
-                        }
-                        step={10_000}
-                        shiftStep={100_000}
-                        sx={{ maxWidth: 180 }}
-                        inputProps={{ style: { textAlign: 'right' } }}
-                      />
-                    </Box>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Net (所得)
-                      </Typography>
-                      <Typography variant="body2">
-                        {formatJPY(netEmploymentIncome)}
-                        {incomeAdjustmentNote && (
-                          <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
-                        )}
-                      </Typography>
-                    </Box>
-                  </Box>
+              <Paper
+                variant="outlined"
+                sx={{
+                  overflowX: 'auto',
+                  '& .MuiTableCell-root': {
+                    px: { xs: 0.75, sm: 2 },
+                    fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                  },
+                }}
+              >
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>Category</TableCell>
+                      <TableCell align="right">Gross (収入)</TableCell>
+                      <TableCell align="right">Net (所得)</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {/* Employment Income Row */}
+                    <TableRow>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        Employment
+                        <br />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          給与
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <SpinnerNumberField
+                          value={income.grossEmploymentIncome}
+                          onChange={(value: number) =>
+                            setIncome({
+                              ...income,
+                              grossEmploymentIncome: value,
+                            })
+                          }
+                          step={10_000}
+                          shiftStep={100_000}
+                          size="small"
+                          hideSpinner
+                          inputProps={{ style: { textAlign: 'right' } }}
+                          sx={incomeInputSx}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" sx={{ fontSize: 'inherit' }}>
+                          {formatJPY(netEmploymentIncome)}
+                          {incomeAdjustmentNote && (
+                            <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
+                          )}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
 
-                  <Divider sx={{ my: 2 }} />
+                    {/* Public Pension Income Row */}
+                    <TableRow>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        Public Pension
+                        <br />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          公的年金等
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <SpinnerNumberField
+                          value={income.grossPublicPensionIncome}
+                          onChange={(value: number) =>
+                            setIncome({
+                              ...income,
+                              grossPublicPensionIncome: value,
+                            })
+                          }
+                          step={10_000}
+                          shiftStep={100_000}
+                          size="small"
+                          hideSpinner
+                          inputProps={{ style: { textAlign: 'right' } }}
+                          sx={incomeInputSx}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" sx={{ fontSize: 'inherit' }}>
+                          {formatJPY(
+                            calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear),
+                          )}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
 
-                  {/* Public Pension Income */}
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                      Public Pension (公的年金等)
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        mb: 1,
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Gross (収入)
-                      </Typography>
-                      <SpinnerNumberField
-                        value={income.grossPublicPensionIncome}
-                        onChange={(value: number) =>
-                          setIncome({
-                            ...income,
-                            grossPublicPensionIncome: value,
-                          })
-                        }
-                        step={10_000}
-                        shiftStep={100_000}
-                        sx={{ maxWidth: 180 }}
-                        inputProps={{ style: { textAlign: 'right' } }}
-                      />
-                    </Box>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Net (所得)
-                      </Typography>
-                      <Typography variant="body2">
-                        {formatJPY(
-                          calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear),
-                        )}
-                      </Typography>
-                    </Box>
-                  </Box>
+                    {/* Other Income Row */}
+                    <TableRow>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                        Other
+                        <br />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          その他
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          sx={{ color: 'text.secondary', fontSize: 'inherit' }}
+                        >
+                          —
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <SpinnerNumberField
+                          value={income.otherNetIncome}
+                          onChange={(value: number) =>
+                            setIncome({
+                              ...income,
+                              otherNetIncome: value,
+                            })
+                          }
+                          step={10_000}
+                          shiftStep={100_000}
+                          size="small"
+                          hideSpinner
+                          inputProps={{ style: { textAlign: 'right' } }}
+                          sx={incomeInputSx}
+                        />
+                      </TableCell>
+                    </TableRow>
 
-                  <Divider sx={{ my: 2 }} />
-
-                  {/* Other Income */}
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                      Other Income (その他)
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        Net (所得)
-                      </Typography>
-                      <SpinnerNumberField
-                        value={income.otherNetIncome}
-                        onChange={(value: number) =>
-                          setIncome({
-                            ...income,
-                            otherNetIncome: value,
-                          })
-                        }
-                        step={10_000}
-                        shiftStep={100_000}
-                        sx={{ maxWidth: 180 }}
-                        inputProps={{ style: { textAlign: 'right' } }}
-                      />
-                    </Box>
-                  </Box>
-
-                  <Divider sx={{ my: 2 }} />
-
-                  {/* Total */}
-                  <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        Total (合計所得金額)
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                        {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-              ) : (
-                /* Desktop: Table Layout */
-                <Paper variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>Category</TableCell>
-                        <TableCell align="right">Gross (収入)</TableCell>
-                        <TableCell align="right">Net (所得)</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {/* Employment Income Row */}
-                      <TableRow>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          Employment
-                          <br />
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            給与
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <SpinnerNumberField
-                            value={income.grossEmploymentIncome}
-                            onChange={(value: number) =>
-                              setIncome({
-                                ...income,
-                                grossEmploymentIncome: value,
-                              })
-                            }
-                            step={10_000}
-                            shiftStep={100_000}
-                            size="small"
-                            hideSpinner
-                            inputProps={{ style: { textAlign: 'right' } }}
-                            sx={{ maxWidth: 160 }}
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2">
-                            {formatJPY(netEmploymentIncome)}
-                            {incomeAdjustmentNote && (
-                              <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
-                            )}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Public Pension Income Row */}
-                      <TableRow>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          Public Pension
-                          <br />
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            公的年金等
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <SpinnerNumberField
-                            value={income.grossPublicPensionIncome}
-                            onChange={(value: number) =>
-                              setIncome({
-                                ...income,
-                                grossPublicPensionIncome: value,
-                              })
-                            }
-                            step={10_000}
-                            shiftStep={100_000}
-                            size="small"
-                            hideSpinner
-                            inputProps={{ style: { textAlign: 'right' } }}
-                            sx={{ maxWidth: 160 }}
-                          />
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2">
-                            {formatJPY(
-                              calculateDependentNetPublicPensionIncome(incomeProfile, incomeYear),
-                            )}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Other Income Row */}
-                      <TableRow>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          Other
-                          <br />
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            その他
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            —
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <SpinnerNumberField
-                            value={income.otherNetIncome}
-                            onChange={(value: number) =>
-                              setIncome({
-                                ...income,
-                                otherNetIncome: value,
-                              })
-                            }
-                            step={10_000}
-                            shiftStep={100_000}
-                            size="small"
-                            hideSpinner
-                            inputProps={{ style: { textAlign: 'right' } }}
-                            sx={{ maxWidth: 160 }}
-                          />
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Total Row */}
-                      <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                        <TableCell colSpan={2}>
-                          <strong>Total (合計所得金額)</strong>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </Paper>
-              )}
+                    {/* Total Row */}
+                    <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                      <TableCell colSpan={2}>
+                        <strong>Total (合計所得金額)</strong>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 'bold', fontSize: 'inherit' }}
+                        >
+                          {formatJPY(calculateDependentTotalNetIncome(incomeProfile, incomeYear))}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </Paper>
             </Box>
 
             {/* Right Column: Household & Health Insurance and/or Disability Status */}
@@ -837,16 +701,20 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       <Box
         sx={{
           display: 'flex',
-          gap: 2,
+          gap: 1.5,
           justifyContent: 'flex-end',
-          flexDirection: isMobile ? 'column-reverse' : 'row',
           mt: 2,
         }}
       >
-        <Button onClick={onCancel} variant="outlined" fullWidth={isMobile}>
+        <Button onClick={onCancel} variant="outlined" sx={{ flex: { xs: 1, sm: '0 0 auto' } }}>
           Cancel
         </Button>
-        <Button type="submit" variant="contained" disabled={!canSubmit} fullWidth={isMobile}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={!canSubmit}
+          sx={{ flex: { xs: 1, sm: '0 0 auto' } }}
+        >
           {isEditing ? 'Update' : 'Add'} Dependent
         </Button>
       </Box>

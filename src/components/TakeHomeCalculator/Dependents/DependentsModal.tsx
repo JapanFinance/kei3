@@ -362,7 +362,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               isTaxpayerNHI={isTaxpayerNHI}
             />
 
-            <Divider sx={{ my: 2.5 }} />
+            <Divider sx={{ my: { xs: 1.5, sm: 2.5 } }} />
 
             {/* Other Dependents Section */}
             <Box
@@ -467,7 +467,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             {/* Household National Health Insurance Section */}
             {hasNHIMembers && (
               <Box>
-                <Divider sx={{ my: 2.5 }} />
+                <Divider sx={{ my: { xs: 1.5, sm: 2.5 } }} />
                 <Typography variant="h6" gutterBottom>
                   Household National Health Insurance
                 </Typography>
@@ -535,7 +535,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             {/* Deduction Summary */}
             {(spouse || otherDependents.length > 0) && (
               <Box>
-                <Divider sx={{ my: 2.5 }} />
+                <Divider sx={{ my: { xs: 1.5, sm: 2.5 } }} />
                 <Typography variant="h6" gutterBottom>
                   Total Deductions Summary
                 </Typography>
