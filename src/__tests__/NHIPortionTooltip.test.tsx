@@ -316,7 +316,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       expect(container.textContent).toMatch(/¥\d{1,3}(,\d{3})* × 2 members = ¥\d{1,3}(,\d{3})*/);
     });
 
-    it('renders NHICalculationBaseTooltip with each member breakdown and statutory citations', () => {
+    it('renders NHICalculationBaseTooltip with each member breakdown and official source link', () => {
       const inputs: TakeHomeInputs = {
         ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
@@ -350,11 +350,11 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       const { container } = render(<NHICalculationBaseTooltip results={results} inputs={inputs} />);
 
       // Shows members
-      expect(container.textContent).toContain('Taxpayer (You)');
+      expect(container.textContent).toContain('Taxpayer');
       expect(container.textContent).toContain('Spouse');
       expect(container.textContent).toContain('Household Total Base');
       expect(container.textContent).toContain('Long-Term Care Base');
-      expect(container.textContent).toContain('地方税法第703条の4第6項');
+      expect(container.textContent).toContain('MHLW: National Health Insurance System');
     });
   });
 });

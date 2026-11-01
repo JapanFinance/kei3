@@ -257,13 +257,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             </>
           )}
           <ResultRow
-            label={
-              isNationalHealthInsurance
-                ? results.nhiHousehold && results.nhiHousehold.insuredCount > 1
-                  ? 'Household NHI Calculation Base'
-                  : 'NHI Calculation Base'
-                : 'Premium Calculation Base'
-            }
+            label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
             labelSuffix={
               isNationalHealthInsurance ? (
                 <DetailedTooltip
@@ -599,7 +593,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 {results.nhiHousehold.effectiveRegion})
               </Typography>
               <ResultRow
-                label="Household NHI Calculation Base"
+                label="NHI Calculation Base"
                 labelSuffix={
                   <DetailedTooltip
                     title="NHI Calculation Base (算定基礎額)"

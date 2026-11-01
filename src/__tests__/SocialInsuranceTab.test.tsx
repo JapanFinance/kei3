@@ -814,7 +814,7 @@ describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
 });
 
 describe('SocialInsuranceTab household NHI calculation base display', () => {
-  it('displays Taxpayer Calculation Base, Other Enrolled Members, and Household NHI Calculation Base', () => {
+  it('displays Taxpayer Calculation Base, Other Enrolled Members, and NHI Calculation Base', () => {
     const inputs: TakeHomeInputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
@@ -853,7 +853,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
     expect(resultRowText('Other Enrolled Members')).toContain('¥20,000');
 
     // Household total base: 4,570,000 + 20,000 = 4,590,000
-    expect(resultRowText('Household NHI Calculation Base')).toContain('¥4,590,000');
+    expect(resultRowText('NHI Calculation Base')).toContain('¥4,590,000');
   });
 
   it('renders manual social insurance amount rather than ¥0 when manual entry is active', () => {
@@ -907,7 +907,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
 
     // Deemed-head household NHI section should display all portion rows
     expect(screen.getByText('Household National Health Insurance')).toBeDefined();
-    expect(resultRowText('Household NHI Calculation Base')).toBeDefined();
+    expect(resultRowText('NHI Calculation Base')).toBeDefined();
     expect(resultRowText('Medical Portion')).toBeDefined();
     expect(resultRowText('Elderly Support Portion')).toBeDefined();
     expect(resultRowText('Long-term Care Portion')).toBeDefined();

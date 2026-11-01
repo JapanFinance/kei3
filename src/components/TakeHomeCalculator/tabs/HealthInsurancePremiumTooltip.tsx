@@ -500,7 +500,7 @@ export interface NHICalculationBaseTooltipProps {
 }
 
 const formatMemberLabel = (relationship: string, isTaxpayer: boolean): string => {
-  if (isTaxpayer) return 'Taxpayer (You)';
+  if (isTaxpayer) return 'Taxpayer';
   switch (relationship) {
     case 'spouse':
       return 'Spouse';
@@ -546,13 +546,9 @@ export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps>
 
   return (
     <Box sx={{ minWidth: { xs: 0, sm: 340 }, maxWidth: { xs: '100vw', sm: 460 } }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-        National Health Insurance Calculation Base (算定基礎額)
-      </Typography>
       <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 1 }}>
-        Under Japanese Local Tax Law and NHI statutory regulations, each insured person's
-        calculation base (旧ただし書き所得) is calculated by deducting the residence tax basic
-        deduction (基礎控除, ¥430,000) from their total net income (総所得金額等), floored at ¥0.
+        Each insured person's calculation base is their total net income (総所得金額等) minus the
+        residence tax basic deduction, floored at ¥0.
       </Typography>
       <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 1.5 }}>
         The household calculation base is the sum of all enrolled members' individual calculation
@@ -608,7 +604,7 @@ export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps>
                     variant="caption"
                     sx={{ color: 'text.secondary', display: 'block', fontSize: '0.75rem' }}
                   >
-                    Not on NHI (¥0 base)
+                    Not NHI
                   </Typography>
                 </TableCell>
                 <TableCell align="right">{formatJPY(nonInsuredHead.netIncome)}</TableCell>
@@ -620,7 +616,7 @@ export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps>
             )}
             <TableRow sx={{ bgcolor: 'action.hover' }}>
               <TableCell colSpan={3}>
-                <strong>Household Total Base (世帯合計)</strong>
+                <strong>Household Total Base</strong>
               </TableCell>
               <TableCell align="right">
                 <strong>{formatJPY(totalBase)}</strong>
@@ -645,10 +641,6 @@ export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps>
           {
             href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/koukikourei/index_00002.html',
             label: 'MHLW: National Health Insurance System (厚生労働省: 国民健康保険制度)',
-          },
-          {
-            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm',
-            label: 'Local Tax Act Art. 703-4 (地方税法第703条の4第6項)',
           },
         ]}
       />
