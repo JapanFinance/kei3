@@ -36,10 +36,10 @@ describe('DependentForm public pension income', () => {
     const pensionCells = within(pensionRow).getAllByRole('cell');
     expect(pensionCells[2]!).toHaveTextContent(/^¥480,000$/);
 
-    // The pension net flows through to the Total (合計所得金額) row's Net column
+    // The pension net flows through to the Total (合計所得金額) row's Net column (label spans 2 columns)
     const totalRow = screen.getByRole('row', { name: /Total \(合計所得金額\)/ });
     const totalCells = within(totalRow).getAllByRole('cell');
-    expect(totalCells[2]!).toHaveTextContent(/^¥480,000$/);
+    expect(totalCells[1]!).toHaveTextContent(/^¥480,000$/);
 
     // Eligible-deductions preview: the 同居老親等 amounts in the income-tax and
     // residence-tax columns of the 扶養控除 row

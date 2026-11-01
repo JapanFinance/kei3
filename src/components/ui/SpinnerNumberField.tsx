@@ -32,6 +32,10 @@ interface SpinnerNumberFieldProps {
   error?: boolean;
   /** Shows the value without allowing edits; the spinner buttons are dropped rather than shown inert. */
   disabled?: boolean;
+  /** Hides the increment/decrement spinner buttons. */
+  hideSpinner?: boolean;
+  /** Standard Material UI size variant for the text field. */
+  size?: 'small' | 'medium';
 }
 
 export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
@@ -52,6 +56,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
   helperText,
   error,
   disabled,
+  hideSpinner,
+  size,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -119,6 +125,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       {...(helperText && { helperText })}
       {...(error && { error })}
       {...(disabled && { disabled })}
+      {...(size && { size })}
       slotProps={{
         htmlInput: {
           inputMode: 'numeric',
@@ -126,7 +133,7 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
         },
         input: {
           endAdornment:
-            !isMobile && !disabled ? (
+            !isMobile && !disabled && !hideSpinner ? (
               <InputAdornment position="end">
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   <IconButton

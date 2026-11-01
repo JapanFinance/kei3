@@ -121,7 +121,12 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
     );
 
   const handleSpouseChange = (newSpouse: Spouse | null) => {
-    const nonSpouseDependents = dependents.filter(d => d.relationship !== 'spouse');
+    let nonSpouseDependents = dependents.filter(d => d.relationship !== 'spouse');
+    if (newSpouse?.isHouseholdHead) {
+      nonSpouseDependents = nonSpouseDependents.map(d =>
+        d.isHouseholdHead ? { ...d, isHouseholdHead: false } : d,
+      );
+    }
     if (newSpouse) {
       onDependentsChange([newSpouse, ...nonSpouseDependents]);
     } else {
@@ -130,12 +135,28 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   };
 
   const handleAddDependent = (dependent: OtherDependent) => {
-    onDependentsChange([...dependents, dependent]);
+    let currentDependents = dependents;
+    if (dependent.isHouseholdHead) {
+      currentDependents = currentDependents.map(d =>
+        d.isHouseholdHead ? { ...d, isHouseholdHead: false } : d,
+      );
+    }
+    onDependentsChange([...currentDependents, dependent]);
     setIsAddingNew(false);
   };
 
   const handleUpdateDependent = (updatedDependent: OtherDependent) => {
-    onDependentsChange(dependents.map(d => (d.id === updatedDependent.id ? updatedDependent : d)));
+    onDependentsChange(
+      dependents.map(d => {
+        if (d.id === updatedDependent.id) {
+          return updatedDependent;
+        }
+        if (updatedDependent.isHouseholdHead && d.isHouseholdHead) {
+          return { ...d, isHouseholdHead: false };
+        }
+        return d;
+      }),
+    );
     setEditingDependent(null);
   };
 
@@ -299,6 +320,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             onSave={editingDependent ? handleUpdateDependent : handleAddDependent}
             onCancel={handleCancelForm}
             incomeYear={incomeYear}
+            isTaxpayerNHI={isTaxpayerNHI}
           />
         ) : (
           <Box>
@@ -340,6 +362,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               spouse={spouse || null}
               onChange={handleSpouseChange}
               incomeYear={incomeYear}
+              isTaxpayerNHI={isTaxpayerNHI}
             />
 
             <Divider sx={{ my: 3 }} />
