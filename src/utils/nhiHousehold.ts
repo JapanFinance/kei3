@@ -10,10 +10,7 @@ import type { Dependent } from '../types/dependents';
 import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
 import type { HealthInsuranceProviderId, NHIPaymentAttribution } from '../types/healthInsurance';
 import {
-  CUSTOM_PROVIDER_ID,
   DEFAULT_NHI_PAYMENT_ATTRIBUTION,
-  DEPENDENT_COVERAGE_ID,
-  isEmployeeHealthProvider,
   LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
@@ -128,7 +125,7 @@ export function resolveDependentNHIEnrollment(
 
 /**
  * Returns a descriptive label for a dependent's automatic ('auto') health insurance option
- * based on the taxpayer's health insurance provider and age.
+ * based on the taxpayer's health insurance provider.
  */
 export function getAutoHealthInsuranceLabel(
   provider?: HealthInsuranceProviderId,
@@ -137,19 +134,10 @@ export function getAutoHealthInsuranceLabel(
   if (isTaxpayerNHI) {
     return 'Same as taxpayer (NHI)';
   }
-  if (provider === undefined || isEmployeeHealthProvider(provider)) {
-    return 'Same as taxpayer (EHI)';
-  }
-  if (provider === CUSTOM_PROVIDER_ID) {
-    return 'Same as taxpayer (Custom EHI)';
-  }
   if (provider === LATTER_STAGE_ELDERLY_ID) {
-    return 'Other / non-NHI (taxpayer on 75+ Healthcare)';
+    return 'Other / non-NHI';
   }
-  if (provider === DEPENDENT_COVERAGE_ID) {
-    return 'Other / non-NHI (taxpayer on dependent coverage)';
-  }
-  return 'Other / non-NHI';
+  return 'Same as taxpayer (EHI)';
 }
 
 /**

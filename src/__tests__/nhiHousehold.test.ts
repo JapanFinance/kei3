@@ -560,27 +560,17 @@ describe('getAutoHealthInsuranceLabel', () => {
     expect(getAutoHealthInsuranceLabel(undefined, true)).toBe('Same as taxpayer (NHI)');
   });
 
-  it('returns "Same as taxpayer (EHI)" when provider is undefined or standard employee insurance', () => {
+  it('returns "Same as taxpayer (EHI)" for employee health insurance, custom providers, and dependent coverage', () => {
     expect(getAutoHealthInsuranceLabel(undefined, false)).toBe('Same as taxpayer (EHI)');
     expect(getAutoHealthInsuranceLabel(DEFAULT_PROVIDER, false)).toBe('Same as taxpayer (EHI)');
     expect(getAutoHealthInsuranceLabel('KantoItsKenpo', false)).toBe('Same as taxpayer (EHI)');
-  });
-
-  it('returns "Same as taxpayer (Custom EHI)" for custom provider', () => {
-    expect(getAutoHealthInsuranceLabel(CUSTOM_PROVIDER_ID, false)).toBe(
-      'Same as taxpayer (Custom EHI)',
-    );
-  });
-
-  it('returns "Other / non-NHI (taxpayer on 75+ Healthcare)" for Latter-Stage Elderly', () => {
-    expect(getAutoHealthInsuranceLabel(LATTER_STAGE_ELDERLY_ID, false)).toBe(
-      'Other / non-NHI (taxpayer on 75+ Healthcare)',
-    );
-  });
-
-  it('returns "Other / non-NHI (taxpayer on dependent coverage)" for DependentCoverage', () => {
+    expect(getAutoHealthInsuranceLabel(CUSTOM_PROVIDER_ID, false)).toBe('Same as taxpayer (EHI)');
     expect(getAutoHealthInsuranceLabel(DEPENDENT_COVERAGE_ID, false)).toBe(
-      'Other / non-NHI (taxpayer on dependent coverage)',
+      'Same as taxpayer (EHI)',
     );
+  });
+
+  it('returns "Other / non-NHI" when the taxpayer is on Latter-Stage Elderly', () => {
+    expect(getAutoHealthInsuranceLabel(LATTER_STAGE_ELDERLY_ID, false)).toBe('Other / non-NHI');
   });
 });
