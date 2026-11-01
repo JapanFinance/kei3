@@ -168,11 +168,14 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           gap: { xs: 1.5, sm: 2.5 },
         }}
       >
-        <FormControl sx={{ minWidth: { xs: '100%', sm: 170 }, flex: { sm: '0 0 auto' } }}>
-          <InputLabel id="age-label">Age</InputLabel>
+        <FormControl
+          size="small"
+          sx={{ minWidth: { xs: '100%', sm: 190 }, flex: { sm: '0 0 auto' } }}
+        >
+          <InputLabel id="age-label">Age on December 31</InputLabel>
           <Select
             labelId="age-label"
-            label="Age"
+            label="Age on December 31"
             value={ageRange}
             onChange={e => setAgeRange(e.target.value as DependentAgeRange)}
           >
@@ -182,7 +185,6 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               </MenuItem>
             ))}
           </Select>
-          <FormHelperText>On December 31</FormHelperText>
         </FormControl>
 
         <FormControlLabel
@@ -273,7 +275,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             {/* Income Information */}
             <Box
               sx={{
-                flex: { md: isSameHousehold ? '1 1 56%' : 1 },
+                flex: {
+                  md: isSameHousehold || isClaimedAsDependent ? '1 1 56%' : 1,
+                },
                 minWidth: 0,
               }}
             >
@@ -581,119 +585,140 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               )}
             </Box>
 
-            {/* Household & Health Insurance Status */}
-            {isSameHousehold && (
+            {/* Right Column: Household & Health Insurance and/or Disability Status */}
+            {(isSameHousehold || isClaimedAsDependent) && (
               <Box
                 sx={{
                   flex: { md: '1 1 44%' },
                   minWidth: 0,
                   display: 'flex',
                   flexDirection: 'column',
+                  gap: 2,
                 }}
               >
-                <Typography
-                  gutterBottom
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    mb: 1,
-                  }}
-                >
-                  Household & Health Insurance
-                </Typography>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    backgroundColor: 'background.default',
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-start',
-                    gap: 2,
-                  }}
-                >
-                  {ageRange === '75plus' ? (
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Aged 75+: Enrolled in Medical System for the Elderly (後期高齢者医療制度); not
-                      enrolled in National Health Insurance.
+                {/* Household & Health Insurance Status */}
+                {isSameHousehold && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography
+                      gutterBottom
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      Household & Health Insurance
                     </Typography>
-                  ) : (
-                    <FormControl fullWidth size="small">
-                      <InputLabel id="dep-hi-label">Health Insurance</InputLabel>
-                      <Select
-                        labelId="dep-hi-label"
-                        label="Health Insurance"
-                        value={healthInsurance}
-                        onChange={e =>
-                          setHealthInsurance(e.target.value as HouseholdMemberHealthInsurance)
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2,
+                        backgroundColor: 'background.default',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                      }}
+                    >
+                      {ageRange === '75plus' ? (
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          Aged 75+: Enrolled in Medical System for the Elderly (後期高齢者医療制度);
+                          not enrolled in National Health Insurance.
+                        </Typography>
+                      ) : (
+                        <FormControl fullWidth size="small">
+                          <InputLabel id="dep-hi-label">Health Insurance</InputLabel>
+                          <Select
+                            labelId="dep-hi-label"
+                            label="Health Insurance"
+                            value={healthInsurance}
+                            onChange={e =>
+                              setHealthInsurance(e.target.value as HouseholdMemberHealthInsurance)
+                            }
+                          >
+                            <MenuItem value="auto">
+                              Same as taxpayer ({isTaxpayerNHI ? 'NHI' : 'EHI'})
+                            </MenuItem>
+                            <MenuItem value="nhi">
+                              National Health Insurance (国民健康保険)
+                            </MenuItem>
+                            <MenuItem value="other">
+                              Employees' Health Insurance (社会保険等)
+                            </MenuItem>
+                          </Select>
+                          <FormHelperText>
+                            Whether this member is covered under National Health Insurance.
+                          </FormHelperText>
+                        </FormControl>
+                      )}
+
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={isHouseholdHead}
+                            onChange={e => setIsHouseholdHead(e.target.checked)}
+                          />
                         }
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            Household head (世帯主)
+                            <SimpleTooltip>
+                              Check if this person is registered as the household head (世帯主) on
+                              the municipal resident record (住民票). By default, the taxpayer is
+                              assumed to be the household head. Under National Health Insurance, a
+                              non-enrolled head acts as a deemed head (擬制世帯主) whose income is
+                              included for low-income premium reductions.
+                            </SimpleTooltip>
+                          </Box>
+                        }
+                        sx={{ m: 0 }}
+                      />
+                    </Paper>
+                  </Box>
+                )}
+
+                {/* Disability Status */}
+                {isClaimedAsDependent && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography
+                      gutterBottom
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        mb: 1,
+                      }}
+                    >
+                      Disability Status
+                    </Typography>
+                    <FormControl fullWidth size="small">
+                      <InputLabel id="dep-disability-label">Disability Status</InputLabel>
+                      <Select
+                        labelId="dep-disability-label"
+                        value={disability}
+                        label="Disability Status"
+                        onChange={e => setDisability(e.target.value as DisabilityLevel)}
                       >
-                        <MenuItem value="auto">
-                          Same as taxpayer ({isTaxpayerNHI ? 'NHI' : 'EHI'})
-                        </MenuItem>
-                        <MenuItem value="nhi">National Health Insurance (国民健康保険)</MenuItem>
-                        <MenuItem value="other">Employees' Health Insurance (社会保険等)</MenuItem>
+                        {DISABILITY_LEVELS.map(level => (
+                          <MenuItem key={level.value} value={level.value}>
+                            {level.label}
+                          </MenuItem>
+                        ))}
                       </Select>
                       <FormHelperText>
-                        Whether this member is covered under National Health Insurance.
+                        See{' '}
+                        <Link
+                          href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          NTA disability deduction guide
+                        </Link>
                       </FormHelperText>
                     </FormControl>
-                  )}
-
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={isHouseholdHead}
-                        onChange={e => setIsHouseholdHead(e.target.checked)}
-                      />
-                    }
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        Household head (世帯主)
-                        <SimpleTooltip>
-                          Check if this person is registered as the household head (世帯主) on the
-                          municipal resident record (住民票). By default, the taxpayer is assumed to
-                          be the household head. Under National Health Insurance, a non-enrolled
-                          head acts as a deemed head (擬制世帯主) whose income is included for
-                          low-income premium reductions.
-                        </SimpleTooltip>
-                      </Box>
-                    }
-                    sx={{ m: 0 }}
-                  />
-                </Paper>
+                  </Box>
+                )}
               </Box>
             )}
           </Box>
-
-          {/* Disability Status */}
-          {isClaimedAsDependent && (
-            <FormControl fullWidth>
-              <InputLabel>Disability Status</InputLabel>
-              <Select
-                value={disability}
-                label="Disability Status"
-                onChange={e => setDisability(e.target.value as DisabilityLevel)}
-              >
-                {DISABILITY_LEVELS.map(level => (
-                  <MenuItem key={level.value} value={level.value}>
-                    {level.label}
-                  </MenuItem>
-                ))}
-              </Select>
-              <FormHelperText>
-                See{' '}
-                <Link
-                  href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  NTA disability deduction guide
-                </Link>
-              </FormHelperText>
-            </FormControl>
-          )}
 
           {/* Eligible Deductions Table */}
           {isClaimedAsDependent && (

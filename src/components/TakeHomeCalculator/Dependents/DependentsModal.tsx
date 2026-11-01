@@ -298,7 +298,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonIcon />
           <Typography variant="h6" component="span">
-            Manage Dependents & Household
+            Manage Household
           </Typography>
         </Box>
         <IconButton edge="end" onClick={onClose} aria-label="close" size="small">

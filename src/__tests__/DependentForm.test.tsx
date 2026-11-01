@@ -60,7 +60,7 @@ describe('DependentForm public pension income', () => {
       />,
     );
 
-    await user.click(screen.getByRole('combobox', { name: 'Age' }));
+    await user.click(screen.getByRole('combobox', { name: /Age/ }));
     const listbox = screen.getByRole('listbox');
     expect(within(listbox).getByRole('option', { name: '23 - 39' })).toBeInTheDocument();
     expect(within(listbox).getByRole('option', { name: '40 - 64' })).toBeInTheDocument();
