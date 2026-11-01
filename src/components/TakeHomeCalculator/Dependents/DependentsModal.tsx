@@ -327,15 +327,12 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             {/* Livelihood / Shared Expenses Disclaimer */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 0.5 }}>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Only add persons with whom living expenses are shared (生計を一にする).
+                Only add persons with whom living expenses are shared.
               </Typography>
-              <DetailedTooltip
-                title="Sharing Living Expenses (生計を一にする)"
-                icon={SIMPLE_TOOLTIP_ICON}
-              >
+              <DetailedTooltip title="Shared Living Expenses" icon={SIMPLE_TOOLTIP_ICON}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  Under Japanese tax law, claiming spousal or dependent deductions
-                  (配偶者控除・扶養控除) strictly requires sharing living expenses (生計を一にする).
+                  Claiming spousal or dependent deductions (配偶者控除・扶養控除) strictly requires
+                  sharing living expenses (生計を一にする).
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Family members living together are presumed to share expenses. Family members

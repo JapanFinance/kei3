@@ -116,7 +116,7 @@ export default function SpouseSection({
           control={
             <Switch checked={hasSpouse} onChange={e => handleToggleSpouse(e.target.checked)} />
           }
-          label="Include a spouse?"
+          label="Include spouse?"
         />
       </Box>
 
@@ -164,12 +164,31 @@ export default function SpouseSection({
               }
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  Claim as tax dependent
-                  <SimpleTooltip>
-                    Leave checked to claim eligible tax deductions for a spouse. Uncheck if the
-                    spouse is claiming the deductions instead (spouses cannot both claim each
-                    other).
-                  </SimpleTooltip>
+                  Claim tax deduction
+                  <DetailedTooltip
+                    title="Spousal Tax Deductions (配偶者控除・配偶者特別控除)"
+                    icon={SIMPLE_TOOLTIP_ICON}
+                  >
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Leave checked to claim eligible spousal tax deductions. Uncheck if the spouse
+                      is claiming the deductions instead (spouses cannot both claim each other) or
+                      does not meet the legal marriage requirement.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Spousal deductions require a legally recognized marriage under the Civil Code
+                      of Japan. De facto or common-law marriages (事実婚・内縁関係), municipal
+                      partnerships, and same-sex marriages are not eligible.
+                    </Typography>
+                    <SourceLinks
+                      sources={[
+                        {
+                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm',
+                          label:
+                            'NTA: Spousal Deduction Requirements (国税庁: 配偶者控除の要件 No.1191)',
+                        },
+                      ]}
+                    />
+                  </DetailedTooltip>
                 </Box>
               }
               sx={{ m: 0 }}
