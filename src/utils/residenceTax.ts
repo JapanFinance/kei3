@@ -156,7 +156,7 @@ export function isResidenceTaxExempt(
  * the age range.
  *
  * The age ranges cannot always answer that second one. They are cut on the 扶養控除 boundaries
- * of 16 and 19 rather than the age of majority, so 'under16' is safely inside the 未成年者 band
+ * of 16 and 19 rather than the age of majority, so 'under6' and '6to15' are safely inside the 未成年者 band
  * but '16to18' spans ages 16 to 18 and holds minors and adults alike. It is resolved as an
  * adult, so a 16- or 17-year-old whose 合計所得金額 falls between the 均等割 limit and
  * {@link NON_TAXABLE_STATUS_INCOME_LIMIT} is reported as 課税 when they are in fact exempt,

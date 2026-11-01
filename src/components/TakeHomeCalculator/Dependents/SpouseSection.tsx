@@ -26,12 +26,14 @@ import type {
   SpouseAgeRange,
 } from '../../../types/dependents';
 import { DISABILITY_LEVELS, SPOUSE_AGE_RANGES } from '../../../types/dependents';
+import type { HealthInsuranceProviderId } from '../../../types/healthInsurance';
 import {
   calculateDependentNetIncomeComponents,
   calculateDependentNetPublicPensionIncome,
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
+import { getAutoHealthInsuranceLabel } from '../../../utils/nhiHousehold';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
@@ -53,6 +55,8 @@ interface SpouseSectionProps {
   incomeYear: number;
   /** Whether the taxpayer is enrolled in National Health Insurance */
   isTaxpayerNHI?: boolean | undefined;
+  /** Taxpayer's current health insurance provider */
+  taxpayerHealthInsuranceProvider?: HealthInsuranceProviderId | undefined;
 }
 
 export default function SpouseSection({
@@ -60,6 +64,7 @@ export default function SpouseSection({
   onChange,
   incomeYear,
   isTaxpayerNHI = false,
+  taxpayerHealthInsuranceProvider,
 }: SpouseSectionProps) {
   const [hasSpouse, setHasSpouse] = useState(spouse !== null);
 
@@ -496,7 +501,10 @@ export default function SpouseSection({
                                 }
                               >
                                 <MenuItem value="auto">
-                                  Same as taxpayer ({isTaxpayerNHI ? 'NHI' : 'EHI'})
+                                  {getAutoHealthInsuranceLabel(
+                                    taxpayerHealthInsuranceProvider,
+                                    isTaxpayerNHI,
+                                  )}
                                 </MenuItem>
                                 <MenuItem value="nhi">
                                   National Health Insurance (国民健康保険)

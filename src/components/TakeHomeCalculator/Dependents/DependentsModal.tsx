@@ -48,6 +48,10 @@ import {
   type NHIPaymentAttribution,
 } from '../../../types/healthInsurance';
 import {
+  isNationalHealthInsuranceEligible,
+  type TaxpayerAgeRange,
+} from '../../../types/taxpayerAge';
+import {
   calculateDependentDeductions,
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
@@ -69,6 +73,8 @@ interface DependentsModalProps {
   incomeYear: number;
   /** Taxpayer's current health insurance provider */
   healthInsuranceProvider?: HealthInsuranceProviderId | undefined;
+  /** Taxpayer's age range */
+  taxpayerAgeRange?: TaxpayerAgeRange | undefined;
   /** NHI payment attribution setting */
   nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
   onNHIPaymentAttributionChange?: ((attribution: NHIPaymentAttribution) => void) | undefined;
@@ -89,6 +95,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   taxpayerNetIncome,
   incomeYear,
   healthInsuranceProvider,
+  taxpayerAgeRange,
   nhiPaymentAttribution = 'fullHousehold',
   onNHIPaymentAttributionChange,
   nhiHouseholdRegion = 'Tokyo',
@@ -103,7 +110,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   const spouse = dependents.find(d => d.relationship === 'spouse');
   const otherDependents = dependents.filter(d => d.relationship !== 'spouse');
 
-  const isTaxpayerNHI = healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
+  const isTaxpayerNHI =
+    healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID &&
+    (taxpayerAgeRange === undefined || isNationalHealthInsuranceEligible(taxpayerAgeRange));
 
   const hasNHIMembers =
     isTaxpayerNHI ||
@@ -321,6 +330,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             onCancel={handleCancelForm}
             incomeYear={incomeYear}
             isTaxpayerNHI={isTaxpayerNHI}
+            taxpayerHealthInsuranceProvider={healthInsuranceProvider}
           />
         ) : (
           <Box>
@@ -360,6 +370,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               onChange={handleSpouseChange}
               incomeYear={incomeYear}
               isTaxpayerNHI={isTaxpayerNHI}
+              taxpayerHealthInsuranceProvider={healthInsuranceProvider}
             />
 
             <Divider sx={{ my: { xs: 1.5, sm: 2.5 } }} />

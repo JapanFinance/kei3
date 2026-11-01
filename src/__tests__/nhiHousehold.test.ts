@@ -9,12 +9,16 @@ import {
 } from '../data/nationalHealthInsurance/nhiPremiumReduction';
 import type { Dependent } from '../types/dependents';
 import {
+  CUSTOM_PROVIDER_ID,
   DEFAULT_NHI_PAYMENT_ATTRIBUTION,
   DEFAULT_PROVIDER,
+  DEPENDENT_COVERAGE_ID,
+  LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
 import {
   composeNHIHousehold,
+  getAutoHealthInsuranceLabel,
   resolveDependentNHIEnrollment,
   resolveEffectiveNHIRegion,
 } from '../utils/nhiHousehold';
@@ -544,5 +548,39 @@ describe('composeNHIHousehold', () => {
     const spouseMember = composition.members.find(m => m.id === 'spouse')!;
     expect(spouseMember.calculationBase).toBe(170_000);
     expect(composition.taxpayerMember.calculationBase).toBe(570_000);
+  });
+});
+
+describe('getAutoHealthInsuranceLabel', () => {
+  it('returns "Same as taxpayer (NHI)" when isTaxpayerNHI is true regardless of provider', () => {
+    expect(getAutoHealthInsuranceLabel(NATIONAL_HEALTH_INSURANCE_ID, true)).toBe(
+      'Same as taxpayer (NHI)',
+    );
+    expect(getAutoHealthInsuranceLabel(DEFAULT_PROVIDER, true)).toBe('Same as taxpayer (NHI)');
+    expect(getAutoHealthInsuranceLabel(undefined, true)).toBe('Same as taxpayer (NHI)');
+  });
+
+  it('returns "Same as taxpayer (EHI)" when provider is undefined or standard employee insurance', () => {
+    expect(getAutoHealthInsuranceLabel(undefined, false)).toBe('Same as taxpayer (EHI)');
+    expect(getAutoHealthInsuranceLabel(DEFAULT_PROVIDER, false)).toBe('Same as taxpayer (EHI)');
+    expect(getAutoHealthInsuranceLabel('KantoItsKenpo', false)).toBe('Same as taxpayer (EHI)');
+  });
+
+  it('returns "Same as taxpayer (Custom EHI)" for custom provider', () => {
+    expect(getAutoHealthInsuranceLabel(CUSTOM_PROVIDER_ID, false)).toBe(
+      'Same as taxpayer (Custom EHI)',
+    );
+  });
+
+  it('returns "Other / non-NHI (taxpayer on 75+ Healthcare)" for Latter-Stage Elderly', () => {
+    expect(getAutoHealthInsuranceLabel(LATTER_STAGE_ELDERLY_ID, false)).toBe(
+      'Other / non-NHI (taxpayer on 75+ Healthcare)',
+    );
+  });
+
+  it('returns "Other / non-NHI (taxpayer on dependent coverage)" for DependentCoverage', () => {
+    expect(getAutoHealthInsuranceLabel(DEPENDENT_COVERAGE_ID, false)).toBe(
+      'Other / non-NHI (taxpayer on dependent coverage)',
+    );
   });
 });

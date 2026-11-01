@@ -10,7 +10,11 @@ import type { Dependent } from '../types/dependents';
 import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
 import type { HealthInsuranceProviderId, NHIPaymentAttribution } from '../types/healthInsurance';
 import {
+  CUSTOM_PROVIDER_ID,
   DEFAULT_NHI_PAYMENT_ATTRIBUTION,
+  DEPENDENT_COVERAGE_ID,
+  isEmployeeHealthProvider,
+  LATTER_STAGE_ELDERLY_ID,
   NATIONAL_HEALTH_INSURANCE_ID,
 } from '../types/healthInsurance';
 import type { TaxpayerAgeRange } from '../types/taxpayerAge';
@@ -59,7 +63,15 @@ export interface NHIHouseholdComposition {
   isDeemedHead: boolean;
   /** Taxpayer member reference */
   taxpayerMember: NHIHouseholdMember;
-  /** Number of NHI-insured members */
+  /**
+   * Number of NHI-insured members.
+   *
+   * Note on limitation: Under 国民健康保険法施行令第29条の7第2項第2号・第3号, members who aged out
+   * of NHI into the 75+ Latter-Stage Elderly Healthcare System (特定同一世帯所属者) are counted
+   * alongside NHI-insured members when expanding the 5割 and 2割 low-income reduction thresholds.
+   * Because past insurance enrollment transitions are not tracked across age 75, 75+ members
+   * (notably a 75+ deemed-head taxpayer) are not included in this count.
+   */
   insuredCount: number;
   /** Number of NHI-insured members aged 40-64 */
   ltcInsuredCount: number;
@@ -112,6 +124,32 @@ export function resolveDependentNHIEnrollment(
     return false;
   }
   return taxpayerOnNHI;
+}
+
+/**
+ * Returns a descriptive label for a dependent's automatic ('auto') health insurance option
+ * based on the taxpayer's health insurance provider and age.
+ */
+export function getAutoHealthInsuranceLabel(
+  provider?: HealthInsuranceProviderId,
+  isTaxpayerNHI?: boolean,
+): string {
+  if (isTaxpayerNHI) {
+    return 'Same as taxpayer (NHI)';
+  }
+  if (provider === undefined || isEmployeeHealthProvider(provider)) {
+    return 'Same as taxpayer (EHI)';
+  }
+  if (provider === CUSTOM_PROVIDER_ID) {
+    return 'Same as taxpayer (Custom EHI)';
+  }
+  if (provider === LATTER_STAGE_ELDERLY_ID) {
+    return 'Other / non-NHI (taxpayer on 75+ Healthcare)';
+  }
+  if (provider === DEPENDENT_COVERAGE_ID) {
+    return 'Other / non-NHI (taxpayer on dependent coverage)';
+  }
+  return 'Other / non-NHI';
 }
 
 /**
@@ -237,6 +275,10 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
   const householdHead = members.find(m => m.isHouseholdHead) ?? taxpayerMember;
   const isDeemedHead = !householdHead.isNHIInsured;
 
+  // Note on limitation: members who moved from NHI into the 75+ Latter-Stage Elderly Healthcare
+  // scheme (特定同一世帯所属者) continue to count toward the 5割/2割 reduction thresholds under
+  // 国民健康保険法施行令第29条の7第2項第2号・第3号. Currently, 75+ members (including a 75+
+  // deemed-head taxpayer) are excluded from insuredCount.
   const insuredMembers = members.filter(m => m.isNHIInsured);
   const insuredCount = insuredMembers.length;
   const ltcInsuredCount = insuredMembers.filter(m => m.isLtcCat2).length;

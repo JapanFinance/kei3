@@ -232,8 +232,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   const prevFYData = getNHIParamsForMonth(region, year, 0); // Jan → previous FY
   const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
 
-  // Low-income reduction tier per fiscal year — must reproduce the calculator's judgement
-  // exactly, or the parity assertions below throw in dev builds.
+  // Low-income reduction tier per fiscal year — reproduces the calculator's judgement.
   const reductionOptions = results.nhiHousehold
     ? {
         insuredCount: results.nhiHousehold.insuredCount,
@@ -280,7 +279,6 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
         preschoolCount: isLtc ? 0 : results.nhiHousehold.preschoolCount,
         childSupportExemptCount:
           portion === 'childSupport' ? results.nhiHousehold.childSupportExemptCount : 0,
-        isHouseholdHead: true,
       }
     : undefined;
 

@@ -1025,6 +1025,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         taxpayerNetIncome={netIncomeComponents.totalNetIncome}
         incomeYear={inputs.incomeYear}
         healthInsuranceProvider={inputs.healthInsuranceProvider}
+        taxpayerAgeRange={inputs.ageRange}
         nhiPaymentAttribution={inputs.nhiPaymentAttribution}
         onNHIPaymentAttributionChange={attribution =>
           dispatch({ type: 'setField', field: 'nhiPaymentAttribution', value: attribution })

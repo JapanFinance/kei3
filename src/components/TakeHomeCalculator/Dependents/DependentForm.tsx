@@ -29,6 +29,7 @@ import type {
   HouseholdMemberHealthInsurance,
 } from '../../../types/dependents';
 import { RELATIONSHIPS, DISABILITY_LEVELS, DEPENDENT_AGE_RANGES } from '../../../types/dependents';
+import type { HealthInsuranceProviderId } from '../../../types/healthInsurance';
 import {
   calculateDependentDeductions,
   calculateDependentNetIncomeComponents,
@@ -36,6 +37,7 @@ import {
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
+import { getAutoHealthInsuranceLabel } from '../../../utils/nhiHousehold';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
@@ -58,6 +60,8 @@ interface DependentFormProps {
   incomeYear: number;
   /** Whether the taxpayer is enrolled in National Health Insurance */
   isTaxpayerNHI?: boolean | undefined;
+  /** Taxpayer's current health insurance provider */
+  taxpayerHealthInsuranceProvider?: HealthInsuranceProviderId | undefined;
 }
 
 /**
@@ -69,6 +73,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   onCancel,
   incomeYear,
   isTaxpayerNHI = false,
+  taxpayerHealthInsuranceProvider,
 }) => {
   const isEditing = dependent !== null;
 
@@ -522,7 +527,10 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                             }
                           >
                             <MenuItem value="auto">
-                              Same as taxpayer ({isTaxpayerNHI ? 'NHI' : 'EHI'})
+                              {getAutoHealthInsuranceLabel(
+                                taxpayerHealthInsuranceProvider,
+                                isTaxpayerNHI,
+                              )}
                             </MenuItem>
                             <MenuItem value="nhi">
                               National Health Insurance (国民健康保険)

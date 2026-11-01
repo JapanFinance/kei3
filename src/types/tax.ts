@@ -1228,7 +1228,13 @@ export interface NHIHouseholdMemberSummary {
 export interface NHIHouseholdSummary {
   /** Individual members and their calculation bases */
   members: NHIHouseholdMemberSummary[];
-  /** Total number of members enrolled in NHI in this household */
+  /**
+   * Total number of members enrolled in NHI in this household.
+   *
+   * Note on limitation: Members who aged out of NHI into the 75+ scheme (特定同一世帯所属者)
+   * count toward the 5割/2割 reduction thresholds in municipal NHI under 国民健康保険法施行令第29条の7第2項,
+   * but are not tracked across age 75 and therefore not included in insuredCount.
+   */
   insuredCount: number;
   /** Number of NHI-insured members aged 40-64 (subject to 介護納付金分) */
   ltcInsuredCount: number;
