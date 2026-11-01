@@ -36,6 +36,7 @@ import {
 import type {
   BonusIncomeStream,
   CustomEmployeesHealthInsuranceRates,
+  NHIHouseholdMemberSummary,
   NHIHouseholdSummary,
 } from '../types/tax';
 import type { NHIHouseholdComposition } from './nhiHousehold';
@@ -768,7 +769,20 @@ export function calculateHouseholdNHIBreakdown(
     childSupportCapped: false,
   };
 
+  const memberSummaries: NHIHouseholdMemberSummary[] = household.members.map(m => ({
+    id: m.id,
+    relationship: m.relationship,
+    isTaxpayer: m.isTaxpayer,
+    isHouseholdHead: m.isHouseholdHead,
+    isNHIInsured: m.isNHIInsured,
+    isLtcCat2: m.isLtcCat2,
+    netIncome: m.netIncome,
+    basicDeduction: calculateResidenceTaxBasicDeduction(m.netIncome),
+    calculationBase: m.calculationBase,
+  }));
+
   const zeroSummary: NHIHouseholdSummary = {
+    members: memberSummaries,
     insuredCount: household.insuredCount,
     ltcInsuredCount: household.ltcInsuredCount,
     preschoolCount: household.preschoolCount,
@@ -956,6 +970,7 @@ export function calculateHouseholdNHIBreakdown(
   };
 
   const summary: NHIHouseholdSummary = {
+    members: memberSummaries,
     insuredCount: household.insuredCount,
     ltcInsuredCount: household.ltcInsuredCount,
     preschoolCount: household.preschoolCount,

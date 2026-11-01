@@ -1208,9 +1208,26 @@ export interface TakeHomeResults {
 }
 
 /**
+ * Summary of an individual member's contribution to household NHI calculation base
+ */
+export interface NHIHouseholdMemberSummary {
+  id: string;
+  relationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
+  isTaxpayer: boolean;
+  isHouseholdHead: boolean;
+  isNHIInsured: boolean;
+  isLtcCat2: boolean;
+  netIncome: number;
+  basicDeduction: number;
+  calculationBase: number;
+}
+
+/**
  * Summary of household-level National Health Insurance calculations and member breakdown
  */
 export interface NHIHouseholdSummary {
+  /** Individual members and their calculation bases */
+  members: NHIHouseholdMemberSummary[];
   /** Total number of members enrolled in NHI in this household */
   insuredCount: number;
   /** Number of NHI-insured members aged 40-64 (subject to 介護納付金分) */

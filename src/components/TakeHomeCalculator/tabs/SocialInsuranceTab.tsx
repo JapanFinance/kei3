@@ -38,7 +38,10 @@ import { ResultRow } from '../ResultRow';
 import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
-import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
+import HealthInsurancePremiumTooltip, {
+  NHIPortionTooltip,
+  NHICalculationBaseTooltip,
+} from './HealthInsurancePremiumTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
 import LatterStageElderlyPremiumTooltip from './LatterStageElderlyPremiumTooltip';
 import LongTermCareCategory1PremiumTooltip from './LongTermCareCategory1PremiumTooltip';
@@ -236,9 +239,46 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             value={formatJPY(-premiumBaseDeduction)}
             type="default"
           />
+          {results.nhiHousehold && results.nhiHousehold.insuredCount > 1 && (
+            <>
+              <ResultRow
+                label="Taxpayer Calculation Base"
+                value={formatJPY(Math.max(0, results.totalNetIncome - premiumBaseDeduction))}
+                type="subtotal"
+              />
+              <ResultRow
+                label="Other Enrolled Members"
+                value={formatJPY(
+                  results.nhiHousehold.calculationBase -
+                    Math.max(0, results.totalNetIncome - premiumBaseDeduction),
+                )}
+                type="default"
+              />
+            </>
+          )}
           <ResultRow
-            label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
-            value={formatJPY(Math.max(0, results.totalNetIncome - premiumBaseDeduction))}
+            label={
+              isNationalHealthInsurance
+                ? results.nhiHousehold && results.nhiHousehold.insuredCount > 1
+                  ? 'Household NHI Calculation Base'
+                  : 'NHI Calculation Base'
+                : 'Premium Calculation Base'
+            }
+            labelSuffix={
+              isNationalHealthInsurance ? (
+                <DetailedTooltip
+                  title="NHI Calculation Base (算定基礎額)"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                >
+                  <NHICalculationBaseTooltip results={results} inputs={inputs} />
+                </DetailedTooltip>
+              ) : undefined
+            }
+            value={formatJPY(
+              isNationalHealthInsurance && results.nhiHousehold
+                ? results.nhiHousehold.calculationBase
+                : Math.max(0, results.totalNetIncome - premiumBaseDeduction),
+            )}
             type="subtotal"
           />
         </>
@@ -538,6 +578,19 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 {results.nhiHousehold.effectiveRegion})
               </Typography>
             )}
+            <ResultRow
+              label="Household NHI Calculation Base"
+              labelSuffix={
+                <DetailedTooltip
+                  title="NHI Calculation Base (算定基礎額)"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                >
+                  <NHICalculationBaseTooltip results={results} inputs={inputs} />
+                </DetailedTooltip>
+              }
+              value={formatJPY(results.nhiHousehold?.calculationBase ?? 0)}
+              type="indented"
+            />
             {results.nhiMedicalPortion !== undefined && results.nhiMedicalPortion > 0 && (
               <ResultRow
                 label="Medical Portion"

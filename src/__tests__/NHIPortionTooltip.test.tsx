@@ -4,7 +4,10 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
-import { NHIPortionTooltip } from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
+import {
+  NHIPortionTooltip,
+  NHICalculationBaseTooltip,
+} from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type {
   TakeHomeResults,
@@ -18,6 +21,7 @@ import {
   calculateNationalHealthInsurancePremiumWithBreakdown,
   type NationalHealthInsurancePortionKey,
 } from '../utils/healthInsuranceCalculator';
+import { calculateTaxes } from '../utils/taxCalculations';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -272,6 +276,79 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         />,
       );
       expect(container.textContent).not.toContain('均等割額の軽減');
+    });
+  });
+
+  describe('multi-member household per-capita formula and calculation base tooltip', () => {
+    it('shows the per-capita formula C * A = Y with member count for multi-member households', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dependents: [
+          {
+            id: 'spouse',
+            relationship: 'spouse',
+            ageRange: '40to64',
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            disability: 'none',
+            isSameHousehold: true,
+            healthInsurance: 'nhi',
+          },
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      // Per-capita formula should show: Rate × 2 members = Total
+      expect(container.textContent).toMatch(/¥\d{1,3}(,\d{3})* × 2 members = ¥\d{1,3}(,\d{3})*/);
+    });
+
+    it('renders NHICalculationBaseTooltip with each member breakdown and statutory citations', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dependents: [
+          {
+            id: 'spouse',
+            relationship: 'spouse',
+            ageRange: '40to64',
+            // Net employment income: 1,000,000 - 550,000 = 450,000.
+            // Base: 450,000 - 430,000 = 20,000.
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            disability: 'none',
+            isSameHousehold: true,
+            healthInsurance: 'nhi',
+          },
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(<NHICalculationBaseTooltip results={results} inputs={inputs} />);
+
+      // Shows members
+      expect(container.textContent).toContain('Taxpayer (You)');
+      expect(container.textContent).toContain('Spouse');
+      expect(container.textContent).toContain('Household Total Base');
+      expect(container.textContent).toContain('Long-Term Care Base');
+      expect(container.textContent).toContain('地方税法第703条の4第6項');
     });
   });
 });

@@ -812,3 +812,44 @@ describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
     },
   );
 });
+
+describe('SocialInsuranceTab household NHI calculation base display', () => {
+  it('displays Taxpayer Calculation Base, Other Enrolled Members, and Household NHI Calculation Base', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+      incomeYear: 2026,
+      ageRange: 'age40to59',
+      region: 'Tokyo-Setagaya',
+      healthInsuranceProvider: 'NationalHealthInsurance',
+      dependents: [
+        {
+          id: 'spouse',
+          relationship: 'spouse',
+          ageRange: '40to64',
+          // Net employment income in 2026: 1,190,000 - 740,000 = 450,000.
+          // Base: 450,000 - 430,000 = 20,000.
+          income: {
+            grossEmploymentIncome: 1_190_000,
+            grossPublicPensionIncome: 0,
+            otherNetIncome: 0,
+          },
+          disability: 'none',
+          isSameHousehold: true,
+          healthInsurance: 'nhi',
+        },
+      ],
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={calculateTaxes(inputs)} />);
+
+    // Taxpayer base: 5,000,000 - 430,000 = 4,570,000
+    expect(resultRowText('Taxpayer Calculation Base')).toContain('¥4,570,000');
+
+    // Other members base: 20,000
+    expect(resultRowText('Other Enrolled Members')).toContain('¥20,000');
+
+    // Household total base: 4,570,000 + 20,000 = 4,590,000
+    expect(resultRowText('Household NHI Calculation Base')).toContain('¥4,590,000');
+  });
+});

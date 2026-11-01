@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
 import { alpha } from '@mui/material/styles';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
@@ -26,13 +32,18 @@ import {
 } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import { getNHIPremiumReductionThresholdsForMonth } from '../../../data/nationalHealthInsurance/nhiPremiumReduction';
 import type { Rate } from '../../../data/rate';
+import { calculateResidenceTaxBasicDeduction } from '../../../data/residenceTaxBasicDeduction';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
   type NHIPremiumReductionRatio,
 } from '../../../types/healthInsurance';
-import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
+import type {
+  TakeHomeResults,
+  TakeHomeInputs,
+  NHIHouseholdMemberSummary,
+} from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import {
@@ -66,6 +77,65 @@ interface NHIPortionTooltipProps {
   inputs: TakeHomeInputs;
 }
 
+const renderPerCapitaFormula = (calc: NationalHealthInsurancePortion) => {
+  const reductionFactor =
+    calc.reductionRatio > 0 ? (
+      <>
+        {' × '}
+        {Math.round((1 - calc.reductionRatio) * 100)}%<sup>†</sup>
+      </>
+    ) : null;
+
+  // Case 1: Preschool children discount (50% reduction for preschool age under 6)
+  if (calc.preschoolCount > 0) {
+    const adultCount = Math.max(0, calc.insuredCount - calc.preschoolCount);
+    return (
+      <>
+        {adultCount > 0 && (
+          <>
+            {formatJPY(calc.perCapitaFull)}
+            {reductionFactor}
+            {` × ${adultCount} adult${adultCount > 1 ? 's' : ''}`}
+            {' + '}
+          </>
+        )}
+        {formatJPY(calc.perCapitaFull)}
+        {reductionFactor}
+        {` × 50% × ${calc.preschoolCount} preschool`}
+        {' = '}
+        {formatJPY(calc.perCapita)}
+      </>
+    );
+  }
+
+  // Case 2: Child support exemption (children through age 18 exempt from child support levy)
+  if (calc.childSupportExemptCount > 0) {
+    const nonExemptCount = Math.max(0, calc.insuredCount - calc.childSupportExemptCount);
+    return (
+      <>
+        {formatJPY(calc.perCapitaFull)}
+        {reductionFactor}
+        {` × ${nonExemptCount} adult${nonExemptCount > 1 ? 's' : ''}`}
+        {` (${calc.childSupportExemptCount} under 19 exempt)`}
+        {' = '}
+        {formatJPY(calc.perCapita)}
+      </>
+    );
+  }
+
+  // Case 3: Standard formula C * A = Y
+  const count = calc.insuredCount;
+  return (
+    <>
+      {formatJPY(calc.perCapitaFull)}
+      {reductionFactor}
+      {count > 1 ? ` × ${count} members` : count === 1 ? ' × 1 member' : ''}
+      {' = '}
+      {formatJPY(calc.perCapita)}
+    </>
+  );
+};
+
 const PortionBreakdown: React.FC<{
   label: string;
   calculationBase: number;
@@ -91,15 +161,7 @@ const PortionBreakdown: React.FC<{
       {formatJPY(calc.incomeBased)}
     </Typography>
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-      Per-capita (均等割):{' '}
-      {calc.reductionRatio > 0 ? (
-        <>
-          {formatJPY(calc.perCapitaFull)} × {Math.round((1 - calc.reductionRatio) * 100)}%
-          <sup>†</sup> = {formatJPY(calc.perCapita)}
-        </>
-      ) : (
-        formatJPY(calc.perCapita)
-      )}
+      Per-capita (均等割): {renderPerCapitaFormula(calc)}
     </Typography>
     {calc.householdFlatFull > 0 && (
       <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
@@ -427,6 +489,168 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
 
       {source}
       {reductionFootnote}
+    </Box>
+  );
+};
+
+export interface NHICalculationBaseTooltipProps {
+  results: TakeHomeResults;
+  inputs: TakeHomeInputs;
+}
+
+const formatMemberLabel = (relationship: string, isTaxpayer: boolean): string => {
+  if (isTaxpayer) return 'Taxpayer (You)';
+  switch (relationship) {
+    case 'spouse':
+      return 'Spouse';
+    case 'child':
+      return 'Child';
+    case 'parent':
+      return 'Parent';
+    default:
+      return 'Other Dependent';
+  }
+};
+
+/**
+ * Tooltip explaining how the National Health Insurance calculation base (算定基礎額 / 旧ただし書き所得)
+ * is determined across all household members under Local Tax Law Art. 703-4 and NHI regulations.
+ */
+export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps> = ({
+  results,
+  inputs,
+}) => {
+  const household = results.nhiHousehold;
+  const isLtc = isLongTermCareCategory2Insured(inputs.ageRange);
+  const totalBase = household
+    ? household.calculationBase
+    : premiumCalculationBase(results.totalNetIncome);
+
+  const members: NHIHouseholdMemberSummary[] = household?.members ?? [
+    {
+      id: 'taxpayer',
+      relationship: 'taxpayer',
+      isTaxpayer: true,
+      isHouseholdHead: true,
+      isNHIInsured: true,
+      isLtcCat2: isLtc,
+      netIncome: results.totalNetIncome,
+      basicDeduction: calculateResidenceTaxBasicDeduction(results.totalNetIncome),
+      calculationBase: premiumCalculationBase(results.totalNetIncome),
+    },
+  ];
+
+  const insuredMembers = members.filter(m => m.isNHIInsured);
+  const nonInsuredHead = members.find(m => m.isHouseholdHead && !m.isNHIInsured);
+
+  return (
+    <Box sx={{ minWidth: { xs: 0, sm: 340 }, maxWidth: { xs: '100vw', sm: 460 } }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+        National Health Insurance Calculation Base (算定基礎額)
+      </Typography>
+      <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 1 }}>
+        Under Japanese Local Tax Law and NHI statutory regulations, each insured person's
+        calculation base (旧ただし書き所得) is calculated by deducting the residence tax basic
+        deduction (基礎控除, ¥430,000) from their total net income (総所得金額等), floored at ¥0.
+      </Typography>
+      <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 1.5 }}>
+        The household calculation base is the sum of all enrolled members' individual calculation
+        bases. Unused deductions from one member cannot offset another member's income.
+      </Typography>
+
+      <Paper variant="outlined" sx={{ mb: 1.5, overflowX: 'auto' }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Member</TableCell>
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                Net Income
+              </TableCell>
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                Basic Ded.
+              </TableCell>
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                Base
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {insuredMembers.map(m => (
+              <TableRow key={m.id}>
+                <TableCell>
+                  {formatMemberLabel(m.relationship, m.isTaxpayer)}
+                  {m.isLtcCat2 && (
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', display: 'block', fontSize: '0.75rem' }}
+                    >
+                      Age 40–64 (LTC)
+                    </Typography>
+                  )}
+                </TableCell>
+                <TableCell align="right">{formatJPY(m.netIncome)}</TableCell>
+                <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                  {m.netIncome > 0
+                    ? `-${formatJPY(Math.min(m.netIncome, m.basicDeduction))}`
+                    : '¥0'}
+                </TableCell>
+                <TableCell align="right">
+                  <strong>{formatJPY(m.calculationBase)}</strong>
+                </TableCell>
+              </TableRow>
+            ))}
+            {nonInsuredHead && (
+              <TableRow key="non-insured-head" sx={{ opacity: 0.7 }}>
+                <TableCell>
+                  {formatMemberLabel(nonInsuredHead.relationship, nonInsuredHead.isTaxpayer)} (Head)
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'text.secondary', display: 'block', fontSize: '0.75rem' }}
+                  >
+                    Not on NHI (¥0 base)
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">{formatJPY(nonInsuredHead.netIncome)}</TableCell>
+                <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                  —
+                </TableCell>
+                <TableCell align="right">¥0</TableCell>
+              </TableRow>
+            )}
+            <TableRow sx={{ bgcolor: 'action.hover' }}>
+              <TableCell colSpan={3}>
+                <strong>Household Total Base (世帯合計)</strong>
+              </TableCell>
+              <TableCell align="right">
+                <strong>{formatJPY(totalBase)}</strong>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Paper>
+
+      {household && household.ltcInsuredCount > 0 && (
+        <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            <strong>Long-Term Care Base (介護納付金分):</strong>{' '}
+            {formatJPY(household.ltcCalculationBase)} (assessed only on the{' '}
+            {household.ltcInsuredCount} member(s) aged 40–64).
+          </Typography>
+        </Box>
+      )}
+
+      <SourceLinks
+        sources={[
+          {
+            href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/koukikourei/index_00002.html',
+            label: 'MHLW: National Health Insurance System (厚生労働省: 国民健康保険制度)',
+          },
+          {
+            href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180.htm',
+            label: 'Local Tax Act Art. 703-4 (地方税法第703条の4第6項)',
+          },
+        ]}
+      />
     </Box>
   );
 };
