@@ -365,27 +365,45 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               isTaxpayerNHI={isTaxpayerNHI}
             />
 
-            <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 2.5 }} />
 
             {/* Other Dependents Section */}
-            <Typography variant="h6" gutterBottom>
-              Other Dependents
-            </Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 1,
+                mb: otherDependents.length === 0 ? 1 : 1.5,
+              }}
+            >
+              <Typography variant="h6">Other Dependents</Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleStartAdd}
+                size="small"
+              >
+                Add Dependent
+              </Button>
+            </Box>
 
             {/* List of other dependents */}
             {otherDependents.length === 0 ? (
               <Box
                 sx={{
                   textAlign: 'center',
-                  py: 4,
+                  pt: 1,
+                  pb: 0.5,
                   color: 'text.secondary',
                 }}
               >
-                <PersonIcon sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
+                <PersonIcon sx={{ fontSize: 36, opacity: 0.3, mb: 0.25 }} />
                 <Typography variant="body2">No other dependents added yet</Typography>
               </Box>
             ) : (
-              <List sx={{ width: '100%' }}>
+              <List sx={{ width: '100%', p: 0 }}>
                 {otherDependents.map((dependent, index) => (
                   <React.Fragment key={dependent.id}>
                     {index > 0 && <Divider component="li" />}
@@ -413,7 +431,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         </>
                       }
                       sx={{
-                        py: 2,
+                        py: 1.5,
                         px: { xs: 1, sm: 2 },
                         '&:hover': {
                           bgcolor: 'action.hover',
@@ -449,23 +467,10 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               </List>
             )}
 
-            {/* Add button */}
-            <Box sx={{ mt: 3, textAlign: 'center' }}>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={handleStartAdd}
-                size="large"
-                fullWidth={isMobile}
-              >
-                Add Other Dependent
-              </Button>
-            </Box>
-
             {/* Household National Health Insurance Section */}
             {hasNHIMembers && (
-              <Box sx={{ mt: 4 }}>
-                <Divider sx={{ mb: 2 }} />
+              <Box>
+                <Divider sx={{ my: 2.5 }} />
                 <Typography variant="h6" gutterBottom>
                   Household National Health Insurance (国民健康保険)
                 </Typography>
@@ -538,8 +543,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
             {/* Deduction Summary */}
             {(spouse || otherDependents.length > 0) && (
-              <Box sx={{ mt: 4 }}>
-                <Divider sx={{ mb: 2 }} />
+              <Box>
+                <Divider sx={{ my: 2.5 }} />
                 <Typography variant="h6" gutterBottom>
                   Total Deductions Summary
                 </Typography>
