@@ -305,7 +305,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
             {/* Livelihood / Shared Expenses Disclaimer */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 0.5 }}>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Only add persons with whom you share living expenses (生計を一にする).
+                Only add persons with whom living expenses are shared (生計を一にする).
               </Typography>
               <DetailedTooltip
                 title="Sharing Living Expenses (生計を一にする)"
@@ -317,9 +317,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Family members living together are presumed to share expenses. Family members
-                  living apart (e.g. for work relocation 単身赴任, university, or medical
-                  convalescence) fully qualify as long as living, educational, or medical funds are
-                  regularly remitted.
+                  living apart (e.g. for work relocation, university, or medical treatment) fully
+                  qualify as long as living, educational, or medical funds are regularly remitted.
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Independent housemates or roommates with separate finances do not share living
@@ -504,8 +503,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           ))}
                         </Select>
                         <FormHelperText>
-                          Since you are on employment or other insurance, select the municipality
-                          where your cohabiting family members' NHI is registered.
+                          When the taxpayer is on employment or other insurance, select the
+                          municipality where the household members' NHI is registered.
                         </FormHelperText>
                       </FormControl>
                     )}

@@ -193,10 +193,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               Claim as tax dependent
               <SimpleTooltip>
-                Leave checked to claim 扶養控除 / 障害者控除 / 所得金額調整控除. Uncheck if this
-                person is not claimed on your tax return (e.g. child claimed by the other parent
-                under 所得税法第85条第5項, or an independent same-household earner), while still
-                including them in the household for National Health Insurance.
+                Leave checked to claim tax deductions for this dependent. Uncheck if this person is
+                not claimed on the tax return or year-end adjustment (e.g. child claimed by the
+                other parent).
               </SimpleTooltip>
             </Box>
           }
@@ -212,7 +211,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
           }
           label={
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              In the same household
+              Same registered address
               <DetailedTooltip
                 title="Same Municipal Household (同一世帯)"
                 icon={SIMPLE_TOOLTIP_ICON}
@@ -221,22 +220,16 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                   Registered under the same municipal resident record (住民票上の同一世帯).
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  Determines whether National Health Insurance covers this person in your municipal
-                  household and pools their per-capita fee and income.
+                  Determines whether National Health Insurance calculations can include this person
+                  and their income.
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  Also qualifies elderly parents (70+) for the cohabiting elderly parent deduction
-                  (同居老親等: +¥100k national / +¥70k residence tax) and disabled persons for the
-                  cohabiting special disability deduction (同居特別障害者: +¥350k national / +¥230k
-                  residence tax).
+                  Also qualifies elderly dependent relatives (70+) for the cohabiting elderly
+                  relative deduction (同居老親等) and disabled persons for the cohabiting special
+                  disability deduction (同居特別障害者).
                 </Typography>
                 <SourceLinks
                   sources={[
-                    {
-                      href: 'https://laws.e-gov.go.jp/law/333AC0000000192#Mp-At_76',
-                      label:
-                        'e-Gov: National Health Insurance Act Art. 76 (国民健康保険法第76条: 世帯主の納付義務)',
-                    },
                     {
                       href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/koukikourei/index_00002.html',
                       label:
@@ -258,9 +251,9 @@ export const DependentForm: React.FC<DependentFormProps> = ({
       {!hasAnyImpact ? (
         <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            This person is neither claimed on your tax return nor enrolled in your municipal
-            household for National Health Insurance. As a result, they will have no effect on your
-            taxes or health insurance premiums.
+            This person is neither claimed as a dependent nor registered at the same address for
+            National Health Insurance. As a result, they will have no effect on taxes or health
+            insurance premiums.
           </Typography>
         </Paper>
       ) : (

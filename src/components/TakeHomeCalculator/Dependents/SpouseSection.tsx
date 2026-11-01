@@ -156,9 +156,9 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   Claim as tax dependent
                   <SimpleTooltip>
-                    Leave checked to claim 配偶者控除 / 配偶者特別控除 / 障害者控除. Uncheck if your
-                    spouse files independently or is not claimed on your tax return, while still
-                    including them in the household for National Health Insurance.
+                    Leave checked to claim eligible tax deductions for a spouse. Uncheck if the
+                    spouse is claiming the deductions instead (spouses cannot both claim each
+                    other).
                   </SimpleTooltip>
                 </Box>
               }
@@ -174,7 +174,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
               }
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  In the same household
+                  Same registered address
                   <DetailedTooltip
                     title="Same Municipal Household (同一世帯)"
                     icon={SIMPLE_TOOLTIP_ICON}
@@ -183,21 +183,15 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                       Registered under the same municipal resident record (住民票上の同一世帯).
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      National Health Insurance (国民健康保険) pools premiums and calculates 7/5/2割
-                      reductions across all enrolled members registered in the same household.
+                      National Health Insurance (国民健康保険) calculates premiums across all
+                      enrolled members registered in the same household.
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
-                      Uncheck if registered at a separate address (e.g. for work relocation
-                      単身赴任). Spousal tax deductions (配偶者控除・配偶者特別控除) are not
-                      affected as long as you share living expenses.
+                      Uncheck if registered at a separate address (e.g. for work relocation).
+                      Spousal tax deductions are not affected as long as living expenses are shared.
                     </Typography>
                     <SourceLinks
                       sources={[
-                        {
-                          href: 'https://laws.e-gov.go.jp/law/333AC0000000192#Mp-At_76',
-                          label:
-                            'e-Gov: National Health Insurance Act Art. 76 (国民健康保険法第76条: 世帯主の納付義務)',
-                        },
                         {
                           href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/koukikourei/index_00002.html',
                           label:
@@ -219,9 +213,9 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
           {!hasAnyImpact ? (
             <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Your spouse is neither claimed on your tax return nor enrolled in your municipal
-                household for National Health Insurance. As a result, they will have no effect on
-                your taxes or health insurance premiums.
+                The spouse is neither claimed for tax deductions nor registered at the same address
+                for National Health Insurance. As a result, they will have no effect on taxes or
+                health insurance premiums.
               </Typography>
             </Paper>
           ) : (
@@ -231,9 +225,10 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                 <Typography variant="subtitle2" gutterBottom>
                   Income Information{' '}
                   <SimpleTooltip>
-                    Enter income amounts to calculate total net income (合計所得金額) and determine
-                    deduction eligibility. Survivor and disability pensions (遺族年金・障害年金) are
-                    non-taxable and are not included.
+                    Enter income amounts to calculate total net income (合計所得金額) to determine
+                    deduction eligibility and National Health Insurance premiums (if applicable).
+                    Survivor and disability pensions (遺族年金・障害年金) are non-taxable and are
+                    not included.
                   </SimpleTooltip>
                 </Typography>
 
@@ -558,7 +553,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                         </MenuItem>
                       </Select>
                       <FormHelperText>
-                        Determines whether your spouse is covered under household National Health
+                        Determines whether the spouse is covered under household National Health
                         Insurance.
                       </FormHelperText>
                     </FormControl>
@@ -576,7 +571,7 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           Designate as household head (擬制世帯主)
                           <SimpleTooltip>
-                            Check if your spouse is the official household head (世帯主) on the
+                            Check if the spouse is the official household head (世帯主) on the
                             住民票. Under NHI law, a non-NHI household head's income is counted
                             toward the 7/5/2割 low-income premium reduction test.
                           </SimpleTooltip>
