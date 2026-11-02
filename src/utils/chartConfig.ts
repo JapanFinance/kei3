@@ -260,7 +260,7 @@ export const generateChartData = (
       label: 'Health Insurance',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.healthInsurance,
+        y: result.healthInsurance + (result.householdNHIPremium ?? 0),
         breakdown,
       })),
       borderColor: 'var(--mui-palette-text-primary)',
@@ -316,23 +316,6 @@ export const generateChartData = (
               breakdown,
             })),
             backgroundColor: 'rgba(0, 139, 139, 0.7)',
-            yAxisID: 'y',
-            type: 'bar' as const,
-            stack: 'stack0',
-          },
-        ]
-      : []),
-    // Without this bar the stack would fall short of the income by the household NHI amount paid as deemed head.
-    ...(resultsAndCaps.some(({ result }) => (result.householdNHIPremium ?? 0) > 0)
-      ? [
-          {
-            label: 'Household National Health Insurance',
-            data: resultsAndCaps.map(({ result, breakdown }, i) => ({
-              x: incomePoints[i]!,
-              y: result.householdNHIPremium ?? 0,
-              breakdown,
-            })),
-            backgroundColor: 'rgba(233, 30, 99, 0.7)',
             yAxisID: 'y',
             type: 'bar' as const,
             stack: 'stack0',

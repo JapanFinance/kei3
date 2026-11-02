@@ -481,7 +481,7 @@ describe('generateChartData employment insurance bar', () => {
 });
 
 describe('generateChartData with household National Health Insurance', () => {
-  it('renders Household National Health Insurance bar and stacks to total income', () => {
+  it('folds household NHI into Health Insurance bar and stacks to total income', () => {
     // EHI employee whose cohabiting spouse is on NHI
     const spouse: Dependent = {
       id: 'spouse',
@@ -502,11 +502,12 @@ describe('generateChartData with household National Health Insurance', () => {
 
     const { datasets } = generateChartData(range, householdContext);
 
-    // Verify dataset exists and is a stacked bar
-    const householdNhi = datasets.find(d => d.label === 'Household National Health Insurance');
-    expect(householdNhi).toBeDefined();
-    expect(householdNhi!.type).toBe('bar');
-    expect(pointsOf(householdNhi!)[0]!.y).toBeGreaterThan(0);
+    // Verify household NHI is folded into Health Insurance and no separate dataset exists
+    expect(datasets.some(d => d.label === 'Household National Health Insurance')).toBe(false);
+    const healthInsurance = datasets.find(d => d.label === 'Health Insurance');
+    expect(healthInsurance).toBeDefined();
+    expect(healthInsurance!.type).toBe('bar');
+    expect(pointsOf(healthInsurance!)[0]!.y).toBeGreaterThan(0);
 
     // Verify all bars stack to total swept income at every point
     const bars = datasets.filter(d => d.type === 'bar');
