@@ -640,6 +640,8 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                         disability,
                         isSameHousehold,
                         isClaimedAsDependent,
+                        healthInsurance,
+                        isHouseholdHead,
                       };
 
                       // Calculate all deductions for this dependent

@@ -6,18 +6,19 @@ import userEvent from '@testing-library/user-event';
 
 import { DependentForm } from '../components/TakeHomeCalculator/Dependents/DependentForm';
 import type { OtherDependent } from '../types/dependents';
+import { makeDependent } from './fixtures/dependents';
 
 const INCOME_YEAR = 2026;
 
 describe('DependentForm public pension income', () => {
-  const pensionerParent: OtherDependent = {
+  const pensionerParent: OtherDependent = makeDependent({
     id: 'dep-1',
     relationship: 'parent',
     ageRange: '70to74',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 1_580_000, otherNetIncome: 0 },
     disability: 'none',
     isSameHousehold: true,
-  };
+  });
 
   it('shows the pension row and applies the 公的年金等控除 in the previews', () => {
     render(

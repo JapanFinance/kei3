@@ -22,21 +22,15 @@ import {
   resolveDependentNHIEnrollment,
   resolveEffectiveNHIRegion,
 } from '../utils/nhiHousehold';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 describe('resolveDependentNHIEnrollment', () => {
-  const baseDependent: Dependent = {
+  const baseDependent: Dependent = makeDependent({
     id: 'dep-1',
     relationship: 'child',
     ageRange: '6to15',
     isSameHousehold: true,
-    income: {
-      grossEmploymentIncome: 0,
-      grossPublicPensionIncome: 0,
-      otherNetIncome: 0,
-    },
-    disability: 'none',
-    isClaimedAsDependent: true,
-  };
+  });
 
   it('returns false when the dependent is not cohabiting', () => {
     const nonCohabiting: Dependent = {
@@ -69,25 +63,18 @@ describe('resolveDependentNHIEnrollment', () => {
   it('returns false when healthInsurance is explicitly set to other', () => {
     const otherDep: Dependent = {
       ...baseDependent,
-      healthInsurance: 'other',
+      healthInsurance: 'non_nhi',
     };
     expect(resolveDependentNHIEnrollment(otherDep, true)).toBe(false);
   });
 
-  it('follows taxpayer insurance when healthInsurance is auto or undefined', () => {
+  it('follows taxpayer insurance when healthInsurance is auto', () => {
     const autoDep: Dependent = {
       ...baseDependent,
       healthInsurance: 'auto',
     };
     expect(resolveDependentNHIEnrollment(autoDep, true)).toBe(true);
     expect(resolveDependentNHIEnrollment(autoDep, false)).toBe(false);
-
-    const undefinedDep: Dependent = {
-      ...baseDependent,
-      healthInsurance: undefined,
-    };
-    expect(resolveDependentNHIEnrollment(undefinedDep, true)).toBe(true);
-    expect(resolveDependentNHIEnrollment(undefinedDep, false)).toBe(false);
   });
 });
 
@@ -185,20 +172,17 @@ describe('composeNHIHousehold', () => {
 
   it('correctly models deemed household head (擬制世帯主)', () => {
     // Taxpayer is on Kyokai Kenpo (EHI), but spouse is enrolled in NHI
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 1_000_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {
@@ -224,21 +208,19 @@ describe('composeNHIHousehold', () => {
   });
 
   it('supports designated household head when dependent is head', () => {
-    const parent: Dependent = {
+    const parent: Dependent = makeDependent({
       id: 'parent',
       relationship: 'parent',
       ageRange: '65to69',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 1_200_000,
         otherNetIncome: 0,
       },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
       isHouseholdHead: true,
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {
@@ -259,20 +241,13 @@ describe('composeNHIHousehold', () => {
   });
 
   it('excludes non-cohabiting dependents from NHI household', () => {
-    const nonCohabitingChild: Dependent = {
+    const nonCohabitingChild: Dependent = makeDependent({
       id: 'child-away',
       relationship: 'child',
       ageRange: '19to22',
       isSameHousehold: false,
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      disability: 'none',
-      isClaimedAsDependent: true,
       healthInsurance: 'nhi',
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {
@@ -292,61 +267,29 @@ describe('composeNHIHousehold', () => {
   });
 
   it('counts preschool children and under-18 children accurately', () => {
-    const preschoolChild: Dependent = {
+    const preschoolChild: Dependent = makeDependent({
       id: 'child-preschool',
       relationship: 'child',
       ageRange: 'under6',
-      isSameHousehold: true,
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      disability: 'none',
-      isClaimedAsDependent: true,
-    };
+    });
 
-    const schoolChild: Dependent = {
+    const schoolChild: Dependent = makeDependent({
       id: 'child-school',
       relationship: 'child',
       ageRange: '6to15',
-      isSameHousehold: true,
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      disability: 'none',
-      isClaimedAsDependent: true,
-    };
+    });
 
-    const highSchoolChild: Dependent = {
+    const highSchoolChild: Dependent = makeDependent({
       id: 'child-highschool',
       relationship: 'child',
       ageRange: '16to18',
-      isSameHousehold: true,
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      disability: 'none',
-      isClaimedAsDependent: true,
-    };
+    });
 
-    const universityChild: Dependent = {
+    const universityChild: Dependent = makeDependent({
       id: 'child-college',
       relationship: 'child',
       ageRange: '19to22',
-      isSameHousehold: true,
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      disability: 'none',
-      isClaimedAsDependent: true,
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {
@@ -367,20 +310,16 @@ describe('composeNHIHousehold', () => {
   });
 
   it('applies the ¥150,000 elderly pension special deduction for 65+ members in reduction test income', () => {
-    const elderlySpouse: Dependent = {
+    const elderlySpouse: Dependent = makeSpouse({
       id: 'elderly-spouse',
-      relationship: 'spouse',
       ageRange: '65to69',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 1_000_000, // net pension income will be calculated
         otherNetIncome: 0,
       },
-      disability: 'none',
-      isClaimedAsDependent: true,
       healthInsurance: 'nhi',
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {
@@ -404,34 +343,28 @@ describe('composeNHIHousehold', () => {
   });
 
   it('counts salary earners accurately for reduction threshold expansion', () => {
-    const earnerSpouse: Dependent = {
+    const earnerSpouse: Dependent = makeSpouse({
       id: 'earner-spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD + 10_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
-    };
+    });
 
-    const nonEarnerChild: Dependent = {
+    const nonEarnerChild: Dependent = makeDependent({
       id: 'child',
       relationship: 'child',
       ageRange: '6to15',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 200_000, // below threshold
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-      disability: 'none',
-      isClaimedAsDependent: true,
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {
@@ -451,11 +384,10 @@ describe('composeNHIHousehold', () => {
   });
 
   it('counts a pensioner with adjusted pension > 0 as a salary/pension earner', () => {
-    const pensionerParent: Dependent = {
+    const pensionerParent: Dependent = makeDependent({
       id: 'parent',
       relationship: 'parent',
       ageRange: '65to69',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         // Gross pension 1.5M -> Net pension (65+) = 1.5M - 1.1M = 400,000
@@ -464,10 +396,9 @@ describe('composeNHIHousehold', () => {
         grossPublicPensionIncome: 1_500_000,
         otherNetIncome: 0,
       },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {
@@ -491,35 +422,28 @@ describe('composeNHIHousehold', () => {
     // Member 2 (Child, age 16-18): Net 200,000 -> Base: max(0, 200,000 - 430,000) = 0 (LTC: false)
     //   Unused deduction: 230,000 (must NOT transfer to reduce Taxpayer or Spouse base)
     // Member 3 (Spouse, age 40-64): Net 600,000 -> Base: 600,000 - 430,000 = 170,000 (LTC: true)
-    const child: Dependent = {
+    const child: Dependent = makeDependent({
       id: 'child',
       relationship: 'child',
       ageRange: '16to18',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
         otherNetIncome: 200_000,
       },
-      disability: 'none',
-      isClaimedAsDependent: true,
       healthInsurance: 'nhi',
-    };
+    });
 
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
         otherNetIncome: 600_000,
       },
-      disability: 'none',
-      isClaimedAsDependent: true,
       healthInsurance: 'nhi',
-    };
+    });
 
     const composition = composeNHIHousehold({
       taxpayer: {

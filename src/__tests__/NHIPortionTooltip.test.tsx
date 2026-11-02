@@ -22,6 +22,7 @@ import {
   type NationalHealthInsurancePortionKey,
 } from '../utils/healthInsuranceCalculator';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeSpouse } from './fixtures/dependents';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -292,19 +293,16 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         manualSocialInsuranceEntry: false,
         manualSocialInsuranceAmount: 0,
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse',
-            relationship: 'spouse',
             ageRange: '40to64',
             income: {
               grossEmploymentIncome: 1_000_000,
               grossPublicPensionIncome: 0,
               otherNetIncome: 0,
             },
-            disability: 'none',
-            isSameHousehold: true,
             healthInsurance: 'nhi',
-          },
+          }),
         ],
       };
       const results = calculateTaxes(inputs);
@@ -328,9 +326,8 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         manualSocialInsuranceEntry: false,
         manualSocialInsuranceAmount: 0,
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse',
-            relationship: 'spouse',
             ageRange: '40to64',
             // Net employment income: 1,000,000 - 550,000 = 450,000.
             // Base: 450,000 - 430,000 = 20,000.
@@ -339,10 +336,8 @@ describe('NHIPortionTooltip consistency with calculator', () => {
               grossPublicPensionIncome: 0,
               otherNetIncome: 0,
             },
-            disability: 'none',
-            isSameHousehold: true,
             healthInsurance: 'nhi',
-          },
+          }),
         ],
       };
       const results = calculateTaxes(inputs);

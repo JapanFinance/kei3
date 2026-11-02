@@ -32,6 +32,7 @@ import {
   residenceTaxPaid,
   totalSocialInsurancePaid,
 } from '../utils/taxCalculations';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 describe('calculateTaxes', () => {
   // Test cases for different income brackets
@@ -419,14 +420,11 @@ describe('calculateTaxes', () => {
   });
 
   it('raises the exemption threshold with a dependent', () => {
-    const spouse = {
+    const spouse = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse' as const,
-      ageRange: 'under40' as const,
+      ageRange: 'under40',
       isSameHousehold: true,
-      disability: 'none' as const,
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    });
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ type: 'miscellaneous' as const, amount: 1_000_000, id: 'test' }],
@@ -2639,14 +2637,11 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
     const withChild = {
       ...baseSalaryInputs,
       dependents: [
-        {
+        makeDependent({
           id: 'c1',
-          relationship: 'child' as const,
-          ageRange: '19to22' as const,
-          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-          disability: 'none' as const,
+          ageRange: '19to22',
           isSameHousehold: true,
-        },
+        }),
       ],
       lifeInsurance: { generalNew: 120_000, medicalCareNew: 0, pensionNew: 0 },
     };
@@ -2965,22 +2960,18 @@ describe('RSU (Restricted Stock Unit) income', () => {
 });
 
 describe('所得金額調整控除 (income amount adjustment deduction) integration', () => {
-  const childUnder23: Dependent = {
+  const childUnder23: Dependent = makeDependent({
     id: 'c1',
     relationship: 'child',
     ageRange: '19to22',
     isSameHousehold: false,
-    disability: 'none',
-    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-  };
-  const adultChild: Dependent = {
+  });
+  const adultChild: Dependent = makeDependent({
     id: 'c2',
     relationship: 'child',
     ageRange: '23to39',
     isSameHousehold: false,
-    disability: 'none',
-    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-  };
+  });
 
   const baseInputs = (dependents: Dependent[]) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -3161,15 +3152,12 @@ describe('home loan credit spillover vs. a residence tax that levies no 所得�
   // The spillover is deducted from the residence-tax 所得割 (地方税法附則第5条の4の2), so a year
   // with no 所得割 absorbs none of it. Both 非課税 paths in calculateResidenceTax are covered:
   // 所得割・均等割とも非課税, and 均等割のみ課税 (所得割が非課税).
-  const underSixteen = (id: string): Dependent => ({
-    id,
-    relationship: 'child',
-    ageRange: '6to15',
-    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    disability: 'none',
-    isSameHousehold: true,
-    healthInsurance: 'other',
-  });
+  const underSixteen = (id: string): Dependent =>
+    makeDependent({
+      id,
+      ageRange: '6to15',
+      healthInsurance: 'non_nhi',
+    });
 
   const householdWithSalary = (amount: number) =>
     calculateTaxes({
@@ -3570,18 +3558,15 @@ describe('calculateTaxes at ages 65 and over', () => {
       const withTaxableSpouse = calculateTaxes({
         ...nhiPensionInputs(1_500_000),
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse-1',
-            relationship: 'spouse' as const,
-            ageRange: 'under40' as const,
+            ageRange: 'under40',
             income: {
               grossEmploymentIncome: 0,
               grossPublicPensionIncome: 0,
               otherNetIncome: 500_000,
             },
-            disability: 'none' as const,
-            isSameHousehold: true,
-          },
+          }),
         ],
       });
       expect(withTaxableSpouse.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(5);
@@ -3602,14 +3587,10 @@ describe('calculateTaxes at ages 65 and over', () => {
       const withDependent = calculateTaxes({
         ...nhiPensionInputs(1_700_000),
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse-1',
-            relationship: 'spouse' as const,
-            ageRange: 'under40' as const,
-            income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-            disability: 'none' as const,
-            isSameHousehold: true,
-          },
+            ageRange: 'under40',
+          }),
         ],
       });
       // Now 非課税, and the spouse has no income of their own, so the whole 世帯 is untaxed.
@@ -5014,14 +4995,10 @@ describe('calculateTaxes with investment income reported under 申告分離課�
         dividends,
       ],
       dependents: [
-        {
+        makeSpouse({
           id: 'spouse',
-          relationship: 'spouse',
           ageRange: 'under40',
-          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-          disability: 'none',
-          isSameHousehold: true,
-        },
+        }),
       ],
     });
 
@@ -6450,18 +6427,15 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           dependents:
             rand() < 0.3
               ? [
-                  {
+                  makeSpouse({
                     id: 'sp1',
-                    relationship: 'spouse',
                     ageRange: 'under40',
                     income: {
                       grossEmploymentIncome: randInt(0, 1_500_000),
                       grossPublicPensionIncome: 0,
                       otherNetIncome: 0,
                     },
-                    disability: 'none',
-                    isSameHousehold: true,
-                  },
+                  }),
                 ]
               : [],
           dcPlanContributions: pick([0, 276_000]),
@@ -6647,16 +6621,12 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
 
     it('assesses household NHI for EHI employee as deemed head and deducts under 所法74条②一', () => {
       // Cohabiting spouse enrolled in NHI with ¥0 income
-      const spouse: Dependent = {
+      const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        relationship: 'spouse',
         ageRange: '40to64',
-        isSameHousehold: true,
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-        disability: 'none',
         isClaimedAsDependent: false, // Not claimed as tax dependent
         healthInsurance: 'nhi',
-      };
+      });
 
       const withoutHouseholdNHI = calculateTaxes(baseInputs);
 
@@ -6694,16 +6664,12 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     });
 
     it('allows EHI deemed head to attribute none of spouse NHI to taxpayer return', () => {
-      const spouse: Dependent = {
+      const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        relationship: 'spouse',
         ageRange: '40to64',
-        isSameHousehold: true,
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-        disability: 'none',
         isClaimedAsDependent: false,
         healthInsurance: 'nhi',
-      };
+      });
 
       const withNoAttribution = calculateTaxes({
         ...baseInputs,
@@ -6733,16 +6699,12 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
         region: 'Tokyo',
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse',
-            relationship: 'spouse',
             ageRange: '70to74',
-            isSameHousehold: true,
-            income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-            disability: 'none',
             isClaimedAsDependent: false,
             healthInsurance: 'nhi',
-          },
+          }),
         ],
         dcPlanContributions: 0,
         manualSocialInsuranceEntry: false,
@@ -6770,21 +6732,18 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
         region: 'Tokyo-Setagaya',
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse',
-            relationship: 'spouse',
             ageRange: '40to64',
-            isSameHousehold: true,
             // Net employment income 450,000 (1,190,000 - 740,000)
             income: {
               grossEmploymentIncome: 1_190_000,
               grossPublicPensionIncome: 0,
               otherNetIncome: 0,
             },
-            disability: 'none',
             isClaimedAsDependent: false,
             healthInsurance: 'nhi',
-          },
+          }),
         ],
         dcPlanContributions: 0,
         manualSocialInsuranceEntry: false,

@@ -204,9 +204,9 @@ export interface DeductionAmount {
  * Health insurance coverage status for a cohabiting household member:
  * - 'auto': Follows taxpayer's insurance (enrolled in NHI if taxpayer is on NHI, otherwise not)
  * - 'nhi': Explicitly enrolled in National Health Insurance in this household
- * - 'other': Covered under Employees' Health Insurance or other system (excluded from household NHI)
+ * - 'non_nhi': Covered under Employees' Health Insurance or other system (excluded from household NHI)
  */
-export type HouseholdMemberHealthInsurance = 'auto' | 'nhi' | 'other';
+export type HouseholdMemberHealthInsurance = 'auto' | 'nhi' | 'non_nhi';
 
 /**
  * Represents a spouse for tax deduction purposes and household social insurance modeling
@@ -232,16 +232,16 @@ export interface Spouse {
 
   /**
    * Whether to claim this spouse as a tax dependent for 配偶者控除 / 配偶者特別控除 / 障害者控除.
-   * Defaults to true when omitted. When false, no tax deductions are claimed for this spouse,
-   * but their same-household status still participates in NHI and residence tax limits.
+   * When false, no tax deductions are claimed for this spouse, but their same-household
+   * status still participates in NHI and residence tax limits.
    */
-  isClaimedAsDependent?: boolean | undefined;
+  isClaimedAsDependent: boolean;
 
   /**
-   * Health insurance enrollment for this same-household member:
-   * Defaults to 'auto' when omitted. Ignored when not in the same household or aged 75+.
+   * Health insurance enrollment for this same-household member.
+   * Ignored when not in the same household or aged 75+.
    */
-  healthInsurance?: HouseholdMemberHealthInsurance | undefined;
+  healthInsurance: HouseholdMemberHealthInsurance;
 
   /**
    * Whether this same-household member is registered as the household head (世帯主)
@@ -253,7 +253,7 @@ export interface Spouse {
    * in the low-income reduction test (国民健康保険法施行令第29条の7第2項). At most one same-household
    * member can be head.
    */
-  isHouseholdHead?: boolean | undefined;
+  isHouseholdHead: boolean;
 }
 
 /**
@@ -280,16 +280,16 @@ export interface OtherDependent {
 
   /**
    * Whether to claim this dependent for 扶養控除 / 障害者控除 / 所得金額調整控除.
-   * Defaults to true when omitted. When false, no tax deductions are claimed for this person
-   * (e.g. child claimed by the other parent under 所得税法第85条第5項, or independent same-household relative).
+   * When false, no tax deductions are claimed for this person (e.g. child claimed by
+   * the other parent under 所得税法第85条第5項, or independent same-household relative).
    */
-  isClaimedAsDependent?: boolean | undefined;
+  isClaimedAsDependent: boolean;
 
   /**
-   * Health insurance enrollment for this same-household member:
-   * Defaults to 'auto' when omitted. Ignored when not in the same household or aged 75+.
+   * Health insurance enrollment for this same-household member.
+   * Ignored when not in the same household or aged 75+.
    */
-  healthInsurance?: HouseholdMemberHealthInsurance | undefined;
+  healthInsurance: HouseholdMemberHealthInsurance;
 
   /**
    * Whether this same-household member is registered as the household head (世帯主)
@@ -301,7 +301,7 @@ export interface OtherDependent {
    * in the low-income reduction test (国民健康保険法施行令第29条の7第2項). At most one same-household
    * member can be head.
    */
-  isHouseholdHead?: boolean | undefined;
+  isHouseholdHead: boolean;
 }
 
 /**

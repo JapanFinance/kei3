@@ -13,6 +13,7 @@ import {
   scaleIncomeStreamsToIncome,
 } from '../utils/chartConfig';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeSpouse } from './fixtures/dependents';
 
 const context: TakeHomeInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -483,16 +484,12 @@ describe('generateChartData employment insurance bar', () => {
 describe('generateChartData with household National Health Insurance', () => {
   it('folds household NHI into Health Insurance bar and stacks to total income', () => {
     // EHI employee whose cohabiting spouse is on NHI
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
-    };
+    });
 
     const householdContext: TakeHomeInputs = {
       ...context,

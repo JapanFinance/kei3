@@ -112,9 +112,7 @@ export default function SpouseSection({
     pensionIncomeAdjustmentDeduction,
   );
 
-  const hasAnyImpact = spouse
-    ? spouse.isClaimedAsDependent !== false || spouse.isSameHousehold
-    : false;
+  const hasAnyImpact = spouse ? spouse.isClaimedAsDependent || spouse.isSameHousehold : false;
 
   return (
     <Box>
@@ -270,10 +268,7 @@ export default function SpouseSection({
                 <Box
                   sx={{
                     flex: {
-                      md:
-                        spouse.isSameHousehold || spouse.isClaimedAsDependent !== false
-                          ? '1 1 56%'
-                          : 1,
+                      md: spouse.isSameHousehold || spouse.isClaimedAsDependent ? '1 1 56%' : 1,
                     },
                     minWidth: 0,
                   }}
@@ -448,7 +443,7 @@ export default function SpouseSection({
                 </Box>
 
                 {/* Right Column: Household & Health Insurance and/or Disability Status */}
-                {(spouse.isSameHousehold || spouse.isClaimedAsDependent !== false) && (
+                {(spouse.isSameHousehold || spouse.isClaimedAsDependent) && (
                   <Box
                     sx={{
                       flex: { md: '1 1 44%' },
@@ -492,7 +487,7 @@ export default function SpouseSection({
                               <Select
                                 labelId="spouse-hi-label"
                                 label="Health Insurance"
-                                value={spouse.healthInsurance ?? 'auto'}
+                                value={spouse.healthInsurance}
                                 onChange={e =>
                                   handleSpouseChange({
                                     healthInsurance: e.target
@@ -522,7 +517,7 @@ export default function SpouseSection({
                           <FormControlLabel
                             control={
                               <Switch
-                                checked={spouse.isHouseholdHead === true}
+                                checked={spouse.isHouseholdHead}
                                 onChange={e =>
                                   handleSpouseChange({ isHouseholdHead: e.target.checked })
                                 }
@@ -548,7 +543,7 @@ export default function SpouseSection({
                     )}
 
                     {/* Disability Status */}
-                    {spouse.isClaimedAsDependent !== false && (
+                    {spouse.isClaimedAsDependent && (
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         <Typography
                           id="spouse-disability-label"

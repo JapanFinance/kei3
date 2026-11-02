@@ -215,6 +215,9 @@ const spouse = (overrides: Partial<Spouse>): Spouse => ({
   income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   disability: 'none',
   isSameHousehold: true,
+  isClaimedAsDependent: true,
+  healthInsurance: 'auto',
+  isHouseholdHead: false,
   ...overrides,
 });
 
@@ -225,6 +228,9 @@ const otherDependent = (overrides: Partial<OtherDependent>): OtherDependent => (
   income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   disability: 'none',
   isSameHousehold: true,
+  isClaimedAsDependent: true,
+  healthInsurance: 'auto',
+  isHouseholdHead: false,
   ...overrides,
 });
 

@@ -8,6 +8,7 @@ import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsu
 import type { CommutingAllowanceIncomeStream, TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeSpouse } from './fixtures/dependents';
 import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 // Mock DetailedTooltip to render children directly for easier testing
@@ -826,9 +827,8 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
       dependents: [
-        {
+        makeSpouse({
           id: 'spouse',
-          relationship: 'spouse',
           ageRange: '40to64',
           // Net employment income in 2026: 1,190,000 - 740,000 = 450,000.
           // Base: 450,000 - 430,000 = 20,000.
@@ -837,10 +837,8 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
             grossPublicPensionIncome: 0,
             otherNetIncome: 0,
           },
-          disability: 'none',
-          isSameHousehold: true,
           healthInsurance: 'nhi',
-        },
+        }),
       ],
     };
 
@@ -886,19 +884,16 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
       manualSocialInsuranceEntry: false,
       manualSocialInsuranceAmount: 0,
       dependents: [
-        {
+        makeSpouse({
           id: 'spouse',
-          relationship: 'spouse',
           ageRange: '40to64',
           income: {
             grossEmploymentIncome: 0,
             grossPublicPensionIncome: 0,
             otherNetIncome: 20_000_000, // Very high income to hit caps
           },
-          disability: 'none',
-          isSameHousehold: true,
           healthInsurance: 'nhi',
-        },
+        }),
       ],
     };
 

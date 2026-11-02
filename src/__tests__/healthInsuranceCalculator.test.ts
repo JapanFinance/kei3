@@ -22,6 +22,7 @@ import {
   premiumCalculationBase,
 } from '../utils/healthInsuranceCalculator';
 import { composeNHIHousehold } from '../utils/nhiHousehold';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 const KYOKAI_KENPO_PROVIDER = DEFAULT_PROVIDER;
 const ITS_KENPO_PROVIDER = 'KantoItsKenpo';
@@ -1084,20 +1085,16 @@ describe('calculateHouseholdNHIBreakdown', () => {
   const year = 2026;
 
   it('calculates fullHousehold attribution where taxpayer pays entire household premium', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 1_200_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-      disability: 'none',
-      isClaimedAsDependent: true,
       healthInsurance: 'nhi',
-    };
+    });
 
     const household = composeNHIHousehold({
       taxpayer: {
@@ -1121,20 +1118,17 @@ describe('calculateHouseholdNHIBreakdown', () => {
   });
 
   it('handles paymentAttribution: none by setting taxpayer portions to zero', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 2_000_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
-    };
+    });
 
     const household = composeNHIHousehold({
       taxpayer: {
@@ -1160,20 +1154,17 @@ describe('calculateHouseholdNHIBreakdown', () => {
   });
 
   it('apportions pro-rata taxpayerShare when taxpayer and spouse share NHI', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 4_300_000, // Same gross income as taxpayer
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
-    };
+    });
 
     const household = composeNHIHousehold({
       taxpayer: {
@@ -1197,20 +1188,17 @@ describe('calculateHouseholdNHIBreakdown', () => {
   });
 
   it('allocates zero taxpayer share when taxpayer is a deemed household head', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse',
       ageRange: '40to64',
-      isSameHousehold: true,
       income: {
         grossEmploymentIncome: 1_000_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-      disability: 'none',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
-    };
+    });
 
     const household = composeNHIHousehold({
       taxpayer: {
@@ -1233,20 +1221,11 @@ describe('calculateHouseholdNHIBreakdown', () => {
   });
 
   it('applies statutory 50% preschool discount and under-18 child support exemption', () => {
-    const preschoolChild: Dependent = {
+    const preschoolChild: Dependent = makeDependent({
       id: 'child-preschool',
-      relationship: 'child',
       ageRange: 'under6',
-      isSameHousehold: true,
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      disability: 'none',
-      isClaimedAsDependent: true,
       healthInsurance: 'nhi',
-    };
+    });
 
     const householdWithPreschool = composeNHIHousehold({
       taxpayer: {
@@ -1261,20 +1240,11 @@ describe('calculateHouseholdNHIBreakdown', () => {
       incomeYear: year,
     });
 
-    const adultDependent: Dependent = {
+    const adultDependent: Dependent = makeDependent({
       id: 'adult-dep',
-      relationship: 'child',
       ageRange: '23to39',
-      isSameHousehold: true,
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      disability: 'none',
-      isClaimedAsDependent: true,
       healthInsurance: 'nhi',
-    };
+    });
 
     const householdWithAdultChild = composeNHIHousehold({
       taxpayer: {
@@ -1305,20 +1275,16 @@ describe('calculateHouseholdNHIBreakdown', () => {
     // 5割: <= 430,000 + 310,000 * 2 = 1,050,000
     // 2割: <= 430,000 + 570,000 * 2 = 1,570,000
     const createTwoPersonHousehold = (taxpayerNet: number, spouseNet: number) => {
-      const spouse: Dependent = {
+      const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        relationship: 'spouse',
         ageRange: 'under40',
-        isSameHousehold: true,
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
           otherNetIncome: spouseNet,
         },
-        disability: 'none',
-        isClaimedAsDependent: true,
         healthInsurance: 'nhi',
-      };
+      });
       return composeNHIHousehold({
         taxpayer: {
           netIncome: taxpayerNet,
@@ -1366,16 +1332,11 @@ describe('calculateHouseholdNHIBreakdown', () => {
       // Spouse on NHI has 0 income.
       // Under 国民健康保険法施行令第29条の7第2項, deemed head's income is tested.
       // Even though spouse has 0 income, household gets 0% reduction.
-      const spouse: Dependent = {
+      const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        relationship: 'spouse',
         ageRange: 'under40',
-        isSameHousehold: true,
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-        disability: 'none',
-        isClaimedAsDependent: true,
         healthInsurance: 'nhi',
-      };
+      });
       const household = composeNHIHousehold({
         taxpayer: {
           netIncome: 6_000_000,
@@ -1397,20 +1358,17 @@ describe('calculateHouseholdNHIBreakdown', () => {
     it('assesses LTC only on 40-64 member and gives 0 LTC share to under-40 taxpayer under taxpayerShare', () => {
       // Taxpayer is 30 (<40, not LTC Cat 2), net income 2,000,000 (base: 1,570,000)
       // Spouse is 50 (40-64, LTC Cat 2), other net income 2,000,000 (base: 1,570,000)
-      const spouse: Dependent = {
+      const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        relationship: 'spouse',
         ageRange: '40to64',
-        isSameHousehold: true,
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
           otherNetIncome: 2_000_000,
         },
-        disability: 'none',
         isClaimedAsDependent: false,
         healthInsurance: 'nhi',
-      };
+      });
       const household = composeNHIHousehold({
         taxpayer: {
           netIncome: 2_000_000,

@@ -136,6 +136,9 @@ describe('getPersonalCircumstanceWarnings', () => {
       isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      isClaimedAsDependent: true,
+      healthInsurance: 'auto',
+      isHouseholdHead: false,
       ...patch,
     }) as Dependent;
 

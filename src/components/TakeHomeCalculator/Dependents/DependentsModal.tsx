@@ -202,7 +202,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   const getDependentChips = (dependent: OtherDependent): React.ReactNode[] => {
     const chips: React.ReactNode[] = [];
 
-    if (dependent.isClaimedAsDependent === false) {
+    if (!dependent.isClaimedAsDependent) {
       chips.push(
         <Chip key="not-tax-dep" label="Not tax dependent" size="small" variant="outlined" />,
       );
@@ -229,7 +229,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       );
     }
 
-    if (dependent.isClaimedAsDependent === false && !dependent.isSameHousehold) {
+    if (!dependent.isClaimedAsDependent && !dependent.isSameHousehold) {
       chips.push(
         <Chip key="no-impact" label="No tax/NHI impact" size="small" variant="outlined" />,
       );

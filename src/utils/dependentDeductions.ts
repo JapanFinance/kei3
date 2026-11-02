@@ -42,7 +42,7 @@ export { getDependentEligibilityMax };
  * by the taxpayer (e.g. child claimed on the other parent's return, or independent cohabiting earner).
  */
 export function isClaimedTaxDependent(dependent: Dependent): boolean {
-  return dependent.isClaimedAsDependent !== false;
+  return dependent.isClaimedAsDependent;
 }
 
 /** Maximum total net income (合計所得金額) for spouse special deduction eligibility (配偶者特別控除).

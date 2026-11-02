@@ -8,6 +8,7 @@ import type { FurusatoNozeiDetails } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { calculateFurusatoResidenceCredit } from '../utils/residenceTax';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 describe('calculateFurusatoNozeiLimit', () => {
   it('calculates furusato nozei for the default salary', () => {
@@ -419,22 +420,8 @@ describe('calculateFurusatoNozeiLimit', () => {
         ...baseInputs,
         incomeStreams,
         dependents: [
-          {
-            id: 'spouse',
-            relationship: 'spouse',
-            ageRange: 'under40',
-            income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-            disability: 'none',
-            isSameHousehold: true,
-          },
-          {
-            id: 'child',
-            relationship: 'child',
-            ageRange: '16to18',
-            income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-            disability: 'none',
-            isSameHousehold: true,
-          },
+          makeSpouse({ id: 'spouse', ageRange: 'under40' }),
+          makeDependent({ id: 'child', ageRange: '16to18' }),
         ],
         homeLoanTaxCredit,
       });

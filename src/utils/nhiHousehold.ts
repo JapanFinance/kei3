@@ -113,11 +113,11 @@ export function resolveDependentNHIEnrollment(
   if (dependent.ageRange === '75plus') {
     return false;
   }
-  const option = dependent.healthInsurance ?? 'auto';
+  const option = dependent.healthInsurance;
   if (option === 'nhi') {
     return true;
   }
-  if (option === 'other') {
+  if (option === 'non_nhi') {
     return false;
   }
   return taxpayerOnNHI;
@@ -195,7 +195,7 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
 
   // Check if any same-household dependent is designated as household head
   const sameHouseholdDependents = dependents.filter(d => d.isSameHousehold);
-  const designatedHeadDep = sameHouseholdDependents.find(d => d.isHouseholdHead === true);
+  const designatedHeadDep = sameHouseholdDependents.find(d => d.isHouseholdHead);
 
   const taxpayerMember: NHIHouseholdMember = {
     id: 'taxpayer',
