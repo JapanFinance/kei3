@@ -203,3 +203,24 @@ describe('SummaryTab with zero or negative annual income from capital losses', (
     ).toBeInTheDocument();
   });
 });
+
+describe('SummaryTab with household NHI premium', () => {
+  it('folds household NHI premium into the single Health Insurance row', () => {
+    render(
+      <SummaryTab
+        results={{
+          ...baseResults,
+          healthInsurance: 200_000,
+          pensionPayments: 100_000,
+          householdNHIPremium: 70_000,
+        }}
+      />,
+    );
+
+    // 200,000 personal health insurance + 70,000 household NHI = 270,000
+    expect(screen.getByText(/^¥270,000/)).toBeInTheDocument();
+    // 270,000 health insurance + 100,000 pension = 370,000 total social insurance
+    expect(screen.getByText(/^¥370,000/)).toBeInTheDocument();
+    expect(screen.queryByText(/Household National Health Insurance/i)).not.toBeInTheDocument();
+  });
+});

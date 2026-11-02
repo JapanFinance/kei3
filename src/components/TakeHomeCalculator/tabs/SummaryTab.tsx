@@ -111,23 +111,12 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             <ResultRow
               label="Health Insurance"
               value={formatAmountWithShare(
-                results.healthInsurance,
+                results.healthInsurance + (results.householdNHIPremium ?? 0),
                 results.annualIncome,
                 !isMobile,
               )}
               type="indented"
             />
-            {results.householdNHIPremium !== undefined && results.householdNHIPremium > 0 && (
-              <ResultRow
-                label="Household National Health Insurance"
-                value={formatAmountWithShare(
-                  results.householdNHIPremium,
-                  results.annualIncome,
-                  !isMobile,
-                )}
-                type="indented"
-              />
-            )}
             <ResultRow
               label="Pension Payments"
               value={formatAmountWithShare(
