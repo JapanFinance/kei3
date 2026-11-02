@@ -475,6 +475,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   personalCircumstances,
                   homeLoanTaxCredit,
                   foreignTaxCredit,
+                  nhiPaymentAttribution,
+                  nhiHouseholdRegion,
                 };
 
                 const taxResults = calculateTaxes(taxInputs);
@@ -520,6 +522,8 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     personalCircumstances,
     homeLoanTaxCredit,
     foreignTaxCredit,
+    nhiPaymentAttribution,
+    nhiHouseholdRegion,
     incomeStreams,
     reportedDividendsTaxation,
     blueFilerDeduction,

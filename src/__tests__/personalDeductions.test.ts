@@ -189,6 +189,18 @@ describe('getPersonalCircumstanceWarnings', () => {
         YEAR,
       ),
     ).toEqual(['singleParentNoQualifyingChild']);
+
+    // An un-claimed child (isClaimedAsDependent: false) does not satisfy the qualifying-child check.
+    const unclaimedChild = member({
+      isClaimedAsDependent: false,
+    });
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'singleParentMother' }),
+        [unclaimedChild],
+        YEAR,
+      ),
+    ).toEqual(['singleParentNoQualifyingChild']);
   });
 
   it('requires a dependent relative for a divorced 寡婦 but not a bereaved one', () => {
@@ -200,7 +212,7 @@ describe('getPersonalCircumstanceWarnings', () => {
       ),
     ).toEqual(['widowDivorcedNoDependentRelative']);
 
-    // Any non-spouse relative within the eligibility threshold satisfies 所法2①三十イ.
+    // Any claimed non-spouse relative within the eligibility threshold satisfies 所法2①三十イ.
     expect(
       getPersonalCircumstanceWarnings(
         circumstances({ widowOrSingleParent: 'widowDivorced' }),
@@ -208,6 +220,21 @@ describe('getPersonalCircumstanceWarnings', () => {
         YEAR,
       ),
     ).toEqual([]);
+
+    // A non-claimed relative (isClaimedAsDependent: false) is not a 扶養親族.
+    expect(
+      getPersonalCircumstanceWarnings(
+        circumstances({ widowOrSingleParent: 'widowDivorced' }),
+        [
+          member({
+            relationship: 'parent',
+            ageRange: '70to74',
+            isClaimedAsDependent: false,
+          } as Partial<Dependent>),
+        ],
+        YEAR,
+      ),
+    ).toEqual(['widowDivorcedNoDependentRelative']);
 
     expect(
       getPersonalCircumstanceWarnings(

@@ -504,7 +504,7 @@ export default function SpouseSection({
                                 <MenuItem value="nhi">
                                   National Health Insurance (国民健康保険)
                                 </MenuItem>
-                                <MenuItem value="other">
+                                <MenuItem value="non_nhi">
                                   Employees' Health Insurance (社会保険等)
                                 </MenuItem>
                               </Select>

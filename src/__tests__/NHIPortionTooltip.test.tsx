@@ -22,7 +22,7 @@ import {
   type NationalHealthInsurancePortionKey,
 } from '../utils/healthInsuranceCalculator';
 import { calculateTaxes } from '../utils/taxCalculations';
-import { makeSpouse } from './fixtures/dependents';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -350,6 +350,40 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       expect(container.textContent).toContain('Household Total Base');
       expect(container.textContent).toContain('Long-Term Care Base');
       expect(container.textContent).toContain('MHLW: National Health Insurance System');
+    });
+
+    it('renders the 100% under-19 exemption formula (not the 50% preschool formula) on the childSupport portion when a preschool child is in the household', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age20to39',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeDependent({
+            id: 'preschooler',
+            relationship: 'child',
+            ageRange: 'under6',
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container: medicalContainer } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(medicalContainer.textContent).toContain('× 50% × 1 preschool');
+
+      const { container: childSupportContainer } = render(
+        <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />,
+      );
+      expect(childSupportContainer.textContent).toContain('× 1 adult (1 under 19 exempt)');
+      expect(childSupportContainer.textContent).not.toContain('× 50% × 1 preschool');
     });
   });
 });

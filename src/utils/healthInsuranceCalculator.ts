@@ -195,7 +195,9 @@ export function calculateNationalHealthInsurancePortion(
   if (totalInsured <= 0) return undefined;
 
   const preschoolCount =
-    portion === 'longTermCare' ? 0 : Math.min(totalInsured, options?.preschoolCount ?? 0);
+    portion === 'longTermCare' || portion === 'childSupport'
+      ? 0
+      : Math.min(totalInsured, options?.preschoolCount ?? 0);
   const childSupportExemptCount =
     portion === 'childSupport' ? Math.min(totalInsured, options?.childSupportExemptCount ?? 0) : 0;
 

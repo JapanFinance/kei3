@@ -86,7 +86,22 @@ const renderPerCapitaFormula = (calc: NationalHealthInsurancePortion) => {
       </>
     ) : null;
 
-  // Case 1: Preschool children discount (50% reduction for preschool age under 6)
+  // Case 1: Child support exemption (children through age 18 exempt from child support levy)
+  if (calc.childSupportExemptCount > 0) {
+    const nonExemptCount = Math.max(0, calc.insuredCount - calc.childSupportExemptCount);
+    return (
+      <>
+        {formatJPY(calc.perCapitaFull)}
+        {reductionFactor}
+        {` × ${nonExemptCount} adult${nonExemptCount !== 1 ? 's' : ''}`}
+        {` (${calc.childSupportExemptCount} under 19 exempt)`}
+        {' = '}
+        {formatJPY(calc.perCapita)}
+      </>
+    );
+  }
+
+  // Case 2: Preschool children discount (50% reduction for preschool age under 6)
   if (calc.preschoolCount > 0) {
     const adultCount = Math.max(0, calc.insuredCount - calc.preschoolCount);
     return (
@@ -102,21 +117,6 @@ const renderPerCapitaFormula = (calc: NationalHealthInsurancePortion) => {
         {formatJPY(calc.perCapitaFull)}
         {reductionFactor}
         {` × 50% × ${calc.preschoolCount} preschool`}
-        {' = '}
-        {formatJPY(calc.perCapita)}
-      </>
-    );
-  }
-
-  // Case 2: Child support exemption (children through age 18 exempt from child support levy)
-  if (calc.childSupportExemptCount > 0) {
-    const nonExemptCount = Math.max(0, calc.insuredCount - calc.childSupportExemptCount);
-    return (
-      <>
-        {formatJPY(calc.perCapitaFull)}
-        {reductionFactor}
-        {` × ${nonExemptCount} adult${nonExemptCount > 1 ? 's' : ''}`}
-        {` (${calc.childSupportExemptCount} under 19 exempt)`}
         {' = '}
         {formatJPY(calc.perCapita)}
       </>
