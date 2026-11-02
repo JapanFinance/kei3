@@ -244,8 +244,14 @@ export interface Spouse {
   healthInsurance?: HouseholdMemberHealthInsurance | undefined;
 
   /**
-   * Whether this same-household non-NHI member is designated as the household head (擬制世帯主)
-   * when the taxpayer is on National Health Insurance. At most one same-household member can be head.
+   * Whether this same-household member is registered as the household head (世帯主)
+   * on the municipal resident record (住民票).
+   *
+   * By default, the taxpayer is assumed to be the household head. If this member is designated
+   * as head, they are the head for municipal NHI purposes. A non-enrolled head acts as a
+   * deemed head (擬制世帯主, 国民健康保険法第9条). In either case, the head's income is included
+   * in the low-income reduction test (国民健康保険法施行令第29条の7第2項). At most one same-household
+   * member can be head.
    */
   isHouseholdHead?: boolean | undefined;
 }
@@ -286,7 +292,14 @@ export interface OtherDependent {
   healthInsurance?: HouseholdMemberHealthInsurance | undefined;
 
   /**
-   * Whether this cohabiting non-NHI member is designated as the household head (擬制世帯主).
+   * Whether this same-household member is registered as the household head (世帯主)
+   * on the municipal resident record (住民票).
+   *
+   * By default, the taxpayer is assumed to be the household head. If this member is designated
+   * as head, they are the head for municipal NHI purposes. A non-enrolled head acts as a
+   * deemed head (擬制世帯主, 国民健康保険法第9条). In either case, the head's income is included
+   * in the low-income reduction test (国民健康保険法施行令第29条の7第2項). At most one same-household
+   * member can be head.
    */
   isHouseholdHead?: boolean | undefined;
 }
