@@ -71,8 +71,8 @@ const NegativeTakeHomeTooltip: React.FC<{ results: TakeHomeResults }> = ({ resul
         {results.householdNHIPremium !== undefined && results.householdNHIPremium > 0 && !isNHI && (
           <li>
             <Typography variant="body2">
-              National Health Insurance premiums for cohabiting household members are being paid by
-              the taxpayer.
+              National Health Insurance premiums for family members in the same household are being
+              paid by the taxpayer.
             </Typography>
           </li>
         )}
