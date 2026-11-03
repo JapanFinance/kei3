@@ -332,6 +332,24 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         </>
       )}
 
+      {/* For taxpayers on non-NHI systems (e.g. EHI) whose household members are on NHI,
+          show the Household NHI Calculation Base alongside income and remuneration */}
+      {!isNationalHealthInsurance &&
+        results.householdNHIPremium !== undefined &&
+        results.householdNHIPremium > 0 &&
+        results.nhiHousehold && (
+          <ResultRow
+            label="Household NHI Calculation Base"
+            labelSuffix={
+              <DetailedTooltip title="Household NHI Calculation Base">
+                <NHICalculationBaseTooltip results={results} inputs={inputs} />
+              </DetailedTooltip>
+            }
+            value={formatJPY(results.nhiHousehold.calculationBase)}
+            type="default"
+          />
+        )}
+
       {/* Health Insurance */}
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -587,16 +605,6 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 Household: {results.nhiHousehold.insuredCount} insured member(s) (
                 {results.nhiHousehold.effectiveRegion})
               </Typography>
-              <ResultRow
-                label="NHI Calculation Base"
-                labelSuffix={
-                  <DetailedTooltip title="NHI Calculation Base">
-                    <NHICalculationBaseTooltip results={results} inputs={inputs} />
-                  </DetailedTooltip>
-                }
-                value={formatJPY(results.nhiHousehold.calculationBase)}
-                type="indented"
-              />
               {portions.medical > 0 && (
                 <ResultRow
                   label="Medical Portion"
