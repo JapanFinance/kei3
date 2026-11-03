@@ -378,12 +378,14 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
       );
       expect(medicalContainer.textContent).toContain('× 50% × 1 preschool');
+      expect(medicalContainer.textContent).toContain('(1 preschool with 50% discount)');
 
       const { container: childSupportContainer } = render(
         <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />,
       );
       expect(childSupportContainer.textContent).toContain('× 1 adult (1 under 19 exempt)');
-      expect(childSupportContainer.textContent).not.toContain('× 50% × 1 preschool');
+      expect(childSupportContainer.textContent).toContain('(1 under 19 exempt)');
+      expect(childSupportContainer.textContent).not.toContain('preschool with 50% discount');
     });
   });
 });

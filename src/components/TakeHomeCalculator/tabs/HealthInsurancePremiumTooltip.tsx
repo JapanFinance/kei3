@@ -382,11 +382,14 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   const householdInfo = results.nhiHousehold && results.nhiHousehold.insuredCount > 1 && (
     <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
       Household: {results.nhiHousehold.insuredCount} insured member(s)
-      {results.nhiHousehold.preschoolCount > 0 &&
+      {portion !== 'childSupport' &&
+        portion !== 'longTermCare' &&
+        results.nhiHousehold.preschoolCount > 0 &&
         ` (${results.nhiHousehold.preschoolCount} preschool with 50% discount)`}
       {portion === 'childSupport' &&
         results.nhiHousehold.childSupportExemptCount > 0 &&
         ` (${results.nhiHousehold.childSupportExemptCount} under 19 exempt)`}
+      {portion === 'longTermCare' && ` (${results.nhiHousehold.ltcInsuredCount} aged 40–64)`}
     </Typography>
   );
 
