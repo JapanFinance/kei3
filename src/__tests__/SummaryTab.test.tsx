@@ -221,6 +221,6 @@ describe('SummaryTab with household NHI premium', () => {
     expect(screen.getByText(/^¥270,000/)).toBeInTheDocument();
     // 270,000 health insurance + 100,000 pension = 370,000 total social insurance
     expect(screen.getByText(/^¥370,000/)).toBeInTheDocument();
-    expect(screen.queryByText(/Household National Health Insurance/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/National Health Insurance/i)).not.toBeInTheDocument();
   });
 });

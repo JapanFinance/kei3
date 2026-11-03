@@ -339,9 +339,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         results.householdNHIPremium > 0 &&
         results.nhiHousehold && (
           <ResultRow
-            label="Household NHI Calculation Base"
+            label="NHI Calculation Base"
             labelSuffix={
-              <DetailedTooltip title="Household NHI Calculation Base">
+              <DetailedTooltip title="NHI Calculation Base">
                 <NHICalculationBaseTooltip results={results} inputs={inputs} />
               </DetailedTooltip>
             }
@@ -595,7 +595,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             <Box sx={{ mt: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-                  Household National Health Insurance
+                  National Health Insurance
                 </Typography>
               </Box>
               <Typography

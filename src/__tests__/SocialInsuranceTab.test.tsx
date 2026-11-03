@@ -901,8 +901,8 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
     render(<SocialInsuranceTab inputs={inputs} results={results} />);
 
     // Deemed-head household NHI section should display all portion rows
-    expect(screen.getByText('Household National Health Insurance')).toBeDefined();
-    expect(resultRowText('Household NHI Calculation Base')).toBeDefined();
+    expect(screen.getByText('National Health Insurance')).toBeDefined();
+    expect(resultRowText('NHI Calculation Base')).toBeDefined();
     expect(resultRowText('Medical Portion')).toBeDefined();
     expect(resultRowText('Elderly Support Portion')).toBeDefined();
     expect(resultRowText('Long-term Care Portion')).toBeDefined();
