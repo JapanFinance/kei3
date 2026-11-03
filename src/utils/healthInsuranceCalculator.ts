@@ -889,74 +889,31 @@ export function calculateHouseholdNHIBreakdown(
   };
 
   // Attribution calculation
-  let taxpayerPortions = { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 };
+  let taxpayerPortions: typeof householdPortions;
+  let taxpayerCaps: NHIHouseholdSummary['taxpayerCaps'];
 
-  if (household.paymentAttribution === 'none') {
-    taxpayerPortions = { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 };
-  } else if (household.paymentAttribution === 'fullHousehold') {
-    taxpayerPortions = { ...householdPortions };
-  } else if (household.paymentAttribution === 'taxpayerShare') {
-    if (!household.taxpayerMember.isNHIInsured) {
+  switch (household.paymentAttribution) {
+    case 'fullHousehold':
+      taxpayerPortions = { ...householdPortions };
+      taxpayerCaps = {
+        medicalCapped: householdBreakdown.medicalCapped,
+        elderlySupportCapped: householdBreakdown.elderlySupportCapped,
+        longTermCareCapped: householdBreakdown.longTermCareCapped,
+        childSupportCapped: householdBreakdown.childSupportCapped,
+      };
+      break;
+    case 'none':
       taxpayerPortions = { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 };
-    } else {
-      const getPortionShare = (portion: NationalHealthInsurancePortionKey): number => {
-        const portionData = currFY[portion];
-        const blendedHouseholdAmount = householdPortions[portion];
-        if (!portionData || blendedHouseholdAmount === 0) return 0;
-
-        const rate = portionData.rate;
-        const perCapitaAdult = portionData.perCapitaPerAdult;
-        const perCapitaPreschool = portionData.perCapitaPerPreschool;
-        const householdFlat = portionData.householdFlat;
-
-        const insuredMembers = household.members.filter(m => m.isNHIInsured);
-        if (insuredMembers.length === 0) return 0;
-
-        if (portion === 'longTermCare') {
-          const ltcMembers = insuredMembers.filter(m => m.isLtcCat2);
-          if (ltcMembers.length === 0 || !household.taxpayerMember.isLtcCat2) return 0;
-          const flatPerMember = householdFlat / ltcMembers.length;
-          const memberUncapped = ltcMembers.map(
-            m => m.calculationBase * rate + perCapitaAdult + flatPerMember,
-          );
-          const totalUncapped = memberUncapped.reduce((sum, u) => sum + u, 0);
-          if (totalUncapped <= 0) return 0;
-          const taxpayerUncapped =
-            household.taxpayerMember.calculationBase * rate + perCapitaAdult + flatPerMember;
-          return Math.round(blendedHouseholdAmount * (taxpayerUncapped / totalUncapped));
-        }
-
-        const flatPerMember = householdFlat / insuredMembers.length;
-        const memberUncapped = insuredMembers.map(m => {
-          let perCapita = perCapitaAdult;
-          if (portion === 'childSupport') {
-            perCapita = m.isChildSupportExempt ? 0 : perCapitaAdult;
-          } else if (m.isPreschool) {
-            perCapita = perCapitaPreschool;
-          }
-          return m.calculationBase * rate + perCapita + flatPerMember;
-        });
-
-        const totalUncapped = memberUncapped.reduce((sum, u) => sum + u, 0);
-        if (totalUncapped <= 0) return 0;
-
-        let tpPerCapita = perCapitaAdult;
-        if (portion === 'childSupport') {
-          tpPerCapita = household.taxpayerMember.isChildSupportExempt ? 0 : perCapitaAdult;
-        } else if (household.taxpayerMember.isPreschool) {
-          tpPerCapita = perCapitaPreschool;
-        }
-        const tpUncapped =
-          household.taxpayerMember.calculationBase * rate + tpPerCapita + flatPerMember;
-        return Math.round(blendedHouseholdAmount * (tpUncapped / totalUncapped));
+      taxpayerCaps = {
+        medicalCapped: false,
+        elderlySupportCapped: false,
+        longTermCareCapped: false,
+        childSupportCapped: false,
       };
-
-      taxpayerPortions = {
-        medical: getPortionShare('medical'),
-        elderlySupport: getPortionShare('elderlySupport'),
-        longTermCare: getPortionShare('longTermCare'),
-        childSupport: getPortionShare('childSupport'),
-      };
+      break;
+    default: {
+      const unhandledAttribution: never = household.paymentAttribution;
+      throw new Error(`Unhandled NHI payment attribution: ${JSON.stringify(unhandledAttribution)}`);
     }
   }
 
@@ -973,14 +930,10 @@ export function calculateHouseholdNHIBreakdown(
     childSupportPortion: taxpayerPortions.childSupport,
     total: taxpayerTotal,
     reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
-    medicalCapped:
-      household.paymentAttribution === 'none' ? false : householdBreakdown.medicalCapped,
-    elderlySupportCapped:
-      household.paymentAttribution === 'none' ? false : householdBreakdown.elderlySupportCapped,
-    longTermCareCapped:
-      household.paymentAttribution === 'none' ? false : householdBreakdown.longTermCareCapped,
-    childSupportCapped:
-      household.paymentAttribution === 'none' ? false : householdBreakdown.childSupportCapped,
+    medicalCapped: taxpayerCaps.medicalCapped,
+    elderlySupportCapped: taxpayerCaps.elderlySupportCapped,
+    longTermCareCapped: taxpayerCaps.longTermCareCapped,
+    childSupportCapped: taxpayerCaps.childSupportCapped,
   };
 
   const summary: NHIHouseholdSummary = {

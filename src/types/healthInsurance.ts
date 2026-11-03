@@ -132,10 +132,9 @@ export const DEFAULT_PROVIDER_REGION = 'DEFAULT';
 /**
  * How the household National Health Insurance bill is attributed to the taxpayer:
  * - 'fullHousehold': Taxpayer pays 100% of the household NHI bill (out-of-pocket & 社会保険料控除).
- * - 'taxpayerShare': Taxpayer pays only their apportioned share of each portion.
  * - 'none': Another household member pays the NHI bill (¥0 out-of-pocket & ¥0 deduction for taxpayer).
  */
-export type NHIPaymentAttribution = 'fullHousehold' | 'taxpayerShare' | 'none';
+export type NHIPaymentAttribution = 'fullHousehold' | 'none';
 
 export const DEFAULT_NHI_PAYMENT_ATTRIBUTION: NHIPaymentAttribution = 'fullHousehold';
 

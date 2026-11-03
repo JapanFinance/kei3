@@ -6724,7 +6724,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       );
     });
 
-    it('respects fullHousehold, taxpayerShare, and none attributions for NHI-enrolled taxpayer', () => {
+    it('respects fullHousehold and none attributions for NHI-enrolled taxpayer', () => {
       const nhiBaseInputs: TakeHomeInputs = {
         ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
         incomeStreams: [{ id: 'biz', type: 'business', amount: 5_000_000 }],
@@ -6752,19 +6752,13 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       };
 
       const resFull = calculateTaxes({ ...nhiBaseInputs, nhiPaymentAttribution: 'fullHousehold' });
-      const resShare = calculateTaxes({ ...nhiBaseInputs, nhiPaymentAttribution: 'taxpayerShare' });
       const resNone = calculateTaxes({ ...nhiBaseInputs, nhiPaymentAttribution: 'none' });
 
       // Household totals should be identical
-      expect(resFull.nhiHousehold!.householdTotal).toBe(resShare.nhiHousehold!.householdTotal);
-      expect(resShare.nhiHousehold!.householdTotal).toBe(resNone.nhiHousehold!.householdTotal);
+      expect(resFull.nhiHousehold!.householdTotal).toBe(resNone.nhiHousehold!.householdTotal);
 
       // fullHousehold: taxpayer pays 100% of household total
       expect(resFull.healthInsurance).toBe(resFull.nhiHousehold!.householdTotal);
-
-      // taxpayerShare: taxpayer pays pro-rata share (> 0 and < full household total)
-      expect(resShare.healthInsurance).toBeGreaterThan(0);
-      expect(resShare.healthInsurance).toBeLessThan(resFull.healthInsurance);
 
       // none: taxpayer pays 0
       expect(resNone.healthInsurance).toBe(0);

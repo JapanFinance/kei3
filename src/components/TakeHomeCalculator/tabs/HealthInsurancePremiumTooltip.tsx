@@ -142,8 +142,8 @@ const PortionBreakdown: React.FC<{
   calc: NationalHealthInsurancePortion;
   /** The figure the breakdown arrives at, shown after the equals sign. */
   premium: number;
-  isTaxpayerShare?: boolean;
-}> = ({ label, calculationBase, calc, premium, isTaxpayerShare }) => (
+  isNotPaidByTaxpayer?: boolean;
+}> = ({ label, calculationBase, calc, premium, isNotPaidByTaxpayer }) => (
   <Box sx={{ mb: 0.5 }}>
     {label && (
       <Typography
@@ -192,9 +192,9 @@ const PortionBreakdown: React.FC<{
       }}
     >
       = <strong>{formatJPY(premium)}</strong>
-      {isTaxpayerShare && (
+      {isNotPaidByTaxpayer && (
         <Typography component="span" variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
-          (Taxpayer share; Household: {formatJPY(calc.premium)})
+          (Not paid by taxpayer — ¥0 attributed)
         </Typography>
       )}
       {calc.isCapped && (
@@ -297,19 +297,16 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     );
   }
 
-  // The portion as the calculation charged it, which the row beside this tooltip shows.
-  const portionPremium =
+  const isNotPaidByTaxpayer = results.nhiHousehold?.paymentAttribution === 'none';
+  const statutoryHouseholdPortion =
+    results.nhiHousehold?.householdPortions[portion] ??
     {
-      medical: results.nhiHousehold?.taxpayerPortions.medical ?? results.nhiMedicalPortion,
-      elderlySupport:
-        results.nhiHousehold?.taxpayerPortions.elderlySupport ?? results.nhiElderlySupportPortion,
-      longTermCare:
-        results.nhiHousehold?.taxpayerPortions.longTermCare ?? results.nhiLongTermCarePortion,
-      childSupport:
-        results.nhiHousehold?.taxpayerPortions.childSupport ?? results.nhiChildSupportPortion,
-    }[portion] ?? 0;
-
-  const isTaxpayerShare = results.nhiHousehold?.paymentAttribution === 'taxpayerShare';
+      medical: results.nhiMedicalPortion,
+      elderlySupport: results.nhiElderlySupportPortion,
+      longTermCare: results.nhiLongTermCarePortion,
+      childSupport: results.nhiChildSupportPortion,
+    }[portion] ??
+    0;
 
   // Show both fiscal years only when this portion's premium can differ between them. The
   // calculation blends every portion whenever any parameter differs, but a portion whose own
@@ -454,14 +451,14 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
             {' + '}
             {formatJPY(currCalc.premium)} × 7⁄10
             {' = '}
-            <strong>{formatJPY(portionPremium)}</strong>
-            {isTaxpayerShare && (
+            <strong>{formatJPY(statutoryHouseholdPortion)}</strong>
+            {isNotPaidByTaxpayer && (
               <Typography
                 component="span"
                 variant="caption"
                 sx={{ color: 'text.secondary', display: 'block' }}
               >
-                (Taxpayer apportioned share)
+                (Not paid by taxpayer — ¥0 attributed)
               </Typography>
             )}
           </Typography>
@@ -484,8 +481,8 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
         label=""
         calculationBase={base}
         calc={currCalc}
-        premium={portionPremium}
-        isTaxpayerShare={isTaxpayerShare}
+        premium={statutoryHouseholdPortion}
+        isNotPaidByTaxpayer={isNotPaidByTaxpayer}
       />
 
       {source}

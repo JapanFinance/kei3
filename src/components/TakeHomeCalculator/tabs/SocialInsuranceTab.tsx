@@ -398,11 +398,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                 sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
               >
                 Household: {results.nhiHousehold.insuredCount} insured member(s)
-                {results.nhiHousehold.paymentAttribution === 'taxpayerShare'
-                  ? ' (Taxpayer share only)'
-                  : results.nhiHousehold.paymentAttribution === 'none'
-                    ? ' (Paid separately / not by taxpayer)'
-                    : ''}
+                {results.nhiHousehold.paymentAttribution === 'none'
+                  ? ' (Paid separately / not by taxpayer)'
+                  : ''}
               </Typography>
             )}
             <ResultRow

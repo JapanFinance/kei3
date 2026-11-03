@@ -1153,73 +1153,6 @@ describe('calculateHouseholdNHIBreakdown', () => {
     expect(result.summary.taxpayerTotal).toBe(0);
   });
 
-  it('apportions pro-rata taxpayerShare when taxpayer and spouse share NHI', () => {
-    const spouse: Dependent = makeSpouse({
-      id: 'spouse',
-      ageRange: '40to64',
-      income: {
-        grossEmploymentIncome: 4_300_000, // Same gross income as taxpayer
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      isClaimedAsDependent: false,
-      healthInsurance: 'nhi',
-    });
-
-    const household = composeNHIHousehold({
-      taxpayer: {
-        netIncome: 3_000_000,
-        grossEmploymentIncome: 4_300_000,
-        netPublicPensionIncome: 0,
-        ageRange: 'age40to59',
-        provider: NATIONAL_HEALTH_INSURANCE_ID,
-        region: 'Tokyo-Shibuya',
-      },
-      dependents: [spouse],
-      incomeYear: year,
-      paymentAttribution: 'taxpayerShare',
-    });
-
-    const result = calculateHouseholdNHIBreakdown(household, year);
-    expect(result.householdBreakdown.total).toBeGreaterThan(0);
-    // Equal income and identical LTC eligibility should result in roughly 50% share
-    const ratio = result.taxpayerBreakdown.total / result.householdBreakdown.total;
-    expect(ratio).toBeCloseTo(0.5, 1);
-  });
-
-  it('allocates zero taxpayer share when taxpayer is a deemed household head', () => {
-    const spouse: Dependent = makeSpouse({
-      id: 'spouse',
-      ageRange: '40to64',
-      income: {
-        grossEmploymentIncome: 1_000_000,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-      isClaimedAsDependent: false,
-      healthInsurance: 'nhi',
-    });
-
-    const household = composeNHIHousehold({
-      taxpayer: {
-        netIncome: 5_000_000,
-        grossEmploymentIncome: 7_000_000,
-        netPublicPensionIncome: 0,
-        ageRange: 'age40to59',
-        provider: DEFAULT_PROVIDER, // Kyokai Kenpo (taxpayer not on NHI)
-        region: 'Tokyo-Shibuya',
-      },
-      dependents: [spouse],
-      incomeYear: year,
-      paymentAttribution: 'taxpayerShare',
-    });
-
-    const result = calculateHouseholdNHIBreakdown(household, year);
-    expect(result.householdBreakdown.total).toBeGreaterThan(0);
-    expect(result.taxpayerBreakdown.total).toBe(0);
-    expect(result.summary.isDeemedHead).toBe(true);
-  });
-
   it('applies statutory 50% preschool discount and under-18 child support exemption', () => {
     const preschoolChild: Dependent = makeDependent({
       id: 'child-preschool',
@@ -1355,7 +1288,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
   });
 
   describe('asymmetric Long-Term Care (介護保険第2号) age configurations', () => {
-    it('assesses LTC only on 40-64 member and gives 0 LTC share to under-40 taxpayer under taxpayerShare', () => {
+    it('assesses LTC only on 40-64 member when taxpayer is under 40', () => {
       // Taxpayer is 30 (<40, not LTC Cat 2), net income 2,000,000 (base: 1,570,000)
       // Spouse is 50 (40-64, LTC Cat 2), other net income 2,000,000 (base: 1,570,000)
       const spouse: Dependent = makeSpouse({
@@ -1380,7 +1313,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
         },
         dependents: [spouse],
         incomeYear: year,
-        paymentAttribution: 'taxpayerShare',
+        paymentAttribution: 'fullHousehold',
       });
 
       const res = calculateHouseholdNHIBreakdown(household, year);
@@ -1390,14 +1323,13 @@ describe('calculateHouseholdNHIBreakdown', () => {
       expect(res.summary.ltcInsuredCount).toBe(1);
       // LTC calculation base should only include spouse (1,570,000), not taxpayer
       expect(res.summary.ltcCalculationBase).toBe(1_570_000);
+      expect(res.summary.calculationBase).toBe(1_570_000 * 2);
 
-      // Taxpayer is under 40, so under taxpayerShare their LTC share must be exactly 0
-      expect(res.taxpayerBreakdown.longTermCarePortion).toBe(0);
-
-      // But taxpayer DOES pay their ~50% share of medical and elderly support
-      expect(res.taxpayerBreakdown.medicalPortion).toBeGreaterThan(0);
-      expect(res.taxpayerBreakdown.elderlySupportPortion).toBeGreaterThan(0);
-      expect(res.taxpayerBreakdown.total).toBeLessThan(res.householdBreakdown.total);
+      // Under fullHousehold, taxpayer pays full household bill including spouse's LTC
+      expect(res.taxpayerBreakdown.longTermCarePortion).toBe(
+        res.householdBreakdown.longTermCarePortion,
+      );
+      expect(res.taxpayerBreakdown.total).toBe(res.householdBreakdown.total);
     });
   });
 });

@@ -503,11 +503,6 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         }
                       >
                         <MenuItem value="fullHousehold">Taxpayer pays full household NHI</MenuItem>
-                        <MenuItem value="taxpayerShare">
-                          {isTaxpayerNHI
-                            ? 'Taxpayer pays their own share only'
-                            : 'Taxpayer pays pro-rata share'}
-                        </MenuItem>
                         <MenuItem value="none">Not paid by taxpayer</MenuItem>
                       </Select>
                       <FormHelperText>
