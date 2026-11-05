@@ -18,6 +18,7 @@ import {
 } from '../types/healthInsurance';
 import {
   composeNHIHousehold,
+  countNHISalaryEarners,
   getAutoHealthInsuranceLabel,
   resolveDependentNHIEnrollment,
   resolveEffectiveNHIRegion,
@@ -32,7 +33,7 @@ describe('resolveDependentNHIEnrollment', () => {
     isSameHousehold: true,
   });
 
-  it('returns false when the dependent is not cohabiting', () => {
+  it('returns false when the dependent is not in the same municipal household', () => {
     const nonCohabiting: Dependent = {
       ...baseDependent,
       isSameHousehold: false,
@@ -95,6 +96,17 @@ describe('resolveEffectiveNHIRegion', () => {
 
   it('falls back to taxpayer region if it is a valid NHI region', () => {
     expect(resolveEffectiveNHIRegion(DEFAULT_PROVIDER, 'Osaka')).toBe('Osaka');
+  });
+
+  it('falls back to taxpayer region when nhiHouseholdRegion is invalid', () => {
+    expect(resolveEffectiveNHIRegion(DEFAULT_PROVIDER, 'Osaka', 'InvalidRegion')).toBe('Osaka');
+  });
+
+  it('resolves region for 75+ Latter-Stage Elderly taxpayer', () => {
+    expect(resolveEffectiveNHIRegion(LATTER_STAGE_ELDERLY_ID, 'Osaka')).toBe('Osaka');
+    expect(resolveEffectiveNHIRegion(LATTER_STAGE_ELDERLY_ID, 'Tokyo', 'Tokyo-Setagaya')).toBe(
+      'Tokyo-Setagaya',
+    );
   });
 
   it('falls back to Tokyo if neither region is a valid NHI region', () => {
@@ -204,7 +216,42 @@ describe('composeNHIHousehold', () => {
     expect(composition.ltcInsuredCount).toBe(1); // Spouse is 40-64
     // Reduction test group includes both deemed head (taxpayer) and insured member (spouse)
     expect(composition.reductionTestGroup).toHaveLength(2);
-    expect(composition.reductionTestIncome).toBeGreaterThan(6_000_000);
+    // Taxpayer net employment (6,000,000) + spouse net employment (1,000,000 - 740,000 deduction = 260,000)
+    expect(composition.reductionTestIncome).toBe(6_260_000);
+  });
+
+  it('models 75+ taxpayer (Latter-Stage Elderly) as deemed head for NHI spouse', () => {
+    const spouse: Dependent = makeSpouse({
+      id: 'spouse',
+      ageRange: '40to64',
+      income: {
+        grossEmploymentIncome: 1_000_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+      healthInsurance: 'nhi',
+    });
+
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 3_000_000,
+        grossEmploymentIncome: 0,
+        netPublicPensionIncome: 3_000_000,
+        ageRange: 'age75plus',
+        provider: LATTER_STAGE_ELDERLY_ID,
+        region: 'Tokyo',
+      },
+      dependents: [spouse],
+      incomeYear: defaultYear,
+    });
+
+    expect(composition.taxpayerMember.isNHIInsured).toBe(false);
+    expect(composition.householdHead.id).toBe('taxpayer');
+    expect(composition.isDeemedHead).toBe(true);
+    expect(composition.insuredCount).toBe(1); // Only spouse is on NHI
+    expect(composition.reductionTestGroup).toHaveLength(2); // 75+ deemed head included in reduction test
+    const spouseMember = composition.members.find(m => m.id === 'spouse')!;
+    expect(composition.calculationBase).toBe(spouseMember.calculationBase);
   });
 
   it('supports designated household head when dependent is head', () => {
@@ -240,7 +287,41 @@ describe('composeNHIHousehold', () => {
     expect(composition.isDeemedHead).toBe(false);
   });
 
-  it('excludes non-cohabiting dependents from NHI household', () => {
+  it('models designated dependent household head who is not NHI-insured as deemed head', () => {
+    const parent: Dependent = makeDependent({
+      id: 'parent',
+      relationship: 'parent',
+      ageRange: '75plus',
+      income: {
+        grossEmploymentIncome: 0,
+        grossPublicPensionIncome: 1_500_000,
+        otherNetIncome: 0,
+      },
+      healthInsurance: 'non_nhi',
+      isHouseholdHead: true,
+    });
+
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 5_000_000,
+        grossEmploymentIncome: 7_000_000,
+        netPublicPensionIncome: 0,
+        ageRange: 'age20to39',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      },
+      dependents: [parent],
+      incomeYear: defaultYear,
+    });
+
+    expect(composition.householdHead.id).toBe('parent');
+    expect(composition.householdHead.isNHIInsured).toBe(false);
+    expect(composition.isDeemedHead).toBe(true);
+    expect(composition.insuredCount).toBe(1); // Only taxpayer is NHI-insured
+    expect(composition.reductionTestGroup).toHaveLength(2); // Deemed head parent + insured taxpayer
+  });
+
+  it('excludes separate-household dependents (isSameHousehold: false) from NHI household', () => {
     const nonCohabitingChild: Dependent = makeDependent({
       id: 'child-away',
       relationship: 'child',
@@ -315,7 +396,10 @@ describe('composeNHIHousehold', () => {
       ageRange: '65to69',
       income: {
         grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 1_000_000, // net pension income will be calculated
+        // Gross pension 1.5M -> Net pension (65+) = 1.5M - 1.1M = 400,000
+        // Elderly pension adjustment = min(400,000, 150,000) = 150,000
+        // Adjusted pension contributed to reduction test income = 400,000 - 150,000 = 250,000
+        grossPublicPensionIncome: 1_500_000,
         otherNetIncome: 0,
       },
       healthInsurance: 'nhi',
@@ -336,10 +420,65 @@ describe('composeNHIHousehold', () => {
 
     const spouseMember = composition.members.find(m => m.id === 'elderly-spouse')!;
     expect(spouseMember.isElderly65Plus).toBe(true);
-    expect(spouseMember.elderlyPensionSpecialDeduction).toBeLessThanOrEqual(
+    expect(spouseMember.elderlyPensionSpecialDeduction).toBe(
       NHI_ELDERLY_PENSION_REDUCTION_SPECIAL_DEDUCTION,
     );
     expect(composition.taxpayerMember.elderlyPensionSpecialDeduction).toBe(0); // 0 net pension
+    // Taxpayer (1,000,000) + spouse adjusted pension (400,000 - 150,000 = 250,000) = 1,250,000
+    expect(composition.reductionTestIncome).toBe(1_250_000);
+  });
+
+  it('applies the ¥150,000 elderly pension special deduction to a 65+ taxpayer with pension income', () => {
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 400_000,
+        grossEmploymentIncome: 0,
+        netPublicPensionIncome: 400_000,
+        ageRange: 'age65to69',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      },
+      dependents: [],
+      incomeYear: defaultYear,
+    });
+
+    expect(composition.taxpayerMember.isElderly65Plus).toBe(true);
+    expect(composition.taxpayerMember.elderlyPensionSpecialDeduction).toBe(150_000);
+    // Net income 400,000 - deduction 150,000 = 250,000
+    expect(composition.reductionTestIncome).toBe(250_000);
+  });
+
+  it('does not apply elderly pension special deduction to members under age 65', () => {
+    const spouseUnder65: Dependent = makeSpouse({
+      id: 'spouse-under65',
+      ageRange: '40to64',
+      income: {
+        grossEmploymentIncome: 0,
+        // Under 65: gross 1.5M - 650k deduction = 850,000 net pension
+        grossPublicPensionIncome: 1_500_000,
+        otherNetIncome: 0,
+      },
+      healthInsurance: 'nhi',
+    });
+
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 1_000_000,
+        grossEmploymentIncome: 1_550_000,
+        netPublicPensionIncome: 0,
+        ageRange: 'age20to39',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      },
+      dependents: [spouseUnder65],
+      incomeYear: defaultYear,
+    });
+
+    const spouseMember = composition.members.find(m => m.id === 'spouse-under65')!;
+    expect(spouseMember.isElderly65Plus).toBe(false);
+    expect(spouseMember.elderlyPensionSpecialDeduction).toBe(0);
+    // Taxpayer (1,000,000) + spouse (850,000 - 0) = 1,850,000
+    expect(composition.reductionTestIncome).toBe(1_850_000);
   });
 
   it('counts salary earners per fiscal year using FY2025 (>550k) and FY2026 (>650k) thresholds', () => {
@@ -503,14 +642,87 @@ describe('composeNHIHousehold', () => {
     expect(spouseMember.calculationBase).toBe(170_000);
     expect(composition.taxpayerMember.calculationBase).toBe(570_000);
   });
+
+  it('handles household with zero NHI-insured members safely', () => {
+    const spouse: Dependent = makeSpouse({
+      id: 'spouse',
+      ageRange: '40to64',
+      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
+      healthInsurance: 'non_nhi',
+    });
+
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 5_000_000,
+        grossEmploymentIncome: 7_000_000,
+        netPublicPensionIncome: 0,
+        ageRange: 'age20to39',
+        provider: DEFAULT_PROVIDER, // EHI
+        region: 'Tokyo',
+      },
+      dependents: [spouse],
+      incomeYear: defaultYear,
+    });
+
+    expect(composition.insuredCount).toBe(0);
+    expect(composition.ltcInsuredCount).toBe(0);
+    expect(composition.preschoolCount).toBe(0);
+    expect(composition.childSupportExemptCount).toBe(0);
+    expect(composition.calculationBase).toBe(0);
+    expect(composition.ltcCalculationBase).toBe(0);
+    // Reduction test group safely contains only household head
+    expect(composition.reductionTestGroup).toHaveLength(1);
+    expect(composition.reductionTestGroup[0]!.id).toBe('taxpayer');
+  });
+
+  it('records paymentAttribution: none when specified', () => {
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 4_000_000,
+        grossEmploymentIncome: 5_400_000,
+        netPublicPensionIncome: 0,
+        ageRange: 'age20to39',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      },
+      dependents: [],
+      incomeYear: defaultYear,
+      paymentAttribution: 'none',
+    });
+
+    expect(composition.paymentAttribution).toBe('none');
+  });
+
+  it('passes through nhiHouseholdRegion to effectiveRegion when taxpayer is on EHI', () => {
+    const spouse: Dependent = makeSpouse({
+      id: 'spouse',
+      ageRange: '40to64',
+      healthInsurance: 'nhi',
+    });
+
+    const composition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 5_000_000,
+        grossEmploymentIncome: 7_000_000,
+        netPublicPensionIncome: 0,
+        ageRange: 'age40to59',
+        provider: DEFAULT_PROVIDER, // EHI
+        region: 'Tokyo',
+      },
+      dependents: [spouse],
+      incomeYear: defaultYear,
+      nhiHouseholdRegion: 'Osaka',
+    });
+
+    expect(composition.effectiveRegion).toBe('Osaka');
+  });
 });
 
 describe('getAutoHealthInsuranceLabel', () => {
-  it('returns "Same as taxpayer (NHI)" when isTaxpayerNHI is true regardless of provider', () => {
+  it('returns "Same as taxpayer (NHI)" when isTaxpayerNHI is true', () => {
     expect(getAutoHealthInsuranceLabel(NATIONAL_HEALTH_INSURANCE_ID, true)).toBe(
       'Same as taxpayer (NHI)',
     );
-    expect(getAutoHealthInsuranceLabel(DEFAULT_PROVIDER, true)).toBe('Same as taxpayer (NHI)');
     expect(getAutoHealthInsuranceLabel(undefined, true)).toBe('Same as taxpayer (NHI)');
   });
 
@@ -526,5 +738,63 @@ describe('getAutoHealthInsuranceLabel', () => {
 
   it('returns "Other / non-NHI" when the taxpayer is on Latter-Stage Elderly', () => {
     expect(getAutoHealthInsuranceLabel(LATTER_STAGE_ELDERLY_ID, false)).toBe('Other / non-NHI');
+  });
+});
+
+describe('countNHISalaryEarners', () => {
+  const threshold = 650_000;
+
+  it('counts members whose gross employment income exceeds the threshold', () => {
+    const members = [
+      {
+        grossEmploymentIncome: 700_000,
+        netPublicPensionIncome: 0,
+        elderlyPensionSpecialDeduction: 0,
+      },
+      {
+        grossEmploymentIncome: 650_000,
+        netPublicPensionIncome: 0,
+        elderlyPensionSpecialDeduction: 0,
+      },
+      {
+        grossEmploymentIncome: 200_000,
+        netPublicPensionIncome: 0,
+        elderlyPensionSpecialDeduction: 0,
+      },
+    ];
+    expect(countNHISalaryEarners(members, threshold)).toBe(1);
+  });
+
+  it('counts members with adjusted public pension income > 0', () => {
+    const members = [
+      // net pension 400k - deduction 150k = 250k > 0 -> counts
+      {
+        grossEmploymentIncome: 0,
+        netPublicPensionIncome: 400_000,
+        elderlyPensionSpecialDeduction: 150_000,
+      },
+      // net pension 150k - deduction 150k = 0 -> does not count
+      {
+        grossEmploymentIncome: 0,
+        netPublicPensionIncome: 150_000,
+        elderlyPensionSpecialDeduction: 150_000,
+      },
+    ];
+    expect(countNHISalaryEarners(members, threshold)).toBe(1);
+  });
+
+  it('counts a member with BOTH gross employment > threshold AND adjusted pension > 0 only once', () => {
+    const members = [
+      {
+        grossEmploymentIncome: 800_000,
+        netPublicPensionIncome: 300_000,
+        elderlyPensionSpecialDeduction: 150_000,
+      },
+    ];
+    expect(countNHISalaryEarners(members, threshold)).toBe(1);
+  });
+
+  it('returns 0 for an empty group', () => {
+    expect(countNHISalaryEarners([], threshold)).toBe(0);
   });
 });
