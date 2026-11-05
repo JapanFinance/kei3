@@ -37,13 +37,10 @@ import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
+  type NHIHouseholdMember,
   type NHIPremiumReductionRatio,
 } from '../../../types/healthInsurance';
-import type {
-  TakeHomeResults,
-  TakeHomeInputs,
-  NHIHouseholdMemberSummary,
-} from '../../../types/tax';
+import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
 import { isLongTermCareCategory2Insured } from '../../../types/taxpayerAge';
 import { formatJPY, formatPercent, formatMonthShort } from '../../../utils/formatters';
 import {
@@ -531,17 +528,24 @@ export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps>
     ? household.calculationBase
     : premiumCalculationBase(results.totalNetIncome);
 
-  const members: NHIHouseholdMemberSummary[] = household?.members ?? [
+  const members: NHIHouseholdMember[] = household?.members ?? [
     {
       id: 'taxpayer',
       relationship: 'taxpayer',
       isTaxpayer: true,
+      isSameHousehold: true,
       isHouseholdHead: true,
       isNHIInsured: true,
       isLtcCat2: isLtc,
+      isPreschool: false,
+      isChildSupportExempt: false,
+      isElderly65Plus: false,
       netIncome: results.totalNetIncome,
       basicDeduction: calculateResidenceTaxBasicDeduction(results.totalNetIncome),
       calculationBase: premiumCalculationBase(results.totalNetIncome),
+      grossEmploymentIncome: 0,
+      netPublicPensionIncome: 0,
+      elderlyPensionSpecialDeduction: 0,
     },
   ];
 

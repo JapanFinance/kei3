@@ -6,9 +6,15 @@ import {
   getNHIPremiumReductionThresholdsForMonth,
   NHI_ELDERLY_PENSION_REDUCTION_SPECIAL_DEDUCTION,
 } from '../data/nationalHealthInsurance/nhiPremiumReduction';
+import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDeduction';
 import type { Dependent } from '../types/dependents';
 import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
-import type { HealthInsuranceProviderId, NHIPaymentAttribution } from '../types/healthInsurance';
+import type {
+  HealthInsuranceProviderId,
+  NHIHouseholdComposition,
+  NHIHouseholdMember,
+  NHIPaymentAttribution,
+} from '../types/healthInsurance';
 import {
   DEFAULT_NHI_PAYMENT_ATTRIBUTION,
   LATTER_STAGE_ELDERLY_ID,
@@ -26,71 +32,6 @@ import {
   calculateDependentTotalNetIncome,
 } from './dependentDeductions';
 import { premiumCalculationBase } from './healthInsuranceCalculator';
-
-/**
- * A household member evaluated for National Health Insurance.
- */
-export interface NHIHouseholdMember {
-  id: string;
-  relationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
-  isTaxpayer: boolean;
-  isSameHousehold: boolean;
-  isHouseholdHead: boolean;
-  isNHIInsured: boolean;
-  isLtcCat2: boolean;
-  isPreschool: boolean;
-  isChildSupportExempt: boolean;
-  isElderly65Plus: boolean;
-  netIncome: number;
-  calculationBase: number;
-  grossEmploymentIncome: number;
-  netPublicPensionIncome: number;
-  elderlyPensionSpecialDeduction: number;
-}
-
-/**
- * Composed household-level NHI structure and statutory reduction inputs.
- */
-export interface NHIHouseholdComposition {
-  /** All members belonging to the 住民票 household (taxpayer + cohabiting dependents) */
-  members: NHIHouseholdMember[];
-  /** Designated household head (世帯主) */
-  householdHead: NHIHouseholdMember;
-  /** Whether the household head is a deemed head (擬制世帯主, not enrolled in NHI) */
-  isDeemedHead: boolean;
-  /** Taxpayer member reference */
-  taxpayerMember: NHIHouseholdMember;
-  /**
-   * Number of NHI-insured members.
-   *
-   * Note on limitation: Under 国民健康保険法施行令第29条の7第5項第1号, members who aged out
-   * of NHI into the 75+ Latter-Stage Elderly Healthcare System (特定同一世帯所属者) are counted
-   * alongside NHI-insured members when expanding the 5割 and 2割 low-income reduction thresholds.
-   * Because past insurance enrollment transitions are not tracked across age 75, 75+ members
-   * (notably a 75+ deemed-head taxpayer) are not included in this count.
-   */
-  insuredCount: number;
-  /** Number of NHI-insured members aged 40-64 */
-  ltcInsuredCount: number;
-  /** Number of NHI-insured preschool children under age 6 */
-  preschoolCount: number;
-  /** Number of NHI-insured children under 19 exempt from child support per-capita */
-  childSupportExemptCount: number;
-  /** Sum of premiumCalculationBase across all NHI-insured members */
-  calculationBase: number;
-  /** Sum of premiumCalculationBase across NHI-insured members aged 40-64 */
-  ltcCalculationBase: number;
-  /** Group evaluated for 7/5/2割 low-income reduction: household head + all NHI-insured members */
-  reductionTestGroup: NHIHouseholdMember[];
-  /** 軽減判定所得 across the reduction test group */
-  reductionTestIncome: number;
-  /** 給与所得者等の数 across the reduction test group for the two fiscal years blended in the year */
-  salaryEarnersCounts: { prevFY: number; currFY: number };
-  /** Region key to look up NHI parameters from */
-  effectiveRegion: string;
-  /** Configured payment attribution */
-  paymentAttribution: NHIPaymentAttribution;
-}
 
 /**
  * Counts salary and public-pension earners (給与所得者等の数) in the reduction test group against
@@ -228,6 +169,7 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
     isChildSupportExempt: taxpayer.ageRange === 'under18',
     isElderly65Plus: taxpayerIs65Plus,
     netIncome: taxpayer.netIncome,
+    basicDeduction: calculateResidenceTaxBasicDeduction(taxpayer.netIncome),
     calculationBase: premiumCalculationBase(taxpayer.netIncome),
     grossEmploymentIncome: taxpayer.grossEmploymentIncome,
     netPublicPensionIncome: taxpayer.netPublicPensionIncome,
@@ -272,6 +214,7 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
       isChildSupportExempt,
       isElderly65Plus,
       netIncome,
+      basicDeduction: calculateResidenceTaxBasicDeduction(netIncome),
       calculationBase: premiumCalculationBase(netIncome),
       grossEmploymentIncome: dep.income.grossEmploymentIncome,
       netPublicPensionIncome,

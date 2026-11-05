@@ -580,8 +580,8 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         results.householdNHIPremium > 0 &&
         results.nhiHousehold &&
         (() => {
-          const portions = results.nhiHousehold.taxpayerPortions;
-          const caps = results.nhiHousehold.taxpayerCaps;
+          const portions = results.nhiHousehold.householdPortions;
+          const caps = results.nhiHousehold.householdCaps;
           const householdCapStatus: CapStatus = {
             healthInsuranceCapped:
               caps.medicalCapped ||

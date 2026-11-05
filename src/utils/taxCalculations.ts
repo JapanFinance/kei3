@@ -18,6 +18,7 @@ import {
   LATTER_STAGE_ELDERLY_ID,
   type LongTermCareCategory1Estimate,
   NATIONAL_HEALTH_INSURANCE_ID,
+  type NHIHouseholdSummary,
 } from '../types/healthInsurance';
 import {
   type BonusIncomeStream,
@@ -27,7 +28,6 @@ import {
   type FurusatoNozeiDetails,
   type HighIncomeMinimumTaxResult,
   type IncomeStream,
-  type NHIHouseholdSummary,
   NO_RESIDENCE_TAX_CREDITS,
   type PersonalCircumstancesInput,
   type RealEstateIncomeStream,

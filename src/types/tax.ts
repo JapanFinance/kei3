@@ -6,6 +6,7 @@ import type { Dependent, DependentDeductionResults, DisabilityLevel } from './de
 import type {
   HealthInsuranceProviderId,
   LongTermCareCategory1Estimate,
+  NHIHouseholdSummary,
   NHIPaymentAttribution,
   NHIPremiumReductionRatio,
 } from './healthInsurance';
@@ -1206,90 +1207,6 @@ export interface TakeHomeResults {
   ageRange: TaxpayerAgeRange;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
-}
-
-/**
- * Summary of an individual member's contribution to household NHI calculation base
- */
-export interface NHIHouseholdMemberSummary {
-  id: string;
-  relationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
-  isTaxpayer: boolean;
-  isHouseholdHead: boolean;
-  isNHIInsured: boolean;
-  isLtcCat2: boolean;
-  netIncome: number;
-  basicDeduction: number;
-  calculationBase: number;
-}
-
-/**
- * Summary of household-level National Health Insurance calculations and member breakdown
- */
-export interface NHIHouseholdSummary {
-  /** Individual members and their calculation bases */
-  members: NHIHouseholdMemberSummary[];
-  /**
-   * Total number of members enrolled in NHI in this household.
-   *
-   * Note on limitation: Members who aged out of NHI into the 75+ scheme (特定同一世帯所属者)
-   * count toward the 5割/2割 reduction thresholds in municipal NHI under
-   * 国民健康保険法施行令第29条の7第5項第1号, but are not tracked across age 75 and therefore not
-   * included in insuredCount.
-   */
-  insuredCount: number;
-  /** Number of NHI-insured members aged 40-64 (subject to 介護納付金分) */
-  ltcInsuredCount: number;
-  /** Number of NHI-insured preschool children under age 6 (subject to 50% 均等割 reduction) */
-  preschoolCount: number;
-  /** Number of NHI-insured children under 19 exempt from 子ども・子育て支援納付金分均等割 */
-  childSupportExemptCount: number;
-  /** Combined premium calculation base across all NHI-insured members */
-  calculationBase: number;
-  /** Combined premium calculation base across NHI-insured members aged 40-64 */
-  ltcCalculationBase: number;
-  /** Whether a deemed household head (擬制世帯主) is present */
-  isDeemedHead: boolean;
-  /** Who the household head is */
-  householdHeadRelationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
-  /** Total reduction test income (軽減判定所得) across head and NHI members */
-  reductionTestIncome: number;
-  /** Number of salary/pension earners in reduction test group (給与所得者等の数) per fiscal year */
-  salaryEarnersCounts: { prevFY: number; currFY: number };
-  /** Low-income reduction ratio applied (0, 0.2, 0.5, 0.7) for prev and curr FY */
-  reductionRatios: { prevFY: NHIPremiumReductionRatio; currFY: NHIPremiumReductionRatio };
-  /** Full household annual premium breakdown */
-  householdTotal: number;
-  householdPortions: {
-    medical: number;
-    elderlySupport: number;
-    longTermCare: number;
-    childSupport: number;
-  };
-  householdCaps: {
-    medicalCapped: boolean;
-    elderlySupportCapped: boolean;
-    longTermCareCapped: boolean;
-    childSupportCapped: boolean;
-  };
-  /** Taxpayer's attributed annual premium breakdown */
-  taxpayerTotal: number;
-  taxpayerPortions: {
-    medical: number;
-    elderlySupport: number;
-    longTermCare: number;
-    childSupport: number;
-  };
-  taxpayerCaps: {
-    medicalCapped: boolean;
-    elderlySupportCapped: boolean;
-    longTermCareCapped: boolean;
-    childSupportCapped: boolean;
-  };
-  /** Configured payment attribution */
-  paymentAttribution: NHIPaymentAttribution;
-  /** Region key used for NHI parameters */
-  effectiveRegion: string;
 }
 
 export interface ResidenceTaxDetails {

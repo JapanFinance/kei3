@@ -911,13 +911,13 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
 
     // Verify portions are non-zero and sum to household NHI premium
     const summary = results.nhiHousehold!;
-    expect(summary.taxpayerPortions.medical).toBeGreaterThan(0);
-    expect(summary.taxpayerPortions.elderlySupport).toBeGreaterThan(0);
-    expect(summary.taxpayerPortions.longTermCare).toBeGreaterThan(0);
-    expect(summary.taxpayerPortions.childSupport).toBeGreaterThan(0);
+    expect(summary.householdPortions.medical).toBeGreaterThan(0);
+    expect(summary.householdPortions.elderlySupport).toBeGreaterThan(0);
+    expect(summary.householdPortions.longTermCare).toBeGreaterThan(0);
+    expect(summary.householdPortions.childSupport).toBeGreaterThan(0);
 
     // Caps should be flagged on the summary
-    expect(summary.taxpayerCaps.medicalCapped).toBe(true);
+    expect(summary.householdCaps.medicalCapped).toBe(true);
   });
 
   it('does not mix household NHI bases into the 75+ Latter-Stage Elderly income-basis block when 2+ dependents are on NHI', () => {

@@ -32,14 +32,10 @@ import {
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
+  type NHIHouseholdComposition,
+  type NHIHouseholdSummary,
 } from '../types/healthInsurance';
-import type {
-  BonusIncomeStream,
-  CustomEmployeesHealthInsuranceRates,
-  NHIHouseholdMemberSummary,
-  NHIHouseholdSummary,
-} from '../types/tax';
-import type { NHIHouseholdComposition } from './nhiHousehold';
+import type { BonusIncomeStream, CustomEmployeesHealthInsuranceRates } from '../types/tax';
 
 /** The portions (区分) a National Health Insurance premium is made of. */
 export type NationalHealthInsurancePortionKey =
@@ -773,30 +769,8 @@ export function calculateHouseholdNHIBreakdown(
     childSupportCapped: false,
   };
 
-  const memberSummaries: NHIHouseholdMemberSummary[] = household.members.map(m => ({
-    id: m.id,
-    relationship: m.relationship,
-    isTaxpayer: m.isTaxpayer,
-    isHouseholdHead: m.isHouseholdHead,
-    isNHIInsured: m.isNHIInsured,
-    isLtcCat2: m.isLtcCat2,
-    netIncome: m.netIncome,
-    basicDeduction: calculateResidenceTaxBasicDeduction(m.netIncome),
-    calculationBase: m.calculationBase,
-  }));
-
   const zeroSummary: NHIHouseholdSummary = {
-    members: memberSummaries,
-    insuredCount: household.insuredCount,
-    ltcInsuredCount: household.ltcInsuredCount,
-    preschoolCount: household.preschoolCount,
-    childSupportExemptCount: household.childSupportExemptCount,
-    calculationBase: household.calculationBase,
-    ltcCalculationBase: household.ltcCalculationBase,
-    isDeemedHead: household.isDeemedHead,
-    householdHeadRelationship: household.householdHead.relationship,
-    reductionTestIncome: household.reductionTestIncome,
-    salaryEarnersCounts: household.salaryEarnersCounts,
+    ...household,
     reductionRatios: { prevFY: 0, currFY: 0 },
     householdTotal: 0,
     householdPortions: { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 },
@@ -807,15 +781,6 @@ export function calculateHouseholdNHIBreakdown(
       childSupportCapped: false,
     },
     taxpayerTotal: 0,
-    taxpayerPortions: { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 },
-    taxpayerCaps: {
-      medicalCapped: false,
-      elderlySupportCapped: false,
-      longTermCareCapped: false,
-      childSupportCapped: false,
-    },
-    paymentAttribution: household.paymentAttribution,
-    effectiveRegion: household.effectiveRegion,
   };
 
   if (!currFYParams || household.insuredCount === 0) {
@@ -891,22 +856,20 @@ export function calculateHouseholdNHIBreakdown(
   };
 
   // Attribution calculation
-  let taxpayerPortions: typeof householdPortions;
-  let taxpayerCaps: NHIHouseholdSummary['taxpayerCaps'];
+  let taxpayerBreakdown: NationalHealthInsuranceBreakdown;
 
   switch (household.paymentAttribution) {
     case 'fullHousehold':
-      taxpayerPortions = { ...householdPortions };
-      taxpayerCaps = {
-        medicalCapped: householdBreakdown.medicalCapped,
-        elderlySupportCapped: householdBreakdown.elderlySupportCapped,
-        longTermCareCapped: householdBreakdown.longTermCareCapped,
-        childSupportCapped: householdBreakdown.childSupportCapped,
-      };
+      taxpayerBreakdown = { ...householdBreakdown };
       break;
     case 'none':
-      taxpayerPortions = { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 };
-      taxpayerCaps = {
+      taxpayerBreakdown = {
+        medicalPortion: 0,
+        elderlySupportPortion: 0,
+        longTermCarePortion: 0,
+        childSupportPortion: 0,
+        total: 0,
+        reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
         medicalCapped: false,
         elderlySupportCapped: false,
         longTermCareCapped: false,
@@ -919,37 +882,8 @@ export function calculateHouseholdNHIBreakdown(
     }
   }
 
-  const taxpayerTotal =
-    taxpayerPortions.medical +
-    taxpayerPortions.elderlySupport +
-    taxpayerPortions.longTermCare +
-    taxpayerPortions.childSupport;
-
-  const taxpayerBreakdown: NationalHealthInsuranceBreakdown = {
-    medicalPortion: taxpayerPortions.medical,
-    elderlySupportPortion: taxpayerPortions.elderlySupport,
-    longTermCarePortion: taxpayerPortions.longTermCare,
-    childSupportPortion: taxpayerPortions.childSupport,
-    total: taxpayerTotal,
-    reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
-    medicalCapped: taxpayerCaps.medicalCapped,
-    elderlySupportCapped: taxpayerCaps.elderlySupportCapped,
-    longTermCareCapped: taxpayerCaps.longTermCareCapped,
-    childSupportCapped: taxpayerCaps.childSupportCapped,
-  };
-
   const summary: NHIHouseholdSummary = {
-    members: memberSummaries,
-    insuredCount: household.insuredCount,
-    ltcInsuredCount: household.ltcInsuredCount,
-    preschoolCount: household.preschoolCount,
-    childSupportExemptCount: household.childSupportExemptCount,
-    calculationBase: household.calculationBase,
-    ltcCalculationBase: household.ltcCalculationBase,
-    isDeemedHead: household.isDeemedHead,
-    householdHeadRelationship: household.householdHead.relationship,
-    reductionTestIncome: household.reductionTestIncome,
-    salaryEarnersCounts: household.salaryEarnersCounts,
+    ...household,
     reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
     householdTotal,
     householdPortions,
@@ -959,16 +893,7 @@ export function calculateHouseholdNHIBreakdown(
       longTermCareCapped: householdBreakdown.longTermCareCapped,
       childSupportCapped: householdBreakdown.childSupportCapped,
     },
-    taxpayerTotal,
-    taxpayerPortions,
-    taxpayerCaps: {
-      medicalCapped: taxpayerBreakdown.medicalCapped,
-      elderlySupportCapped: taxpayerBreakdown.elderlySupportCapped,
-      longTermCareCapped: taxpayerBreakdown.longTermCareCapped,
-      childSupportCapped: taxpayerBreakdown.childSupportCapped,
-    },
-    paymentAttribution: household.paymentAttribution,
-    effectiveRegion: household.effectiveRegion,
+    taxpayerTotal: taxpayerBreakdown.total,
   };
 
   return {
