@@ -349,7 +349,9 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       expect(container.textContent).toContain('Spouse');
       expect(container.textContent).toContain('Household Total Base');
       expect(container.textContent).toContain('Long-Term Care Base');
-      expect(container.textContent).toContain('MHLW: National Health Insurance System');
+      expect(container.textContent).toContain(
+        'Tokyo Bureau of Public Health: National Health Insurance Guide',
+      );
     });
 
     it('renders the 100% under-19 exemption formula (not the 50% preschool formula) on the childSupport portion when a preschool child is in the household', () => {

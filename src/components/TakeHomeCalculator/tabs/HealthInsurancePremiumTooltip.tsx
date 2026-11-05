@@ -643,8 +643,9 @@ export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps>
       <SourceLinks
         sources={[
           {
-            href: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/koukikourei/index_00002.html',
-            label: 'MHLW: National Health Insurance System (厚生労働省: 国民健康保険制度)',
+            href: 'https://www.hokeniryo.metro.tokyo.lg.jp/kenkou/kokuho/aramashi/index.html',
+            label:
+              'Tokyo Bureau of Public Health: National Health Insurance Guide (東京都保健医療局: 国民健康保険のあらまし)',
           },
         ]}
       />
