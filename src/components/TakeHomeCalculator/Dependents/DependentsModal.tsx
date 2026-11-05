@@ -43,6 +43,7 @@ import type {
 } from '../../../types/dependents';
 import { RELATIONSHIPS, DEPENDENT_AGE_RANGES, DEDUCTION_TYPES } from '../../../types/dependents';
 import {
+  DEFAULT_PROVIDER,
   NATIONAL_HEALTH_INSURANCE_ID,
   type HealthInsuranceProviderId,
   type NHIPaymentAttribution,
@@ -56,7 +57,10 @@ import {
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
-import { resolveDependentNHIEnrollment } from '../../../utils/nhiHousehold';
+import {
+  resolveDependentNHIEnrollment,
+  resolveEffectiveNHIRegion,
+} from '../../../utils/nhiHousehold';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
@@ -78,7 +82,9 @@ interface DependentsModalProps {
   /** NHI payment attribution setting */
   nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
   onNHIPaymentAttributionChange?: ((attribution: NHIPaymentAttribution) => void) | undefined;
-  /** NHI household region setting */
+  /** Taxpayer's selected region on the main form (used as fallback before Tokyo) */
+  region?: string | undefined;
+  /** Explicit household NHI municipality/region override */
   nhiHouseholdRegion?: string | undefined;
   onNHIHouseholdRegionChange?: ((region: string) => void) | undefined;
 }
@@ -98,13 +104,20 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   taxpayerAgeRange,
   nhiPaymentAttribution = 'fullHousehold',
   onNHIPaymentAttributionChange,
-  nhiHouseholdRegion = 'Tokyo',
+  region,
+  nhiHouseholdRegion,
   onNHIHouseholdRegionChange,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [editingDependent, setEditingDependent] = useState<OtherDependent | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+
+  const effectiveNHIRegion = resolveEffectiveNHIRegion(
+    healthInsuranceProvider ?? DEFAULT_PROVIDER,
+    region ?? 'Tokyo',
+    nhiHouseholdRegion,
+  );
 
   // Separate spouse from other dependents
   const spouse = dependents.find(d => d.relationship === 'spouse');
@@ -506,8 +519,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         <MenuItem value="none">Not paid by taxpayer</MenuItem>
                       </Select>
                       <FormHelperText>
-                        Whoever pays NHI premiums for family members can claim the amount paid as
-                        the social insurance deduction.
+                        NHI paid for yourself or a legal spouse/relative sharing living expenses is
+                        deductible.
                       </FormHelperText>
                     </FormControl>
 
@@ -519,7 +532,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         <Select
                           labelId="nhi-modal-region-label"
                           label="Household NHI Municipality / Region"
-                          value={nhiHouseholdRegion}
+                          value={effectiveNHIRegion}
                           onChange={e => onNHIHouseholdRegionChange?.(e.target.value)}
                         >
                           {NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS.map(opt => (

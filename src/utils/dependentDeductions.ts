@@ -38,8 +38,8 @@ export { getDependentEligibilityMax };
 
 /**
  * Whether a dependent is claimed for tax deductions (扶養控除 / 配偶者控除 / 障害者控除 等).
- * Defaults to true when omitted. When false, the person is not claimed as a tax dependent
- * by the taxpayer (e.g. child claimed on the other parent's return, or independent cohabiting earner).
+ * When false, the person is not claimed as a tax dependent by the taxpayer (e.g. child claimed
+ * on the other parent's return, or independent cohabiting earner).
  */
 export function isClaimedTaxDependent(dependent: Dependent): boolean {
   return dependent.isClaimedAsDependent;

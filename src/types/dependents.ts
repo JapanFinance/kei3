@@ -231,9 +231,11 @@ export interface Spouse {
   isSameHousehold: boolean;
 
   /**
-   * Whether to claim this spouse as a tax dependent for 配偶者控除 / 配偶者特別控除 / 障害者控除.
-   * When false, no tax deductions are claimed for this spouse, but their same-household
-   * status still participates in NHI and residence tax limits.
+   * Whether to claim this spouse for tax deductions (配偶者控除 / 配偶者特別控除 / 障害者控除),
+   * residence-tax non-taxable limits, and National Pension exemption headcounts.
+   * When false, tax-dependent rules exclude this spouse, while same-household municipal rules
+   * (household NHI and age 65+ LTC Category 1 household taxability) still include them when
+   * `isSameHousehold` is true.
    */
   isClaimedAsDependent: boolean;
 
@@ -250,8 +252,8 @@ export interface Spouse {
    * By default, the taxpayer is assumed to be the household head. If this member is designated
    * as head, they are the head for municipal NHI purposes. A non-enrolled head acts as a
    * deemed head (擬制世帯主, 国民健康保険法第9条). In either case, the head's income is included
-   * in the low-income reduction test (国民健康保険法施行令第29条の7第2項). At most one same-household
-   * member can be head.
+   * in the low-income reduction test (国民健康保険法施行令第29条の7第5項第1号). At most one
+   * same-household member can be head.
    */
   isHouseholdHead: boolean;
 }
@@ -279,9 +281,12 @@ export interface OtherDependent {
   isSameHousehold: boolean;
 
   /**
-   * Whether to claim this dependent for 扶養控除 / 障害者控除 / 所得金額調整控除.
-   * When false, no tax deductions are claimed for this person (e.g. child claimed by
-   * the other parent under 所得税法第85条第5項, or independent same-household relative).
+   * Whether to claim this dependent for tax deductions (扶養控除 / 特定親族特別控除 / 障害者控除 /
+   * 所得金額調整控除), residence-tax non-taxable limits, and National Pension exemption headcounts.
+   * When false, tax-dependent rules exclude this person (e.g. child claimed by the other parent
+   * under 所得税法第85条第5項, or independent same-household relative), while same-household
+   * municipal rules (household NHI and age 65+ LTC Category 1 household taxability) still include
+   * them when `isSameHousehold` is true.
    */
   isClaimedAsDependent: boolean;
 
@@ -298,8 +303,8 @@ export interface OtherDependent {
    * By default, the taxpayer is assumed to be the household head. If this member is designated
    * as head, they are the head for municipal NHI purposes. A non-enrolled head acts as a
    * deemed head (擬制世帯主, 国民健康保険法第9条). In either case, the head's income is included
-   * in the low-income reduction test (国民健康保険法施行令第29条の7第2項). At most one same-household
-   * member can be head.
+   * in the low-income reduction test (国民健康保険法施行令第29条の7第5項第1号). At most one
+   * same-household member can be head.
    */
   isHouseholdHead: boolean;
 }

@@ -109,7 +109,6 @@ function App() {
     manualSocialInsuranceEntry: false,
     manualSocialInsuranceAmount: 0,
     nhiPaymentAttribution: 'fullHousehold',
-    nhiHouseholdRegion: 'Tokyo',
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   };
 

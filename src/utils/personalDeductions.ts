@@ -187,7 +187,7 @@ export const getPersonalCircumstanceWarnings = (
     const hasQualifyingChild = dependents.some(
       dependent =>
         dependent.relationship === 'child' &&
-        dependent.isClaimedAsDependent !== false &&
+        dependent.isClaimedAsDependent &&
         calculateDependentTotalNetIncome(dependent, year) <= getSingleParentChildIncomeLimit(year),
     );
     if (!hasQualifyingChild) warnings.push('singleParentNoQualifyingChild');
@@ -197,7 +197,7 @@ export const getPersonalCircumstanceWarnings = (
     const hasDependentRelative = dependents.some(
       dependent =>
         dependent.relationship !== 'spouse' &&
-        dependent.isClaimedAsDependent !== false &&
+        dependent.isClaimedAsDependent &&
         calculateDependentTotalNetIncome(dependent, year) <= getDependentEligibilityMax(year),
     );
     if (!hasDependentRelative) warnings.push('widowDivorcedNoDependentRelative');

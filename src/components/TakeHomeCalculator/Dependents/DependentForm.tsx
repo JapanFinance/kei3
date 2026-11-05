@@ -92,7 +92,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   const [disability, setDisability] = useState<DisabilityLevel>(dependent?.disability ?? 'none');
   const [isSameHousehold, setIsSameHousehold] = useState(dependent?.isSameHousehold ?? true);
   const [isClaimedAsDependent, setIsClaimedAsDependent] = useState<boolean>(
-    dependent?.isClaimedAsDependent !== false,
+    dependent?.isClaimedAsDependent ?? true,
   );
   const [healthInsurance, setHealthInsurance] = useState<HouseholdMemberHealthInsurance>(
     dependent?.healthInsurance ?? 'auto',

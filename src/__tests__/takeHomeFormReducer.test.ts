@@ -23,6 +23,7 @@ import {
   DEFAULT_INCOME_YEAR,
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
 } from '../types/tax';
+import { resolveEffectiveNHIRegion } from '../utils/nhiHousehold';
 
 const baseState: TakeHomeFormState = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -918,5 +919,87 @@ describe('75+ provider forcing', () => {
     expect(ids).toHaveLength(47);
     expect(ids).toContain('Tokyo');
     expect(ids).toContain('Okinawa');
+  });
+
+  describe('nhiHouseholdRegion synchronization and fallback', () => {
+    it('lets non-NHI region changes fall through to resolveEffectiveNHIRegion until explicitly overridden', () => {
+      const osakaEHI = takeHomeFormReducer(baseState, {
+        type: 'regionChanged',
+        region: 'Osaka',
+      });
+
+      expect(osakaEHI.nhiHouseholdRegion).toBeUndefined();
+      expect(
+        resolveEffectiveNHIRegion(
+          osakaEHI.healthInsuranceProvider,
+          osakaEHI.region,
+          osakaEHI.nhiHouseholdRegion,
+        ),
+      ).toBe('Osaka');
+    });
+
+    it('does not stamp Tokyo onto nhiHouseholdRegion on a round trip through NHI without picking a municipality', () => {
+      const toNHI = takeHomeFormReducer(baseState, {
+        type: 'providerChanged',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+      });
+      expect(toNHI.nhiHouseholdRegion).toBeUndefined();
+
+      const backToEHI = takeHomeFormReducer(toNHI, {
+        type: 'providerChanged',
+        provider: 'KyokaiKenpo',
+      });
+      const toOsaka = takeHomeFormReducer(backToEHI, {
+        type: 'regionChanged',
+        region: 'Osaka',
+      });
+
+      expect(toOsaka.nhiHouseholdRegion).toBeUndefined();
+      expect(
+        resolveEffectiveNHIRegion(
+          toOsaka.healthInsuranceProvider,
+          toOsaka.region,
+          toOsaka.nhiHouseholdRegion,
+        ),
+      ).toBe('Osaka');
+    });
+
+    it('preserves an explicitly chosen NHI municipality across a switch to EHI and clears stale overrides when returning to NHI', () => {
+      const onNHI = takeHomeFormReducer(baseState, {
+        type: 'providerChanged',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+      });
+      const setagayaNHI = takeHomeFormReducer(onNHI, {
+        type: 'regionChanged',
+        region: 'Tokyo-Setagaya',
+      });
+      expect(setagayaNHI.nhiHouseholdRegion).toBe('Tokyo-Setagaya');
+
+      const toEHI = takeHomeFormReducer(setagayaNHI, {
+        type: 'providerChanged',
+        provider: 'KyokaiKenpo',
+      });
+      expect(toEHI.region).toBe('Tokyo');
+      expect(toEHI.nhiHouseholdRegion).toBe('Tokyo-Setagaya');
+      expect(
+        resolveEffectiveNHIRegion(
+          toEHI.healthInsuranceProvider,
+          toEHI.region,
+          toEHI.nhiHouseholdRegion,
+        ),
+      ).toBe('Tokyo-Setagaya');
+
+      // Auto-cascade to NHI via applyProviderValidity clears the stale override alongside resetting region
+      const cascadedToNHI = takeHomeFormReducer(
+        { ...toEHI, incomeMode: 'advanced' },
+        {
+          type: 'incomeStreamsChanged',
+          streams: [{ id: 'b1', type: 'business', amount: 5_000_000 }],
+        },
+      );
+      expect(cascadedToNHI.healthInsuranceProvider).toBe(NATIONAL_HEALTH_INSURANCE_ID);
+      expect(cascadedToNHI.region).toBe('Tokyo');
+      expect(cascadedToNHI.nhiHouseholdRegion).toBeUndefined();
+    });
   });
 });

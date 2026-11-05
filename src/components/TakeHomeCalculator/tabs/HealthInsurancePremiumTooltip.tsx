@@ -233,12 +233,6 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
 
   // Low-income reduction tier per fiscal year — reproduces the calculator's judgement.
-  const reductionOptions = results.nhiHousehold
-    ? {
-        insuredCount: results.nhiHousehold.insuredCount,
-        salaryEarnersCount: results.nhiHousehold.salaryEarnersCount,
-      }
-    : undefined;
   const reductionIncome = results.nhiHousehold
     ? results.nhiHousehold.reductionTestIncome
     : results.totalNetIncome;
@@ -247,13 +241,23 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     reductionIncome,
     year,
     0,
-    reductionOptions,
+    results.nhiHousehold
+      ? {
+          insuredCount: results.nhiHousehold.insuredCount,
+          salaryEarnersCount: results.nhiHousehold.salaryEarnersCounts.prevFY,
+        }
+      : undefined,
   );
   const currReductionRatio = getNHIPremiumReductionRatioForMonth(
     reductionIncome,
     year,
     3,
-    reductionOptions,
+    results.nhiHousehold
+      ? {
+          insuredCount: results.nhiHousehold.insuredCount,
+          salaryEarnersCount: results.nhiHousehold.salaryEarnersCounts.currFY,
+        }
+      : undefined,
   );
 
   if (!currFYData) {
@@ -353,7 +357,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
         {(() => {
           const thresholds = getNHIPremiumReductionThresholdsForMonth(year, 3);
           const insuredCount = results.nhiHousehold?.insuredCount ?? 1;
-          const salaryEarnersCount = results.nhiHousehold?.salaryEarnersCount ?? 1;
+          const salaryEarnersCount = results.nhiHousehold?.salaryEarnersCounts.currFY ?? 1;
           const earnerAllowance =
             thresholds.perAdditionalSalaryEarner * Math.max(0, salaryEarnersCount - 1);
           const isHousehold = insuredCount > 1 || salaryEarnersCount > 1;

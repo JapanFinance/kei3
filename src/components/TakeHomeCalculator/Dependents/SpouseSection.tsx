@@ -17,7 +17,6 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import { useState } from 'react';
 
 import type {
   DisabilityLevel,
@@ -66,10 +65,9 @@ export default function SpouseSection({
   isTaxpayerNHI = false,
   taxpayerHealthInsuranceProvider,
 }: SpouseSectionProps) {
-  const [hasSpouse, setHasSpouse] = useState(spouse !== null);
+  const hasSpouse = spouse !== null;
 
   const handleToggleSpouse = (checked: boolean) => {
-    setHasSpouse(checked);
     if (checked) {
       // Create new spouse with default values
       const newSpouse: Spouse = {
@@ -126,7 +124,7 @@ export default function SpouseSection({
         />
       </Box>
 
-      {hasSpouse && spouse && (
+      {spouse && (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Age & Status Switches on one row on desktop */}
           <Box
@@ -164,7 +162,7 @@ export default function SpouseSection({
             <FormControlLabel
               control={
                 <Switch
-                  checked={spouse.isClaimedAsDependent !== false}
+                  checked={spouse.isClaimedAsDependent}
                   onChange={e => handleSpouseChange({ isClaimedAsDependent: e.target.checked })}
                 />
               }

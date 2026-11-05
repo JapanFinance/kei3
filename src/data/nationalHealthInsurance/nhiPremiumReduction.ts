@@ -20,15 +20,9 @@
  */
 
 /**
- * Gross employment income threshold for a salary earner under the reduction test
- * (給与所得者等の数: 給与収入 > 55万円, 国民健康保険法施行令第29条の7第5項).
- */
-export const NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD = 550_000;
-
-/**
  * Special deduction for public pension income of individuals aged 65 and over
  * when assessing the NHI low-income reduction (高齢者特別控除: up to 15万円 from
- * 公的年金等に係る雑所得, 国民健康保険法施行令第29条の7第5項).
+ * 公的年金等に係る雑所得, 国民健康保険法施行令第29条の7第5項第1号).
  */
 export const NHI_ELDERLY_PENSION_REDUCTION_SPECIAL_DEDUCTION = 150_000;
 
@@ -43,10 +37,15 @@ export interface NHIPremiumReductionThresholds {
   twentyPercentPerInsured: number;
   /**
    * Additional allowance of 10万円 × (給与所得者等の数 − 1), included in every tier when the
-   * household has two or more salary or public-pension earners. Zero for the single-earner
-   * household this calculator models.
+   * household has two or more salary or public-pension earners.
    */
   perAdditionalSalaryEarner: number;
+  /**
+   * Gross employment income threshold above which a member counts toward 給与所得者等の数
+   * (給与収入 > 55万円 in FY2025; 給与収入 > 65万円 from FY2026 following the 令和7年度税制改正,
+   * 国民健康保険法施行令第29条の7第5項第1号).
+   */
+  salaryEarnerGrossThreshold: number;
 }
 
 /**
@@ -67,6 +66,7 @@ export const NHI_PREMIUM_REDUCTION_PERIODS: ReadonlyArray<NHIPremiumReductionThr
     fiftyPercentPerInsured: 310_000,
     twentyPercentPerInsured: 570_000,
     perAdditionalSalaryEarner: 100_000,
+    salaryEarnerGrossThreshold: 650_000,
   },
   // FY2025 (令和7年度): April 2025 – March 2026
   {
@@ -75,6 +75,7 @@ export const NHI_PREMIUM_REDUCTION_PERIODS: ReadonlyArray<NHIPremiumReductionThr
     fiftyPercentPerInsured: 305_000,
     twentyPercentPerInsured: 560_000,
     perAdditionalSalaryEarner: 100_000,
+    salaryEarnerGrossThreshold: 550_000,
   },
 ];
 

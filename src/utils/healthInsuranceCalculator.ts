@@ -731,7 +731,7 @@ export interface HouseholdNHICalculationResult {
  * - Multiplies per-capita by insured headcount, applying low-income reduction and preschool 50% discount
  * - Adds 1x household flat rate (平等割) per levied portion
  * - Caps each portion once at the household level before blending 3/10 prevFY + 7/10 currFY
- * - Calculates taxpayer payment attribution (100% full, apportioned share, or none/0)
+ * - Calculates taxpayer payment attribution (100% full household or none/0)
  */
 export function calculateHouseholdNHIBreakdown(
   household: NHIHouseholdComposition,
@@ -741,21 +741,23 @@ export function calculateHouseholdNHIBreakdown(
   const prevFYParams = getNHIParamsForMonth(regionKey, year, 0);
   const currFYParams = getNHIParamsForMonth(regionKey, year, 3);
 
-  const reductionOptions = {
-    insuredCount: household.insuredCount,
-    salaryEarnersCount: household.salaryEarnersCount,
-  };
   const prevReductionRatio = getNHIPremiumReductionRatioForMonth(
     household.reductionTestIncome,
     year,
     0,
-    reductionOptions,
+    {
+      insuredCount: household.insuredCount,
+      salaryEarnersCount: household.salaryEarnersCounts.prevFY,
+    },
   );
   const currReductionRatio = getNHIPremiumReductionRatioForMonth(
     household.reductionTestIncome,
     year,
     3,
-    reductionOptions,
+    {
+      insuredCount: household.insuredCount,
+      salaryEarnersCount: household.salaryEarnersCounts.currFY,
+    },
   );
 
   const zeroBreakdown: NationalHealthInsuranceBreakdown = {
@@ -794,7 +796,7 @@ export function calculateHouseholdNHIBreakdown(
     isDeemedHead: household.isDeemedHead,
     householdHeadRelationship: household.householdHead.relationship,
     reductionTestIncome: household.reductionTestIncome,
-    salaryEarnersCount: household.salaryEarnersCount,
+    salaryEarnersCounts: household.salaryEarnersCounts,
     reductionRatios: { prevFY: 0, currFY: 0 },
     householdTotal: 0,
     householdPortions: { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 },
@@ -947,7 +949,7 @@ export function calculateHouseholdNHIBreakdown(
     isDeemedHead: household.isDeemedHead,
     householdHeadRelationship: household.householdHead.relationship,
     reductionTestIncome: household.reductionTestIncome,
-    salaryEarnersCount: household.salaryEarnersCount,
+    salaryEarnersCounts: household.salaryEarnersCounts,
     reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
     householdTotal,
     householdPortions,

@@ -1030,6 +1030,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onNHIPaymentAttributionChange={attribution =>
           dispatch({ type: 'setField', field: 'nhiPaymentAttribution', value: attribution })
         }
+        region={inputs.region}
         nhiHouseholdRegion={inputs.nhiHouseholdRegion}
         onNHIHouseholdRegionChange={region =>
           dispatch({ type: 'setField', field: 'nhiHouseholdRegion', value: region })

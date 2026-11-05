@@ -1263,7 +1263,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
     it('disqualifies household from reduction when deemed household head has high income', () => {
       // Taxpayer on EHI (Kyokai Kenpo) earning 8M gross (6M net).
       // Spouse on NHI has 0 income.
-      // Under 国民健康保険法施行令第29条の7第2項, deemed head's income is tested.
+      // Under 国民健康保険法施行令第29条の7第5項第1号, deemed head's income is tested.
       // Even though spouse has 0 income, household gets 0% reduction.
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
@@ -1284,6 +1284,50 @@ describe('calculateHouseholdNHIBreakdown', () => {
       });
       const res = calculateHouseholdNHIBreakdown(household, year);
       expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0, currFY: 0 });
+    });
+
+    it('blends differing prevFY and currFY reduction ratios when household income falls between FY2025 and FY2026 thresholds', () => {
+      // 2 insured members, 0 salary earners:
+      // FY2025 5割 threshold = 430,000 + 305,000 * 2 = 1,040,000 -> 1,045,000 gets 2割 (0.2)
+      // FY2026 5割 threshold = 430,000 + 310,000 * 2 = 1,050,000 -> 1,045,000 gets 5割 (0.5)
+      const household = createTwoPersonHousehold(600_000, 445_000);
+      const res = calculateHouseholdNHIBreakdown(household, 2026);
+      expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0.2, currFY: 0.5 });
+      expect(res.summary.reductionRatios).toEqual({ prevFY: 0.2, currFY: 0.5 });
+    });
+
+    it('evaluates salaryEarnersCounts per fiscal year across the FY2025 (>550k) vs FY2026 (>650k) boundary', () => {
+      // Taxpayer has ¥1,150,000 gross salary (2026 net = ¥500,000; >650k so earner in both FYs).
+      // Cohabiting NHI spouse has ¥600,000 gross salary (2026 net = ¥0):
+      // - Jan–Mar 2026 (FY2025): 600,000 > 550,000 -> 2 salary earners -> 7割 limit = 430k + 100k = 530k -> 7割 (0.7)
+      // - Jun–Dec 2026 (FY2026): 600,000 <= 650,000 -> 1 salary earner -> 7割 limit = 430k (< 500k),
+      //   5割 limit = 430k + 310k * 2 = 1,050k -> 5割 (0.5)
+      const spouse: Dependent = makeSpouse({
+        id: 'spouse',
+        ageRange: 'under40',
+        income: {
+          grossEmploymentIncome: 600_000,
+          grossPublicPensionIncome: 0,
+          otherNetIncome: 0,
+        },
+        healthInsurance: 'nhi',
+      });
+      const household = composeNHIHousehold({
+        taxpayer: {
+          netIncome: 500_000,
+          grossEmploymentIncome: 1_150_000,
+          netPublicPensionIncome: 0,
+          ageRange: 'age20to39',
+          provider: NATIONAL_HEALTH_INSURANCE_ID,
+          region: 'Tokyo-Shibuya',
+        },
+        dependents: [spouse],
+        incomeYear: 2026,
+      });
+
+      const res = calculateHouseholdNHIBreakdown(household, 2026);
+      expect(res.summary.salaryEarnersCounts).toEqual({ prevFY: 2, currFY: 1 });
+      expect(res.householdBreakdown.reductionRatios).toEqual({ prevFY: 0.7, currFY: 0.5 });
     });
   });
 

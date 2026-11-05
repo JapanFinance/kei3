@@ -3,8 +3,8 @@
 
 import { NATIONAL_HEALTH_INSURANCE_REGIONS } from '../data/nationalHealthInsurance/nhiParamsData';
 import {
+  getNHIPremiumReductionThresholdsForMonth,
   NHI_ELDERLY_PENSION_REDUCTION_SPECIAL_DEDUCTION,
-  NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD,
 } from '../data/nationalHealthInsurance/nhiPremiumReduction';
 import type { Dependent } from '../types/dependents';
 import { DEPENDENT_AGE_BANDS, SPOUSE_AGE_BANDS, dependentAgeCoversBand } from '../types/dependents';
@@ -63,7 +63,7 @@ export interface NHIHouseholdComposition {
   /**
    * Number of NHI-insured members.
    *
-   * Note on limitation: Under 国民健康保険法施行令第29条の7第2項第2号・第3号, members who aged out
+   * Note on limitation: Under 国民健康保険法施行令第29条の7第5項第1号, members who aged out
    * of NHI into the 75+ Latter-Stage Elderly Healthcare System (特定同一世帯所属者) are counted
    * alongside NHI-insured members when expanding the 5割 and 2割 low-income reduction thresholds.
    * Because past insurance enrollment transitions are not tracked across age 75, 75+ members
@@ -84,12 +84,31 @@ export interface NHIHouseholdComposition {
   reductionTestGroup: NHIHouseholdMember[];
   /** 軽減判定所得 across the reduction test group */
   reductionTestIncome: number;
-  /** 給与所得者等の数 across the reduction test group */
-  salaryEarnersCount: number;
+  /** 給与所得者等の数 across the reduction test group for the two fiscal years blended in the year */
+  salaryEarnersCounts: { prevFY: number; currFY: number };
   /** Region key to look up NHI parameters from */
   effectiveRegion: string;
   /** Configured payment attribution */
   paymentAttribution: NHIPaymentAttribution;
+}
+
+/**
+ * Counts salary and public-pension earners (給与所得者等の数) in the reduction test group against
+ * a fiscal year's gross employment threshold (国民健康保険法施行令第29条の7第5項第1号).
+ */
+export function countNHISalaryEarners(
+  reductionTestGroup: ReadonlyArray<
+    Pick<
+      NHIHouseholdMember,
+      'grossEmploymentIncome' | 'netPublicPensionIncome' | 'elderlyPensionSpecialDeduction'
+    >
+  >,
+  salaryEarnerGrossThreshold: number,
+): number {
+  return reductionTestGroup.filter(m => {
+    const adjustedPension = m.netPublicPensionIncome - m.elderlyPensionSpecialDeduction;
+    return m.grossEmploymentIncome > salaryEarnerGrossThreshold || adjustedPension > 0;
+  }).length;
 }
 
 /**
@@ -99,7 +118,7 @@ export interface NHIHouseholdComposition {
  * - Members who are not in the same municipal household (isSameHousehold === false) belong to a separate household
  * - Members aged 75 or older (後期高齢者医療制度) cannot be enrolled in NHI
  * - 'nhi': explicitly enrolled in NHI
- * - 'other': explicitly covered under Employees' Health Insurance or other system
+ * - 'non_nhi': explicitly covered under Employees' Health Insurance or other system
  * - 'auto': follows the taxpayer's insurance (enrolled in NHI if taxpayer is on NHI, else not)
  */
 export function resolveDependentNHIEnrollment(
@@ -265,8 +284,8 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
 
   // Note on limitation: members who moved from NHI into the 75+ Latter-Stage Elderly Healthcare
   // scheme (特定同一世帯所属者) continue to count toward the 5割/2割 reduction thresholds under
-  // 国民健康保険法施行令第29条の7第2項第2号・第3号. Currently, 75+ members (including a 75+
-  // deemed-head taxpayer) are excluded from insuredCount.
+  // 国民健康保険法施行令第29条の7第5項第1号. Currently, 75+ members (including a 75+ deemed-head
+  // taxpayer) are excluded from insuredCount.
   const insuredMembers = members.filter(m => m.isNHIInsured);
   const insuredCount = insuredMembers.length;
   const ltcInsuredCount = insuredMembers.filter(m => m.isLtcCat2).length;
@@ -291,12 +310,12 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
     0,
   );
 
-  const salaryEarnersCount = reductionTestGroup.filter(m => {
-    const adjustedPension = m.netPublicPensionIncome - m.elderlyPensionSpecialDeduction;
-    return (
-      m.grossEmploymentIncome > NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD || adjustedPension > 0
-    );
-  }).length;
+  const prevFYThresholds = getNHIPremiumReductionThresholdsForMonth(incomeYear, 0);
+  const currFYThresholds = getNHIPremiumReductionThresholdsForMonth(incomeYear, 3);
+  const salaryEarnersCounts = {
+    prevFY: countNHISalaryEarners(reductionTestGroup, prevFYThresholds.salaryEarnerGrossThreshold),
+    currFY: countNHISalaryEarners(reductionTestGroup, currFYThresholds.salaryEarnerGrossThreshold),
+  };
 
   const effectiveRegion = resolveEffectiveNHIRegion(
     taxpayer.provider,
@@ -317,7 +336,7 @@ export function composeNHIHousehold(params: ComposeNHIHouseholdParams): NHIHouse
     ltcCalculationBase,
     reductionTestGroup,
     reductionTestIncome,
-    salaryEarnersCount,
+    salaryEarnersCounts,
     effectiveRegion,
     paymentAttribution: params.paymentAttribution ?? DEFAULT_NHI_PAYMENT_ATTRIBUTION,
   };

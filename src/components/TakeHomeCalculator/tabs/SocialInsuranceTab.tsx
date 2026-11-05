@@ -239,23 +239,25 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             value={formatJPY(-premiumBaseDeduction)}
             type="default"
           />
-          {results.nhiHousehold && results.nhiHousehold.insuredCount > 1 && (
-            <>
-              <ResultRow
-                label="Taxpayer Calculation Base"
-                value={formatJPY(Math.max(0, results.totalNetIncome - premiumBaseDeduction))}
-                type="subtotal"
-              />
-              <ResultRow
-                label="Other Enrolled Members"
-                value={formatJPY(
-                  results.nhiHousehold.calculationBase -
-                    Math.max(0, results.totalNetIncome - premiumBaseDeduction),
-                )}
-                type="default"
-              />
-            </>
-          )}
+          {isNationalHealthInsurance &&
+            results.nhiHousehold &&
+            results.nhiHousehold.insuredCount > 1 && (
+              <>
+                <ResultRow
+                  label="Taxpayer Calculation Base"
+                  value={formatJPY(Math.max(0, results.totalNetIncome - premiumBaseDeduction))}
+                  type="subtotal"
+                />
+                <ResultRow
+                  label="Other Enrolled Members"
+                  value={formatJPY(
+                    results.nhiHousehold.calculationBase -
+                      Math.max(0, results.totalNetIncome - premiumBaseDeduction),
+                  )}
+                  type="default"
+                />
+              </>
+            )}
           <ResultRow
             label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
             labelSuffix={
@@ -410,17 +412,19 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           </>
         ) : isNationalHealthInsurance ? (
           <>
-            {results.nhiHousehold && results.nhiHousehold.insuredCount > 1 && (
-              <Typography
-                variant="caption"
-                sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
-              >
-                Household: {results.nhiHousehold.insuredCount} insured member(s)
-                {results.nhiHousehold.paymentAttribution === 'none'
-                  ? ' (Paid separately / not by taxpayer)'
-                  : ''}
-              </Typography>
-            )}
+            {results.nhiHousehold &&
+              (results.nhiHousehold.insuredCount > 1 ||
+                results.nhiHousehold.paymentAttribution === 'none') && (
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
+                >
+                  Household: {results.nhiHousehold.insuredCount} insured member(s)
+                  {results.nhiHousehold.paymentAttribution === 'none'
+                    ? ' (Paid separately / not by taxpayer)'
+                    : ''}
+                </Typography>
+              )}
             <ResultRow
               label="Medical Portion"
               labelSuffix={
@@ -459,7 +463,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               value={formatJPY(results.nhiElderlySupportPortion ?? 0)}
               type="indented"
             />
-            {results.nhiLongTermCarePortion !== undefined && results.nhiLongTermCarePortion > 0 && (
+            {(results.nhiHousehold?.householdPortions.longTermCare ??
+              results.nhiLongTermCarePortion ??
+              0) > 0 && (
               <ResultRow
                 label="Long-term Care Portion"
                 labelSuffix={
@@ -476,11 +482,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     )}
                   </Box>
                 }
-                value={formatJPY(results.nhiLongTermCarePortion)}
+                value={formatJPY(results.nhiLongTermCarePortion ?? 0)}
                 type="indented"
               />
             )}
-            {results.nhiChildSupportPortion !== undefined && results.nhiChildSupportPortion > 0 && (
+            {(results.nhiHousehold?.householdPortions.childSupport ??
+              results.nhiChildSupportPortion ??
+              0) > 0 && (
               <ResultRow
                 label="Child Support Portion"
                 labelSuffix={
@@ -497,7 +505,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     )}
                   </Box>
                 }
-                value={formatJPY(results.nhiChildSupportPortion)}
+                value={formatJPY(results.nhiChildSupportPortion ?? 0)}
                 type="indented"
               />
             )}

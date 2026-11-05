@@ -387,5 +387,41 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       expect(childSupportContainer.textContent).toContain('(1 under 19 exempt)');
       expect(childSupportContainer.textContent).not.toContain('preschool with 50% discount');
     });
+
+    it('reproduces blended reduction tiers when a spouse earning ¥600,000 counts as a salary earner in FY2025 but not FY2026', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        // 2026 net employment income: 1,240,000 - 740,000 = 500,000 (between 430k and 530k)
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 1_240_000, frequency: 'annual' }],
+        incomeYear: 2026,
+        ageRange: 'age20to39',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: 'under40',
+            income: {
+              grossEmploymentIncome: 600_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('Jan–Mar 70% (7割軽減), Jun–Dec 50% (5割軽減)');
+      expect(container.textContent).toContain(
+        'Household (2 insured, 1 earner(s)) thresholds for FY2026',
+      );
+    });
   });
 });

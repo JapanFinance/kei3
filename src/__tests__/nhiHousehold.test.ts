@@ -4,8 +4,8 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  getNHIPremiumReductionThresholdsForMonth,
   NHI_ELDERLY_PENSION_REDUCTION_SPECIAL_DEDUCTION,
-  NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD,
 } from '../data/nationalHealthInsurance/nhiPremiumReduction';
 import type { Dependent } from '../types/dependents';
 import {
@@ -130,7 +130,7 @@ describe('composeNHIHousehold', () => {
     expect(composition.childSupportExemptCount).toBe(0);
     expect(composition.reductionTestGroup).toHaveLength(1);
     expect(composition.reductionTestIncome).toBe(4_000_000);
-    expect(composition.salaryEarnersCount).toBe(1);
+    expect(composition.salaryEarnersCounts).toEqual({ prevFY: 1, currFY: 1 });
     expect(composition.paymentAttribution).toBe(DEFAULT_NHI_PAYMENT_ATTRIBUTION);
   });
 
@@ -342,12 +342,18 @@ describe('composeNHIHousehold', () => {
     expect(composition.taxpayerMember.elderlyPensionSpecialDeduction).toBe(0); // 0 net pension
   });
 
-  it('counts salary earners accurately for reduction threshold expansion', () => {
+  it('counts salary earners per fiscal year using FY2025 (>550k) and FY2026 (>650k) thresholds', () => {
+    const fy2026Threshold = getNHIPremiumReductionThresholdsForMonth(
+      2026,
+      3,
+    ).salaryEarnerGrossThreshold;
+    expect(fy2026Threshold).toBe(650_000);
+
     const earnerSpouse: Dependent = makeSpouse({
       id: 'earner-spouse',
       ageRange: '40to64',
       income: {
-        grossEmploymentIncome: NHI_SALARY_EARNER_GROSS_EMPLOYMENT_THRESHOLD + 10_000,
+        grossEmploymentIncome: fy2026Threshold + 10_000, // 660,000 > both FY2025 (550k) and FY2026 (650k)
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
@@ -376,11 +382,35 @@ describe('composeNHIHousehold', () => {
         region: 'Tokyo',
       },
       dependents: [earnerSpouse, nonEarnerChild],
-      incomeYear: defaultYear,
+      incomeYear: 2026,
     });
 
-    // Taxpayer (earner) + Spouse (earner) = 2 salary earners
-    expect(composition.salaryEarnersCount).toBe(2);
+    // Taxpayer (earner) + Spouse (earner) = 2 salary earners in both FY2025 and FY2026
+    expect(composition.salaryEarnersCounts).toEqual({ prevFY: 2, currFY: 2 });
+
+    // Spouse earning ¥600,000 exceeds FY2025's ¥550,000 threshold (Jan–Mar 2026)
+    // but has ¥0 net employment income and does NOT exceed FY2026's ¥650,000 threshold (Jun–Dec 2026).
+    const boundarySpouse: Dependent = {
+      ...earnerSpouse,
+      income: {
+        grossEmploymentIncome: 600_000,
+        grossPublicPensionIncome: 0,
+        otherNetIncome: 0,
+      },
+    };
+    const boundaryComposition = composeNHIHousehold({
+      taxpayer: {
+        netIncome: 4_000_000,
+        grossEmploymentIncome: 5_500_000,
+        netPublicPensionIncome: 0,
+        ageRange: 'age40to59',
+        provider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo',
+      },
+      dependents: [boundarySpouse],
+      incomeYear: 2026,
+    });
+    expect(boundaryComposition.salaryEarnersCounts).toEqual({ prevFY: 2, currFY: 1 });
   });
 
   it('counts a pensioner with adjusted pension > 0 as a salary/pension earner', () => {
@@ -414,7 +444,7 @@ describe('composeNHIHousehold', () => {
     });
 
     // Parent qualifies as salary/pension earner via adjusted pension > 0
-    expect(composition.salaryEarnersCount).toBe(1);
+    expect(composition.salaryEarnersCounts).toEqual({ prevFY: 1, currFY: 1 });
   });
 
   it('sums calculationBase per member and ensures unused basic deductions do not transfer', () => {

@@ -876,12 +876,13 @@ export interface TakeHomeFormState {
   medicalExpenses: MedicalExpensesInput;
   personalCircumstances: PersonalCircumstancesInput;
   /** How household NHI premiums are attributed to the taxpayer */
-  nhiPaymentAttribution?: NHIPaymentAttribution;
+  nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
   /**
-   * Region used for household NHI when the taxpayer is on another provider
-   * (e.g. Employees' Health Insurance) but household members are on NHI.
+   * Explicit municipality/region override for household NHI when the taxpayer is on another
+   * provider (e.g. Employees' Health Insurance) while household members are on NHI. When absent,
+   * {@link resolveEffectiveNHIRegion} defaults to `region` if it is a known NHI region, else Tokyo.
    */
-  nhiHouseholdRegion?: string;
+  nhiHouseholdRegion?: string | undefined;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -1232,8 +1233,9 @@ export interface NHIHouseholdSummary {
    * Total number of members enrolled in NHI in this household.
    *
    * Note on limitation: Members who aged out of NHI into the 75+ scheme (特定同一世帯所属者)
-   * count toward the 5割/2割 reduction thresholds in municipal NHI under 国民健康保険法施行令第29条の7第2項,
-   * but are not tracked across age 75 and therefore not included in insuredCount.
+   * count toward the 5割/2割 reduction thresholds in municipal NHI under
+   * 国民健康保険法施行令第29条の7第5項第1号, but are not tracked across age 75 and therefore not
+   * included in insuredCount.
    */
   insuredCount: number;
   /** Number of NHI-insured members aged 40-64 (subject to 介護納付金分) */
@@ -1252,8 +1254,8 @@ export interface NHIHouseholdSummary {
   householdHeadRelationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
   /** Total reduction test income (軽減判定所得) across head and NHI members */
   reductionTestIncome: number;
-  /** Number of salary/pension earners in reduction test group (給与所得者等の数) */
-  salaryEarnersCount: number;
+  /** Number of salary/pension earners in reduction test group (給与所得者等の数) per fiscal year */
+  salaryEarnersCounts: { prevFY: number; currFY: number };
   /** Low-income reduction ratio applied (0, 0.2, 0.5, 0.7) for prev and curr FY */
   reductionRatios: { prevFY: NHIPremiumReductionRatio; currFY: NHIPremiumReductionRatio };
   /** Full household annual premium breakdown */

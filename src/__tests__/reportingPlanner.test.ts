@@ -36,6 +36,7 @@ import {
   type ReportingPlan,
   type ReportingUnit,
 } from '../utils/reportingPlanner';
+import { makeSpouse } from './fixtures/dependents';
 
 const account = (
   overrides: Partial<WithholdingAccountIncomeStream> & Pick<WithholdingAccountIncomeStream, 'id'>,
@@ -984,5 +985,36 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
       evaluated: currentEvaluated,
     });
     expect(bestPlan.evaluated.figures.kept).toBeGreaterThan(0);
+  });
+
+  it('accounts for deemed-head household NHI reduction cliffs when evaluating optional dividend reporting', () => {
+    // EHI taxpayer (deemed head) with ¥1,170,000 salary (2026 net = 1,170,000 - 740,000 = ¥430,000,
+    // right at the 70% single-insured low-income reduction threshold) and a cohabiting spouse on
+    // NHI with ¥0 income. Reporting ¥200,000 of optional withholding-account dividends pushes
+    // household 軽減判定所得 from ¥430,000 (70% reduction) to ¥630,000 (50% reduction), increasing
+    // household NHI paid.
+    const divAccount = account({ id: 'a1', dividends: 200_000, reportsDividends: false });
+    const inputs: TakeHomeInputs = {
+      ...salaryInputs([divAccount], { salary: 1_170_000, incomeYear: 2026 }),
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      dependents: [
+        makeSpouse({
+          id: 'nhi-spouse',
+          ageRange: 'under40',
+          healthInsurance: 'nhi',
+        }),
+      ],
+    };
+
+    const units = deriveReportingUnits(inputs.incomeStreams);
+    const withheldEval = evaluatePlan(inputs, withheldOnlyPlan(inputs, units));
+    const reportedSeparateEval = evaluatePlan(inputs, {
+      streams: [inputs.incomeStreams[0]!, { ...divAccount, reportsDividends: true }],
+      election: 'separate',
+    });
+
+    expect(reportedSeparateEval.figures.socialInsurance).toBeGreaterThan(
+      withheldEval.figures.socialInsurance,
+    );
   });
 });
