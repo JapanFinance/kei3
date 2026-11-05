@@ -1114,7 +1114,6 @@ describe('calculateHouseholdNHIBreakdown', () => {
     expect(result.householdBreakdown.total).toBeGreaterThan(0);
     expect(result.taxpayerBreakdown.total).toBe(result.householdBreakdown.total);
     expect(result.summary.paymentAttribution).toBe('fullHousehold');
-    expect(result.summary.taxpayerTotal).toBe(result.summary.householdTotal);
   });
 
   it('handles paymentAttribution: none by setting taxpayer portions to zero', () => {
@@ -1150,7 +1149,6 @@ describe('calculateHouseholdNHIBreakdown', () => {
     expect(result.taxpayerBreakdown.medicalPortion).toBe(0);
     expect(result.taxpayerBreakdown.elderlySupportPortion).toBe(0);
     expect(result.summary.paymentAttribution).toBe('none');
-    expect(result.summary.taxpayerTotal).toBe(0);
   });
 
   it('applies statutory 50% preschool discount and under-18 child support exemption', () => {

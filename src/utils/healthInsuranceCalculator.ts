@@ -780,7 +780,6 @@ export function calculateHouseholdNHIBreakdown(
       longTermCareCapped: false,
       childSupportCapped: false,
     },
-    taxpayerTotal: 0,
   };
 
   if (!currFYParams || household.insuredCount === 0) {
@@ -893,7 +892,6 @@ export function calculateHouseholdNHIBreakdown(
       longTermCareCapped: householdBreakdown.longTermCareCapped,
       childSupportCapped: householdBreakdown.childSupportCapped,
     },
-    taxpayerTotal: taxpayerBreakdown.total,
   };
 
   return {

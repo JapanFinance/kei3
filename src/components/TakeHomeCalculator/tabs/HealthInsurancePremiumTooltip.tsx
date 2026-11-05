@@ -234,28 +234,15 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     ? results.nhiHousehold.reductionTestIncome
     : results.totalNetIncome;
 
-  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(
-    reductionIncome,
-    year,
-    0,
-    results.nhiHousehold
-      ? {
-          insuredCount: results.nhiHousehold.insuredCount,
-          salaryEarnersCount: results.nhiHousehold.salaryEarnersCounts.prevFY,
-        }
-      : undefined,
-  );
-  const currReductionRatio = getNHIPremiumReductionRatioForMonth(
-    reductionIncome,
-    year,
-    3,
-    results.nhiHousehold
-      ? {
-          insuredCount: results.nhiHousehold.insuredCount,
-          salaryEarnersCount: results.nhiHousehold.salaryEarnersCounts.currFY,
-        }
-      : undefined,
-  );
+  const prevReductionRatio =
+    results.nhiHousehold?.reductionRatios.prevFY ??
+    results.nhiReductionRatios?.prevFY ??
+    getNHIPremiumReductionRatioForMonth(reductionIncome, year, 0);
+
+  const currReductionRatio =
+    results.nhiHousehold?.reductionRatios.currFY ??
+    results.nhiReductionRatios?.currFY ??
+    getNHIPremiumReductionRatioForMonth(reductionIncome, year, 3);
 
   if (!currFYData) {
     return (

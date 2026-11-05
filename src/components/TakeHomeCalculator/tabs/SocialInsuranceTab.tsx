@@ -245,14 +245,14 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               <>
                 <ResultRow
                   label="Taxpayer Calculation Base"
-                  value={formatJPY(Math.max(0, results.totalNetIncome - premiumBaseDeduction))}
+                  value={formatJPY(results.nhiHousehold.taxpayerMember.calculationBase)}
                   type="subtotal"
                 />
                 <ResultRow
                   label="Other Enrolled Members"
                   value={formatJPY(
                     results.nhiHousehold.calculationBase -
-                      Math.max(0, results.totalNetIncome - premiumBaseDeduction),
+                      results.nhiHousehold.taxpayerMember.calculationBase,
                   )}
                   type="default"
                 />

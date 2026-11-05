@@ -129,18 +129,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
   const hasNHIMembers =
     isTaxpayerNHI ||
-    Boolean(
-      spouse &&
-      spouse.isSameHousehold &&
-      spouse.ageRange !== '75plus' &&
-      resolveDependentNHIEnrollment(spouse, isTaxpayerNHI),
-    ) ||
-    otherDependents.some(
-      d =>
-        d.isSameHousehold &&
-        d.ageRange !== '75plus' &&
-        resolveDependentNHIEnrollment(d, isTaxpayerNHI),
-    );
+    (spouse !== undefined && resolveDependentNHIEnrollment(spouse, isTaxpayerNHI)) ||
+    otherDependents.some(d => resolveDependentNHIEnrollment(d, isTaxpayerNHI));
 
   const handleSpouseChange = (newSpouse: Spouse | null) => {
     let nonSpouseDependents = dependents.filter(d => d.relationship !== 'spouse');

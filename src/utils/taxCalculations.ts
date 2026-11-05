@@ -1220,12 +1220,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       }
     }
 
-    socialInsuranceDeduction =
-      healthInsurance +
-      pensionPayments +
-      employmentInsurance +
-      longTermCareCategory1Premium +
-      (householdNHIPremium ?? 0);
+    socialInsuranceDeduction = totalSocialInsurancePaid({
+      healthInsurance,
+      pensionPayments,
+      employmentInsurance,
+      longTermCareCategory1Premium,
+      householdNHIPremium,
+    });
   }
 
   // iDeCo, corporate DC, and 小規模企業共済 contributions are all deductible in full as

@@ -6679,7 +6679,6 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
 
       // Taxpayer pays 0 of the spouse's NHI
       expect(withNoAttribution.householdNHIPremium).toBe(0);
-      expect(withNoAttribution.nhiHousehold!.taxpayerTotal).toBe(0);
       expect(withNoAttribution.nhiHousehold!.householdTotal).toBeGreaterThan(0);
     });
 

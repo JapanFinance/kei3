@@ -233,8 +233,6 @@ export interface NHIHouseholdSummary extends NHIHouseholdComposition {
     longTermCareCapped: boolean;
     childSupportCapped: boolean;
   };
-  /** Taxpayer's attributed annual premium breakdown */
-  taxpayerTotal: number;
 }
 
 /**
