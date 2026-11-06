@@ -22,13 +22,14 @@ import {
   isSubjectToEmployeesPension,
   isSubjectToNationalPension,
 } from '../../../types/taxpayerAge';
-import { detectCaps } from '../../../utils/capDetection';
+import { detectCaps, type CapStatus } from '../../../utils/capDetection';
 import { formatJPY } from '../../../utils/formatters';
 import { calculateEmployeesHealthInsuranceBonusBreakdown } from '../../../utils/healthInsuranceCalculator';
 import {
   calculatePensionBonusBreakdown,
   findPensionBracket,
 } from '../../../utils/pensionCalculator';
+import { totalSocialInsurancePaid } from '../../../utils/taxCalculations';
 import CapIndicator from '../../ui/CapIndicator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
@@ -37,7 +38,10 @@ import { ResultRow } from '../ResultRow';
 import AnnualIncomeTooltip from './AnnualIncomeTooltip';
 import { SalaryBreakdownTooltip, BonusBreakdownTooltip } from './EmploymentInsuranceRateTooltip';
 import HealthInsuranceBonusTooltip from './HealthInsuranceBonusTooltip';
-import HealthInsurancePremiumTooltip, { NHIPortionTooltip } from './HealthInsurancePremiumTooltip';
+import HealthInsurancePremiumTooltip, {
+  NHIPortionTooltip,
+  NHICalculationBaseTooltip,
+} from './HealthInsurancePremiumTooltip';
 import IncomeOverviewRows from './IncomeOverviewRows';
 import LatterStageElderlyPremiumTooltip from './LatterStageElderlyPremiumTooltip';
 import LongTermCareCategory1PremiumTooltip from './LongTermCareCategory1PremiumTooltip';
@@ -78,13 +82,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const totalSocialInsurance =
-    results.socialInsuranceOverride !== undefined
-      ? results.socialInsuranceOverride
-      : results.healthInsurance +
-        results.pensionPayments +
-        (results.employmentInsurance ?? 0) +
-        (results.longTermCareCategory1Premium ?? 0);
+  const totalSocialInsurance = totalSocialInsurancePaid(results);
 
   // Determine if using National Health Insurance
   const isNationalHealthInsurance = inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID;
@@ -241,9 +239,39 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
             value={formatJPY(-premiumBaseDeduction)}
             type="default"
           />
+          {isNationalHealthInsurance &&
+            results.nhiHousehold &&
+            results.nhiHousehold.insuredCount > 1 && (
+              <>
+                <ResultRow
+                  label="Taxpayer Calculation Base"
+                  value={formatJPY(results.nhiHousehold.taxpayerMember.calculationBase)}
+                  type="subtotal"
+                />
+                <ResultRow
+                  label="Other Enrolled Members"
+                  value={formatJPY(
+                    results.nhiHousehold.calculationBase -
+                      results.nhiHousehold.taxpayerMember.calculationBase,
+                  )}
+                  type="default"
+                />
+              </>
+            )}
           <ResultRow
             label={isNationalHealthInsurance ? 'NHI Calculation Base' : 'Premium Calculation Base'}
-            value={formatJPY(Math.max(0, results.totalNetIncome - premiumBaseDeduction))}
+            labelSuffix={
+              isNationalHealthInsurance ? (
+                <DetailedTooltip title="NHI Calculation Base">
+                  <NHICalculationBaseTooltip results={results} inputs={inputs} />
+                </DetailedTooltip>
+              ) : undefined
+            }
+            value={formatJPY(
+              isNationalHealthInsurance && results.nhiHousehold
+                ? results.nhiHousehold.calculationBase
+                : Math.max(0, results.totalNetIncome - premiumBaseDeduction),
+            )}
             type="subtotal"
           />
         </>
@@ -306,6 +334,24 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         </>
       )}
 
+      {/* For taxpayers on non-NHI systems (e.g. EHI) whose household members are on NHI,
+          show the Household NHI Calculation Base alongside income and remuneration */}
+      {!isNationalHealthInsurance &&
+        results.householdNHIPremiumPaidByTaxpayer !== undefined &&
+        results.householdNHIPremiumPaidByTaxpayer > 0 &&
+        results.nhiHousehold && (
+          <ResultRow
+            label="NHI Calculation Base"
+            labelSuffix={
+              <DetailedTooltip title="NHI Calculation Base">
+                <NHICalculationBaseTooltip results={results} inputs={inputs} />
+              </DetailedTooltip>
+            }
+            value={formatJPY(results.nhiHousehold.calculationBase)}
+            type="default"
+          />
+        )}
+
       {/* Health Insurance */}
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -366,6 +412,19 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           </>
         ) : isNationalHealthInsurance ? (
           <>
+            {results.nhiHousehold &&
+              (results.nhiHousehold.insuredCount > 1 ||
+                results.nhiHousehold.paymentAttribution === 'none') && (
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
+                >
+                  Household: {results.nhiHousehold.insuredCount} insured member(s)
+                  {results.nhiHousehold.paymentAttribution === 'none'
+                    ? ' (Paid separately / not by taxpayer)'
+                    : ''}
+                </Typography>
+              )}
             <ResultRow
               label="Medical Portion"
               labelSuffix={
@@ -404,7 +463,9 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               value={formatJPY(results.nhiElderlySupportPortion ?? 0)}
               type="indented"
             />
-            {results.nhiLongTermCarePortion !== undefined && results.nhiLongTermCarePortion > 0 && (
+            {(results.nhiHousehold?.householdPortions.longTermCare ??
+              results.nhiLongTermCarePortion ??
+              0) > 0 && (
               <ResultRow
                 label="Long-term Care Portion"
                 labelSuffix={
@@ -421,11 +482,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     )}
                   </Box>
                 }
-                value={formatJPY(results.nhiLongTermCarePortion)}
+                value={formatJPY(results.nhiLongTermCarePortion ?? 0)}
                 type="indented"
               />
             )}
-            {results.nhiChildSupportPortion !== undefined && results.nhiChildSupportPortion > 0 && (
+            {(results.nhiHousehold?.householdPortions.childSupport ??
+              results.nhiChildSupportPortion ??
+              0) > 0 && (
               <ResultRow
                 label="Child Support Portion"
                 labelSuffix={
@@ -442,7 +505,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                     )}
                   </Box>
                 }
-                value={formatJPY(results.nhiChildSupportPortion)}
+                value={formatJPY(results.nhiChildSupportPortion ?? 0)}
                 type="indented"
               />
             )}
@@ -510,6 +573,150 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           </>
         )}
       </Box>
+
+      {/* Household National Health Insurance (when taxpayer is not on NHI but pays for household) */}
+      {!isNationalHealthInsurance &&
+        results.householdNHIPremiumPaidByTaxpayer !== undefined &&
+        results.householdNHIPremiumPaidByTaxpayer > 0 &&
+        results.nhiHousehold &&
+        (() => {
+          const portions = results.nhiHousehold.householdPortions;
+          const caps = results.nhiHousehold.householdCaps;
+          const householdCapStatus: CapStatus = {
+            healthInsuranceCapped:
+              caps.medicalCapped ||
+              caps.elderlySupportCapped ||
+              caps.longTermCareCapped ||
+              caps.childSupportCapped,
+            pensionCapped: false,
+            pensionFixed: true,
+            healthInsuranceBonusCapped: false,
+            healthInsuranceCapDetails: {
+              medicalCapped: caps.medicalCapped,
+              supportCapped: caps.elderlySupportCapped,
+              ltcCapped: caps.longTermCareCapped,
+              childSupportCapped: caps.childSupportCapped,
+            },
+          };
+
+          return (
+            <Box sx={{ mt: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                  National Health Insurance
+                </Typography>
+              </Box>
+              <Typography
+                variant="caption"
+                sx={{ color: 'text.secondary', display: 'block', mb: 1 }}
+              >
+                Household: {results.nhiHousehold.insuredCount} insured member(s) (
+                {results.nhiHousehold.effectiveRegion})
+              </Typography>
+              {portions.medical > 0 && (
+                <ResultRow
+                  label="Medical Portion"
+                  labelSuffix={
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <DetailedTooltip title="🏥 Medical Portion (医療分)">
+                        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />
+                      </DetailedTooltip>
+                      {caps.medicalCapped && (
+                        <CapIndicator
+                          capStatus={householdCapStatus}
+                          iconOnly
+                          contributionType="medical portion"
+                        />
+                      )}
+                    </Box>
+                  }
+                  value={formatJPY(portions.medical)}
+                  type="indented"
+                />
+              )}
+              {portions.elderlySupport > 0 && (
+                <ResultRow
+                  label="Elderly Support Portion"
+                  labelSuffix={
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <DetailedTooltip title="👥 Elderly Support Portion (後期高齢者支援金分)">
+                        <NHIPortionTooltip
+                          portion="elderlySupport"
+                          results={results}
+                          inputs={inputs}
+                        />
+                      </DetailedTooltip>
+                      {caps.elderlySupportCapped && (
+                        <CapIndicator
+                          capStatus={householdCapStatus}
+                          iconOnly
+                          contributionType="elderly support portion"
+                        />
+                      )}
+                    </Box>
+                  }
+                  value={formatJPY(portions.elderlySupport)}
+                  type="indented"
+                />
+              )}
+              {portions.longTermCare > 0 && (
+                <ResultRow
+                  label="Long-term Care Portion"
+                  labelSuffix={
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <DetailedTooltip title="🏠 Long-Term Care Portion (介護分)">
+                        <NHIPortionTooltip
+                          portion="longTermCare"
+                          results={results}
+                          inputs={inputs}
+                        />
+                      </DetailedTooltip>
+                      {caps.longTermCareCapped && (
+                        <CapIndicator
+                          capStatus={householdCapStatus}
+                          iconOnly
+                          contributionType="long-term care portion"
+                        />
+                      )}
+                    </Box>
+                  }
+                  value={formatJPY(portions.longTermCare)}
+                  type="indented"
+                />
+              )}
+              {portions.childSupport > 0 && (
+                <ResultRow
+                  label="Child Support Portion"
+                  labelSuffix={
+                    <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <DetailedTooltip title="👶 Child Support Portion (子ども・子育て支援納付金分)">
+                        <NHIPortionTooltip
+                          portion="childSupport"
+                          results={results}
+                          inputs={inputs}
+                        />
+                      </DetailedTooltip>
+                      {caps.childSupportCapped && (
+                        <CapIndicator
+                          capStatus={householdCapStatus}
+                          iconOnly
+                          contributionType="child support portion"
+                        />
+                      )}
+                    </Box>
+                  }
+                  value={formatJPY(portions.childSupport)}
+                  type="indented"
+                />
+              )}
+              <ResultRow
+                label="Household NHI Premium"
+                value={formatJPY(results.householdNHIPremiumPaidByTaxpayer)}
+                type="subtotal"
+              />
+            </Box>
+          );
+        })()}
 
       {/* Pension Payments */}
       <Box sx={{ mt: 1 }}>

@@ -108,6 +108,7 @@ function App() {
     dcPlanContributions: 0,
     manualSocialInsuranceEntry: false,
     manualSocialInsuranceAmount: 0,
+    nhiPaymentAttribution: 'fullHousehold',
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
   };
 
@@ -232,6 +233,8 @@ function App() {
             personalCircumstances={deferredInputs.personalCircumstances}
             homeLoanTaxCredit={deferredInputs.homeLoanTaxCredit}
             foreignTaxCredit={deferredInputs.foreignTaxCredit}
+            nhiPaymentAttribution={deferredInputs.nhiPaymentAttribution}
+            nhiHouseholdRegion={deferredInputs.nhiHouseholdRegion}
           />
         </Suspense>
 

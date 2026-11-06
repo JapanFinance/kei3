@@ -75,6 +75,7 @@ export const STATUTORY_AGE_BANDS = {
   nationalPension: { minAgeInclusive: 20, maxAgeExclusive: 60 },
   employeesPension: { maxAgeExclusive: 70 },
   latterStageElderly: { minAgeInclusive: 75 },
+  nhiEligible: { maxAgeExclusive: 75 },
   publicPensionDeductionElderly: PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   elderlyDependentIncomeThreshold: { minAgeInclusive: 60 },
 } satisfies Record<string, AgeBand>;
@@ -139,6 +140,14 @@ export function isSubjectToEmployeesPension(ageRange: TaxpayerAgeRange): boolean
  */
 export function isLatterStageElderly(ageRange: TaxpayerAgeRange): boolean {
   return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.latterStageElderly);
+}
+
+/**
+ * Whether the taxpayer is eligible for National Health Insurance (below age 75).
+ * At age 75+, taxpayers transition to the Latter-Stage Elderly Healthcare System.
+ */
+export function isNationalHealthInsuranceEligible(ageRange: TaxpayerAgeRange): boolean {
+  return taxpayerAgeCoversBand(ageRange, STATUTORY_AGE_BANDS.nhiEligible);
 }
 
 if (import.meta.env.DEV) {

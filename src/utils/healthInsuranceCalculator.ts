@@ -32,6 +32,8 @@ import {
   NATIONAL_HEALTH_INSURANCE_ID,
   DEPENDENT_COVERAGE_ID,
   CUSTOM_PROVIDER_ID,
+  type NHIHouseholdComposition,
+  type NHIHouseholdSummary,
 } from '../types/healthInsurance';
 import type { BonusIncomeStream, CustomEmployeesHealthInsuranceRates } from '../types/tax';
 
@@ -104,13 +106,26 @@ const NHI_PORTION_FIELDS: Record<
   },
 };
 
+/**
+ * Options for calculating a portion's per-capita and household flat amounts
+ * in multi-member households.
+ */
+export interface NHIPortionHouseholdOptions {
+  /** Total number of insured members subject to this portion's per-capita levy (default 1) */
+  insuredCount?: number;
+  /** Number of preschool children under 6 receiving 50% discount on per-capita (default 0) */
+  preschoolCount?: number;
+  /** Number of children under 19 exempt from child support per-capita levy (default 0) */
+  childSupportExemptCount?: number;
+}
+
 /** One portion of a National Health Insurance premium for one fiscal year's parameters. */
 export interface NationalHealthInsurancePortion {
   /** The 所得割率. */
   rate: number;
   /** 所得割: the calculation base times {@link rate}. */
   incomeBased: number;
-  /** 均等割額 after any low-income reduction. */
+  /** 均等割額 after any low-income reduction and preschool discount. */
   perCapita: number;
   /** 平等割額 after any low-income reduction, 0 where the region levies none. */
   householdFlat: number;
@@ -128,6 +143,16 @@ export interface NationalHealthInsurancePortion {
   premium: number;
   /** Whether {@link uncapped} reached {@link cap}, so that more income would not raise the portion. */
   isCapped: boolean;
+  /** Number of insured individuals subject to this portion's per-capita levy */
+  insuredCount: number;
+  /** Number of preschool children subject to the 50% discount on this portion's per-capita levy */
+  preschoolCount: number;
+  /** Number of children exempt from this portion's per-capita levy */
+  childSupportExemptCount: number;
+  /** Per-capita amount per adult/standard insured member after reduction */
+  perCapitaPerAdult: number;
+  /** Per-capita amount per preschool child after reduction */
+  perCapitaPerPreschool: number;
 }
 
 /**
@@ -155,20 +180,51 @@ export function calculateNationalHealthInsurancePortion(
   params: NationalHealthInsuranceRegionParams,
   portion: NationalHealthInsurancePortionKey,
   reductionRatio: NHIPremiumReductionRatio = 0,
+  {
+    insuredCount = 1,
+    preschoolCount: rawPreschoolCount = 0,
+    childSupportExemptCount: rawChildSupportExemptCount = 0,
+  }: NHIPortionHouseholdOptions = {},
 ): NationalHealthInsurancePortion | undefined {
   const fields = NHI_PORTION_FIELDS[portion];
   const rate = params[fields.rate];
   const cap = params[fields.cap];
   if (!rate || !cap) return undefined;
 
+  if (insuredCount <= 0) return undefined;
+
+  const preschoolCount =
+    portion === 'longTermCare' || portion === 'childSupport'
+      ? 0
+      : Math.min(insuredCount, rawPreschoolCount);
+  const childSupportExemptCount =
+    portion === 'childSupport' ? Math.min(insuredCount, rawChildSupportExemptCount) : 0;
+
   const perCapitaFull = params[fields.perCapita] ?? 0;
   const householdFlatFull = params[fields.householdFlat] ?? 0;
   const reductionKeepFactor = 1 - reductionRatio;
-  const perCapita = perCapitaFull * reductionKeepFactor;
+
+  const perCapitaPerAdult = perCapitaFull * reductionKeepFactor;
+  const perCapitaPerPreschool = perCapitaPerAdult * 0.5;
+
+  let perCapita = 0;
+  if (portion === 'childSupport') {
+    // Under FY2026 rules (国民健康保険法施行令第29条の7第5項), children through age 18
+    // are 100% exempt from the child support per-capita levy.
+    const nonExemptAdultCount = Math.max(0, insuredCount - childSupportExemptCount);
+    perCapita = nonExemptAdultCount * perCapitaPerAdult;
+  } else if (portion === 'longTermCare') {
+    perCapita = insuredCount * perCapitaPerAdult;
+  } else {
+    const adultCount = Math.max(0, insuredCount - preschoolCount);
+    perCapita = adultCount * perCapitaPerAdult + preschoolCount * perCapitaPerPreschool;
+  }
+
   const householdFlat = householdFlatFull * reductionKeepFactor;
   const incomeBased = calculationBase * rate;
   const uncapped = incomeBased + perCapita + householdFlat;
   const premium = Math.round(Math.min(uncapped, cap));
+
   return {
     rate,
     incomeBased,
@@ -181,6 +237,11 @@ export function calculateNationalHealthInsurancePortion(
     cap,
     premium,
     isCapped: uncapped >= cap,
+    insuredCount,
+    preschoolCount,
+    childSupportExemptCount,
+    perCapitaPerAdult,
+    perCapitaPerPreschool: portion === 'childSupport' ? 0 : perCapitaPerPreschool,
   };
 }
 
@@ -198,25 +259,42 @@ export function nationalHealthInsurancePortionDiffers(
 }
 
 /**
+ * Household counts for determining the NHI low-income premium reduction ratio.
+ */
+export interface NHIReductionHouseholdCounts {
+  /** Total number of NHI-insured members in the household (default 1) */
+  insuredCount?: number;
+  /** Number of salary and public pension earners in the reduction test group (default 1) */
+  salaryEarnersCount?: number;
+}
+
+/**
  * Determines the NHI low-income premium reduction (均等割額・平等割額の軽減) ratio.
  *
- * The statutory test compares the household's 総所得金額等 to the thresholds. This calculator
- * models a single insured person with no loss carryover or 専従者 items, so 合計所得金額
- * (totalNetIncome) is the same figure, 被保険者数 = 1, and the 10万円 × (給与所得者等の数 − 1)
- * allowance is zero. Boundaries are inclusive (以下).
+ * The statutory test compares the reduction test income (軽減判定所得) of the reduction test group
+ * (household head + all NHI-insured members) to the thresholds.
  */
 export function calculateNHIPremiumReductionRatio(
-  totalNetIncome: number,
+  reductionTestIncome: number,
   thresholds: NHIPremiumReductionThresholds,
+  { insuredCount = 1, salaryEarnersCount = 1 }: NHIReductionHouseholdCounts = {},
 ): NHIPremiumReductionRatio {
-  const insuredCount = 1;
-  if (totalNetIncome <= thresholds.baseAmount) {
+  const earnerAllowance =
+    thresholds.perAdditionalSalaryEarner * Math.max(0, salaryEarnersCount - 1);
+
+  if (reductionTestIncome <= thresholds.baseAmount + earnerAllowance) {
     return 0.7;
   }
-  if (totalNetIncome <= thresholds.baseAmount + thresholds.fiftyPercentPerInsured * insuredCount) {
+  if (
+    reductionTestIncome <=
+    thresholds.baseAmount + thresholds.fiftyPercentPerInsured * insuredCount + earnerAllowance
+  ) {
     return 0.5;
   }
-  if (totalNetIncome <= thresholds.baseAmount + thresholds.twentyPercentPerInsured * insuredCount) {
+  if (
+    reductionTestIncome <=
+    thresholds.baseAmount + thresholds.twentyPercentPerInsured * insuredCount + earnerAllowance
+  ) {
     return 0.2;
   }
   return 0;
@@ -228,13 +306,15 @@ export function calculateNHIPremiumReductionRatio(
  * reproduce the engine's arithmetic exactly.
  */
 export function getNHIPremiumReductionRatioForMonth(
-  totalNetIncome: number,
+  reductionTestIncome: number,
   year: number,
   month: number,
+  counts: NHIReductionHouseholdCounts = {},
 ): NHIPremiumReductionRatio {
   return calculateNHIPremiumReductionRatio(
-    totalNetIncome,
+    reductionTestIncome,
     getNHIPremiumReductionThresholdsForMonth(year, month),
+    counts,
   );
 }
 
@@ -448,8 +528,73 @@ type NationalHealthInsuranceFiscalYearPortions = Record<
 >;
 
 /**
- * Every portion for one fiscal year's parameters. The 介護納付金分 is levied on a Category 2
- * insured person (ages 40-64) only.
+ * Calculates all portions for one fiscal year's parameters for a household.
+ */
+export function calculateNationalHealthInsuranceFiscalYearPortionsForHousehold(
+  calculationBase: number,
+  ltcCalculationBase: number,
+  params: NationalHealthInsuranceRegionParams,
+  reductionRatio: NHIPremiumReductionRatio,
+  counts: {
+    insuredCount: number;
+    ltcInsuredCount: number;
+    preschoolCount: number;
+    childSupportExemptCount: number;
+  },
+): NationalHealthInsuranceFiscalYearPortions {
+  return {
+    medical: calculateNationalHealthInsurancePortion(
+      calculationBase,
+      params,
+      'medical',
+      reductionRatio,
+      {
+        insuredCount: counts.insuredCount,
+        preschoolCount: counts.preschoolCount,
+        childSupportExemptCount: 0,
+      },
+    ),
+    elderlySupport: calculateNationalHealthInsurancePortion(
+      calculationBase,
+      params,
+      'elderlySupport',
+      reductionRatio,
+      {
+        insuredCount: counts.insuredCount,
+        preschoolCount: counts.preschoolCount,
+        childSupportExemptCount: 0,
+      },
+    ),
+    longTermCare:
+      counts.ltcInsuredCount > 0
+        ? calculateNationalHealthInsurancePortion(
+            ltcCalculationBase,
+            params,
+            'longTermCare',
+            reductionRatio,
+            {
+              insuredCount: counts.ltcInsuredCount,
+              preschoolCount: 0,
+              childSupportExemptCount: 0,
+            },
+          )
+        : undefined,
+    childSupport: calculateNationalHealthInsurancePortion(
+      calculationBase,
+      params,
+      'childSupport',
+      reductionRatio,
+      {
+        insuredCount: counts.insuredCount,
+        preschoolCount: counts.preschoolCount,
+        childSupportExemptCount: counts.childSupportExemptCount,
+      },
+    ),
+  };
+}
+
+/**
+ * Every portion for one fiscal year's parameters for a single individual.
  */
 function calculateNationalHealthInsuranceFiscalYearPortions(
   netIncome: number,
@@ -458,24 +603,18 @@ function calculateNationalHealthInsuranceFiscalYearPortions(
   reductionRatio: NHIPremiumReductionRatio,
 ): NationalHealthInsuranceFiscalYearPortions {
   const base = premiumCalculationBase(netIncome);
-  return {
-    medical: calculateNationalHealthInsurancePortion(base, params, 'medical', reductionRatio),
-    elderlySupport: calculateNationalHealthInsurancePortion(
-      base,
-      params,
-      'elderlySupport',
-      reductionRatio,
-    ),
-    longTermCare: isSubjectToLongTermCarePremium
-      ? calculateNationalHealthInsurancePortion(base, params, 'longTermCare', reductionRatio)
-      : undefined,
-    childSupport: calculateNationalHealthInsurancePortion(
-      base,
-      params,
-      'childSupport',
-      reductionRatio,
-    ),
-  };
+  return calculateNationalHealthInsuranceFiscalYearPortionsForHousehold(
+    base,
+    base,
+    params,
+    reductionRatio,
+    {
+      insuredCount: 1,
+      ltcInsuredCount: isSubjectToLongTermCarePremium ? 1 : 0,
+      preschoolCount: 0,
+      childSupportExemptCount: 0,
+    },
+  );
 }
 
 /**
@@ -579,6 +718,196 @@ export function calculateNationalHealthInsurancePremiumWithBreakdown(
     elderlySupportCapped: blendCapped('elderlySupport'),
     longTermCareCapped: blendCapped('longTermCare'),
     childSupportCapped: blendCapped('childSupport'),
+  };
+}
+
+/**
+ * Result of household-level National Health Insurance calculations,
+ * containing both full-household and taxpayer-attributed breakdowns plus summary.
+ */
+export interface HouseholdNHICalculationResult {
+  householdBreakdown: NationalHealthInsuranceBreakdown;
+  taxpayerBreakdown: NationalHealthInsuranceBreakdown;
+  summary: NHIHouseholdSummary;
+}
+
+/**
+ * Calculates household National Health Insurance premiums, applying statutory household rules:
+ * - Sums calculation bases across NHI-insured members (40-64 only for long-term care)
+ * - Multiplies per-capita by insured headcount, applying low-income reduction and preschool 50% discount
+ * - Adds 1x household flat rate (平等割) per levied portion
+ * - Caps each portion once at the household level before blending 3/10 prevFY + 7/10 currFY
+ * - Calculates taxpayer payment attribution (100% full household or none/0)
+ */
+export function calculateHouseholdNHIBreakdown(
+  household: NHIHouseholdComposition,
+  year: number,
+): HouseholdNHICalculationResult {
+  const regionKey = household.effectiveRegion;
+  const prevFYParams = getNHIParamsForMonth(regionKey, year, 0);
+  const currFYParams = getNHIParamsForMonth(regionKey, year, 3);
+
+  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(
+    household.reductionTestIncome,
+    year,
+    0,
+    {
+      insuredCount: household.insuredCount,
+      salaryEarnersCount: household.salaryEarnersCounts.prevFY,
+    },
+  );
+  const currReductionRatio = getNHIPremiumReductionRatioForMonth(
+    household.reductionTestIncome,
+    year,
+    3,
+    {
+      insuredCount: household.insuredCount,
+      salaryEarnersCount: household.salaryEarnersCounts.currFY,
+    },
+  );
+
+  const zeroBreakdown: NationalHealthInsuranceBreakdown = {
+    medicalPortion: 0,
+    elderlySupportPortion: 0,
+    longTermCarePortion: 0,
+    childSupportPortion: 0,
+    total: 0,
+    reductionRatios: { prevFY: 0, currFY: 0 },
+    medicalCapped: false,
+    elderlySupportCapped: false,
+    longTermCareCapped: false,
+    childSupportCapped: false,
+  };
+
+  const zeroSummary: NHIHouseholdSummary = {
+    ...household,
+    reductionRatios: { prevFY: 0, currFY: 0 },
+    householdTotal: 0,
+    householdPortions: { medical: 0, elderlySupport: 0, longTermCare: 0, childSupport: 0 },
+    householdCaps: {
+      medicalCapped: false,
+      elderlySupportCapped: false,
+      longTermCareCapped: false,
+      childSupportCapped: false,
+    },
+  };
+
+  if (!currFYParams || household.insuredCount === 0) {
+    return {
+      householdBreakdown: zeroBreakdown,
+      taxpayerBreakdown: zeroBreakdown,
+      summary: zeroSummary,
+    };
+  }
+
+  const counts = {
+    insuredCount: household.insuredCount,
+    ltcInsuredCount: household.ltcInsuredCount,
+    preschoolCount: household.preschoolCount,
+    childSupportExemptCount: household.childSupportExemptCount,
+  };
+
+  const currFY = calculateNationalHealthInsuranceFiscalYearPortionsForHousehold(
+    household.calculationBase,
+    household.ltcCalculationBase,
+    currFYParams,
+    currReductionRatio,
+    counts,
+  );
+
+  const prevFY =
+    prevFYParams &&
+    (nhiParamsDiffer(prevFYParams, currFYParams) || prevReductionRatio !== currReductionRatio)
+      ? calculateNationalHealthInsuranceFiscalYearPortionsForHousehold(
+          household.calculationBase,
+          household.ltcCalculationBase,
+          prevFYParams,
+          prevReductionRatio,
+          counts,
+        )
+      : currFY;
+
+  const blend = (portion: NationalHealthInsurancePortionKey): number =>
+    Math.round(
+      ((prevFY[portion]?.premium ?? 0) * 3) / 10 + ((currFY[portion]?.premium ?? 0) * 7) / 10,
+    );
+
+  const blendCapped = (portion: NationalHealthInsurancePortionKey): boolean => {
+    const levied = [prevFY[portion], currFY[portion]].filter(
+      (fiscalYear): fiscalYear is NationalHealthInsurancePortion => fiscalYear !== undefined,
+    );
+    return levied.length > 0 && levied.every(fiscalYear => fiscalYear.isCapped);
+  };
+
+  const householdPortions = {
+    medical: blend('medical'),
+    elderlySupport: blend('elderlySupport'),
+    longTermCare: blend('longTermCare'),
+    childSupport: blend('childSupport'),
+  };
+  const householdTotal =
+    householdPortions.medical +
+    householdPortions.elderlySupport +
+    householdPortions.longTermCare +
+    householdPortions.childSupport;
+
+  const householdBreakdown: NationalHealthInsuranceBreakdown = {
+    medicalPortion: householdPortions.medical,
+    elderlySupportPortion: householdPortions.elderlySupport,
+    longTermCarePortion: householdPortions.longTermCare,
+    childSupportPortion: householdPortions.childSupport,
+    total: householdTotal,
+    reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
+    medicalCapped: blendCapped('medical'),
+    elderlySupportCapped: blendCapped('elderlySupport'),
+    longTermCareCapped: blendCapped('longTermCare'),
+    childSupportCapped: blendCapped('childSupport'),
+  };
+
+  // Attribution calculation
+  let taxpayerBreakdown: NationalHealthInsuranceBreakdown;
+
+  switch (household.paymentAttribution) {
+    case 'fullHousehold':
+      taxpayerBreakdown = { ...householdBreakdown };
+      break;
+    case 'none':
+      taxpayerBreakdown = {
+        medicalPortion: 0,
+        elderlySupportPortion: 0,
+        longTermCarePortion: 0,
+        childSupportPortion: 0,
+        total: 0,
+        reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
+        medicalCapped: false,
+        elderlySupportCapped: false,
+        longTermCareCapped: false,
+        childSupportCapped: false,
+      };
+      break;
+    default: {
+      const unhandledAttribution: never = household.paymentAttribution;
+      throw new Error(`Unhandled NHI payment attribution: ${JSON.stringify(unhandledAttribution)}`);
+    }
+  }
+
+  const summary: NHIHouseholdSummary = {
+    ...household,
+    reductionRatios: { prevFY: prevReductionRatio, currFY: currReductionRatio },
+    householdTotal,
+    householdPortions,
+    householdCaps: {
+      medicalCapped: householdBreakdown.medicalCapped,
+      elderlySupportCapped: householdBreakdown.elderlySupportCapped,
+      longTermCareCapped: householdBreakdown.longTermCareCapped,
+      childSupportCapped: householdBreakdown.childSupportCapped,
+    },
+  };
+
+  return {
+    householdBreakdown,
+    taxpayerBreakdown,
+    summary,
   };
 }
 

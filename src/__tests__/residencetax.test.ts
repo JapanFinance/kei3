@@ -18,6 +18,7 @@ import {
   PREFECTURAL_TAX_PROPORTION,
   RESIDENCE_TAX_RATE,
 } from '../utils/residenceTax';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 const TEST_INCOME_YEAR = 2026;
 
@@ -315,14 +316,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
 
   it('should be non-taxable for person with 1 dependent (spouse) with income <= 1,010,000', () => {
     // Limit = 350k * (1+1) + 100k + 210k = 700k + 310k = 1,010,000
-    const spouse: Dependent = {
-      id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    const spouse: Dependent = makeSpouse({ id: '1', ageRange: 'under40' });
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
@@ -334,14 +328,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
   });
 
   it('should be taxable for person with 1 dependent (spouse) with income > 1,010,000', () => {
-    const spouse: Dependent = {
-      id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    const spouse: Dependent = makeSpouse({ id: '1', ageRange: 'under40' });
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_010_001, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
@@ -350,14 +337,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
 
   it('should count under 16 dependent for non-taxable limit', () => {
     // Limit = 350k * (1+1) + 100k + 210k = 1,010,000
-    const child: Dependent = {
-      id: '1',
-      relationship: 'child',
-      ageRange: 'under16',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    const child: Dependent = makeDependent({ id: '1', ageRange: '6to15' });
     const dependents = calculateDependentDeductions([child], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_010_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
@@ -370,22 +350,8 @@ describe('Residence Tax - Non-Taxable Limit', () => {
 
   it('should be non-taxable for person with spouse and under 16 dependent (2 dependents) with income <= 1,360,000', () => {
     // Limit = 350k * (2+1) + 100k + 210k = 1,050k + 310k = 1,360,000
-    const spouse: Dependent = {
-      id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
-    const child: Dependent = {
-      id: '2',
-      relationship: 'child',
-      ageRange: 'under16',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    const spouse: Dependent = makeSpouse({ id: '1', ageRange: 'under40' });
+    const child: Dependent = makeDependent({ id: '2', ageRange: '6to15' });
     const dependents = calculateDependentDeductions([spouse, child], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_360_000, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
@@ -397,22 +363,8 @@ describe('Residence Tax - Non-Taxable Limit', () => {
   });
 
   it('should be taxable for person with spouse and under 16 dependent (2 dependents) with income > 1,360,000', () => {
-    const spouse: Dependent = {
-      id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
-    const child: Dependent = {
-      id: '2',
-      relationship: 'child',
-      ageRange: 'under16',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    const spouse: Dependent = makeSpouse({ id: '1', ageRange: 'under40' });
+    const child: Dependent = makeDependent({ id: '2', ageRange: '6to15' });
     const dependents = calculateDependentDeductions([spouse, child], TEST_INCOME_YEAR);
 
     const result = calculateResidenceTax(1_360_001, 0, dependents, TEST_INCOME_YEAR, 'age20to39');
@@ -423,14 +375,11 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     // Spouse with 1,000,000 income qualifies for Spouse Special Deduction but is NOT a "Same Livelihood Spouse"
     // So qualifiedDependentsCount should be 0.
     // Limit for single person = 450,000
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: true,
-      disability: 'none',
+      ageRange: 'under40',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_000_000 },
-    };
+    });
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
     // If spouse counted: Limit would be 350k*(1+1)+310k = 1,010,000 -> 500,000 would be non-taxable
@@ -443,14 +392,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
   it('should count under 16 dependent even though deduction amount is 0', () => {
     // Under 16 dependent has 0 deduction, but counts for non-taxable limit
     // Limit = 350k*(1+1)+310k = 1,010,000
-    const child: Dependent = {
-      id: '1',
-      relationship: 'child',
-      ageRange: 'under16',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    const child: Dependent = makeDependent({ id: '1', ageRange: '6to15' });
     const dependents = calculateDependentDeductions([child], TEST_INCOME_YEAR);
 
     // Verify deduction is actually 0 first
@@ -470,14 +412,7 @@ describe('Residence Tax - Non-Taxable Limit', () => {
     // Per Capita Limit: 350k*(2)+100k+210k = 1,010,000
     // Income Levy Limit: 350k*(2)+100k+320k = 1,120,000
 
-    const spouse: Dependent = {
-      id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+    const spouse: Dependent = makeSpouse({ id: '1', ageRange: 'under40' });
     const dependents = calculateDependentDeductions([spouse], TEST_INCOME_YEAR);
 
     // Test income: 1,050,000 (Between 1,010,000 and 1,120,000)
@@ -752,22 +687,8 @@ describe('calculateResidenceTax minor (未成年者) non-taxation', () => {
     // A minor above 1.35M with enough dependents can still be non-taxable under the
     // dependent-count limits (2 dependents → per-capita limit 1,360,000).
     const dependents: Dependent[] = [
-      {
-        id: 'd1',
-        relationship: 'child',
-        ageRange: 'under16',
-        isCohabiting: true,
-        disability: 'none',
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-      },
-      {
-        id: 'd2',
-        relationship: 'child',
-        ageRange: 'under16',
-        isCohabiting: true,
-        disability: 'none',
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-      },
+      makeDependent({ id: 'd1', ageRange: '6to15' }),
+      makeDependent({ id: 'd2', ageRange: '6to15' }),
     ];
     const deductions = calculateDependentDeductions(dependents, TEST_INCOME_YEAR, 1_355_000);
     const result = calculateResidenceTax(1_355_000, 0, deductions, TEST_INCOME_YEAR, 'under18');

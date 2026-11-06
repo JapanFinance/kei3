@@ -598,9 +598,10 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
             }}
           >
             <Typography sx={{ ...fieldLabelSx, mb: 0.5, gap: 0.5 }}>
-              Dependents
+              Household
               <SimpleTooltip>
-                Add spouse and dependents to calculate applicable tax deductions.
+                Add spouse and dependents to calculate applicable tax deductions and household
+                National Health Insurance.
               </SimpleTooltip>
             </Typography>
             <Badge
@@ -1023,6 +1024,17 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
         onDependentsChange={handleDependentsChange}
         taxpayerNetIncome={netIncomeComponents.totalNetIncome}
         incomeYear={inputs.incomeYear}
+        healthInsuranceProvider={inputs.healthInsuranceProvider}
+        taxpayerAgeRange={inputs.ageRange}
+        nhiPaymentAttribution={inputs.nhiPaymentAttribution}
+        onNHIPaymentAttributionChange={attribution =>
+          dispatch({ type: 'setField', field: 'nhiPaymentAttribution', value: attribution })
+        }
+        region={inputs.region}
+        nhiHouseholdRegion={inputs.nhiHouseholdRegion}
+        onNHIHouseholdRegionChange={region =>
+          dispatch({ type: 'setField', field: 'nhiHouseholdRegion', value: region })
+        }
       />
 
       <IncomeDetailsModal

@@ -289,6 +289,14 @@ export type FormAction =
  * 後期高齢者医療制度 at 75+, so a fallback always exists; the empty-list guard only satisfies
  * the type of `available[0]`.
  */
+function clearNHIHouseholdRegionOverride(state: TakeHomeFormState): TakeHomeFormState {
+  if (state.nhiHouseholdRegion === undefined) {
+    return state;
+  }
+  const { nhiHouseholdRegion: _, ...rest } = state;
+  return rest;
+}
+
 function applyProviderValidity(state: TakeHomeFormState): TakeHomeFormState {
   const available = availableProvidersFor(state);
   if (available.some(option => option.id === state.healthInsuranceProvider)) {
@@ -299,8 +307,10 @@ function applyProviderValidity(state: TakeHomeFormState): TakeHomeFormState {
   if (!fallback) {
     return state;
   }
+  const base =
+    fallback.id === NATIONAL_HEALTH_INSURANCE_ID ? clearNHIHouseholdRegionOverride(state) : state;
   return {
-    ...state,
+    ...base,
     healthInsuranceProvider: fallback.id,
     region: defaultRegionForProvider(fallback.id),
   };
@@ -388,9 +398,15 @@ function reduceRegionChanged(
   const isValid = regionOptionsFor(state.healthInsuranceProvider).some(
     option => option.id === action.region,
   );
+  const newRegion = isValid
+    ? action.region
+    : defaultRegionForProvider(state.healthInsuranceProvider);
   return {
     ...state,
-    region: isValid ? action.region : defaultRegionForProvider(state.healthInsuranceProvider),
+    region: newRegion,
+    ...(state.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID && {
+      nhiHouseholdRegion: newRegion,
+    }),
   };
 }
 
@@ -419,12 +435,18 @@ export function takeHomeFormReducer(
     case 'incomeModeChanged':
       return reduceIncomeModeChanged(state, action);
 
-    case 'providerChanged':
+    case 'providerChanged': {
+      const newRegion = defaultRegionForProvider(action.provider);
+      const base =
+        action.provider === NATIONAL_HEALTH_INSURANCE_ID
+          ? clearNHIHouseholdRegionOverride(state)
+          : state;
       return {
-        ...state,
+        ...base,
         healthInsuranceProvider: action.provider,
-        region: defaultRegionForProvider(action.provider),
+        region: newRegion,
       };
+    }
 
     case 'regionChanged':
       return reduceRegionChanged(state, action);

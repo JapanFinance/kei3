@@ -131,4 +131,19 @@ describe('NegativeTakeHomeTooltip', () => {
       'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/tanjikan.html',
     );
   });
+
+  it('explains household NHI premiums paid by a non-NHI taxpayer when take-home is negative', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      takeHomeIncome: -40_000,
+      healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
+      householdNHIPremiumPaidByTaxpayer: 120_000,
+    });
+    render(<NegativeTakeHomeTooltip results={results} />);
+
+    expect(
+      screen.getByText(
+        /National Health Insurance premiums for family members in the same household are being paid by the taxpayer/,
+      ),
+    ).toBeInTheDocument();
+  });
 });

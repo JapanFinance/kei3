@@ -10,6 +10,7 @@ import type { Dependent } from '../types/dependents';
 import type { PersonalCircumstancesInput } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
 import { calculatePersonalDeductions } from '../utils/personalDeductions';
+import { makeDependent } from './fixtures/dependents';
 
 const renderModal = (
   personalCircumstances: PersonalCircumstancesInput,
@@ -124,16 +125,7 @@ describe('Personal Circumstances card', () => {
       { disability: 'none', widowOrSingleParent: 'singleParentMother' },
       3_000_000,
       vi.fn(),
-      [
-        {
-          id: 'c1',
-          relationship: 'child',
-          ageRange: 'under16',
-          isCohabiting: true,
-          disability: 'none',
-          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-        },
-      ],
+      [makeDependent({ id: 'c1' })],
     );
     expect(screen.queryByText(/No qualifying child/)).not.toBeInTheDocument();
   });

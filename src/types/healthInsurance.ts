@@ -130,6 +130,15 @@ export type ProviderRegion = string;
 export const DEFAULT_PROVIDER_REGION = 'DEFAULT';
 
 /**
+ * How the household National Health Insurance bill is attributed to the taxpayer:
+ * - 'fullHousehold': Taxpayer pays 100% of the household NHI bill (out-of-pocket & 社会保険料控除).
+ * - 'none': Another household member pays the NHI bill (¥0 out-of-pocket & ¥0 deduction for taxpayer).
+ */
+export type NHIPaymentAttribution = 'fullHousehold' | 'none';
+
+export const DEFAULT_NHI_PAYMENT_ATTRIBUTION: NHIPaymentAttribution = 'fullHousehold';
+
+/**
  * Statutory NHI low-income premium reduction (均等割額・平等割額の軽減) ratio:
  * - 0.7: 7割軽減 (70% reduction)
  * - 0.5: 5割軽減 (50% reduction)
@@ -137,6 +146,94 @@ export const DEFAULT_PROVIDER_REGION = 'DEFAULT';
  * - 0: No reduction
  */
 export type NHIPremiumReductionRatio = 0.7 | 0.5 | 0.2 | 0;
+
+/**
+ * A household member evaluated for National Health Insurance.
+ */
+export interface NHIHouseholdMember {
+  id: string;
+  relationship: 'taxpayer' | 'spouse' | 'child' | 'parent' | 'other';
+  isTaxpayer: boolean;
+  isSameHousehold: boolean;
+  isHouseholdHead: boolean;
+  isNHIInsured: boolean;
+  isLtcCat2: boolean;
+  isPreschool: boolean;
+  isChildSupportExempt: boolean;
+  isElderly65Plus: boolean;
+  netIncome: number;
+  basicDeduction: number;
+  calculationBase: number;
+  grossEmploymentIncome: number;
+  netPublicPensionIncome: number;
+  elderlyPensionSpecialDeduction: number;
+}
+
+/**
+ * Composed household-level NHI structure and statutory reduction inputs.
+ */
+export interface NHIHouseholdComposition {
+  /** All members belonging to the 住民票 household (taxpayer + cohabiting dependents) */
+  members: NHIHouseholdMember[];
+  /** Designated household head (世帯主) */
+  householdHead: NHIHouseholdMember;
+  /** Whether the household head is a deemed head (擬制世帯主, not enrolled in NHI) */
+  isDeemedHead: boolean;
+  /** Taxpayer member reference */
+  taxpayerMember: NHIHouseholdMember;
+  /**
+   * Number of NHI-insured members.
+   *
+   * Note on limitation: Under 国民健康保険法施行令第29条の7第5項第1号, members who aged out
+   * of NHI into the 75+ Latter-Stage Elderly Healthcare System (特定同一世帯所属者) are counted
+   * alongside NHI-insured members when expanding the 5割 and 2割 low-income reduction thresholds.
+   * Because past insurance enrollment transitions are not tracked across age 75, 75+ members
+   * (notably a 75+ deemed-head taxpayer) are not included in this count.
+   */
+  insuredCount: number;
+  /** Number of NHI-insured members aged 40-64 */
+  ltcInsuredCount: number;
+  /** Number of NHI-insured preschool children under age 6 */
+  preschoolCount: number;
+  /** Number of NHI-insured children under 19 exempt from child support per-capita */
+  childSupportExemptCount: number;
+  /** Sum of premiumCalculationBase across all NHI-insured members */
+  calculationBase: number;
+  /** Sum of premiumCalculationBase across NHI-insured members aged 40-64 */
+  ltcCalculationBase: number;
+  /** Group evaluated for 7/5/2割 low-income reduction: household head + all NHI-insured members */
+  reductionTestGroup: NHIHouseholdMember[];
+  /** 軽減判定所得 across the reduction test group */
+  reductionTestIncome: number;
+  /** 給与所得者等の数 across the reduction test group for the two fiscal years blended in the year */
+  salaryEarnersCounts: { prevFY: number; currFY: number };
+  /** Region key to look up NHI parameters from */
+  effectiveRegion: string;
+  /** Configured payment attribution */
+  paymentAttribution: NHIPaymentAttribution;
+}
+
+/**
+ * Summary of household-level National Health Insurance calculations and member breakdown
+ */
+export interface NHIHouseholdSummary extends NHIHouseholdComposition {
+  /** Low-income reduction ratio applied (0, 0.2, 0.5, 0.7) for prev and curr FY */
+  reductionRatios: { prevFY: NHIPremiumReductionRatio; currFY: NHIPremiumReductionRatio };
+  /** Full household annual premium breakdown */
+  householdTotal: number;
+  householdPortions: {
+    medical: number;
+    elderlySupport: number;
+    longTermCare: number;
+    childSupport: number;
+  };
+  householdCaps: {
+    medicalCapped: boolean;
+    elderlySupportCapped: boolean;
+    longTermCareCapped: boolean;
+    childSupportCapped: boolean;
+  };
+}
 
 /**
  * Parameters for calculating National Health Insurance (NHI) premiums.

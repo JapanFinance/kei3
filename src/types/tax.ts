@@ -6,6 +6,8 @@ import type { Dependent, DependentDeductionResults, DisabilityLevel } from './de
 import type {
   HealthInsuranceProviderId,
   LongTermCareCategory1Estimate,
+  NHIHouseholdSummary,
+  NHIPaymentAttribution,
   NHIPremiumReductionRatio,
 } from './healthInsurance';
 import type { TaxpayerAgeRange } from './taxpayerAge';
@@ -874,6 +876,14 @@ export interface TakeHomeFormState {
   earthquakeInsurance: EarthquakeInsuranceInput;
   medicalExpenses: MedicalExpensesInput;
   personalCircumstances: PersonalCircumstancesInput;
+  /** How household NHI premiums are attributed to the taxpayer */
+  nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
+  /**
+   * Explicit municipality/region override for household NHI when the taxpayer is on another
+   * provider (e.g. Employees' Health Insurance) while household members are on NHI. When absent,
+   * {@link resolveEffectiveNHIRegion} defaults to `region` if it is a known NHI region, else Tokyo.
+   */
+  nhiHouseholdRegion?: string | undefined;
 }
 
 /** Interface for Calculation Logic (clean, normalized inputs) */
@@ -933,6 +943,10 @@ export interface TakeHomeInputs {
    * donation.
    */
   furusatoDonation?: number | undefined;
+  /** How household NHI premiums are attributed to the taxpayer */
+  nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
+  /** Region used for household NHI when taxpayer is on non-NHI provider */
+  nhiHouseholdRegion?: string | undefined;
 }
 
 /**
@@ -1173,6 +1187,17 @@ export interface TakeHomeResults {
    * rather than an entered billed amount; carries the 所得段階 and 基準額 behind the figure.
    */
   longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
+  /**
+   * Annual household NHI premium attributed to and paid by the taxpayer when the taxpayer
+   * themselves is NOT enrolled in NHI (e.g. on Employees' Health Insurance or 75+ Latter-Stage Elderly)
+   * but pays the household NHI bill as 擬制世帯主. Deductible as 社会保険料控除 under 所得税法第74条.
+   */
+  householdNHIPremiumPaidByTaxpayer?: number | undefined;
+  /**
+   * Household-level National Health Insurance calculation summary and attribution breakdown.
+   * Present whenever the household has at least one NHI-insured member.
+   */
+  nhiHousehold?: NHIHouseholdSummary | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   /** The bonus streams' amounts added up. 0 when there are none. */

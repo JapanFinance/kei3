@@ -68,6 +68,16 @@ const NegativeTakeHomeTooltip: React.FC<{ results: TakeHomeResults }> = ({ resul
         because they do not scale down to zero.
       </Typography>
       <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+        {results.householdNHIPremiumPaidByTaxpayer !== undefined &&
+          results.householdNHIPremiumPaidByTaxpayer > 0 &&
+          !isNHI && (
+            <li>
+              <Typography variant="body2">
+                National Health Insurance premiums for family members in the same household are
+                being paid by the taxpayer.
+              </Typography>
+            </li>
+          )}
         {isNHI && (
           <li>
             <Typography variant="body2">

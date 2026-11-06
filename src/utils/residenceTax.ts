@@ -8,6 +8,7 @@ import { calculateResidenceTaxBasicDeduction } from '../data/residenceTaxBasicDe
 import type { Dependent, DependentDeductionResults } from '../types/dependents';
 import {
   DEDUCTION_TYPES,
+  DEPENDENT_AGE_BANDS,
   SPOUSE_AGE_BANDS,
   type DependentAgeRange,
   type SpouseAgeRange,
@@ -155,7 +156,7 @@ export function isResidenceTaxExempt(
  * the age range.
  *
  * The age ranges cannot always answer that second one. They are cut on the 扶養控除 boundaries
- * of 16 and 19 rather than the age of majority, so 'under16' is safely inside the 未成年者 band
+ * of 16 and 19 rather than the age of majority, so 'under6' and '6to15' are safely inside the 未成年者 band
  * but '16to18' spans ages 16 to 18 and holds minors and adults alike. It is resolved as an
  * adult, so a 16- or 17-year-old whose 合計所得金額 falls between the 均等割 limit and
  * {@link NON_TAXABLE_STATUS_INCOME_LIMIT} is reported as 課税 when they are in fact exempt,
@@ -167,7 +168,8 @@ export function isDependentResidenceTaxable(dependent: Dependent, year: number):
   if (netIncome <= getResidenceTaxExemptionLimits(0).perCapitaLimit) return false;
   const hasExemptStatus =
     dependent.disability !== 'none' ||
-    (dependent.relationship !== 'spouse' && dependent.ageRange === 'under16');
+    (dependent.relationship !== 'spouse' &&
+      dependentAgeCoversBand(dependent.ageRange, DEPENDENT_AGE_BANDS.dependentUnder16));
   return !(hasExemptStatus && netIncome <= NON_TAXABLE_STATUS_INCOME_LIMIT);
 }
 
@@ -485,7 +487,7 @@ function calculateStatutoryPersonalDeductionDifference(
       case DEDUCTION_TYPES.ELDERLY_COHABITING_DEPENDENT:
         // 同居老親等 (cohabiting elderly 直系尊属, 70+). Whether a dependent qualifies is decided
         // once, where the deduction amount is chosen (isCohabitingElderlyDependent); we switch on
-        // the resulting breakdown type alone and never re-derive it from relationship/isCohabiting.
+        // the resulting breakdown type alone and never re-derive it from relationship/isSameHousehold.
         totalDifference += STATUTORY_DEDUCTION_DIFFERENCES.DEPENDENT_ELDERLY_COHABITING;
         break;
 

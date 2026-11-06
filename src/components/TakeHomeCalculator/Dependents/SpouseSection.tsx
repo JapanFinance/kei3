@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Box from '@mui/material/Box';
-import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
@@ -11,7 +10,6 @@ import Link from '@mui/material/Link';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
-import { useTheme } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -19,48 +17,73 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import useMediaQuery from '@mui/material/useMediaQuery';
-import { useState } from 'react';
 
-import type { Spouse } from '../../../types/dependents';
+import type {
+  DisabilityLevel,
+  HouseholdMemberHealthInsurance,
+  Spouse,
+  SpouseAgeRange,
+} from '../../../types/dependents';
 import { DISABILITY_LEVELS, SPOUSE_AGE_RANGES } from '../../../types/dependents';
+import type { HealthInsuranceProviderId } from '../../../types/healthInsurance';
 import {
   calculateDependentNetIncomeComponents,
   calculateDependentNetPublicPensionIncome,
   calculateDependentTotalNetIncome,
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
+import { getAutoHealthInsuranceLabel } from '../../../utils/nhiHousehold';
+import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
+import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
-import { SimpleTooltip } from '../../ui/Tooltips';
+import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
+
+const incomeInputSx = {
+  maxWidth: { xs: 125, sm: 160 },
+  '& .MuiInputBase-input': {
+    fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+    px: { xs: 0.75, sm: 1.5 },
+  },
+};
 
 interface SpouseSectionProps {
   spouse: Spouse | null;
   onChange: (spouse: Spouse | null) => void;
   /** Income year for the net-income preview calculations. */
   incomeYear: number;
+  /** Whether the taxpayer is enrolled in National Health Insurance */
+  isTaxpayerNHI: boolean;
+  /** Taxpayer's current health insurance provider */
+  taxpayerHealthInsuranceProvider?: HealthInsuranceProviderId | undefined;
 }
 
-export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSectionProps) {
-  const [hasSpouse, setHasSpouse] = useState(spouse !== null);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+export default function SpouseSection({
+  spouse,
+  onChange,
+  incomeYear,
+  isTaxpayerNHI,
+  taxpayerHealthInsuranceProvider,
+}: SpouseSectionProps) {
+  const hasSpouse = spouse !== null;
 
   const handleToggleSpouse = (checked: boolean) => {
-    setHasSpouse(checked);
     if (checked) {
       // Create new spouse with default values
       const newSpouse: Spouse = {
         id: crypto.randomUUID(),
         relationship: 'spouse',
-        ageRange: 'under65',
+        ageRange: 'under40',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
           otherNetIncome: 0,
         },
         disability: 'none',
-        isCohabiting: true,
+        isSameHousehold: true,
+        isClaimedAsDependent: true,
+        healthInsurance: 'auto',
+        isHouseholdHead: false,
       };
       onChange(newSpouse);
     } else {
@@ -87,6 +110,8 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
     pensionIncomeAdjustmentDeduction,
   );
 
+  const hasAnyImpact = spouse ? spouse.isClaimedAsDependent || spouse.isSameHousehold : false;
+
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -95,305 +120,34 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
           control={
             <Switch checked={hasSpouse} onChange={e => handleToggleSpouse(e.target.checked)} />
           }
-          label="Include a spouse?"
+          label="Include spouse?"
         />
       </Box>
 
-      {hasSpouse && spouse && (
+      {spouse && (
         <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Income Information */}
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>
-              Income Information{' '}
-              <SimpleTooltip>
-                Enter income amounts to calculate total net income (合計所得金額) and determine
-                deduction eligibility. Survivor and disability pensions (遺族年金・障害年金) are
-                non-taxable and are not included.
-              </SimpleTooltip>
-            </Typography>
-
-            {isMobile ? (
-              /* Mobile: Stacked Layout */
-              <Paper variant="outlined" sx={{ mt: 1, p: 2 }}>
-                {/* Employment Income */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                    Employment Income (給与)
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      Gross (収入)
-                    </Typography>
-                    <SpinnerNumberField
-                      value={spouse.income.grossEmploymentIncome}
-                      onChange={(value: number) =>
-                        handleSpouseChange({
-                          income: {
-                            ...spouse.income,
-                            grossEmploymentIncome: value,
-                          },
-                        })
-                      }
-                      step={10_000}
-                      shiftStep={100_000}
-                      sx={{ maxWidth: 180 }}
-                      inputProps={{ style: { textAlign: 'right' } }}
-                    />
-                  </Box>
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      Net (所得)
-                    </Typography>
-                    <Typography variant="body2">
-                      {formatJPY(netEmploymentIncome)}
-                      {incomeAdjustmentNote && (
-                        <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
-                      )}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Divider sx={{ my: 2 }} />
-
-                {/* Public Pension Income */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                    Public Pension (公的年金等)
-                  </Typography>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      mb: 1,
-                    }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      Gross (収入)
-                    </Typography>
-                    <SpinnerNumberField
-                      value={spouse.income.grossPublicPensionIncome}
-                      onChange={(value: number) =>
-                        handleSpouseChange({
-                          income: {
-                            ...spouse.income,
-                            grossPublicPensionIncome: value,
-                          },
-                        })
-                      }
-                      step={10_000}
-                      shiftStep={100_000}
-                      sx={{ maxWidth: 180 }}
-                      inputProps={{ style: { textAlign: 'right' } }}
-                    />
-                  </Box>
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      Net (所得)
-                    </Typography>
-                    <Typography variant="body2">
-                      {formatJPY(calculateDependentNetPublicPensionIncome(spouse, incomeYear))}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Divider sx={{ my: 2 }} />
-
-                {/* Other Income */}
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" gutterBottom sx={{ fontWeight: 'medium' }}>
-                    Other Income (その他)
-                  </Typography>
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      Net (所得)
-                    </Typography>
-                    <SpinnerNumberField
-                      value={spouse.income.otherNetIncome}
-                      onChange={(value: number) =>
-                        handleSpouseChange({
-                          income: {
-                            ...spouse.income,
-                            otherNetIncome: value,
-                          },
-                        })
-                      }
-                      step={10_000}
-                      shiftStep={100_000}
-                      sx={{ maxWidth: 180 }}
-                      inputProps={{ style: { textAlign: 'right' } }}
-                    />
-                  </Box>
-                </Box>
-
-                <Divider sx={{ my: 2 }} />
-
-                {/* Total */}
-                <Box sx={{ backgroundColor: 'action.hover', p: 1.5, borderRadius: 1 }}>
-                  <Box
-                    sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                  >
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      Total (合計所得金額)
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                      {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Paper>
-            ) : (
-              /* Desktop: Table Layout */
-              <Paper variant="outlined" sx={{ mt: 1 }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Income Category</TableCell>
-                      <TableCell align="right">Gross (収入)</TableCell>
-                      <TableCell align="right">Net (所得)</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {/* Employment Income Row */}
-                    <TableRow>
-                      <TableCell>
-                        Employment
-                        <br />
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          給与
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <SpinnerNumberField
-                          value={spouse.income.grossEmploymentIncome}
-                          onChange={(value: number) =>
-                            handleSpouseChange({
-                              income: {
-                                ...spouse.income,
-                                grossEmploymentIncome: value,
-                              },
-                            })
-                          }
-                          step={10_000}
-                          shiftStep={100_000}
-                          sx={{ maxWidth: 150 }}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatJPY(netEmploymentIncome)}
-                          {incomeAdjustmentNote && (
-                            <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
-                          )}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-
-                    {/* Public Pension Income Row */}
-                    <TableRow>
-                      <TableCell>
-                        Public Pension
-                        <br />
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          公的年金等
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <SpinnerNumberField
-                          value={spouse.income.grossPublicPensionIncome}
-                          onChange={(value: number) =>
-                            handleSpouseChange({
-                              income: {
-                                ...spouse.income,
-                                grossPublicPensionIncome: value,
-                              },
-                            })
-                          }
-                          step={10_000}
-                          shiftStep={100_000}
-                          sx={{ maxWidth: 150 }}
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {formatJPY(calculateDependentNetPublicPensionIncome(spouse, incomeYear))}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-
-                    {/* Other Income Row */}
-                    <TableRow>
-                      <TableCell>
-                        Other
-                        <br />
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          その他
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          —
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <SpinnerNumberField
-                          value={spouse.income.otherNetIncome}
-                          onChange={(value: number) =>
-                            handleSpouseChange({
-                              income: {
-                                ...spouse.income,
-                                otherNetIncome: value,
-                              },
-                            })
-                          }
-                          step={10_000}
-                          shiftStep={100_000}
-                          sx={{ maxWidth: 150 }}
-                        />
-                      </TableCell>
-                    </TableRow>
-
-                    {/* Total Row */}
-                    <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                      <TableCell>
-                        <strong>Total (合計所得金額)</strong>
-                      </TableCell>
-                      <TableCell align="right"></TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Paper>
-            )}
-          </Box>
-
-          {/* Age Range and Living Together on same row */}
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <FormControl sx={{ flex: 1 }}>
-              <InputLabel>Age</InputLabel>
+          {/* Age & Status Switches on one row on desktop */}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              flexWrap: 'wrap',
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              gap: { xs: 1, sm: 2.5 },
+            }}
+          >
+            <FormControl
+              size="small"
+              sx={{ minWidth: { xs: '100%', sm: 190 }, flex: { sm: '0 0 auto' } }}
+            >
+              <InputLabel id="spouse-age-label">Age on December 31</InputLabel>
               <Select
+                labelId="spouse-age-label"
                 value={spouse.ageRange}
-                label="Age"
+                label="Age on December 31"
                 onChange={e =>
                   handleSpouseChange({
-                    ageRange: e.target.value,
+                    ageRange: e.target.value as SpouseAgeRange,
                   })
                 }
               >
@@ -403,50 +157,436 @@ export default function SpouseSection({ spouse, onChange, incomeYear }: SpouseSe
                   </MenuItem>
                 ))}
               </Select>
-              <FormHelperText>On December 31</FormHelperText>
             </FormControl>
 
             <FormControlLabel
               control={
                 <Switch
-                  checked={spouse.isCohabiting}
-                  onChange={e => handleSpouseChange({ isCohabiting: e.target.checked })}
+                  checked={spouse.isClaimedAsDependent}
+                  onChange={e => handleSpouseChange({ isClaimedAsDependent: e.target.checked })}
                 />
               }
-              label="Living together"
-              sx={{ flex: 1 }}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  Claim tax deduction
+                  <DetailedTooltip
+                    title="Spousal Tax Deductions (配偶者控除・配偶者特別控除)"
+                    icon={SIMPLE_TOOLTIP_ICON}
+                  >
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Leave checked to claim eligible spousal tax deductions. Uncheck if the spouse
+                      is claiming the deductions instead (spouses cannot both claim each other) or
+                      does not meet the legal marriage requirement.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Spousal deductions require a legally recognized marriage under the Civil Code
+                      of Japan. De facto or common-law marriages (事実婚・内縁関係), municipal
+                      partnerships, and same-sex marriages are not eligible.
+                    </Typography>
+                    <SourceLinks
+                      sources={[
+                        {
+                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1191.htm',
+                          label:
+                            'NTA: Spousal Deduction Requirements (国税庁: 配偶者控除の要件 No.1191)',
+                        },
+                      ]}
+                    />
+                  </DetailedTooltip>
+                </Box>
+              }
+              sx={{ m: 0 }}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={spouse.isSameHousehold}
+                  onChange={e => handleSpouseChange({ isSameHousehold: e.target.checked })}
+                />
+              }
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  Same registered address
+                  <DetailedTooltip
+                    title="Same Municipal Household (同一世帯)"
+                    icon={SIMPLE_TOOLTIP_ICON}
+                  >
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Registered under the same municipal resident record (住民票上の同一世帯).
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      National Health Insurance (国民健康保険) calculates premiums across all
+                      enrolled members registered in the same household.
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Uncheck if registered at a separate address (e.g. for work relocation).
+                      Spousal tax deductions are not affected as long as living expenses are shared.
+                    </Typography>
+                    <SourceLinks
+                      sources={[
+                        {
+                          href: 'https://www.hokeniryo.metro.tokyo.lg.jp/kenkou/kokuho/aramashi/index.html',
+                          label:
+                            'Tokyo Bureau of Public Health: National Health Insurance Guide (東京都保健医療局: 国民健康保険のあらまし)',
+                        },
+                        {
+                          href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1180_qa.htm',
+                          label: 'NTA: Spouses living apart (国税庁:「生計を一にする」の意義)',
+                        },
+                      ]}
+                    />
+                  </DetailedTooltip>
+                </Box>
+              }
+              sx={{ m: 0 }}
             />
           </Box>
 
-          {/* Disability Status */}
-          <FormControl fullWidth>
-            <InputLabel>Disability Status</InputLabel>
-            <Select
-              value={spouse.disability}
-              label="Disability Status"
-              onChange={e =>
-                handleSpouseChange({
-                  disability: e.target.value,
-                })
-              }
-            >
-              {DISABILITY_LEVELS.map(level => (
-                <MenuItem key={level.value} value={level.value}>
-                  {level.label}
-                </MenuItem>
-              ))}
-            </Select>
-            <FormHelperText>
-              See{' '}
-              <Link
-                href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
-                target="_blank"
-                rel="noopener noreferrer"
+          {!hasAnyImpact ? (
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                The spouse is neither claimed for tax deductions nor registered at the same address
+                for National Health Insurance. As a result, they will have no effect on taxes or
+                health insurance premiums.
+              </Typography>
+            </Paper>
+          ) : (
+            <>
+              {/* Income & Household Health Insurance Section */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: 2,
+                  alignItems: 'stretch',
+                }}
               >
-                NTA disability deduction guide
-              </Link>
-            </FormHelperText>
-          </FormControl>
+                {/* Income Information */}
+                <Box
+                  sx={{
+                    flex: {
+                      md: spouse.isSameHousehold || spouse.isClaimedAsDependent ? '1 1 56%' : 1,
+                    },
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      minHeight: 28,
+                      mb: 1,
+                    }}
+                  >
+                    Income Information
+                    <SimpleTooltip>
+                      Enter income amounts to calculate total net income (合計所得金額) to determine
+                      deduction eligibility and National Health Insurance premiums (if applicable).
+                      Survivor and disability pensions (遺族年金・障害年金) are non-taxable and are
+                      not included.
+                    </SimpleTooltip>
+                  </Typography>
+
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      overflowX: 'auto',
+                      '& .MuiTableCell-root': {
+                        px: { xs: 0.75, sm: 2 },
+                        fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+                      },
+                    }}
+                  >
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>Category</TableCell>
+                          <TableCell align="right">Gross (収入)</TableCell>
+                          <TableCell align="right">Net (所得)</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {/* Employment Income Row */}
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            Employment
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              給与
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <SpinnerNumberField
+                              value={spouse.income.grossEmploymentIncome}
+                              onChange={(value: number) =>
+                                handleSpouseChange({
+                                  income: {
+                                    ...spouse.income,
+                                    grossEmploymentIncome: value,
+                                  },
+                                })
+                              }
+                              step={10_000}
+                              shiftStep={100_000}
+                              size="small"
+                              hideSpinner
+                              inputProps={{ style: { textAlign: 'right' } }}
+                              sx={incomeInputSx}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" sx={{ fontSize: 'inherit' }}>
+                              {formatJPY(netEmploymentIncome)}
+                              {incomeAdjustmentNote && (
+                                <SimpleTooltip>{incomeAdjustmentNote}</SimpleTooltip>
+                              )}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Public Pension Income Row */}
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            Public Pension
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              公的年金等
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <SpinnerNumberField
+                              value={spouse.income.grossPublicPensionIncome}
+                              onChange={(value: number) =>
+                                handleSpouseChange({
+                                  income: {
+                                    ...spouse.income,
+                                    grossPublicPensionIncome: value,
+                                  },
+                                })
+                              }
+                              step={10_000}
+                              shiftStep={100_000}
+                              size="small"
+                              hideSpinner
+                              inputProps={{ style: { textAlign: 'right' } }}
+                              sx={incomeInputSx}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" sx={{ fontSize: 'inherit' }}>
+                              {formatJPY(
+                                calculateDependentNetPublicPensionIncome(spouse, incomeYear),
+                              )}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Other Income Row */}
+                        <TableRow>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            Other
+                            <br />
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              その他
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              sx={{ color: 'text.secondary', fontSize: 'inherit' }}
+                            >
+                              —
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <SpinnerNumberField
+                              value={spouse.income.otherNetIncome}
+                              onChange={(value: number) =>
+                                handleSpouseChange({
+                                  income: {
+                                    ...spouse.income,
+                                    otherNetIncome: value,
+                                  },
+                                })
+                              }
+                              step={10_000}
+                              shiftStep={100_000}
+                              size="small"
+                              hideSpinner
+                              inputProps={{ style: { textAlign: 'right' } }}
+                              sx={incomeInputSx}
+                            />
+                          </TableCell>
+                        </TableRow>
+
+                        {/* Total Row */}
+                        <TableRow sx={{ backgroundColor: 'action.hover' }}>
+                          <TableCell colSpan={2}>
+                            <strong>Total (合計所得金額)</strong>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              variant="body2"
+                              sx={{ fontWeight: 'bold', fontSize: 'inherit' }}
+                            >
+                              {formatJPY(calculateDependentTotalNetIncome(spouse, incomeYear))}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                </Box>
+
+                {/* Right Column: Household & Health Insurance and/or Disability Status */}
+                {(spouse.isSameHousehold || spouse.isClaimedAsDependent) && (
+                  <Box
+                    sx={{
+                      flex: { md: '1 1 44%' },
+                      minWidth: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                    }}
+                  >
+                    {spouse.isSameHousehold && (
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            minHeight: 28,
+                            mb: 1,
+                          }}
+                        >
+                          Household & Health Insurance
+                        </Typography>
+                        <Paper
+                          variant="outlined"
+                          sx={{
+                            p: 1.5,
+                            backgroundColor: 'background.default',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 1,
+                          }}
+                        >
+                          {spouse.ageRange === '75plus' ? (
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                              Aged 75+: Enrolled in Medical System for the Elderly
+                              (後期高齢者医療制度); not enrolled in National Health Insurance.
+                            </Typography>
+                          ) : (
+                            <FormControl fullWidth size="small">
+                              <InputLabel id="spouse-hi-label">Health Insurance</InputLabel>
+                              <Select
+                                labelId="spouse-hi-label"
+                                label="Health Insurance"
+                                value={spouse.healthInsurance}
+                                onChange={e =>
+                                  handleSpouseChange({
+                                    healthInsurance: e.target
+                                      .value as HouseholdMemberHealthInsurance,
+                                  })
+                                }
+                              >
+                                <MenuItem value="auto">
+                                  {getAutoHealthInsuranceLabel(
+                                    taxpayerHealthInsuranceProvider,
+                                    isTaxpayerNHI,
+                                  )}
+                                </MenuItem>
+                                <MenuItem value="nhi">
+                                  National Health Insurance (国民健康保険)
+                                </MenuItem>
+                                <MenuItem value="non_nhi">
+                                  Employees' Health Insurance (社会保険等)
+                                </MenuItem>
+                              </Select>
+                              <FormHelperText>
+                                Health insurance system covering the spouse.
+                              </FormHelperText>
+                            </FormControl>
+                          )}
+
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                checked={spouse.isHouseholdHead}
+                                onChange={e =>
+                                  handleSpouseChange({ isHouseholdHead: e.target.checked })
+                                }
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                Household head (世帯主)
+                                <SimpleTooltip>
+                                  Check if the spouse is registered as the household head (世帯主)
+                                  on the municipal resident record (住民票). By default, the
+                                  taxpayer is assumed to be the household head. Under National
+                                  Health Insurance, a non-enrolled head acts as a deemed head
+                                  (擬制世帯主) whose income is included for low-income premium
+                                  reductions.
+                                </SimpleTooltip>
+                              </Box>
+                            }
+                            sx={{ m: 0 }}
+                          />
+                        </Paper>
+                      </Box>
+                    )}
+
+                    {/* Disability Status */}
+                    {spouse.isClaimedAsDependent && (
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography
+                          id="spouse-disability-label"
+                          variant="subtitle2"
+                          component="label"
+                          htmlFor="spouse-disability-select"
+                          sx={{ display: 'block', mb: 0.5 }}
+                        >
+                          Disability Status
+                        </Typography>
+                        <FormControl fullWidth size="small">
+                          <Select
+                            id="spouse-disability-select"
+                            labelId="spouse-disability-label"
+                            value={spouse.disability}
+                            onChange={e =>
+                              handleSpouseChange({
+                                disability: e.target.value as DisabilityLevel,
+                              })
+                            }
+                          >
+                            {DISABILITY_LEVELS.map(level => (
+                              <MenuItem key={level.value} value={level.value}>
+                                {level.label}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          <FormHelperText>
+                            See{' '}
+                            <Link
+                              href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1160.htm"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              NTA disability deduction guide
+                            </Link>
+                          </FormHelperText>
+                        </FormControl>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            </>
+          )}
         </Box>
       )}
     </Box>

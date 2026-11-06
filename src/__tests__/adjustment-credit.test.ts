@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { DEDUCTION_TYPES, type Dependent } from '../types/dependents';
 import { calculateDependentDeductions } from '../utils/dependentDeductions';
 import { calculateResidenceTax, calculateAdjustmentCredit } from '../utils/residenceTax';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 /**
  * Tests for adjustment credit (調整控除) calculation per Local Tax Act Article 314-6
@@ -20,18 +21,16 @@ import { calculateResidenceTax, calculateAdjustmentCredit } from '../utils/resid
 
 describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
   describe('General spouse (under 70) - income ≤ 58万円', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: false,
-      disability: 'none',
+      ageRange: 'under40',
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 900_000, // Gross 90万円 → net 35万円 (under 58万円 limit)
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-    };
+    });
 
     it('taxpayer income ≤ 900万円 → 5万円 statutory difference', () => {
       const taxpayerIncome = 8_000_000;
@@ -113,18 +112,16 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
   });
 
   describe('Elderly spouse (70+) - income ≤ 58万円', () => {
-    const elderlySpouse: Dependent = {
+    const elderlySpouse: Dependent = makeSpouse({
       id: '1',
-      relationship: 'spouse',
-      ageRange: '70plus',
-      isCohabiting: false,
-      disability: 'none',
+      ageRange: '70to74',
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 900_000, // Gross 90万円 → net 35万円
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-    };
+    });
 
     it('taxpayer income ≤ 900万円 → 10万円 statutory difference', () => {
       const taxpayerIncome = 8_000_000;
@@ -181,18 +178,16 @@ describe('Adjustment Credit - Spouse Deduction (配偶者控除)', () => {
 
 describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)', () => {
   describe('Spouse income 58-100万円 (qualifies for spouse special deduction)', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: false,
-      disability: 'none',
+      ageRange: 'under40',
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 1_600_001, // Gross 1,600,001円 → net 950,001円 (over 58万円, qualifies for spouse special deduction)
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-    };
+    });
 
     it('statutory difference is 0 (mutually exclusive income ranges)', () => {
       const taxpayerIncome = 8_000_000;
@@ -225,18 +220,16 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
 
     testCases.forEach(({ grossIncome, description }) => {
       it(`spouse ${description} → statutory difference is 0`, () => {
-        const spouse: Dependent = {
+        const spouse: Dependent = makeSpouse({
           id: '1',
-          relationship: 'spouse',
-          ageRange: 'under65',
-          isCohabiting: false,
-          disability: 'none',
+          ageRange: 'under40',
+          isSameHousehold: false,
           income: {
             grossEmploymentIncome: grossIncome,
             grossPublicPensionIncome: 0,
             otherNetIncome: 0,
           },
-        };
+        });
 
         const taxpayerIncome = 8_000_000;
         const socialInsurance = 1_000_000;
@@ -260,18 +253,12 @@ describe('Adjustment Credit - Spouse Special Deduction (配偶者特別控除)',
 describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
   describe('General dependent (16-18, 23-69) - 5万円 statutory difference', () => {
     it('calculates correctly for age 16-18', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: true,
-        disability: 'none',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+        isSameHousehold: true,
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -290,18 +277,12 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
     });
 
     it('calculates correctly for age 23-69', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'parent',
-        ageRange: '23to64',
-        isCohabiting: false,
-        disability: 'none',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+        ageRange: '23to39',
+        isSameHousehold: false,
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -322,18 +303,12 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
   describe('Special dependent (19-22) - 18万円 statutory difference', () => {
     it('calculates correctly for special dependent', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: true,
-        disability: 'none',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+        isSameHousehold: true,
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -354,18 +329,12 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 
   describe('Elderly dependent (70+) - 10万円 statutory difference', () => {
     it('calculates correctly for non-cohabiting elderly parent', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'parent',
-        ageRange: '70plus',
-        isCohabiting: false,
-        disability: 'none',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+        ageRange: '70to74',
+        isSameHousehold: false,
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -384,18 +353,12 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
     });
 
     it('calculates correctly for cohabiting elderly parent - 13万円 statutory difference', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'parent',
-        ageRange: '70plus',
-        isCohabiting: true,
-        disability: 'none',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+        ageRange: '70to74',
+        isSameHousehold: true,
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -417,19 +380,13 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
       // 'other' ("Other Relative") is NOT a 直系尊属, so cohabiting does NOT upgrade it to 同居老親等.
       // It gets the plain 老人扶養親族 difference (10万), matching the plain elderly deduction it
       // actually receives — the statutory difference must track the deduction granted, not be
-      // re-derived from relationship/isCohabiting (which had overstated this case by 3万).
-      const dependent: Dependent = {
+      // re-derived from relationship/isSameHousehold (which had overstated this case by 3万).
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'other',
-        ageRange: '70plus',
-        isCohabiting: true,
-        disability: 'none',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+        ageRange: '70to74',
+        isSameHousehold: true,
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -455,14 +412,13 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
   });
 
   describe('同居老親等 vs plain elderly: parent and "other" diverge', () => {
-    const makeElderly = (relationship: 'parent' | 'other'): Dependent => ({
-      id: '1',
-      relationship,
-      ageRange: '70plus',
-      isCohabiting: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    });
+    const makeElderly = (relationship: 'parent' | 'other'): Dependent =>
+      makeDependent({
+        id: '1',
+        relationship,
+        ageRange: '70to74',
+        isSameHousehold: true,
+      });
 
     // Chosen so residence taxable income stays ≤ ¥2M in both cases, keeping the adjustment credit
     // in the "5% of the full statutory difference" branch (not the >¥2M floored-at-¥50,000 branch),
@@ -524,18 +480,13 @@ describe('Adjustment Credit - Dependent Deductions (扶養控除)', () => {
 describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
   describe('Regular disability - 1万円 statutory difference', () => {
     it('calculates correctly for regular disability', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'regular',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -556,18 +507,13 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
 
   describe('Special disability - 10万円 statutory difference', () => {
     it('calculates correctly for non-cohabiting special disability', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: false,
+        isSameHousehold: false,
         disability: 'special',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -586,18 +532,13 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
     });
 
     it('calculates correctly for cohabiting special disability - 22万円 statutory difference', () => {
-      const dependent: Dependent = {
+      const dependent: Dependent = makeDependent({
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: true,
+        isSameHousehold: true,
         disability: 'special',
-        income: {
-          grossEmploymentIncome: 0,
-          grossPublicPensionIncome: 0,
-          otherNetIncome: 0,
-        },
-      };
+      });
 
       const taxpayerIncome = 8_000_000;
       const socialInsurance = 1_000_000;
@@ -619,44 +560,31 @@ describe('Adjustment Credit - Disability Deductions (障害者控除)', () => {
 
 describe('Adjustment Credit - Combined Scenarios', () => {
   it('spouse + multiple dependents + disability', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: '1',
-      relationship: 'spouse',
-      ageRange: 'under65',
-      isCohabiting: false,
-      disability: 'none',
+      ageRange: 'under40',
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 900_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-    };
+    });
 
-    const child1: Dependent = {
+    const child1: Dependent = makeDependent({
       id: '2',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: true,
-      disability: 'none',
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-    };
+      isSameHousehold: true,
+    });
 
-    const child2: Dependent = {
+    const child2: Dependent = makeDependent({
       id: '3',
       relationship: 'child',
       ageRange: '16to18',
-      isCohabiting: true,
+      isSameHousehold: true,
       disability: 'regular',
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-    };
+    });
 
     const taxpayerIncome = 8_000_000;
     const socialInsurance = 1_000_000;
@@ -681,31 +609,24 @@ describe('Adjustment Credit - Combined Scenarios', () => {
   });
 
   it('elderly spouse + elderly cohabiting parent + special disability', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: '1',
-      relationship: 'spouse',
-      ageRange: '70plus',
-      isCohabiting: false,
-      disability: 'none',
+      ageRange: '70to74',
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 900_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-    };
+    });
 
-    const parent: Dependent = {
+    const parent: Dependent = makeDependent({
       id: '2',
       relationship: 'parent',
-      ageRange: '70plus',
-      isCohabiting: true,
+      ageRange: '70to74',
+      isSameHousehold: true,
       disability: 'special',
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-    };
+    });
 
     const taxpayerIncome = 8_000_000;
     const socialInsurance = 1_000_000;
@@ -729,31 +650,23 @@ describe('Adjustment Credit - Combined Scenarios', () => {
   });
 
   it('higher taxpayer income affects spouse deduction statutory difference', () => {
-    const spouse: Dependent = {
+    const spouse: Dependent = makeSpouse({
       id: '1',
-      relationship: 'spouse',
-      ageRange: '70plus',
-      isCohabiting: false,
-      disability: 'none',
+      ageRange: '70to74',
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 900_000,
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-    };
+    });
 
-    const child: Dependent = {
+    const child: Dependent = makeDependent({
       id: '2',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: true,
-      disability: 'none',
-      income: {
-        grossEmploymentIncome: 0,
-        grossPublicPensionIncome: 0,
-        otherNetIncome: 0,
-      },
-    };
+      isSameHousehold: true,
+    });
 
     // Test with taxpayer income in 950-1000万円 bracket
     const taxpayerIncome = 9_700_000;
@@ -778,30 +691,24 @@ describe('Adjustment Credit - Combined Scenarios', () => {
 
   it('multiple dependents in different age categories', () => {
     const dependents: Dependent[] = [
-      {
+      makeDependent({
         id: '1',
         relationship: 'child',
         ageRange: '16to18',
-        isCohabiting: true,
-        disability: 'none',
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-      },
-      {
+        isSameHousehold: true,
+      }),
+      makeDependent({
         id: '2',
         relationship: 'child',
         ageRange: '19to22',
-        isCohabiting: true,
-        disability: 'none',
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-      },
-      {
+        isSameHousehold: true,
+      }),
+      makeDependent({
         id: '3',
         relationship: 'child',
-        ageRange: '23to64',
-        isCohabiting: false,
-        disability: 'none',
-        income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-      },
+        ageRange: '23to39',
+        isSameHousehold: false,
+      }),
     ];
 
     const taxpayerIncome = 8_000_000;
@@ -850,18 +757,17 @@ describe('Adjustment Credit - amount formula (調整控除額)', () => {
 
 describe('Specific Relative Special Deduction (特定親族特別控除)', () => {
   it('has NO statutory difference (0 yen)', () => {
-    const dependent: Dependent = {
+    const dependent: Dependent = makeDependent({
       id: '1',
       relationship: 'child',
       ageRange: '19to22',
-      isCohabiting: false,
-      disability: 'none',
+      isSameHousehold: false,
       income: {
         grossEmploymentIncome: 1_490_000, // Net = 750,000 (qualifies for specific relative special)
         grossPublicPensionIncome: 0,
         otherNetIncome: 0,
       },
-    };
+    });
 
     const taxpayerIncome = 8_000_000;
     const socialInsurance = 1_000_000;

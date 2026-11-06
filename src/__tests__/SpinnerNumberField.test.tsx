@@ -138,6 +138,17 @@ describe('SpinnerNumberField', () => {
     expect(mockOnChange).toHaveBeenCalledWith(95000);
   });
 
+  it('hides spinner buttons when hideSpinner is true', () => {
+    const mockOnChange = vi.fn();
+
+    render(
+      <SpinnerNumberField value={100000} onChange={mockOnChange} label="Test Amount" hideSpinner />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Increase Test Amount' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Decrease Test Amount' })).not.toBeInTheDocument();
+  });
+
   it('displays yen symbol prefix in formatted input', () => {
     const mockOnChange = vi.fn();
 

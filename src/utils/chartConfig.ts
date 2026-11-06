@@ -260,7 +260,7 @@ export const generateChartData = (
       label: 'Health Insurance',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.healthInsurance,
+        y: result.healthInsurance + (result.householdNHIPremiumPaidByTaxpayer ?? 0),
         breakdown,
       })),
       borderColor: 'var(--mui-palette-text-primary)',

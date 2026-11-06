@@ -129,6 +129,9 @@ function checkHealthInsuranceCap(
       // fiscal years' caps are already at hand.
       return { capped: results.latterStageMedicalCapped === true };
     case NATIONAL_HEALTH_INSURANCE_ID: {
+      if (results.nhiHousehold?.paymentAttribution === 'none') {
+        return { capped: false };
+      }
       // Whether a portion has stopped rising with income is decided where the premium is
       // calculated, which holds both fiscal years' 賦課限度額 (see
       // calculateNationalHealthInsurancePremiumWithBreakdown), as it is for 後期高齢者医療.

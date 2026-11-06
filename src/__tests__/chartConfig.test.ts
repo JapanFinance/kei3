@@ -3,6 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 
+import type { Dependent } from '../types/dependents';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, type TakeHomeInputs } from '../types/tax';
 import {
@@ -12,6 +13,7 @@ import {
   scaleIncomeStreamsToIncome,
 } from '../utils/chartConfig';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeSpouse } from './fixtures/dependents';
 
 const context: TakeHomeInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -476,6 +478,41 @@ describe('generateChartData employment insurance bar', () => {
       ],
     });
     expect(datasets.some(d => d.label === 'Employment Insurance')).toBe(false);
+  });
+});
+
+describe('generateChartData with household National Health Insurance', () => {
+  it('folds household NHI into Health Insurance bar and stacks to total income', () => {
+    // EHI employee whose cohabiting spouse is on NHI
+    const spouse: Dependent = makeSpouse({
+      id: 'spouse',
+      ageRange: '40to64',
+      isClaimedAsDependent: false,
+      healthInsurance: 'nhi',
+    });
+
+    const householdContext: TakeHomeInputs = {
+      ...context,
+      dependents: [spouse],
+      nhiPaymentAttribution: 'fullHousehold',
+    };
+
+    const { datasets } = generateChartData(range, householdContext);
+
+    // Verify household NHI is folded into Health Insurance and no separate dataset exists
+    expect(datasets.some(d => d.label === 'Household National Health Insurance')).toBe(false);
+    const healthInsurance = datasets.find(d => d.label === 'Health Insurance');
+    expect(healthInsurance).toBeDefined();
+    expect(healthInsurance!.type).toBe('bar');
+    expect(pointsOf(healthInsurance!)[0]!.y).toBeGreaterThan(0);
+
+    // Verify all bars stack to total swept income at every point
+    const bars = datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
   });
 });
 

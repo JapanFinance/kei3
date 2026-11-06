@@ -18,6 +18,7 @@ import {
   LATTER_STAGE_ELDERLY_ID,
   type LongTermCareCategory1Estimate,
   NATIONAL_HEALTH_INSURANCE_ID,
+  type NHIHouseholdSummary,
 } from '../types/healthInsurance';
 import {
   type BonusIncomeStream,
@@ -54,8 +55,8 @@ import {
 import { calculateForeignTaxCredit } from './foreignTaxCredit';
 import {
   calculateHealthInsuranceBreakdown,
+  calculateHouseholdNHIBreakdown,
   calculateLatterStageElderlyPremium,
-  calculateNationalHealthInsurancePremiumWithBreakdown,
   type LatterStageElderlyBreakdown,
 } from './healthInsuranceCalculator';
 import {
@@ -85,6 +86,7 @@ import {
   composeNetIncomeComponents,
   type NetIncomeComponents,
 } from './netIncomeComponents';
+import { composeNHIHousehold } from './nhiHousehold';
 import {
   calculateNationalPensionFullExemptionThreshold,
   calculatePensionBreakdown,
@@ -139,10 +141,37 @@ const longTermCareCategory1TierInputs = (
     inputs.ageRange,
     inputs.personalCircumstances,
   ),
-  householdHasOtherTaxableMember: inputs.dependents.some(dependent =>
-    isDependentResidenceTaxable(dependent, inputs.incomeYear),
+  householdHasOtherTaxableMember: inputs.dependents.some(
+    dependent =>
+      dependent.isSameHousehold && isDependentResidenceTaxable(dependent, inputs.incomeYear),
   ),
 });
+
+/**
+ * Total social insurance premiums paid by the taxpayer:
+ * Health insurance + Pension + Employment insurance + LTC Category 1 + Household NHI (as 擬制世帯主),
+ * or the manually entered override amount when manual mode is active.
+ * Single source of truth across calculations, charts, and reporting.
+ */
+export function totalSocialInsurancePaid(results: {
+  healthInsurance: number;
+  pensionPayments: number;
+  employmentInsurance?: number | undefined;
+  longTermCareCategory1Premium?: number | undefined;
+  householdNHIPremiumPaidByTaxpayer?: number | undefined;
+  socialInsuranceOverride?: number | undefined;
+}): number {
+  if (results.socialInsuranceOverride !== undefined) {
+    return results.socialInsuranceOverride;
+  }
+  return (
+    results.healthInsurance +
+    results.pensionPayments +
+    (results.employmentInsurance ?? 0) +
+    (results.longTermCareCategory1Premium ?? 0) +
+    (results.householdNHIPremiumPaidByTaxpayer ?? 0)
+  );
+}
 
 /**
  * Breakdown of Employment Insurance premium components
@@ -1039,6 +1068,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   let nhiBreakdown = null;
   let latterStageBreakdown: LatterStageElderlyBreakdown | null = null;
   let nationalPensionExemption: TakeHomeResults['nationalPensionExemption'];
+  let householdNHIPremiumPaidByTaxpayer: number | undefined;
+  let nhiHouseholdSummary: NHIHouseholdSummary | undefined;
 
   // Bonus breakdown variables
   let healthInsuranceOnBonus = 0;
@@ -1054,6 +1085,21 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
     const subjectToLongTermCarePremium = isLongTermCareCategory2Insured(inputs.ageRange);
 
+    const nhiHouseholdComposition = composeNHIHousehold({
+      taxpayer: {
+        netIncome,
+        grossEmploymentIncome,
+        netPublicPensionIncome,
+        ageRange: inputs.ageRange,
+        provider: inputs.healthInsuranceProvider,
+        region: inputs.region,
+      },
+      dependents: inputs.dependents,
+      incomeYear,
+      paymentAttribution: inputs.nhiPaymentAttribution,
+      nhiHouseholdRegion: inputs.nhiHouseholdRegion,
+    });
+
     if (inputs.healthInsuranceProvider === LATTER_STAGE_ELDERLY_ID) {
       latterStageBreakdown = calculateLatterStageElderlyPremium(
         netIncome,
@@ -1061,14 +1107,17 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
         inputs.region,
       );
       healthInsurance = latterStageBreakdown.total;
+
+      if (nhiHouseholdComposition.insuredCount > 0) {
+        const householdResult = calculateHouseholdNHIBreakdown(nhiHouseholdComposition, incomeYear);
+        householdNHIPremiumPaidByTaxpayer = householdResult.taxpayerBreakdown.total;
+        nhiHouseholdSummary = householdResult.summary;
+      }
     } else if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
-      nhiBreakdown = calculateNationalHealthInsurancePremiumWithBreakdown(
-        netIncome,
-        subjectToLongTermCarePremium,
-        incomeYear,
-        inputs.region,
-      );
+      const householdResult = calculateHouseholdNHIBreakdown(nhiHouseholdComposition, incomeYear);
+      nhiBreakdown = householdResult.taxpayerBreakdown;
       healthInsurance = nhiBreakdown.total;
+      nhiHouseholdSummary = householdResult.summary;
     } else {
       // Employee Health Insurance
       // For Employee Health Insurance, the premiums are based on standard monthly remuneration,
@@ -1084,6 +1133,12 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       );
       healthInsurance = hiResult.total;
       healthInsuranceOnBonus = hiResult.bonusPortion;
+
+      if (nhiHouseholdComposition.insuredCount > 0) {
+        const householdResult = calculateHouseholdNHIBreakdown(nhiHouseholdComposition, incomeYear);
+        householdNHIPremiumPaidByTaxpayer = householdResult.taxpayerBreakdown.total;
+        nhiHouseholdSummary = householdResult.summary;
+      }
     }
 
     // Calculate pension based on health insurance type
@@ -1165,8 +1220,13 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       }
     }
 
-    socialInsuranceDeduction =
-      healthInsurance + pensionPayments + employmentInsurance + longTermCareCategory1Premium;
+    socialInsuranceDeduction = totalSocialInsurancePaid({
+      healthInsurance,
+      pensionPayments,
+      employmentInsurance,
+      longTermCareCategory1Premium,
+      householdNHIPremiumPaidByTaxpayer,
+    });
   }
 
   // iDeCo, corporate DC, and 小規模企業共済 contributions are all deductible in full as
@@ -1608,6 +1668,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     longTermCareCategory1Premium:
       longTermCareCategory1Premium > 0 ? longTermCareCategory1Premium : undefined,
     ...(longTermCareCategory1Estimate && { longTermCareCategory1Estimate }),
+    ...(householdNHIPremiumPaidByTaxpayer !== undefined && { householdNHIPremiumPaidByTaxpayer }),
+    ...(nhiHouseholdSummary && { nhiHousehold: nhiHouseholdSummary }),
     // Context needed for cap detection
     salaryIncome,
     bonusIncome: totalBonusIncome,

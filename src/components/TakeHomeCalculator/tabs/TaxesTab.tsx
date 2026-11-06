@@ -33,7 +33,11 @@ import {
   NON_TAXABLE_STATUS_INCOME_LIMIT,
   PREFECTURAL_RESIDENCE_TAX_RATE,
 } from '../../../utils/residenceTax';
-import { incomeTaxPaid, residenceTaxPaid } from '../../../utils/taxCalculations';
+import {
+  incomeTaxPaid,
+  residenceTaxPaid,
+  totalSocialInsurancePaid,
+} from '../../../utils/taxCalculations';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import HighlightedRowValue from '../../ui/HighlightedRowValue';
 import ReferenceTable from '../../ui/ReferenceTable';
@@ -298,12 +302,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [showIncomeBasedSplit, setShowIncomeBasedSplit] = useState(false);
   const [showIncomeTaxForeignCredit, setShowIncomeTaxForeignCredit] = useState(false);
-  const totalSocialInsurance =
-    results.socialInsuranceOverride ??
-    results.healthInsurance +
-      results.pensionPayments +
-      (results.employmentInsurance ?? 0) +
-      (results.longTermCareCategory1Premium ?? 0);
+  const totalSocialInsurance = totalSocialInsurancePaid(results);
   // Almost taxable income but before applying the basic deduction
   const subtotalIncome =
     results.totalNetIncome - totalSocialInsurance - results.dcPlanContributions;

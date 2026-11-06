@@ -30,7 +30,9 @@ import {
   foreignPensionSourceIncome,
   incomeTaxPaid,
   residenceTaxPaid,
+  totalSocialInsurancePaid,
 } from '../utils/taxCalculations';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 describe('calculateTaxes', () => {
   // Test cases for different income brackets
@@ -418,14 +420,11 @@ describe('calculateTaxes', () => {
   });
 
   it('raises the exemption threshold with a dependent', () => {
-    const spouse = {
+    const spouse = makeSpouse({
       id: 'spouse',
-      relationship: 'spouse' as const,
-      ageRange: 'under65' as const,
-      isCohabiting: true,
-      disability: 'none' as const,
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    };
+      ageRange: 'under40',
+      isSameHousehold: true,
+    });
     const inputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [{ type: 'miscellaneous' as const, amount: 1_000_000, id: 'test' }],
@@ -2638,14 +2637,11 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
     const withChild = {
       ...baseSalaryInputs,
       dependents: [
-        {
+        makeDependent({
           id: 'c1',
-          relationship: 'child' as const,
-          ageRange: '19to22' as const,
-          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-          disability: 'none' as const,
-          isCohabiting: true,
-        },
+          ageRange: '19to22',
+          isSameHousehold: true,
+        }),
       ],
       lifeInsurance: { generalNew: 120_000, medicalCareNew: 0, pensionNew: 0 },
     };
@@ -2964,22 +2960,18 @@ describe('RSU (Restricted Stock Unit) income', () => {
 });
 
 describe('所得金額調整控除 (income amount adjustment deduction) integration', () => {
-  const childUnder23: Dependent = {
+  const childUnder23: Dependent = makeDependent({
     id: 'c1',
     relationship: 'child',
     ageRange: '19to22',
-    isCohabiting: false,
-    disability: 'none',
-    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-  };
-  const adultChild: Dependent = {
+    isSameHousehold: false,
+  });
+  const adultChild: Dependent = makeDependent({
     id: 'c2',
     relationship: 'child',
-    ageRange: '23to64',
-    isCohabiting: false,
-    disability: 'none',
-    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-  };
+    ageRange: '23to39',
+    isSameHousehold: false,
+  });
 
   const baseInputs = (dependents: Dependent[]) => ({
     ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -3160,14 +3152,12 @@ describe('home loan credit spillover vs. a residence tax that levies no 所得�
   // The spillover is deducted from the residence-tax 所得割 (地方税法附則第5条の4の2), so a year
   // with no 所得割 absorbs none of it. Both 非課税 paths in calculateResidenceTax are covered:
   // 所得割・均等割とも非課税, and 均等割のみ課税 (所得割が非課税).
-  const underSixteen = (id: string): Dependent => ({
-    id,
-    relationship: 'child',
-    ageRange: 'under16',
-    income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-    disability: 'none',
-    isCohabiting: true,
-  });
+  const underSixteen = (id: string): Dependent =>
+    makeDependent({
+      id,
+      ageRange: '6to15',
+      healthInsurance: 'non_nhi',
+    });
 
   const householdWithSalary = (amount: number) =>
     calculateTaxes({
@@ -3260,11 +3250,11 @@ describe('home loan credit spillover vs. a residence tax that levies no 所得�
     expect(result.residenceTax.nonTaxableStatus).toBe('minor');
 
     const credit = result.homeLoanTaxCredit!;
-    expect(credit.appliedToIncomeTax).toBe(5_000);
-    expect(credit.residenceTaxSpilloverCap?.incomeRateCap).toBe(5_000);
+    expect(credit.appliedToIncomeTax).toBe(5_050);
+    expect(credit.residenceTaxSpilloverCap?.incomeRateCap).toBe(5_050);
     expect(credit.residenceTaxSpilloverCap?.residenceIncomeBasedCap).toBe(0);
     expect(credit.appliedToResidenceTax).toBe(0);
-    expect(credit.unusedCredit).toBe(295_000);
+    expect(credit.unusedCredit).toBe(294_950);
     expect(credit.warnings[0]).toContain('所得割');
     expect(result.residenceTaxIncomeBasedBeforeHomeLoanCredit).toBeUndefined();
   });
@@ -3568,22 +3558,41 @@ describe('calculateTaxes at ages 65 and over', () => {
       const withTaxableSpouse = calculateTaxes({
         ...nhiPensionInputs(1_500_000),
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse-1',
-            relationship: 'spouse' as const,
-            ageRange: 'under65' as const,
+            ageRange: 'under40',
             income: {
               grossEmploymentIncome: 0,
               grossPublicPensionIncome: 0,
               otherNetIncome: 500_000,
             },
-            disability: 'none' as const,
-            isCohabiting: true,
-          },
+          }),
         ],
       });
       expect(withTaxableSpouse.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(5);
       expect(withTaxableSpouse.longTermCareCategory1Premium).toBe(75_800);
+
+      // When the taxable dependent lives in a separate municipal household (isSameHousehold: false),
+      // they do not affect the taxpayer's municipal household non-taxable status, keeping taxpayer in Tier 3.
+      const withLivingSeparatelyTaxableSpouse = calculateTaxes({
+        ...nhiPensionInputs(1_500_000),
+        dependents: [
+          makeSpouse({
+            id: 'spouse-1',
+            ageRange: 'under40',
+            isSameHousehold: false,
+            income: {
+              grossEmploymentIncome: 0,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 500_000,
+            },
+          }),
+        ],
+      });
+      expect(
+        withLivingSeparatelyTaxableSpouse.longTermCareCategory1Estimate?.currentFiscalYear.tier,
+      ).toBe(3);
+      expect(withLivingSeparatelyTaxableSpouse.longTermCareCategory1Premium).toBe(51_900);
     });
 
     // The 均等割 limit the tier judgment tests the taxpayer against takes a dependent count and
@@ -3600,14 +3609,10 @@ describe('calculateTaxes at ages 65 and over', () => {
       const withDependent = calculateTaxes({
         ...nhiPensionInputs(1_700_000),
         dependents: [
-          {
+          makeSpouse({
             id: 'spouse-1',
-            relationship: 'spouse' as const,
-            ageRange: 'under65' as const,
-            income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-            disability: 'none' as const,
-            isCohabiting: true,
-          },
+            ageRange: 'under40',
+          }),
         ],
       });
       // Now 非課税, and the spouse has no income of their own, so the whole 世帯 is untaxed.
@@ -5012,14 +5017,10 @@ describe('calculateTaxes with investment income reported under 申告分離課�
         dividends,
       ],
       dependents: [
-        {
+        makeSpouse({
           id: 'spouse',
-          relationship: 'spouse',
-          ageRange: 'under65',
-          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-          disability: 'none',
-          isCohabiting: true,
-        },
+          ageRange: 'under40',
+        }),
       ],
     });
 
@@ -6448,18 +6449,15 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           dependents:
             rand() < 0.3
               ? [
-                  {
+                  makeSpouse({
                     id: 'sp1',
-                    relationship: 'spouse',
-                    ageRange: 'under65',
+                    ageRange: 'under40',
                     income: {
                       grossEmploymentIncome: randInt(0, 1_500_000),
                       grossPublicPensionIncome: 0,
                       otherNetIncome: 0,
                     },
-                    disability: 'none',
-                    isCohabiting: true,
-                  },
+                  }),
                 ]
               : [],
           dcPlanContributions: pick([0, 276_000]),
@@ -6584,6 +6582,213 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
           }
         }
       }
+    });
+  });
+
+  describe('totalSocialInsurancePaid', () => {
+    it('sums all social insurance components including household NHI paid by taxpayer', () => {
+      const total = totalSocialInsurancePaid({
+        healthInsurance: 300_000,
+        pensionPayments: 400_000,
+        employmentInsurance: 30_000,
+        longTermCareCategory1Premium: 50_000,
+        householdNHIPremiumPaidByTaxpayer: 120_000,
+      });
+      expect(total).toBe(900_000);
+    });
+
+    it('handles undefined optional components gracefully', () => {
+      const total = totalSocialInsurancePaid({
+        healthInsurance: 200_000,
+        pensionPayments: 200_000,
+      });
+      expect(total).toBe(400_000);
+    });
+
+    it('returns socialInsuranceOverride when present, ignoring individual premium components', () => {
+      const total = totalSocialInsurancePaid({
+        healthInsurance: 0,
+        pensionPayments: 0,
+        employmentInsurance: 0,
+        longTermCareCategory1Premium: 0,
+        householdNHIPremiumPaidByTaxpayer: 0,
+        socialInsuranceOverride: 500_000,
+      });
+      expect(total).toBe(500_000);
+    });
+
+    it('returns socialInsuranceOverride even when calculated components are non-zero', () => {
+      const total = totalSocialInsurancePaid({
+        healthInsurance: 300_000,
+        pensionPayments: 400_000,
+        socialInsuranceOverride: 600_000,
+      });
+      expect(total).toBe(600_000);
+    });
+  });
+
+  describe('household NHI integration in calculateTaxes', () => {
+    const baseInputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'salary', type: 'salary', amount: 6_000_000, frequency: 'annual' }],
+      ageRange: 'age40to59',
+      healthInsuranceProvider: DEFAULT_PROVIDER, // Kyokai Kenpo
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    it('assesses household NHI for EHI employee as deemed head and deducts under 所法74条②一', () => {
+      // Cohabiting spouse enrolled in NHI with ¥0 income
+      const spouse: Dependent = makeSpouse({
+        id: 'spouse',
+        ageRange: '40to64',
+        isClaimedAsDependent: false, // Not claimed as tax dependent
+        healthInsurance: 'nhi',
+      });
+
+      const withoutHouseholdNHI = calculateTaxes(baseInputs);
+
+      const withHouseholdNHI = calculateTaxes({
+        ...baseInputs,
+        dependents: [spouse],
+        nhiPaymentAttribution: 'fullHousehold',
+      });
+
+      // 1. householdNHIPremiumPaidByTaxpayer should be populated
+      expect(withHouseholdNHI.householdNHIPremiumPaidByTaxpayer).toBeGreaterThan(0);
+      const nhiPremium = withHouseholdNHI.householdNHIPremiumPaidByTaxpayer!;
+
+      // 2. Summary should record household composition
+      expect(withHouseholdNHI.nhiHousehold).toBeDefined();
+      expect(withHouseholdNHI.nhiHousehold!.isDeemedHead).toBe(true);
+      expect(withHouseholdNHI.nhiHousehold!.insuredCount).toBe(1);
+
+      // 3. totalSocialInsurancePaid must increase by exactly the household NHI premium
+      expect(totalSocialInsurancePaid(withHouseholdNHI)).toBe(
+        totalSocialInsurancePaid(withoutHouseholdNHI) + nhiPremium,
+      );
+
+      // 4. Taxable base decreases, lowering national income tax, residence tax, and take-home pay
+      expect(withHouseholdNHI.nationalIncomeTaxBase).toBeLessThan(
+        withoutHouseholdNHI.nationalIncomeTaxBase!,
+      );
+      expect(withHouseholdNHI.nationalIncomeTax).toBeLessThan(
+        withoutHouseholdNHI.nationalIncomeTax,
+      );
+      expect(withHouseholdNHI.residenceTax.totalResidenceTax).toBeLessThan(
+        withoutHouseholdNHI.residenceTax.totalResidenceTax,
+      );
+      expect(withHouseholdNHI.takeHomeIncome).toBeLessThan(withoutHouseholdNHI.takeHomeIncome);
+    });
+
+    it('allows EHI deemed head to attribute none of spouse NHI to taxpayer return', () => {
+      const spouse: Dependent = makeSpouse({
+        id: 'spouse',
+        ageRange: '40to64',
+        isClaimedAsDependent: false,
+        healthInsurance: 'nhi',
+      });
+
+      const withoutHouseholdNHI = calculateTaxes(baseInputs);
+
+      const withNoAttribution = calculateTaxes({
+        ...baseInputs,
+        dependents: [spouse],
+        nhiPaymentAttribution: 'none',
+      });
+
+      // Taxpayer pays 0 of the spouse's NHI, leaving social insurance and take-home pay unchanged
+      expect(withNoAttribution.householdNHIPremiumPaidByTaxpayer).toBe(0);
+      expect(withNoAttribution.nhiHousehold!.householdTotal).toBeGreaterThan(0);
+      expect(totalSocialInsurancePaid(withNoAttribution)).toBe(
+        totalSocialInsurancePaid(withoutHouseholdNHI),
+      );
+      expect(withNoAttribution.takeHomeIncome).toBe(withoutHouseholdNHI.takeHomeIncome);
+    });
+
+    it('assesses household NHI for 75+ Latter-Stage Elderly taxpayer as deemed head', () => {
+      const elderlyInputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [
+          {
+            id: 'pension',
+            type: 'publicPension',
+            amount: 2_500_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ],
+        ageRange: 'age75plus',
+        healthInsuranceProvider: LATTER_STAGE_ELDERLY_ID,
+        region: 'Tokyo',
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '70to74',
+            isClaimedAsDependent: false,
+            healthInsurance: 'nhi',
+          }),
+        ],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+
+      const results = calculateTaxes(elderlyInputs);
+      // Taxpayer is on Latter-Stage Elderly, but household NHI is levied for spouse
+      expect(results.healthInsurance).toBeGreaterThan(0); // Latter-Stage Elderly premium
+      expect(results.householdNHIPremiumPaidByTaxpayer).toBeGreaterThan(0); // Household NHI for spouse
+      expect(totalSocialInsurancePaid(results)).toBe(
+        results.healthInsurance +
+          results.householdNHIPremiumPaidByTaxpayer! +
+          results.pensionPayments +
+          (results.longTermCareCategory1Premium ?? 0),
+      );
+    });
+
+    it('respects fullHousehold and none attributions for NHI-enrolled taxpayer', () => {
+      const nhiBaseInputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 'biz', type: 'business', amount: 5_000_000 }],
+        ageRange: 'age40to59',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        region: 'Tokyo-Setagaya',
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '40to64',
+            // Net employment income 450,000 (1,190,000 - 740,000)
+            income: {
+              grossEmploymentIncome: 1_190_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            isClaimedAsDependent: false,
+            healthInsurance: 'nhi',
+          }),
+        ],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+
+      const resFull = calculateTaxes({ ...nhiBaseInputs, nhiPaymentAttribution: 'fullHousehold' });
+      const resNone = calculateTaxes({ ...nhiBaseInputs, nhiPaymentAttribution: 'none' });
+
+      // Household totals should be identical
+      expect(resFull.nhiHousehold!.householdTotal).toBe(resNone.nhiHousehold!.householdTotal);
+
+      // fullHousehold: taxpayer pays 100% of household total
+      expect(resFull.healthInsurance).toBe(resFull.nhiHousehold!.householdTotal);
+
+      // none: taxpayer pays 0
+      expect(resNone.healthInsurance).toBe(0);
     });
   });
 });

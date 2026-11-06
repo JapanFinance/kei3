@@ -8,6 +8,7 @@ import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsu
 import type { CommutingAllowanceIncomeStream, TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeSpouse } from './fixtures/dependents';
 import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 // Mock DetailedTooltip to render children directly for easier testing
@@ -811,4 +812,194 @@ describe('SocialInsuranceTab standard-remuneration band boundaries', () => {
       expect(detailValues('Standard Monthly Remuneration')).toEqual([healthSMR, pensionSMR]);
     },
   );
+});
+
+describe('SocialInsuranceTab household NHI calculation base display', () => {
+  it('displays Taxpayer Calculation Base, Other Enrolled Members, and NHI Calculation Base', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+      incomeYear: 2026,
+      ageRange: 'age40to59',
+      region: 'Tokyo-Setagaya',
+      healthInsuranceProvider: 'NationalHealthInsurance',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [
+        makeSpouse({
+          id: 'spouse',
+          ageRange: '40to64',
+          // Net employment income in 2026: 1,190,000 - 740,000 = 450,000.
+          // Base: 450,000 - 430,000 = 20,000.
+          income: {
+            grossEmploymentIncome: 1_190_000,
+            grossPublicPensionIncome: 0,
+            otherNetIncome: 0,
+          },
+          healthInsurance: 'nhi',
+        }),
+      ],
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={calculateTaxes(inputs)} />);
+
+    // Taxpayer base: 5,000,000 - 430,000 = 4,570,000
+    expect(resultRowText('Taxpayer Calculation Base')).toContain('¥4,570,000');
+
+    // Other members base: 20,000
+    expect(resultRowText('Other Enrolled Members')).toContain('¥20,000');
+
+    // Household total base: 4,570,000 + 20,000 = 4,590,000
+    expect(resultRowText('NHI Calculation Base')).toContain('¥4,590,000');
+  });
+
+  it('renders manual social insurance amount rather than ¥0 when manual entry is active', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+      incomeYear: 2026,
+      ageRange: 'age20to39',
+      region: 'Tokyo',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: true,
+      manualSocialInsuranceAmount: 680_000,
+      dependents: [],
+    };
+
+    render(<SocialInsuranceTab inputs={inputs} results={calculateTaxes(inputs)} />);
+    expect(resultRowText('Total Social Insurance')).toContain('¥680,000');
+  });
+
+  it('renders deemed-head Household NHI portion rows and cap indicators for EHI taxpayer', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'salary', type: 'salary', amount: 5_000_000, frequency: 'annual' }],
+      incomeYear: 2026,
+      ageRange: 'age20to39',
+      region: 'Tokyo-Setagaya',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [
+        makeSpouse({
+          id: 'spouse',
+          ageRange: '40to64',
+          income: {
+            grossEmploymentIncome: 0,
+            grossPublicPensionIncome: 0,
+            otherNetIncome: 20_000_000, // Very high income to hit caps
+          },
+          healthInsurance: 'nhi',
+        }),
+      ],
+    };
+
+    const results = calculateTaxes(inputs);
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    // Deemed-head household NHI section should display all portion rows
+    expect(screen.getByText('National Health Insurance')).toBeDefined();
+    expect(resultRowText('NHI Calculation Base')).toBeDefined();
+    expect(resultRowText('Medical Portion')).toBeDefined();
+    expect(resultRowText('Elderly Support Portion')).toBeDefined();
+    expect(resultRowText('Long-term Care Portion')).toBeDefined();
+    expect(resultRowText('Child Support Portion')).toBeDefined();
+    expect(resultRowText('Household NHI Premium')).toBeDefined();
+
+    // Verify portions are non-zero and sum to household NHI premium
+    const summary = results.nhiHousehold!;
+    expect(summary.householdPortions.medical).toBeGreaterThan(0);
+    expect(summary.householdPortions.elderlySupport).toBeGreaterThan(0);
+    expect(summary.householdPortions.longTermCare).toBeGreaterThan(0);
+    expect(summary.householdPortions.childSupport).toBeGreaterThan(0);
+
+    // Caps should be flagged on the summary
+    expect(summary.householdCaps.medicalCapped).toBe(true);
+  });
+
+  it('does not mix household NHI bases into the 75+ Latter-Stage Elderly income-basis block when 2+ dependents are on NHI', () => {
+    // 75+ taxpayer on 後期高齢者医療制度 with high business income (base: 5,000,000 - 430,000 = 4,570,000)
+    // plus 2 cohabiting NHI members with lower income (spouse base: 570,000; child base: 0).
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'b1', type: 'business', amount: 5_000_000 }],
+      incomeYear: 2026,
+      ageRange: 'age75plus',
+      region: 'Tokyo',
+      healthInsuranceProvider: 'LatterStageElderly',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [
+        makeSpouse({
+          id: 'spouse',
+          ageRange: '65to69',
+          income: {
+            grossEmploymentIncome: 0,
+            grossPublicPensionIncome: 0,
+            otherNetIncome: 1_000_000,
+          },
+          isClaimedAsDependent: false,
+          healthInsurance: 'nhi',
+        }),
+        {
+          id: 'child',
+          relationship: 'child',
+          ageRange: '23to39',
+          income: {
+            grossEmploymentIncome: 0,
+            grossPublicPensionIncome: 0,
+            otherNetIncome: 0,
+          },
+          disability: 'none',
+          isSameHousehold: true,
+          isClaimedAsDependent: true,
+          healthInsurance: 'nhi',
+          isHouseholdHead: false,
+        },
+      ],
+    };
+
+    const results = calculateTaxes(inputs);
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    // Latter-Stage Elderly block shows only the taxpayer's own Premium Calculation Base,
+    // without Taxpayer Calculation Base / negative Other Enrolled Members rows.
+    expect(screen.queryByText('Taxpayer Calculation Base')).not.toBeInTheDocument();
+    expect(screen.queryByText('Other Enrolled Members')).not.toBeInTheDocument();
+    expect(resultRowText('Premium Calculation Base')).toContain('¥4,570,000');
+
+    // Separate Household NHI Calculation Base row shows the 2 NHI dependents' combined base (570,000).
+    expect(resultRowText('NHI Calculation Base')).toContain('¥570,000');
+    expect(resultRowText('Household NHI Premium')).toBeDefined();
+  });
+
+  it('keeps Long-term Care and Child Support portion rows visible at ¥0 when paymentAttribution is none', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'b1', type: 'business', amount: 4_000_000 }],
+      incomeYear: 2026,
+      ageRange: 'age40to59',
+      region: 'Tokyo-Setagaya',
+      healthInsuranceProvider: 'NationalHealthInsurance',
+      nhiPaymentAttribution: 'none',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [],
+    };
+
+    const results = calculateTaxes(inputs);
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText(/Paid separately \/ not by taxpayer/)).toBeInTheDocument();
+    expect(resultRowText('Medical Portion')).toContain('¥0');
+    expect(resultRowText('Elderly Support Portion')).toContain('¥0');
+    expect(resultRowText('Long-term Care Portion')).toContain('¥0');
+    expect(resultRowText('Child Support Portion')).toContain('¥0');
+    expect(resultRowText('Annual Premium')).toContain('¥0');
+  });
 });

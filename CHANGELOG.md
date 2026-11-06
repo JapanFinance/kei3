@@ -2,6 +2,12 @@
 
 All notable changes to the Japan Take-Home Pay Calculator will be documented in this file.
 
+## 2026-11-05
+
+### Updated
+
+- The Dependents modal has been renamed the Household modal and can now be used for calculating household National Health Insurance ([国民健康保険](https://www.hokeniryo.metro.tokyo.lg.jp/kenkou/kokuho/aramashi/index.html)) bills. National Health Insurance is assessed at the municipal household (世帯) level. Household members can now be entered with their own income, age, and insurance coverage. The calculator computes household premiums, evaluates low-income reduction thresholds, applies statutory 50% preschool discounts, and FY2026 child support exemptions through age 18.
+
 ## 2026-10-25
 
 ### New

@@ -52,12 +52,17 @@ describe('age-range bounds', () => {
   });
 
   it('gives each dependent choice the interval its label states', () => {
-    expect(dependentAgeRangeBounds('under16')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 16 });
+    expect(dependentAgeRangeBounds('under6')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 6 });
+    expect(dependentAgeRangeBounds('6to15')).toEqual({ minAgeInclusive: 6, maxAgeExclusive: 16 });
     expect(dependentAgeRangeBounds('19to22')).toEqual({ minAgeInclusive: 19, maxAgeExclusive: 23 });
     // A spouse's ranges overlap a non-spouse dependent's rather than continuing them.
-    expect(dependentAgeRangeBounds('under65')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 65 });
-    expect(dependentAgeRangeBounds('70plus')).toEqual({
+    expect(dependentAgeRangeBounds('under40')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 40 });
+    expect(dependentAgeRangeBounds('70to74')).toEqual({
       minAgeInclusive: 70,
+      maxAgeExclusive: 75,
+    });
+    expect(dependentAgeRangeBounds('75plus')).toEqual({
+      minAgeInclusive: 75,
       maxAgeExclusive: Infinity,
     });
   });
@@ -136,14 +141,18 @@ describe('the 65 boundary of the public pension deduction', () => {
     expect(taxpayerNetPension('age60to64')).toBe(NET_UNDER_65);
     expect(taxpayerNetPension('age65to69')).toBe(NET_65_PLUS);
 
-    expect(calculateDependentNetPublicPensionIncome(pensionOnly('23to64'), YEAR)).toBe(
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('23to39'), YEAR)).toBe(
+      NET_UNDER_65,
+    );
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('40to64'), YEAR)).toBe(
       NET_UNDER_65,
     );
     expect(calculateDependentNetPublicPensionIncome(pensionOnly('65to69'), YEAR)).toBe(NET_65_PLUS);
-    expect(calculateDependentNetPublicPensionIncome(pensionOnly('70plus'), YEAR)).toBe(NET_65_PLUS);
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('70to74'), YEAR)).toBe(NET_65_PLUS);
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('75plus'), YEAR)).toBe(NET_65_PLUS);
 
     // A spouse is read on the same band as a non-spouse dependent.
-    expect(calculateDependentNetPublicPensionIncome(pensionOnly('under65'), YEAR)).toBe(
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('under40'), YEAR)).toBe(
       NET_UNDER_65,
     );
   });
@@ -170,29 +179,38 @@ describe('the 65 boundary of the public pension deduction', () => {
 
 describe('dependentAgeCoversBand', () => {
   it('answers spouse and non-spouse categories on the same bands', () => {
+    expect(dependentAgeCoversBand('under40', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
+      false,
+    );
     expect(
-      dependentAgeCoversBand('under65', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
+      dependentAgeCoversBand('23to39', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(false);
     expect(
-      dependentAgeCoversBand('23to64', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
+      dependentAgeCoversBand('40to64', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(false);
     expect(
       dependentAgeCoversBand('65to69', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(true);
-    expect(dependentAgeCoversBand('70plus', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
+    expect(dependentAgeCoversBand('70to74', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
+      true,
+    );
+    expect(dependentAgeCoversBand('75plus', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
       true,
     );
   });
 
   it('reads the 70 boundary of the elderly bands', () => {
     expect(dependentAgeCoversBand('65to69', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(false);
-    expect(dependentAgeCoversBand('70plus', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(true);
+    expect(dependentAgeCoversBand('70to74', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(true);
+    expect(dependentAgeCoversBand('75plus', DEPENDENT_AGE_BANDS.elderlyDependent)).toBe(true);
     expect(dependentAgeCoversBand('65to69', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(false);
-    expect(dependentAgeCoversBand('70plus', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(true);
+    expect(dependentAgeCoversBand('70to74', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(true);
+    expect(dependentAgeCoversBand('75plus', SPOUSE_AGE_BANDS.elderlySpouse)).toBe(true);
   });
 
   it('reads the 16 boundary of the 扶養控除 and the 19-23 band of the 特定 rules', () => {
-    expect(dependentAgeCoversBand('under16', DEPENDENT_AGE_BANDS.dependentDeduction)).toBe(false);
+    expect(dependentAgeCoversBand('under6', DEPENDENT_AGE_BANDS.dependentDeduction)).toBe(false);
+    expect(dependentAgeCoversBand('6to15', DEPENDENT_AGE_BANDS.dependentDeduction)).toBe(false);
     expect(dependentAgeCoversBand('16to18', DEPENDENT_AGE_BANDS.dependentDeduction)).toBe(true);
 
     for (const band of [
@@ -201,7 +219,7 @@ describe('dependentAgeCoversBand', () => {
     ]) {
       expect(dependentAgeCoversBand('16to18', band)).toBe(false);
       expect(dependentAgeCoversBand('19to22', band)).toBe(true);
-      expect(dependentAgeCoversBand('23to64', band)).toBe(false);
+      expect(dependentAgeCoversBand('23to39', band)).toBe(false);
     }
   });
 
@@ -219,9 +237,10 @@ describe('dependentAgeCoversBand', () => {
   });
 
   it('reads the 23 boundary of the 所得金額調整控除 dependent condition', () => {
-    expect(dependentAgeCoversBand('under16', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
+    expect(dependentAgeCoversBand('under6', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
+    expect(dependentAgeCoversBand('6to15', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
     expect(dependentAgeCoversBand('16to18', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
     expect(dependentAgeCoversBand('19to22', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
-    expect(dependentAgeCoversBand('23to64', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(false);
+    expect(dependentAgeCoversBand('23to39', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(false);
   });
 });

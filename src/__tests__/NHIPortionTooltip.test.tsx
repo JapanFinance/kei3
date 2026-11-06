@@ -4,8 +4,11 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
-import { NHIPortionTooltip } from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
-import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import {
+  NHIPortionTooltip,
+  NHICalculationBaseTooltip,
+} from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type {
   TakeHomeResults,
   TakeHomeInputs,
@@ -18,6 +21,8 @@ import {
   calculateNationalHealthInsurancePremiumWithBreakdown,
   type NationalHealthInsurancePortionKey,
 } from '../utils/healthInsuranceCalculator';
+import { calculateTaxes } from '../utils/taxCalculations';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -272,6 +277,228 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         />,
       );
       expect(container.textContent).not.toContain('均等割額の軽減');
+    });
+  });
+
+  describe('multi-member household per-capita formula and calculation base tooltip', () => {
+    it('shows the per-capita formula C * A = Y with member count for multi-member households', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '40to64',
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      // Per-capita formula should show: Rate × 2 members = Total
+      expect(container.textContent).toMatch(/¥\d{1,3}(,\d{3})* × 2 members = ¥\d{1,3}(,\d{3})*/);
+    });
+
+    it('renders NHICalculationBaseTooltip with each member breakdown and official source link', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '40to64',
+            // Net employment income: 1,000,000 - 550,000 = 450,000.
+            // Base: 450,000 - 430,000 = 20,000.
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(<NHICalculationBaseTooltip results={results} inputs={inputs} />);
+
+      // Shows members
+      expect(container.textContent).toContain('Taxpayer');
+      expect(container.textContent).toContain('Spouse');
+      expect(container.textContent).toContain('Household Total Base');
+      expect(container.textContent).toContain('Long-Term Care Base');
+      expect(container.textContent).toContain(
+        'Tokyo Bureau of Public Health: National Health Insurance Guide',
+      );
+    });
+
+    it('renders the 100% under-19 exemption formula (not the 50% preschool formula) on the childSupport portion when a preschool child is in the household', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age20to39',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeDependent({
+            id: 'preschooler',
+            relationship: 'child',
+            ageRange: 'under6',
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container: medicalContainer } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(medicalContainer.textContent).toContain('× 50% × 1 preschooler');
+      expect(medicalContainer.textContent).toContain('(1 preschooler with 50% discount)');
+
+      const { container: childSupportContainer } = render(
+        <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />,
+      );
+      expect(childSupportContainer.textContent).toContain('× 1 adult (1 under 19 exempt)');
+      expect(childSupportContainer.textContent).toContain('(1 under 19 exempt)');
+      expect(childSupportContainer.textContent).not.toContain('preschooler with 50% discount');
+    });
+
+    it('renders "(Not paid by taxpayer)" without "¥0 attributed" when payment attribution is none', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        nhiPaymentAttribution: 'none',
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '40to64',
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('(Not paid by taxpayer)');
+      expect(container.textContent).not.toContain('¥0 attributed');
+    });
+
+    it('shows household info when taxpayer is not the NHI member (e.g. taxpayer on EHI, 1 dependent on NHI)', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 7_000_000, frequency: 'annual' }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: DEFAULT_PROVIDER, // EHI
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '40to64',
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      // Tooltip on the spouse's NHI portion shows Household info even though insuredCount === 1
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('Household: 1 insured member(s)');
+
+      // Calculation base tooltip shows taxpayer as non-insured deemed head
+      const { container: baseContainer } = render(
+        <NHICalculationBaseTooltip results={results} inputs={inputs} />,
+      );
+      expect(baseContainer.textContent).toContain('Taxpayer (Head)');
+      expect(baseContainer.textContent).toContain('Not NHI');
+      expect(baseContainer.textContent).toContain('Spouse');
+    });
+
+    it('reproduces blended reduction tiers when a spouse earning ¥600,000 counts as a salary earner in FY2025 but not FY2026', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        // 2026 net employment income: 1,240,000 - 740,000 = 500,000 (between 430k and 530k)
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 1_240_000, frequency: 'annual' }],
+        incomeYear: 2026,
+        ageRange: 'age20to39',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: 'under40',
+            income: {
+              grossEmploymentIncome: 600_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('Jan–Mar 70% (7割軽減), Jun–Dec 50% (5割軽減)');
+      expect(container.textContent).toContain(
+        'Household (2 insured, 1 earner(s)) thresholds for FY2026',
+      );
     });
   });
 });

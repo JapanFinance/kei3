@@ -10,6 +10,7 @@ import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeSpouse } from './fixtures/dependents';
 
 // The tooltip content is rendered inline so its rows are visible without opening a popover.
 vi.mock('../components/ui/Tooltips', () => ({
@@ -90,16 +91,7 @@ describe('TaxesTab municipal non-taxable resident display (Issue #686)', () => {
           id: 'misc1',
         },
       ],
-      dependents: [
-        {
-          id: 'spouse1',
-          relationship: 'spouse',
-          ageRange: 'under65',
-          isCohabiting: true,
-          disability: 'none',
-          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-        },
-      ],
+      dependents: [makeSpouse({ id: 'spouse1' })],
     };
     const results = calculateTaxes(inputs);
 
@@ -168,16 +160,7 @@ describe('TaxesTab municipal non-taxable resident display (Issue #686)', () => {
   it('correctly calculates dependent threshold for zero income with configured dependents', () => {
     const inputsWithDependent: TakeHomeInputs = {
       ...baseInputs,
-      dependents: [
-        {
-          id: 'spouse1',
-          relationship: 'spouse',
-          ageRange: 'under65',
-          isCohabiting: true,
-          disability: 'none',
-          income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-        },
-      ],
+      dependents: [makeSpouse({ id: 'spouse1' })],
     };
     const results = calculateTaxes(inputsWithDependent);
 

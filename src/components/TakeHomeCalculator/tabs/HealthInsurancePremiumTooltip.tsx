@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
 import { alpha } from '@mui/material/styles';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import React from 'react';
 
@@ -26,10 +32,12 @@ import {
 } from '../../../data/nationalHealthInsurance/nhiParamsData';
 import { getNHIPremiumReductionThresholdsForMonth } from '../../../data/nationalHealthInsurance/nhiPremiumReduction';
 import type { Rate } from '../../../data/rate';
+import { calculateResidenceTaxBasicDeduction } from '../../../data/residenceTaxBasicDeduction';
 import {
   DEFAULT_PROVIDER_REGION,
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
+  type NHIHouseholdMember,
   type NHIPremiumReductionRatio,
 } from '../../../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../../../types/tax';
@@ -66,13 +74,73 @@ interface NHIPortionTooltipProps {
   inputs: TakeHomeInputs;
 }
 
+const renderPerCapitaFormula = (calc: NationalHealthInsurancePortion) => {
+  const reductionFactor =
+    calc.reductionRatio > 0 ? (
+      <>
+        {' × '}
+        {Math.round((1 - calc.reductionRatio) * 100)}%<sup>†</sup>
+      </>
+    ) : null;
+
+  // Case 1: Child support exemption (children through age 18 exempt from child support levy)
+  if (calc.childSupportExemptCount > 0) {
+    const nonExemptCount = Math.max(0, calc.insuredCount - calc.childSupportExemptCount);
+    return (
+      <>
+        {formatJPY(calc.perCapitaFull)}
+        {reductionFactor}
+        {` × ${nonExemptCount} adult${nonExemptCount !== 1 ? 's' : ''}`}
+        {` (${calc.childSupportExemptCount} under 19 exempt)`}
+        {' = '}
+        {formatJPY(calc.perCapita)}
+      </>
+    );
+  }
+
+  // Case 2: Preschool children discount (50% reduction for preschool age under 6)
+  if (calc.preschoolCount > 0) {
+    const adultCount = Math.max(0, calc.insuredCount - calc.preschoolCount);
+    return (
+      <>
+        {adultCount > 0 && (
+          <>
+            {formatJPY(calc.perCapitaFull)}
+            {reductionFactor}
+            {` × ${adultCount} adult${adultCount > 1 ? 's' : ''}`}
+            {' + '}
+          </>
+        )}
+        {formatJPY(calc.perCapitaFull)}
+        {reductionFactor}
+        {` × 50% × ${calc.preschoolCount} preschooler${calc.preschoolCount > 1 ? 's' : ''}`}
+        {' = '}
+        {formatJPY(calc.perCapita)}
+      </>
+    );
+  }
+
+  // Case 3: Standard formula C * A = Y
+  const count = calc.insuredCount;
+  return (
+    <>
+      {formatJPY(calc.perCapitaFull)}
+      {reductionFactor}
+      {count > 1 ? ` × ${count} members` : count === 1 ? ' × 1 member' : ''}
+      {' = '}
+      {formatJPY(calc.perCapita)}
+    </>
+  );
+};
+
 const PortionBreakdown: React.FC<{
   label: string;
   calculationBase: number;
   calc: NationalHealthInsurancePortion;
   /** The figure the breakdown arrives at, shown after the equals sign. */
   premium: number;
-}> = ({ label, calculationBase, calc, premium }) => (
+  isNotPaidByTaxpayer?: boolean;
+}> = ({ label, calculationBase, calc, premium, isNotPaidByTaxpayer }) => (
   <Box sx={{ mb: 0.5 }}>
     {label && (
       <Typography
@@ -90,15 +158,7 @@ const PortionBreakdown: React.FC<{
       {formatJPY(calc.incomeBased)}
     </Typography>
     <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
-      Per-capita (均等割):{' '}
-      {calc.reductionRatio > 0 ? (
-        <>
-          {formatJPY(calc.perCapitaFull)} × {Math.round((1 - calc.reductionRatio) * 100)}%
-          <sup>†</sup> = {formatJPY(calc.perCapita)}
-        </>
-      ) : (
-        formatJPY(calc.perCapita)
-      )}
+      Per-capita (均等割): {renderPerCapitaFormula(calc)}
     </Typography>
     {calc.householdFlatFull > 0 && (
       <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 0.3 }}>
@@ -125,9 +185,15 @@ const PortionBreakdown: React.FC<{
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
+        flexWrap: 'wrap',
       }}
     >
       = <strong>{formatJPY(premium)}</strong>
+      {isNotPaidByTaxpayer && (
+        <Typography component="span" variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
+          (Not paid by taxpayer)
+        </Typography>
+      )}
       {calc.isCapped && (
         <Box
           component="span"
@@ -158,15 +224,33 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
   results,
   inputs,
 }) => {
-  const region = inputs.region;
+  const region = results.nhiHousehold?.effectiveRegion ?? inputs.region;
   const year = inputs.incomeYear;
   const prevFYData = getNHIParamsForMonth(region, year, 0); // Jan → previous FY
   const currFYData = getNHIParamsForMonth(region, year, 3); // Apr → current FY
 
-  // Low-income reduction tier per fiscal year — must reproduce the calculator's judgement
-  // exactly, or the parity assertions below throw in dev builds.
-  const prevReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 0);
-  const currReductionRatio = getNHIPremiumReductionRatioForMonth(results.totalNetIncome, year, 3);
+  // Low-income reduction tier per fiscal year — reproduces the calculator's judgement.
+  const reductionIncome = results.nhiHousehold
+    ? results.nhiHousehold.reductionTestIncome
+    : results.totalNetIncome;
+
+  const prevReductionRatio =
+    results.nhiHousehold?.reductionRatios.prevFY ??
+    results.nhiReductionRatios?.prevFY ??
+    getNHIPremiumReductionRatioForMonth(reductionIncome, year, 0);
+
+  const currReductionRatio =
+    results.nhiHousehold?.reductionRatios.currFY ??
+    results.nhiReductionRatios?.currFY ??
+    getNHIPremiumReductionRatioForMonth(reductionIncome, year, 3);
+
+  const isTaxpayerOnlyNHIMember =
+    results.nhiHousehold?.taxpayerMember.isNHIInsured && results.nhiHousehold.insuredCount === 1;
+
+  const showHouseholdInfo =
+    results.nhiHousehold !== undefined &&
+    results.nhiHousehold.insuredCount > 0 &&
+    !isTaxpayerOnlyNHIMember;
 
   if (!currFYData) {
     return (
@@ -176,12 +260,30 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     );
   }
 
-  const base = premiumCalculationBase(results.totalNetIncome);
+  const isLtc = portion === 'longTermCare';
+  const base = results.nhiHousehold
+    ? isLtc
+      ? results.nhiHousehold.ltcCalculationBase
+      : results.nhiHousehold.calculationBase
+    : premiumCalculationBase(results.totalNetIncome);
+
+  const householdOptions = results.nhiHousehold
+    ? {
+        insuredCount: isLtc
+          ? results.nhiHousehold.ltcInsuredCount
+          : results.nhiHousehold.insuredCount,
+        preschoolCount: isLtc ? 0 : results.nhiHousehold.preschoolCount,
+        childSupportExemptCount:
+          portion === 'childSupport' ? results.nhiHousehold.childSupportExemptCount : 0,
+      }
+    : undefined;
+
   const currCalc = calculateNationalHealthInsurancePortion(
     base,
     currFYData,
     portion,
     currReductionRatio,
+    householdOptions,
   );
   if (!currCalc) {
     return (
@@ -191,14 +293,16 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     );
   }
 
-  // The portion as the calculation charged it, which the row beside this tooltip shows.
-  const portionPremium =
+  const isNotPaidByTaxpayer = results.nhiHousehold?.paymentAttribution === 'none';
+  const statutoryHouseholdPortion =
+    results.nhiHousehold?.householdPortions[portion] ??
     {
       medical: results.nhiMedicalPortion,
       elderlySupport: results.nhiElderlySupportPortion,
       longTermCare: results.nhiLongTermCarePortion,
       childSupport: results.nhiChildSupportPortion,
-    }[portion] ?? 0;
+    }[portion] ??
+    0;
 
   // Show both fiscal years only when this portion's premium can differ between them. The
   // calculation blends every portion whenever any parameter differs, but a portion whose own
@@ -244,11 +348,19 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
       <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
         {(() => {
           const thresholds = getNHIPremiumReductionThresholdsForMonth(year, 3);
+          const insuredCount = results.nhiHousehold?.insuredCount ?? 1;
+          const salaryEarnersCount = results.nhiHousehold?.salaryEarnersCounts.currFY ?? 1;
+          const earnerAllowance =
+            thresholds.perAdditionalSalaryEarner * Math.max(0, salaryEarnersCount - 1);
+          const isHousehold = showHouseholdInfo || insuredCount > 1 || salaryEarnersCount > 1;
+          const labelPrefix = isHousehold
+            ? `Household (${insuredCount} insured, ${salaryEarnersCount} earner(s))`
+            : 'Single-person';
           return (
-            `Single-person thresholds for FY${year}: ` +
-            `70% ≤ ${formatJPY(thresholds.baseAmount)}; ` +
-            `50% ≤ ${formatJPY(thresholds.baseAmount + thresholds.fiftyPercentPerInsured)}; ` +
-            `20% ≤ ${formatJPY(thresholds.baseAmount + thresholds.twentyPercentPerInsured)}.`
+            `${labelPrefix} thresholds for FY${year}: ` +
+            `70% ≤ ${formatJPY(thresholds.baseAmount + earnerAllowance)}; ` +
+            `50% ≤ ${formatJPY(thresholds.baseAmount + thresholds.fiftyPercentPerInsured * insuredCount + earnerAllowance)}; ` +
+            `20% ≤ ${formatJPY(thresholds.baseAmount + thresholds.twentyPercentPerInsured * insuredCount + earnerAllowance)}.`
           );
         })()}
       </Typography>
@@ -263,12 +375,28 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     </Box>
   );
 
+  const household = results.nhiHousehold;
+  const householdInfo = showHouseholdInfo && household && (
+    <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
+      Household: {household.insuredCount} insured member(s)
+      {portion !== 'childSupport' &&
+        portion !== 'longTermCare' &&
+        household.preschoolCount > 0 &&
+        ` (${household.preschoolCount} preschooler${household.preschoolCount > 1 ? 's' : ''} with 50% discount)`}
+      {portion === 'childSupport' &&
+        household.childSupportExemptCount > 0 &&
+        ` (${household.childSupportExemptCount} under 19 exempt)`}
+      {portion === 'longTermCare' && ` (${household.ltcInsuredCount} aged 40–64)`}
+    </Typography>
+  );
+
   if (blended) {
     const prevCalc = calculateNationalHealthInsurancePortion(
       base,
       prevFYData,
       portion,
       prevReductionRatio,
+      householdOptions,
     );
     const prevFYLabel = `FY${year - 1}`;
     const currFYLabel = `FY${year}`;
@@ -278,6 +406,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
         <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
           NHI Calculation Base: {formatJPY(base)}
         </Typography>
+        {householdInfo}
 
         <Box sx={{ mb: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           {prevCalc ? (
@@ -322,7 +451,16 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
             {' + '}
             {formatJPY(currCalc.premium)} × 7⁄10
             {' = '}
-            <strong>{formatJPY(portionPremium)}</strong>
+            <strong>{formatJPY(statutoryHouseholdPortion)}</strong>
+            {isNotPaidByTaxpayer && (
+              <Typography
+                component="span"
+                variant="caption"
+                sx={{ color: 'text.secondary', display: 'block' }}
+              >
+                (Not paid by taxpayer)
+              </Typography>
+            )}
           </Typography>
         </Box>
 
@@ -337,11 +475,180 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
       <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 1 }}>
         NHI Calculation Base: {formatJPY(base)}
       </Typography>
+      {householdInfo}
 
-      <PortionBreakdown label="" calculationBase={base} calc={currCalc} premium={portionPremium} />
+      <PortionBreakdown
+        label=""
+        calculationBase={base}
+        calc={currCalc}
+        premium={statutoryHouseholdPortion}
+        isNotPaidByTaxpayer={isNotPaidByTaxpayer}
+      />
 
       {source}
       {reductionFootnote}
+    </Box>
+  );
+};
+
+export interface NHICalculationBaseTooltipProps {
+  results: TakeHomeResults;
+  inputs: TakeHomeInputs;
+}
+
+const formatMemberLabel = (relationship: string, isTaxpayer: boolean): string => {
+  if (isTaxpayer) return 'Taxpayer';
+  switch (relationship) {
+    case 'spouse':
+      return 'Spouse';
+    case 'child':
+      return 'Child';
+    case 'parent':
+      return 'Parent';
+    default:
+      return 'Other Dependent';
+  }
+};
+
+/**
+ * Tooltip explaining how the National Health Insurance calculation base
+ * is determined across all household members.
+ */
+export const NHICalculationBaseTooltip: React.FC<NHICalculationBaseTooltipProps> = ({
+  results,
+  inputs,
+}) => {
+  const household = results.nhiHousehold;
+  const isLtc = isLongTermCareCategory2Insured(inputs.ageRange);
+  const totalBase = household
+    ? household.calculationBase
+    : premiumCalculationBase(results.totalNetIncome);
+
+  const members: NHIHouseholdMember[] = household?.members ?? [
+    {
+      id: 'taxpayer',
+      relationship: 'taxpayer',
+      isTaxpayer: true,
+      isSameHousehold: true,
+      isHouseholdHead: true,
+      isNHIInsured: true,
+      isLtcCat2: isLtc,
+      isPreschool: false,
+      isChildSupportExempt: false,
+      isElderly65Plus: false,
+      netIncome: results.totalNetIncome,
+      basicDeduction: calculateResidenceTaxBasicDeduction(results.totalNetIncome),
+      calculationBase: premiumCalculationBase(results.totalNetIncome),
+      grossEmploymentIncome: 0,
+      netPublicPensionIncome: 0,
+      elderlyPensionSpecialDeduction: 0,
+    },
+  ];
+
+  const insuredMembers = members.filter(m => m.isNHIInsured);
+  const nonInsuredHead = members.find(m => m.isHouseholdHead && !m.isNHIInsured);
+
+  return (
+    <Box sx={{ minWidth: { xs: 0, sm: 340 }, maxWidth: { xs: '100vw', sm: 460 } }}>
+      <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 1 }}>
+        Each insured person's calculation base is their total net income (総所得金額等) minus the
+        residence tax basic deduction, floored at ¥0.
+      </Typography>
+      <Typography variant="body2" sx={{ fontSize: '0.85rem', mb: 1.5 }}>
+        The household calculation base is the sum of all enrolled members' individual calculation
+        bases. Unused deductions from one member cannot offset another member's income.
+      </Typography>
+
+      <Paper variant="outlined" sx={{ mb: 1.5, overflowX: 'auto' }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ whiteSpace: 'nowrap' }}>Member</TableCell>
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                Net Income
+              </TableCell>
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                Basic Ded.
+              </TableCell>
+              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                Base
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {insuredMembers.map(m => (
+              <TableRow key={m.id}>
+                <TableCell>
+                  {formatMemberLabel(m.relationship, m.isTaxpayer)}
+                  {m.isLtcCat2 && (
+                    <Typography
+                      variant="caption"
+                      sx={{ color: 'text.secondary', display: 'block', fontSize: '0.75rem' }}
+                    >
+                      Age 40–64 (LTC)
+                    </Typography>
+                  )}
+                </TableCell>
+                <TableCell align="right">{formatJPY(m.netIncome)}</TableCell>
+                <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                  {m.netIncome > 0
+                    ? `-${formatJPY(Math.min(m.netIncome, m.basicDeduction))}`
+                    : '¥0'}
+                </TableCell>
+                <TableCell align="right">
+                  <strong>{formatJPY(m.calculationBase)}</strong>
+                </TableCell>
+              </TableRow>
+            ))}
+            {nonInsuredHead && (
+              <TableRow key="non-insured-head" sx={{ opacity: 0.7 }}>
+                <TableCell>
+                  {formatMemberLabel(nonInsuredHead.relationship, nonInsuredHead.isTaxpayer)} (Head)
+                  <Typography
+                    variant="caption"
+                    sx={{ color: 'text.secondary', display: 'block', fontSize: '0.75rem' }}
+                  >
+                    Not NHI
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">{formatJPY(nonInsuredHead.netIncome)}</TableCell>
+                <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                  —
+                </TableCell>
+                <TableCell align="right">¥0</TableCell>
+              </TableRow>
+            )}
+            <TableRow sx={{ bgcolor: 'action.hover' }}>
+              <TableCell colSpan={3}>
+                <strong>Household Total Base</strong>
+              </TableCell>
+              <TableCell align="right">
+                <strong>{formatJPY(totalBase)}</strong>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </Paper>
+
+      {household && household.ltcInsuredCount > 0 && (
+        <Box sx={{ mb: 1, p: 1, bgcolor: 'action.hover', borderRadius: 1 }}>
+          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+            <strong>Long-Term Care Base (介護納付金分):</strong>{' '}
+            {formatJPY(household.ltcCalculationBase)} (assessed only on the{' '}
+            {household.ltcInsuredCount} member(s) aged 40–64).
+          </Typography>
+        </Box>
+      )}
+
+      <SourceLinks
+        sources={[
+          {
+            href: 'https://www.hokeniryo.metro.tokyo.lg.jp/kenkou/kokuho/aramashi/index.html',
+            label:
+              'Tokyo Bureau of Public Health: National Health Insurance Guide (東京都保健医療局: 国民健康保険のあらまし)',
+          },
+        ]}
+      />
     </Box>
   );
 };

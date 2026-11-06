@@ -6,18 +6,19 @@ import userEvent from '@testing-library/user-event';
 
 import { DependentForm } from '../components/TakeHomeCalculator/Dependents/DependentForm';
 import type { OtherDependent } from '../types/dependents';
+import { makeDependent } from './fixtures/dependents';
 
 const INCOME_YEAR = 2026;
 
 describe('DependentForm public pension income', () => {
-  const pensionerParent: OtherDependent = {
+  const pensionerParent: OtherDependent = makeDependent({
     id: 'dep-1',
     relationship: 'parent',
-    ageRange: '70plus',
+    ageRange: '70to74',
     income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 1_580_000, otherNetIncome: 0 },
     disability: 'none',
-    isCohabiting: true,
-  };
+    isSameHousehold: true,
+  });
 
   it('shows the pension row and applies the 公的年金等控除 in the previews', () => {
     render(
@@ -26,6 +27,7 @@ describe('DependentForm public pension income', () => {
         onSave={vi.fn()}
         onCancel={vi.fn()}
         incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
       />,
     );
 
@@ -36,10 +38,10 @@ describe('DependentForm public pension income', () => {
     const pensionCells = within(pensionRow).getAllByRole('cell');
     expect(pensionCells[2]!).toHaveTextContent(/^¥480,000$/);
 
-    // The pension net flows through to the Total (合計所得金額) row's Net column
+    // The pension net flows through to the Total (合計所得金額) row's Net column (label spans 2 columns)
     const totalRow = screen.getByRole('row', { name: /Total \(合計所得金額\)/ });
     const totalCells = within(totalRow).getAllByRole('cell');
-    expect(totalCells[2]!).toHaveTextContent(/^¥480,000$/);
+    expect(totalCells[1]!).toHaveTextContent(/^¥480,000$/);
 
     // Eligible-deductions preview: the 同居老親等 amounts in the income-tax and
     // residence-tax columns of the 扶養控除 row
@@ -57,13 +59,17 @@ describe('DependentForm public pension income', () => {
         onSave={vi.fn()}
         onCancel={vi.fn()}
         incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
       />,
     );
 
-    await user.click(screen.getByRole('combobox', { name: 'Age' }));
+    await user.click(screen.getByRole('combobox', { name: /Age/ }));
     const listbox = screen.getByRole('listbox');
-    expect(within(listbox).getByRole('option', { name: '23 - 64' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '23 - 39' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '40 - 64' })).toBeInTheDocument();
     expect(within(listbox).getByRole('option', { name: '65 - 69' })).toBeInTheDocument();
-    expect(within(listbox).queryByRole('option', { name: '23 - 69' })).not.toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '70 - 74' })).toBeInTheDocument();
+    expect(within(listbox).getByRole('option', { name: '75 or Older' })).toBeInTheDocument();
+    expect(within(listbox).queryByRole('option', { name: '23 - 64' })).not.toBeInTheDocument();
   });
 });
