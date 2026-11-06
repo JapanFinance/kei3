@@ -274,7 +274,7 @@ export const generateChartData = (
       label: 'Pension',
       data: resultsAndCaps.map(({ result, breakdown }, i) => ({
         x: incomePoints[i]!,
-        y: result.pensionPayments,
+        y: result.pensionPayments + (result.familyNationalPension ?? 0),
         breakdown,
       })),
       borderColor: 'var(--mui-palette-text-primary)',

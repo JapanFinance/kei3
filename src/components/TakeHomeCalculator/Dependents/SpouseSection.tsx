@@ -24,7 +24,11 @@ import type {
   Spouse,
   SpouseAgeRange,
 } from '../../../types/dependents';
-import { DISABILITY_LEVELS, SPOUSE_AGE_RANGES } from '../../../types/dependents';
+import {
+  DISABILITY_LEVELS,
+  isDependentSubjectToNationalPension,
+  SPOUSE_AGE_RANGES,
+} from '../../../types/dependents';
 import type { HealthInsuranceProviderId } from '../../../types/healthInsurance';
 import {
   calculateDependentNetIncomeComponents,
@@ -38,6 +42,7 @@ import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../../ui/Tooltips';
 import { describeIncomeAdjustmentDeduction } from './incomeAdjustmentNote';
+import { NationalPensionPaymentCard } from './NationalPensionPaymentCard';
 
 const incomeInputSx = {
   maxWidth: { xs: 125, sm: 160 },
@@ -73,7 +78,7 @@ export default function SpouseSection({
       const newSpouse: Spouse = {
         id: crypto.randomUUID(),
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -84,6 +89,7 @@ export default function SpouseSection({
         isClaimedAsDependent: true,
         healthInsurance: 'auto',
         isHouseholdHead: false,
+        paysNationalPension: false,
       };
       onChange(newSpouse);
     } else {
@@ -110,7 +116,23 @@ export default function SpouseSection({
     pensionIncomeAdjustmentDeduction,
   );
 
-  const hasAnyImpact = spouse ? spouse.isClaimedAsDependent || spouse.isSameHousehold : false;
+  const hasIncomeOrHouseholdImpact = spouse
+    ? spouse.isClaimedAsDependent || spouse.isSameHousehold
+    : false;
+  const isEligibleForNP = spouse ? isDependentSubjectToNationalPension(spouse.ageRange) : false;
+  const hasAnyImpact =
+    hasIncomeOrHouseholdImpact || Boolean(spouse && isEligibleForNP && spouse.paysNationalPension);
+
+  const nationalPensionCard =
+    spouse && isEligibleForNP ? (
+      <NationalPensionPaymentCard
+        isSpouse
+        paysNationalPension={spouse.paysNationalPension}
+        customAmount={spouse.nationalPensionCustomAmount}
+        incomeYear={incomeYear}
+        onChange={updates => handleSpouseChange(updates)}
+      />
+    ) : null;
 
   return (
     <Box>
@@ -243,14 +265,19 @@ export default function SpouseSection({
             />
           </Box>
 
-          {!hasAnyImpact ? (
-            <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                The spouse is neither claimed for tax deductions nor registered at the same address
-                for National Health Insurance. As a result, they will have no effect on taxes or
-                health insurance premiums.
-              </Typography>
-            </Paper>
+          {!hasIncomeOrHouseholdImpact ? (
+            <>
+              {nationalPensionCard}
+              {!hasAnyImpact && (
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: 'action.hover' }}>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    The spouse is neither claimed for tax deductions nor registered at the same
+                    address for National Health Insurance. As a result, they will have no effect on
+                    taxes or social insurance unless you pay their National Pension.
+                  </Typography>
+                </Paper>
+              )}
+            </>
           ) : (
             <>
               {/* Income & Household Health Insurance Section */}
@@ -539,6 +566,8 @@ export default function SpouseSection({
                         </Paper>
                       </Box>
                     )}
+
+                    {nationalPensionCard}
 
                     {/* Disability Status */}
                     {spouse.isClaimedAsDependent && (

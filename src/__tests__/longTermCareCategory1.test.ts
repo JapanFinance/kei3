@@ -211,13 +211,14 @@ describe('estimateLongTermCareCategory1Premium', () => {
 const spouse = (overrides: Partial<Spouse>): Spouse => ({
   id: 'spouse-1',
   relationship: 'spouse',
-  ageRange: 'under40',
+  ageRange: '20to39',
   income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
   disability: 'none',
   isSameHousehold: true,
   isClaimedAsDependent: true,
   healthInsurance: 'auto',
   isHouseholdHead: false,
+  paysNationalPension: false,
   ...overrides,
 });
 
@@ -231,6 +232,7 @@ const otherDependent = (overrides: Partial<OtherDependent>): OtherDependent => (
   isClaimedAsDependent: true,
   healthInsurance: 'auto',
   isHouseholdHead: false,
+  paysNationalPension: false,
   ...overrides,
 });
 

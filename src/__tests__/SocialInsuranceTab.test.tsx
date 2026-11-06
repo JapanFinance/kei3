@@ -8,7 +8,7 @@ import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsu
 import type { CommutingAllowanceIncomeStream, TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { calculateTaxes } from '../utils/taxCalculations';
-import { makeSpouse } from './fixtures/dependents';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 import { makeResidenceTaxDetails, makeTakeHomeResults } from './fixtures/takeHomeResults';
 
 // Mock DetailedTooltip to render children directly for easier testing
@@ -836,7 +836,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
       dependents: [
         makeSpouse({
           id: 'spouse',
-          ageRange: '40to64',
+          ageRange: '40to59',
           // Net employment income in 2026: 1,190,000 - 740,000 = 450,000.
           // Base: 450,000 - 430,000 = 20,000.
           income: {
@@ -893,7 +893,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
       dependents: [
         makeSpouse({
           id: 'spouse',
-          ageRange: '40to64',
+          ageRange: '40to59',
           income: {
             grossEmploymentIncome: 0,
             grossPublicPensionIncome: 0,
@@ -952,7 +952,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
           isClaimedAsDependent: false,
           healthInsurance: 'nhi',
         }),
-        {
+        makeDependent({
           id: 'child',
           relationship: 'child',
           ageRange: '23to39',
@@ -966,7 +966,7 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
           isClaimedAsDependent: true,
           healthInsurance: 'nhi',
           isHouseholdHead: false,
-        },
+        }),
       ],
     };
 
@@ -1008,5 +1008,47 @@ describe('SocialInsuranceTab household NHI calculation base display', () => {
     expect(resultRowText('Long-term Care Portion')).toContain('¥0');
     expect(resultRowText('Child Support Portion')).toContain('¥0');
     expect(resultRowText('Annual Premium')).toContain('¥0');
+  });
+
+  it('renders itemized Family National Pension section and adds to Annual Social Insurance', () => {
+    const inputs: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'salary', type: 'salary', amount: 6_000_000, frequency: 'annual' }],
+      incomeYear: 2026,
+      ageRange: 'age40to59',
+      region: 'Tokyo',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      dependents: [
+        makeDependent({
+          id: 'child-1',
+          relationship: 'child',
+          ageRange: '20to22',
+          isSameHousehold: false,
+          paysNationalPension: true,
+        }),
+        makeDependent({
+          id: 'child-2',
+          relationship: 'child',
+          ageRange: '20to22',
+          isSameHousehold: false,
+          paysNationalPension: true,
+          nationalPensionCustomAmount: 107_520,
+        }),
+      ],
+    };
+
+    const results = calculateTaxes(inputs);
+    render(<SocialInsuranceTab inputs={inputs} results={results} />);
+
+    expect(screen.getByText('Family National Pension')).toBeInTheDocument();
+    expect(resultRowText('Child 1')).toContain('¥213,810');
+    expect(resultRowText('Child 2 (custom)')).toContain('¥107,520');
+    expect(resultRowText('Family Pension Contribution')).toContain('¥321,330');
+    expect(resultRowText('Annual Social Insurance')).toContain(
+      `¥${(results.healthInsurance + results.pensionPayments + (results.employmentInsurance ?? 0) + 321_330).toLocaleString('en-US')}`,
+    );
   });
 });
