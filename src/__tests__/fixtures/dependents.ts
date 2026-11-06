@@ -16,13 +16,14 @@ const NO_INCOME = {
 export const makeSpouse = (overrides: Partial<Spouse> = {}): Spouse => ({
   id: 'test-spouse',
   relationship: 'spouse',
-  ageRange: 'under40',
+  ageRange: '20to39',
   income: NO_INCOME,
   disability: 'none',
   isSameHousehold: true,
   isClaimedAsDependent: true,
   healthInsurance: 'auto',
   isHouseholdHead: false,
+  paysNationalPension: false,
   ...overrides,
 });
 
@@ -40,6 +41,7 @@ export const makeDependent = (overrides: Partial<OtherDependent> = {}): OtherDep
   isClaimedAsDependent: true,
   healthInsurance: 'auto',
   isHouseholdHead: false,
+  paysNationalPension: false,
   ...overrides,
 });
 

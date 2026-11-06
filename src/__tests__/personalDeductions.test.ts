@@ -139,6 +139,7 @@ describe('getPersonalCircumstanceWarnings', () => {
       isClaimedAsDependent: true,
       healthInsurance: 'auto',
       isHouseholdHead: false,
+      paysNationalPension: false,
       ...patch,
     }) as Dependent;
 
@@ -149,7 +150,7 @@ describe('getPersonalCircumstanceWarnings', () => {
   });
 
   it('flags an entered spouse against any selection', () => {
-    const spouse = member({ relationship: 'spouse', ageRange: 'under40' } as Partial<Dependent>);
+    const spouse = member({ relationship: 'spouse', ageRange: '20to39' } as Partial<Dependent>);
     expect(
       getPersonalCircumstanceWarnings(
         circumstances({ widowOrSingleParent: 'widowBereaved' }),

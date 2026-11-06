@@ -56,13 +56,14 @@ export const ENGINE_SCENARIOS = {
         {
           id: 'spouse',
           relationship: 'spouse',
-          ageRange: '40to64',
+          ageRange: '40to59',
           income: NO_INCOME,
           disability: 'none',
           isSameHousehold: true,
           isClaimedAsDependent: true,
           healthInsurance: 'auto',
           isHouseholdHead: false,
+          paysNationalPension: false,
         },
         {
           id: 'child',
@@ -74,6 +75,7 @@ export const ENGINE_SCENARIOS = {
           isClaimedAsDependent: true,
           healthInsurance: 'auto',
           isHouseholdHead: false,
+          paysNationalPension: false,
         },
       ],
     },

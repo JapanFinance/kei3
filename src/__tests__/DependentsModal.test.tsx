@@ -53,11 +53,12 @@ describe('SpouseSection', () => {
     const createdSpouse = onChange.mock.calls[0]![0];
     expect(createdSpouse).toMatchObject({
       relationship: 'spouse',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: true,
       isClaimedAsDependent: true,
       healthInsurance: 'auto',
       isHouseholdHead: false,
+      paysNationalPension: false,
     });
 
     // External prop update from null -> spouse -> null reflects directly without stale local state

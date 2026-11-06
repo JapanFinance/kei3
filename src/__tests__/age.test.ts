@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { NATIONAL_PENSION_AGE_BAND } from '../data/nationalPensionContribution';
 import {
   PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND,
   calculateNetPublicPensionIncome,
@@ -14,6 +15,7 @@ import {
   SPOUSE_AGE_BANDS,
   dependentAgeCoversBand,
   dependentAgeRangeBounds,
+  isDependentSubjectToNationalPension,
 } from '../types/dependents';
 import { EMPTY_PERSONAL_CIRCUMSTANCES } from '../types/tax';
 import {
@@ -54,9 +56,13 @@ describe('age-range bounds', () => {
   it('gives each dependent choice the interval its label states', () => {
     expect(dependentAgeRangeBounds('under6')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 6 });
     expect(dependentAgeRangeBounds('6to15')).toEqual({ minAgeInclusive: 6, maxAgeExclusive: 16 });
-    expect(dependentAgeRangeBounds('19to22')).toEqual({ minAgeInclusive: 19, maxAgeExclusive: 23 });
+    expect(dependentAgeRangeBounds('19')).toEqual({ minAgeInclusive: 19, maxAgeExclusive: 20 });
+    expect(dependentAgeRangeBounds('20to22')).toEqual({ minAgeInclusive: 20, maxAgeExclusive: 23 });
     // A spouse's ranges overlap a non-spouse dependent's rather than continuing them.
-    expect(dependentAgeRangeBounds('under40')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 40 });
+    expect(dependentAgeRangeBounds('under20')).toEqual({ minAgeInclusive: 0, maxAgeExclusive: 20 });
+    expect(dependentAgeRangeBounds('20to39')).toEqual({ minAgeInclusive: 20, maxAgeExclusive: 40 });
+    expect(dependentAgeRangeBounds('40to59')).toEqual({ minAgeInclusive: 40, maxAgeExclusive: 60 });
+    expect(dependentAgeRangeBounds('60to64')).toEqual({ minAgeInclusive: 60, maxAgeExclusive: 65 });
     expect(dependentAgeRangeBounds('70to74')).toEqual({
       minAgeInclusive: 70,
       maxAgeExclusive: 75,
@@ -144,7 +150,10 @@ describe('the 65 boundary of the public pension deduction', () => {
     expect(calculateDependentNetPublicPensionIncome(pensionOnly('23to39'), YEAR)).toBe(
       NET_UNDER_65,
     );
-    expect(calculateDependentNetPublicPensionIncome(pensionOnly('40to64'), YEAR)).toBe(
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('40to59'), YEAR)).toBe(
+      NET_UNDER_65,
+    );
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('60to64'), YEAR)).toBe(
       NET_UNDER_65,
     );
     expect(calculateDependentNetPublicPensionIncome(pensionOnly('65to69'), YEAR)).toBe(NET_65_PLUS);
@@ -152,7 +161,7 @@ describe('the 65 boundary of the public pension deduction', () => {
     expect(calculateDependentNetPublicPensionIncome(pensionOnly('75plus'), YEAR)).toBe(NET_65_PLUS);
 
     // A spouse is read on the same band as a non-spouse dependent.
-    expect(calculateDependentNetPublicPensionIncome(pensionOnly('under40'), YEAR)).toBe(
+    expect(calculateDependentNetPublicPensionIncome(pensionOnly('20to39'), YEAR)).toBe(
       NET_UNDER_65,
     );
   });
@@ -179,14 +188,17 @@ describe('the 65 boundary of the public pension deduction', () => {
 
 describe('dependentAgeCoversBand', () => {
   it('answers spouse and non-spouse categories on the same bands', () => {
-    expect(dependentAgeCoversBand('under40', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
+    expect(dependentAgeCoversBand('20to39', SPOUSE_AGE_BANDS.publicPensionDeductionElderly)).toBe(
       false,
     );
     expect(
       dependentAgeCoversBand('23to39', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(false);
     expect(
-      dependentAgeCoversBand('40to64', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
+      dependentAgeCoversBand('40to59', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
+    ).toBe(false);
+    expect(
+      dependentAgeCoversBand('60to64', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
     ).toBe(false);
     expect(
       dependentAgeCoversBand('65to69', DEPENDENT_AGE_BANDS.publicPensionDeductionElderly),
@@ -218,7 +230,8 @@ describe('dependentAgeCoversBand', () => {
       DEPENDENT_AGE_BANDS.specificRelative,
     ]) {
       expect(dependentAgeCoversBand('16to18', band)).toBe(false);
-      expect(dependentAgeCoversBand('19to22', band)).toBe(true);
+      expect(dependentAgeCoversBand('19', band)).toBe(true);
+      expect(dependentAgeCoversBand('20to22', band)).toBe(true);
       expect(dependentAgeCoversBand('23to39', band)).toBe(false);
     }
   });
@@ -240,7 +253,33 @@ describe('dependentAgeCoversBand', () => {
     expect(dependentAgeCoversBand('under6', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
     expect(dependentAgeCoversBand('6to15', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
     expect(dependentAgeCoversBand('16to18', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
-    expect(dependentAgeCoversBand('19to22', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
+    expect(dependentAgeCoversBand('19', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
+    expect(dependentAgeCoversBand('20to22', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(true);
     expect(dependentAgeCoversBand('23to39', DEPENDENT_AGE_BANDS.dependentUnder23)).toBe(false);
+  });
+
+  it('shares the 20–60 National Pension band across taxpayer, spouse, and dependents', () => {
+    expect(STATUTORY_AGE_BANDS.nationalPension).toBe(NATIONAL_PENSION_AGE_BAND);
+    expect(SPOUSE_AGE_BANDS.nationalPension).toBe(NATIONAL_PENSION_AGE_BAND);
+    expect(DEPENDENT_AGE_BANDS.nationalPension).toBe(NATIONAL_PENSION_AGE_BAND);
+
+    // Spouse boundaries at 20 and 60
+    expect(isDependentSubjectToNationalPension('under20')).toBe(false);
+    expect(isDependentSubjectToNationalPension('20to39')).toBe(true);
+    expect(isDependentSubjectToNationalPension('40to59')).toBe(true);
+    expect(isDependentSubjectToNationalPension('60to64')).toBe(false);
+    expect(isDependentSubjectToNationalPension('65to69')).toBe(false);
+
+    // Non-spouse dependent boundaries at 20 and 60 (19 vs 20-22; 40-59 vs 60-64)
+    expect(isDependentSubjectToNationalPension('16to18')).toBe(false);
+    expect(isDependentSubjectToNationalPension('19')).toBe(false);
+    expect(isDependentSubjectToNationalPension('20to22')).toBe(true);
+    expect(isDependentSubjectToNationalPension('23to39')).toBe(true);
+
+    // Both 40-59 and 60-64 stay inside 介護保険第2号 (40-64)
+    expect(dependentAgeCoversBand('40to59', DEPENDENT_AGE_BANDS.longTermCareCategory2)).toBe(true);
+    expect(dependentAgeCoversBand('60to64', DEPENDENT_AGE_BANDS.longTermCareCategory2)).toBe(true);
+    expect(dependentAgeCoversBand('40to59', SPOUSE_AGE_BANDS.longTermCareCategory2)).toBe(true);
+    expect(dependentAgeCoversBand('60to64', SPOUSE_AGE_BANDS.longTermCareCategory2)).toBe(true);
   });
 });

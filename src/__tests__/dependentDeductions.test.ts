@@ -72,7 +72,7 @@ function getSpouseSpecialDeduction(
 ) {
   const spouse: Dependent = makeSpouse({
     id: 'test-spouse',
-    ageRange: 'under40',
+    ageRange: '20to39',
     isSameHousehold: true,
     income: {
       grossEmploymentIncome: 0,
@@ -95,7 +95,7 @@ function getSpecificRelativeDeduction(dependentNetIncome: number, year?: number)
   const dependent: Dependent = makeDependent({
     id: 'test-child',
     relationship: 'child',
-    ageRange: '19to22',
+    ageRange: '20to22',
     isSameHousehold: false,
     income: {
       grossEmploymentIncome: 0,
@@ -116,7 +116,7 @@ function getSpecificRelativeDeduction(dependentNetIncome: number, year?: number)
 function getSpouseDeduction(isElderly: boolean, taxpayerNetIncome: number) {
   const dependent: Dependent = makeSpouse({
     id: 'test-spouse',
-    ageRange: isElderly ? '70to74' : 'under40',
+    ageRange: isElderly ? '70to74' : '20to39',
     isSameHousehold: true,
   });
 
@@ -232,7 +232,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -248,7 +248,7 @@ describe('Dependent Deduction Eligibility (扶養控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -268,7 +268,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -284,7 +284,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -300,7 +300,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -318,7 +318,7 @@ describe('Spouse Deduction Eligibility (配偶者控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -356,7 +356,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -372,7 +372,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -390,7 +390,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -406,7 +406,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -424,7 +424,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -444,7 +444,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -460,7 +460,7 @@ describe('Spouse Special Deduction Eligibility (配偶者特別控除)', () => {
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -558,7 +558,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
       const dependent: Dependent = makeMember({
         id: '1',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: false,
         disability: 'none',
         income: {
@@ -576,7 +576,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
       const dependent: Dependent = makeMember({
         id: '1',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: false,
         disability: 'none',
         income: {
@@ -592,7 +592,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
       const dependent: Dependent = makeMember({
         id: '1',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: false,
         disability: 'none',
         income: {
@@ -608,7 +608,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
       const dependent: Dependent = makeMember({
         id: '1',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: false,
         disability: 'none',
         income: {
@@ -676,7 +676,7 @@ describe('Specific Relative Special Deduction Eligibility (特定親族特別控
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: true,
         disability: 'none',
         income: {
@@ -822,7 +822,7 @@ describe('Special Dependent (特定扶養親族) Classification', () => {
     const dependent: Dependent = makeMember({
       id: '1',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: false,
       disability: 'none',
       income: {
@@ -838,7 +838,7 @@ describe('Special Dependent (特定扶養親族) Classification', () => {
     const dependent: Dependent = makeMember({
       id: '1',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: false,
       disability: 'none',
       income: {
@@ -1354,7 +1354,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     const spouse: Dependent = makeMember({
       id: '1',
       relationship: 'spouse',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: false,
       disability: 'none',
       income: {
@@ -1393,7 +1393,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     const spouse: Dependent = makeMember({
       id: '1',
       relationship: 'spouse',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: false,
       disability: 'none',
       income: {
@@ -1471,7 +1471,7 @@ describe('Integration: calculateDependentDeductions with Taxpayer Income', () =>
     const child: Dependent = makeMember({
       id: '1',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: false,
       disability: 'none',
       income: {
@@ -1558,7 +1558,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: false,
         disability: 'regular',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
@@ -1575,7 +1575,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: false,
         disability: 'regular',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
@@ -1593,7 +1593,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: false,
         disability: 'special',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 }, // Using otherNetIncome for exact control
@@ -1612,7 +1612,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
       const spouse: Dependent = makeMember({
         id: '1',
         relationship: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         isSameHousehold: false,
         disability: 'special',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 }, // Using otherNetIncome for exact control
@@ -1714,7 +1714,7 @@ describe('障害者控除 requires 合計所得金額 within the dependent eligi
     const spouse: Dependent = makeMember({
       id: '1',
       relationship: 'spouse',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: true,
       disability: 'special',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 2_000_000 }, // Using otherNetIncome for exact control
@@ -1732,7 +1732,7 @@ describe('NOT_ELIGIBLE breakdown entry for a spouse with no applicable deduction
     const spouse: Dependent = makeMember({
       id: '1',
       relationship: 'spouse',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: true,
       disability: 'none',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 1_330_001 }, // Using otherNetIncome for exact control
@@ -1763,7 +1763,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
   function makeSpouseWithNetIncome(netIncome: number): Dependent {
     return makeSpouse({
       id: 'test-spouse',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: true,
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: netIncome },
     });
@@ -1828,7 +1828,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
       const dependent: Dependent = makeMember({
         id: 'test',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: false,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 580_000 },
@@ -1841,7 +1841,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
       const dependent: Dependent = makeMember({
         id: 'test',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: false,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 580_001 },
@@ -1859,7 +1859,7 @@ describe('2025 income year (R7) — 58万円 threshold', () => {
       const dependent: Dependent = makeMember({
         id: 'test',
         relationship: 'child',
-        ageRange: '19to22',
+        ageRange: '20to22',
         isSameHousehold: false,
         disability: 'none',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 600_000 },
@@ -1876,7 +1876,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
     makeDependent({
       id: 'dep',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: false,
       disability: 'none',
       ...overrides,
@@ -1918,7 +1918,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
       expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageRange: '16to18' })], 2026)).toBe(
         true,
       );
-      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageRange: '19to22' })], 2026)).toBe(
+      expect(hasIncomeAdjustmentDeductionDependent([dependent({ ageRange: '20to22' })], 2026)).toBe(
         true,
       );
     });
@@ -1959,12 +1959,12 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
     it('requires the dependent to be within the 扶養親族 income threshold', () => {
       // 2026 threshold is ¥620,000.
       const richChild = dependent({
-        ageRange: '19to22',
+        ageRange: '20to22',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 700_000 },
       });
       expect(hasIncomeAdjustmentDeductionDependent([richChild], 2026)).toBe(false);
       const poorChild = dependent({
-        ageRange: '19to22',
+        ageRange: '20to22',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 },
       });
       expect(hasIncomeAdjustmentDeductionDependent([poorChild], 2026)).toBe(true);
@@ -1975,7 +1975,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
         makeSpouse({
           id: 'sp',
           relationship: 'spouse',
-          ageRange: 'under40',
+          ageRange: '20to39',
           isSameHousehold: true,
           disability: 'none',
           ...overrides,
@@ -1996,7 +1996,7 @@ describe('所得金額調整控除 (Income Amount Adjustment Deduction)', () => 
 
 describe('hasDependentRelativeUnder23', () => {
   const child = (
-    ageRange: '6to15' | '16to18' | '19to22' | '23to39' | '70to74',
+    ageRange: '6to15' | '16to18' | '20to22' | '23to39' | '70to74',
     otherNetIncome = 0,
   ): Dependent =>
     makeDependent({
@@ -2008,12 +2008,12 @@ describe('hasDependentRelativeUnder23', () => {
 
   const spouseUnder70: Dependent = makeSpouse({
     id: 's',
-    ageRange: 'under40',
+    ageRange: '20to39',
   });
 
   it('is true for a non-spouse dependent under 23 within the threshold (incl. under 16)', () => {
     expect(hasDependentRelativeUnder23([child('6to15')], 2026)).toBe(true);
-    expect(hasDependentRelativeUnder23([child('19to22')], 2026)).toBe(true);
+    expect(hasDependentRelativeUnder23([child('20to22')], 2026)).toBe(true);
   });
 
   it('is false for dependents aged 23 or older', () => {
@@ -2023,7 +2023,7 @@ describe('hasDependentRelativeUnder23', () => {
 
   it('excludes a spouse and any dependent over the 扶養親族 income threshold', () => {
     expect(hasDependentRelativeUnder23([spouseUnder70], 2026)).toBe(false);
-    expect(hasDependentRelativeUnder23([child('19to22', 700_000)], 2026)).toBe(false);
+    expect(hasDependentRelativeUnder23([child('20to22', 700_000)], 2026)).toBe(false);
   });
 
   it('is false with no dependents', () => {
@@ -2057,7 +2057,7 @@ describe('Public Pension Income in Total Net Income', () => {
   });
 
   it('the 65 boundary changes spouse deduction eligibility for the same gross pension', () => {
-    const spouse = (ageRange: 'under40' | '65to69'): Dependent =>
+    const spouse = (ageRange: '20to39' | '65to69'): Dependent =>
       makeSpouse({
         id: 's',
         ageRange,
@@ -2070,8 +2070,8 @@ describe('Public Pension Income in Total Net Income', () => {
     // 65-69: net 400,000 ≤ 620,000 → 配偶者控除
     expect(isEligibleForSpouseDeduction(spouse('65to69'))).toBe(true);
     // Under 65: net 850,000 > 620,000 → falls to 配偶者特別控除 instead
-    expect(isEligibleForSpouseDeduction(spouse('under40'))).toBe(false);
-    expect(isEligibleForSpouseSpecialDeduction(spouse('under40'))).toBe(true);
+    expect(isEligibleForSpouseDeduction(spouse('20to39'))).toBe(false);
+    expect(isEligibleForSpouseSpecialDeduction(spouse('20to39'))).toBe(true);
   });
 
   it('a cohabiting elderly parent on a model pension qualifies as 同居老親等', () => {
@@ -2236,9 +2236,9 @@ describe('countDependentsWithinEligibilityIncome', () => {
 
   it('counts a spouse and children, including children under 16', () => {
     const dependents = [
-      makeCountDependent('s', 'spouse', 'under40', 0),
+      makeCountDependent('s', 'spouse', '20to39', 0),
       makeCountDependent('c1', 'child', '6to15', 0),
-      makeCountDependent('c2', 'child', '19to22', 0),
+      makeCountDependent('c2', 'child', '20to22', 0),
     ];
     expect(countDependentsWithinEligibilityIncome(dependents, 2026)).toBe(3);
   });
@@ -2246,8 +2246,8 @@ describe('countDependentsWithinEligibilityIncome', () => {
   it('excludes dependents whose net income exceeds the eligibility max', () => {
     // 2026 eligibility max is 620,000 (令和8年度税制改正); the boundary is inclusive.
     const dependents = [
-      makeCountDependent('ok', 'child', '19to22', 620_000),
-      makeCountDependent('over', 'child', '19to22', 620_001),
+      makeCountDependent('ok', 'child', '20to22', 620_000),
+      makeCountDependent('over', 'child', '20to22', 620_001),
     ];
     expect(countDependentsWithinEligibilityIncome(dependents, 2026)).toBe(1);
   });
@@ -2259,7 +2259,7 @@ describe('countDependentsWithinEligibilityIncome', () => {
   it('excludes dependents where isClaimedAsDependent is false even when income is within eligibility', () => {
     const dependents = [
       { ...makeCountDependent('c1', 'child', '6to15', 0), isClaimedAsDependent: false },
-      makeCountDependent('c2', 'child', '19to22', 0),
+      makeCountDependent('c2', 'child', '20to22', 0),
     ];
     expect(countDependentsWithinEligibilityIncome(dependents, 2026)).toBe(1);
   });
@@ -2273,7 +2273,7 @@ describe('isClaimedAsDependent separation from tax deductions', () => {
     });
     const claimedChild: Dependent = makeDependent({
       id: 'child-1',
-      ageRange: '19to22',
+      ageRange: '20to22',
       disability: 'regular',
     });
 
@@ -2299,7 +2299,7 @@ describe('isClaimedAsDependent separation from tax deductions', () => {
   it('excludes dependents with isClaimedAsDependent: false from income adjustment deduction conditions', () => {
     const childUnder23: Dependent = makeDependent({
       id: 'c',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isClaimedAsDependent: false,
     });
 
