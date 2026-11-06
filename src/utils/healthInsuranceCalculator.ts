@@ -180,22 +180,25 @@ export function calculateNationalHealthInsurancePortion(
   params: NationalHealthInsuranceRegionParams,
   portion: NationalHealthInsurancePortionKey,
   reductionRatio: NHIPremiumReductionRatio = 0,
-  options?: NHIPortionHouseholdOptions,
+  {
+    insuredCount = 1,
+    preschoolCount: rawPreschoolCount = 0,
+    childSupportExemptCount: rawChildSupportExemptCount = 0,
+  }: NHIPortionHouseholdOptions = {},
 ): NationalHealthInsurancePortion | undefined {
   const fields = NHI_PORTION_FIELDS[portion];
   const rate = params[fields.rate];
   const cap = params[fields.cap];
   if (!rate || !cap) return undefined;
 
-  const totalInsured = options?.insuredCount ?? 1;
-  if (totalInsured <= 0) return undefined;
+  if (insuredCount <= 0) return undefined;
 
   const preschoolCount =
     portion === 'longTermCare' || portion === 'childSupport'
       ? 0
-      : Math.min(totalInsured, options?.preschoolCount ?? 0);
+      : Math.min(insuredCount, rawPreschoolCount);
   const childSupportExemptCount =
-    portion === 'childSupport' ? Math.min(totalInsured, options?.childSupportExemptCount ?? 0) : 0;
+    portion === 'childSupport' ? Math.min(insuredCount, rawChildSupportExemptCount) : 0;
 
   const perCapitaFull = params[fields.perCapita] ?? 0;
   const householdFlatFull = params[fields.householdFlat] ?? 0;
@@ -208,12 +211,12 @@ export function calculateNationalHealthInsurancePortion(
   if (portion === 'childSupport') {
     // Under FY2026 rules (国民健康保険法施行令第29条の7第5項), children through age 18
     // are 100% exempt from the child support per-capita levy.
-    const nonExemptAdultCount = Math.max(0, totalInsured - childSupportExemptCount);
+    const nonExemptAdultCount = Math.max(0, insuredCount - childSupportExemptCount);
     perCapita = nonExemptAdultCount * perCapitaPerAdult;
   } else if (portion === 'longTermCare') {
-    perCapita = totalInsured * perCapitaPerAdult;
+    perCapita = insuredCount * perCapitaPerAdult;
   } else {
-    const adultCount = Math.max(0, totalInsured - preschoolCount);
+    const adultCount = Math.max(0, insuredCount - preschoolCount);
     perCapita = adultCount * perCapitaPerAdult + preschoolCount * perCapitaPerPreschool;
   }
 
@@ -234,12 +237,11 @@ export function calculateNationalHealthInsurancePortion(
     cap,
     premium,
     isCapped: uncapped >= cap,
-    insuredCount: totalInsured,
+    insuredCount,
     preschoolCount,
     childSupportExemptCount,
     perCapitaPerAdult,
-    perCapitaPerPreschool:
-      portion === 'childSupport' && childSupportExemptCount > 0 ? 0 : perCapitaPerPreschool,
+    perCapitaPerPreschool: portion === 'childSupport' ? 0 : perCapitaPerPreschool,
   };
 }
 
@@ -257,6 +259,16 @@ export function nationalHealthInsurancePortionDiffers(
 }
 
 /**
+ * Household counts for determining the NHI low-income premium reduction ratio.
+ */
+export interface NHIReductionHouseholdCounts {
+  /** Total number of NHI-insured members in the household (default 1) */
+  insuredCount?: number;
+  /** Number of salary and public pension earners in the reduction test group (default 1) */
+  salaryEarnersCount?: number;
+}
+
+/**
  * Determines the NHI low-income premium reduction (均等割額・平等割額の軽減) ratio.
  *
  * The statutory test compares the reduction test income (軽減判定所得) of the reduction test group
@@ -265,10 +277,8 @@ export function nationalHealthInsurancePortionDiffers(
 export function calculateNHIPremiumReductionRatio(
   reductionTestIncome: number,
   thresholds: NHIPremiumReductionThresholds,
-  options?: { insuredCount?: number; salaryEarnersCount?: number },
+  { insuredCount = 1, salaryEarnersCount = 1 }: NHIReductionHouseholdCounts = {},
 ): NHIPremiumReductionRatio {
-  const insuredCount = options?.insuredCount ?? 1;
-  const salaryEarnersCount = options?.salaryEarnersCount ?? 1;
   const earnerAllowance =
     thresholds.perAdditionalSalaryEarner * Math.max(0, salaryEarnersCount - 1);
 
@@ -299,12 +309,12 @@ export function getNHIPremiumReductionRatioForMonth(
   reductionTestIncome: number,
   year: number,
   month: number,
-  options?: { insuredCount?: number; salaryEarnersCount?: number },
+  counts: NHIReductionHouseholdCounts = {},
 ): NHIPremiumReductionRatio {
   return calculateNHIPremiumReductionRatio(
     reductionTestIncome,
     getNHIPremiumReductionThresholdsForMonth(year, month),
-    options,
+    counts,
   );
 }
 
