@@ -212,7 +212,7 @@ describe('SummaryTab with household NHI premium', () => {
           ...baseResults,
           healthInsurance: 200_000,
           pensionPayments: 100_000,
-          householdNHIPremium: 70_000,
+          householdNHIPremiumPaidByTaxpayer: 70_000,
         }}
       />,
     );

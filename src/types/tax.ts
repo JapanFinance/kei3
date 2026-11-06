@@ -1188,11 +1188,11 @@ export interface TakeHomeResults {
    */
   longTermCareCategory1Estimate?: LongTermCareCategory1Estimate | undefined;
   /**
-   * Annual household NHI premium attributed to the taxpayer when the taxpayer themselves
-   * is NOT enrolled in NHI (e.g. on Employees' Health Insurance or 75+ Latter-Stage Elderly)
+   * Annual household NHI premium attributed to and paid by the taxpayer when the taxpayer
+   * themselves is NOT enrolled in NHI (e.g. on Employees' Health Insurance or 75+ Latter-Stage Elderly)
    * but pays the household NHI bill as 擬制世帯主. Deductible as 社会保険料控除 under 所得税法第74条.
    */
-  householdNHIPremium?: number | undefined;
+  householdNHIPremiumPaidByTaxpayer?: number | undefined;
   /**
    * Household-level National Health Insurance calculation summary and attribution breakdown.
    * Present whenever the household has at least one NHI-insured member.

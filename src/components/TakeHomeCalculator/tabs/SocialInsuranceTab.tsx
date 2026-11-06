@@ -337,8 +337,8 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {/* For taxpayers on non-NHI systems (e.g. EHI) whose household members are on NHI,
           show the Household NHI Calculation Base alongside income and remuneration */}
       {!isNationalHealthInsurance &&
-        results.householdNHIPremium !== undefined &&
-        results.householdNHIPremium > 0 &&
+        results.householdNHIPremiumPaidByTaxpayer !== undefined &&
+        results.householdNHIPremiumPaidByTaxpayer > 0 &&
         results.nhiHousehold && (
           <ResultRow
             label="NHI Calculation Base"
@@ -576,8 +576,8 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
 
       {/* Household National Health Insurance (when taxpayer is not on NHI but pays for household) */}
       {!isNationalHealthInsurance &&
-        results.householdNHIPremium !== undefined &&
-        results.householdNHIPremium > 0 &&
+        results.householdNHIPremiumPaidByTaxpayer !== undefined &&
+        results.householdNHIPremiumPaidByTaxpayer > 0 &&
         results.nhiHousehold &&
         (() => {
           const portions = results.nhiHousehold.householdPortions;
@@ -711,7 +711,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
               )}
               <ResultRow
                 label="Household NHI Premium"
-                value={formatJPY(results.householdNHIPremium)}
+                value={formatJPY(results.householdNHIPremiumPaidByTaxpayer)}
                 type="subtotal"
               />
             </Box>

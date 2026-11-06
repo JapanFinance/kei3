@@ -158,7 +158,7 @@ export function totalSocialInsurancePaid(results: {
   pensionPayments: number;
   employmentInsurance?: number | undefined;
   longTermCareCategory1Premium?: number | undefined;
-  householdNHIPremium?: number | undefined;
+  householdNHIPremiumPaidByTaxpayer?: number | undefined;
   socialInsuranceOverride?: number | undefined;
 }): number {
   if (results.socialInsuranceOverride !== undefined) {
@@ -169,7 +169,7 @@ export function totalSocialInsurancePaid(results: {
     results.pensionPayments +
     (results.employmentInsurance ?? 0) +
     (results.longTermCareCategory1Premium ?? 0) +
-    (results.householdNHIPremium ?? 0)
+    (results.householdNHIPremiumPaidByTaxpayer ?? 0)
   );
 }
 
@@ -1068,7 +1068,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   let nhiBreakdown = null;
   let latterStageBreakdown: LatterStageElderlyBreakdown | null = null;
   let nationalPensionExemption: TakeHomeResults['nationalPensionExemption'];
-  let householdNHIPremium: number | undefined;
+  let householdNHIPremiumPaidByTaxpayer: number | undefined;
   let nhiHouseholdSummary: NHIHouseholdSummary | undefined;
 
   // Bonus breakdown variables
@@ -1110,7 +1110,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
       if (nhiHouseholdComposition.insuredCount > 0) {
         const householdResult = calculateHouseholdNHIBreakdown(nhiHouseholdComposition, incomeYear);
-        householdNHIPremium = householdResult.taxpayerBreakdown.total;
+        householdNHIPremiumPaidByTaxpayer = householdResult.taxpayerBreakdown.total;
         nhiHouseholdSummary = householdResult.summary;
       }
     } else if (inputs.healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID) {
@@ -1136,7 +1136,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
 
       if (nhiHouseholdComposition.insuredCount > 0) {
         const householdResult = calculateHouseholdNHIBreakdown(nhiHouseholdComposition, incomeYear);
-        householdNHIPremium = householdResult.taxpayerBreakdown.total;
+        householdNHIPremiumPaidByTaxpayer = householdResult.taxpayerBreakdown.total;
         nhiHouseholdSummary = householdResult.summary;
       }
     }
@@ -1225,7 +1225,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       pensionPayments,
       employmentInsurance,
       longTermCareCategory1Premium,
-      householdNHIPremium,
+      householdNHIPremiumPaidByTaxpayer,
     });
   }
 
@@ -1668,7 +1668,7 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     longTermCareCategory1Premium:
       longTermCareCategory1Premium > 0 ? longTermCareCategory1Premium : undefined,
     ...(longTermCareCategory1Estimate && { longTermCareCategory1Estimate }),
-    ...(householdNHIPremium !== undefined && { householdNHIPremium }),
+    ...(householdNHIPremiumPaidByTaxpayer !== undefined && { householdNHIPremiumPaidByTaxpayer }),
     ...(nhiHouseholdSummary && { nhiHousehold: nhiHouseholdSummary }),
     // Context needed for cap detection
     salaryIncome,

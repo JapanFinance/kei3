@@ -111,7 +111,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             <ResultRow
               label="Health Insurance"
               value={formatAmountWithShare(
-                results.healthInsurance + (results.householdNHIPremium ?? 0),
+                results.healthInsurance + (results.householdNHIPremiumPaidByTaxpayer ?? 0),
                 results.annualIncome,
                 !isMobile,
               )}

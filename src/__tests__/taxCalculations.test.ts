@@ -3571,6 +3571,28 @@ describe('calculateTaxes at ages 65 and over', () => {
       });
       expect(withTaxableSpouse.longTermCareCategory1Estimate?.currentFiscalYear.tier).toBe(5);
       expect(withTaxableSpouse.longTermCareCategory1Premium).toBe(75_800);
+
+      // When the taxable dependent lives in a separate municipal household (isSameHousehold: false),
+      // they do not affect the taxpayer's municipal household non-taxable status, keeping taxpayer in Tier 3.
+      const withLivingSeparatelyTaxableSpouse = calculateTaxes({
+        ...nhiPensionInputs(1_500_000),
+        dependents: [
+          makeSpouse({
+            id: 'spouse-1',
+            ageRange: 'under40',
+            isSameHousehold: false,
+            income: {
+              grossEmploymentIncome: 0,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 500_000,
+            },
+          }),
+        ],
+      });
+      expect(
+        withLivingSeparatelyTaxableSpouse.longTermCareCategory1Estimate?.currentFiscalYear.tier,
+      ).toBe(3);
+      expect(withLivingSeparatelyTaxableSpouse.longTermCareCategory1Premium).toBe(51_900);
     });
 
     // The 均等割 limit the tier judgment tests the taxpayer against takes a dependent count and
@@ -6564,13 +6586,13 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
   });
 
   describe('totalSocialInsurancePaid', () => {
-    it('sums all social insurance components including household NHI', () => {
+    it('sums all social insurance components including household NHI paid by taxpayer', () => {
       const total = totalSocialInsurancePaid({
         healthInsurance: 300_000,
         pensionPayments: 400_000,
         employmentInsurance: 30_000,
         longTermCareCategory1Premium: 50_000,
-        householdNHIPremium: 120_000,
+        householdNHIPremiumPaidByTaxpayer: 120_000,
       });
       expect(total).toBe(900_000);
     });
@@ -6589,7 +6611,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         pensionPayments: 0,
         employmentInsurance: 0,
         longTermCareCategory1Premium: 0,
-        householdNHIPremium: 0,
+        householdNHIPremiumPaidByTaxpayer: 0,
         socialInsuranceOverride: 500_000,
       });
       expect(total).toBe(500_000);
@@ -6636,9 +6658,9 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         nhiPaymentAttribution: 'fullHousehold',
       });
 
-      // 1. householdNHIPremium should be populated
-      expect(withHouseholdNHI.householdNHIPremium).toBeGreaterThan(0);
-      const nhiPremium = withHouseholdNHI.householdNHIPremium!;
+      // 1. householdNHIPremiumPaidByTaxpayer should be populated
+      expect(withHouseholdNHI.householdNHIPremiumPaidByTaxpayer).toBeGreaterThan(0);
+      const nhiPremium = withHouseholdNHI.householdNHIPremiumPaidByTaxpayer!;
 
       // 2. Summary should record household composition
       expect(withHouseholdNHI.nhiHousehold).toBeDefined();
@@ -6671,15 +6693,21 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         healthInsurance: 'nhi',
       });
 
+      const withoutHouseholdNHI = calculateTaxes(baseInputs);
+
       const withNoAttribution = calculateTaxes({
         ...baseInputs,
         dependents: [spouse],
         nhiPaymentAttribution: 'none',
       });
 
-      // Taxpayer pays 0 of the spouse's NHI
-      expect(withNoAttribution.householdNHIPremium).toBe(0);
+      // Taxpayer pays 0 of the spouse's NHI, leaving social insurance and take-home pay unchanged
+      expect(withNoAttribution.householdNHIPremiumPaidByTaxpayer).toBe(0);
       expect(withNoAttribution.nhiHousehold!.householdTotal).toBeGreaterThan(0);
+      expect(totalSocialInsurancePaid(withNoAttribution)).toBe(
+        totalSocialInsurancePaid(withoutHouseholdNHI),
+      );
+      expect(withNoAttribution.takeHomeIncome).toBe(withoutHouseholdNHI.takeHomeIncome);
     });
 
     it('assesses household NHI for 75+ Latter-Stage Elderly taxpayer as deemed head', () => {
@@ -6714,10 +6742,10 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       const results = calculateTaxes(elderlyInputs);
       // Taxpayer is on Latter-Stage Elderly, but household NHI is levied for spouse
       expect(results.healthInsurance).toBeGreaterThan(0); // Latter-Stage Elderly premium
-      expect(results.householdNHIPremium).toBeGreaterThan(0); // Household NHI for spouse
+      expect(results.householdNHIPremiumPaidByTaxpayer).toBeGreaterThan(0); // Household NHI for spouse
       expect(totalSocialInsurancePaid(results)).toBe(
         results.healthInsurance +
-          results.householdNHIPremium! +
+          results.householdNHIPremiumPaidByTaxpayer! +
           results.pensionPayments +
           (results.longTermCareCategory1Premium ?? 0),
       );

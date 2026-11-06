@@ -136,7 +136,7 @@ describe('NegativeTakeHomeTooltip', () => {
     const results: TakeHomeResults = makeTakeHomeResults({
       takeHomeIncome: -40_000,
       healthInsuranceProvider: DEPENDENT_COVERAGE_ID,
-      householdNHIPremium: 120_000,
+      householdNHIPremiumPaidByTaxpayer: 120_000,
     });
     render(<NegativeTakeHomeTooltip results={results} />);
 
