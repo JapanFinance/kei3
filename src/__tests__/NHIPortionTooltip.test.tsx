@@ -8,7 +8,7 @@ import {
   NHIPortionTooltip,
   NHICalculationBaseTooltip,
 } from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
-import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type {
   TakeHomeResults,
   TakeHomeInputs,
@@ -379,15 +379,90 @@ describe('NHIPortionTooltip consistency with calculator', () => {
       const { container: medicalContainer } = render(
         <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
       );
-      expect(medicalContainer.textContent).toContain('× 50% × 1 preschool');
-      expect(medicalContainer.textContent).toContain('(1 preschool with 50% discount)');
+      expect(medicalContainer.textContent).toContain('× 50% × 1 preschooler');
+      expect(medicalContainer.textContent).toContain('(1 preschooler with 50% discount)');
 
       const { container: childSupportContainer } = render(
         <NHIPortionTooltip portion="childSupport" results={results} inputs={inputs} />,
       );
       expect(childSupportContainer.textContent).toContain('× 1 adult (1 under 19 exempt)');
       expect(childSupportContainer.textContent).toContain('(1 under 19 exempt)');
-      expect(childSupportContainer.textContent).not.toContain('preschool with 50% discount');
+      expect(childSupportContainer.textContent).not.toContain('preschooler with 50% discount');
+    });
+
+    it('renders "(Not paid by taxpayer)" without "¥0 attributed" when payment attribution is none', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'business', amount: 5_000_000 }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        nhiPaymentAttribution: 'none',
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '40to64',
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('(Not paid by taxpayer)');
+      expect(container.textContent).not.toContain('¥0 attributed');
+    });
+
+    it('shows household info when taxpayer is not the NHI member (e.g. taxpayer on EHI, 1 dependent on NHI)', () => {
+      const inputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 's1', type: 'salary', amount: 7_000_000, frequency: 'annual' }],
+        incomeYear: 2026,
+        ageRange: 'age40to59',
+        region: 'Tokyo-Setagaya',
+        healthInsuranceProvider: DEFAULT_PROVIDER, // EHI
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        dependents: [
+          makeSpouse({
+            id: 'spouse',
+            ageRange: '40to64',
+            income: {
+              grossEmploymentIncome: 1_000_000,
+              grossPublicPensionIncome: 0,
+              otherNetIncome: 0,
+            },
+            healthInsurance: 'nhi',
+          }),
+        ],
+      };
+      const results = calculateTaxes(inputs);
+
+      // Tooltip on the spouse's NHI portion shows Household info even though insuredCount === 1
+      const { container } = render(
+        <NHIPortionTooltip portion="medical" results={results} inputs={inputs} />,
+      );
+      expect(container.textContent).toContain('Household: 1 insured member(s)');
+
+      // Calculation base tooltip shows taxpayer as non-insured deemed head
+      const { container: baseContainer } = render(
+        <NHICalculationBaseTooltip results={results} inputs={inputs} />,
+      );
+      expect(baseContainer.textContent).toContain('Taxpayer (Head)');
+      expect(baseContainer.textContent).toContain('Not NHI');
+      expect(baseContainer.textContent).toContain('Spouse');
     });
 
     it('reproduces blended reduction tiers when a spouse earning ¥600,000 counts as a salary earner in FY2025 but not FY2026', () => {

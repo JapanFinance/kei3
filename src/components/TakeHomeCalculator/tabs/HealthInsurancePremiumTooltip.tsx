@@ -113,7 +113,7 @@ const renderPerCapitaFormula = (calc: NationalHealthInsurancePortion) => {
         )}
         {formatJPY(calc.perCapitaFull)}
         {reductionFactor}
-        {` × 50% × ${calc.preschoolCount} preschool`}
+        {` × 50% × ${calc.preschoolCount} preschooler${calc.preschoolCount > 1 ? 's' : ''}`}
         {' = '}
         {formatJPY(calc.perCapita)}
       </>
@@ -191,7 +191,7 @@ const PortionBreakdown: React.FC<{
       = <strong>{formatJPY(premium)}</strong>
       {isNotPaidByTaxpayer && (
         <Typography component="span" variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
-          (Not paid by taxpayer — ¥0 attributed)
+          (Not paid by taxpayer)
         </Typography>
       )}
       {calc.isCapped && (
@@ -243,6 +243,14 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     results.nhiHousehold?.reductionRatios.currFY ??
     results.nhiReductionRatios?.currFY ??
     getNHIPremiumReductionRatioForMonth(reductionIncome, year, 3);
+
+  const isTaxpayerOnlyNHIMember =
+    results.nhiHousehold?.taxpayerMember.isNHIInsured && results.nhiHousehold.insuredCount === 1;
+
+  const showHouseholdInfo =
+    results.nhiHousehold !== undefined &&
+    results.nhiHousehold.insuredCount > 0 &&
+    !isTaxpayerOnlyNHIMember;
 
   if (!currFYData) {
     return (
@@ -344,7 +352,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
           const salaryEarnersCount = results.nhiHousehold?.salaryEarnersCounts.currFY ?? 1;
           const earnerAllowance =
             thresholds.perAdditionalSalaryEarner * Math.max(0, salaryEarnersCount - 1);
-          const isHousehold = insuredCount > 1 || salaryEarnersCount > 1;
+          const isHousehold = showHouseholdInfo || insuredCount > 1 || salaryEarnersCount > 1;
           const labelPrefix = isHousehold
             ? `Household (${insuredCount} insured, ${salaryEarnersCount} earner(s))`
             : 'Single-person';
@@ -367,17 +375,18 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
     </Box>
   );
 
-  const householdInfo = results.nhiHousehold && results.nhiHousehold.insuredCount > 1 && (
+  const household = results.nhiHousehold;
+  const householdInfo = showHouseholdInfo && household && (
     <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary', mb: 0.5 }}>
-      Household: {results.nhiHousehold.insuredCount} insured member(s)
+      Household: {household.insuredCount} insured member(s)
       {portion !== 'childSupport' &&
         portion !== 'longTermCare' &&
-        results.nhiHousehold.preschoolCount > 0 &&
-        ` (${results.nhiHousehold.preschoolCount} preschool with 50% discount)`}
+        household.preschoolCount > 0 &&
+        ` (${household.preschoolCount} preschooler${household.preschoolCount > 1 ? 's' : ''} with 50% discount)`}
       {portion === 'childSupport' &&
-        results.nhiHousehold.childSupportExemptCount > 0 &&
-        ` (${results.nhiHousehold.childSupportExemptCount} under 19 exempt)`}
-      {portion === 'longTermCare' && ` (${results.nhiHousehold.ltcInsuredCount} aged 40–64)`}
+        household.childSupportExemptCount > 0 &&
+        ` (${household.childSupportExemptCount} under 19 exempt)`}
+      {portion === 'longTermCare' && ` (${household.ltcInsuredCount} aged 40–64)`}
     </Typography>
   );
 
@@ -449,7 +458,7 @@ export const NHIPortionTooltip: React.FC<NHIPortionTooltipProps> = ({
                 variant="caption"
                 sx={{ color: 'text.secondary', display: 'block' }}
               >
-                (Not paid by taxpayer — ¥0 attributed)
+                (Not paid by taxpayer)
               </Typography>
             )}
           </Typography>

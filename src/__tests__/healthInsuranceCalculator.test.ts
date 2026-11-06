@@ -1721,7 +1721,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
         ageRange: 'under40',
-        healthInsurance: 'social',
+        healthInsurance: 'non_nhi',
       });
       const household = composeNHIHousehold({
         taxpayer: {
