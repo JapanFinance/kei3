@@ -59,7 +59,7 @@ interface DependentFormProps {
   /** Income year for the net-income and deduction preview calculations. */
   incomeYear: number;
   /** Whether the taxpayer is enrolled in National Health Insurance */
-  isTaxpayerNHI?: boolean | undefined;
+  isTaxpayerNHI: boolean;
   /** Taxpayer's current health insurance provider */
   taxpayerHealthInsuranceProvider?: HealthInsuranceProviderId | undefined;
 }
@@ -72,7 +72,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
   onSave,
   onCancel,
   incomeYear,
-  isTaxpayerNHI = false,
+  isTaxpayerNHI,
   taxpayerHealthInsuranceProvider,
 }) => {
   const isEditing = dependent !== null;

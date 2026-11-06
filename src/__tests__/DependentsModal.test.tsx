@@ -18,7 +18,12 @@ describe('SpouseSection', () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     const { rerender } = render(
-      <SpouseSection spouse={null} onChange={onChange} incomeYear={INCOME_YEAR} />,
+      <SpouseSection
+        spouse={null}
+        onChange={onChange}
+        incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
+      />,
     );
 
     const includeSwitch = screen.getByRole('switch', { name: 'Include spouse?' });
@@ -42,12 +47,20 @@ describe('SpouseSection', () => {
         spouse={makeSpouse({ id: 'ext-spouse' })}
         onChange={onChange}
         incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
       />,
     );
     expect(screen.getByRole('switch', { name: 'Include spouse?' })).toBeChecked();
     expect(screen.getByText('Income Information')).toBeInTheDocument();
 
-    rerender(<SpouseSection spouse={null} onChange={onChange} incomeYear={INCOME_YEAR} />);
+    rerender(
+      <SpouseSection
+        spouse={null}
+        onChange={onChange}
+        incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
+      />,
+    );
     expect(screen.getByRole('switch', { name: 'Include spouse?' })).not.toBeChecked();
     expect(screen.queryByText('Income Information')).not.toBeInTheDocument();
   });
@@ -58,6 +71,7 @@ describe('SpouseSection', () => {
         spouse={makeSpouse({ isClaimedAsDependent: false, isSameHousehold: false })}
         onChange={vi.fn()}
         incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
       />,
     );
 
@@ -73,6 +87,7 @@ describe('SpouseSection', () => {
         spouse={makeSpouse({ ageRange: '75plus', isSameHousehold: true })}
         onChange={vi.fn()}
         incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
       />,
     );
 

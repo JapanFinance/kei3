@@ -53,7 +53,7 @@ interface SpouseSectionProps {
   /** Income year for the net-income preview calculations. */
   incomeYear: number;
   /** Whether the taxpayer is enrolled in National Health Insurance */
-  isTaxpayerNHI?: boolean | undefined;
+  isTaxpayerNHI: boolean;
   /** Taxpayer's current health insurance provider */
   taxpayerHealthInsuranceProvider?: HealthInsuranceProviderId | undefined;
 }
@@ -62,7 +62,7 @@ export default function SpouseSection({
   spouse,
   onChange,
   incomeYear,
-  isTaxpayerNHI = false,
+  isTaxpayerNHI,
   taxpayerHealthInsuranceProvider,
 }: SpouseSectionProps) {
   const hasSpouse = spouse !== null;

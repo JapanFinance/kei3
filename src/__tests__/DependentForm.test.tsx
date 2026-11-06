@@ -27,6 +27,7 @@ describe('DependentForm public pension income', () => {
         onSave={vi.fn()}
         onCancel={vi.fn()}
         incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
       />,
     );
 
@@ -58,6 +59,7 @@ describe('DependentForm public pension income', () => {
         onSave={vi.fn()}
         onCancel={vi.fn()}
         incomeYear={INCOME_YEAR}
+        isTaxpayerNHI={false}
       />,
     );
 
