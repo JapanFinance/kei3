@@ -37,9 +37,15 @@ interface NationalPensionTooltipProps {
   exemption?:
     | { requested: boolean; eligible: boolean; applied: boolean; incomeThreshold: number }
     | undefined;
+  /** When true, explains deducting family members' contributions under 所得税法第74条第2項第1号. */
+  familyDeduction?: boolean | undefined;
 }
 
-const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year, exemption }) => {
+const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({
+  year,
+  exemption,
+  familyDeduction,
+}) => {
   const months = Array.from({ length: 12 }, (_, month) => ({
     month,
     contribution: getNationalPensionMonthlyContribution(year, month),
@@ -116,12 +122,29 @@ const NationalPensionTooltip: React.FC<NationalPensionTooltipProps> = ({ year, e
               `Fully exempted periods accrue one half of the normal basic pension amount.`}
         </Typography>
       )}
+      {familyDeduction && (
+        <Typography variant="body2" sx={{ mt: 1, fontSize: '0.85rem' }}>
+          Contributions actually paid on behalf of a spouse or relative who shares living expenses
+          (生計を一にする配偶者その他の親族) are 100% deductible under the Social Insurance
+          Deduction (社会保険料控除, Income Tax Act Art. 74). Living at the same registered address
+          is not required (e.g. a university student living apart qualifies). Attach the deduction
+          certificate (社会保険料（国民年金保険料）控除証明書) at year-end adjustment or tax filing.
+        </Typography>
+      )}
       <SourceLinks
         sources={[
           {
             href: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html#cms01',
             label: '国民年金保険料の金額 (Japan Pension Service)',
           },
+          ...(familyDeduction
+            ? [
+                {
+                  href: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1130.htm',
+                  label: 'No.1130 社会保険料控除 (National Tax Agency)',
+                },
+              ]
+            : []),
           ...(exemption
             ? [
                 {

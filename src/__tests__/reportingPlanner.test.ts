@@ -1000,7 +1000,7 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
       dependents: [
         makeSpouse({
           id: 'nhi-spouse',
-          ageRange: 'under40',
+          ageRange: '20to39',
           healthInsurance: 'nhi',
         }),
       ],

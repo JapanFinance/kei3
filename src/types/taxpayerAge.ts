@@ -1,6 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { NATIONAL_PENSION_AGE_BAND } from '../data/nationalPensionContribution';
 import { PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND } from '../data/publicPensionDeduction';
 import {
   assertAgeRangesDoNotCrossBands,
@@ -72,7 +73,7 @@ const TAXPAYER_AGE_RANGE_BOUNDS: Record<TaxpayerAgeRange, AgeRange> = {
 export const STATUTORY_AGE_BANDS = {
   longTermCareCategory2: { minAgeInclusive: 40, maxAgeExclusive: 65 },
   longTermCareCategory1: { minAgeInclusive: 65 },
-  nationalPension: { minAgeInclusive: 20, maxAgeExclusive: 60 },
+  nationalPension: NATIONAL_PENSION_AGE_BAND,
   employeesPension: { maxAgeExclusive: 70 },
   latterStageElderly: { minAgeInclusive: 75 },
   nhiEligible: { maxAgeExclusive: 75 },
