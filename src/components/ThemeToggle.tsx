@@ -19,7 +19,6 @@ const ThemeToggle = () => {
       color="inherit"
       size={isMobile ? 'small' : 'medium'}
       sx={{
-        ml: 1,
         '&:hover': {
           backgroundColor: 'action.hover',
         },
