@@ -43,7 +43,6 @@ import type {
 } from '../../../types/dependents';
 import { RELATIONSHIPS, DEPENDENT_AGE_RANGES, DEDUCTION_TYPES } from '../../../types/dependents';
 import {
-  DEFAULT_PROVIDER,
   NATIONAL_HEALTH_INSURANCE_ID,
   type HealthInsuranceProviderId,
   type NHIPaymentAttribution,
@@ -76,17 +75,17 @@ interface DependentsModalProps {
   /** Income year used for the dependent-deduction eligibility/threshold lookup. */
   incomeYear: number;
   /** Taxpayer's current health insurance provider */
-  healthInsuranceProvider?: HealthInsuranceProviderId | undefined;
+  healthInsuranceProvider: HealthInsuranceProviderId;
   /** Taxpayer's age range */
-  taxpayerAgeRange?: TaxpayerAgeRange | undefined;
+  taxpayerAgeRange: TaxpayerAgeRange;
   /** NHI payment attribution setting */
   nhiPaymentAttribution?: NHIPaymentAttribution | undefined;
-  onNHIPaymentAttributionChange?: ((attribution: NHIPaymentAttribution) => void) | undefined;
+  onNHIPaymentAttributionChange: (attribution: NHIPaymentAttribution) => void;
   /** Taxpayer's selected region on the main form (used as fallback before Tokyo) */
-  region?: string | undefined;
+  region: string;
   /** Explicit household NHI municipality/region override */
   nhiHouseholdRegion?: string | undefined;
-  onNHIHouseholdRegionChange?: ((region: string) => void) | undefined;
+  onNHIHouseholdRegionChange: (region: string) => void;
 }
 
 /**
@@ -114,8 +113,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
   const [isAddingNew, setIsAddingNew] = useState(false);
 
   const effectiveNHIRegion = resolveEffectiveNHIRegion(
-    healthInsuranceProvider ?? DEFAULT_PROVIDER,
-    region ?? 'Tokyo',
+    healthInsuranceProvider,
+    region,
     nhiHouseholdRegion,
   );
 
@@ -125,7 +124,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
 
   const isTaxpayerNHI =
     healthInsuranceProvider === NATIONAL_HEALTH_INSURANCE_ID &&
-    (taxpayerAgeRange === undefined || isNationalHealthInsuranceEligible(taxpayerAgeRange));
+    isNationalHealthInsuranceEligible(taxpayerAgeRange);
 
   const hasNHIMembers =
     isTaxpayerNHI ||
@@ -249,9 +248,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
           <Chip key="insurance" label="NHI" size="small" color="primary" variant="outlined" />,
         );
       } else {
-        chips.push(
-          <Chip key="insurance" label="Other Insurance" size="small" variant="outlined" />,
-        );
+        chips.push(<Chip key="insurance" label="Not NHI" size="small" variant="outlined" />);
       }
     }
 
@@ -489,7 +486,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                   <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
                     {isTaxpayerNHI
                       ? 'NHI is assessed at the household level on the combined income of all enrolled members.'
-                      : "Member(s) not covered by Employees' Health Insurance are enrolled in NHI."}
+                      : "Member(s) under 75 not covered by Employees' Health Insurance are enrolled in NHI."}
                   </Typography>
 
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -502,7 +499,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         label="Payment Attribution & Deduction"
                         value={nhiPaymentAttribution}
                         onChange={e =>
-                          onNHIPaymentAttributionChange?.(e.target.value as NHIPaymentAttribution)
+                          onNHIPaymentAttributionChange(e.target.value as NHIPaymentAttribution)
                         }
                       >
                         <MenuItem value="fullHousehold">Taxpayer pays full household NHI</MenuItem>
@@ -523,7 +520,7 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                           labelId="nhi-modal-region-label"
                           label="Household NHI Municipality / Region"
                           value={effectiveNHIRegion}
-                          onChange={e => onNHIHouseholdRegionChange?.(e.target.value)}
+                          onChange={e => onNHIHouseholdRegionChange(e.target.value)}
                         >
                           {NATIONAL_HEALTH_INSURANCE_REGION_OPTIONS.map(opt => (
                             <MenuItem key={opt.id} value={opt.id}>

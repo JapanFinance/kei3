@@ -8,10 +8,29 @@ import { describe, expect, it, vi } from 'vitest';
 import { DependentsModal } from '../components/TakeHomeCalculator/Dependents/DependentsModal';
 import SpouseSection from '../components/TakeHomeCalculator/Dependents/SpouseSection';
 import type { Dependent } from '../types/dependents';
-import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
+import {
+  DEFAULT_PROVIDER,
+  LATTER_STAGE_ELDERLY_ID,
+  NATIONAL_HEALTH_INSURANCE_ID,
+} from '../types/healthInsurance';
 import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 const INCOME_YEAR = 2026;
+
+const baseModalProps = {
+  open: true,
+  onClose: vi.fn(),
+  dependents: [] as Dependent[],
+  onDependentsChange: vi.fn(),
+  taxpayerNetIncome: 4_000_000,
+  incomeYear: INCOME_YEAR,
+  healthInsuranceProvider: DEFAULT_PROVIDER,
+  taxpayerAgeRange: 'age20to39' as const,
+  nhiPaymentAttribution: 'fullHousehold' as const,
+  onNHIPaymentAttributionChange: vi.fn(),
+  region: 'Tokyo',
+  onNHIHouseholdRegionChange: vi.fn(),
+};
 
 describe('SpouseSection', () => {
   it('toggles spouse creation and removal and stays synchronized with controlled spouse prop updates', async () => {
@@ -116,13 +135,9 @@ describe('DependentsModal', () => {
 
     const { rerender } = render(
       <DependentsModal
-        open
-        onClose={vi.fn()}
+        {...baseModalProps}
         dependents={[initialSpouse, initialChild]}
         onDependentsChange={onDependentsChange}
-        taxpayerNetIncome={4_000_000}
-        incomeYear={INCOME_YEAR}
-        healthInsuranceProvider={DEFAULT_PROVIDER}
       />,
     );
 
@@ -136,13 +151,9 @@ describe('DependentsModal', () => {
     const afterSpouseHead: Dependent[] = onDependentsChange.mock.lastCall![0];
     rerender(
       <DependentsModal
-        open
-        onClose={vi.fn()}
+        {...baseModalProps}
         dependents={afterSpouseHead}
         onDependentsChange={onDependentsChange}
-        taxpayerNetIncome={4_000_000}
-        incomeYear={INCOME_YEAR}
-        healthInsuranceProvider={DEFAULT_PROVIDER}
       />,
     );
 
@@ -160,13 +171,9 @@ describe('DependentsModal', () => {
 
     rerender(
       <DependentsModal
-        open
-        onClose={vi.fn()}
+        {...baseModalProps}
         dependents={afterAddHead}
         onDependentsChange={onDependentsChange}
-        taxpayerNetIncome={4_000_000}
-        incomeYear={INCOME_YEAR}
-        healthInsuranceProvider={DEFAULT_PROVIDER}
       />,
     );
 
@@ -190,13 +197,8 @@ describe('DependentsModal', () => {
     // EHI taxpayer in Osaka with auto spouse -> spouse resolves to EHI, so no Household NHI card
     const { rerender } = render(
       <DependentsModal
-        open
-        onClose={vi.fn()}
+        {...baseModalProps}
         dependents={[makeSpouse({ healthInsurance: 'auto' })]}
-        onDependentsChange={vi.fn()}
-        taxpayerNetIncome={4_000_000}
-        incomeYear={INCOME_YEAR}
-        healthInsuranceProvider={DEFAULT_PROVIDER}
         region="Osaka"
         onNHIPaymentAttributionChange={onAttributionChange}
         onNHIHouseholdRegionChange={onRegionChange}
@@ -207,13 +209,8 @@ describe('DependentsModal', () => {
     // Spouse explicitly enrolled in NHI -> card renders, region defaults to Osaka (not Tokyo!)
     rerender(
       <DependentsModal
-        open
-        onClose={vi.fn()}
+        {...baseModalProps}
         dependents={[makeSpouse({ healthInsurance: 'nhi' })]}
-        onDependentsChange={vi.fn()}
-        taxpayerNetIncome={4_000_000}
-        incomeYear={INCOME_YEAR}
-        healthInsuranceProvider={DEFAULT_PROVIDER}
         region="Osaka"
         onNHIPaymentAttributionChange={onAttributionChange}
         onNHIHouseholdRegionChange={onRegionChange}
@@ -221,6 +218,11 @@ describe('DependentsModal', () => {
     );
 
     expect(screen.getByText('Household National Health Insurance')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Member(s) under 75 not covered by Employees' Health Insurance are enrolled in NHI.",
+      ),
+    ).toBeInTheDocument();
 
     const regionSelect = screen.getByRole('combobox', {
       name: 'Household NHI Municipality / Region',
@@ -242,20 +244,21 @@ describe('DependentsModal', () => {
     );
     expect(onAttributionChange).toHaveBeenCalledWith('none');
 
-    // When taxpayer themselves is on NHI, the secondary region dropdown is hidden
+    // When taxpayer themselves is on NHI, the secondary region dropdown is hidden and household text reflects full assessment
     rerender(
       <DependentsModal
-        open
-        onClose={vi.fn()}
+        {...baseModalProps}
         dependents={[makeSpouse({ healthInsurance: 'auto' })]}
-        onDependentsChange={vi.fn()}
-        taxpayerNetIncome={4_000_000}
-        incomeYear={INCOME_YEAR}
         healthInsuranceProvider={NATIONAL_HEALTH_INSURANCE_ID}
         region="Osaka"
       />,
     );
     expect(screen.getByText('Household National Health Insurance')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'NHI is assessed at the household level on the combined income of all enrolled members.',
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('combobox', { name: 'Household NHI Municipality / Region' }),
     ).not.toBeInTheDocument();
@@ -264,8 +267,7 @@ describe('DependentsModal', () => {
   it('renders status chips accurately for household and non-household dependents', () => {
     render(
       <DependentsModal
-        open
-        onClose={vi.fn()}
+        {...baseModalProps}
         dependents={[
           makeDependent({
             id: 'd1',
@@ -284,11 +286,19 @@ describe('DependentsModal', () => {
             isSameHousehold: true,
             healthInsurance: 'nhi',
           }),
+          makeDependent({
+            id: 'd4',
+            ageRange: '23to39',
+            isSameHousehold: true,
+            healthInsurance: 'non_nhi',
+          }),
+          makeDependent({
+            id: 'd5',
+            ageRange: '6to15',
+            isSameHousehold: true,
+            healthInsurance: 'auto',
+          }),
         ]}
-        onDependentsChange={vi.fn()}
-        taxpayerNetIncome={4_000_000}
-        incomeYear={INCOME_YEAR}
-        healthInsuranceProvider={DEFAULT_PROVIDER}
       />,
     );
 
@@ -297,5 +307,37 @@ describe('DependentsModal', () => {
     expect(screen.getByText('75+ Elderly Medical')).toBeInTheDocument();
     expect(screen.getByText('Household Head')).toBeInTheDocument();
     expect(screen.getByText('NHI')).toBeInTheDocument();
+    // d4 (non_nhi) and d5 (auto with EHI taxpayer) both render "Not NHI"
+    const notNHIChips = screen.getAllByText('Not NHI');
+    expect(notNHIChips).toHaveLength(2);
+    expect(screen.queryByText('Other Insurance')).not.toBeInTheDocument();
+  });
+
+  it('supports household NHI settings when taxpayer is 75+ (Latter-Stage Elderly) and dependent is on NHI', () => {
+    render(
+      <DependentsModal
+        {...baseModalProps}
+        taxpayerAgeRange="age75plus"
+        healthInsuranceProvider={LATTER_STAGE_ELDERLY_ID}
+        dependents={[
+          makeDependent({
+            id: 'd-young',
+            ageRange: '23to39',
+            isSameHousehold: true,
+            healthInsurance: 'nhi',
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Household National Health Insurance')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Member(s) under 75 not covered by Employees' Health Insurance are enrolled in NHI.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: 'Household NHI Municipality / Region' }),
+    ).toBeInTheDocument();
   });
 });
