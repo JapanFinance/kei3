@@ -470,7 +470,7 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
       <IncomeDetailsModal
         open={true}
         onClose={() => {}}
-        streams={[]}
+        streams={[{ id: 's1', type: 'salary', amount: 5_000_000, frequency: 'annual' }]}
         onStreamsChange={handleStreamsChange}
       />,
     );
@@ -507,6 +507,12 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     const user = userEvent.setup();
     const streams: IncomeStream[] = [
       {
+        id: 's1',
+        type: 'salary',
+        amount: 5_000_000,
+        frequency: 'annual',
+      },
+      {
         id: 'commute-1',
         type: 'commutingAllowance',
         amount: 20000,
@@ -528,6 +534,77 @@ describe('IncomeDetailsModal - Commuting Allowance', () => {
     const option = screen.getByRole('menuitem', { name: /commuting allowance/i });
     expect(option).toHaveAttribute('aria-disabled', 'true');
     expect(option).toHaveTextContent(/Already added/);
+  });
+
+  it('disables Commuting Allowance option when no employment income exists', async () => {
+    const user = userEvent.setup();
+    const streams: IncomeStream[] = [
+      {
+        id: 'b1',
+        type: 'business',
+        amount: 3_000_000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={() => {}}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    const option = screen.getByRole('menuitem', { name: /commuting allowance/i });
+    expect(option).toHaveAttribute('aria-disabled', 'true');
+    expect(option).toHaveTextContent(/Requires salary, bonus, or stock compensation/);
+  });
+
+  it('removes Commuting Allowance when deleting the last employment income stream', async () => {
+    const user = userEvent.setup();
+    const handleStreamsChange = vi.fn();
+    const streams: IncomeStream[] = [
+      {
+        id: 's1',
+        type: 'salary',
+        amount: 5_000_000,
+        frequency: 'annual',
+      },
+      {
+        id: 'c1',
+        type: 'commutingAllowance',
+        amount: 20_000,
+        frequency: 'monthly',
+      },
+      {
+        id: 'b1',
+        type: 'business',
+        amount: 3_000_000,
+      },
+    ];
+
+    render(
+      <IncomeDetailsModal
+        open={true}
+        onClose={() => {}}
+        streams={streams}
+        onStreamsChange={handleStreamsChange}
+      />,
+    );
+
+    // Delete the salary stream (the only employment stream)
+    const deleteButtons = screen.getAllByRole('button', { name: /delete income/i });
+    await user.click(deleteButtons[0]!);
+
+    // Should remove both salary and commuting allowance, leaving only business
+    expect(handleStreamsChange).toHaveBeenCalledWith([
+      {
+        id: 'b1',
+        type: 'business',
+        amount: 3_000_000,
+      },
+    ]);
   });
 });
 
