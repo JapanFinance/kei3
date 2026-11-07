@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import { useTheme, alpha } from '@mui/material/styles';
 import type { SxProps, Theme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import React from 'react';
 
@@ -28,6 +29,7 @@ const iconMap: Record<string, React.ReactNode> = {
 
 interface ResultRowProps {
   label: string | React.ReactNode;
+  sublabel?: React.ReactNode;
   value: string | React.ReactNode;
   type?:
     | 'default'
@@ -59,6 +61,7 @@ interface ResultRowProps {
 
 export const ResultRow: React.FC<ResultRowProps> = ({
   label,
+  sublabel,
   value,
   type = 'default',
   valuePrefix,
@@ -204,7 +207,7 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       {label}
     </>
   );
-  const labelContent = (
+  const labelRow = (
     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}>
       {disclosure ? (
         <ButtonBase
@@ -243,6 +246,27 @@ export const ResultRow: React.FC<ResultRowProps> = ({
       )}
       {labelSuffix}
     </Box>
+  );
+
+  const labelContent = sublabel ? (
+    <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+      {labelRow}
+      <Typography
+        variant="caption"
+        sx={{
+          fontSize: '0.72rem',
+          color: 'text.secondary',
+          fontStyle: 'italic',
+          lineHeight: 1.15,
+          mt: 0.1,
+          pl: 1,
+        }}
+      >
+        {sublabel}
+      </Typography>
+    </Box>
+  ) : (
+    labelRow
   );
 
   return (

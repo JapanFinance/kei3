@@ -210,8 +210,13 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
   const rawMonthlyRemuneration = annualRemuneration / 12;
 
   // The grades the premiums were charged on, from the lookups the calculation used.
-  const healthSMR = findSMRBracket(rawMonthlyRemuneration).smrAmount;
-  const pensionSMR = findPensionBracket(rawMonthlyRemuneration).smrAmount;
+  const healthBracket = findSMRBracket(rawMonthlyRemuneration);
+  const healthSMR = healthBracket.smrAmount;
+  const healthGrade = healthBracket.grade;
+
+  const pensionBracket = findPensionBracket(rawMonthlyRemuneration);
+  const pensionSMR = pensionBracket.smrAmount;
+  const pensionGrade = pensionBracket.grade;
 
   return (
     <Box>
@@ -282,48 +287,53 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <ResultRow
             label="Monthly Remuneration"
             labelSuffix={
-              <DetailedTooltip title="Monthly Remuneration">
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    Breakdown
-                  </Typography>
-                  <table
-                    style={{
-                      width: '100%',
-                      borderCollapse: 'collapse',
-                      fontSize: '0.9rem',
-                      marginBottom: '8px',
-                    }}
-                  >
-                    <tbody>
-                      <tr>
-                        <td style={{ padding: '2px 0' }}>Base Monthly Salary:</td>
-                        <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
-                          {formatJPY(salaryIncome / 12)}
-                        </td>
-                      </tr>
-                      {monthlyCommutingAllowance > 0 && (
+              monthlyCommutingAllowance > 0 ? (
+                <DetailedTooltip title="Monthly Remuneration">
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Breakdown
+                    </Typography>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: '0.9rem',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '2px 0' }}>Base Monthly Salary:</td>
+                          <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
+                            {formatJPY(salaryIncome / 12)}
+                          </td>
+                        </tr>
                         <tr>
                           <td style={{ padding: '2px 0' }}>Monthly Commuting Allowance:</td>
                           <td style={{ padding: '2px 0', textAlign: 'right', fontWeight: 500 }}>
                             {formatJPY(monthlyCommutingAllowance)}
                           </td>
                         </tr>
-                      )}
-                      <tr style={{ borderTop: '1px solid #ddd' }}>
-                        <td style={{ padding: '4px 0', fontWeight: 600 }}>Total:</td>
-                        <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
-                          {formatJPY(rawMonthlyRemuneration)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Monthly remuneration includes base salary and various allowances (e.g. commuting
-                    allowance, housing allowance).
-                  </Typography>
-                </Box>
-              </DetailedTooltip>
+                        <tr style={{ borderTop: '1px solid #ddd' }}>
+                          <td style={{ padding: '4px 0', fontWeight: 600 }}>Total:</td>
+                          <td style={{ padding: '4px 0', textAlign: 'right', fontWeight: 600 }}>
+                            {formatJPY(rawMonthlyRemuneration)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Monthly remuneration includes base salary plus regular allowances (e.g.
+                      commuting allowance, housing allowance).
+                    </Typography>
+                  </Box>
+                </DetailedTooltip>
+              ) : (
+                <SimpleTooltip>
+                  Monthly remuneration includes base salary plus regular allowances (such as
+                  commuting or housing allowance). Enter allowances in the advanced income mode.
+                </SimpleTooltip>
+              )
             }
             value={formatJPY(rawMonthlyRemuneration)}
             type="default"
@@ -520,6 +530,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           <>
             <ResultRow
               label="Salary Premium"
+              sublabel={`(SMR Grade ${healthGrade})`}
               labelSuffix={
                 <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
                   <DetailedTooltip title="Health Insurance Premium">
@@ -728,6 +739,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
         {!isIncomeBasedProvider && (
           <ResultRow
             label="Monthly Contribution"
+            sublabel={employeesPensionDue ? `(SMR Grade ${pensionGrade})` : undefined}
             labelSuffix={
               employeesPensionDue ? (
                 <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
@@ -816,7 +828,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {/* Employment Insurance */}
       {results.hasEmploymentIncome && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
+          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Employment Insurance
             <DetailedTooltip title="Employment Insurance" icon={SIMPLE_TOOLTIP_ICON}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
