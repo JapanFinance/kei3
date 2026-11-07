@@ -436,7 +436,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 iDeCo / DC / Mutual Aid Deduction
-                <DetailedTooltip title="小規模企業共済等掛金控除">
+                <DetailedTooltip title="小規模企業共済等掛金控除" icon={SIMPLE_TOOLTIP_ICON}>
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Small Enterprise Mutual Aid Contribution Deduction (小規模企業共済等掛金控除)
@@ -566,7 +566,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 Taxable Income
-                <DetailedTooltip title="Taxable Income for National Income Tax">
+                <DetailedTooltip
+                  title="Taxable Income for National Income Tax"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                >
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       Taxable Income Calculation
@@ -811,8 +814,8 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
           <ResultRow
             label={
               <span>
-                Reconstruction Surtax
-                <DetailedTooltip title="Special Reconstruction Surtax">
+                Reconstruction Surtax (2.1%)
+                <DetailedTooltip title="Special Reconstruction Surtax" icon={SIMPLE_TOOLTIP_ICON}>
                   <Box>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                       復興特別所得税
@@ -1058,7 +1061,10 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
                 label={
                   <span>
                     Taxable Income
-                    <DetailedTooltip title="Taxable Income for Residence Tax">
+                    <DetailedTooltip
+                      title="Taxable Income for Residence Tax"
+                      icon={SIMPLE_TOOLTIP_ICON}
+                    >
                       <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
                           Taxable Income Calculation

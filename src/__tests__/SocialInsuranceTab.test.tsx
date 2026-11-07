@@ -345,7 +345,7 @@ describe('SocialInsuranceTab', () => {
     expect(screen.queryByTitle('Pension Contribution')).not.toBeInTheDocument();
   });
 
-  it('hides Monthly Commuting Allowance row when 0', () => {
+  it('shows simple tooltip and omits breakdown table when commuting allowance is 0', () => {
     const noCommutingInputs = {
       ...mockInputs,
       incomeStreams: [{ id: '1', type: 'salary', amount: 500000, frequency: 'monthly' }],
@@ -358,17 +358,26 @@ describe('SocialInsuranceTab', () => {
       />,
     );
 
-    // Breakdown should be present
-    expect(screen.getByText('Breakdown')).toBeInTheDocument();
+    // Simple tooltip explanation should be present
+    expect(
+      screen.getByText(
+        /Monthly remuneration is calculated as annual salary \/ 12 and includes regular allowances/,
+      ),
+    ).toBeInTheDocument();
 
-    // Base Salary should be present
-    expect(screen.getByText('Base Monthly Salary:')).toBeInTheDocument();
-
-    // Commuting Allowance row should NOT be present
+    // Breakdown table should NOT be present
+    expect(screen.queryByText('Breakdown')).not.toBeInTheDocument();
+    expect(screen.queryByText('Base Monthly Salary:')).not.toBeInTheDocument();
     expect(screen.queryByText('Monthly Commuting Allowance:')).not.toBeInTheDocument();
+  });
 
-    // Total should still be present
-    expect(screen.getByText('Total:')).toBeInTheDocument();
+  it('displays SMR Grade sublabel in Health Insurance and Pension rows', () => {
+    render(<SocialInsuranceTab inputs={mockInputs} results={mockResults} />);
+
+    expect(screen.getAllByText('Salary Premium').length).toBeGreaterThan(0);
+    expect(screen.getByText('(SMR Grade 31)')).toBeInTheDocument();
+    expect(screen.getByText('Monthly Contribution')).toBeInTheDocument();
+    expect(screen.getByText('(SMR Grade 28)')).toBeInTheDocument();
   });
 });
 

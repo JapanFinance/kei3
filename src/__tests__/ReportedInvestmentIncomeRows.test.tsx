@@ -733,7 +733,7 @@ describe('TaxesTab with the foreign tax credit', () => {
     render(<TaxesTab results={withForeignTax} inputs={inputs} />);
 
     expectInDocumentOrder([
-      screen.getByText('Reconstruction Surtax'),
+      screen.getByText('Reconstruction Surtax (2.1%)'),
       screen.getByText('Foreign Tax Credit'),
       screen.getByText('Foreign Tax Paid'),
       screen.getByText('Total Income Tax'),
