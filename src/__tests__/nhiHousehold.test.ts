@@ -186,7 +186,7 @@ describe('composeNHIHousehold', () => {
     // Taxpayer is on Kyokai Kenpo (EHI), but spouse is enrolled in NHI
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: {
         grossEmploymentIncome: 1_000_000,
         grossPublicPensionIncome: 0,
@@ -223,7 +223,7 @@ describe('composeNHIHousehold', () => {
   it('models 75+ taxpayer (Latter-Stage Elderly) as deemed head for NHI spouse', () => {
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: {
         grossEmploymentIncome: 1_000_000,
         grossPublicPensionIncome: 0,
@@ -325,7 +325,7 @@ describe('composeNHIHousehold', () => {
     const nonCohabitingChild: Dependent = makeDependent({
       id: 'child-away',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
       isSameHousehold: false,
       healthInsurance: 'nhi',
     });
@@ -369,7 +369,7 @@ describe('composeNHIHousehold', () => {
     const universityChild: Dependent = makeDependent({
       id: 'child-college',
       relationship: 'child',
-      ageRange: '19to22',
+      ageRange: '20to22',
     });
 
     const composition = composeNHIHousehold({
@@ -451,7 +451,7 @@ describe('composeNHIHousehold', () => {
   it('does not apply elderly pension special deduction to members under age 65', () => {
     const spouseUnder65: Dependent = makeSpouse({
       id: 'spouse-under65',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: {
         grossEmploymentIncome: 0,
         // Under 65: gross 1.5M - 650k deduction = 850,000 net pension
@@ -490,7 +490,7 @@ describe('composeNHIHousehold', () => {
 
     const earnerSpouse: Dependent = makeSpouse({
       id: 'earner-spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: {
         grossEmploymentIncome: fy2026Threshold + 10_000, // 660,000 > both FY2025 (550k) and FY2026 (650k)
         grossPublicPensionIncome: 0,
@@ -605,7 +605,7 @@ describe('composeNHIHousehold', () => {
 
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: {
         grossEmploymentIncome: 0,
         grossPublicPensionIncome: 0,
@@ -646,7 +646,7 @@ describe('composeNHIHousehold', () => {
   it('handles household with zero NHI-insured members safely', () => {
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
       healthInsurance: 'non_nhi',
     });
@@ -696,7 +696,7 @@ describe('composeNHIHousehold', () => {
   it('passes through nhiHouseholdRegion to effectiveRegion when taxpayer is on EHI', () => {
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       healthInsurance: 'nhi',
     });
 

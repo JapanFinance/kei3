@@ -5,6 +5,7 @@
  * Types for dependent-related deductions in Japanese tax system
  */
 
+import { NATIONAL_PENSION_AGE_BAND } from '../data/nationalPensionContribution';
 import { PUBLIC_PENSION_DEDUCTION_ELDERLY_AGE_BAND } from '../data/publicPensionDeduction';
 import {
   assertAgeRangesDoNotCrossBands,
@@ -55,23 +56,33 @@ export type DependentRelationship = 'spouse' | 'child' | 'parent' | 'other';
 
 /**
  * Age range for spouse
- * - under40: Under 40 years old
- * - 40to64: Age 40-64 (subject to 介護保険第2号)
+ * - under20: Under 20 years old (not yet subject to compulsory National Pension)
+ * - 20to39: Age 20-39 (subject to National Pension Category 1/3)
+ * - 40to59: Age 40-59 (subject to National Pension Category 1/3 and 介護保険第2号)
+ * - 60to64: Age 60-64 (National Pension ends at 60; still subject to 介護保険第2号)
  * - 65to69: Age 65-69 (higher public pension deduction minimum)
  * - 70to74: Age 70-74 (老人控除対象配偶者, higher spouse deduction)
  * - 75plus: 75 years or older (老人控除対象配偶者; moves to 後期高齢者医療制度)
  */
-export type SpouseAgeRange = 'under40' | '40to64' | '65to69' | '70to74' | '75plus';
+export type SpouseAgeRange =
+  | 'under20'
+  | '20to39'
+  | '40to59'
+  | '60to64'
+  | '65to69'
+  | '70to74'
+  | '75plus';
 
 /**
  * Age range for non-spouse dependents
  * - under6: Under 6 years old (未就学児, eligible for 50% NHI per-capita reduction)
  * - 6to15: Age 6-15 (minor, not eligible for income tax dependent deduction)
  * - 16to18: Age 16-18 (eligible for standard dependent deduction)
- * - 19to22: Age 19-22 (eligible for special dependent deduction if income within the eligibility
- *   threshold, or specific relative special deduction above it)
- * - 23to39: Age 23-39 (eligible for standard dependent deduction)
- * - 40to64: Age 40-64 (eligible for standard dependent deduction; subject to 介護保険第2号)
+ * - 19: Age 19 (eligible for 特定扶養控除 / 特定親族特別控除; not yet subject to National Pension)
+ * - 20to22: Age 20-22 (eligible for 特定扶養控除 / 特定親族特別控除; subject to National Pension Category 1)
+ * - 23to39: Age 23-39 (eligible for standard dependent deduction; subject to National Pension Category 1)
+ * - 40to59: Age 40-59 (eligible for standard dependent deduction; subject to National Pension Category 1 and 介護保険第2号)
+ * - 60to64: Age 60-64 (eligible for standard dependent deduction; subject to 介護保険第2号)
  * - 65to69: Age 65-69 (eligible for standard dependent deduction; higher public pension deduction minimum)
  * - 70to74: Age 70-74 (eligible for elderly dependent deduction)
  * - 75plus: 75 years or older (eligible for elderly dependent deduction; moves to 後期高齢者医療制度)
@@ -80,9 +91,11 @@ export type DependentAgeRange =
   | 'under6'
   | '6to15'
   | '16to18'
-  | '19to22'
+  | '19'
+  | '20to22'
   | '23to39'
-  | '40to64'
+  | '40to59'
+  | '60to64'
   | '65to69'
   | '70to74'
   | '75plus';
@@ -92,10 +105,13 @@ const AGE_RANGE_BOUNDS = {
   under6: { minAgeInclusive: 0, maxAgeExclusive: 6 },
   '6to15': { minAgeInclusive: 6, maxAgeExclusive: 16 },
   '16to18': { minAgeInclusive: 16, maxAgeExclusive: 19 },
-  '19to22': { minAgeInclusive: 19, maxAgeExclusive: 23 },
+  '19': { minAgeInclusive: 19, maxAgeExclusive: 20 },
+  '20to22': { minAgeInclusive: 20, maxAgeExclusive: 23 },
   '23to39': { minAgeInclusive: 23, maxAgeExclusive: 40 },
-  '40to64': { minAgeInclusive: 40, maxAgeExclusive: 65 },
-  under40: { minAgeInclusive: 0, maxAgeExclusive: 40 },
+  under20: { minAgeInclusive: 0, maxAgeExclusive: 20 },
+  '20to39': { minAgeInclusive: 20, maxAgeExclusive: 40 },
+  '40to59': { minAgeInclusive: 40, maxAgeExclusive: 60 },
+  '60to64': { minAgeInclusive: 60, maxAgeExclusive: 65 },
   '65to69': { minAgeInclusive: 65, maxAgeExclusive: 70 },
   '70to74': { minAgeInclusive: 70, maxAgeExclusive: 75 },
   '75plus': { minAgeInclusive: 75, maxAgeExclusive: Infinity },
@@ -128,6 +144,8 @@ export const SPOUSE_AGE_BANDS = {
   longTermCareCategory2: { minAgeInclusive: 40, maxAgeExclusive: 65 },
   /** 国民健康保険被保険者適格: ages under 75 */
   nhiEligible: { maxAgeExclusive: 75 },
+  /** 国民年金第1号被保険者適格: ages 20 to 59 (国民年金法第7条第1項第1号) */
+  nationalPension: NATIONAL_PENSION_AGE_BAND,
 } satisfies Record<string, AgeBand>;
 
 /**
@@ -171,6 +189,8 @@ export const DEPENDENT_AGE_BANDS = {
   longTermCareCategory2: { minAgeInclusive: 40, maxAgeExclusive: 65 },
   /** 国民健康保険被保険者適格: ages under 75 */
   nhiEligible: { maxAgeExclusive: 75 },
+  /** 国民年金第1号被保険者適格: ages 20 to 59 (国民年金法第7条第1項第1号) */
+  nationalPension: NATIONAL_PENSION_AGE_BAND,
 } satisfies Record<string, AgeBand>;
 
 /**
@@ -190,6 +210,16 @@ export function dependentAgeCoversBand(
   band: AgeBand,
 ): boolean {
   return ageRangeCoversBand(dependentAgeRangeBounds(ageRange), band);
+}
+
+/**
+ * Whether a spouse or other dependent falls within the compulsory National Pension (国民年金)
+ * enrollment age band (ages 20–59, 国民年金法第7条第1項第1号).
+ */
+export function isDependentSubjectToNationalPension(
+  ageRange: SpouseAgeRange | DependentAgeRange,
+): boolean {
+  return dependentAgeCoversBand(ageRange, NATIONAL_PENSION_AGE_BAND);
 }
 
 /**
@@ -256,6 +286,21 @@ export interface Spouse {
    * same-household member can be head.
    */
   isHouseholdHead: boolean;
+
+  /**
+   * Whether the taxpayer pays this family member's National Pension (国民年金) contributions,
+   * deductible under 所得税法第74条第1項・第2項第1号 and 地方税法第34条第1項第3号・第314条の2第1項第3号.
+   * Requires neither cohabitation (isSameHousehold) nor claiming a dependent deduction
+   * (isClaimedAsDependent) — only 生計を一にする. Ignored outside ages 20–59.
+   */
+  paysNationalPension: boolean;
+
+  /**
+   * Optional custom annual yen amount paid for this family member's National Pension
+   * (e.g. partial year turning 20, 前納 / 2年前納 advance payment, 付加保険料, or 追納 back-payment).
+   * When undefined, defaults to {@link getNationalPensionAnnualTotal} for the income year.
+   */
+  nationalPensionCustomAmount?: number | undefined;
 }
 
 /**
@@ -307,6 +352,21 @@ export interface OtherDependent {
    * same-household member can be head.
    */
   isHouseholdHead: boolean;
+
+  /**
+   * Whether the taxpayer pays this family member's National Pension (国民年金) contributions,
+   * deductible under 所得税法第74条第1項・第2項第1号 and 地方税法第34条第1項第3号・第314条の2第1項第3号.
+   * Requires neither cohabitation (isSameHousehold) nor claiming a dependent deduction
+   * (isClaimedAsDependent) — only 生計を一にする. Ignored outside ages 20–59.
+   */
+  paysNationalPension: boolean;
+
+  /**
+   * Optional custom annual yen amount paid for this family member's National Pension
+   * (e.g. partial year turning 20, 前納 / 2年前納 advance payment, 付加保険料, or 追納 back-payment).
+   * When undefined, defaults to {@link getNationalPensionAnnualTotal} for the income year.
+   */
+  nationalPensionCustomAmount?: number | undefined;
 }
 
 /**
@@ -373,12 +433,20 @@ export interface SpouseAgeRangeInfo {
  */
 export const SPOUSE_AGE_RANGES: SpouseAgeRangeInfo[] = [
   {
-    value: 'under40',
-    label: 'Under 40',
+    value: 'under20',
+    label: 'Under 20',
   },
   {
-    value: '40to64',
-    label: '40 - 64',
+    value: '20to39',
+    label: '20 - 39',
+  },
+  {
+    value: '40to59',
+    label: '40 - 59',
+  },
+  {
+    value: '60to64',
+    label: '60 - 64',
   },
   {
     value: '65to69',
@@ -419,16 +487,24 @@ export const DEPENDENT_AGE_RANGES: DependentAgeRangeInfo[] = [
     label: '16 - 18',
   },
   {
-    value: '19to22',
-    label: '19 - 22',
+    value: '19',
+    label: '19',
+  },
+  {
+    value: '20to22',
+    label: '20 - 22',
   },
   {
     value: '23to39',
     label: '23 - 39',
   },
   {
-    value: '40to64',
-    label: '40 - 64',
+    value: '40to59',
+    label: '40 - 59',
+  },
+  {
+    value: '60to64',
+    label: '60 - 64',
   },
   {
     value: '65to69',

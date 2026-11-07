@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * National pension (国民年金) monthly contribution amounts.
+ * National pension (国民年金) monthly contribution amounts and statutory enrollment age band.
  *
  * The contribution is a fixed monthly amount set per fiscal year (April–March).
  * Assumes monthly payment (毎月納付), the default payment method with no advance discount.
@@ -10,6 +10,17 @@
  * Source: https://www.nenkin.go.jp/service/kokunen/hokenryo/hokenryo.html
  * Historical rates: https://www.nenkin.go.jp/service/kokunen/hokenryo/hensen.html
  */
+
+import type { AgeBand } from '../types/age';
+
+/**
+ * Compulsory National Pension Category 1 (第1号被保険者) age band: ages 20 or older and under 60
+ * (国民年金法第7条第1項第1号: 国内に住所を有する二十歳以上六十歳未満の者).
+ * Shared by taxpayer, spouse, and dependent age-range tables so no age choice can straddle 20 or 60.
+ *
+ * @see https://laws.e-gov.go.jp/law/334AC0000000141#Mp-Ch_2-At_7
+ */
+export const NATIONAL_PENSION_AGE_BAND: AgeBand = { minAgeInclusive: 20, maxAgeExclusive: 60 };
 
 export interface NationalPensionContributionPeriod {
   /** The date from which this rate applies (inclusive). Month is 0-indexed (0=Jan, 3=Apr). */

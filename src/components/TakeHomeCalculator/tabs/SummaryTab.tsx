@@ -120,7 +120,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
             <ResultRow
               label="Pension Payments"
               value={formatAmountWithShare(
-                results.pensionPayments,
+                results.pensionPayments + (results.familyNationalPension ?? 0),
                 results.annualIncome,
                 !isMobile,
               )}
