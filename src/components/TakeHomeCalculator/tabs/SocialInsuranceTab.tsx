@@ -323,15 +323,16 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
                       </tbody>
                     </table>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Monthly remuneration includes base salary and various allowances (e.g.
+                      Monthly remuneration includes base salary plus regular allowances (e.g.
                       commuting allowance, housing allowance).
                     </Typography>
                   </Box>
                 </DetailedTooltip>
               ) : (
                 <SimpleTooltip>
-                  Monthly remuneration is calculated as annual salary / 12 and includes regular
-                  allowances (e.g. commuting allowance, housing allowance).
+                  Monthly remuneration includes base salary plus regular allowances (such as
+                  commuting or housing allowance). Enter your commuting allowance in the form to
+                  include it in the premium calculation.
                 </SimpleTooltip>
               )
             }

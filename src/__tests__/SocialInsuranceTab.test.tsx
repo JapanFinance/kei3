@@ -360,9 +360,7 @@ describe('SocialInsuranceTab', () => {
 
     // Simple tooltip explanation should be present
     expect(
-      screen.getByText(
-        /Monthly remuneration is calculated as annual salary \/ 12 and includes regular allowances/,
-      ),
+      screen.getByText(/Monthly remuneration includes base salary plus regular allowances/),
     ).toBeInTheDocument();
 
     // Breakdown table should NOT be present
