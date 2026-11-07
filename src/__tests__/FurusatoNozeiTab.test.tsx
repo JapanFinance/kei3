@@ -103,7 +103,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     expect(screen.getByTestId('WarningIcon')).toHaveClass('MuiSvgIcon-colorWarning');
     expect(
       screen.getByText(
-        /because the Foreign Tax Credit already reduces your Japanese national income tax to ¥0/,
+        /because the Foreign Tax Credit already reduces Japanese national income tax to ¥0/,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
@@ -129,7 +129,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Applying the donation deduction lowers your Japanese income tax base, which reduces the allowable Foreign Tax Credit limit/,
+        /Applying the donation deduction lowers the Japanese income tax base, which reduces the allowable Foreign Tax Credit limit/,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();
@@ -155,11 +155,11 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     expect(screen.getByText('High Out-of-Pocket Cost')).toBeInTheDocument();
     expect(
       screen.getByText(
-        /because the Home Loan Tax Credit already reduces your Japanese national income tax to ¥0, and any spillover into residence tax has reached its statutory cap/,
+        /because the Home Loan Tax Credit already reduces Japanese national income tax to ¥0, and any spillover into residence tax has reached its statutory cap/,
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/If you are eligible.*this issue is avoided by using the One-Stop system/s),
+      screen.getByText(/If eligible.*this issue is avoided by using the One-Stop system/s),
     ).toBeInTheDocument();
   });
 
@@ -185,7 +185,7 @@ describe('FurusatoNozeiTab High Out-of-Pocket Cost Warnings', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /any reduction in your baseline income tax is offset yen-for-yen by an increase in the minimum tax addition/,
+        /any reduction in baseline income tax is offset yen-for-yen by an increase in the minimum tax addition/,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(/One-Stop system.*cannot be used/s)).toBeInTheDocument();

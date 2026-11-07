@@ -436,11 +436,11 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
             label={
               <span>
                 iDeCo / DC / Mutual Aid Deduction
-                <DetailedTooltip title="小規模企業共済等掛金控除" icon={SIMPLE_TOOLTIP_ICON}>
+                <DetailedTooltip
+                  title="Small Enterprise Mutual Aid Contribution Deduction (小規模企業共済等掛金控除)"
+                  icon={SIMPLE_TOOLTIP_ICON}
+                >
                   <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Small Enterprise Mutual Aid Contribution Deduction (小規模企業共済等掛金控除)
-                    </Typography>
                     <Typography variant="body2" sx={{ mb: 1 }}>
                       Contributions to iDeCo (individual defined contribution pension), employee
                       contributions to corporate defined contribution plans (企業型DC), and Small

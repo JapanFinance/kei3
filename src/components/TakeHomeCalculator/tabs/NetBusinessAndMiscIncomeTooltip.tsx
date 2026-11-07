@@ -114,8 +114,8 @@ const NetBusinessAndMiscIncomeTooltip: React.FC<NetBusinessAndMiscIncomeTooltipP
             <Typography variant="body2" sx={{ mb: 1 }}>
               A net loss from business income can offset other aggregate income (such as employment
               income or miscellaneous income) when calculating total net income (総所得金額 /
-              合計所得金額). A business loss cannot offset separately taxed income under
-              申告分離課税 (such as capital gains), though under statutory ordering it can offset
+              合計所得金額). A business loss cannot offset income subject to separate taxation
+              (申告分離課税, such as capital gains), though under statutory ordering it can offset
               retirement income (退職所得) and forestry income (山林所得). The blue-filer special
               deduction cannot create or increase a loss.
             </Typography>

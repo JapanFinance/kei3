@@ -65,6 +65,10 @@ Before declaring a task complete, you MUST:
 - Keep modules in [`src/utils/`](src/utils) and [`src/data/`](src/data) pure and free of DOM/React state, with JSDoc comments linking to official statutory sources.
 - Formatting, SPDX license headers, deep `@mui/*` imports (no barrel imports), and JSX/object-literal rules are enforced by [`oxlint`](.oxlintrc.json) and [`oxfmt`](.oxfmtrc.jsonc).
 
+### User-Facing Copy
+- **Third-Person Perspective (No Second-Person)**: Avoid second-person pronouns ("you", "your", "yours", "yourself"). The calculator is frequently used for hypothetical projections, scenario modeling, or entering tax information for third parties. Use role-based or impersonal phrasing ("the taxpayer", "an employee", "the household", "annual income") rather than addressing the user directly.
+- **English-First with Targeted Statutory Japanese**: Write all copy so that an English speaker with no knowledge of Japanese can fully understand it. Do not include Japanese characters unless referencing a specific legal, administrative, or statutory term with technical meaning (e.g., *青色申告特別控除*, *均等割*, *特定口座*), and always accompany it with an English translation or explanation (e.g., `Adjustment Credit (調整控除)`). When a tooltip, dialog, or section already has an English title or header, subtitles or secondary labels should use the statutory Japanese term directly rather than repeating the English name.
+
 ### Performance & Bundle Size ([`.github/size-report.mjs`](.github/size-report.mjs))
 - **Enforced Budget**: CI runs `npm run size` after build and fails if the total Brotli size exceeds `BUDGET_BYTES` in [`.github/size-report.mjs`](.github/size-report.mjs). Use `npm run size:summary` for token-efficient local verification.
 - **Conscious Increases**: Bundle size increases must be conscious, measured decisions justified by the change. If a feature legitimately requires exceeding the budget, adjust `BUDGET_BYTES` in the same PR with justification.

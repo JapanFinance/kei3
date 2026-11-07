@@ -411,12 +411,12 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                     mb: 0.5,
                   }}
                 >
-                  iDeCo / Corporate DC / Small Enterprise Mutual Aid
-                  {' '}Contributions
+                  iDeCo / Corporate DC / Small Enterprise Mutual Aid Contributions
                   <SimpleTooltip>
                     Contributions to iDeCo, employee contributions to a corporate DC plan
                     (企業型DC), and Small Enterprise Mutual Aid (小規模企業共済) are all deducted in
-                    full as the 小規模企業共済等掛金控除. Enter the combined annual total.
+                    full as the Small Enterprise Mutual Aid Contribution Deduction
+                    (小規模企業共済等掛金控除). Enter the combined annual total.
                   </SimpleTooltip>
                 </Typography>
                 <Typography
@@ -440,7 +440,7 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   label="Annual Contributions"
                   step={1_000}
                   shiftStep={10_000}
-                  helperText="iDeCo + corporate DC + 小規模企業共済, not including employer contributions."
+                  helperText="Not including employer contributions, for corporate DC plans."
                 />
               </FormControl>
             </CardContent>
@@ -613,11 +613,12 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
               <Typography sx={cardTitleSx}>
                 Medical Expenses (医療費控除)
                 <SimpleTooltip>
-                  Enter the medical expenses paid and any reimbursements (insurance payouts,
-                  高額療養費, government subsidies, etc.). The calculator subtracts the income-based
-                  floor automatically, so enter the raw amounts — not a deduction figure. This is
-                  the standard 医療費控除 only; the セルフメディケーション税制 (医療費控除の特例)
-                  alternative isn&apos;t supported yet.
+                  Enter medical expenses paid and any reimbursements (insurance payouts, high-cost
+                  medical expense benefits [高額療養費], government subsidies, etc.). The calculator
+                  subtracts the income-based floor automatically, so enter raw amounts. This is the
+                  standard medical expense deduction (医療費控除) only; the self-medication tax
+                  scheme (セルフメディケーション税制, 医療費控除の特例) alternative is not supported
+                  yet.
                 </SimpleTooltip>
               </Typography>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
@@ -831,15 +832,18 @@ export const AdditionalDeductionsModal: React.FC<AdditionalDeductionsModalProps>
                   label={
                     <Typography variant="body2" component="span" sx={{ fontSize: '0.85rem' }}>
                       Purchase subject to consumption tax? (特定取得)
-                      <DetailedTooltip title="特定取得" icon={SIMPLE_TOOLTIP_ICON}>
+                      <DetailedTooltip
+                        title="Specified Acquisition (特定取得)"
+                        icon={SIMPLE_TOOLTIP_ICON}
+                      >
                         <Box>
                           <Typography variant="body2">
                             Check this if consumption tax was charged on the purchase — i.e. a new
                             build, or a pre-owned home bought from a consumption tax-collecting
                             business. Uncheck it if no consumption tax was charged, such as a
                             pre-owned home bought from a private individual. For 2014–2021 move-ins
-                            this changes the residence tax spillover cap (特定取得 → 7% / ¥136,500;
-                            non-特定取得 → 5% / ¥97,500).
+                            this changes the residence tax spillover cap (from 5% / ¥97,500 to 7% /
+                            ¥136,500).
                           </Typography>
                           <Box sx={{ mt: 1 }}>
                             <a

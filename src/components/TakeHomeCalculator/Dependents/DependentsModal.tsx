@@ -506,8 +506,8 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         <MenuItem value="none">Not paid by taxpayer</MenuItem>
                       </Select>
                       <FormHelperText>
-                        NHI paid for yourself or a legal spouse/relative sharing living expenses is
-                        deductible.
+                        NHI paid for the taxpayer or a legal spouse/relative sharing living expenses
+                        is deductible.
                       </FormHelperText>
                     </FormControl>
 

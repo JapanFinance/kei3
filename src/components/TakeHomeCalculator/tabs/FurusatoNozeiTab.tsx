@@ -269,8 +269,8 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                         <>
                           <Typography variant="body2">
                             The out-of-pocket cost is higher than the expected ≈2,000 yen because
-                            the Foreign Tax Credit already reduces your Japanese national income tax
-                            to ¥0. As a result, the donation deduction cannot reduce it further.
+                            the Foreign Tax Credit already reduces Japanese national income tax to
+                            ¥0. As a result, the donation deduction cannot reduce it further.
                           </Typography>
                           <Typography variant="body2" sx={{ mt: 1 }}>
                             Any unused foreign tax credit can be carried forward for up to 3 years.
@@ -282,7 +282,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                         <>
                           <Typography variant="body2">
                             The out-of-pocket cost is higher than the expected ≈2,000 yen. Applying
-                            the donation deduction lowers your Japanese income tax base, which
+                            the donation deduction lowers the Japanese income tax base, which
                             reduces the allowable Foreign Tax Credit limit.
                           </Typography>
                           <Typography variant="body2" sx={{ mt: 1 }}>
@@ -297,12 +297,12 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                       <>
                         <Typography variant="body2">
                           The out-of-pocket cost is higher than the expected ≈2,000 yen because the
-                          Home Loan Tax Credit already reduces your Japanese national income tax to
-                          ¥0, and any spillover into residence tax has reached its statutory cap.
+                          Home Loan Tax Credit already reduces Japanese national income tax to ¥0,
+                          and any spillover into residence tax has reached its statutory cap.
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>
-                          If you are eligible (e.g. year 2+ of mortgage with salary income only),
-                          this issue is avoided by using the One-Stop system (ワンストップ特例制度).
+                          If eligible (e.g. year 2+ of mortgage with salary income only), this issue
+                          is avoided by using the One-Stop system (ワンストップ特例制度).
                         </Typography>
                       </>
                     ) : results.highIncomeMinimumTax ? (
@@ -311,7 +311,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
                           The out-of-pocket cost is higher than the expected ≈2,000 yen because the
                           Minimum Tax on High Income Taxpayers (特定の基準所得金額の課税の特例) sets
                           a statutory tax floor on baseline income. Because baseline income does not
-                          subtract donation deductions, any reduction in your baseline income tax is
+                          subtract donation deductions, any reduction in baseline income tax is
                           offset yen-for-yen by an increase in the minimum tax addition.
                         </Typography>
                         <Typography variant="body2" sx={{ mt: 1 }}>
