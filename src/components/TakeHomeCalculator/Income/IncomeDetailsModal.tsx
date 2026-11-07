@@ -892,7 +892,7 @@ export const IncomeDetailsModal: React.FC<IncomeDetailsModalProps> = ({
       <DialogTitle sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" component="span">
-            Income/Benefit Details
+            Income Details
           </Typography>
           <Chip
             label={`Total: ${formatJPY(totalIncome)}`}
