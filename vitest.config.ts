@@ -11,11 +11,28 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./test-setup.ts'],
     // `.claude` holds agent worktrees (full, sometimes-stale repo copies); without this,
     // `vitest run` collects their test files too. Mirrors the ignorePatterns in
     // .oxlintrc.json and .oxfmtrc.jsonc.
     exclude: [...configDefaults.exclude, '**/.claude/**'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'node',
+          include: ['src/**/__tests__/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'dom',
+          environment: 'jsdom',
+          setupFiles: ['./test-setup.ts'],
+          include: ['src/**/__tests__/**/*.test.tsx'],
+        },
+      },
+    ],
   },
 });
