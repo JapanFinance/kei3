@@ -16,7 +16,7 @@ The app is built around a synchronous, pure calculation engine that recomputes r
 ```bash
 npm run dev                                               # Vite dev server
 npm run build                                             # TypeScript check (tsc -b) + Vite production build
-npm run size                                              # Measure Brotli bundle size against budget (run after build)
+npm run size:summary                                      # 1-line bundle size summary (or npm run size)
 npm run lint                                              # Type-aware oxlint (npm run lint:fix to autofix)
 npm run format                                            # Format with oxfmt (*.md is excluded)
 npx vitest run --reporter=minimal                         # Run full test suite once (bare `npm test` enters watch mode)
@@ -28,7 +28,7 @@ npm run bench                                             # Run Vitest calculati
 
 Before declaring a task complete, you MUST:
 1. Run `npm run format` and `npm run lint` (or `npm run lint:fix`), fixing all errors and any new warnings.
-2. Run `npm run build` and `npm run size` to verify TypeScript compilation, bundling, and that the bundle stays within budget.
+2. Run `npm run build` and `npm run size:summary` to verify TypeScript compilation, bundling, and that the bundle stays within budget.
 3. Run relevant tests with `npx vitest related <files> --run --reporter=minimal` (or the full suite) to ensure no regressions.
 
 ### Testing Guidelines (Vitest)
@@ -66,7 +66,7 @@ Before declaring a task complete, you MUST:
 - Formatting, SPDX license headers, deep `@mui/*` imports (no barrel imports), and JSX/object-literal rules are enforced by [`oxlint`](.oxlintrc.json) and [`oxfmt`](.oxfmtrc.jsonc).
 
 ### Performance & Bundle Size ([`.github/size-report.mjs`](.github/size-report.mjs))
-- **Enforced Budget**: CI runs `npm run size` after build and fails if the total Brotli size exceeds `BUDGET_BYTES` in [`.github/size-report.mjs`](.github/size-report.mjs).
+- **Enforced Budget**: CI runs `npm run size` after build and fails if the total Brotli size exceeds `BUDGET_BYTES` in [`.github/size-report.mjs`](.github/size-report.mjs). Use `npm run size:summary` for token-efficient local verification.
 - **Conscious Increases**: Bundle size increases must be conscious, measured decisions justified by the change. If a feature legitimately requires exceeding the budget, adjust `BUDGET_BYTES` in the same PR with justification.
 - **Load Waves**: Maintain the prioritized startup sequence (`Wave 1` entry → `Wave 2` app → deferred results/chart/modals). Avoid importing deferred dependencies statically into eager entry modules.
 

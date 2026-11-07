@@ -6,11 +6,12 @@
 // after `npm run build`.
 //
 // Modes (first CLI arg):
-//   measure
+//   measure [--summary]
 //     Read dist/assets, compute per-file Brotli sizes, group the assets into
 //     load waves (see computeWaves), write size-report.json, append the tables
 //     to the job summary ($GITHUB_STEP_SUMMARY), and exit non-zero if the total
-//     exceeds the budget — this is the CI gate.
+//     exceeds the budget — this is the CI gate. Pass --summary for a one-line
+//     summary on success.
 //   comment <headReport> [baseReport]
 //     Upsert the sticky PR comment from a report JSON. Given a base report (the
 //     PR's base commit, restored from the Actions cache) it also shows the
@@ -331,12 +332,26 @@ async function upsertComment(markdown) {
 }
 
 const mode = process.argv[2];
+const isSummary =
+  process.argv.includes('--summary') ||
+  process.argv.includes('summary') ||
+  process.argv.includes('--minimal');
 
 if (mode === 'measure') {
   const report = measure();
   writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
   const markdown = renderMarkdown(report);
-  console.log(markdown);
+  if (isSummary) {
+    const status = report.total <= report.budget ? '✅' : '❌ over budget';
+    console.log(
+      `📦 Bundle size — ${kb(report.total)} Brotli / ${kb(report.budget)} budget ${status}`,
+    );
+    if (report.total > report.budget) {
+      console.log(`\n${markdown}`);
+    }
+  } else {
+    console.log(markdown);
+  }
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${markdown}\n`);
   }
@@ -355,6 +370,6 @@ if (mode === 'measure') {
   console.log(markdown);
   await upsertComment(markdown);
 } else {
-  console.error('Usage: node .github/size-report.mjs measure | comment <head> [base]');
+  console.error('Usage: node .github/size-report.mjs measure [--summary] | comment <head> [base]');
   process.exit(1);
 }
