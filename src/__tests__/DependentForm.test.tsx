@@ -253,4 +253,109 @@ describe('SpouseSection & DependentsModal National Pension integration', () => {
     expect(screen.getByText('National Pension')).toBeInTheDocument();
     expect(screen.queryByText('No tax/NHI impact')).not.toBeInTheDocument();
   });
+
+  it('treats a ¥0 custom National Pension entry as no tax/NHI impact in forms and chips', () => {
+    const zeroPensionChild = makeDependent({
+      id: 'student-zero',
+      relationship: 'child',
+      ageRange: '20to22',
+      isClaimedAsDependent: false,
+      isSameHousehold: false,
+      paysNationalPension: true,
+      nationalPensionCustomAmount: 0,
+    });
+
+    render(
+      <>
+        <DependentForm
+          dependent={zeroPensionChild}
+          onSave={vi.fn()}
+          onCancel={vi.fn()}
+          incomeYear={INCOME_YEAR}
+          isTaxpayerNHI={false}
+        />
+        <DependentsModal
+          open
+          onClose={vi.fn()}
+          dependents={[zeroPensionChild]}
+          onDependentsChange={vi.fn()}
+          taxpayerNetIncome={5_000_000}
+          incomeYear={INCOME_YEAR}
+          healthInsuranceProvider={DEFAULT_PROVIDER}
+          taxpayerAgeRange="age20to39"
+          onNHIPaymentAttributionChange={vi.fn()}
+          region="Tokyo"
+          onNHIHouseholdRegionChange={vi.fn()}
+        />
+      </>,
+    );
+
+    expect(screen.getByText(/no effect on taxes or social insurance/)).toBeInTheDocument();
+    expect(screen.queryByText('National Pension')).not.toBeInTheDocument();
+    expect(screen.getByText('No tax/NHI impact')).toBeInTheDocument();
+  });
+
+  it('seeds Custom mode with the current income year statutory amount after incomeYear changes', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const spouse = makeSpouse({
+      ageRange: '20to39',
+      isClaimedAsDependent: true,
+      paysNationalPension: true,
+    });
+
+    const { rerender } = render(
+      <SpouseSection spouse={spouse} onChange={onChange} incomeYear={2025} isTaxpayerNHI={false} />,
+    );
+
+    rerender(
+      <SpouseSection spouse={spouse} onChange={onChange} incomeYear={2026} isTaxpayerNHI={false} />,
+    );
+
+    await user.click(screen.getByRole('switch', { name: 'Custom' }));
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        paysNationalPension: true,
+        nationalPensionCustomAmount: 213_810,
+      }),
+    );
+  });
+
+  it('omits National Pension wording from the no-impact notice outside ages 20–59', () => {
+    const minorChild = makeDependent({
+      id: 'minor-child',
+      relationship: 'child',
+      ageRange: '16to18',
+      isClaimedAsDependent: false,
+      isSameHousehold: false,
+    });
+    const seniorSpouse = makeSpouse({
+      ageRange: '60to64',
+      isClaimedAsDependent: false,
+      isSameHousehold: false,
+    });
+
+    render(
+      <>
+        <DependentForm
+          dependent={minorChild}
+          onSave={vi.fn()}
+          onCancel={vi.fn()}
+          incomeYear={INCOME_YEAR}
+          isTaxpayerNHI={false}
+        />
+        <SpouseSection
+          spouse={seniorSpouse}
+          onChange={vi.fn()}
+          incomeYear={INCOME_YEAR}
+          isTaxpayerNHI={false}
+        />
+      </>,
+    );
+
+    expect(
+      screen.queryByText(/unless the taxpayer pays their National Pension/),
+    ).not.toBeInTheDocument();
+  });
 });

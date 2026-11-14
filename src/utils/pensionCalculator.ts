@@ -226,6 +226,24 @@ export function calculatePensionPremium(
 }
 
 /**
+ * Effective National Pension (国民年金) contribution paid by the taxpayer for one family member.
+ * Returns 0 outside the statutory 20–59 age band, when unpaid, or for non-positive/non-finite custom entries.
+ */
+export function getEffectiveFamilyNationalPensionAmount(
+  member: Pick<Dependent, 'ageRange' | 'paysNationalPension' | 'nationalPensionCustomAmount'>,
+  year: number,
+): number {
+  if (!member.paysNationalPension || !isDependentSubjectToNationalPension(member.ageRange)) {
+    return 0;
+  }
+  if (member.nationalPensionCustomAmount === undefined) {
+    return getNationalPensionAnnualTotal(year);
+  }
+  const custom = member.nationalPensionCustomAmount;
+  return Number.isFinite(custom) ? Math.max(0, Math.round(custom)) : 0;
+}
+
+/**
  * Calculates National Pension (国民年金) contributions paid by the taxpayer on behalf of
  * family members sharing living expenses (生計を一にする配偶者その他の親族, 所得税法第74条第2項第1号).
  * Only dependents aged 20–59 with `paysNationalPension: true` contribute; stale flags outside
@@ -239,20 +257,14 @@ export function calculateFamilyNationalPension(
   let total = 0;
 
   for (const dep of dependents) {
-    if (!dep.paysNationalPension || !isDependentSubjectToNationalPension(dep.ageRange)) {
-      continue;
-    }
-    const isCustomAmount = dep.nationalPensionCustomAmount !== undefined;
-    const amount = isCustomAmount
-      ? Math.max(0, Math.round(dep.nationalPensionCustomAmount!))
-      : getNationalPensionAnnualTotal(year);
+    const amount = getEffectiveFamilyNationalPensionAmount(dep, year);
     if (amount > 0) {
       total += amount;
       breakdown.push({
         id: dep.id,
         relationship: dep.relationship,
         amount,
-        isCustomAmount,
+        isCustomAmount: dep.nationalPensionCustomAmount !== undefined,
       });
     }
   }
