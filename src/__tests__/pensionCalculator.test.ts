@@ -8,7 +8,10 @@ import {
   calculatePensionBreakdown,
   calculatePensionBonusBreakdown,
   calculateNationalPensionFullExemptionThreshold,
+  calculateFamilyNationalPension,
+  getEffectiveFamilyNationalPensionAmount,
 } from '../utils/pensionCalculator';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 const TEST_INCOME_YEAR = 2026;
 
@@ -200,5 +203,92 @@ describe('National Pension full exemption (全額免除)', () => {
     expect(calculateNationalPensionFullExemptionThreshold(0)).toBe(670_000);
     expect(calculateNationalPensionFullExemptionThreshold(1)).toBe(1_020_000);
     expect(calculateNationalPensionFullExemptionThreshold(2)).toBe(1_370_000);
+  });
+});
+
+describe('family National Pension contributions', () => {
+  it('returns statutory full-year amount for 20-59 members when paid without custom amount', () => {
+    const member = makeDependent({ id: 'c1', ageRange: '20to22', paysNationalPension: true });
+
+    const amount = getEffectiveFamilyNationalPensionAmount(member, TEST_INCOME_YEAR);
+
+    expect(amount).toBe(213_810);
+  });
+
+  it('rounds positive custom amounts and clamps zero, negative, or non-finite values to zero', () => {
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: 107_520.6 },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(107_521);
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: 0 },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: -500 },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        { ageRange: '20to39', paysNationalPension: true, nationalPensionCustomAmount: Number.NaN },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        {
+          ageRange: '20to39',
+          paysNationalPension: true,
+          nationalPensionCustomAmount: Number.POSITIVE_INFINITY,
+        },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+  });
+
+  it('returns zero outside the 20-59 statutory band even when flagged paid', () => {
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        { ageRange: '19', paysNationalPension: true },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+    expect(
+      getEffectiveFamilyNationalPensionAmount(
+        { ageRange: '60to64', paysNationalPension: true, nationalPensionCustomAmount: 100_000 },
+        TEST_INCOME_YEAR,
+      ),
+    ).toBe(0);
+  });
+
+  it('sums positive member contributions and omits zero or non-finite entries from breakdown', () => {
+    const dependents = [
+      makeSpouse({ id: 'spouse', ageRange: '20to39', paysNationalPension: true }),
+      makeDependent({
+        id: 'child-zero',
+        ageRange: '20to22',
+        paysNationalPension: true,
+        nationalPensionCustomAmount: 0,
+      }),
+      makeDependent({
+        id: 'child-nan',
+        ageRange: '20to22',
+        paysNationalPension: true,
+        nationalPensionCustomAmount: Number.NaN,
+      }),
+    ];
+
+    const result = calculateFamilyNationalPension(dependents, TEST_INCOME_YEAR);
+
+    expect(result.total).toBe(213_810);
+    expect(result.breakdown).toEqual([
+      { id: 'spouse', relationship: 'spouse', amount: 213_810, isCustomAmount: false },
+    ]);
   });
 });

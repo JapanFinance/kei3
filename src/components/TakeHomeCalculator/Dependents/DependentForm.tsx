@@ -43,6 +43,7 @@ import {
 } from '../../../utils/dependentDeductions';
 import { formatJPY } from '../../../utils/formatters';
 import { getAutoHealthInsuranceLabel } from '../../../utils/nhiHousehold';
+import { getEffectiveFamilyNationalPensionAmount } from '../../../utils/pensionCalculator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { SpinnerNumberField } from '../../ui/SpinnerNumberField';
@@ -133,7 +134,12 @@ export const DependentForm: React.FC<DependentFormProps> = ({
 
   const hasIncomeOrHouseholdImpact = isClaimedAsDependent || isSameHousehold;
   const isEligibleForNP = isDependentSubjectToNationalPension(ageRange);
-  const hasAnyImpact = hasIncomeOrHouseholdImpact || (isEligibleForNP && paysNationalPension);
+  const hasAnyImpact =
+    hasIncomeOrHouseholdImpact ||
+    getEffectiveFamilyNationalPensionAmount(
+      { ageRange, paysNationalPension, nationalPensionCustomAmount },
+      incomeYear,
+    ) > 0;
 
   const nationalPensionCard = isEligibleForNP ? (
     <NationalPensionPaymentCard
@@ -321,7 +327,8 @@ export const DependentForm: React.FC<DependentFormProps> = ({
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 This person is neither claimed as a dependent nor registered at the same address for
                 National Health Insurance. As a result, they will have no effect on taxes or social
-                insurance unless you pay their National Pension.
+                insurance
+                {isEligibleForNP ? ' unless the taxpayer pays their National Pension.' : '.'}
               </Typography>
             </Paper>
           )}

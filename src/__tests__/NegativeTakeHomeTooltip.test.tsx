@@ -146,4 +146,20 @@ describe('NegativeTakeHomeTooltip', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('explains family National Pension contributions paid by the taxpayer when take-home is negative', () => {
+    const results: TakeHomeResults = makeTakeHomeResults({
+      takeHomeIncome: -40_000,
+      healthInsuranceProvider: DEFAULT_PROVIDER,
+      familyNationalPension: 213_810,
+    });
+
+    render(<NegativeTakeHomeTooltip results={results} />);
+
+    expect(
+      screen.getByText(
+        /National Pension contributions for family members are being paid by the taxpayer/,
+      ),
+    ).toBeInTheDocument();
+  });
 });
