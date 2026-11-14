@@ -24,6 +24,7 @@ import {
   type BonusIncomeStream,
   type BusinessIncomeStream,
   DEFAULT_REPORTED_DIVIDENDS_TAXATION,
+  type FamilyNationalPensionItem,
   type ForeignTaxCreditResult,
   type FurusatoNozeiDetails,
   type HighIncomeMinimumTaxResult,
@@ -88,6 +89,7 @@ import {
 } from './netIncomeComponents';
 import { composeNHIHousehold } from './nhiHousehold';
 import {
+  calculateFamilyNationalPension,
   calculateNationalPensionFullExemptionThreshold,
   calculatePensionBreakdown,
 } from './pensionCalculator';
@@ -149,7 +151,8 @@ const longTermCareCategory1TierInputs = (
 
 /**
  * Total social insurance premiums paid by the taxpayer:
- * Health insurance + Pension + Employment insurance + LTC Category 1 + Household NHI (as 擬制世帯主),
+ * Health insurance + Pension + Employment insurance + LTC Category 1 + Household NHI (as 擬制世帯主)
+ * + Family National Pension (所法第74条第2項第1号),
  * or the manually entered override amount when manual mode is active.
  * Single source of truth across calculations, charts, and reporting.
  */
@@ -159,6 +162,7 @@ export function totalSocialInsurancePaid(results: {
   employmentInsurance?: number | undefined;
   longTermCareCategory1Premium?: number | undefined;
   householdNHIPremiumPaidByTaxpayer?: number | undefined;
+  familyNationalPension?: number | undefined;
   socialInsuranceOverride?: number | undefined;
 }): number {
   if (results.socialInsuranceOverride !== undefined) {
@@ -169,7 +173,8 @@ export function totalSocialInsurancePaid(results: {
     results.pensionPayments +
     (results.employmentInsurance ?? 0) +
     (results.longTermCareCategory1Premium ?? 0) +
-    (results.householdNHIPremiumPaidByTaxpayer ?? 0)
+    (results.householdNHIPremiumPaidByTaxpayer ?? 0) +
+    (results.familyNationalPension ?? 0)
   );
 }
 
@@ -1070,6 +1075,8 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
   let nationalPensionExemption: TakeHomeResults['nationalPensionExemption'];
   let householdNHIPremiumPaidByTaxpayer: number | undefined;
   let nhiHouseholdSummary: NHIHouseholdSummary | undefined;
+  let familyNationalPension: number | undefined;
+  let familyNationalPensionBreakdown: FamilyNationalPensionItem[] | undefined;
 
   // Bonus breakdown variables
   let healthInsuranceOnBonus = 0;
@@ -1220,12 +1227,19 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
       }
     }
 
+    const familyPensionResult = calculateFamilyNationalPension(inputs.dependents, incomeYear);
+    if (familyPensionResult.total > 0) {
+      familyNationalPension = familyPensionResult.total;
+      familyNationalPensionBreakdown = familyPensionResult.breakdown;
+    }
+
     socialInsuranceDeduction = totalSocialInsurancePaid({
       healthInsurance,
       pensionPayments,
       employmentInsurance,
       longTermCareCategory1Premium,
       householdNHIPremiumPaidByTaxpayer,
+      familyNationalPension,
     });
   }
 
@@ -1670,6 +1684,10 @@ export const calculateTaxes = (inputs: TakeHomeInputs): TakeHomeResults => {
     ...(longTermCareCategory1Estimate && { longTermCareCategory1Estimate }),
     ...(householdNHIPremiumPaidByTaxpayer !== undefined && { householdNHIPremiumPaidByTaxpayer }),
     ...(nhiHouseholdSummary && { nhiHousehold: nhiHouseholdSummary }),
+    ...(familyNationalPension !== undefined && {
+      familyNationalPension,
+      familyNationalPensionBreakdown,
+    }),
     // Context needed for cap detection
     salaryIncome,
     bonusIncome: totalBonusIncome,

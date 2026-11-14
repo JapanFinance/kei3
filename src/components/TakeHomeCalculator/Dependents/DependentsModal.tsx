@@ -60,6 +60,7 @@ import {
   resolveDependentNHIEnrollment,
   resolveEffectiveNHIRegion,
 } from '../../../utils/nhiHousehold';
+import { getEffectiveFamilyNationalPensionAmount } from '../../../utils/pensionCalculator';
 import { SIMPLE_TOOLTIP_ICON } from '../../ui/constants';
 import SourceLinks from '../../ui/SourceLinks';
 import { DetailedTooltip } from '../../ui/Tooltips';
@@ -231,9 +232,23 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
       );
     }
 
-    if (!dependent.isClaimedAsDependent && !dependent.isSameHousehold) {
+    const paysNP = getEffectiveFamilyNationalPensionAmount(dependent, incomeYear) > 0;
+
+    if (!dependent.isClaimedAsDependent && !dependent.isSameHousehold && !paysNP) {
       chips.push(
         <Chip key="no-impact" label="No tax/NHI impact" size="small" variant="outlined" />,
+      );
+    }
+
+    if (paysNP) {
+      chips.push(
+        <Chip
+          key="national-pension"
+          label="National Pension"
+          size="small"
+          color="primary"
+          variant="outlined"
+        />,
       );
     }
 
@@ -341,8 +356,9 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
               </Typography>
               <DetailedTooltip title="Shared Living Expenses" icon={SIMPLE_TOOLTIP_ICON}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  Claiming spousal or dependent deductions (配偶者控除・扶養控除) strictly requires
-                  sharing living expenses (生計を一にする).
+                  Claiming spousal or dependent deductions (配偶者控除・扶養控除) or deducting a
+                  family member&apos;s National Pension under the social insurance deduction
+                  (社会保険料控除) strictly requires sharing living expenses (生計を一にする).
                 </Typography>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Family members living together are presumed to share expenses. Family members

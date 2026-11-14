@@ -4,7 +4,8 @@
 import type { StandardMonthlyRemunerationBracket } from '../data/employeesHealthInsurance/smrBrackets';
 import { getNationalPensionAnnualTotal } from '../data/nationalPensionContribution';
 import { perMilleTo } from '../data/rate';
-import type { BonusIncomeStream } from '../types/tax';
+import { isDependentSubjectToNationalPension, type Dependent } from '../types/dependents';
+import type { BonusIncomeStream, FamilyNationalPensionItem } from '../types/tax';
 
 export type { StandardMonthlyRemunerationBracket };
 
@@ -222,4 +223,51 @@ export function calculatePensionPremium(
 ): number {
   return calculatePensionBreakdown(isEmployeesPension, monthlyIncome, isHalfAmount, bonuses, year)
     .total;
+}
+
+/**
+ * Effective National Pension (国民年金) contribution paid by the taxpayer for one family member.
+ * Returns 0 outside the statutory 20–59 age band, when unpaid, or for non-positive/non-finite custom entries.
+ */
+export function getEffectiveFamilyNationalPensionAmount(
+  member: Pick<Dependent, 'ageRange' | 'paysNationalPension' | 'nationalPensionCustomAmount'>,
+  year: number,
+): number {
+  if (!member.paysNationalPension || !isDependentSubjectToNationalPension(member.ageRange)) {
+    return 0;
+  }
+  if (member.nationalPensionCustomAmount === undefined) {
+    return getNationalPensionAnnualTotal(year);
+  }
+  const custom = member.nationalPensionCustomAmount;
+  return Number.isFinite(custom) ? Math.max(0, Math.round(custom)) : 0;
+}
+
+/**
+ * Calculates National Pension (国民年金) contributions paid by the taxpayer on behalf of
+ * family members sharing living expenses (生計を一にする配偶者その他の親族, 所得税法第74条第2項第1号).
+ * Only dependents aged 20–59 with `paysNationalPension: true` contribute; stale flags outside
+ * 20–59 are ignored.
+ */
+export function calculateFamilyNationalPension(
+  dependents: readonly Dependent[],
+  year: number,
+): { total: number; breakdown: FamilyNationalPensionItem[] } {
+  const breakdown: FamilyNationalPensionItem[] = [];
+  let total = 0;
+
+  for (const dep of dependents) {
+    const amount = getEffectiveFamilyNationalPensionAmount(dep, year);
+    if (amount > 0) {
+      total += amount;
+      breakdown.push({
+        id: dep.id,
+        relationship: dep.relationship,
+        amount,
+        isCustomAmount: dep.nationalPensionCustomAmount !== undefined,
+      });
+    }
+  }
+
+  return { total, breakdown };
 }

@@ -78,6 +78,13 @@ const NegativeTakeHomeTooltip: React.FC<{ results: TakeHomeResults }> = ({ resul
               </Typography>
             </li>
           )}
+        {results.familyNationalPension !== undefined && results.familyNationalPension > 0 && (
+          <li>
+            <Typography variant="body2">
+              National Pension contributions for family members are being paid by the taxpayer.
+            </Typography>
+          </li>
+        )}
         {isNHI && (
           <li>
             <Typography variant="body2">

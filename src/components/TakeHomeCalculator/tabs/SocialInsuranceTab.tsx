@@ -10,6 +10,7 @@ import React from 'react';
 
 import { getCustomProviderRates } from '../../../data/employeesHealthInsurance/providerRates';
 import { findSMRBracket } from '../../../data/employeesHealthInsurance/smrBrackets';
+import { RELATIONSHIPS } from '../../../types/dependents';
 import {
   NATIONAL_HEALTH_INSURANCE_ID,
   CUSTOM_PROVIDER_ID,
@@ -801,6 +802,53 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           type="subtotal"
         />
       </Box>
+
+      {/* Family National Pension (paid by taxpayer under 所法第74条第2項第1号) */}
+      {results.familyNationalPension !== undefined &&
+        results.familyNationalPension > 0 &&
+        results.familyNationalPensionBreakdown &&
+        (() => {
+          const breakdown = results.familyNationalPensionBreakdown;
+          const counts = new Map<string, number>();
+          for (const item of breakdown) {
+            counts.set(item.relationship, (counts.get(item.relationship) ?? 0) + 1);
+          }
+          const indices = new Map<string, number>();
+
+          return (
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                Family National Pension
+                <DetailedTooltip title="Family National Pension" icon={SIMPLE_TOOLTIP_ICON}>
+                  <NationalPensionTooltip year={inputs.incomeYear} familyDeduction />
+                </DetailedTooltip>
+              </Typography>
+              {breakdown.map(item => {
+                const baseLabel =
+                  RELATIONSHIPS.find(r => r.value === item.relationship)?.label ??
+                  item.relationship;
+                const totalForRel = counts.get(item.relationship) ?? 1;
+                const nextIdx = (indices.get(item.relationship) ?? 0) + 1;
+                indices.set(item.relationship, nextIdx);
+                const memberLabel = totalForRel > 1 ? `${baseLabel} ${nextIdx}` : baseLabel;
+
+                return (
+                  <ResultRow
+                    key={item.id}
+                    label={item.isCustomAmount ? `${memberLabel} (custom)` : memberLabel}
+                    value={formatJPY(item.amount)}
+                    type="indented"
+                  />
+                );
+              })}
+              <ResultRow
+                label="Family Pension Contribution"
+                value={formatJPY(results.familyNationalPension)}
+                type="subtotal"
+              />
+            </Box>
+          );
+        })()}
 
       {/* Long-term Care Insurance (第1号被保険者, ages 65+) */}
       {results.longTermCareCategory1Premium !== undefined && (

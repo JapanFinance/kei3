@@ -1118,7 +1118,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
   it('calculates fullHousehold attribution where taxpayer pays entire household premium', () => {
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: {
         grossEmploymentIncome: 1_200_000,
         grossPublicPensionIncome: 0,
@@ -1163,7 +1163,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
   it('handles paymentAttribution: none by setting taxpayer portions to zero', () => {
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       income: {
         grossEmploymentIncome: 2_000_000,
         grossPublicPensionIncome: 0,
@@ -1296,7 +1296,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
     const createTwoPersonHousehold = (taxpayerNet: number, spouseNet: number) => {
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -1321,7 +1321,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
     const createUnreducedTwoPersonZeroBaseHousehold = () => {
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -1439,7 +1439,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       // Even though spouse has 0 income, household gets 0% reduction.
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         healthInsurance: 'nhi',
       });
       const household = composeNHIHousehold({
@@ -1476,7 +1476,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       //   5割 limit = 430k + 310k * 2 = 1,050k -> 5割 (0.5)
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         income: {
           grossEmploymentIncome: 600_000,
           grossPublicPensionIncome: 0,
@@ -1509,7 +1509,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       // Spouse is 50 (40-64, LTC Cat 2), other net income 2,000,000 (base: 1,570,000)
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: '40to64',
+        ageRange: '40to59',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -1556,7 +1556,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       // At Shibuya rates, all 4 portions comfortably exceed their statutory caps.
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: '40to64',
+        ageRange: '40to59',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -1619,7 +1619,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       // Because taxpayer is not on NHI, paymentAttribution is 'none'.
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: '40to64',
+        ageRange: '40to59',
         income: {
           grossEmploymentIncome: 0,
           grossPublicPensionIncome: 0,
@@ -1664,7 +1664,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       // and deemed head earns 6M on EHI so reduction is 0%.
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
         healthInsurance: 'nhi',
       });
@@ -1720,7 +1720,7 @@ describe('calculateHouseholdNHIBreakdown', () => {
       // Taxpayer on EHI, spouse on EHI
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: 'under40',
+        ageRange: '20to39',
         healthInsurance: 'non_nhi',
       });
       const household = composeNHIHousehold({

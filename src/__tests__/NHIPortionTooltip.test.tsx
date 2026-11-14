@@ -295,7 +295,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         dependents: [
           makeSpouse({
             id: 'spouse',
-            ageRange: '40to64',
+            ageRange: '40to59',
             income: {
               grossEmploymentIncome: 1_000_000,
               grossPublicPensionIncome: 0,
@@ -328,7 +328,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         dependents: [
           makeSpouse({
             id: 'spouse',
-            ageRange: '40to64',
+            ageRange: '40to59',
             // Net employment income: 1,000,000 - 550,000 = 450,000.
             // Base: 450,000 - 430,000 = 20,000.
             income: {
@@ -405,7 +405,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         dependents: [
           makeSpouse({
             id: 'spouse',
-            ageRange: '40to64',
+            ageRange: '40to59',
             income: {
               grossEmploymentIncome: 1_000_000,
               grossPublicPensionIncome: 0,
@@ -438,7 +438,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         dependents: [
           makeSpouse({
             id: 'spouse',
-            ageRange: '40to64',
+            ageRange: '40to59',
             income: {
               grossEmploymentIncome: 1_000_000,
               grossPublicPensionIncome: 0,
@@ -480,7 +480,7 @@ describe('NHIPortionTooltip consistency with calculator', () => {
         dependents: [
           makeSpouse({
             id: 'spouse',
-            ageRange: 'under40',
+            ageRange: '20to39',
             income: {
               grossEmploymentIncome: 600_000,
               grossPublicPensionIncome: 0,

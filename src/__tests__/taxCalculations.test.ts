@@ -422,7 +422,7 @@ describe('calculateTaxes', () => {
   it('raises the exemption threshold with a dependent', () => {
     const spouse = makeSpouse({
       id: 'spouse',
-      ageRange: 'under40',
+      ageRange: '20to39',
       isSameHousehold: true,
     });
     const inputs = {
@@ -2639,7 +2639,7 @@ describe('Additional income deductions (life, earthquake, medical, other)', () =
       dependents: [
         makeDependent({
           id: 'c1',
-          ageRange: '19to22',
+          ageRange: '20to22',
           isSameHousehold: true,
         }),
       ],
@@ -2963,7 +2963,7 @@ describe('所得金額調整控除 (income amount adjustment deduction) integrat
   const childUnder23: Dependent = makeDependent({
     id: 'c1',
     relationship: 'child',
-    ageRange: '19to22',
+    ageRange: '20to22',
     isSameHousehold: false,
   });
   const adultChild: Dependent = makeDependent({
@@ -3560,7 +3560,7 @@ describe('calculateTaxes at ages 65 and over', () => {
         dependents: [
           makeSpouse({
             id: 'spouse-1',
-            ageRange: 'under40',
+            ageRange: '20to39',
             income: {
               grossEmploymentIncome: 0,
               grossPublicPensionIncome: 0,
@@ -3579,7 +3579,7 @@ describe('calculateTaxes at ages 65 and over', () => {
         dependents: [
           makeSpouse({
             id: 'spouse-1',
-            ageRange: 'under40',
+            ageRange: '20to39',
             isSameHousehold: false,
             income: {
               grossEmploymentIncome: 0,
@@ -3611,7 +3611,7 @@ describe('calculateTaxes at ages 65 and over', () => {
         dependents: [
           makeSpouse({
             id: 'spouse-1',
-            ageRange: 'under40',
+            ageRange: '20to39',
           }),
         ],
       });
@@ -5019,7 +5019,7 @@ describe('calculateTaxes with investment income reported under 申告分離課�
       dependents: [
         makeSpouse({
           id: 'spouse',
-          ageRange: 'under40',
+          ageRange: '20to39',
         }),
       ],
     });
@@ -6451,7 +6451,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
               ? [
                   makeSpouse({
                     id: 'sp1',
-                    ageRange: 'under40',
+                    ageRange: '20to39',
                     income: {
                       grossEmploymentIncome: randInt(0, 1_500_000),
                       grossPublicPensionIncome: 0,
@@ -6645,7 +6645,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
       // Cohabiting spouse enrolled in NHI with ¥0 income
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: '40to64',
+        ageRange: '40to59',
         isClaimedAsDependent: false, // Not claimed as tax dependent
         healthInsurance: 'nhi',
       });
@@ -6688,7 +6688,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
     it('allows EHI deemed head to attribute none of spouse NHI to taxpayer return', () => {
       const spouse: Dependent = makeSpouse({
         id: 'spouse',
-        ageRange: '40to64',
+        ageRange: '40to59',
         isClaimedAsDependent: false,
         healthInsurance: 'nhi',
       });
@@ -6761,7 +6761,7 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
         dependents: [
           makeSpouse({
             id: 'spouse',
-            ageRange: '40to64',
+            ageRange: '40to59',
             // Net employment income 450,000 (1,190,000 - 740,000)
             income: {
               grossEmploymentIncome: 1_190_000,
@@ -6789,6 +6789,184 @@ describe('calculateTaxes with foreign tax (外国税額控除)', () => {
 
       // none: taxpayer pays 0
       expect(resNone.healthInsurance).toBe(0);
+    });
+  });
+
+  describe('Family National Pension (国民年金) payments and 社会保険料控除 (所法第74条第2項第1号)', () => {
+    const baseSalariedParent: TakeHomeInputs = {
+      ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+      incomeStreams: [{ id: 'sal', type: 'salary', amount: 8_000_000, frequency: 'annual' }],
+      ageRange: 'age40to59',
+      healthInsuranceProvider: 'KyokaiKenpo',
+      region: 'Tokyo',
+      dependents: [],
+      dcPlanContributions: 0,
+      manualSocialInsuranceEntry: false,
+      manualSocialInsuranceAmount: 0,
+      incomeYear: 2026,
+    };
+
+    it('deducts statutory 2026 National Pension (¥213,810) paid for a non-cohabiting 20–22 university student child', () => {
+      // 2026 statutory annual National Pension = 3 * 17,510 + 9 * 17,920 = 213,810
+      const studentBase = makeDependent({
+        id: 'student',
+        relationship: 'child',
+        ageRange: '20to22',
+        isSameHousehold: false, // Living apart in another city for university
+        isClaimedAsDependent: true,
+      });
+
+      const withoutPension = calculateTaxes({
+        ...baseSalariedParent,
+        dependents: [{ ...studentBase, paysNationalPension: false }],
+      });
+      const withPension = calculateTaxes({
+        ...baseSalariedParent,
+        dependents: [{ ...studentBase, paysNationalPension: true }],
+      });
+
+      expect(withoutPension.familyNationalPension).toBeUndefined();
+      expect(withPension.familyNationalPension).toBe(213_810);
+      expect(withPension.familyNationalPensionBreakdown).toEqual([
+        { id: 'student', relationship: 'child', amount: 213_810, isCustomAmount: false },
+      ]);
+
+      // Taxpayer's own Employees' Pension is unchanged
+      expect(withPension.pensionPayments).toBe(withoutPension.pensionPayments);
+
+      // Social insurance total rises by exactly ¥213,810
+      expect(totalSocialInsurancePaid(withPension)).toBe(
+        totalSocialInsurancePaid(withoutPension) + 213_810,
+      );
+
+      // Taxable income drops, lowering both national income tax and residence tax, and Furusato limit
+      expect(withPension.taxableIncomeForNationalIncomeTax!).toBeLessThan(
+        withoutPension.taxableIncomeForNationalIncomeTax!,
+      );
+      expect(withPension.taxableIncomeForResidenceTax!).toBeLessThan(
+        withoutPension.taxableIncomeForResidenceTax!,
+      );
+      expect(withPension.nationalIncomeTax).toBeLessThan(withoutPension.nationalIncomeTax);
+      expect(withPension.residenceTax.totalResidenceTax).toBeLessThan(
+        withoutPension.residenceTax.totalResidenceTax,
+      );
+      expect(withPension.furusatoNozei.limit).toBeLessThan(withoutPension.furusatoNozei.limit);
+
+      // Take-home pay drops by less than ¥213,810 due to tax savings
+      const taxSaved =
+        withoutPension.nationalIncomeTax -
+        withPension.nationalIncomeTax +
+        (withoutPension.residenceTax.totalResidenceTax -
+          withPension.residenceTax.totalResidenceTax);
+      expect(taxSaved).toBeGreaterThan(0);
+      expect(withoutPension.takeHomeIncome - withPension.takeHomeIncome).toBe(213_810 - taxSaved);
+    });
+
+    it('applies 社会保険料控除 even when the family member is neither claimed for 扶養控除 nor cohabiting', () => {
+      const unclaimedStudent = makeDependent({
+        id: 'student-unclaimed',
+        relationship: 'child',
+        ageRange: '20to22',
+        isClaimedAsDependent: false, // e.g. claimed by the other parent
+        isSameHousehold: false,
+        paysNationalPension: true,
+      });
+
+      const baseline = calculateTaxes(baseSalariedParent);
+      const withStudent = calculateTaxes({
+        ...baseSalariedParent,
+        dependents: [unclaimedStudent],
+      });
+
+      expect(withStudent.dependentDeductions?.nationalTax.total).toBe(0);
+      expect(withStudent.familyNationalPension).toBe(213_810);
+      expect(withStudent.nationalIncomeTax).toBeLessThan(baseline.nationalIncomeTax);
+      expect(withStudent.residenceTax.totalResidenceTax).toBeLessThan(
+        baseline.residenceTax.totalResidenceTax,
+      );
+    });
+
+    it('supports custom National Pension amounts (partial-year turning 20, 前納, 追納) and ignores ¥0 custom amount', () => {
+      const partialYearChild = makeDependent({
+        id: 'turning-20',
+        relationship: 'child',
+        ageRange: '20to22',
+        paysNationalPension: true,
+        nationalPensionCustomAmount: 107_520, // 6 months * 17,920
+      });
+      const zeroCustomSpouse = makeSpouse({
+        id: 'spouse-zero',
+        ageRange: '20to39',
+        paysNationalPension: true,
+        nationalPensionCustomAmount: 0,
+      });
+
+      const result = calculateTaxes({
+        ...baseSalariedParent,
+        dependents: [zeroCustomSpouse, partialYearChild],
+      });
+
+      expect(result.familyNationalPension).toBe(107_520);
+      expect(result.familyNationalPensionBreakdown).toEqual([
+        { id: 'turning-20', relationship: 'child', amount: 107_520, isCustomAmount: true },
+      ]);
+    });
+
+    it('ignores stale paysNationalPension: true outside the 20–59 statutory band', () => {
+      const result = calculateTaxes({
+        ...baseSalariedParent,
+        dependents: [
+          makeSpouse({ id: 's-under20', ageRange: 'under20', paysNationalPension: true }),
+          makeDependent({ id: 'd-19', ageRange: '19', paysNationalPension: true }),
+          makeDependent({ id: 'd-60to64', ageRange: '60to64', paysNationalPension: true }),
+          makeDependent({
+            id: 'd-70to74',
+            relationship: 'parent',
+            ageRange: '70to74',
+            paysNationalPension: true,
+          }),
+        ],
+      });
+
+      expect(result.familyNationalPension).toBeUndefined();
+      expect(result.familyNationalPensionBreakdown).toBeUndefined();
+    });
+
+    it('keeps paid family National Pension deductible when an NHI taxpayer has 全額免除 on their own pension, and respects manual override', () => {
+      const nhiTaxpayerInputs: TakeHomeInputs = {
+        ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
+        incomeStreams: [{ id: 'biz', type: 'business', amount: 600_000 }],
+        ageRange: 'age20to39',
+        healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
+        nationalPensionExemption: true,
+        region: 'Tokyo-Setagaya',
+        dependents: [
+          makeSpouse({
+            id: 'spouse-np',
+            ageRange: '20to39',
+            paysNationalPension: true,
+          }),
+        ],
+        dcPlanContributions: 0,
+        manualSocialInsuranceEntry: false,
+        manualSocialInsuranceAmount: 0,
+        incomeYear: 2026,
+      };
+
+      const res = calculateTaxes(nhiTaxpayerInputs);
+      expect(res.nationalPensionExemption?.applied).toBe(true);
+      expect(res.pensionPayments).toBe(0);
+      expect(res.familyNationalPension).toBe(213_810);
+      expect(totalSocialInsurancePaid(res)).toBe(res.healthInsurance + 213_810);
+
+      // Manual social insurance entry overrides automatic family pension
+      const manualRes = calculateTaxes({
+        ...nhiTaxpayerInputs,
+        manualSocialInsuranceEntry: true,
+        manualSocialInsuranceAmount: 150_000,
+      });
+      expect(manualRes.familyNationalPension).toBeUndefined();
+      expect(totalSocialInsurancePaid(manualRes)).toBe(150_000);
     });
   });
 });

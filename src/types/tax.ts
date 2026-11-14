@@ -1198,6 +1198,18 @@ export interface TakeHomeResults {
    * Present whenever the household has at least one NHI-insured member.
    */
   nhiHousehold?: NHIHouseholdSummary | undefined;
+  /**
+   * Total annual National Pension (国民年金) contributions paid by the taxpayer on behalf of
+   * family members sharing living expenses (生計を一にする配偶者その他の親族), deductible as
+   * 社会保険料控除 under 所得税法第74条第1項・第2項第1号. Present when positive and outside manual
+   * social insurance entry.
+   */
+  familyNationalPension?: number | undefined;
+  /**
+   * Per-member breakdown of {@link familyNationalPension}. Present whenever {@link familyNationalPension}
+   * is positive.
+   */
+  familyNationalPensionBreakdown?: FamilyNationalPensionItem[] | undefined;
   // Context needed for cap detection
   salaryIncome: number; // Regular salary income (monthly * 12 or annual amount) excluding bonuses
   /** The bonus streams' amounts added up. 0 when there are none. */
@@ -1207,6 +1219,16 @@ export interface TakeHomeResults {
   ageRange: TaxpayerAgeRange;
   // Custom provider rates (percentages, e.g. 5.0 for 5%)
   customEHIRates?: CustomEmployeesHealthInsuranceRates | undefined;
+}
+
+/**
+ * Summary of a family member's National Pension contribution paid by the taxpayer
+ */
+export interface FamilyNationalPensionItem {
+  id: string;
+  relationship: Dependent['relationship'];
+  amount: number;
+  isCustomAmount: boolean;
 }
 
 export interface ResidenceTaxDetails {

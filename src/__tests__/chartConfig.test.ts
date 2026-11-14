@@ -13,7 +13,7 @@ import {
   scaleIncomeStreamsToIncome,
 } from '../utils/chartConfig';
 import { calculateTaxes } from '../utils/taxCalculations';
-import { makeSpouse } from './fixtures/dependents';
+import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 const context: TakeHomeInputs = {
   ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
@@ -486,7 +486,7 @@ describe('generateChartData with household National Health Insurance', () => {
     // EHI employee whose cohabiting spouse is on NHI
     const spouse: Dependent = makeSpouse({
       id: 'spouse',
-      ageRange: '40to64',
+      ageRange: '40to59',
       isClaimedAsDependent: false,
       healthInsurance: 'nhi',
     });
@@ -509,6 +509,40 @@ describe('generateChartData with household National Health Insurance', () => {
     // Verify all bars stack to total swept income at every point
     const bars = datasets.filter(d => d.type === 'bar');
     const takeHome = pointsOf(datasets.find(d => d.label === 'Take-Home Pay')!);
+    takeHome.forEach((point, i) => {
+      const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
+      expect(stacked, `income ${point.x}`).toBe(point.x);
+    });
+  });
+
+  it('folds family National Pension into the Pension bar and stacks to total income', () => {
+    const student: Dependent = makeDependent({
+      id: 'student',
+      relationship: 'child',
+      ageRange: '20to22',
+      isSameHousehold: false,
+      paysNationalPension: true,
+    });
+
+    const baselineChart = generateChartData(range, {
+      ...context,
+      dependents: [{ ...student, paysNationalPension: false }],
+    });
+    const familyPensionChart = generateChartData(range, { ...context, dependents: [student] });
+
+    const basePension = pointsOf(baselineChart.datasets.find(d => d.label === 'Pension')!);
+    const withFamilyPension = pointsOf(
+      familyPensionChart.datasets.find(d => d.label === 'Pension')!,
+    );
+
+    // Every swept point adds the fixed 2026 statutory contribution (¥213,810) to the Pension bar
+    withFamilyPension.forEach((pt, i) => {
+      expect(pt.y).toBe(basePension[i]!.y + 213_810);
+    });
+
+    // All bars still stack to total swept income at every point
+    const bars = familyPensionChart.datasets.filter(d => d.type === 'bar');
+    const takeHome = pointsOf(familyPensionChart.datasets.find(d => d.label === 'Take-Home Pay')!);
     takeHome.forEach((point, i) => {
       const stacked = bars.reduce((sum, d) => sum + pointsOf(d)[i]!.y, 0);
       expect(stacked, `income ${point.x}`).toBe(point.x);
