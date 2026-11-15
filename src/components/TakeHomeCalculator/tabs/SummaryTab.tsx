@@ -87,6 +87,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       >
         <Typography
           variant="subtitle2"
+          component="h3"
           sx={{
             mt: { xs: 0.5, sm: 1 },
             mb: { xs: 0.5, sm: 1 },
@@ -170,6 +171,7 @@ const SummaryTab: React.FC<SummaryTabProps> = ({ results }) => {
       >
         <Typography
           variant="subtitle2"
+          component="h3"
           sx={{
             mt: { xs: 0.5, sm: 1 },
             mb: { xs: 0.5, sm: 1 },

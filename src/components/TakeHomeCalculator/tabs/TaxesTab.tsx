@@ -414,6 +414,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
     <Box>
       <Typography
         variant="h6"
+        component="h3"
         sx={{
           mb: 1,
           color: 'warning.main',
@@ -483,7 +484,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
       {/* Income Tax Calculation */}
       <Box sx={{ mb: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
+        <Typography variant="h6" component="h4" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
           Income Tax Calculation
         </Typography>
 
@@ -977,7 +978,7 @@ const TaxesTab: React.FC<TaxesTabProps> = ({ results, inputs }) => {
 
       {/* Residence Tax Calculation */}
       <Box sx={{ mb: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
+        <Typography variant="h6" component="h4" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
           Residence Tax Calculation
         </Typography>
 

@@ -9,10 +9,18 @@ export const theme = createTheme({
   // across all components, replacing each component's own focus treatment.
   // https://mui.com/material-ui/customization/focus-visible/
   focusVisible: true,
-  // Only `background` differs from MUI's defaults, overridden so paper
-  // contrasts with the page.
+  // Override light-mode `background` so paper contrasts with the page, and
+  // darken `primary.main` / `warning.main` from MUI's defaults (#1976d2 /
+  // #ed6c02) so text using those tokens maintains >= 4.5:1 WCAG AA contrast
+  // on both white paper and tinted summary/banner backgrounds.
   colorSchemes: {
-    light: { palette: { background: { default: '#f5f5f5' } } },
+    light: {
+      palette: {
+        background: { default: '#f5f5f5' },
+        primary: { main: '#1565c0' },
+        warning: { main: '#c2410c' },
+      },
+    },
     dark: { palette: { background: { paper: '#1e1e1e' } } },
   },
   components: {

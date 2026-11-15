@@ -143,6 +143,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       <Box>
         <Typography
           variant="h6"
+          component="h3"
           sx={{
             mb: 1,
             color: 'primary.main',
@@ -222,6 +223,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
     <Box>
       <Typography
         variant="h6"
+        component="h3"
         sx={{
           mb: 1,
           color: 'primary.main',
@@ -365,7 +367,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {/* Health Insurance */}
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          <Typography variant="h6" component="h4" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {isLatterStage
               ? 'Medical System for the Elderly (75+)'
               : isNationalHealthInsurance
@@ -613,7 +615,11 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
           return (
             <Box sx={{ mt: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                <Typography
+                  variant="h6"
+                  component="h4"
+                  sx={{ fontSize: '1.1rem', fontWeight: 600 }}
+                >
                   National Health Insurance
                 </Typography>
               </Box>
@@ -732,7 +738,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {/* Pension Payments */}
       <Box sx={{ mt: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          <Typography variant="h6" component="h4" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             {pensionCopy.title}
           </Typography>
         </Box>
@@ -805,7 +811,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {/* Long-term Care Insurance (第1号被保険者, ages 65+) */}
       {results.longTermCareCategory1Premium !== undefined && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          <Typography variant="h6" component="h4" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Age 65+ Long-term Care Insurance
             <DetailedTooltip title="Age 65+ Long-term Care Insurance" icon={SIMPLE_TOOLTIP_ICON}>
               <LongTermCareCategory1PremiumTooltip
@@ -828,7 +834,7 @@ const SocialInsuranceTab: React.FC<SocialInsuranceTabProps> = ({ results, inputs
       {/* Employment Insurance */}
       {results.hasEmploymentIncome && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+          <Typography variant="h6" component="h4" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
             Employment Insurance
             <DetailedTooltip title="Employment Insurance" icon={SIMPLE_TOOLTIP_ICON}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>

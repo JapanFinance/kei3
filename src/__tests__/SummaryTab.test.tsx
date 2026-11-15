@@ -224,3 +224,12 @@ describe('SummaryTab with household NHI premium', () => {
     expect(screen.queryByText(/National Health Insurance/i)).not.toBeInTheDocument();
   });
 });
+
+describe('SummaryTab heading hierarchy', () => {
+  it('renders section headings at level 3 beneath the breakdown heading', () => {
+    render(<SummaryTab results={baseResults} />);
+
+    expect(screen.getByRole('heading', { level: 3, name: 'Social Insurance' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Taxes' })).toBeInTheDocument();
+  });
+});

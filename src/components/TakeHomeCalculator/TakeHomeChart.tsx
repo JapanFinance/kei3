@@ -576,6 +576,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
       <Box sx={{ mb: { xs: 1, sm: 2 } }}>
         <Typography
           variant="h6"
+          component="h2"
           gutterBottom
           sx={{
             fontSize: { xs: '1.08rem', sm: '1.3rem' },
@@ -646,6 +647,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               >
                 <Typography
                   variant="subtitle2"
+                  component="h3"
                   sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.9rem' }}
                 >
                   Comparative Data Unavailable
@@ -967,6 +969,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               <Typography
                 id="range-slider"
                 variant="subtitle2"
+                component="h3"
                 gutterBottom
                 sx={{
                   fontSize: { xs: '1rem', sm: '1.1rem' },

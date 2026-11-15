@@ -75,9 +75,8 @@
 // with the bundle-size budget, an intentional, justified drop should lower the
 // floor in the same change; an improvement should raise it.
 //   Performance     warn  ≥ 0.75   preview ~0.85, production ~0.82–0.84.
-//   Accessibility   error ≥ 0.95   held below 1.0 by color-contrast on muted
-//                                   text and a subtitle2 rendered as <h6>
-//                                   (heading-order).
+//   Accessibility   error ≥ 1.00   perfect since color-contrast and heading
+//                                   order were fixed.
 //   Best Practices  error ≥ 1.00   perfect since the favicon landed (its 404
 //                                   was the one failing audit).
 //   SEO             error ≥ 1.00   (with is-crawlable skipped on workers.dev
@@ -133,7 +132,7 @@ export const MILESTONE_THROTTLING = {
 // error levels except performance to the production audit.
 export const BUDGETS = {
   performance: { level: 'warn', minScore: 0.75 },
-  accessibility: { level: 'error', minScore: 0.95 },
+  accessibility: { level: 'error', minScore: 1 },
   'best-practices': { level: 'error', minScore: 1 },
   seo: { level: 'error', minScore: 1 },
 };

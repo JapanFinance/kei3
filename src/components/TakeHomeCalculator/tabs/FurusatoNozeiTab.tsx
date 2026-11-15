@@ -32,7 +32,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
     return (
       <Box sx={{ textAlign: 'center', py: 4 }}>
         <VolunteerActivismIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-        <Typography variant="h6" sx={{ color: 'text.disabled', mb: 1 }}>
+        <Typography variant="h6" component="h3" sx={{ color: 'text.disabled', mb: 1 }}>
           No Furusato Nozei Data Available
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -58,6 +58,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
     <Box>
       <Typography
         variant="h6"
+        component="h3"
         sx={{
           mb: 1,
           color: 'secondary.main',
@@ -136,7 +137,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
 
       {/* Tax Reductions */}
       <Box sx={{ mb: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
+        <Typography variant="h6" component="h4" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
           Tax Reductions (at limit)
         </Typography>
 
@@ -355,7 +356,7 @@ const FurusatoNozeiTab: React.FC<FurusatoNozeiTabProps> = ({ results }) => {
 
       {/* Effective Return */}
       <Box sx={{ mb: 1 }}>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
+        <Typography variant="h6" component="h4" sx={{ mb: 1, fontSize: '1.1rem', fontWeight: 600 }}>
           Effective Return Analysis
         </Typography>
 
