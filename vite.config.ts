@@ -268,13 +268,23 @@ type ChunkGraph = {
   getModuleInfo(id: string): { isEntry: boolean; importers: string[] } | null;
 };
 
+// @mui/material/styles/index.mjs re-exports enhanceHighContrast, an opt-in
+// helper never imported by the app. enhanceHighContrast statically imports 15
+// component *Classes modules — three of which (FilledInput, Input,
+// OutlinedInput) import InputBase/index.mjs, pulling InputBase,
+// TextareaAutosize, and FormControl into the un-shaken module graph. Because
+// getModuleInfo().importers reflects file-level imports before tree-shaking
+// drops unused barrel re-exports, walking through enhanceHighContrast would
+// misclassify that form-input subgraph into vendor-eager (Wave 1).
+const UNUSED_BARREL_REEXPORTS = /[\\/]@mui[\\/]material[\\/]styles[\\/]enhanceHighContrast\.m?js$/;
+
 // A dynamic import edge appears in dynamicImporters, not importers, so the
 // walk stops at lazy boundaries by construction. Within one walk the visiting
 // set both breaks import cycles and memoizes exhausted subtrees; results are
 // not cached across walks because a cross-walk cache would need cycle-aware
 // invalidation to stay correct.
 const eagerlyReachable = (id: string, graph: ChunkGraph, visiting = new Set<string>()): boolean => {
-  if (visiting.has(id)) return false;
+  if (visiting.has(id) || UNUSED_BARREL_REEXPORTS.test(id)) return false;
   visiting.add(id);
   const info = graph.getModuleInfo(id);
   if (!info) return false;
