@@ -114,12 +114,13 @@ const CSP_ENVIRONMENTS = [
 ];
 
 /**
- * Appends the Content-Security-Policy and Permissions-Policy to the _headers
+ * Appends Content-Security-Policy, Permissions-Policy,
+ * Cross-Origin-Opener-Policy, and Cross-Origin-Resource-Policy to the _headers
  * file copied from public/, hashing the built index.html for script-src.
  *
  * One CSP rule is written per entry in {@link CSP_ENVIRONMENTS}, so each
- * deployed host reports under its own Sentry environment. Permissions-Policy is
- * host-independent and applies to every path.
+ * deployed host reports under its own Sentry environment. The remaining
+ * security headers are host-independent and apply to every path.
  *
  * @param options - Plugin configuration
  * @param options.cspReportOnly - Deliver as Content-Security-Policy-Report-Only,
@@ -224,15 +225,19 @@ const securityHeaders = ({
         .join('\n');
     });
 
-    const permissionsBlock = [
+    const sharedSecurityBlock = [
       '# Security headers. The Content-Security-Policy script-src hashes are',
       '# regenerated from the emitted index.html on every build by the',
       '# security-headers plugin in vite.config.',
       '/*',
       `  Permissions-Policy: ${permissionsPolicy}`,
+      // Isolate the browsing context group from cross-origin popups/windows
+      // (XS-Leaks defense) and block third-party sites from embedding assets.
+      '  Cross-Origin-Opener-Policy: same-origin',
+      '  Cross-Origin-Resource-Policy: same-origin',
     ].join('\n');
 
-    const block = [permissionsBlock, ...envBlocks].join('\n\n');
+    const block = [sharedSecurityBlock, ...envBlocks].join('\n\n');
     writeFileSync(headersPath, `${readFileSync(headersPath, 'utf8').trimEnd()}\n\n${block}\n`);
   },
 });
