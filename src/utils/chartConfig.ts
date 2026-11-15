@@ -147,6 +147,7 @@ export const scaleIncomeStreamsToIncome = (
 export const generateChartData = (
   chartRange: ChartRange,
   currentInputs: TakeHomeInputs,
+  capBorderColor: string = 'rgba(0, 0, 0, 0.87)',
 ): ChartData<'bar' | 'line'> => {
   // Create income points based on the current range. Points below the income the sweep holds
   // constant are left out: no earned income could bring the total that low.
@@ -263,7 +264,7 @@ export const generateChartData = (
         y: result.healthInsurance + (result.householdNHIPremiumPaidByTaxpayer ?? 0),
         breakdown,
       })),
-      borderColor: 'var(--mui-palette-text-primary)',
+      borderColor: capBorderColor,
       backgroundColor: 'rgba(255, 140, 0, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) => (caps.healthInsuranceCapped ? 2 : 0)),
       yAxisID: 'y',
@@ -277,7 +278,7 @@ export const generateChartData = (
         y: result.pensionPayments,
         breakdown,
       })),
-      borderColor: 'var(--mui-palette-text-primary)',
+      borderColor: capBorderColor,
       backgroundColor: 'rgba(138, 43, 226, 0.7)',
       borderWidth: resultsAndCaps.map(({ caps }) =>
         caps.pensionCapped || caps.pensionFixed ? 2 : 0,

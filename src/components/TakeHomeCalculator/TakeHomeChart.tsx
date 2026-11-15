@@ -6,7 +6,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Select from '@mui/material/Select';
 import Slider from '@mui/material/Slider';
-import { useTheme } from '@mui/material/styles';
+import { useColorScheme, useTheme, type CssVarsTheme, type Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
@@ -261,7 +261,11 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 }) => {
   useLoadMilestone('chart-rendered');
 
-  const theme = useTheme();
+  const theme = useTheme<Theme & Partial<Pick<CssVarsTheme, 'colorSchemes'>>>();
+  const { colorScheme } = useColorScheme();
+  const capBorderColor =
+    (colorScheme && theme.colorSchemes?.[colorScheme]?.palette.text.primary) ??
+    theme.palette.text.primary;
 
   const totalIncome = Math.max(
     currentIncome,
@@ -358,34 +362,39 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
     if (isChartDisabled) {
       return { datasets: [] };
     }
-    return generateChartData(chartRange, {
-      incomeYear,
-      ageRange,
-      longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
-      longTermCareCategory1Premium,
-      healthInsuranceProvider,
-      nationalPensionExemption,
-      region,
-      dcPlanContributions,
-      dependents,
-      customEHIRates,
-      manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
-      manualSocialInsuranceAmount,
-      incomeStreams,
-      reportedDividendsTaxation,
-      blueFilerDeduction,
-      lifeInsurance,
-      earthquakeInsurance,
-      medicalExpenses,
-      personalCircumstances,
-      homeLoanTaxCredit,
-      foreignTaxCredit,
-      nhiPaymentAttribution,
-      nhiHouseholdRegion,
-    });
+    return generateChartData(
+      chartRange,
+      {
+        incomeYear,
+        ageRange,
+        longTermCareCategory1ManualEntry: longTermCareCategory1ManualEntry ?? false,
+        longTermCareCategory1Premium,
+        healthInsuranceProvider,
+        nationalPensionExemption,
+        region,
+        dcPlanContributions,
+        dependents,
+        customEHIRates,
+        manualSocialInsuranceEntry: manualSocialInsuranceEntry ?? false,
+        manualSocialInsuranceAmount,
+        incomeStreams,
+        reportedDividendsTaxation,
+        blueFilerDeduction,
+        lifeInsurance,
+        earthquakeInsurance,
+        medicalExpenses,
+        personalCircumstances,
+        homeLoanTaxCredit,
+        foreignTaxCredit,
+        nhiPaymentAttribution,
+        nhiHouseholdRegion,
+      },
+      capBorderColor,
+    );
   }, [
     isChartDisabled,
     chartRange,
+    capBorderColor,
     incomeYear,
     ageRange,
     longTermCareCategory1ManualEntry,
