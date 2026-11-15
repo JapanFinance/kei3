@@ -1,13 +1,7 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import {
-  useEffect,
-  useSyncExternalStore,
-  type ComponentProps,
-  type ComponentType,
-  type ReactNode,
-} from 'react';
+import { useEffect, useSyncExternalStore, type ComponentProps, type ComponentType } from 'react';
 
 import {
   changelogModalStore,
@@ -16,7 +10,6 @@ import {
   type DeferredModuleStore,
   type InputModalsModule,
 } from '../utils/deferredModules';
-import ChangelogLoadingDialog from './ChangelogLoadingDialog';
 import ModalLoadingDialog from './ui/ModalLoadingDialog';
 
 interface ModalProps {
@@ -34,7 +27,7 @@ interface ModalProps {
 function createDeferredModal<TModule, P extends ModalProps>(
   store: DeferredModuleStore<TModule>,
   selectComponent: (mod: TModule) => ComponentType<P>,
-  renderLoading: (onClose: () => void) => ReactNode,
+  loadingAriaLabel: string,
   displayName: string,
 ): ComponentType<P> {
   function DeferredModal(props: P) {
@@ -47,7 +40,9 @@ function createDeferredModal<TModule, P extends ModalProps>(
     }, [props.open, mod]);
 
     if (!mod) {
-      return props.open ? renderLoading(props.onClose) : null;
+      return props.open ? (
+        <ModalLoadingDialog onClose={props.onClose} ariaLabel={loadingAriaLabel} />
+      ) : null;
     }
 
     const Modal = selectComponent(mod);
@@ -65,7 +60,7 @@ function createDeferredInputModal<K extends keyof InputModalsModule>(
   return createDeferredModal<InputModalsModule, ComponentProps<InputModalsModule[K]>>(
     inputModalsStore,
     mod => mod[exportName] as ComponentType<ComponentProps<InputModalsModule[K]>>,
-    onClose => <ModalLoadingDialog onClose={onClose} ariaLabel={loadingAriaLabel} />,
+    loadingAriaLabel,
     exportName,
   );
 }
@@ -88,9 +83,4 @@ export const IncomeDetailsModal = createDeferredInputModal(
 export const ChangelogModal = createDeferredModal<
   ChangelogModule,
   ComponentProps<ChangelogModule['default']>
->(
-  changelogModalStore,
-  mod => mod.default,
-  onClose => <ChangelogLoadingDialog onClose={onClose} />,
-  'ChangelogModal',
-);
+>(changelogModalStore, mod => mod.default, 'Loading changelog', 'ChangelogModal');

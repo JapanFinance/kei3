@@ -48,4 +48,18 @@ describe('ModalLoadingDialog', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('cancels its timer when unmounted before the delay', () => {
+    vi.useFakeTimers();
+    const { unmount } = render(
+      <ModalLoadingDialog onClose={vi.fn()} ariaLabel="Loading dependents dialog" />,
+    );
+
+    unmount();
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(screen.queryByLabelText('Loading dependents dialog')).not.toBeInTheDocument();
+  });
 });
