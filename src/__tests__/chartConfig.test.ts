@@ -516,6 +516,26 @@ describe('generateChartData with household National Health Insurance', () => {
   });
 });
 
+describe('generateChartData capped-bar border color', () => {
+  it('uses the default resolved border color instead of a CSS custom property', () => {
+    const { datasets } = generateChartData(range, context);
+    const healthInsurance = datasets.find(d => d.label === 'Health Insurance');
+    const pension = datasets.find(d => d.label === 'Pension');
+
+    expect(healthInsurance?.borderColor).toBe('rgba(0, 0, 0, 0.87)');
+    expect(pension?.borderColor).toBe('rgba(0, 0, 0, 0.87)');
+  });
+
+  it('applies a custom resolved capBorderColor to capped social insurance datasets', () => {
+    const { datasets } = generateChartData(range, context, '#fff');
+    const healthInsurance = datasets.find(d => d.label === 'Health Insurance');
+    const pension = datasets.find(d => d.label === 'Pension');
+
+    expect(healthInsurance?.borderColor).toBe('#fff');
+    expect(pension?.borderColor).toBe('#fff');
+  });
+});
+
 describe('getChartOptions animation', () => {
   it('leaves the Chart.js animation defaults in place by default', () => {
     expect(getChartOptions(range, 3_000_000, 4_000_000)).not.toHaveProperty('animation');
