@@ -615,7 +615,14 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
         </Paper>
       ) : (
         <>
-          <Box className="chart-container" sx={{ mb: { xs: 1.2, sm: 2 }, position: 'relative' }}>
+          <Box
+            sx={{
+              height: 400,
+              width: '100%',
+              mb: { xs: 1.2, sm: 2 },
+              position: 'relative',
+            }}
+          >
             <Chart
               ref={chartRef}
               type="bar"
@@ -662,28 +669,27 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
 
           {/* Custom Legend for Income Lines */}
           <Box
-            className="chart-legend"
             sx={{
               display: 'flex',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
               flexDirection: { xs: 'column', sm: 'row' },
               alignItems: { xs: 'flex-start', sm: 'center' },
               gap: { xs: 0.7, sm: 2 },
               mb: { xs: 1.2, sm: 2 },
-              mt: 0,
             }}
           >
             {currentIncome > 0 && (
               <Box
-                className="legend-item"
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
                   opacity: yourIncomeIsVisibleInChart ? 1 : 0.5,
+                  transition: 'opacity 0.3s ease-in-out',
                   gap: 1,
                 }}
               >
                 <Box
-                  className="legend-marker"
                   sx={{
                     width: 2, // vertical line: narrow width
                     height: 24, // vertical line: tall height
@@ -706,16 +712,15 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
               </Box>
             )}
             <Box
-              className="legend-item"
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 opacity: medianIncomeIsVisibleInChart ? 1 : 0.5,
+                transition: 'opacity 0.3s ease-in-out',
                 gap: 1,
               }}
             >
               <Box
-                className="legend-marker"
                 sx={{
                   width: 2, // vertical line: narrow width
                   height: 24, // vertical line: tall height
@@ -739,7 +744,7 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             {/* The comparison group reads inline within the percentile sentence. Always rendered
             (not gated on income): the selection also drives the median line, which is meaningful
             before any income is entered. */}
-            <Box className="legend-item" sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography
                 component="div"
                 variant="body2"
@@ -821,7 +826,6 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
             {/* Quintile bands for the selected 世帯類型: published 五分位値 for 全世帯, estimated by
             inverting the bucketed distribution for every other type. */}
             <Box
-              className="legend-item"
               sx={{
                 display: 'flex',
                 alignItems: 'center',
