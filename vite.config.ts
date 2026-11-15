@@ -308,7 +308,7 @@ export default defineConfig(({ mode }) => ({
     cloudflare(mode === 'preview' ? { config: applyPreviewWorkerConfig } : undefined),
     stripHtmlComments(),
     dropImportMapAsset(),
-    securityHeaders({ cspReportOnly: true, reportEndpoint: CSP_REPORT_ENDPOINT }),
+    securityHeaders({ cspReportOnly: false, reportEndpoint: CSP_REPORT_ENDPOINT }),
     react(),
     Sitemap({
       hostname: 'https://kei3.japanfinance.org/',
