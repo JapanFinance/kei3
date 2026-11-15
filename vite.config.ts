@@ -121,14 +121,18 @@ const CSP_ENVIRONMENTS = [
  * deployed host reports under its own Sentry environment. Permissions-Policy is
  * host-independent and applies to every path.
  *
+ * @param options - Plugin configuration
  * @param options.cspReportOnly - Deliver as Content-Security-Policy-Report-Only,
  *   which observes violations without blocking, and drop the directives such a
- *   policy ignores
+ *   policy ignores (default: false)
  * @param options.reportEndpoint - Violation collector URL; empty omits every
  *   reporting directive and header
  */
-const securityHeaders = (options: {
-  cspReportOnly: boolean;
+const securityHeaders = ({
+  cspReportOnly = false,
+  reportEndpoint,
+}: {
+  cspReportOnly?: boolean;
   reportEndpoint: string;
 }): PluginOption => ({
   name: 'security-headers',
@@ -143,14 +147,14 @@ const securityHeaders = (options: {
       CLOUDFLARE_ANALYTICS_SCRIPT,
       ...inlineScriptHashes(readFileSync(indexPath, 'utf8')),
     ].join(' ');
-    const cspField = options.cspReportOnly
+    const cspField = cspReportOnly
       ? 'Content-Security-Policy-Report-Only'
       : 'Content-Security-Policy';
 
     // Report ingest host must be in connect-src (or default-src), otherwise
     // the browser blocks the report submission and the collector silently
     // receives nothing.
-    const reportOrigin = options.reportEndpoint ? new URL(options.reportEndpoint).origin : '';
+    const reportOrigin = reportEndpoint ? new URL(reportEndpoint).origin : '';
     const connectSrc = reportOrigin ? `connect-src 'self' ${reportOrigin}` : "connect-src 'self'";
 
     const cspFor = (reportUrl: string): string =>
@@ -169,7 +173,7 @@ const securityHeaders = (options: {
         connectSrc,
         // upgrade-insecure-requests is silently ignored in a report-only policy,
         // and the browser logs a console warning
-        options.cspReportOnly ? null : 'upgrade-insecure-requests',
+        cspReportOnly ? null : 'upgrade-insecure-requests',
         // report-to is the current Reporting API; report-uri is the legacy
         // mechanism still needed by browsers that have not implemented report-to.
         reportUrl ? 'report-to csp-endpoint' : null,
@@ -179,7 +183,7 @@ const securityHeaders = (options: {
         .join('; ');
 
     const reportUrlFor = (env: string): string =>
-      options.reportEndpoint ? `${options.reportEndpoint}&sentry_environment=${env}` : '';
+      reportEndpoint ? `${reportEndpoint}&sentry_environment=${env}` : '';
 
     // Opt out of browser features the calculator never uses, so a future
     // injected script cannot silently reach for them.
@@ -308,7 +312,7 @@ export default defineConfig(({ mode }) => ({
     cloudflare(mode === 'preview' ? { config: applyPreviewWorkerConfig } : undefined),
     stripHtmlComments(),
     dropImportMapAsset(),
-    securityHeaders({ cspReportOnly: true, reportEndpoint: CSP_REPORT_ENDPOINT }),
+    securityHeaders({ reportEndpoint: CSP_REPORT_ENDPOINT }),
     react(),
     Sitemap({
       hostname: 'https://kei3.japanfinance.org/',
