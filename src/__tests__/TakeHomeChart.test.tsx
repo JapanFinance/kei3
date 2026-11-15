@@ -1,16 +1,22 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { ThemeProvider, useColorScheme } from '@mui/material/styles';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
 import TakeHomeChart, { MAX_CHART_INCOME } from '../components/TakeHomeCalculator/TakeHomeChart';
+import { theme } from '../theme';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
 import { DEFAULT_TAXPAYER_AGE_RANGE } from '../types/taxpayerAge';
 
 vi.mock('react-chartjs-2', () => ({
-  Chart: () => <div data-testid="chart-canvas" />,
+  Chart: ({ data }: { data?: { datasets?: { label?: string; borderColor?: string }[] } }) => {
+    const health = data?.datasets?.find(d => d.label === 'Health Insurance');
+    return <div data-testid="chart-canvas" data-border-color={health?.borderColor} />;
+  },
 }));
 
 const baseProps: React.ComponentProps<typeof TakeHomeChart> = {
@@ -86,5 +92,29 @@ describe('TakeHomeChart', () => {
 
     expect(screen.getByText('Chart Disabled')).toBeInTheDocument();
     expect(screen.queryByTestId('chart-canvas')).not.toBeInTheDocument();
+  });
+
+  it('resolves light and dark text.primary for capped-bar borderColor', async () => {
+    const user = userEvent.setup();
+    const SwitchToDark = () => {
+      const { setMode } = useColorScheme();
+      return <button onClick={() => setMode('dark')}>Switch to dark</button>;
+    };
+
+    render(
+      <ThemeProvider theme={theme} defaultMode="light" storageManager={null}>
+        <SwitchToDark />
+        <TakeHomeChart {...baseProps} />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute(
+      'data-border-color',
+      'rgba(0, 0, 0, 0.87)',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Switch to dark' }));
+
+    expect(screen.getByTestId('chart-canvas')).toHaveAttribute('data-border-color', '#fff');
   });
 });

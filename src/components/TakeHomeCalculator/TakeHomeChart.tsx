@@ -262,10 +262,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
   useLoadMilestone('chart-rendered');
 
   const theme = useTheme<Theme & Partial<Pick<CssVarsTheme, 'colorSchemes'>>>();
-  const { mode, systemMode } = useColorScheme();
-  const colorScheme = (mode === 'system' ? systemMode : mode) === 'dark' ? 'dark' : 'light';
+  const { colorScheme } = useColorScheme();
   const capBorderColor =
-    theme.colorSchemes?.[colorScheme]?.palette.text.primary ?? theme.palette.text.primary;
+    (colorScheme && theme.colorSchemes?.[colorScheme]?.palette.text.primary) ??
+    theme.palette.text.primary;
 
   const totalIncome = Math.max(
     currentIncome,
