@@ -259,29 +259,11 @@ const securityHeaders = ({
 //   the first lazy chunk that needs it, fetched in parallel via that chunk's
 //   preload list, and can never delay first paint — the entry cannot
 //   statically import it, so index.html can never modulepreload it.
-// The classification walks static importer edges up to an entry, deriving the
-// split from the module graph rather than a hand-maintained list of package
-// paths: a vendor upgrade that moves files around cannot break it, and a new
-// eagerly-imported component moves only the modules it actually needs into
-// vendor-eager instead of dragging the whole library forward.
-type ChunkGraph = {
-  getModuleInfo(id: string): { isEntry: boolean; importers: string[] } | null;
-};
-
-// A dynamic import edge appears in dynamicImporters, not importers, so the
-// walk stops at lazy boundaries by construction. Within one walk the visiting
-// set both breaks import cycles and memoizes exhausted subtrees; results are
-// not cached across walks because a cross-walk cache would need cycle-aware
-// invalidation to stay correct.
-const eagerlyReachable = (id: string, graph: ChunkGraph, visiting = new Set<string>()): boolean => {
-  if (visiting.has(id)) return false;
-  visiting.add(id);
-  const info = graph.getModuleInfo(id);
-  if (!info) return false;
-  return (
-    info.isEntry || info.importers.some(importer => eagerlyReachable(importer, graph, visiting))
-  );
-};
+// Matching Rolldown's `$initial` tag lets the bundler classify from the live
+// static entry chain after tree-shaking, avoiding pre-shake barrel re-exports
+// (such as unused helpers in @mui/material/styles, @mui/material/utils, and
+// @mui/system) that a raw importer walk would pull into vendor-eager, while
+// still deriving the split automatically from the module graph.
 
 // Groups are matched in order; a module claimed by an earlier group is
 // excluded from later ones.
@@ -296,15 +278,16 @@ const codeSplitting = {
       test: /node_modules[\\/](chart\.js|react-chartjs-2|@kurkle)[\\/]/,
     },
     {
-      name: (id: string, ctx: ChunkGraph) =>
-        id.includes('node_modules')
-          ? eagerlyReachable(id, ctx)
-            ? 'vendor-eager'
-            : 'vendor-deferred'
-          : null,
-      // Every vendor module is classified individually above; recursive
-      // dependency capture would let one group claim modules the walk
-      // assigned to the other.
+      name: 'vendor-eager',
+      test: /node_modules/,
+      tags: ['$initial' as const],
+      // Only claim the entry-chain modules themselves; let the fallback group
+      // capture deferred dependencies rather than pulling through un-shaken edges.
+      includeDependenciesRecursively: false,
+    },
+    {
+      name: 'vendor-deferred',
+      test: /node_modules/,
       includeDependenciesRecursively: false,
     },
   ],
