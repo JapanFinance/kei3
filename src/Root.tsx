@@ -11,8 +11,6 @@ import ChangelogButton from './components/ChangelogButton';
 import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { theme } from './theme';
 
-import './index.css';
-
 // Defer loading of the main App component
 const App = lazy(() => import('./App.tsx'));
 

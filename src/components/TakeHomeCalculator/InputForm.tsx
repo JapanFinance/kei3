@@ -328,8 +328,19 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
 
   return (
     <Box
-      className="form-container"
-      sx={{ p: { xs: 1.2, sm: 2 }, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 2 }}
+      sx={{
+        p: { xs: 1.2, sm: 2 },
+        bgcolor: 'background.paper',
+        borderRadius: 3,
+        boxShadow: 2,
+        border: '1px solid',
+        borderColor: 'divider',
+        width: '100%',
+        maxWidth: '100%',
+        mx: 'auto',
+        position: 'relative',
+        zIndex: 1,
+      }}
     >
       <Typography
         variant="h5"
@@ -343,7 +354,7 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       >
         Taxpayer Information
       </Typography>
-      <Box className="form-group">
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 3 }}>
         <Card variant="outlined">
           <CardContent sx={{ p: 2, pt: 1, '&:last-child': { pb: 2 } }}>
             <Typography

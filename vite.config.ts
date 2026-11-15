@@ -160,12 +160,12 @@ const securityHeaders = ({
 
     const cspFor = (reportUrl: string): string =>
       [
-        "default-src 'self'",
+        "default-src 'none'",
         "base-uri 'none'",
         "object-src 'none'",
         "frame-ancestors 'none'",
-        "form-action 'self'",
-        "img-src 'self' data:",
+        "form-action 'none'",
+        "img-src 'self'",
         // emotion (MUI) inserts <style> rules whose content varies per render,
         // so they cannot be hashed, and a nonce would need per-request HTML
         // that static-asset serving cannot produce.
