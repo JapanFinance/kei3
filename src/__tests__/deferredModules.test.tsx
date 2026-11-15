@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { act, render, screen } from '@testing-library/react';
-import { Suspense } from 'react';
+import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 function deferred<T>() {
@@ -15,11 +15,11 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-type ComponentModule = { default: () => null };
+type ComponentModule = { default: () => ReactNode };
 type InputModalsModule = {
-  AdditionalDeductionsModal: () => null;
-  DependentsModal: () => null;
-  IncomeDetailsModal: () => null;
+  AdditionalDeductionsModal: () => ReactNode;
+  DependentsModal: () => ReactNode;
+  IncomeDetailsModal: () => ReactNode;
 };
 
 // Dynamic imports in Vitest settle on macrotask ticks; flush via an un-faked MessageChannel task.
@@ -141,29 +141,28 @@ describe('deferredModules', () => {
 
   it('loads input modals on demand without starting results or chart', async () => {
     const mod = await import('../utils/deferredModules');
+    const modals = await import('../components/deferredModals');
     inputModalsGate.resolve({
       AdditionalDeductionsModal: () => null,
-      DependentsModal: () => null,
+      DependentsModal: () => <div data-testid="dependents-loaded" />,
       IncomeDetailsModal: () => null,
     });
 
     mod.requestInputModals();
     render(
-      <Suspense fallback={<div>loading</div>}>
-        <mod.DependentsModal
-          open={false}
-          onClose={() => {}}
-          dependents={[]}
-          onDependentsChange={() => {}}
-          taxpayerNetIncome={0}
-          incomeYear={2026}
-          healthInsuranceProvider="KyokaiKenpo"
-          taxpayerAgeRange="age20to39"
-          onNHIPaymentAttributionChange={() => {}}
-          region="Tokyo"
-          onNHIHouseholdRegionChange={() => {}}
-        />
-      </Suspense>,
+      <modals.DependentsModal
+        open
+        onClose={() => {}}
+        dependents={[]}
+        onDependentsChange={() => {}}
+        taxpayerNetIncome={0}
+        incomeYear={2026}
+        healthInsuranceProvider="KyokaiKenpo"
+        taxpayerAgeRange="age20to39"
+        onNHIPaymentAttributionChange={() => {}}
+        region="Tokyo"
+        onNHIHouseholdRegionChange={() => {}}
+      />,
     );
     await act(async () => {
       await flushImports();
@@ -172,6 +171,178 @@ describe('deferredModules', () => {
     expect(inputModalsLoader).toHaveBeenCalledTimes(1);
     expect(resultsLoader).not.toHaveBeenCalled();
     expect(chartLoader).not.toHaveBeenCalled();
-    expect(screen.queryByText('loading')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dependents-loaded')).toBeInTheDocument();
+  });
+
+  it('renders an already-loaded modal synchronously without flashing a loading dialog', async () => {
+    const mod = await import('../utils/deferredModules');
+    const modals = await import('../components/deferredModals');
+    mod.requestInputModals();
+    inputModalsGate.resolve({
+      AdditionalDeductionsModal: () => null,
+      DependentsModal: () => <div data-testid="dependents-loaded" />,
+      IncomeDetailsModal: () => null,
+    });
+    await flushImports();
+
+    render(
+      <modals.DependentsModal
+        open
+        onClose={() => {}}
+        dependents={[]}
+        onDependentsChange={() => {}}
+        taxpayerNetIncome={0}
+        incomeYear={2026}
+        healthInsuranceProvider="KyokaiKenpo"
+        taxpayerAgeRange="age20to39"
+        onNHIPaymentAttributionChange={() => {}}
+        region="Tokyo"
+        onNHIHouseholdRegionChange={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId('dependents-loaded')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading dependents dialog')).not.toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(screen.queryByLabelText('Loading dependents dialog')).not.toBeInTheDocument();
+  });
+
+  it('swaps in fast-arriving modals before the 150 ms spinner delay without showing the spinner', async () => {
+    const mod = await import('../utils/deferredModules');
+    const modals = await import('../components/deferredModals');
+    mod.requestInputModals();
+
+    render(
+      <modals.DependentsModal
+        open
+        onClose={() => {}}
+        dependents={[]}
+        onDependentsChange={() => {}}
+        taxpayerNetIncome={0}
+        incomeYear={2026}
+        healthInsuranceProvider="KyokaiKenpo"
+        taxpayerAgeRange="age20to39"
+        onNHIPaymentAttributionChange={() => {}}
+        region="Tokyo"
+        onNHIHouseholdRegionChange={() => {}}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Loading dependents dialog')).not.toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    expect(screen.queryByLabelText('Loading dependents dialog')).not.toBeInTheDocument();
+
+    inputModalsGate.resolve({
+      AdditionalDeductionsModal: () => null,
+      DependentsModal: () => <div data-testid="dependents-loaded" />,
+      IncomeDetailsModal: () => null,
+    });
+    await act(async () => {
+      await flushImports();
+    });
+
+    expect(screen.getByTestId('dependents-loaded')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading dependents dialog')).not.toBeInTheDocument();
+  });
+
+  it('shows the spinner at 150 ms while waiting and swaps cleanly once the modal resolves', async () => {
+    const mod = await import('../utils/deferredModules');
+    const modals = await import('../components/deferredModals');
+    mod.requestInputModals();
+
+    render(
+      <modals.DependentsModal
+        open
+        onClose={() => {}}
+        dependents={[]}
+        onDependentsChange={() => {}}
+        taxpayerNetIncome={0}
+        incomeYear={2026}
+        healthInsuranceProvider="KyokaiKenpo"
+        taxpayerAgeRange="age20to39"
+        onNHIPaymentAttributionChange={() => {}}
+        region="Tokyo"
+        onNHIHouseholdRegionChange={() => {}}
+      />,
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(150);
+    });
+    expect(screen.getByLabelText('Loading dependents dialog')).toBeInTheDocument();
+
+    inputModalsGate.resolve({
+      AdditionalDeductionsModal: () => null,
+      DependentsModal: () => <div data-testid="dependents-loaded" />,
+      IncomeDetailsModal: () => null,
+    });
+    await act(async () => {
+      await flushImports();
+    });
+
+    expect(screen.queryByLabelText('Loading dependents dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dependents-loaded')).toBeInTheDocument();
+  });
+
+  it('retries loading input modals on a subsequent open after a fetch failure', async () => {
+    const mod = await import('../utils/deferredModules');
+    const modals = await import('../components/deferredModals');
+
+    mod.requestInputModals();
+    await flushImports();
+    expect(inputModalsLoader).toHaveBeenCalledTimes(1);
+
+    inputModalsGate.reject(new Error('network error'));
+    await flushImports();
+
+    const retryGate = deferred<InputModalsModule>();
+    inputModalsLoader.mockImplementationOnce(() => retryGate.promise);
+
+    render(
+      <modals.DependentsModal
+        open
+        onClose={() => {}}
+        dependents={[]}
+        onDependentsChange={() => {}}
+        taxpayerNetIncome={0}
+        incomeYear={2026}
+        healthInsuranceProvider="KyokaiKenpo"
+        taxpayerAgeRange="age20to39"
+        onNHIPaymentAttributionChange={() => {}}
+        region="Tokyo"
+        onNHIHouseholdRegionChange={() => {}}
+      />,
+    );
+    await flushImports();
+    expect(inputModalsLoader).toHaveBeenCalledTimes(2);
+
+    retryGate.resolve({
+      AdditionalDeductionsModal: () => null,
+      DependentsModal: () => <div data-testid="dependents-loaded" />,
+      IncomeDetailsModal: () => null,
+    });
+    await act(async () => {
+      await flushImports();
+    });
+
+    expect(screen.getByTestId('dependents-loaded')).toBeInTheDocument();
+  });
+
+  it('renders an already-loaded ChangelogModal synchronously without loading UI', async () => {
+    const mod = await import('../utils/deferredModules');
+    const modals = await import('../components/deferredModals');
+    mod.requestChangelogModal();
+    changelogGate.resolve({ default: () => <div data-testid="changelog-loaded" /> });
+    await flushImports();
+
+    render(<modals.ChangelogModal open onClose={() => {}} onViewed={() => {}} />);
+
+    expect(screen.getByTestId('changelog-loaded')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading changelog')).not.toBeInTheDocument();
   });
 });

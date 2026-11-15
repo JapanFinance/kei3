@@ -7,8 +7,23 @@ import { CHANGELOG_HASH } from '../hooks/useChangelogModal';
 
 type ResultsModule = typeof import('../components/TakeHomeCalculator/TakeHomeResults');
 type ChartModule = typeof import('../components/TakeHomeCalculator/TakeHomeChart');
-type InputModalsModule = typeof import('../components/TakeHomeCalculator/inputModals');
-type ChangelogModule = typeof import('../components/ChangelogModal');
+export type InputModalsModule = typeof import('../components/TakeHomeCalculator/inputModals');
+export type ChangelogModule = typeof import('../components/ChangelogModal');
+
+export interface DeferredModuleStore<T> {
+  /** Returns the resolved module synchronously if already loaded, otherwise `undefined`. */
+  getSnapshot: () => T | undefined;
+  /** Subscribes to module resolution notifications for `useSyncExternalStore`. */
+  subscribe: (listener: () => void) => () => void;
+  /** Bypasses any deferral wait and begins loading immediately. */
+  request: () => void;
+}
+
+interface DeferredLoader<T> {
+  store: DeferredModuleStore<T>;
+  load: () => Promise<T>;
+  settled: Promise<void>;
+}
 
 // Safari does not implement requestIdleCallback; the timeout arguments bound
 // the wait so the module still loads promptly on a busy page.
@@ -21,30 +36,71 @@ const whenBrowserIdle = () =>
     }
   });
 
+function createDeferredLoader<T>(
+  waitForGate: (requested: Promise<void>) => Promise<void>,
+  importModule: () => Promise<T>,
+): DeferredLoader<T> {
+  let loaded: T | undefined;
+  let modulePromise: Promise<T> | undefined;
+  const listeners = new Set<() => void>();
+
+  let resolveSettled = () => {};
+  const settled = new Promise<void>(resolve => {
+    resolveSettled = resolve;
+  });
+
+  let resolveRequested = () => {};
+  const requested = new Promise<void>(resolve => {
+    resolveRequested = resolve;
+  });
+
+  const load = () => {
+    if (!modulePromise) {
+      modulePromise = waitForGate(requested).then(() =>
+        importModule().then(
+          mod => {
+            loaded = mod;
+            listeners.forEach(listener => listener());
+            return mod;
+          },
+          error => {
+            // Clear the failed promise so an interactive click can retry loading.
+            modulePromise = undefined;
+            throw error;
+          },
+        ),
+      );
+      void modulePromise.then(resolveSettled, resolveSettled);
+    }
+    return modulePromise;
+  };
+
+  const request = () => {
+    resolveRequested();
+    void load().catch(() => undefined);
+  };
+
+  const store: DeferredModuleStore<T> = {
+    getSnapshot: () => loaded,
+    subscribe: listener => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    request,
+  };
+
+  return { store, load, settled };
+}
+
 let resolveChartSettled = () => {};
 const chartSettled = new Promise<void>(resolve => {
   resolveChartSettled = resolve;
 });
 
-let resolveInputModalsSettled = () => {};
-const inputModalsSettled = new Promise<void>(resolve => {
-  resolveInputModalsSettled = resolve;
-});
-
-let resolveInputModalsRequested = () => {};
-const inputModalsRequest = new Promise<void>(resolve => {
-  resolveInputModalsRequested = resolve;
-});
-
-let resolveChangelogRequested = () => {};
-const changelogRequest = new Promise<void>(resolve => {
-  resolveChangelogRequested = resolve;
-});
-
 let resultsModulePromise: Promise<ResultsModule> | undefined;
 let chartModulePromise: Promise<ChartModule> | undefined;
-let inputModalsModulePromise: Promise<InputModalsModule> | undefined;
-let changelogModulePromise: Promise<ChangelogModule> | undefined;
 
 const loadResultsModule = () => {
   resultsModulePromise ??= import('../components/TakeHomeCalculator/TakeHomeResults');
@@ -67,29 +123,25 @@ const loadChartModule = () => {
 // All three input modals load together in one chunk after the visible chart
 // module settles (or immediately on first click) so opening any modal does not
 // wait on separate waves or compete with visible startup content.
-const loadInputModalsModule = () => {
-  if (!inputModalsModulePromise) {
-    inputModalsModulePromise = Promise.race([chartSettled, inputModalsRequest]).then(
-      () => import('../components/TakeHomeCalculator/inputModals'),
-    );
-    void inputModalsModulePromise.then(resolveInputModalsSettled, resolveInputModalsSettled);
-  }
-  return inputModalsModulePromise;
-};
+const inputModalsLoader = createDeferredLoader<InputModalsModule>(
+  requested => Promise.race([chartSettled, requested]),
+  () => import('../components/TakeHomeCalculator/inputModals'),
+);
 
 // The changelog is invisible until opened, so it waits until the browser is
 // idle after the input modals — ready before anyone clicks the button without
 // competing with interactive or visible content. Deep links to #changelog need
 // the modal immediately and skip the deferral.
-const loadChangelogModule = () => {
-  changelogModulePromise ??=
+const changelogLoader = createDeferredLoader<ChangelogModule>(
+  requested =>
     window.location.hash === CHANGELOG_HASH
-      ? import('../components/ChangelogModal')
-      : Promise.race([inputModalsSettled.then(whenBrowserIdle), changelogRequest]).then(
-          () => import('../components/ChangelogModal'),
-        );
-  return changelogModulePromise;
-};
+      ? Promise.resolve()
+      : Promise.race([inputModalsLoader.settled.then(whenBrowserIdle), requested]),
+  () => import('../components/ChangelogModal'),
+);
+
+export const inputModalsStore = inputModalsLoader.store;
+export const changelogModalStore = changelogLoader.store;
 
 /**
  * Starts background loading of deferred modules in priority order: results,
@@ -98,32 +150,19 @@ const loadChangelogModule = () => {
 export function startDeferredLoads(): void {
   void loadResultsModule().catch(() => undefined);
   void loadChartModule().catch(() => undefined);
-  void loadInputModalsModule().catch(() => undefined);
-  void loadChangelogModule().catch(() => undefined);
+  void inputModalsLoader.load().catch(() => undefined);
+  void changelogLoader.load().catch(() => undefined);
 }
 
 /** Starts loading the input modals immediately if not already in flight. */
 export function requestInputModals(): void {
-  resolveInputModalsRequested();
-  void loadInputModalsModule().catch(() => undefined);
+  inputModalsStore.request();
 }
 
 /** Starts loading the changelog modal immediately if not already in flight. */
 export function requestChangelogModal(): void {
-  resolveChangelogRequested();
-  void loadChangelogModule().catch(() => undefined);
+  changelogModalStore.request();
 }
 
 export const TakeHomeResultsDisplay = lazy(loadResultsModule);
 export const TakeHomeChart = lazy(loadChartModule);
-export const ChangelogModal = lazy(loadChangelogModule);
-
-export const AdditionalDeductionsModal = lazy(() =>
-  loadInputModalsModule().then(m => ({ default: m.AdditionalDeductionsModal })),
-);
-export const DependentsModal = lazy(() =>
-  loadInputModalsModule().then(m => ({ default: m.DependentsModal })),
-);
-export const IncomeDetailsModal = lazy(() =>
-  loadInputModalsModule().then(m => ({ default: m.IncomeDetailsModal })),
-);

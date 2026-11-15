@@ -9,6 +9,8 @@ export const CHANGELOG_HASH = '#changelog';
 
 export interface UseChangelogModalReturn {
   isOpen: boolean;
+  /** True once the modal has been opened at least once, keeping exit transitions mounted. */
+  hasOpened: boolean;
   openModal: () => void;
   closeModal: () => void;
   /**
@@ -31,6 +33,7 @@ export interface UseChangelogModalReturn {
  */
 export function useChangelogModal(): UseChangelogModalReturn {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
   const [hasNewFeatures, setHasNewFeatures] = useState(
     () => __LATEST_CHANGELOG_DATE__ !== '' && getLastViewedDate() !== __LATEST_CHANGELOG_DATE__,
   );
@@ -46,6 +49,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
   useEffect(() => {
     const checkHash = () => {
       if (window.location.hash === CHANGELOG_HASH) {
+        setHasOpened(true);
         setIsOpen(true);
       }
     };
@@ -63,6 +67,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
   }, []);
 
   const openModal = useCallback(() => {
+    setHasOpened(true);
     setIsOpen(true);
     // Hide the dot on the click itself so the button responds immediately.
     // Only markViewed writes it down, so this is forgotten on a reload if the
@@ -85,6 +90,7 @@ export function useChangelogModal(): UseChangelogModalReturn {
 
   return {
     isOpen,
+    hasOpened,
     openModal,
     closeModal,
     markViewed,

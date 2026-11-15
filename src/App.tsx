@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import { useReducer, useDeferredValue, useMemo, useCallback, Suspense } from 'react';
 
 import ChangelogButton from './components/ChangelogButton';
-import ChangelogLoadingDialog from './components/ChangelogLoadingDialog';
+import { ChangelogModal } from './components/deferredModals';
 import SiteHeader, { SITE_TITLE } from './components/SiteHeader';
 import { TakeHomeInputForm } from './components/TakeHomeCalculator/InputForm';
 import { useChangelogModal } from './hooks/useChangelogModal';
@@ -19,7 +19,6 @@ import {
 } from './types/tax';
 import { DEFAULT_TAXPAYER_AGE_RANGE } from './types/taxpayerAge';
 import {
-  ChangelogModal,
   TakeHomeChart,
   TakeHomeResultsDisplay,
   requestChangelogModal,
@@ -36,6 +35,7 @@ function App() {
   // Changelog modal management
   const {
     isOpen: isChangelogOpen,
+    hasOpened: hasChangelogOpened,
     openModal: openChangelog,
     closeModal: closeChangelog,
     markViewed: markChangelogViewed,
@@ -219,15 +219,13 @@ function App() {
         </Box>
 
         {/* Changelog Modal */}
-        <Suspense
-          fallback={isChangelogOpen ? <ChangelogLoadingDialog onClose={closeChangelog} /> : null}
-        >
+        {(hasChangelogOpened || isChangelogOpen) && (
           <ChangelogModal
             open={isChangelogOpen}
             onClose={closeChangelog}
             onViewed={markChangelogViewed}
           />
-        </Suspense>
+        )}
       </Box>
     </Box>
   );

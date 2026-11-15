@@ -63,12 +63,7 @@ import {
   TAXPAYER_AGE_RANGE_LABELS,
   isLongTermCareCategory1Insured,
 } from '../../types/taxpayerAge';
-import {
-  AdditionalDeductionsModal,
-  DependentsModal,
-  IncomeDetailsModal,
-  requestInputModals,
-} from '../../utils/deferredModules';
+import { requestInputModals } from '../../utils/deferredModules';
 import { countDependentsWithinEligibilityIncome } from '../../utils/dependentDeductions';
 import { formatJPY } from '../../utils/formatters';
 import {
@@ -81,8 +76,8 @@ import {
   NATIONAL_PENSION_FULL_EXEMPTION_PER_PERSON,
 } from '../../utils/pensionCalculator';
 import { calculateNetIncomeComponents } from '../../utils/taxCalculations';
+import { AdditionalDeductionsModal, DependentsModal, IncomeDetailsModal } from '../deferredModals';
 import { SIMPLE_TOOLTIP_ICON } from '../ui/constants';
-import ModalLoadingDialog from '../ui/ModalLoadingDialog';
 import SourceLinks, { type Source } from '../ui/SourceLinks';
 import { SpinnerNumberField } from '../ui/SpinnerNumberField';
 import { DetailedTooltip, SimpleTooltip } from '../ui/Tooltips';
@@ -1050,102 +1045,69 @@ export const TakeHomeInputForm: React.FC<TaxInputFormProps> = ({
       </Box>
 
       {(dependentsModalMounted || dependentsModalOpen) && (
-        <React.Suspense
-          fallback={
-            dependentsModalOpen ? (
-              <ModalLoadingDialog
-                onClose={handleCloseDependentsModal}
-                ariaLabel="Loading dependents dialog"
-              />
-            ) : null
+        <DependentsModal
+          open={dependentsModalOpen}
+          onClose={handleCloseDependentsModal}
+          dependents={inputs.dependents}
+          onDependentsChange={handleDependentsChange}
+          taxpayerNetIncome={taxpayerNetIncome}
+          incomeYear={inputs.incomeYear}
+          healthInsuranceProvider={inputs.healthInsuranceProvider}
+          taxpayerAgeRange={inputs.ageRange}
+          nhiPaymentAttribution={inputs.nhiPaymentAttribution}
+          onNHIPaymentAttributionChange={attribution =>
+            dispatch({ type: 'setField', field: 'nhiPaymentAttribution', value: attribution })
           }
-        >
-          <DependentsModal
-            open={dependentsModalOpen}
-            onClose={handleCloseDependentsModal}
-            dependents={inputs.dependents}
-            onDependentsChange={handleDependentsChange}
-            taxpayerNetIncome={taxpayerNetIncome}
-            incomeYear={inputs.incomeYear}
-            healthInsuranceProvider={inputs.healthInsuranceProvider}
-            taxpayerAgeRange={inputs.ageRange}
-            nhiPaymentAttribution={inputs.nhiPaymentAttribution}
-            onNHIPaymentAttributionChange={attribution =>
-              dispatch({ type: 'setField', field: 'nhiPaymentAttribution', value: attribution })
-            }
-            region={inputs.region}
-            nhiHouseholdRegion={inputs.nhiHouseholdRegion}
-            onNHIHouseholdRegionChange={region =>
-              dispatch({ type: 'setField', field: 'nhiHouseholdRegion', value: region })
-            }
-          />
-        </React.Suspense>
+          region={inputs.region}
+          nhiHouseholdRegion={inputs.nhiHouseholdRegion}
+          onNHIHouseholdRegionChange={region =>
+            dispatch({ type: 'setField', field: 'nhiHouseholdRegion', value: region })
+          }
+        />
       )}
 
       {(incomeModalMounted || incomeModalOpen) && (
-        <React.Suspense
-          fallback={
-            incomeModalOpen ? (
-              <ModalLoadingDialog
-                onClose={() => setIncomeModalOpen(false)}
-                ariaLabel="Loading income details dialog"
-              />
-            ) : null
-          }
-        >
-          <IncomeDetailsModal
-            open={incomeModalOpen}
-            onClose={() => setIncomeModalOpen(false)}
-            streams={inputs.incomeStreams}
-            onStreamsChange={handleIncomeStreamsChange}
-            blueFilerDeduction={inputs.blueFilerDeduction}
-            onBlueFilerDeductionChange={handleBlueFilerDeductionChange}
-            reportedDividendsTaxation={inputs.reportedDividendsTaxation}
-            onReportedDividendsTaxationChange={handleReportedDividendsTaxationChange}
-            calculationInputs={inputs}
-            netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
-            investmentIncome={investmentIncome}
-          />
-        </React.Suspense>
+        <IncomeDetailsModal
+          open={incomeModalOpen}
+          onClose={() => setIncomeModalOpen(false)}
+          streams={inputs.incomeStreams}
+          onStreamsChange={handleIncomeStreamsChange}
+          blueFilerDeduction={inputs.blueFilerDeduction}
+          onBlueFilerDeductionChange={handleBlueFilerDeductionChange}
+          reportedDividendsTaxation={inputs.reportedDividendsTaxation}
+          onReportedDividendsTaxationChange={handleReportedDividendsTaxationChange}
+          calculationInputs={inputs}
+          netPublicPensionIncome={netIncomeComponents.netPublicPensionIncome}
+          investmentIncome={investmentIncome}
+        />
       )}
 
       {(additionalModalMounted || additionalModalOpen) && (
-        <React.Suspense
-          fallback={
-            additionalModalOpen ? (
-              <ModalLoadingDialog
-                onClose={() => setAdditionalModalOpen(false)}
-                ariaLabel="Loading additional deductions dialog"
-              />
-            ) : null
-          }
-        >
-          <AdditionalDeductionsModal
-            open={additionalModalOpen}
-            onClose={() => setAdditionalModalOpen(false)}
-            dcPlanContributions={inputs.dcPlanContributions}
-            onDcPlanContributionsChange={handleDcPlanContributionsChange}
-            homeLoanTaxCredit={inputs.homeLoanTaxCredit}
-            onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
-            homeLoanTaxCreditResult={homeLoanTaxCreditResult}
-            foreignTaxCredit={inputs.foreignTaxCredit}
-            onForeignTaxCreditChange={handleForeignTaxCreditChange}
-            foreignTaxCreditResult={foreignTaxCreditResult}
-            withheldForeignTax={investmentIncome?.withheld?.foreignTax}
-            lifeInsurance={inputs.lifeInsurance}
-            onLifeInsuranceChange={handleLifeInsuranceChange}
-            earthquakeInsurance={inputs.earthquakeInsurance}
-            onEarthquakeInsuranceChange={handleEarthquakeInsuranceChange}
-            medicalExpenses={inputs.medicalExpenses}
-            onMedicalExpensesChange={handleMedicalExpensesChange}
-            personalCircumstances={inputs.personalCircumstances}
-            onPersonalCircumstancesChange={handlePersonalCircumstancesChange}
-            dependents={inputs.dependents}
-            additionalDeductions={additionalDeductions}
-            personalDeductions={personalDeductions}
-            incomeYear={inputs.incomeYear}
-          />
-        </React.Suspense>
+        <AdditionalDeductionsModal
+          open={additionalModalOpen}
+          onClose={() => setAdditionalModalOpen(false)}
+          dcPlanContributions={inputs.dcPlanContributions}
+          onDcPlanContributionsChange={handleDcPlanContributionsChange}
+          homeLoanTaxCredit={inputs.homeLoanTaxCredit}
+          onHomeLoanTaxCreditChange={handleHomeLoanTaxCreditChange}
+          homeLoanTaxCreditResult={homeLoanTaxCreditResult}
+          foreignTaxCredit={inputs.foreignTaxCredit}
+          onForeignTaxCreditChange={handleForeignTaxCreditChange}
+          foreignTaxCreditResult={foreignTaxCreditResult}
+          withheldForeignTax={investmentIncome?.withheld?.foreignTax}
+          lifeInsurance={inputs.lifeInsurance}
+          onLifeInsuranceChange={handleLifeInsuranceChange}
+          earthquakeInsurance={inputs.earthquakeInsurance}
+          onEarthquakeInsuranceChange={handleEarthquakeInsuranceChange}
+          medicalExpenses={inputs.medicalExpenses}
+          onMedicalExpensesChange={handleMedicalExpensesChange}
+          personalCircumstances={inputs.personalCircumstances}
+          onPersonalCircumstancesChange={handlePersonalCircumstancesChange}
+          dependents={inputs.dependents}
+          additionalDeductions={additionalDeductions}
+          personalDeductions={personalDeductions}
+          incomeYear={inputs.incomeYear}
+        />
       )}
     </Box>
   );
