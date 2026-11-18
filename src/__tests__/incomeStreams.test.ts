@@ -5,6 +5,7 @@ import {
   annualIncomeContribution,
   annualIncomeStreamAmount,
   dependentTestAnnualIncome,
+  hasEmploymentIncomeStream,
   isEarnedIncomeStream,
   monthlyIncomeStreamAmount,
   totalAnnualIncomeFromStreams,
@@ -563,6 +564,44 @@ describe('validateIncomeStream', () => {
         validateIncomeStream({ id: 'c', type: 'commutingAllowance', amount: invalid, frequency }),
       ).toContain('Commuting allowance cannot exceed ¥150,000/month (non-taxable cap)');
     });
+
+    it('rejects negative amounts', () => {
+      expect(
+        validateIncomeStream({
+          id: 'c',
+          type: 'commutingAllowance',
+          amount: -1,
+          frequency: 'monthly',
+        }),
+      ).toBe('Commuting allowance cannot be negative.');
+      expect(
+        validateIncomeStream({
+          id: 'c',
+          type: 'commutingAllowance',
+          amount: -50_000,
+          frequency: 'annual',
+        }),
+      ).toBe('Commuting allowance cannot be negative.');
+    });
+
+    it('accepts zero and positive amounts within the monthly cap', () => {
+      expect(
+        validateIncomeStream({
+          id: 'c',
+          type: 'commutingAllowance',
+          amount: 0,
+          frequency: 'monthly',
+        }),
+      ).toBeUndefined();
+      expect(
+        validateIncomeStream({
+          id: 'c',
+          type: 'commutingAllowance',
+          amount: 10_000,
+          frequency: 'monthly',
+        }),
+      ).toBeUndefined();
+    });
   });
 
   describe('business income', () => {
@@ -771,6 +810,45 @@ describe('validateIncomeStream', () => {
           foreignTax: 0,
         }),
       ).toBe('Interest cannot be negative.');
+    });
+  });
+
+  describe('hasEmploymentIncomeStream', () => {
+    it('returns true when salary, bonus, or stock compensation is present', () => {
+      expect(
+        hasEmploymentIncomeStream([
+          { id: 's', type: 'salary', amount: 3_000_000, frequency: 'annual' },
+        ]),
+      ).toBe(true);
+      expect(
+        hasEmploymentIncomeStream([{ id: 'b', type: 'bonus', amount: 1_000_000, month: 6 }]),
+      ).toBe(true);
+      expect(
+        hasEmploymentIncomeStream([
+          { id: 'sc', type: 'stockCompensation', amount: 2_000_000, issuerDomicile: 'foreign' },
+        ]),
+      ).toBe(true);
+    });
+
+    it('returns false for streams without employment income', () => {
+      expect(hasEmploymentIncomeStream([])).toBe(false);
+      expect(
+        hasEmploymentIncomeStream([
+          { id: 'b', type: 'business', amount: 4_000_000 },
+          { id: 'c', type: 'commutingAllowance', amount: 10_000, frequency: 'monthly' },
+        ]),
+      ).toBe(false);
+      expect(
+        hasEmploymentIncomeStream([
+          {
+            id: 'p',
+            type: 'publicPension',
+            amount: 2_000_000,
+            payerDomicile: 'domestic',
+            foreignTax: 0,
+          },
+        ]),
+      ).toBe(false);
     });
   });
 });

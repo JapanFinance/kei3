@@ -37,6 +37,7 @@ export interface IncomeStreamFormProps {
    * under the current tax return inputs.
    */
   isMinimumTaxTriggered?: ((draft: IncomeStream) => boolean) | undefined;
+  hasEmploymentIncome?: boolean | undefined;
 }
 
 const STREAM_FORM_COMPONENTS: { [T in IncomeStreamType]: React.FC<StreamTypeFormProps<T>> } = {
@@ -60,6 +61,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   onSave,
   onCancel,
   isMinimumTaxTriggered,
+  hasEmploymentIncome,
 }) => {
   // STREAM_FORM_COMPONENTS is exhaustively typed over every IncomeStreamType above.
   const Component = STREAM_FORM_COMPONENTS[type] as React.FC<StreamTypeFormProps>;
@@ -73,6 +75,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
       onSave={onSave}
       onCancel={onCancel}
       isMinimumTaxTriggered={isMinimumTaxTriggered}
+      hasEmploymentIncome={hasEmploymentIncome}
     />
   );
 };
