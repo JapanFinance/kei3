@@ -879,7 +879,8 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     manualSocialInsuranceAmount: 0,
   };
 
-  test('correctly calculates net income passed to dependents modal for mixed income streams', () => {
+  test('correctly calculates net income passed to dependents modal for mixed income streams', async () => {
+    const user = userEvent.setup();
     const inputs: TakeHomeFormState = {
       ...defaultInputs,
       incomeMode: 'advanced',
@@ -893,7 +894,9 @@ describe('TakeHomeInputForm Dependents Modal', () => {
 
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
-    const modal = screen.getByTestId('dependents-modal');
+    await user.click(screen.getByRole('button', { name: 'Manage' }));
+
+    const modal = await screen.findByTestId('dependents-modal');
     const netIncomePassed = Number(modal.getAttribute('data-net-income'));
 
     const expectedNetSalary = calculateNetEmploymentIncome(5_000_000, 2026);
@@ -902,7 +905,8 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     expect(netIncomePassed).toBe(expectedTotalNet);
   });
 
-  test('T11: correctly calculates net income passed to dependents modal with real estate and blueFilerDeduction', () => {
+  test('T11: correctly calculates net income passed to dependents modal with real estate and blueFilerDeduction', async () => {
+    const user = userEvent.setup();
     const inputs: TakeHomeFormState = {
       ...defaultInputs,
       incomeMode: 'advanced',
@@ -921,7 +925,9 @@ describe('TakeHomeInputForm Dependents Modal', () => {
     const mockDispatch = vi.fn();
     render(<TakeHomeInputForm inputs={inputs} dispatch={mockDispatch} />);
 
-    const modal = screen.getByTestId('dependents-modal');
+    await user.click(screen.getByRole('button', { name: 'Manage' }));
+
+    const modal = await screen.findByTestId('dependents-modal');
     const netIncomePassed = Number(modal.getAttribute('data-net-income'));
 
     // 5,000,000 real estate - 650,000 blue-filer deduction = 4,350,000
@@ -972,7 +978,9 @@ describe('TakeHomeInputForm Income Details Modal', () => {
 
     // 措法41の15の3: at 65 or older the band-1 minimum deduction is 1,100,000, above the
     // 400,000 + 25% × (2,400,000 − 500,000) = 875,000 the 所法35④一 formula gives.
-    expect(screen.getByText(/Public Pension Deduction.*-¥1,100,000/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Public Pension Deduction.*-¥1,100,000/, {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Net Public Pension Income: ¥1,300,000')).toBeInTheDocument();
 
     // Under 65 the formula governs instead, so the same gross nets a smaller deduction.
@@ -1028,7 +1036,7 @@ describe('Commuting Allowance Integration', () => {
     await user.click(screen.getByRole('button', { name: /edit income/i }));
 
     // 2. Open the employment-income type menu and choose Commuting Allowance
-    await user.click(screen.getByRole('button', { name: /add employment income/i }));
+    await user.click(await screen.findByRole('button', { name: /add employment income/i }));
     await user.click(screen.getByRole('menuitem', { name: /commuting allowance/i }));
 
     // 4. Enter Amount
@@ -1086,7 +1094,7 @@ describe('Investment Income Integration', () => {
     render(<TestWrapper />);
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
-    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(await screen.findByRole('button', { name: /add investment income/i }));
     await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
 
     const amountInput = screen.getByRole('textbox', { name: /gross dividends/i });
@@ -1104,7 +1112,7 @@ describe('Investment Income Integration', () => {
     render(<TestWrapper />);
 
     await user.click(screen.getByRole('button', { name: /edit income/i }));
-    await user.click(screen.getByRole('button', { name: /add investment income/i }));
+    await user.click(await screen.findByRole('button', { name: /add investment income/i }));
     await user.click(screen.getByRole('menuitem', { name: /^dividends/i }));
 
     await user.type(screen.getByRole('textbox', { name: /gross dividends/i }), '300000');
@@ -1159,7 +1167,7 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
 
     // 3. Find and Delete the Salary stream
     // Look for the "SALARY" chip/text to find the right card
-    const salaryChip = screen.getByText('SALARY');
+    const salaryChip = await screen.findByText('SALARY');
     const salaryCard = salaryChip.closest('.MuiCard-root');
     expect(salaryCard).toBeInTheDocument();
     if (!salaryCard) throw new Error('Salary card not found');
@@ -1226,7 +1234,9 @@ describe('Additional Deductions & Credits: foreign tax credit', () => {
     render(<TakeHomeInputForm inputs={salaryInputs} dispatch={dispatch} />);
 
     await user.click(screen.getByRole('button', { name: /Add iDeCo/ }));
-    const foreignTax = screen.getByLabelText('Foreign Tax Paid with a Tax Return (外国所得税)');
+    const foreignTax = await screen.findByLabelText(
+      'Foreign Tax Paid with a Tax Return (外国所得税)',
+    );
     await user.clear(foreignTax);
     await user.type(foreignTax, '20000');
 

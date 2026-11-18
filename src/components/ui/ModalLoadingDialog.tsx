@@ -4,7 +4,7 @@
 import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import { keyframes } from '@mui/material/styles';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -12,7 +12,7 @@ const spin = keyframes`
 `;
 
 /**
- * How long to wait before admitting the changelog is still loading. Measured
+ * How long to wait before admitting the modal is still loading. Measured
  * click-to-rendered times were 80 ms with no network latency and 575 ms with
  * 500 ms of it, so this stays clear of the fast case — where appearing and
  * being replaced within ~50 ms would only read as a flicker — while still
@@ -20,16 +20,20 @@ const spin = keyframes`
  */
 const SPINNER_DELAY_MS = 150;
 
+interface ModalLoadingDialogProps {
+  onClose: () => void;
+  ariaLabel: string;
+}
+
 /**
- * Stands in for {@link import('./ChangelogModal')} while its module is still
- * loading, so opening the changelog has a visible effect when the wait is long
- * enough to notice.
+ * Stands in for a lazily loaded modal while its module is still downloading,
+ * so opening it has a visible effect when the wait is long enough to notice.
  *
  * Deliberately plain rather than a copy of the real dialog's heading and
  * layout: reproducing those here would duplicate them into the startup chunk,
  * and this is on screen only until the module arrives.
  */
-export default function ChangelogLoadingDialog({ onClose }: { onClose: () => void }) {
+export default function ModalLoadingDialog({ onClose, ariaLabel }: ModalLoadingDialogProps) {
   const [waitedLongEnough, setWaitedLongEnough] = useState(false);
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export default function ChangelogLoadingDialog({ onClose }: { onClose: () => voi
   if (!waitedLongEnough) return null;
 
   return (
-    <Dialog open onClose={onClose} maxWidth="md" fullWidth aria-label="Loading changelog">
+    <Dialog open onClose={onClose} maxWidth="md" fullWidth aria-label={ariaLabel}>
       <Box
         sx={{
           minHeight: { xs: '70vh', sm: '60vh' },

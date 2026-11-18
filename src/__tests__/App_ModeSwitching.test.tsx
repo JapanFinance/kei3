@@ -49,7 +49,9 @@ describe('App Integration - Income Mode Switching', () => {
 
     // 3. Replace the salary with miscellaneous income
     await user.click(screen.getByRole('button', { name: /edit income\/benefits/i }));
-    await user.click(await screen.findByRole('button', { name: /delete income/i }));
+    await user.click(
+      await screen.findByRole('button', { name: /delete income/i }, { timeout: 5000 }),
+    );
     await user.click(screen.getByRole('button', { name: /add miscellaneous income/i }));
     await user.type(
       screen.getByRole('textbox', { name: /annual income after expenses/i }),
