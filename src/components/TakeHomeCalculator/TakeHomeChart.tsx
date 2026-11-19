@@ -773,7 +773,10 @@ const TakeHomeChart: React.FC<TakeHomeChartProps> = ({
                   name="household-type"
                   variant="standard"
                   value={householdType}
-                  onChange={event => setHouseholdType(event.target.value as HouseholdType)}
+                  onChange={event => {
+                    // SAFETY: MenuItem values come exclusively from HOUSEHOLD_TYPE_ORDER.
+                    setHouseholdType(event.target.value as HouseholdType);
+                  }}
                   renderValue={value => lowercaseFirst(HOUSEHOLD_INCOME_DISTRIBUTIONS[value].label)}
                   inputProps={{ 'aria-label': 'Comparison household type' }}
                   sx={{

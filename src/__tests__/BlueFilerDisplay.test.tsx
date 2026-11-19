@@ -6,14 +6,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
 import TaxesTab from '../components/TakeHomeCalculator/tabs/TaxesTab';
+import { Rate } from '../data/rate';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
-import type {
-  TakeHomeResults,
-  TakeHomeInputs,
-  ResidenceTaxDetails,
-  FurusatoNozeiDetails,
-} from '../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import type { TakeHomeResults, TakeHomeInputs } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, ZERO_FURUSATO_NOZEI_DETAILS } from '../types/tax';
 
 // Mock dependencies
 vi.mock('../components/ui/Tooltips', () => ({
@@ -34,15 +30,33 @@ const mockResults: TakeHomeResults = {
   businessBlueFilerDeduction: 650_000,
   nationalIncomeTax: 100_000,
   residenceTax: {
+    taxableIncome: 0,
+    cityProportion: Rate.ZERO,
+    prefecturalProportion: Rate.ZERO,
+    residenceTaxRate: Rate.ZERO,
+    basicDeduction: 0,
+    personalDeductionDifference: 0,
     totalResidenceTax: 200_000,
-    city: { cityIncomeTax: 100_000, cityPerCapitaTax: 0 },
-    prefecture: { prefectureIncomeTax: 100_000, prefecturePerCapitaTax: 0 },
-  } as unknown as ResidenceTaxDetails,
+    city: {
+      cityTaxableIncome: 0,
+      cityAdjustmentCredit: 0,
+      cityIncomeTax: 100_000,
+      cityPerCapitaTax: 0,
+    },
+    prefecture: {
+      prefecturalTaxableIncome: 0,
+      prefecturalAdjustmentCredit: 0,
+      prefecturalIncomeTax: 100_000,
+      prefecturalPerCapitaTax: 0,
+    },
+    perCapitaTax: 0,
+    forestEnvironmentTax: 0,
+  },
   healthInsurance: 300_000,
   pensionPayments: 180_000,
   employmentInsurance: 0,
   takeHomeIncome: 4_220_000,
-  furusatoNozei: {} as unknown as FurusatoNozeiDetails,
+  furusatoNozei: ZERO_FURUSATO_NOZEI_DETAILS,
   dcPlanContributions: 0,
   healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
   region: 'Tokyo',

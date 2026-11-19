@@ -514,9 +514,10 @@ export const DependentsModal: React.FC<DependentsModalProps> = ({
                         labelId="nhi-modal-attribution-label"
                         label="Payment Attribution & Deduction"
                         value={nhiPaymentAttribution}
-                        onChange={e =>
-                          onNHIPaymentAttributionChange(e.target.value as NHIPaymentAttribution)
-                        }
+                        onChange={e => {
+                          // SAFETY: MenuItem values are strictly NHIPaymentAttribution.
+                          onNHIPaymentAttributionChange(e.target.value as NHIPaymentAttribution);
+                        }}
                       >
                         <MenuItem value="fullHousehold">Taxpayer pays full household NHI</MenuItem>
                         <MenuItem value="none">Not paid by taxpayer</MenuItem>

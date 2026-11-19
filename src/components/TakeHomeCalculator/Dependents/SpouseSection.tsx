@@ -171,6 +171,7 @@ export default function SpouseSection({
                 label="Age on December 31"
                 onChange={e =>
                   handleSpouseChange({
+                    // SAFETY: MenuItem values come exclusively from SPOUSE_AGE_RANGES.
                     ageRange: e.target.value as SpouseAgeRange,
                   })
                 }
@@ -518,6 +519,7 @@ export default function SpouseSection({
                                 value={spouse.healthInsurance}
                                 onChange={e =>
                                   handleSpouseChange({
+                                    // SAFETY: MenuItem values are strictly HouseholdMemberHealthInsurance.
                                     healthInsurance: e.target
                                       .value as HouseholdMemberHealthInsurance,
                                   })
@@ -589,6 +591,7 @@ export default function SpouseSection({
                             value={spouse.disability}
                             onChange={e =>
                               handleSpouseChange({
+                                // SAFETY: MenuItem values come exclusively from DISABILITY_LEVELS.
                                 disability: e.target.value as DisabilityLevel,
                               })
                             }

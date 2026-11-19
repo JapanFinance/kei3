@@ -34,6 +34,7 @@ const context: TakeHomeInputs = {
 const range = { min: 1_000_000, max: 5_000_000 };
 
 type Point = { x: number; y: number };
+// SAFETY: generateChartData emits { x, y } point arrays for every dataset in this suite.
 const pointsOf = (dataset: { data: unknown }) => dataset.data as Point[];
 
 describe('generateChartData with the 介護保険第1号 premium', () => {
@@ -110,6 +111,7 @@ describe('generateChartData with public pension income', () => {
     // The sweep scales the lone pension stream to each income point, so every point's breakdown
     // is the whole income under the 'Public Pension Income' label.
     withBreakdown.forEach(dataset => {
+      // SAFETY: generateChartData attaches `breakdown` to every bar dataset point.
       const points = dataset.data as (Point & {
         breakdown?: { label: string; amount: number }[];
       })[];
@@ -164,6 +166,7 @@ describe('generateChartData with a commuting allowance', () => {
     expect(bars.length).toBeGreaterThan(0);
 
     bars.forEach(dataset => {
+      // SAFETY: generateChartData attaches `breakdown` to every bar dataset point.
       const points = dataset.data as (Point & {
         breakdown?: { label: string; amount: number }[];
       })[];
@@ -296,6 +299,7 @@ describe('generateChartData with investment income reported under 申告分離�
     expect(bars.length).toBeGreaterThan(0);
 
     bars.forEach(dataset => {
+      // SAFETY: generateChartData attaches `breakdown` to every bar dataset point.
       const points = dataset.data as (Point & {
         breakdown?: { label: string; amount: number }[];
       })[];

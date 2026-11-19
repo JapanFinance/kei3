@@ -3,7 +3,6 @@
 
 import { describe, it, expect } from 'vitest';
 
-import type { Dependent } from '../types/dependents';
 import { DEFAULT_PROVIDER } from '../types/healthInsurance';
 import type { PersonalCircumstancesInput, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
@@ -14,6 +13,7 @@ import {
   WIDOW_SINGLE_PARENT_INCOME_LIMIT,
 } from '../utils/personalDeductions';
 import { calculateTaxes } from '../utils/taxCalculations';
+import { makeMember } from './fixtures/dependents';
 
 const circumstances = (patch: Partial<PersonalCircumstancesInput>): PersonalCircumstancesInput => ({
   disability: 'none',
@@ -128,20 +128,6 @@ describe('calculatePersonalDeductions', () => {
 
 describe('getPersonalCircumstanceWarnings', () => {
   const YEAR = 2026;
-  const member = (patch: Partial<Dependent>): Dependent =>
-    ({
-      id: 'd1',
-      relationship: 'child',
-      ageRange: '6to15',
-      isSameHousehold: true,
-      disability: 'none',
-      income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 0 },
-      isClaimedAsDependent: true,
-      healthInsurance: 'auto',
-      isHouseholdHead: false,
-      taxpayerPaysNationalPension: false,
-      ...patch,
-    }) as Dependent;
 
   it('returns nothing when no 寡婦/ひとり親 status is selected', () => {
     expect(
@@ -150,7 +136,7 @@ describe('getPersonalCircumstanceWarnings', () => {
   });
 
   it('flags an entered spouse against any selection', () => {
-    const spouse = member({ relationship: 'spouse', ageRange: '20to39' } as Partial<Dependent>);
+    const spouse = makeMember({ relationship: 'spouse', ageRange: '20to39' });
     expect(
       getPersonalCircumstanceWarnings(
         circumstances({ widowOrSingleParent: 'widowBereaved' }),
@@ -163,13 +149,13 @@ describe('getPersonalCircumstanceWarnings', () => {
   it('flags a single parent without a qualifying child, keyed to the year limit', () => {
     const noChildren = getPersonalCircumstanceWarnings(
       circumstances({ widowOrSingleParent: 'singleParentMother' }),
-      [member({ relationship: 'parent' })],
+      [makeMember({ relationship: 'parent' })],
       YEAR,
     );
     expect(noChildren).toEqual(['singleParentNoQualifyingChild']);
 
     // otherNetIncome counts at face value, so the 2026 limit of ¥620,000 is testable exactly.
-    const childAtLimit = member({
+    const childAtLimit = makeMember({
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_000 },
     });
     expect(
@@ -180,7 +166,7 @@ describe('getPersonalCircumstanceWarnings', () => {
       ),
     ).toEqual([]);
 
-    const childOverLimit = member({
+    const childOverLimit = makeMember({
       income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome: 620_001 },
     });
     expect(
@@ -192,7 +178,7 @@ describe('getPersonalCircumstanceWarnings', () => {
     ).toEqual(['singleParentNoQualifyingChild']);
 
     // An un-claimed child (isClaimedAsDependent: false) does not satisfy the qualifying-child check.
-    const unclaimedChild = member({
+    const unclaimedChild = makeMember({
       isClaimedAsDependent: false,
     });
     expect(
@@ -217,7 +203,7 @@ describe('getPersonalCircumstanceWarnings', () => {
     expect(
       getPersonalCircumstanceWarnings(
         circumstances({ widowOrSingleParent: 'widowDivorced' }),
-        [member({ relationship: 'parent', ageRange: '70to74' } as Partial<Dependent>)],
+        [makeMember({ relationship: 'parent', ageRange: '70to74' })],
         YEAR,
       ),
     ).toEqual([]);
@@ -227,11 +213,11 @@ describe('getPersonalCircumstanceWarnings', () => {
       getPersonalCircumstanceWarnings(
         circumstances({ widowOrSingleParent: 'widowDivorced' }),
         [
-          member({
+          makeMember({
             relationship: 'parent',
             ageRange: '70to74',
             isClaimedAsDependent: false,
-          } as Partial<Dependent>),
+          }),
         ],
         YEAR,
       ),

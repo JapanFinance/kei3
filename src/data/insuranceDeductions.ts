@@ -254,7 +254,7 @@ export const calculateEarthquakeInsuranceDeduction = (
 
 if (import.meta.env.DEV) {
   // Each band table must be ascending by `upTo` and terminate with an Infinity band.
-  const tables: Record<string, ReadonlyArray<DeductionBand>> = {
+  const tables = {
     LIFE_NEW_NATIONAL,
     LIFE_NEW_NATIONAL_CHILD_REARING: LIFE_NEW_GENERAL_NATIONAL_CHILD_REARING,
     LIFE_OLD_NATIONAL,
@@ -262,7 +262,7 @@ if (import.meta.env.DEV) {
     LIFE_OLD_RESIDENCE,
     QUAKE_OLD_LONG_TERM_NATIONAL,
     QUAKE_OLD_LONG_TERM_RESIDENCE,
-  };
+  } satisfies Record<string, ReadonlyArray<DeductionBand>>;
   for (const [name, bands] of Object.entries(tables)) {
     if (bands.length === 0 || bands[bands.length - 1]!.upTo !== Infinity) {
       throw new Error(`insuranceDeductions: ${name} must end with an upTo: Infinity band`);

@@ -220,6 +220,7 @@ export const HOUSEHOLD_INCOME_DISTRIBUTIONS: Record<HouseholdType, HouseholdInco
 
 /** Selector order for the household types, derived from the declaration order of
  * {@link HOUSEHOLD_INCOME_DISTRIBUTIONS} so the two cannot drift apart. */
+// SAFETY: Object.keys returns string[], and HOUSEHOLD_INCOME_DISTRIBUTIONS keys are every HouseholdType.
 export const HOUSEHOLD_TYPE_ORDER = Object.keys(
   HOUSEHOLD_INCOME_DISTRIBUTIONS,
 ) as readonly HouseholdType[];

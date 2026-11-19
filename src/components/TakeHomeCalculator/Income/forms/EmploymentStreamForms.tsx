@@ -71,7 +71,10 @@ export const SalaryStreamForm: React.FC<StreamTypeFormProps<'salary'>> = ({
           labelId="salary-frequency-label"
           value={frequency}
           label="Frequency"
-          onChange={e => setFrequency(e.target.value as 'monthly' | 'annual')}
+          onChange={e => {
+            // SAFETY: MenuItem values are strictly 'monthly' | 'annual'.
+            setFrequency(e.target.value as 'monthly' | 'annual');
+          }}
         >
           <MenuItem value="monthly">Monthly</MenuItem>
           <MenuItem value="annual">Annual</MenuItem>
@@ -178,9 +181,10 @@ export const CommutingAllowanceStreamForm: React.FC<StreamTypeFormProps<'commuti
           labelId="commuting-allowance-frequency-label"
           value={frequency}
           label="Frequency"
-          onChange={e =>
-            setFrequency(e.target.value as CommutingAllowanceIncomeStream['frequency'])
-          }
+          onChange={e => {
+            // SAFETY: MenuItem values are strictly CommutingAllowanceIncomeStream['frequency'].
+            setFrequency(e.target.value as CommutingAllowanceIncomeStream['frequency']);
+          }}
         >
           <MenuItem value="monthly">1 Month</MenuItem>
           <MenuItem value="3-months">3 Months</MenuItem>

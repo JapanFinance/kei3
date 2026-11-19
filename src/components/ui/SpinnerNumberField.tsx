@@ -64,8 +64,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
 
   const handleChange = (newValue: number) => {
     let clampedValue = newValue;
-    if (typeof min === 'number') clampedValue = Math.max(min, clampedValue);
-    if (typeof max === 'number') clampedValue = Math.min(max, clampedValue);
+    if (min !== undefined) clampedValue = Math.max(min, clampedValue);
+    if (max !== undefined) clampedValue = Math.min(max, clampedValue);
 
     // NumericFormat reports every change of the value prop back through onValueChange, so
     // without this check each change from outside the field would be dispatched a second time.
@@ -111,8 +111,8 @@ export const SpinnerNumberField: React.FC<SpinnerNumberFieldProps> = ({
       isAllowed={values => {
         const { floatValue } = values;
         if (floatValue === undefined) return true;
-        if (typeof min === 'number' && floatValue < min) return false;
-        if (typeof max === 'number' && floatValue > max) return false;
+        if (min !== undefined && floatValue < min) return false;
+        if (max !== undefined && floatValue > max) return false;
         return true;
       }}
       onKeyDown={handleKeyDown}

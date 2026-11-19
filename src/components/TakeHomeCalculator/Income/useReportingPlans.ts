@@ -318,7 +318,7 @@ export function useReportingPlans(
             }
             // The plans evaluated so far, with the total while the search is exhaustive; undefined
             // once the search is over, so the indicator disappears when the Best row is final.
-            publishProgress(showProgress ? { done, ...(bounded ? {} : { count }) } : undefined);
+            publishProgress(showProgress ? (bounded ? { done } : { done, count }) : undefined);
           });
         }
         await yieldToEventLoop();

@@ -78,6 +78,7 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
               value={location}
               label="Property Location"
               onChange={e => {
+                // SAFETY: MenuItem values are strictly 'domestic' | 'foreign'.
                 const newLocation = e.target.value as 'domestic' | 'foreign';
                 setLocation(newLocation);
                 if (newLocation === 'domestic') {

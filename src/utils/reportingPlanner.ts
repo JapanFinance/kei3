@@ -96,6 +96,7 @@ const withholdingAccountState = (
 ): ReportingUnitState => ({
   reportsDividend,
   apply: stream => ({
+    // SAFETY: withholdingAccountState is attached only to units whose streamIndex holds a WithholdingAccountIncomeStream.
     ...(stream as WithholdingAccountIncomeStream),
     reportsCapitalGains,
     reportsDividends,
@@ -104,7 +105,11 @@ const withholdingAccountState = (
 
 const dividendsState = (isReported: boolean, reportsDividend: boolean): ReportingUnitState => ({
   reportsDividend,
-  apply: stream => ({ ...(stream as DividendsIncomeStream), isReported }),
+  apply: stream => ({
+    // SAFETY: dividendsState is attached only to units whose streamIndex holds a DividendsIncomeStream.
+    ...(stream as DividendsIncomeStream),
+    isReported,
+  }),
 });
 
 /**
@@ -557,7 +562,7 @@ const unitName = (streams: readonly IncomeStream[], streamIndex: number): string
   if (stream.type === 'withholdingAccount') {
     return `Account ${position} (sales ${formatJPY(stream.capitalGains)}, dividends ${formatJPY(stream.dividends)})`;
   }
-  // 'dividends' — the only other stream type deriveReportingUnits gives a unit to.
+  // SAFETY: 'dividends' is the only other stream type deriveReportingUnits gives a unit to.
   return `Dividends ${position} (${formatJPY((stream as DividendsIncomeStream).amount)})`;
 };
 
@@ -572,6 +577,7 @@ const unitTarget = (stream: IncomeStream): string => {
           ? 'report the dividends only'
           : 'leave both to withholding';
   }
+  // SAFETY: deriveReportingUnits emits units only for withholdingAccount and dividends streams.
   return (stream as DividendsIncomeStream).isReported ? 'report' : 'leave to withholding';
 };
 
@@ -587,14 +593,13 @@ export const planChanges = (
   current: ReportingPlan,
   units: readonly ReportingUnit[],
 ): string[] => {
-  const changes = units
-    .filter(
-      unit => !unitFlagsEqual(plan.streams[unit.streamIndex]!, current.streams[unit.streamIndex]!),
-    )
-    .map(
-      unit =>
-        `${unitName(plan.streams, unit.streamIndex)}: ${unitTarget(plan.streams[unit.streamIndex]!)}.`,
-    );
+  const changes = units.flatMap(unit =>
+    unitFlagsEqual(plan.streams[unit.streamIndex]!, current.streams[unit.streamIndex]!)
+      ? []
+      : [
+          `${unitName(plan.streams, unit.streamIndex)}: ${unitTarget(plan.streams[unit.streamIndex]!)}.`,
+        ],
+  );
   const electionMatters = planReportsDividend(units, plan.streams);
   const electionMattered = planReportsDividend(units, current.streams);
   if (electionMatters && (!electionMattered || plan.election !== current.election)) {

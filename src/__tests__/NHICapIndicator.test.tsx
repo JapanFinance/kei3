@@ -5,14 +5,10 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
+import { Rate } from '../data/rate';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
-import type {
-  TakeHomeResults,
-  TakeHomeInputs,
-  ResidenceTaxDetails,
-  FurusatoNozeiDetails,
-} from '../types/tax';
-import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS } from '../types/tax';
+import type { TakeHomeResults, TakeHomeInputs } from '../types/tax';
+import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, ZERO_FURUSATO_NOZEI_DETAILS } from '../types/tax';
 import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
 
 // Mock scrollTo (used by SMRTableTooltip)
@@ -35,15 +31,33 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     hasEmploymentIncome: false,
     nationalIncomeTax: 0,
     residenceTax: {
+      taxableIncome: 0,
+      cityProportion: Rate.ZERO,
+      prefecturalProportion: Rate.ZERO,
+      residenceTaxRate: Rate.ZERO,
+      basicDeduction: 0,
+      personalDeductionDifference: 0,
       totalResidenceTax: 0,
-      city: { cityIncomeTax: 0, cityPerCapitaTax: 0 },
-      prefecture: { prefectureIncomeTax: 0, prefecturePerCapitaTax: 0 },
-    } as unknown as ResidenceTaxDetails,
+      city: {
+        cityTaxableIncome: 0,
+        cityAdjustmentCredit: 0,
+        cityIncomeTax: 0,
+        cityPerCapitaTax: 0,
+      },
+      prefecture: {
+        prefecturalTaxableIncome: 0,
+        prefecturalAdjustmentCredit: 0,
+        prefecturalIncomeTax: 0,
+        prefecturalPerCapitaTax: 0,
+      },
+      perCapitaTax: 0,
+      forestEnvironmentTax: 0,
+    },
     healthInsurance: breakdown.total,
     pensionPayments: 0,
     employmentInsurance: 0,
     takeHomeIncome: 0,
-    furusatoNozei: {} as unknown as FurusatoNozeiDetails,
+    furusatoNozei: ZERO_FURUSATO_NOZEI_DETAILS,
     dcPlanContributions: 0,
     healthInsuranceProvider: NATIONAL_HEALTH_INSURANCE_ID,
     region,

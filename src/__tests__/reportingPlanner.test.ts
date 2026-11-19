@@ -126,6 +126,7 @@ describe('deriveReportingUnits', () => {
     expect(units[0]!.states).toHaveLength(2);
 
     for (const state of units[0]!.states) {
+      // SAFETY: `source` is a WithholdingAccountIncomeStream, and its unit preserves stream.type.
       const applied = state.apply(source) as WithholdingAccountIncomeStream;
       // Reporting the loss without the dividends is the forbidden state; it must never appear.
       expect(applied.reportsCapitalGains && !applied.reportsDividends).toBe(false);
@@ -166,6 +167,7 @@ describe('deriveReportingUnits', () => {
     });
     const units = deriveReportingUnits([source]);
     expect(units[0]!.states).toHaveLength(1);
+    // SAFETY: `source` is a DividendsIncomeStream, and its unit preserves stream.type.
     const applied = units[0]!.states[0]!.apply(source) as DividendsIncomeStream;
     expect(applied.isReported).toBe(true);
   });
@@ -195,6 +197,7 @@ describe('countPlans', () => {
 
     expect(plans).toHaveLength(countPlans(units));
     for (const plan of plans) {
+      // SAFETY: `streams[0]` is constructed as a WithholdingAccountIncomeStream above.
       const a = plan.streams[0] as WithholdingAccountIncomeStream;
       expect(a.reportsCapitalGains && !a.reportsDividends).toBe(false);
     }
@@ -235,6 +238,7 @@ describe('search-space reduction', () => {
       [false, true].map(reportsDividends => ({
         reportsDividend: reportsDividends,
         apply: (stream: IncomeStream) => ({
+          // SAFETY: allFourStates is only applied to indices holding WithholdingAccountIncomeStream in this test.
           ...(stream as WithholdingAccountIncomeStream),
           reportsCapitalGains,
           reportsDividends,
@@ -888,12 +892,14 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
     expect(hasOptionalUnit(minTaxUnits)).toBe(false);
 
     // Patched streams under the only state report everything
+    // SAFETY: `mixedAccount` is a WithholdingAccountIncomeStream, and unit 0 corresponds to streams[0].
     const patchedAccount = minTaxUnits[0]!.states[0]!.apply(
       mixedAccount,
     ) as WithholdingAccountIncomeStream;
     expect(patchedAccount.reportsCapitalGains).toBe(true);
     expect(patchedAccount.reportsDividends).toBe(true);
 
+    // SAFETY: `domesticDiv` is a DividendsIncomeStream, and unit 1 corresponds to streams[1].
     const patchedDividend = minTaxUnits[1]!.states[0]!.apply(domesticDiv) as DividendsIncomeStream;
     expect(patchedDividend.isReported).toBe(true);
   });
@@ -906,6 +912,7 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
     const plans = [...generatePlans(inputs.incomeStreams, units)];
     // Since there are no dividends, only 1 plan (reported, separate taxation) is generated
     expect(plans).toHaveLength(1);
+    // SAFETY: `salaryInputs` places `gainAccount` (WithholdingAccountIncomeStream) at index 1.
     const stream = plans[0]!.streams[1] as WithholdingAccountIncomeStream;
     expect(stream.reportsCapitalGains).toBe(true);
   });
@@ -934,6 +941,7 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
   });
 
   it('T8: reporting planner accounts for real estate income and shared blueFilerDeduction', () => {
+    const a1 = account({ id: 'a1', capitalGains: 1_000_000, dividends: 300_000 });
     const inputs: TakeHomeInputs = {
       ...EMPTY_ADDITIONAL_DEDUCTION_INPUTS,
       incomeStreams: [
@@ -944,7 +952,7 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
           location: 'domestic',
           foreignTax: 0,
         },
-        account({ id: 'a1', capitalGains: 1_000_000, dividends: 300_000 }),
+        a1,
       ],
       blueFilerDeduction: 650_000,
       reportedDividendsTaxation: 'aggregate',
@@ -968,10 +976,10 @@ describe('high-income minimum tax (措法41条の19) in reporting planner', () =
       streams: [
         inputs.incomeStreams[0]!,
         {
-          ...inputs.incomeStreams[1]!,
+          ...a1,
           reportsCapitalGains: true,
           reportsDividends: true,
-        } as WithholdingAccountIncomeStream,
+        },
       ],
       election: 'aggregate',
     };

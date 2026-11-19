@@ -1485,6 +1485,7 @@ export type EmployeeProviderId = keyof typeof PROVIDER_DEFINITIONS;
  */
 export function getProviderDefinition(id: string): ProviderDefinition | undefined {
   return Object.hasOwn(PROVIDER_DEFINITIONS, id)
-    ? PROVIDER_DEFINITIONS[id as EmployeeProviderId]
+    ? // SAFETY: Object.hasOwn verified that `id` is an own key of PROVIDER_DEFINITIONS.
+      PROVIDER_DEFINITIONS[id as EmployeeProviderId]
     : undefined;
 }

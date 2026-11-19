@@ -57,6 +57,11 @@ function incomeTierFor(
   return pensionIncomeEtc <= tiers.tier2PensionIncomeEtcMax ? 2 : 3;
 }
 
+export interface LongTermCareCategory1Tier {
+  tier: number;
+  multiplier: number;
+}
+
 /**
  * Judges the national-standard 所得段階 (施行令第38条第1項). Tier 1 also covers 被保護者 and
  * 世帯非課税 recipients of 老齢福祉年金 regardless of income; neither status is modeled, so those
@@ -67,7 +72,7 @@ function incomeTierFor(
 export function judgeLongTermCareCategory1Tier(
   inputs: LongTermCareCategory1TierInputs,
   tiers: LongTermCareStandardTierTable,
-): { tier: number; multiplier: number } {
+): LongTermCareCategory1Tier {
   const tier = incomeTierFor(inputs, tiers);
   return { tier, multiplier: tiers.multipliers[tier - 1]! };
 }
