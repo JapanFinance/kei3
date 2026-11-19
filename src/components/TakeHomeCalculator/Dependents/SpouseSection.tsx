@@ -18,12 +18,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
-import type {
-  DisabilityLevel,
-  HouseholdMemberHealthInsurance,
-  Spouse,
-  SpouseAgeRange,
-} from '../../../types/dependents';
+import type { Spouse } from '../../../types/dependents';
 import { DISABILITY_LEVELS, SPOUSE_AGE_RANGES } from '../../../types/dependents';
 import type { HealthInsuranceProviderId } from '../../../types/healthInsurance';
 import {
@@ -145,12 +140,7 @@ export default function SpouseSection({
                 labelId="spouse-age-label"
                 value={spouse.ageRange}
                 label="Age on December 31"
-                onChange={e =>
-                  handleSpouseChange({
-                    // SAFETY: MenuItem values come exclusively from SPOUSE_AGE_RANGES.
-                    ageRange: e.target.value as SpouseAgeRange,
-                  })
-                }
+                onChange={e => handleSpouseChange({ ageRange: e.target.value })}
               >
                 {SPOUSE_AGE_RANGES.map(cat => (
                   <MenuItem key={cat.value} value={cat.value}>
@@ -488,11 +478,7 @@ export default function SpouseSection({
                                 label="Health Insurance"
                                 value={spouse.healthInsurance}
                                 onChange={e =>
-                                  handleSpouseChange({
-                                    // SAFETY: MenuItem values are strictly HouseholdMemberHealthInsurance.
-                                    healthInsurance: e.target
-                                      .value as HouseholdMemberHealthInsurance,
-                                  })
+                                  handleSpouseChange({ healthInsurance: e.target.value })
                                 }
                               >
                                 <MenuItem value="auto">
@@ -559,12 +545,7 @@ export default function SpouseSection({
                             id="spouse-disability-select"
                             labelId="spouse-disability-label"
                             value={spouse.disability}
-                            onChange={e =>
-                              handleSpouseChange({
-                                // SAFETY: MenuItem values come exclusively from DISABILITY_LEVELS.
-                                disability: e.target.value as DisabilityLevel,
-                              })
-                            }
+                            onChange={e => handleSpouseChange({ disability: e.target.value })}
                           >
                             {DISABILITY_LEVELS.map(level => (
                               <MenuItem key={level.value} value={level.value}>

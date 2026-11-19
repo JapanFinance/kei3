@@ -107,10 +107,9 @@ describe('ReportingPlanner', () => {
   it('computes and displays real reporting plans when expanded', async () => {
     render(<ReportingPlanner inputs={inputs} onStreamsChange={vi.fn()} />);
 
-    const user = await expandPanel();
+    await expandPanel();
     expect(await screen.findByText('Current')).toBeInTheDocument();
     expect(screen.getAllByText('Best').length).toBeGreaterThan(0);
-    expect(user).toBeDefined();
   });
 
   it('renders each row with its label and figures', async () => {

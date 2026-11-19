@@ -120,17 +120,17 @@ export class Rate {
    * When `factor` is an integer, scales the rate by that whole multiple.
    */
   times(factor: Rate | number): Rate {
-    if (typeof factor === 'number') {
-      if (import.meta.env.DEV && !(Number.isSafeInteger(factor) && factor >= 0)) {
-        throw new Error(`Multiplier must be a non-negative whole number: ${factor}`);
-      }
-      const g = gcd(factor, this.#scale);
-      return new Rate(this.#units * (factor / g), this.#scale / g);
+    if (factor instanceof Rate) {
+      const units = this.#units * factor.#units;
+      const scale = this.#scale * factor.#scale;
+      const g = gcd(units, scale);
+      return new Rate(units / g, scale / g);
     }
-    const units = this.#units * factor.#units;
-    const scale = this.#scale * factor.#scale;
-    const g = gcd(units, scale);
-    return new Rate(units / g, scale / g);
+    if (import.meta.env.DEV && !(Number.isSafeInteger(factor) && factor >= 0)) {
+      throw new Error(`Multiplier must be a non-negative whole number: ${factor}`);
+    }
+    const g = gcd(factor, this.#scale);
+    return new Rate(this.#units * (factor / g), this.#scale / g);
   }
 
   /** Whether `other` represents the same mathematical rate. */
