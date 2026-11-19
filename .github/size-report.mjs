@@ -106,10 +106,11 @@ function computeWaves(files, sizes) {
   const queue = [
     {
       entry: 'index.html',
-      seeds: [...html.matchAll(HTML_ENTRY), ...html.matchAll(HTML_ASSET_LINK)].flatMap(match => {
-        const name = chunkName(match[1]);
-        return known(name) ? [name] : [];
-      }),
+      seeds: [...html.matchAll(HTML_ENTRY), ...html.matchAll(HTML_ASSET_LINK)]
+        .values()
+        .map(match => chunkName(match[1]))
+        .filter(known)
+        .toArray(),
     },
   ];
 
