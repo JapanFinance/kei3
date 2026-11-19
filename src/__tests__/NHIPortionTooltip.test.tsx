@@ -8,7 +8,6 @@ import {
   NHIPortionTooltip,
   NHICalculationBaseTooltip,
 } from '../components/TakeHomeCalculator/tabs/HealthInsurancePremiumTooltip';
-import { Rate } from '../data/rate';
 import { DEFAULT_PROVIDER, NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, ZERO_FURUSATO_NOZEI_DETAILS } from '../types/tax';
@@ -19,6 +18,7 @@ import {
 } from '../utils/healthInsuranceCalculator';
 import { calculateTaxes } from '../utils/taxCalculations';
 import { makeDependent, makeSpouse } from './fixtures/dependents';
+import { makeResidenceTaxDetails } from './fixtures/takeHomeResults';
 
 /**
  * Build minimal TakeHomeResults and TakeHomeInputs for a given NHI scenario,
@@ -36,29 +36,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     annualIncome,
     hasEmploymentIncome: false,
     nationalIncomeTax: 0,
-    residenceTax: {
-      taxableIncome: 0,
-      cityProportion: Rate.ZERO,
-      prefecturalProportion: Rate.ZERO,
-      residenceTaxRate: Rate.ZERO,
-      basicDeduction: 0,
-      personalDeductionDifference: 0,
-      totalResidenceTax: 0,
-      city: {
-        cityTaxableIncome: 0,
-        cityAdjustmentCredit: 0,
-        cityIncomeTax: 0,
-        cityPerCapitaTax: 0,
-      },
-      prefecture: {
-        prefecturalTaxableIncome: 0,
-        prefecturalAdjustmentCredit: 0,
-        prefecturalIncomeTax: 0,
-        prefecturalPerCapitaTax: 0,
-      },
-      perCapitaTax: 0,
-      forestEnvironmentTax: 0,
-    },
+    residenceTax: makeResidenceTaxDetails(),
     healthInsurance: breakdown.total,
     pensionPayments: 0,
     employmentInsurance: 0,

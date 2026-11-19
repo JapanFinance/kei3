@@ -68,14 +68,6 @@
     },
     {
       "files": [
-        "src/data/rate.ts",
-        "src/components/TakeHomeCalculator/ResultRow.tsx",
-        "src/utils/healthInsuranceCalculator.ts"
-      ],
-      "rules": { "anti-slop/no-runtime-typeof": "off" }
-    },
-    {
-      "files": [
         "test-setup.ts",
         "src/__tests__/App_ModeSwitching.test.tsx",
         "src/__tests__/BlueFilerDisplay.test.tsx",

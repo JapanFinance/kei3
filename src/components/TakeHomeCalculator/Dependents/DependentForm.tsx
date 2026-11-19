@@ -204,10 +204,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             labelId="relationship-label"
             label="Relationship"
             value={relationship}
-            onChange={e => {
-              // SAFETY: MenuItem values are filtered from RELATIONSHIPS excluding 'spouse'.
-              setRelationship(e.target.value as Exclude<DependentRelationship, 'spouse'>);
-            }}
+            onChange={e => setRelationship(e.target.value)}
           >
             {RELATIONSHIPS.filter(rel => rel.value !== 'spouse').map(rel => (
               <MenuItem key={rel.value} value={rel.value}>
@@ -232,10 +229,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
             labelId="age-label"
             label="Age on Dec 31"
             value={ageRange}
-            onChange={e => {
-              // SAFETY: MenuItem values come exclusively from DEPENDENT_AGE_RANGES.
-              setAgeRange(e.target.value as DependentAgeRange);
-            }}
+            onChange={e => setAgeRange(e.target.value)}
           >
             {DEPENDENT_AGE_RANGES.map(cat => (
               <MenuItem key={cat.value} value={cat.value}>
@@ -566,10 +560,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                             labelId="dep-hi-label"
                             label="Health Insurance"
                             value={healthInsurance}
-                            onChange={e => {
-                              // SAFETY: MenuItem values are strictly HouseholdMemberHealthInsurance.
-                              setHealthInsurance(e.target.value as HouseholdMemberHealthInsurance);
-                            }}
+                            onChange={e => setHealthInsurance(e.target.value)}
                           >
                             <MenuItem value="auto">
                               {getAutoHealthInsuranceLabel(
@@ -635,10 +626,7 @@ export const DependentForm: React.FC<DependentFormProps> = ({
                         id="dep-disability-select"
                         labelId="dep-disability-label"
                         value={disability}
-                        onChange={e => {
-                          // SAFETY: MenuItem values come exclusively from DISABILITY_LEVELS.
-                          setDisability(e.target.value as DisabilityLevel);
-                        }}
+                        onChange={e => setDisability(e.target.value)}
                       >
                         {DISABILITY_LEVELS.map(level => (
                           <MenuItem key={level.value} value={level.value}>

@@ -5,11 +5,11 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 import SocialInsuranceTab from '../components/TakeHomeCalculator/tabs/SocialInsuranceTab';
-import { Rate } from '../data/rate';
 import { NATIONAL_HEALTH_INSURANCE_ID } from '../types/healthInsurance';
 import type { TakeHomeResults, TakeHomeInputs } from '../types/tax';
 import { EMPTY_ADDITIONAL_DEDUCTION_INPUTS, ZERO_FURUSATO_NOZEI_DETAILS } from '../types/tax';
 import { calculateNationalHealthInsurancePremiumWithBreakdown } from '../utils/healthInsuranceCalculator';
+import { makeResidenceTaxDetails } from './fixtures/takeHomeResults';
 
 // Mock scrollTo (used by SMRTableTooltip)
 Element.prototype.scrollTo = vi.fn();
@@ -30,29 +30,7 @@ function buildNHIScenario(annualIncome: number, region: string, includeLTC: bool
     annualIncome,
     hasEmploymentIncome: false,
     nationalIncomeTax: 0,
-    residenceTax: {
-      taxableIncome: 0,
-      cityProportion: Rate.ZERO,
-      prefecturalProportion: Rate.ZERO,
-      residenceTaxRate: Rate.ZERO,
-      basicDeduction: 0,
-      personalDeductionDifference: 0,
-      totalResidenceTax: 0,
-      city: {
-        cityTaxableIncome: 0,
-        cityAdjustmentCredit: 0,
-        cityIncomeTax: 0,
-        cityPerCapitaTax: 0,
-      },
-      prefecture: {
-        prefecturalTaxableIncome: 0,
-        prefecturalAdjustmentCredit: 0,
-        prefecturalIncomeTax: 0,
-        prefecturalPerCapitaTax: 0,
-      },
-      perCapitaTax: 0,
-      forestEnvironmentTax: 0,
-    },
+    residenceTax: makeResidenceTaxDetails(),
     healthInsurance: breakdown.total,
     pensionPayments: 0,
     employmentInsurance: 0,
