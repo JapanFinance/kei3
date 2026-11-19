@@ -515,6 +515,7 @@ if (import.meta.env.DEV) {
   const boundsOf = <Choice extends SpouseAgeRange | DependentAgeRange>(
     choices: ReadonlyArray<{ value: Choice }>,
   ): Record<Choice, AgeRange> =>
+    // SAFETY: Object.fromEntries maps every Choice element from `choices`, yielding a complete Record<Choice, AgeRange>.
     Object.fromEntries(choices.map(({ value }) => [value, AGE_RANGE_BOUNDS[value]])) as Record<
       Choice,
       AgeRange

@@ -1160,12 +1160,12 @@ describe('Regression: Health Insurance Provider Auto-Correction', () => {
     // 3. Find and Delete the Salary stream
     // Look for the "SALARY" chip/text to find the right card
     const salaryChip = screen.getByText('SALARY');
-    const salaryCard = salaryChip.closest('.MuiCard-root');
+    const salaryCard = salaryChip.closest<HTMLElement>('.MuiCard-root');
     expect(salaryCard).toBeInTheDocument();
     if (!salaryCard) throw new Error('Salary card not found');
 
     // Find the delete button within this card using the accessible name
-    const deleteButton = within(salaryCard as HTMLElement).getByRole('button', {
+    const deleteButton = within(salaryCard).getByRole('button', {
       name: /delete income/i,
     });
     expect(deleteButton).toBeInTheDocument();

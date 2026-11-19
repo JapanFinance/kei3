@@ -17,16 +17,16 @@ import { makeDependent, makeSpouse } from './fixtures/dependents';
 
 const INCOME_YEAR = 2026;
 
-const baseModalProps = {
+const baseModalProps: React.ComponentProps<typeof DependentsModal> = {
   open: true,
   onClose: vi.fn(),
-  dependents: [] as Dependent[],
+  dependents: [],
   onDependentsChange: vi.fn(),
   taxpayerNetIncome: 4_000_000,
   incomeYear: INCOME_YEAR,
   healthInsuranceProvider: DEFAULT_PROVIDER,
-  taxpayerAgeRange: 'age20to39' as const,
-  nhiPaymentAttribution: 'fullHousehold' as const,
+  taxpayerAgeRange: 'age20to39',
+  nhiPaymentAttribution: 'fullHousehold',
   onNHIPaymentAttributionChange: vi.fn(),
   region: 'Tokyo',
   onNHIHouseholdRegionChange: vi.fn(),

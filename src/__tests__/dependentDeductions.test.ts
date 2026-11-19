@@ -2222,6 +2222,7 @@ describe('countDependentsWithinEligibilityIncome', () => {
     relationship === 'spouse'
       ? makeSpouse({
           id,
+          // SAFETY: Test helper callers pass SpouseAgeRange whenever relationship === 'spouse'.
           ageRange: ageRange as SpouseAgeRange,
           isSameHousehold: true,
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome },
@@ -2229,6 +2230,7 @@ describe('countDependentsWithinEligibilityIncome', () => {
       : makeDependent({
           id,
           relationship,
+          // SAFETY: Test helper callers pass DependentAgeRange whenever relationship !== 'spouse'.
           ageRange: ageRange as DependentAgeRange,
           isSameHousehold: true,
           income: { grossEmploymentIncome: 0, grossPublicPensionIncome: 0, otherNetIncome },

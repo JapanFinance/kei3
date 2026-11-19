@@ -84,6 +84,16 @@ function checkPensionCap(isNationalPension: boolean, monthlyRemuneration: number
   return findPensionBracket(monthlyRemuneration).maxIncomeExclusive === Infinity;
 }
 
+interface HealthInsuranceCapStatus {
+  capped: boolean;
+  details?: {
+    medicalCapped?: boolean;
+    supportCapped?: boolean;
+    ltcCapped?: boolean;
+    childSupportCapped?: boolean;
+  };
+}
+
 /**
  * Checks if health insurance contributions are at the maximum
  * @param results - The results of the tax calculations
@@ -94,15 +104,7 @@ function checkHealthInsuranceCap(
   results: TakeHomeResults,
   monthlyRemuneration: number,
   year: number,
-): {
-  capped: boolean;
-  details?: {
-    medicalCapped?: boolean;
-    supportCapped?: boolean;
-    ltcCapped?: boolean;
-    childSupportCapped?: boolean;
-  };
-} {
+): HealthInsuranceCapStatus {
   const provider = results.healthInsuranceProvider;
 
   if (isEmployeeHealthProvider(provider) || provider === CUSTOM_PROVIDER_ID) {

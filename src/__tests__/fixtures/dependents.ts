@@ -51,7 +51,9 @@ export const makeMember = (
   overrides: Partial<Spouse> | Partial<OtherDependent> = {},
 ): Dependent => {
   if (overrides.relationship === 'spouse') {
+    // SAFETY: `relationship === 'spouse'` narrows these test overrides to Spouse fields.
     return makeSpouse(overrides as Partial<Spouse>);
   }
+  // SAFETY: `relationship !== 'spouse'` narrows these test overrides to OtherDependent fields.
   return makeDependent(overrides as Partial<OtherDependent>);
 };

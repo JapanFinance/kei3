@@ -61,7 +61,7 @@ export const IncomeStreamForm: React.FC<IncomeStreamFormProps> = ({
   onCancel,
   isMinimumTaxTriggered,
 }) => {
-  // STREAM_FORM_COMPONENTS is exhaustively typed over every IncomeStreamType above.
+  // SAFETY: STREAM_FORM_COMPONENTS is exhaustively keyed by IncomeStreamType, and typedInitialData narrows to `type`.
   const Component = STREAM_FORM_COMPONENTS[type] as React.FC<StreamTypeFormProps>;
   const key = initialData ? `${type}-${initialData.id}` : type;
   const typedInitialData = initialData?.type === type ? initialData : undefined;
