@@ -7,7 +7,7 @@
 
 ## Configuration & Intentional Deviations
 
-- **Effect plugin excluded**: `scripts/oxlint-plugins/anti-slop/effect/index.ts` is not registered because `effect` is not a dependency in `package.json`.
+- **Effect plugin removed**: `scripts/oxlint-plugins/anti-slop/effect/` was removed and is not registered because `effect` is not a dependency in `package.json`.
 - **`anti-slop/require-readable-spacing`**: Set to `"off"` in `.oxlintrc.json` to leave spacing and formatting to `oxfmt`.
 - **`anti-slop/no-runtime-typeof`**: Configured with `["error", { "allowInTypeGuards": true }]` globally, and `"off"` via overrides for tooling `.mjs` scripts (`scripts/**/*.mjs`, `.github/**/*.mjs`) and `src/data/rate.ts`, `src/components/TakeHomeCalculator/ResultRow.tsx`, `src/utils/healthInsuranceCalculator.ts`.
 - **`anti-slop/no-module-mocking`**: Enabled at `"error"` globally; set to `"off"` via overrides only for `test-setup.ts` and the 19 UI/JSDOM component test files that isolate `Tooltips`, lazy modals/charts, or `react-chartjs-2`.
