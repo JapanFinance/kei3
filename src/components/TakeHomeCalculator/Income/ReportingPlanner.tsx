@@ -45,10 +45,10 @@ export interface ReportingPlannerViewProps {
   onStreamsChange: (streams: IncomeStream[]) => void;
   /** Applies a row's plan: the election its reported dividends, if any, are taxed under. */
   onReportedDividendsTaxationChange?: ((election: ReportedDividendsTaxation) => void) | undefined;
-  /** Controlled or observed expansion state of the accordion. */
-  expanded?: boolean | undefined;
-  /** Notifies callers when the user expands or collapses the accordion. */
-  onExpandedChange?: ((expanded: boolean) => void) | undefined;
+  /** Whether the accordion is expanded. */
+  expanded: boolean;
+  /** Notifies the caller when the user expands or collapses the accordion. */
+  onExpandedChange: (expanded: boolean) => void;
 }
 
 const FIGURE_COLUMNS: readonly { key: keyof PlanFigures; label: string }[] = [
@@ -304,7 +304,7 @@ export const ReportingPlannerView: React.FC<ReportingPlannerViewProps> = ({
   planState,
   onStreamsChange,
   onReportedDividendsTaxationChange,
-  expanded: controlledExpanded,
+  expanded,
   onExpandedChange,
 }) => {
   const theme = useTheme();
@@ -313,8 +313,6 @@ export const ReportingPlannerView: React.FC<ReportingPlannerViewProps> = ({
   // neither, so each plan gets its own two-column table there, as the comparison this replaces
   // did for each election.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [uncontrolledExpanded, setUncontrolledExpanded] = useState(false);
-  const expanded = controlledExpanded ?? uncontrolledExpanded;
   const { rows, mandatoryNote, progress, showProgress, bounded, boundedEstimate } = planState;
 
   // The latest handlers behind one stable callback, so the memoised plan rows are not
@@ -331,12 +329,7 @@ export const ReportingPlannerView: React.FC<ReportingPlannerViewProps> = ({
   return (
     <Accordion
       expanded={expanded}
-      onChange={(_, isExpanded) => {
-        if (controlledExpanded === undefined) {
-          setUncontrolledExpanded(isExpanded);
-        }
-        onExpandedChange?.(isExpanded);
-      }}
+      onChange={(_, isExpanded) => onExpandedChange(isExpanded)}
       disableGutters
       sx={{ mt: 1 }}
     >
