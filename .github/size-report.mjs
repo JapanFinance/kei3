@@ -107,8 +107,10 @@ function computeWaves(files, sizes) {
     {
       entry: 'index.html',
       seeds: [...html.matchAll(HTML_ENTRY), ...html.matchAll(HTML_ASSET_LINK)]
+        .values()
         .map(match => chunkName(match[1]))
-        .filter(known),
+        .filter(known)
+        .toArray(),
     },
   ];
 

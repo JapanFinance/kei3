@@ -6,6 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { getLongTermCareCategory1ParamsForMonth } from '../data/longTermCareCategory1Params';
 import { PREFECTURE_NAMES, prefectureForRegion, type Prefecture } from '../data/prefectures';
 
+// SAFETY: Object.keys returns string[], and PREFECTURE_NAMES keys are every Prefecture.
 const PREFECTURES = Object.keys(PREFECTURE_NAMES) as Prefecture[];
 
 describe('prefectureForRegion', () => {

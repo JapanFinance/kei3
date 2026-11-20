@@ -14,6 +14,7 @@ const sources = import.meta.glob('../**/*.tsx', { query: '?raw', import: 'defaul
 describe('MUI system props', () => {
   it('routes theme colour paths through sx rather than a color prop', () => {
     const offenders = Object.entries(sources).flatMap(([path, source]) =>
+      // SAFETY: import.meta.glob with `query: '?raw', import: 'default'` yields source strings.
       ((source as string).match(DOTTED_COLOR_PROP) ?? []).map(match => `${path}: ${match}`),
     );
 

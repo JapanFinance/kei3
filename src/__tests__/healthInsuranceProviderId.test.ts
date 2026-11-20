@@ -14,6 +14,7 @@ import {
   type HealthInsuranceProviderId,
 } from '../types/healthInsurance';
 
+// SAFETY: Object.keys returns string[], and PROVIDER_DEFINITIONS keys are every EmployeeProviderId.
 const EMPLOYEE_PROVIDER_IDS = Object.keys(
   PROVIDER_DEFINITIONS,
 ) as (keyof typeof PROVIDER_DEFINITIONS)[];
@@ -56,6 +57,7 @@ describe('getProviderDisplayName', () => {
   });
 
   it('throws on an id outside the union', () => {
+    // SAFETY: Intentionally passes an invalid ID to verify the runtime exhaustive-switch guard.
     expect(() => getProviderDisplayName('NotAProvider' as HealthInsuranceProviderId)).toThrow(
       /Unknown provider ID/,
     );

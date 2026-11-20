@@ -78,7 +78,7 @@ export const RealEstateStreamForm: React.FC<StreamTypeFormProps<'realEstate'>> =
               value={location}
               label="Property Location"
               onChange={e => {
-                const newLocation = e.target.value as 'domestic' | 'foreign';
+                const newLocation = e.target.value;
                 setLocation(newLocation);
                 if (newLocation === 'domestic') {
                   setForeignTax(0);

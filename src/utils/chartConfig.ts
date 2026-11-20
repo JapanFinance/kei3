@@ -34,7 +34,7 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
 
     // Draw Your Income line if it exists and is within the chart range
     if (
-      typeof pluginData.currentIncomePosition === 'number' &&
+      pluginData.currentIncomePosition !== undefined &&
       pluginData.currentIncomePosition >= 0 &&
       pluginData.currentIncomePosition <= 1
     ) {
@@ -52,7 +52,7 @@ export const currentAndMedianIncomeChartPlugin: Plugin<'bar' | 'line'> = {
 
     // Draw Median Income line if it exists and is within the chart range
     if (
-      typeof pluginData.medianIncomePosition === 'number' &&
+      pluginData.medianIncomePosition !== undefined &&
       pluginData.medianIncomePosition >= 0 &&
       pluginData.medianIncomePosition <= 1
     ) {
@@ -406,10 +406,9 @@ export const getChartOptions = (
     Math.min(1, (medianIncome - minIncome) / (maxIncome - minIncome)),
   );
 
-  return {
+  const options: ChartOptions<'bar' | 'line'> = {
     responsive: true,
     maintainAspectRatio: false,
-    ...(animate ? {} : { animation: false as const }),
     interaction: {
       mode: 'index' as const,
       intersect: false,
@@ -451,6 +450,7 @@ export const getChartOptions = (
           },
           footer: function (tooltipItems: TooltipItem<'bar' | 'line'>[]) {
             const item = tooltipItems[0];
+            // SAFETY: generateChartData attaches `breakdown` to every bar datum in its datasets.
             const raw = item?.raw as
               | { breakdown?: { label: string; amount: number }[] }
               | undefined;
@@ -525,4 +525,8 @@ export const getChartOptions = (
       },
     },
   };
+  if (!animate) {
+    options.animation = false;
+  }
+  return options;
 };

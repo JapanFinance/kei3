@@ -56,6 +56,7 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
     // Check for section headers (### New, ### Updated, etc.)
     const sectionMatch = line.match(/^### (New|Updated|Fixed|Deprecated|Removed|Security)/i);
     if (sectionMatch && currentEntry && sectionMatch[1]) {
+      // SAFETY: regex alternation matches only keys of ChangelogEntry['sections'] (lowercased).
       currentSection = sectionMatch[1].toLowerCase() as keyof ChangelogEntry['sections'];
       currentEntry.sections[currentSection] = [];
       continue;
@@ -79,10 +80,11 @@ export function parseChangelog(markdownContent: string): ParsedChangelog {
   // Find latest date (entries are in reverse chronological order, so first is latest)
   const latestDate = entries[0]?.date;
 
-  return {
-    entries,
-    ...(latestDate ? { latestDate } : {}),
-  };
+  const result: ParsedChangelog = { entries };
+  if (latestDate) {
+    result.latestDate = latestDate;
+  }
+  return result;
 }
 
 /**

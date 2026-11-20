@@ -21,6 +21,6 @@ export function latestChangelogDate(): string {
 }
 
 /** Vite `define` entry; the value is embedded as source text, hence the JSON. */
-export function changelogDefine(): Record<string, string> {
+export function changelogDefine() {
   return { __LATEST_CHANGELOG_DATE__: JSON.stringify(latestChangelogDate()) };
 }

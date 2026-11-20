@@ -277,8 +277,8 @@ describe('useReportingPlans', () => {
     const bestRow = rows.find(r => r.roles.includes('best'))!;
     expect(bestRow).toBeDefined();
     const acctStream = bestRow.evaluated.streams.find(
-      s => s.type === 'withholdingAccount',
-    ) as WithholdingAccountIncomeStream;
+      (s): s is WithholdingAccountIncomeStream => s.type === 'withholdingAccount',
+    )!;
     expect(acctStream.reportsCapitalGains).toBe(true);
 
     // Current matches Best and canApply is false

@@ -70,7 +70,7 @@ export const CapitalGainsStreamForm: React.FC<StreamTypeFormProps<'capitalGains'
           labelId="share-account-label"
           value={account}
           label="Account"
-          onChange={e => setAccount(e.target.value as CapitalGainsIncomeStream['account'])}
+          onChange={e => setAccount(e.target.value)}
         >
           <MenuItem value="domesticNoWithholding">
             Domestic account no withholding (特定口座（源泉徴収なし）・一般口座)

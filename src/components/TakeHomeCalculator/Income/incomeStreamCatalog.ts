@@ -187,6 +187,7 @@ export const INCOME_STREAM_CATALOG: Record<IncomeStreamType, IncomeStreamTypeInf
   },
 };
 
+// SAFETY: Object.keys returns string[], and INCOME_STREAM_CATALOG keys are every IncomeStreamType.
 export const INCOME_STREAM_TYPES = Object.keys(INCOME_STREAM_CATALOG) as IncomeStreamType[];
 
 export const incomeStreamTypesInCategory = (category: IncomeCategoryKey): IncomeStreamType[] =>

@@ -1,7 +1,6 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -9,6 +8,7 @@ import {
   IncomeStreamForm,
   MINIMUM_TAX_REPORTING_NOTE,
 } from '../components/TakeHomeCalculator/Income/IncomeStreamForm';
+import { stubViewportWidth } from './fixtures/matchMedia';
 
 describe('IncomeStreamForm', () => {
   const mockOnSave = vi.fn();
@@ -17,6 +17,10 @@ describe('IncomeStreamForm', () => {
   beforeEach(() => {
     mockOnSave.mockClear();
     mockOnCancel.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('should default frequency to Annual for Salary', () => {
@@ -365,37 +369,29 @@ describe('IncomeStreamForm', () => {
   });
 
   it('places the reporting tooltip on the section title and hides the separate Reporting label on mobile in a withholding account', () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
-    try {
-      render(
-        <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
-      );
+    stubViewportWidth(375);
+    render(
+      <IncomeStreamForm type="withholdingAccount" onSave={mockOnSave} onCancel={mockOnCancel} />,
+    );
 
-      const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
-      expect(salesGroup.queryByText('Reporting')).toBeNull();
-      expect(salesGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+    const salesGroup = within(screen.getByRole('group', { name: 'Sales' }));
+    expect(salesGroup.queryByText('Reporting')).toBeNull();
+    expect(salesGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
 
-      const dividendsGroup = within(screen.getByRole('group', { name: 'Dividends' }));
-      expect(dividendsGroup.queryByText('Reporting')).toBeNull();
-      expect(dividendsGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
-    } finally {
-      vi.mocked(useMediaQuery).mockReturnValue(false);
-    }
+    const dividendsGroup = within(screen.getByRole('group', { name: 'Dividends' }));
+    expect(dividendsGroup.queryByText('Reporting')).toBeNull();
+    expect(dividendsGroup.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
   });
 
   it('places the reporting tooltip on Gross Dividends and hides the separate Reporting label on mobile for dividends', () => {
-    vi.mocked(useMediaQuery).mockReturnValue(true);
-    try {
-      render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
+    stubViewportWidth(375);
+    render(<IncomeStreamForm type="dividends" onSave={mockOnSave} onCancel={mockOnCancel} />);
 
-      expect(screen.getByLabelText('Gross Dividends')).toBeInTheDocument();
-      expect(screen.queryByText('Reporting')).toBeNull();
-      expect(screen.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Withheld only' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Reported' })).toBeInTheDocument();
-    } finally {
-      vi.mocked(useMediaQuery).mockReturnValue(false);
-    }
+    expect(screen.getByLabelText('Gross Dividends')).toBeInTheDocument();
+    expect(screen.queryByText('Reporting')).toBeNull();
+    expect(screen.getByRole('button', { name: 'reporting info' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Withheld only' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reported' })).toBeInTheDocument();
   });
 });
 
