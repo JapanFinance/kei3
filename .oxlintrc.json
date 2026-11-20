@@ -68,7 +68,6 @@
     },
     {
       "files": [
-        "test-setup.ts",
         "src/__tests__/App_ModeSwitching.test.tsx",
         "src/__tests__/BlueFilerDisplay.test.tsx",
         "src/__tests__/ForeignTaxCreditTooltips.test.tsx",
