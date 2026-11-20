@@ -95,21 +95,22 @@ const withholdingAccountState = (
   reportsDividend: boolean,
 ): ReportingUnitState => ({
   reportsDividend,
-  apply: stream => ({
-    // SAFETY: withholdingAccountState is attached only to units whose streamIndex holds a WithholdingAccountIncomeStream.
-    ...(stream as WithholdingAccountIncomeStream),
-    reportsCapitalGains,
-    reportsDividends,
-  }),
+  apply: stream => {
+    if (stream.type !== 'withholdingAccount') {
+      throw new Error(`Expected withholdingAccount stream, got ${stream.type}`);
+    }
+    return { ...stream, reportsCapitalGains, reportsDividends };
+  },
 });
 
 const dividendsState = (isReported: boolean, reportsDividend: boolean): ReportingUnitState => ({
   reportsDividend,
-  apply: stream => ({
-    // SAFETY: dividendsState is attached only to units whose streamIndex holds a DividendsIncomeStream.
-    ...(stream as DividendsIncomeStream),
-    isReported,
-  }),
+  apply: stream => {
+    if (stream.type !== 'dividends') {
+      throw new Error(`Expected dividends stream, got ${stream.type}`);
+    }
+    return { ...stream, isReported };
+  },
 });
 
 /**
@@ -562,8 +563,10 @@ const unitName = (streams: readonly IncomeStream[], streamIndex: number): string
   if (stream.type === 'withholdingAccount') {
     return `Account ${position} (sales ${formatJPY(stream.capitalGains)}, dividends ${formatJPY(stream.dividends)})`;
   }
-  // SAFETY: 'dividends' is the only other stream type deriveReportingUnits gives a unit to.
-  return `Dividends ${position} (${formatJPY((stream as DividendsIncomeStream).amount)})`;
+  if (stream.type === 'dividends') {
+    return `Dividends ${position} (${formatJPY(stream.amount)})`;
+  }
+  throw new Error(`Unexpected stream type in reporting unit: ${stream.type}`);
 };
 
 /** What the entry is set to under a plan, as an instruction. */
@@ -577,8 +580,10 @@ const unitTarget = (stream: IncomeStream): string => {
           ? 'report the dividends only'
           : 'leave both to withholding';
   }
-  // SAFETY: deriveReportingUnits emits units only for withholdingAccount and dividends streams.
-  return (stream as DividendsIncomeStream).isReported ? 'report' : 'leave to withholding';
+  if (stream.type === 'dividends') {
+    return stream.isReported ? 'report' : 'leave to withholding';
+  }
+  throw new Error(`Unexpected stream type in reporting unit: ${stream.type}`);
 };
 
 /**
@@ -593,13 +598,13 @@ export const planChanges = (
   current: ReportingPlan,
   units: readonly ReportingUnit[],
 ): string[] => {
-  const changes = units.flatMap(unit =>
-    unitFlagsEqual(plan.streams[unit.streamIndex]!, current.streams[unit.streamIndex]!)
-      ? []
-      : [
-          `${unitName(plan.streams, unit.streamIndex)}: ${unitTarget(plan.streams[unit.streamIndex]!)}.`,
-        ],
-  );
+  const changes: string[] = [];
+  for (const unit of units) {
+    const planned = plan.streams[unit.streamIndex]!;
+    const existing = current.streams[unit.streamIndex]!;
+    if (unitFlagsEqual(planned, existing)) continue;
+    changes.push(`${unitName(plan.streams, unit.streamIndex)}: ${unitTarget(planned)}.`);
+  }
   const electionMatters = planReportsDividend(units, plan.streams);
   const electionMattered = planReportsDividend(units, current.streams);
   if (electionMatters && (!electionMattered || plan.election !== current.election)) {
