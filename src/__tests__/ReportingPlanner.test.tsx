@@ -1,10 +1,9 @@
 // Copyright the original author or authors
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ReportingPlanner,
@@ -21,8 +20,7 @@ import {
   type TakeHomeInputs,
 } from '../types/tax';
 import type { EvaluatedPlan, PlanFigures } from '../utils/reportingPlanner';
-
-const mockedUseMediaQuery = vi.mocked(useMediaQuery);
+import { stubViewportWidth } from './fixtures/matchMedia';
 
 const streamA: IncomeStream = {
   id: 'a',
@@ -100,8 +98,8 @@ const expandPanel = async () => {
 };
 
 describe('ReportingPlanner', () => {
-  beforeEach(() => {
-    mockedUseMediaQuery.mockReturnValue(false);
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('computes and displays real reporting plans when expanded', async () => {
@@ -275,7 +273,7 @@ describe('ReportingPlanner', () => {
   });
 
   it('tags a uniform plan that is both Current and Best instead of repeating it', () => {
-    mockedUseMediaQuery.mockReturnValue(true);
+    stubViewportWidth(375);
     const planState = makePlanState({
       rows: [
         row({
@@ -349,7 +347,7 @@ describe('ReportingPlanner', () => {
   });
 
   it('renders one two-column block per plan on a phone screen', () => {
-    mockedUseMediaQuery.mockReturnValue(true);
+    stubViewportWidth(375);
     const planState = makePlanState({
       rows: [
         row({
